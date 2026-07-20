@@ -17,9 +17,10 @@ import { useMnaModule } from './hooks/useMnaModule';
 import { computeInstantRead } from './engine/instantRead';
 import { isAssessableItem } from './engine/assessItemFilter';
 import { decideNeedle } from './engine/needleDecision';
+import { isMotionArtifact } from './engine/motionArtifact';
 import type { NestWorkerMessage } from './workers/nestMessages';
 import { KICK_FLYBACK_MS, NEEDLE_REST_OFFSET, ITEM_INTERRUPT_MS,
-         SHOWN_READS_CAP } from './engine/tuning';
+         SHOWN_READS_CAP, READ_WINDOW_AFTER_S } from './engine/tuning';
 import { QuantumSphere } from './components/QuantumSphere';
 import { chargeStateById, type ChargeStateId } from './lib/chargeState';
 import { cycleStateMachine } from './engine/CycleStateMachine';
@@ -1088,7 +1089,7 @@ export default function App() {
     if (cyc) cyc.items.push(rec);
     // PAS de slittamento : le read est cherché AUTOUR de l'item ; beforeMs = combien AVANT il est
     // survenu (toujours signe « − » côté UI ; pas de read latent).
-    const wait = Math.max(50, (tSpeak + 0.15 - timeRef.current) * 1000);
+    const wait = Math.max(50, (tSpeak + READ_WINDOW_AFTER_S - timeRef.current) * 1000);   // stessa manopola della finestra
     const notBefore = assessPrevAtRef.current + 0.05;   // jamais la lecture de l'item PRÉCÉDENT
     assessPrevAtRef.current = tSpeak;
     const _tid = window.setTimeout(() => {
@@ -1642,7 +1643,7 @@ export default function App() {
         virtualNeedle.setTarget(qlToNeedlePos(_validSignal ? qL : 0)); // no contact → ago a riposo, niente reazioni
 
         // IL = Indice de Libération = Pγ / Pθ (reçu du worker) — FIX B-10: msSol setter removed; mS still used locally for TA calc below
-        const { IL, thetaPow, alphaPow, gammaPow, isMotionArtifact, isSomaticPersist, isSomaticRelease, isEmotionalConfirm, isBpmArtifact, isCognitionDetected, isEpSomatic, mS } = e.data.payload;
+        const { IL, thetaPow, alphaPow, gammaPow, isSomaticPersist, isSomaticRelease, isEmotionalConfirm, isCognitionDetected, isEpSomatic, mS } = e.data.payload;
 
         // ── TA Quantum Recalibration + Total-TA high-water accumulator ──
         // → engine/TaAccumulator (SessionEngine slice 1; spec §5 NEST V3,
@@ -1683,12 +1684,19 @@ export default function App() {
         //   VISIBLE needle, sustained F/N detection, dirty-needle persistence —
         //   all preserved bit-per-bit inside the engine.
         const inDirtyRange = IL > 1.5 / s && IL <= 2.5 / s;
+        // ARTEFATTO DI MOVIMENTO — calcolato QUI dal giroscopio (engine/motionArtifact).
+        // Il worker inviava una costante `false` e il gyro non gli arrivava nemmeno: la guardia
+        // del classificatore era quindi MORTA, e un movimento della testa diventava un « Fall »
+        // mostrato e registrato come lettura dell'item. Il buffer gyro vive già qui.
+        const _gb = gyroBuffer.current;
+        const _motionArtifact = isMotionArtifact(_gb.x, _gb.y, _gb.z);
         const reactionKey = reactionClassifier.classify({
           offH: needleVirtualRef.current,
           nowS: timeRef.current,
           inDirtyRange,
-          isBpmArtifact: !!isBpmArtifact,
-          isMotionArtifact: !!isMotionArtifact,
+          // `isBpmArtifact` resta NON implementato (nessuna definizione condivisa) — non lo si finge.
+          isBpmArtifact: false,
+          isMotionArtifact: _motionArtifact,
           isStall: !!isStall,
           // Prior F/N basé sur le LOCK EEG (déjà calculés) : quand le lock qL flotte, l'aiguille
           // qui oscille est un F/N, pas une série de Fall/Long Fall → plus de décomposition.

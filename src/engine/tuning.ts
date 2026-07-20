@@ -113,3 +113,12 @@ export const ITEM_FILLERS = new Set([
 
 /** Quante letture MOSTRATE si tengono in memoria (oltre, si scarta la metà più vecchia). */
 export const SHOWN_READS_CAP = 2000;
+
+// ── ARTEFATTO DI MOVIMENTO (giroscopio) ────────────────────────────────────────────────────────
+/** Quanti campioni di giroscopio si guardano (il buffer ne tiene 256). */
+export const MOTION_WINDOW_SAMPLES = 32;
+/** Sopra questo RMS (modulo della velocità angolare) la lettura NON è attribuibile all'item.
+ *  Volutamente ALTO: sopprimere una lettura vera è peggio che lasciar passare un piccolo
+ *  movimento. Il radar del pannello salute usa 40 come fondo scala → 30 = movimento netto.
+ *  DA TARARE IN SEDUTA: se troppe letture vere spariscono, ALZARLO. */
+export const MOTION_ARTIFACT_RMS = 30;

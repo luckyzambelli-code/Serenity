@@ -77,12 +77,13 @@ export interface MetricsUpdatePayload {
   // ── artefatti e marcatori ──
   rawSlope: number;
   energyRecovery: number;
-  gyroRms: number;
-  isMotionArtifact: boolean;
+  // NOTA: `gyroRms` / `isMotionArtifact` / `isBpmArtifact` sono stati RIMOSSI dal contratto.
+  // Il worker li scriveva come costanti (0/false) e non ha alcun input da cui derivarli (il
+  // giroscopio non gli viene inviato). Dichiararli come misure rendeva il difetto invisibile.
+  // L'artefatto di movimento è ora calcolato in App da `engine/motionArtifact`.
   isSomaticPersist: boolean;
   isSomaticRelease: boolean;
   isEmotionalConfirm: boolean;
-  isBpmArtifact: boolean;
   isCognitionDetected: boolean;
   isEpSomatic: boolean;
   gsrValue: number;
@@ -109,5 +110,6 @@ export type NestWorkerMessage =
   | { type: 'BPM_UPDATE'; payload: BpmUpdatePayload }
   | { type: 'GSR_UPDATE'; payload: GsrUpdatePayload }
   | { type: 'GSR_RESET' }
-  | { type: 'HARDWARE_ERROR'; payload?: unknown }
-  | { type: 'EP_VALIDATION_UPDATE'; payload?: unknown };
+  | { type: 'HARDWARE_ERROR'; payload?: unknown };
+// (Nessuna variante 'EP_VALIDATION_UPDATE' : il worker non l'ha mai emessa. Dichiararla qui
+//  significherebbe descrivere un protocollo che non esiste — proprio ciò che questo file evita.)

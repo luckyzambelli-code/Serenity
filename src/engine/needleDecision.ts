@@ -96,7 +96,13 @@ export function decideNeedle(i: NeedleInputs): NeedleDecision {
   // A fine float l'ago rientra verso il riposo: è un movimento a DESTRA che il classificatore
   // legge come Fall/SF e che cancellerebbe subito la F/N ancora tenuta. Ma « una F/N non cade »:
   // un rientro (ago ancora a SINISTRA della zona di caduta) NON è una caduta.
-  const holdingFn = i.shownKey === 'reaction_fn' && i.nowMs < i.holdUntilMs;
+  // La protezione vale finché una F/N è DAVVERO in corso. NON basta guardare il blocco della
+  // scritta: `freeNeedleForNewItem()` lo AZZERA ad ogni item dato (App.tsx), e per un tick la
+  // protezione spariva → il rientro meccanico dopo il float diventava un « Fall » mostrato E
+  // registrato, che con RI_PRIORITY (Fall 5 > F/N 2) scavalcava la lettura vera dell'item.
+  // Si usa quindi ANCHE il marcatore d'episodio F/N, che l'azzeramento dell'hold non tocca.
+  const fnEpisodeRunning = (i.timeS - i.lastFnShownAtS) < FN_EPISODE_GAP_S;
+  const holdingFn = i.shownKey === 'reaction_fn' && (i.nowMs < i.holdUntilMs || fnEpisodeRunning);
   const genuineFall = i.reactionKey !== 'reaction_sf' && i.curVirtualOffset > FALL_ZONE_OFFSET;
   if (isKick && holdingFn && !genuineFall) return { ...base, path: 'suppress' };
 

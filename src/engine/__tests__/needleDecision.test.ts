@@ -48,6 +48,31 @@ describe('falso kick durante un hold F/N', () => {
     expect(d.path).toBe('suppress');
   });
 
+  it('REGRESSIONE (phantom Fall): la protezione sopravvive all azzeramento dell hold da parte di un nuovo item', () => {
+    // `freeNeedleForNewItem()` azzera reactionHoldUntilRef ad OGNI item dato. Prima, per un tick
+    // la protezione spariva e il rientro dopo il float diventava un « Fall » mostrato E REGISTRATO,
+    // che scavalcava la lettura vera (Fall 5 > F/N 2). L episodio F/N in corso deve bastare.
+    const d = decideNeedle(base({
+      reactionKey: 'reaction_fall', reactionLabel: 'Fall', rawTarget: 0.2,
+      shownKey: 'reaction_fn',
+      holdUntilMs: 0,                                   // azzerato dall item
+      timeS: 100, lastFnShownAtS: 100,                  // ma la F/N è a schermo ORA
+      curVirtualOffset: FALL_ZONE_OFFSET - 0.1,         // ago ancora a sinistra: non è una caduta
+    }));
+    expect(d.path).toBe('suppress');
+    expect(d.recordShownRead).toBe(false);   // niente lettura fantasma attribuita all item
+  });
+
+  it('a episodio F/N CHIUSO la protezione non si applica più', () => {
+    const d = decideNeedle(base({
+      reactionKey: 'reaction_fall', reactionLabel: 'Fall', rawTarget: 0.2,
+      shownKey: 'reaction_fn', holdUntilMs: 0,
+      timeS: 100, lastFnShownAtS: 100 - (FN_EPISODE_GAP_S + 1),   // float finito da tempo
+      curVirtualOffset: FALL_ZONE_OFFSET - 0.1,
+    }));
+    expect(d.startKick).toBe(true);
+  });
+
   it('MA una VERA caduta interrompe la F/N', () => {
     const d = decideNeedle(base({
       reactionKey: 'reaction_fall', reactionLabel: 'Fall', rawTarget: 0.2,
@@ -83,6 +108,16 @@ describe('oscillazione (kick)', () => {
       rawTarget: 0.9, needleInMotion: true, activeKickRaw: 0.2,
     }));
     expect(d.startKick).toBe(true);
+    // L'escalation NON è un'interruzione da nuovo item: il swing prosegue, non va TAGLIATO.
+    // (Senza questa asserzione, `interruptPrevious: true` fisso passava tutti i test, e in App
+    //  avrebbe azzerato motion/kick/finestra-item ad OGNI colpo → difetto d'ago invisibile.)
+    expect(d.interruptPrevious).toBe(false);
+  });
+
+  it('un kick normale (ago libero) non interrompe nulla', () => {
+    const d = decideNeedle(base({ reactionKey: 'reaction_fall', reactionLabel: 'Fall', rawTarget: 0.2 }));
+    expect(d.startKick).toBe(true);
+    expect(d.interruptPrevious).toBe(false);
   });
 
   it('una lettura equivalente NON rimpiazza (serve un margine)', () => {
