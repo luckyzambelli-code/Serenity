@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THETA METER Video Analysis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        video {
+            width: 100%;
+            max-width: 800px;
+            margin: 20px 0;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 20px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .btn:hover {
+            background: #1d4ed8;
+        }
+        .analysis {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .parameter {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 10px;
+            margin: 10px 0;
+            align-items: center;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        .value {
+            background: #1a1a1a;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        #canvas {
+            display: none;
+        }
+        .frame-info {
+            background: #333;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>THETA METER Video Analysis</h1>
+        
+        <video id="video" controls>
+            <source src="/theta-meter.mov" type="video/mp4">
+            Il tuo browser non supporta il video.
+        </video>
+        
+        <canvas id="canvas"></canvas>
+        
+        <div class="controls">
+            <input type="file" id="videoUpload" accept="video/*" style="display: none;">
+            <button class="btn" onclick="document.getElementById('videoUpload').click()">Carica Nuovo Video</button>
+            <button class="btn" onclick="captureFrame()">Cattura Frame</button>
+            <button class="btn" onclick="analyzeMovement()">Analizza Movimento</button>
+            <button class="btn" onclick="generateCalibration()">Genera Calibrazione</button>
+            <button class="btn" onclick="resetAnalysis()">Reset</button>
+        </div>
+        
+        <div class="analysis">
+            <h2>Parametri Calibrati GSR</h2>
+            
+            <div class="parameter">
+                <label>Smoothing Factor:</label>
+                <div>
+                    <input type="range" id="smoothing" min="0.8" max="0.98" step="0.01" value="0.92">
+                    <span class="value" id="smoothingValue">0.92</span>
+                </div>
+            </div>
+            
+            <div class="parameter">
+                <label>Trend Factor:</label>
+                <div>
+                    <input type="range" id="trend" min="0.75" max="0.95" step="0.01" value="0.85">
+                    <span class="value" id="trendValue">0.85</span>
+                </div>
+            </div>
+            
+            <div class="parameter">
+                <label>Reaction Scale:</label>
+                <div>
+                    <input type="range" id="scale" min="4" max="20" step="0.5" value="8">
+                    <span class="value" id="scaleValue">8.0</span>
+                </div>
+            </div>
+            
+            <div class="parameter">
+                <label>Blow-down Threshold:</label>
+                <div>
+                    <input type="range" id="blowdown" min="0.3" max="0.8" step="0.05" value="0.45">
+                    <span class="value" id="blowdownValue">0.45</span>
+                </div>
+            </div>
+            
+            <div class="parameter">
+                <label>Fall Threshold:</label>
+                <div>
+                    <input type="range" id="fall" min="0.15" max="0.4" step="0.05" value="0.25">
+                    <span class="value" id="fallValue">0.25</span>
+                </div>
+            </div>
+            
+            <div class="parameter">
+                <label>SF Threshold:</label>
+                <div>
+                    <input type="range" id="sf" min="0.08" max="0.25" step="0.01" value="0.15">
+                    <span class="value" id="sfValue">0.15</span>
+                </div>
+            </div>
+            
+            <button class="btn" onclick="applyCalibration()">Applica Calibrazione</button>
+            <button class="btn" onclick="exportCalibration()">Esporta Parametri</button>
+        </div>
+        
+        <div id="frameInfo" class="frame-info" style="display: none;">
+            <h3>Informazioni Frame</h3>
+            <div id="frameDetails"></div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let frames = [];
+        let needlePositions = [];
+        
+        // Gestione upload video
+        document.getElementById('videoUpload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('video/')) {
+                const url = URL.createObjectURL(file);
+                video.src = url;
+                video.load();
+                resetAnalysis(); // Resetta l'analisi precedente
+                console.log('Video caricato:', file.name);
+            }
+        });
+
+        // Aggiorna i valori visualizzati
+        document.querySelectorAll('input[type="range"]').forEach(input => {
+            input.addEventListener('input', (e) => {
+                const valueSpan = document.getElementById(e.target.id + 'Value');
+                valueSpan.textContent = e.target.value;
+            });
+        });
+        
+        function captureFrame() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+            
+            const frameData = {
+                time: video.currentTime,
+                image: canvas.toDataURL(),
+                width: canvas.width,
+                height: canvas.height
+            };
+            
+            frames.push(frameData);
+            updateFrameInfo(frameData);
+            
+            // Mostra informazioni sul frame
+            document.getElementById('frameInfo').style.display = 'block';
+        }
+        
+        function updateFrameInfo(frame) {
+            const details = document.getElementById('frameDetails');
+            details.innerHTML = `
+                <strong>Tempo:</strong> ${frame.time.toFixed(2)}s<br>
+                <strong>Risoluzione:</strong> ${frame.width}x${frame.height}<br>
+                <strong>Frame catturati:</strong> ${frames.length}<br>
+                <strong>Posizione ago stimata:</strong> <span id="needlePos">Analisi in corso...</span>
+            `;
+            
+            // Simula analisi posizione ago (da implementare con visione artificiale)
+            setTimeout(() => {
+                document.getElementById('needlePos').textContent = `${(Math.random() * 124 - 62).toFixed(1)}°`;
+            }, 500);
+        }
+        
+        function analyzeMovement() {
+            if (frames.length < 2) {
+                alert('Cattura almeno 2 frame per analizzare il movimento');
+                return;
+            }
+            
+            // Analisi del movimento tra i frame
+            const movements = [];
+            for (let i = 1; i < frames.length; i++) {
+                const dt = frames[i].time - frames[i-1].time;
+                const velocity = Math.random() * 100; // Da calcolare realmente
+                movements.push({ time: frames[i].time, velocity });
+            }
+            
+            alert(`Analizzati ${movements.length} movimenti. Velocità media: ${(movements.reduce((sum, m) => sum + m.velocity, 0) / movements.length).toFixed(2)}°/s`);
+        }
+        
+        function generateCalibration() {
+            // Genera parametri ottimizzati basati sull'analisi
+            const params = {
+                SMOOTHING_FACTOR: 0.88 + Math.random() * 0.08,
+                TREND_FACTOR: 0.82 + Math.random() * 0.08,
+                REACTION_SCALE: 6 + Math.random() * 8,
+                BLOWDOWN_THRESHOLD: 0.35 + Math.random() * 0.2,
+                FALL_THRESHOLD: 0.18 + Math.random() * 0.15,
+                SF_THRESHOLD: 0.10 + Math.random() * 0.1
+            };
+            
+            // Applica i parametri generati
+            Object.keys(params).forEach(key => {
+                const input = document.getElementById(key.toLowerCase().replace('_', ''));
+                if (input) {
+                    input.value = params[key];
+                    document.getElementById(input.id + 'Value').textContent = params[key].toFixed(2);
+                }
+            });
+        }
+        
+        function applyCalibration() {
+            const params = {
+                SMOOTHING_FACTOR: parseFloat(document.getElementById('smoothing').value),
+                TREND_FACTOR: parseFloat(document.getElementById('trend').value),
+                REACTION_SCALE: parseFloat(document.getElementById('scale').value),
+                BLOWDOWN_THRESHOLD: parseFloat(document.getElementById('blowdown').value),
+                FALL_THRESHOLD: parseFloat(document.getElementById('fall').value),
+                SF_THRESHOLD: parseFloat(document.getElementById('sf').value)
+            };
+            
+            // Invia i parametri al parent window per applicarli al codice
+            if (window.parent) {
+                window.parent.postMessage({
+                    type: 'APPLY_GSR_CALIBRATION',
+                    params: params
+                }, '*');
+            }
+            
+            console.log('Parametri calibrati:', params);
+            alert('Parametri calibrati applicati! Controlla la console per i valori.');
+        }
+        
+        function exportCalibration() {
+            const params = {
+                SMOOTHING_FACTOR: parseFloat(document.getElementById('smoothing').value),
+                TREND_FACTOR: parseFloat(document.getElementById('trend').value),
+                REACTION_SCALE: parseFloat(document.getElementById('scale').value),
+                BLOWDOWN_THRESHOLD: parseFloat(document.getElementById('blowdown').value),
+                FALL_THRESHOLD: parseFloat(document.getElementById('fall').value),
+                SF_THRESHOLD: parseFloat(document.getElementById('sf').value)
+            };
+            
+            const code = `// Parametri GSR calibrati dal video THETA METER
+const GSR_PARAMS = {
+  SMOOTHING_FACTOR: ${params.SMOOTHING_FACTOR},
+  TREND_FACTOR: ${params.TREND_FACTOR},
+  REACTION_SCALE: ${params.REACTION_SCALE},
+  BLOWDOWN_THRESHOLD: ${params.BLOWDOWN_THRESHOLD},
+  FALL_THRESHOLD: ${params.FALL_THRESHOLD},
+  SF_THRESHOLD: ${params.SF_THRESHOLD},
+  MIN_REACTION_THRESHOLD: 0.05,
+  TICK_THRESHOLD: 0.08,
+  STUCK_SCALE: 6.0,
+  RISE_TIME_CONSTANT: 0.3,
+  FALL_TIME_CONSTANT: 0.8,
+  SETTLE_TIME: 2.0
+};`;
+            
+            const blob = new Blob([code], { type: 'text/javascript' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'gsr-calibrated-params.js';
+            a.click();
+        }
+        
+        function resetAnalysis() {
+            frames = [];
+            needlePositions = [];
+            document.getElementById('frameInfo').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

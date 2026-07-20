@@ -1,0 +1,9 @@
+{
+  "name": "Muse 2 Connection App",
+  "description": "An app to connect and stream data from a Muse 2 headband using Web Bluetooth.",
+  "requestFramePermissions": [
+    "bluetooth",
+    "camera",
+    "microphone"
+  ]
+}

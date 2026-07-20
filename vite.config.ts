@@ -1,0 +1,51 @@
+import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+import { readFileSync } from 'node:fs';
+import { defineConfig } from 'vite';
+
+// CONN-115: expose the package.json version to the app (shown next to the title).
+// MUST read package.json from disk (NOT process.env.npm_package_version): in
+// `dist:mac` the bump script rewrites package.json, but the child `npm run build`
+// INHERITS npm_package_version from the parent process at its PRE-bump value, so
+// the in-app version lagged one behind the DMG. Reading the file is always correct.
+const APP_VERSION =
+  JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf8')).version;
+
+export default defineConfig({
+  base: './', // Forza Vite a usare percorsi relativi (fondamentale per Electron)
+  plugins: [
+    react(), 
+    tailwindcss(),
+  ],
+  define: {
+    'process.env.GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || ''),
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, '.'),
+      // In Electron renderer, process.release.name === 'node', so @xenova/transformers
+      // picks onnxruntime-node (native module). Vite can't bundle native modules, so
+      // InferenceSession is undefined → "Cannot read properties of undefined (reading 'create')".
+      // Redirecting to onnxruntime-web forces the WASM backend in the renderer.
+      'onnxruntime-node': 'onnxruntime-web',
+    },
+  },
+  server: {
+    // 0.0.0.0 : le dev server écoute sur le LAN → on peut tester le TÉLÉPHONE (satellite) contre lui.
+    host: '0.0.0.0',
+    port: 3000,
+    // PAS de `hmr.host` codé en dur : Vite déduit alors l'hôte de la PAGE. Donc le HMR marche
+    // partout — en local ET depuis le téléphone — sur n'importe quel réseau. (Une IP fixe cassait
+    // le HMR sur un autre réseau ; mettre 'localhost' aurait cassé le test depuis le téléphone.)
+  },
+  optimizeDeps: {
+    exclude: ['@xenova/transformers'],
+  },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    emptyOutDir: true,
+  },
+});
