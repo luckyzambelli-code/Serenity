@@ -16,8 +16,9 @@
 // ré-exporte ici pour ne pas casser les imports existants (App, MirrorDial).
 import {
   MIRROR_DIAL_K, MIRROR_SMOOTH, MIRROR_DEADBAND, MIRROR_CONTACT_MIN, MIRROR_TURNOVER,
+  MIRROR_CONTACT_WINDOW_S,
 } from './tuning';
-export { MIRROR_DIAL_K, MIRROR_SMOOTH, MIRROR_DEADBAND, MIRROR_CONTACT_MIN, MIRROR_TURNOVER };
+export { MIRROR_DIAL_K, MIRROR_SMOOTH, MIRROR_DEADBAND, MIRROR_CONTACT_MIN, MIRROR_TURNOVER, MIRROR_CONTACT_WINDOW_S };
 
 export const mirrorReading = (q: number): number => Math.max(0, Math.min(10, q * MIRROR_DIAL_K));
 /** Lecture 0..10 → offset [-1,1] du cadran de l'aiguille (même géométrie que ClearDial/QuantumSphere). */
@@ -39,10 +40,12 @@ export class MirrorCycle {
   private smoothQ = 0;
   private hwQ = 0;
   private peakQ = 0;   // pic en cours de mesure, avant le figeage
+  private armedAtS = 0;   // quand l'item a été donné — borne la fenêtre de contact
 
   /** AGGANCIO : on donne l'item → on commence à mesurer le contact de sa charge. */
-  arm(): void {
+  arm(nowS: number): void {
     this.armed = true;
+    this.armedAtS = nowS;
     this.contactQ = 0;
     this.locked = false;
     this.dischargeQ = 0;
@@ -53,7 +56,7 @@ export class MirrorCycle {
     this.peakQ = 0;
   }
 
-  update(q: number): void {
+  update(q: number, nowS: number): void {
     if (!this.armed) return;
     q = Math.max(0, q);
     this.smoothQ = this.smoothQ * (1 - MIRROR_SMOOTH) + q * MIRROR_SMOOTH;
@@ -62,7 +65,11 @@ export class MirrorCycle {
     if (!this.locked) {
       // (a) MESURE DU CONTACT : on suit le pic ; dès que le read se retourne, on FIGE la valeur.
       if (this.smoothQ > this.peakQ) this.peakQ = this.smoothQ;
-      if (this.peakQ >= MIRROR_CONTACT_MIN && this.smoothQ < MIRROR_TURNOVER * this.peakQ) {
+      // Si FIGE quando il read si ribalta OPPURE quando la finestra di contatto scade: la carica
+      // dell'item è quella che compare SUBITO dopo averlo dato, non il massimo di sempre.
+      const turnedOver = this.smoothQ < MIRROR_TURNOVER * this.peakQ;
+      const windowOver = (nowS - this.armedAtS) >= MIRROR_CONTACT_WINDOW_S;
+      if (this.peakQ >= MIRROR_CONTACT_MIN && (turnedOver || windowOver)) {
         this.contactQ = this.peakQ;   // valeur de l'item, figée
         this.locked = true;
         this.hwQ = this.peakQ;        // la descente depuis le pic compte déjà comme smaltito
@@ -90,6 +97,7 @@ export class MirrorCycle {
 
   reset(): void {
     this.armed = false;
+    this.armedAtS = 0;
     this.contactQ = 0;
     this.locked = false;
     this.dischargeQ = 0;

@@ -83,6 +83,12 @@ export const MIRROR_SMOOTH = 0.15;
 export const MIRROR_DEADBAND = 0.04;
 /** Picco minimo (qL) per riconoscere un VERO contatto di carica (sotto = rumore). */
 export const MIRROR_CONTACT_MIN = 0.08;
+/** Entro quanti secondi dall'aggancio si CHIUDE comunque la misura del contatto.
+ *  Senza questo limite il picco cresceva SENZA FINE finché la carica non scendeva del 15%:
+ *  il contatto "non avveniva" per molto tempo e, quando avveniva, catturava il massimo ASSOLUTO
+ *  della seduta — quindi un valore saturo (sempre 10). La carica di un item è quella che compare
+ *  SUBITO dopo averlo dato, non il massimo di sempre. TARABILE. */
+export const MIRROR_CONTACT_WINDOW_S = 5;
 /** Il read è considerato RIBALTATO — quindi il valore dell'item viene CONGELATO — quando la
  *  carica scende sotto questa frazione del picco.
  *  PIÙ ALTO (es. 0.95) = congela prima; PIÙ BASSO (es. 0.7) = aspetta di più. */
@@ -93,8 +99,11 @@ export const MIRROR_TURNOVER = 0.85;
  *  diventava un item con la sua lettura → rumore nel report. Queste manopole decidono cosa passa. */
 /** Lunghezza minima (caratteri) perché una frase sia un item. */
 export const ITEM_MIN_CHARS = 2;
-/** Oltre questo numero di parole è un commento/monologo, non un item. */
-export const ITEM_MAX_WORDS = 12;
+/** Oltre questo numero di parole è un commento/monologo, non un item.
+ *  ALZATO (era 12): lo speech-to-text unisce spesso più frasi in una riga, e una domanda
+ *  d'auditing lunga veniva SCARTATA in silenzio — compariva nel journal ma non nel modulo.
+ *  Vale il principio dichiarato: NEL DUBBIO L'ITEM PASSA. */
+export const ITEM_MAX_WORDS = 25;
 /** Intercalari scartati (confronto senza accenti/maiuscole/punteggiatura), 5 lingue. */
 export const ITEM_FILLERS = new Set([
   // it

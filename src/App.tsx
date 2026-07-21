@@ -1031,7 +1031,7 @@ export default function App() {
   /** MIRROR (méthode de Ron) — AGGANCIO : on donne l'item, le cycle du double démarre. Chose à
    *  part : ni CONTACT ni NULL. Le pic du read = charge instantanée, la cible = son double. */
   const armMirror = () => {
-    mirrorCycle.arm();
+    mirrorCycle.arm(timeRef.current);
     setMirrorArmed(true);
     setMirrorDisp({ contactQ: 0, dischargeQ: 0, locked: false, reached: false });
     const n = ++mStartedRef.current;
@@ -1656,7 +1656,7 @@ export default function App() {
         // ── CYCLE MIRROR (méthode de Ron) — vue à part, « DOUBLE POUR EFFACER » par item : valeur
         // effective = pic ; on efface quand le smaltito cumulé = 2× la valeur effective.
         if (viewModeRef.current === 'mirror' && mirrorArmedRef.current) {
-          mirrorCycle.update(_validSignal ? qL : 0);
+          mirrorCycle.update(_validSignal ? qL : 0, timeRef.current);
           if (pushUi) setMirrorDisp({ contactQ: mirrorCycle.contactQ, dischargeQ: mirrorCycle.dischargeQ, locked: mirrorCycle.locked, reached: mirrorCycle.reached });
         }
         // Instrumentation calibration TA (Option B) : snapshot LIVE des 5 bandes BRUTES + BPM,
@@ -2873,7 +2873,7 @@ export default function App() {
         mirrorAwaitItemRef.current = false;
         setAuditingQuestion(txt);                                   // l'item s'affiche dans le champ
         if (mirrorCurRef.current) mirrorCurRef.current.question = txt;
-        mirrorCycle.arm();                                          // ré-ancrage = charge INSTANTANÉE
+        mirrorCycle.arm(timeRef.current);                                          // ré-ancrage = charge INSTANTANÉE
         setMirrorDisp({ contactQ: 0, dischargeQ: 0, locked: false, reached: false });
         logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
           text: `◎ MIRROR — ${LC('item', 'item', 'item', 'ítem', 'item')} · ${txt}`, type: 'normal' });

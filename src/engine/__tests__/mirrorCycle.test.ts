@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MirrorCycle, mirrorReading, mirrorOffset } from '../MirrorCycle';
-import { MIRROR_DIAL_K, MIRROR_CONTACT_MIN, MIRROR_TURNOVER } from '../tuning';
+import { MIRROR_DIAL_K, MIRROR_CONTACT_MIN, MIRROR_TURNOVER, MIRROR_CONTACT_WINDOW_S } from '../tuning';
 
 /**
  * MIRROR — metodo del doppio (Ron), modello a/b/c:
@@ -9,8 +9,11 @@ import { MIRROR_DIAL_K, MIRROR_CONTACT_MIN, MIRROR_TURNOVER } from '../tuning';
  *   c) raggiunta la cible → OTTENUTO.
  */
 
+/** Orologio simulato: un tick = 50 ms, come il flusso reale. */
+let clock = 0;
+const armAt = (c: MirrorCycle) => { clock = 0; c.arm(0); };
 /** Alimenta il ciclo con una serie di cariche (un tick per valore). */
-const feed = (c: MirrorCycle, values: number[]) => values.forEach(v => c.update(v));
+const feed = (c: MirrorCycle, values: number[]) => values.forEach(v => { clock += 0.05; c.update(v, clock); });
 /** Ripete un valore n volte — serve perché la carica è LISCIATA (EMA) prima di essere usata. */
 const hold = (v: number, n: number) => Array.from({ length: n }, () => v);
 
@@ -39,7 +42,7 @@ describe('MirrorCycle', () => {
 
   it('(a) CONGELA il valore dell item quando il read si ribalta', () => {
     const c = new MirrorCycle();
-    c.arm();
+    armAt(c);
     feed(c, hold(1.0, 60));            // salita e plateau → il pic si costruisce
     const peak = c.contactQ || 0;
     expect(c.locked).toBe(false);      // finché non ridiscende, niente congelamento
@@ -51,7 +54,7 @@ describe('MirrorCycle', () => {
 
   it('il valore congelato NON cambia più (non cresce coi re-contatti)', () => {
     const c = new MirrorCycle();
-    c.arm();
+    armAt(c);
     feed(c, hold(0.6, 60)); feed(c, hold(0, 20));
     expect(c.locked).toBe(true);
     const fixed = c.contactQ;
@@ -61,7 +64,7 @@ describe('MirrorCycle', () => {
 
   it('il rumore sotto la soglia di contatto non arma nulla', () => {
     const c = new MirrorCycle();
-    c.arm();
+    armAt(c);
     feed(c, hold(MIRROR_CONTACT_MIN / 3, 80));
     feed(c, hold(0, 40));
     expect(c.locked).toBe(false);
@@ -69,7 +72,7 @@ describe('MirrorCycle', () => {
 
   it('(b/c) OTTENUTO quando lo smaltito raggiunge il DOPPIO del valore', () => {
     const c = new MirrorCycle();
-    c.arm();
+    armAt(c);
     feed(c, hold(1.0, 80));            // contatto
     feed(c, hold(0, 60));              // prima discesa → lock + smaltito
     expect(c.locked).toBe(true);
@@ -83,7 +86,7 @@ describe('MirrorCycle', () => {
   it('progress() va da 0 a 1 e non sfora', () => {
     const c = new MirrorCycle();
     expect(c.progress()).toBe(0);            // non armato
-    c.arm();
+    armAt(c);
     feed(c, hold(1.0, 80)); feed(c, hold(0, 60));
     expect(c.progress()).toBeGreaterThan(0);
     for (let i = 0; i < 8; i++) { feed(c, hold(1.0, 60)); feed(c, hold(0, 60)); }
@@ -92,8 +95,8 @@ describe('MirrorCycle', () => {
 
   it('arm() riparte pulito (item successivo)', () => {
     const c = new MirrorCycle();
-    c.arm(); feed(c, hold(1.0, 80)); feed(c, hold(0, 60));
-    c.arm();
+    armAt(c); feed(c, hold(1.0, 80)); feed(c, hold(0, 60));
+    armAt(c);
     expect(c.locked).toBe(false);
     expect(c.contactQ).toBe(0);
     expect(c.dischargeQ).toBe(0);
@@ -103,5 +106,36 @@ describe('MirrorCycle', () => {
   it('la soglia di ribaltamento è quella tarata', () => {
     expect(MIRROR_TURNOVER).toBeGreaterThan(0);
     expect(MIRROR_TURNOVER).toBeLessThan(1);
+  });
+
+  // ── DIFETTO OSSERVATO IN SEDUTA: « il contatto non avviene, poi avviene ma sempre a 10 » ──
+  // Il picco cresceva senza limite di tempo finché la carica non scendeva del 15%: con una carica
+  // che sale a lungo, catturava il massimo ASSOLUTO → valore saturo. La finestra di contatto chiude.
+  it('CHIUDE la misura entro la finestra anche se la carica non ridiscende mai', () => {
+    const c = new MirrorCycle();
+    armAt(c);
+    // carica che sale in continuazione per più della finestra di contatto: prima non si fermava mai
+    const rampa = Array.from({ length: Math.ceil(MIRROR_CONTACT_WINDOW_S / 0.05) + 40 }, (_, i) => 0.3 + i * 0.02);
+    feed(c, rampa);
+    expect(c.locked).toBe(true);
+  });
+
+  it('il valore NON satura a 10 su una carica normale che sale a lungo', () => {
+    const c = new MirrorCycle();
+    armAt(c);
+    // carica plausibile (fino a ~1.2 = zona alta) mantenuta ben oltre la finestra
+    const lunga = Array.from({ length: 400 }, (_, i) => Math.min(1.2, 0.2 + i * 0.01));
+    feed(c, lunga);
+    expect(c.locked).toBe(true);
+    expect(mirrorReading(c.contactQ)).toBeLessThan(10);   // prima finiva sempre a fondo scala
+  });
+
+  it('un contatto NETTO resta più rapido della finestra (il ribaltamento vince)', () => {
+    const c = new MirrorCycle();
+    armAt(c);
+    feed(c, hold(1.0, 40));   // 2 s
+    feed(c, hold(0, 20));     // ridiscende → deve bloccare SUBITO, non attendere la finestra
+    expect(c.locked).toBe(true);
+    expect(clock).toBeLessThan(MIRROR_CONTACT_WINDOW_S);
   });
 });

@@ -36,8 +36,14 @@ describe('isAssessableItem', () => {
   });
 
   it('SCARTA i monologhi (commento, non item)', () => {
-    const monologo = 'allora adesso ti spiego bene come funziona questa cosa perche e importante capirla';
+    const monologo = ('allora adesso ti spiego per bene come funziona tutta questa cosa perche '
+      + 'e davvero importante che tu la capisca prima di andare avanti con il resto della seduta');
     expect(isAssessableItem(monologo)).toBe(false);
+  });
+
+  it('TIENE una frase lunga ma plausibile come item (lo STT unisce le frasi)', () => {
+    // Prima il tetto era 12 parole: frasi cosi finivano nel journal ma NON nel modulo.
+    expect(isAssessableItem('qualcosa che hai fatto e di cui non hai mai parlato con nessuno')).toBe(true);
   });
 
   it('MA tiene una domanda lunga (finisce con ?) — resta una domanda d auditing', () => {
