@@ -34,15 +34,32 @@ let _httpServer = null;
 // ── BLE state — module-level so ipcMain handlers (registered once) can access it ──
 let _bleCallback  = null;
 let _bleForEmeter = false;
+// FIX MUSE-RECONNECT: se il Muse non compare nello scan, la richiesta Bluetooth restava APPESA
+// PER SEMPRE (il picker del renderer a cui veniva inoltrata la lista non esiste) → connect() mai
+// risolto → "searching" infinito e i tentativi successivi avvelenati. Ora lo scan ha un timeout:
+// scaduto, si risponde '' (annulla) e il renderer riceve un errore PULITO e può riprovare.
+let _bleScanTimer = null;
+const BLE_SCAN_TIMEOUT_MS = 12000;
+function _bleAnswer(deviceId) {
+  if (_bleScanTimer) { clearTimeout(_bleScanTimer); _bleScanTimer = null; }
+  if (_bleCallback) {
+    const cb = _bleCallback;
+    _bleCallback = null;
+    _bleForEmeter = false;
+    try { cb(deviceId || ''); } catch (_) {}
+  }
+}
 
 // Renderer picks a BLE device → complete the pending BLE request
 ipcMain.handle('ble-select', (_e, deviceId) => {
-  if (_bleCallback) {
-    const cb = _bleCallback;
-    _bleCallback  = null;
-    _bleForEmeter = false;
-    cb(deviceId || ''); // empty string = cancel
-  }
+  _bleAnswer(deviceId);
+  return { ok: true };
+});
+
+// FIX MUSE-RECONNECT: il renderer annulla ESPLICITAMENTE una ricerca (bottone premuto di nuovo,
+// timeout lato renderer). Senza questo, la callback pendente restava appesa in Chromium.
+ipcMain.handle('ble-cancel', () => {
+  _bleAnswer('');
   return { ok: true };
 });
 
@@ -161,14 +178,21 @@ function createWindow() {
 
   win.webContents.on('select-bluetooth-device', (event, deviceList, callback) => {
     event.preventDefault();
+    const isNewScan = !_bleCallback;   // l'evento rispara con la lista aggiornata: 1 timer per scan
     _bleCallback = callback;
 
     // Auto-select Muse 2 (legacy path — no UI needed)
     const museDevice = deviceList.find(d => d.deviceName && d.deviceName.includes('Muse'));
     if (museDevice && !_bleForEmeter) {
-      _bleCallback = null;
-      callback(museDevice.deviceId);
+      _bleAnswer(museDevice.deviceId);
       return;
+    }
+
+    // Niente Muse (ancora): NON restare appesi per sempre. Il timer parte al PRIMO evento dello
+    // scan; se il Muse non compare entro il timeout, si annulla e il renderer riceve l'errore.
+    if (isNewScan) {
+      if (_bleScanTimer) clearTimeout(_bleScanTimer);
+      _bleScanTimer = setTimeout(() => _bleAnswer(''), BLE_SCAN_TIMEOUT_MS);
     }
 
     // Forward the current device list to the renderer so it can show a picker

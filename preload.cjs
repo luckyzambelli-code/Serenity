@@ -13,6 +13,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   /** CONN-76: read the OS clipboard (navigator.clipboard is blocked in Electron). */
   readClipboard: () => ipcRenderer.invoke('clipboard-read'),
 
+  /** FIX MUSE-RECONNECT: annulla una ricerca Bluetooth pendente nel main (callback appesa). */
+  bleCancel: () => ipcRenderer.invoke('ble-cancel'),
+
   // CONN-71: native macOS speech-to-text (SFSpeechRecognizer sidecar).
   stt: {
     /** Start the native recognizer for a BCP-47 locale (e.g. 'fr-FR'). */

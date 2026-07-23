@@ -2507,6 +2507,16 @@ export default function App() {
 
   // Simulation reactions — REMOVED
 
+  // FIX MUSE-RECONNECT: né connect() né gatt.connect() hanno un timeout nativo — su macOS su un
+  // dispositivo che non trasmette possono restare APPESI per sempre ("searching" infinito, badge
+  // che mente, riconnessione impossibile). Ogni attesa Bluetooth è ora limitata nel tempo, e
+  // l'annullamento pulisce anche la callback pendente nel processo main (ble-cancel).
+  const MUSE_CONNECT_TIMEOUT_MS = 20000;   // ricerca+connessione iniziale
+  const MUSE_GATT_TIMEOUT_MS = 4000;       // singolo tentativo di riconnessione silenziosa
+  const withTimeout = <T,>(pr: Promise<T>, ms: number, label: string): Promise<T> =>
+    Promise.race([pr, new Promise<never>((_, rej) => setTimeout(() => rej(new Error(label)), ms))]);
+  const bleCancel = () => { try { (window as any).electronAPI?.bleCancel?.(); } catch (_) {} };
+
   const handleConnectMuse = async (): Promise<boolean> => {
     if (museConnection === 'searching') {
       // Annulation explicite de la recherche en cours
@@ -2521,6 +2531,7 @@ export default function App() {
         try { museClientRef.current.disconnect(); } catch (_) {}
         museClientRef.current = null;
       }
+      bleCancel();   // risolve la richiesta Bluetooth pendente nel main (altrimenti resta appesa)
       setMuseConnection('disconnected');
       addLog({ time, speaker: 'SYS', text: '⊘ Recherche MUSE annulée.' });
       return false;
@@ -2564,8 +2575,8 @@ export default function App() {
       client.enableAux = true;
       museClientRef.current = client;
 
-      await client.connect();
-      await client.start();
+      await withTimeout(client.connect(), MUSE_CONNECT_TIMEOUT_MS, 'MUSE connect timeout');
+      await withTimeout(client.start(), MUSE_CONNECT_TIMEOUT_MS, 'MUSE start timeout');
 
       // FIX C-02: bail out if the user cancelled during await
       if (token !== museTokenRef.current) {
@@ -2732,6 +2743,9 @@ export default function App() {
           const MAX_ATTEMPTS = 6;
           const ATTEMPT_INTERVAL = 5000; // 5s entre chaque tentative
 
+          // Il badge non deve MENTIRE: durante la riconnessione silenziosa lo stato è 'searching'
+          // (prima restava 'connected' su un GATT morto, e il bottone faceva la cosa sbagliata).
+          setMuseConnection('searching');
           addLog({ time: timeRef.current, speaker: 'SYS',
             text: (t('log_muse_signal_lost') as string) || '⚠ MUSE signal lost — reconnexion silencieuse…', type: 'highlight' });
 
@@ -2750,9 +2764,17 @@ export default function App() {
               // connect(gatt), reconnects silently to the already-paired Muse.
               const dev = museDeviceRef.current;
               if (!dev || !dev.gatt) throw new Error('no retained Muse device');
-              const server = await dev.gatt.connect();
-              await client.connect(server);
-              await client.start();
+              // gatt.connect() su un device che non trasmette può PENDERE per sempre → timeout,
+              // e prima di riprovare si ABORTISCE il tentativo pendente (disconnect).
+              let server;
+              try {
+                server = await withTimeout(dev.gatt.connect(), MUSE_GATT_TIMEOUT_MS, 'gatt timeout');
+              } catch (e) {
+                try { dev.gatt.disconnect(); } catch (_) {}
+                throw e;
+              }
+              await withTimeout(client.connect(server), MUSE_GATT_TIMEOUT_MS, 'muse connect timeout');
+              await withTimeout(client.start(), MUSE_GATT_TIMEOUT_MS, 'muse start timeout');
               if (reconnectToken !== museTokenRef.current) {
                 try { client.disconnect(); } catch (_) {}
                 return;
@@ -2792,6 +2814,8 @@ export default function App() {
       return true;
     } catch (error) {
       console.warn("Muse connection error:", error);
+      bleCancel();   // il timeout può lasciare una richiesta pendente nel main: si risolve qui
+      if (museClientRef.current) { try { museClientRef.current.disconnect(); } catch (_) {} museClientRef.current = null; }
       setMuseConnection('disconnected');
       setBatteryLevel(null);
       addLog({ time, speaker: 'SYS', text: t('log_not_found') as string, type: 'highlight' });
