@@ -198,7 +198,7 @@ export default function App() {
   // MIRROR (méthode de Ron : « double the instant charge to erase it ») — 3e vue, chose À PART.
   const [mirrorArmed, setMirrorArmed] = useState(false);
   const mirrorArmedRef = useRef(false); mirrorArmedRef.current = mirrorArmed;
-  const [mirrorDisp, setMirrorDisp] = useState({ contactQ: 0, dischargeQ: 0, locked: false, reached: false });
+  const [mirrorDisp, setMirrorDisp] = useState({ contactQ: 0, dischargeQ: 0, locked: false, reached: false, valueR: 0 });
   // TOTAL DE SÉANCE (point d de Ron/utilisateur) — compteur SÉPARÉ (la somme déborde de 1–10) :
   // nb d'items, nb effacés, et Σ des valeurs effectives (son double = valeur doublée totale).
   const [mirrorSession, setMirrorSession] = useState({ count: 0, erased: 0, sumV: 0 });
@@ -1033,7 +1033,7 @@ export default function App() {
   const armMirror = () => {
     mirrorCycle.arm(timeRef.current);
     setMirrorArmed(true);
-    setMirrorDisp({ contactQ: 0, dischargeQ: 0, locked: false, reached: false });
+    setMirrorDisp({ contactQ: 0, dischargeQ: 0, locked: false, reached: false, valueR: 0 });
     const n = ++mStartedRef.current;
     mirrorCurRef.current = { n, question: auditingQuestion.trim(), tStartSec: timeRef.current };
     // ITEM À LA VOIX : si le champ est VIDE, on inscrit ce que l'auditeur va DIRE comme item,
@@ -1049,7 +1049,11 @@ export default function App() {
     // Enregistrer l'item (valeur effective, double, effacé) + l'AJOUTER au TOTAL DE SÉANCE (point d).
     const cur = mirrorCurRef.current;
     if (cur) {
-      const readInst = mirrorReading(mirrorCycle.contactQ);          // valeur de l'item (0..10)
+      const readInst = mirrorCycle.valueR;                           // valore 1-10 RELATIVO all'ambiente
+      // DIAGNOSTICA per la taratura: i numeri veri di questa macchina/persona nel journal.
+      logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
+        text: `MIRROR contact: amb ${mirrorCycle.baselineQ.toFixed(2)} pic ${mirrorCycle.contactQ.toFixed(2)} (x${(mirrorCycle.contactQ / Math.max(mirrorCycle.baselineQ, 0.05)).toFixed(2)}) -> ${readInst.toFixed(1)}/10`,
+        type: 'normal' });
       if (readInst > 0.1 || erased) {
         mirrorCyclesRef.current.push({ n: cur.n, question: cur.question, tStartSec: cur.tStartSec, tEndSec: timeRef.current,
           readInst, readDouble: 2 * readInst, erased });
@@ -1655,9 +1659,13 @@ export default function App() {
         }
         // ── CYCLE MIRROR (méthode de Ron) — vue à part, « DOUBLE POUR EFFACER » par item : valeur
         // effective = pic ; on efface quand le smaltito cumulé = 2× la valeur effective.
+        if (viewModeRef.current === 'mirror') {
+          // l'AMBIENTE si misura sempre (anche senza item): è il riferimento del valore relativo
+          mirrorCycle.track(_validSignal ? qL : 0);
+        }
         if (viewModeRef.current === 'mirror' && mirrorArmedRef.current) {
           mirrorCycle.update(_validSignal ? qL : 0, timeRef.current);
-          if (pushUi) setMirrorDisp({ contactQ: mirrorCycle.contactQ, dischargeQ: mirrorCycle.dischargeQ, locked: mirrorCycle.locked, reached: mirrorCycle.reached });
+          if (pushUi) setMirrorDisp({ contactQ: mirrorCycle.contactQ, dischargeQ: mirrorCycle.dischargeQ, locked: mirrorCycle.locked, reached: mirrorCycle.reached, valueR: mirrorCycle.valueR });
         }
         // Instrumentation calibration TA (Option B) : snapshot LIVE des 5 bandes BRUTES + BPM,
         // lu par le panneau au moment d'une capture (mS, TA_meter). Offline on formera les RATIOS
@@ -2874,7 +2882,7 @@ export default function App() {
         setAuditingQuestion(txt);                                   // l'item s'affiche dans le champ
         if (mirrorCurRef.current) mirrorCurRef.current.question = txt;
         mirrorCycle.arm(timeRef.current);                                          // ré-ancrage = charge INSTANTANÉE
-        setMirrorDisp({ contactQ: 0, dischargeQ: 0, locked: false, reached: false });
+        setMirrorDisp({ contactQ: 0, dischargeQ: 0, locked: false, reached: false, valueR: 0 });
         logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
           text: `◎ MIRROR — ${LC('item', 'item', 'item', 'ítem', 'item')} · ${txt}`, type: 'normal' });
         break;
@@ -3702,7 +3710,7 @@ export default function App() {
       setDeltaStar(lagMeter.getDeltaStar()); setDeltaStarN(0); setDeltaTrend(0);
       setDeltaBaseline(lagMeter.getBaseline()); setDeltaAdaptive(0); gammaEmaRef.current = 0;
       falseAsIsDetector.reset(); setAsIsFalse(false);
-      mirrorCycle.reset(); setMirrorArmed(false); setMirrorDisp({ contactQ: 0, dischargeQ: 0, locked: false, reached: false });
+      mirrorCycle.reset(); setMirrorArmed(false); setMirrorDisp({ contactQ: 0, dischargeQ: 0, locked: false, reached: false, valueR: 0 });
       setMirrorSession({ count: 0, erased: 0, sumV: 0 });
       mirrorCyclesRef.current = []; mirrorCurRef.current = null; mStartedRef.current = 0; mDoneRef.current = 0;
       mirrorVoiceModeRef.current = false; mirrorAwaitItemRef.current = false; mirrorLogCursorRef.current = 0;
@@ -5530,7 +5538,7 @@ export default function App() {
                   </div>
                   {(() => {
                     // ITEM COURANT : valeur (figée au contact) → double = cible, % vers la cible.
-                    const effR = mirrorReading(mirrorDisp.contactQ);
+                    const effR = mirrorDisp.valueR;
                     const doubleR = 2 * effR;
                     const progress = mirrorDisp.locked && mirrorDisp.contactQ > 1e-6 ? Math.min(1, mirrorDisp.dischargeQ / (2 * mirrorDisp.contactQ)) : 0;
                     const chip: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, height: 26, padding: '0 10px', borderRadius: 8, fontFamily: 'monospace', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.22)' };
@@ -5605,7 +5613,7 @@ export default function App() {
                 (cycle CONTACT/DISSOLUTION/AS-IS), aligné avec l'aiguille. Sinon : le ClearDial. */}
             <div className="absolute inset-0 z-40 pointer-events-none">
               {viewMode === 'mirror' ? (
-                <MirrorDial armed={mirrorArmed} contactQ={mirrorDisp.contactQ} dischargeQ={mirrorDisp.dischargeQ}
+                <MirrorDial armed={mirrorArmed} valueR={mirrorDisp.valueR} contactQ={mirrorDisp.contactQ} dischargeQ={mirrorDisp.dischargeQ}
                   locked={mirrorDisp.locked} reached={mirrorDisp.reached} isLightTheme={isLightTheme} lang={lang} />
               ) : (
                 <ClearDial armed={cycleArmed} asIsPending={asIsPending} manualReady={manualReady} asIsFalse={asIsFalse} asIsIO={asIsIO} onValidate={validateAsIs} deltaStar={deltaStar} deltaStarN={deltaStarN} isLightTheme={isLightTheme}

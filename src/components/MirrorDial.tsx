@@ -1,6 +1,6 @@
 import React from 'react';
 import { pick5 } from '../i18n5';
-import { mirrorReading, mirrorOffset } from '../engine/MirrorCycle';
+import { mirrorOffset } from '../engine/MirrorCycle';
 
 /**
  * MirrorDial — la vue MIRROR (méthode de Ron), modèle demandé par l'utilisateur :
@@ -21,14 +21,15 @@ const arc = (o0: number, o1: number, r: number) => {
 };
 
 export function MirrorDial({
-  armed, contactQ, dischargeQ, locked, reached, isLightTheme = false, lang = 'it',
+  armed, valueR, contactQ, dischargeQ, locked, reached, isLightTheme = false, lang = 'it',
 }: {
-  armed: boolean; contactQ: number; dischargeQ: number; locked: boolean; reached: boolean;
+  /** Valore 1–10 dell'item, RELATIVO all'ambiente (fissato al contatto). */
+  armed: boolean; valueR: number; contactQ: number; dischargeQ: number; locked: boolean; reached: boolean;
   isLightTheme?: boolean; lang?: string;
 }) {
   const L = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang as string, it, fr, en, es, sv);
 
-  const valR = mirrorReading(contactQ);            // (a) valeur de l'item (1–10), figée
+  const valR = valueR;                              // (a) valore 1–10 (RELATIVO), fissato al contatto
   const doubleR = 2 * valR;                         // (b) le DOUBLE = la cible
   const targOnScale = doubleR <= 10;
   const progress = locked && contactQ > 1e-6 ? Math.min(1, dischargeQ / (2 * contactQ)) : 0;

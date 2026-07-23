@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { MirrorCycle, mirrorReading, mirrorOffset } from '../MirrorCycle';
+import { MirrorCycle, mirrorReading, mirrorOffset, mirrorValueFromRatio } from '../MirrorCycle';
 import { MIRROR_DIAL_K, MIRROR_CONTACT_MIN, MIRROR_TURNOVER, MIRROR_CONTACT_WINDOW_S } from '../tuning';
 
 /**
@@ -11,7 +11,12 @@ import { MIRROR_DIAL_K, MIRROR_CONTACT_MIN, MIRROR_TURNOVER, MIRROR_CONTACT_WIND
 
 /** Orologio simulato: un tick = 50 ms, come il flusso reale. */
 let clock = 0;
-const armAt = (c: MirrorCycle) => { clock = 0; c.arm(0); };
+/** Prepara l'AMBIENTE (riferimento del valore relativo) e aggancia. */
+const armAt = (c: MirrorCycle, ambient = 0.1) => {
+  clock = 0;
+  for (let i = 0; i < 80; i++) c.track(ambient);
+  c.arm(0);
+};
 /** Alimenta il ciclo con una serie di cariche (un tick per valore). */
 const feed = (c: MirrorCycle, values: number[]) => values.forEach(v => { clock += 0.05; c.update(v, clock); });
 /** Ripete un valore n volte — serve perché la carica è LISCIATA (EMA) prima di essere usata. */
@@ -120,14 +125,33 @@ describe('MirrorCycle', () => {
     expect(c.locked).toBe(true);
   });
 
-  it('il valore NON satura a 10 su una carica normale che sale a lungo', () => {
+  it('SINTOMO IN SEDUTA (« sempre 10 »): con ambiente ALTO il valore NON satura più', () => {
+    // Prima la scala era assoluta (qL×5, saturazione a qL=2): con cariche reali che girano a 2+
+    // OGNI item usciva 10. Ora il valore è RELATIVO all'ambiente della persona/macchina.
     const c = new MirrorCycle();
-    armAt(c);
-    // carica plausibile (fino a ~1.2 = zona alta) mantenuta ben oltre la finestra
-    const lunga = Array.from({ length: 400 }, (_, i) => Math.min(1.2, 0.2 + i * 0.01));
-    feed(c, lunga);
+    armAt(c, 2.5);                     // ambiente già altissimo per la vecchia scala
+    feed(c, hold(3.0, 60));            // l'item fa salire la carica del ~20%
+    feed(c, hold(2.5, 60));            // e ridiscende
     expect(c.locked).toBe(true);
-    expect(mirrorReading(c.contactQ)).toBeLessThan(10);   // prima finiva sempre a fondo scala
+    expect(c.valueR).toBeGreaterThan(0);
+    expect(c.valueR).toBeLessThan(4);  // salita modesta → valore basso, NON 10
+  });
+
+  it('un item che TRIPLICA l ambiente vale fondo scala', () => {
+    const c = new MirrorCycle();
+    armAt(c, 0.5);
+    feed(c, hold(1.6, 80));            // ~3.2× l'ambiente
+    feed(c, hold(0.5, 60));
+    expect(c.locked).toBe(true);
+    expect(c.valueR).toBeGreaterThanOrEqual(9);
+  });
+
+  it('mirrorValueFromRatio: la scala relativa è quella dichiarata', () => {
+    expect(mirrorValueFromRatio(1.0, 1.0)).toBe(0);       // picco = ambiente → nessuna salita
+    expect(mirrorValueFromRatio(2.0, 1.0)).toBe(5);       // doppio dell'ambiente → metà scala
+    expect(mirrorValueFromRatio(3.0, 1.0)).toBe(10);      // triplo → fondo scala
+    expect(mirrorValueFromRatio(9.0, 1.0)).toBe(10);      // oltre → resta 10
+    expect(mirrorValueFromRatio(0.5, 1.0)).toBe(0);       // sotto l'ambiente → 0, mai negativo
   });
 
   it('un contatto NETTO resta più rapido della finestra (il ribaltamento vince)', () => {

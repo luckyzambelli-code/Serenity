@@ -16,9 +16,17 @@
 // ré-exporte ici pour ne pas casser les imports existants (App, MirrorDial).
 import {
   MIRROR_DIAL_K, MIRROR_SMOOTH, MIRROR_DEADBAND, MIRROR_CONTACT_MIN, MIRROR_TURNOVER,
-  MIRROR_CONTACT_WINDOW_S,
+  MIRROR_CONTACT_WINDOW_S, MIRROR_RATIO_FULL, MIRROR_AMBIENT_ALPHA, MIRROR_BASELINE_FLOOR,
 } from './tuning';
 export { MIRROR_DIAL_K, MIRROR_SMOOTH, MIRROR_DEADBAND, MIRROR_CONTACT_MIN, MIRROR_TURNOVER, MIRROR_CONTACT_WINDOW_S };
+
+/** VALORE 1–10 RELATIVO: di quanto il picco supera l'ambiente, in rapporto.
+ *  picco=ambiente → 0 · picco=2×ambiente → 5 (con RATIO_FULL=3) · picco≥RATIO_FULL×amb → 10. */
+export const mirrorValueFromRatio = (peakQ: number, baselineQ: number): number => {
+  const base = Math.max(baselineQ, MIRROR_BASELINE_FLOOR);
+  const v = 10 * (peakQ / base - 1) / (MIRROR_RATIO_FULL - 1);
+  return Math.max(0, Math.min(10, v));
+};
 
 export const mirrorReading = (q: number): number => Math.max(0, Math.min(10, q * MIRROR_DIAL_K));
 /** Lecture 0..10 → offset [-1,1] du cadran de l'aiguille (même géométrie que ClearDial/QuantumSphere). */
@@ -36,16 +44,31 @@ export class MirrorCycle {
   reached = false;
   /** Charge courante lissée. */
   liveQ = 0;
+  /** AMBIENTE: EMA lento della carica, aggiornato SEMPRE in vista MIRROR (anche da non armato). */
+  ambientQ = 0;
+  /** Ambiente FISSATO all'aggancio → riferimento del valore relativo. */
+  baselineQ = 0;
+  /** (a) VALORE 1–10 dell'item (RELATIVO all'ambiente), fissato al lock. */
+  valueR = 0;
 
   private smoothQ = 0;
   private hwQ = 0;
   private peakQ = 0;   // pic en cours de mesure, avant le figeage
   private armedAtS = 0;   // quand l'item a été donné — borne la fenêtre de contact
 
+  /** Da chiamare AD OGNI TICK in vista MIRROR (anche senza item armato): mantiene l'ambiente. */
+  track(q: number): void {
+    q = Math.max(0, q);
+    this.ambientQ = this.ambientQ === 0 ? q
+      : this.ambientQ * (1 - MIRROR_AMBIENT_ALPHA) + q * MIRROR_AMBIENT_ALPHA;
+  }
+
   /** AGGANCIO : on donne l'item → on commence à mesurer le contact de sa charge. */
   arm(nowS: number): void {
     this.armed = true;
     this.armedAtS = nowS;
+    this.baselineQ = Math.max(this.ambientQ, MIRROR_BASELINE_FLOOR);
+    this.valueR = 0;
     this.contactQ = 0;
     this.locked = false;
     this.dischargeQ = 0;
@@ -70,7 +93,8 @@ export class MirrorCycle {
       const turnedOver = this.smoothQ < MIRROR_TURNOVER * this.peakQ;
       const windowOver = (nowS - this.armedAtS) >= MIRROR_CONTACT_WINDOW_S;
       if (this.peakQ >= MIRROR_CONTACT_MIN && (turnedOver || windowOver)) {
-        this.contactQ = this.peakQ;   // valeur de l'item, figée
+        this.contactQ = this.peakQ;   // picco in qL (serve per smaltito/doppio)
+        this.valueR = mirrorValueFromRatio(this.peakQ, this.baselineQ);   // valore 1–10 RELATIVO
         this.locked = true;
         this.hwQ = this.peakQ;        // la descente depuis le pic compte déjà comme smaltito
       }
@@ -98,6 +122,9 @@ export class MirrorCycle {
   reset(): void {
     this.armed = false;
     this.armedAtS = 0;
+    this.ambientQ = 0;
+    this.baselineQ = 0;
+    this.valueR = 0;
     this.contactQ = 0;
     this.locked = false;
     this.dischargeQ = 0;

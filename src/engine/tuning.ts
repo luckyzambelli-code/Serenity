@@ -83,6 +83,17 @@ export const MIRROR_SMOOTH = 0.15;
 export const MIRROR_DEADBAND = 0.04;
 /** Picco minimo (qL) per riconoscere un VERO contatto di carica (sotto = rumore). */
 export const MIRROR_CONTACT_MIN = 0.08;
+/** SCALA RELATIVA del valore 1–10 (v1.0.376). In seduta il valore usciva SEMPRE 10: la carica
+ *  reale supera stabilmente qL=2 e la vecchia scala fissa (×5, saturazione a 10) era sbagliata in
+ *  partenza — stessa lezione della calibrazione TA: gli assoluti variano ~100× tra macchine e
+ *  persone. Ora il valore misura DI QUANTO la carica SALE rispetto all'AMBIENTE al momento
+ *  dell'item: picco = ambiente → 0 · picco = 2×ambiente → 5 · picco ≥ RATIO_FULL×ambiente → 10. */
+/** Rapporto picco/ambiente che vale FONDO SCALA (10). Da tarare in seduta. */
+export const MIRROR_RATIO_FULL = 3.0;
+/** EMA lento dell'ambiente (aggiornato ad ogni tick in vista MIRROR, anche da non armato). */
+export const MIRROR_AMBIENT_ALPHA = 0.02;
+/** Pavimento dell'ambiente (evita rapporti esplosivi quando la carica ambiente è ~0). */
+export const MIRROR_BASELINE_FLOOR = 0.05;
 /** Entro quanti secondi dall'aggancio si CHIUDE comunque la misura del contatto.
  *  Senza questo limite il picco cresceva SENZA FINE finché la carica non scendeva del 15%:
  *  il contatto "non avveniva" per molto tempo e, quando avveniva, catturava il massimo ASSOLUTO
