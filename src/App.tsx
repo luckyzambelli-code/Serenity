@@ -1052,7 +1052,7 @@ export default function App() {
       const readInst = mirrorCycle.valueR;                           // valore 1-10 RELATIVO all'ambiente
       // DIAGNOSTICA per la taratura: i numeri veri di questa macchina/persona nel journal.
       logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
-        text: `MIRROR contact: amb ${mirrorCycle.baselineQ.toFixed(2)} pic ${mirrorCycle.contactQ.toFixed(2)} (x${(mirrorCycle.contactQ / Math.max(mirrorCycle.baselineQ, 0.05)).toFixed(2)}) -> ${readInst.toFixed(1)}/10`,
+        text: `MIRROR contact: amb ${mirrorCycle.baselineQ.toFixed(2)} pic ${mirrorCycle.contactQ.toFixed(2)} (x${(mirrorCycle.contactQ / Math.max(mirrorCycle.baselineQ, 0.05)).toFixed(2)}) -> ${readInst.toFixed(1)}/10${mirrorCycle.peakAgeS > 0.15 ? ` · ${LC('picco preso', 'pic pris', 'peak taken', 'pico tomado', 'topp tagen')} ${mirrorCycle.peakAgeS.toFixed(1)}s ${LC('PRIMA dell\'item', 'AVANT l\'item', 'BEFORE the item', 'ANTES del ítem', 'FÖRE item')}` : ''}`,
         type: 'normal' });
       if (readInst > 0.1 || erased) {
         mirrorCyclesRef.current.push({ n: cur.n, question: cur.question, tStartSec: cur.tStartSec, tEndSec: timeRef.current,
@@ -1661,7 +1661,7 @@ export default function App() {
         // effective = pic ; on efface quand le smaltito cumulé = 2× la valeur effective.
         if (viewModeRef.current === 'mirror') {
           // l'AMBIENTE si misura sempre (anche senza item): è il riferimento del valore relativo
-          mirrorCycle.track(_validSignal ? qL : 0);
+          mirrorCycle.track(_validSignal ? qL : 0, timeRef.current);
         }
         if (viewModeRef.current === 'mirror' && mirrorArmedRef.current) {
           mirrorCycle.update(_validSignal ? qL : 0, timeRef.current);

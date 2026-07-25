@@ -94,6 +94,21 @@ export const MIRROR_RATIO_FULL = 3.0;
 export const MIRROR_AMBIENT_ALPHA = 0.02;
 /** Pavimento dell'ambiente (evita rapporti esplosivi quando la carica ambiente è ~0). */
 export const MIRROR_BASELINE_FLOOR = 0.05;
+/** MIRROR — RETROSPEZIONE al momento in cui si dà l'item. Il preclear ha spesso GIÀ pensato
+ *  l'item prima che l'auditor prema il pulsante, e l'EEG coglie la reazione prima ancora che il
+ *  corpo la manifesti: quando si arma, il picco vero è quindi spesso GIÀ PASSATO e misurare solo
+ *  "da adesso in poi" dà un valore troppo basso. Si guarda quindi indietro di questi secondi e si
+ *  prende la carica PIÙ FORTE. Stesso principio del read istantaneo (−ms) e della CAPTURE del MNA.
+ *  TARABILE: più lungo = si risale più indietro (rischio di prendere una carica di un altro
+ *  pensiero); più corto = si rischia di mancare il picco reale. */
+export const MIRROR_LOOKBACK_S = 4;
+/** Quanto il picco deve superare l'AMBIENTE per contare come VERO contatto di carica.
+ *  Regola RELATIVA, coerente col resto di MIRROR: una carica conta perché SALE sopra il livello
+ *  abituale della persona, non perché supera un numero assoluto. Serve sia alla retrospezione
+ *  (un picco anteriore dev'essere una vera salita) sia al congelamento del valore — senza questa
+ *  guardia il semplice livello ambiente veniva preso per un picco e la misura si bloccava subito.
+ *  1.2 = almeno il 20% sopra l'ambiente. TARABILE. */
+export const MIRROR_CONTACT_RISE_RATIO = 1.2;
 /** Entro quanti secondi dall'aggancio si CHIUDE comunque la misura del contatto.
  *  Senza questo limite il picco cresceva SENZA FINE finché la carica non scendeva del 15%:
  *  il contatto "non avveniva" per molto tempo e, quando avveniva, catturava il massimo ASSOLUTO

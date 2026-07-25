@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { MirrorCycle, mirrorReading, mirrorOffset, mirrorValueFromRatio } from '../MirrorCycle';
-import { MIRROR_DIAL_K, MIRROR_CONTACT_MIN, MIRROR_TURNOVER, MIRROR_CONTACT_WINDOW_S } from '../tuning';
+import { MIRROR_DIAL_K, MIRROR_CONTACT_MIN, MIRROR_TURNOVER, MIRROR_CONTACT_WINDOW_S,
+         MIRROR_LOOKBACK_S } from '../tuning';
 
 /**
  * MIRROR — metodo del doppio (Ron), modello a/b/c:
@@ -14,9 +15,12 @@ let clock = 0;
 /** Prepara l'AMBIENTE (riferimento del valore relativo) e aggancia. */
 const armAt = (c: MirrorCycle, ambient = 0.1) => {
   clock = 0;
-  for (let i = 0; i < 80; i++) c.track(ambient);
-  c.arm(0);
+  for (let i = 0; i < 80; i++) { clock += 0.05; c.track(ambient, clock); }
+  c.arm(clock);
 };
+/** Alimenta SOLO l'ambiente/lo storico (item non ancora dato) — come in vista MIRROR a riposo. */
+const idle = (c: MirrorCycle, values: number[]) =>
+  values.forEach(v => { clock += 0.05; c.track(v, clock); });
 /** Alimenta il ciclo con una serie di cariche (un tick per valore). */
 const feed = (c: MirrorCycle, values: number[]) => values.forEach(v => { clock += 0.05; c.update(v, clock); });
 /** Ripete un valore n volte — serve perché la carica è LISCIATA (EMA) prima di essere usata. */
@@ -116,6 +120,46 @@ describe('MirrorCycle', () => {
   // ── DIFETTO OSSERVATO IN SEDUTA: « il contatto non avviene, poi avviene ma sempre a 10 » ──
   // Il picco cresceva senza limite di tempo finché la carica non scendeva del 15%: con una carica
   // che sale a lungo, catturava il massimo ASSOLUTO → valore saturo. La finestra di contatto chiude.
+  it('RETROSPEZIONE: prende il picco dei secondi PRIMA dell item (il PC ci ha già pensato)', () => {
+    // Il preclear pensa l'item PRIMA che l'auditor prema: la carica sale e ricomincia a scendere,
+    // POI si arma. Senza retrospezione il picco vero sarebbe perso e il valore troppo basso.
+    const c = new MirrorCycle();
+    clock = 0;
+    idle(c, hold(0.2, 60));            // ambiente calmo
+    idle(c, hold(1.6, 40));            // il PC pensa l'item → forte salita (~2 s prima)
+    idle(c, hold(0.5, 20));            // ricomincia a scendere
+    c.arm(clock);                      // l'auditor preme SOLO ADESSO
+    feed(c, hold(0.5, 10));
+    expect(c.locked).toBe(true);       // la carica è già ridiscesa → si fissa subito
+    expect(c.contactQ).toBeGreaterThan(1.0);   // il picco d'PRIMA è stato recuperato
+    expect(c.peakAgeS).toBeGreaterThan(0.5);   // e si sa che veniva da prima
+  });
+
+  it('senza retrospezione il picco sarebbe perso (contro-prova)', () => {
+    // Stessa scena ma il picco è FUORI dalla finestra → non deve essere recuperato.
+    const c = new MirrorCycle();
+    clock = 0;
+    idle(c, hold(1.6, 40));                                  // picco molto vecchio
+    idle(c, hold(0.2, Math.ceil(MIRROR_LOOKBACK_S / 0.05) + 20));  // poi calma, oltre la finestra
+    c.arm(clock);
+    feed(c, hold(0.2, 20));
+    expect(c.contactQ).toBeLessThan(1.0);   // il vecchio picco NON è stato preso
+  });
+
+  it('la retrospezione non risale nel ciclo PRECEDENTE', () => {
+    const c = new MirrorCycle();
+    clock = 0;
+    idle(c, hold(0.2, 60));
+    c.arm(clock);
+    feed(c, hold(2.0, 40));            // carica FORTE appartenente all item 1
+    feed(c, hold(0.2, 20));
+    c.disarm();                        // VALIDA → fine del ciclo 1
+    idle(c, hold(0.2, 10));            // breve calma
+    c.arm(clock);                      // item 2, subito dopo
+    feed(c, hold(0.2, 20));
+    expect(c.contactQ).toBeLessThan(1.0);   // non ha rubato la carica dell item 1
+  });
+
   it('CHIUDE la misura entro la finestra anche se la carica non ridiscende mai', () => {
     const c = new MirrorCycle();
     armAt(c);
@@ -130,8 +174,8 @@ describe('MirrorCycle', () => {
     // OGNI item usciva 10. Ora il valore è RELATIVO all'ambiente della persona/macchina.
     const c = new MirrorCycle();
     armAt(c, 2.5);                     // ambiente già altissimo per la vecchia scala
-    feed(c, hold(3.0, 60));            // l'item fa salire la carica del ~20%
-    feed(c, hold(2.5, 60));            // e ridiscende
+    feed(c, hold(3.5, 60));            // l'item fa salire la carica del ~40%: vero contatto…
+    feed(c, hold(2.5, 60));            // …ma modesto in proporzione; poi ridiscende
     expect(c.locked).toBe(true);
     expect(c.valueR).toBeGreaterThan(0);
     expect(c.valueR).toBeLessThan(4);  // salita modesta → valore basso, NON 10
@@ -157,9 +201,10 @@ describe('MirrorCycle', () => {
   it('un contatto NETTO resta più rapido della finestra (il ribaltamento vince)', () => {
     const c = new MirrorCycle();
     armAt(c);
+    const armedAt = clock;    // il tempo si conta DALL AGGANCIO, non dall inizio del test
     feed(c, hold(1.0, 40));   // 2 s
     feed(c, hold(0, 20));     // ridiscende → deve bloccare SUBITO, non attendere la finestra
     expect(c.locked).toBe(true);
-    expect(clock).toBeLessThan(MIRROR_CONTACT_WINDOW_S);
+    expect(clock - armedAt).toBeLessThan(MIRROR_CONTACT_WINDOW_S);
   });
 });

@@ -17,6 +17,7 @@
 import {
   MIRROR_DIAL_K, MIRROR_SMOOTH, MIRROR_DEADBAND, MIRROR_CONTACT_MIN, MIRROR_TURNOVER,
   MIRROR_CONTACT_WINDOW_S, MIRROR_RATIO_FULL, MIRROR_AMBIENT_ALPHA, MIRROR_BASELINE_FLOOR,
+  MIRROR_LOOKBACK_S, MIRROR_CONTACT_RISE_RATIO,
 } from './tuning';
 export { MIRROR_DIAL_K, MIRROR_SMOOTH, MIRROR_DEADBAND, MIRROR_CONTACT_MIN, MIRROR_TURNOVER, MIRROR_CONTACT_WINDOW_S };
 
@@ -50,17 +51,35 @@ export class MirrorCycle {
   baselineQ = 0;
   /** (a) VALORE 1–10 dell'item (RELATIVO all'ambiente), fissato al lock. */
   valueR = 0;
+  /** Da quanti secondi PRIMA dell'item proviene il picco trattenuto (0 = preso dopo l'item).
+   *  Serve a dire onestamente all'auditor che la carica era già lì quando ha premuto. */
+  peakAgeS = 0;
 
   private smoothQ = 0;
   private hwQ = 0;
   private peakQ = 0;   // pic en cours de mesure, avant le figeage
   private armedAtS = 0;   // quand l'item a été donné — borne la fenêtre de contact
+  /** Charge lissée suivie EN CONTINU, même hors cycle : alimente la rétrospection. */
+  private preSmoothQ = 0;
+  /** Historique court de la charge lissée (pour regarder en arrière au moment de l'aggancio). */
+  private hist: Array<{ t: number; q: number }> = [];
+  private lastTickS = 0;
+  /** Fin du cycle précédent : la rétrospection ne remonte JAMAIS au-delà, sinon un item
+   *  s'attribuerait la charge de l'item d'avant (même règle que pour les reads d'ASSESSMENT). */
+  private cycleEndS = -Infinity;
 
-  /** Da chiamare AD OGNI TICK in vista MIRROR (anche senza item armato): mantiene l'ambiente. */
-  track(q: number): void {
+  /** Da chiamare AD OGNI TICK in vista MIRROR (anche senza item armato): mantiene l'ambiente
+   *  E lo storico corto della carica, che serve alla RETROSPEZIONE quando si dà l'item. */
+  track(q: number, nowS = 0): void {
     q = Math.max(0, q);
+    this.lastTickS = nowS;
     this.ambientQ = this.ambientQ === 0 ? q
       : this.ambientQ * (1 - MIRROR_AMBIENT_ALPHA) + q * MIRROR_AMBIENT_ALPHA;
+    // carica lisciata seguita in continuo (stessa lisciatura di quella usata da armati)
+    this.preSmoothQ = this.preSmoothQ * (1 - MIRROR_SMOOTH) + q * MIRROR_SMOOTH;
+    this.hist.push({ t: nowS, q: this.preSmoothQ });
+    const cut = nowS - MIRROR_LOOKBACK_S;
+    while (this.hist.length && this.hist[0].t < cut) this.hist.shift();
   }
 
   /** AGGANCIO : on donne l'item → on commence à mesurer le contact de sa charge. */
@@ -73,10 +92,23 @@ export class MirrorCycle {
     this.locked = false;
     this.dischargeQ = 0;
     this.reached = false;
-    this.liveQ = 0;
-    this.smoothQ = 0;
     this.hwQ = 0;
-    this.peakQ = 0;
+
+    // ── RETROSPEZIONE ────────────────────────────────────────────────────────────────────
+    // Il preclear ha spesso già pensato l'item PRIMA che si prema il pulsante. Si riparte
+    // quindi dal picco delle ultime secondi — MAI oltre la fine del ciclo precedente.
+    const from = Math.max(nowS - MIRROR_LOOKBACK_S, this.cycleEndS);
+    let best = 0, bestT = nowS;
+    for (const h of this.hist) if (h.t >= from && h.q > best) { best = h.q; bestT = h.t; }
+    // Il picco anteriore conta SOLO se è una vera SALITA sopra l'ambiente: altrimenti si
+    // riprenderebbe il livello ambiente come « picco » e la misura si bloccherebbe subito a 0.
+    const isRealPriorRead = best > this.baselineQ * MIRROR_CONTACT_RISE_RATIO;
+    this.peakQ = isRealPriorRead ? best : 0;
+    this.peakAgeS = isRealPriorRead ? Math.max(0, nowS - bestT) : 0;
+    // Si riprende dal livello CORRENTE (non da zero): altrimenti la carica lisciata dovrebbe
+    // risalire da 0 e i primi secondi sarebbero falsati.
+    this.smoothQ = this.preSmoothQ;
+    this.liveQ = this.smoothQ;
   }
 
   update(q: number, nowS: number): void {
@@ -92,7 +124,13 @@ export class MirrorCycle {
       // dell'item è quella che compare SUBITO dopo averlo dato, non il massimo di sempre.
       const turnedOver = this.smoothQ < MIRROR_TURNOVER * this.peakQ;
       const windowOver = (nowS - this.armedAtS) >= MIRROR_CONTACT_WINDOW_S;
-      if (this.peakQ >= MIRROR_CONTACT_MIN && (turnedOver || windowOver)) {
+      // Perché ci sia CONTATTO servono DUE cose: superare il rumore di fondo (soglia assoluta) ed
+      // essere una vera SALITA sopra l'ambiente della persona (soglia relativa). La seconda è
+      // indispensabile da quando la misura riparte dal livello corrente invece che da zero:
+      // altrimenti l'ambiente stesso passerebbe per un picco.
+      const aboveNoise = this.peakQ >= MIRROR_CONTACT_MIN;
+      const aboveAmbient = this.peakQ >= this.baselineQ * MIRROR_CONTACT_RISE_RATIO;
+      if (aboveNoise && aboveAmbient && (turnedOver || windowOver)) {
         this.contactQ = this.peakQ;   // picco in qL (serve per smaltito/doppio)
         this.valueR = mirrorValueFromRatio(this.peakQ, this.baselineQ);   // valore 1–10 RELATIVO
         this.locked = true;
@@ -117,11 +155,18 @@ export class MirrorCycle {
     return this.locked && target > 1e-6 ? Math.min(1, this.dischargeQ / target) : 0;
   }
 
-  disarm(): void { this.armed = false; }
+  /** Fine del ciclo: si memorizza l'istante perché la retrospezione del PROSSIMO item
+   *  non risalga dentro questo ciclo. */
+  disarm(): void { this.armed = false; this.cycleEndS = this.lastTickS; }
 
   reset(): void {
     this.armed = false;
     this.armedAtS = 0;
+    this.preSmoothQ = 0;
+    this.hist = [];
+    this.lastTickS = 0;
+    this.cycleEndS = -Infinity;
+    this.peakAgeS = 0;
     this.ambientQ = 0;
     this.baselineQ = 0;
     this.valueR = 0;
