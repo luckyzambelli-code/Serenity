@@ -84,7 +84,7 @@ export function Sidebar({
       {/* CONFIG — icône en RELIEF sur pastille ronde en verre (comme le pouce lune/soleil). */}
       <button
         onClick={() => toggleDrawer('config')}
-        title="Settings"
+        title={t('tip_settings')}
         style={{
           width: 84, height: 84, borderRadius: 14, border: 'none',
           background: 'transparent',
@@ -121,7 +121,7 @@ export function Sidebar({
           <button
             className={`smbtn${active ? ' is-active' : ''}`}
             onClick={() => toggleDrawer('link')}
-            title="Sessione"
+            title={t('tip_session')}
             style={{ height: 'auto', minHeight: 168, paddingTop: 9, paddingBottom: 10, justifyContent: 'flex-start', gap: 2 }}
           >
             <div className="smbtn-icon" style={{ color: modeColor }}>

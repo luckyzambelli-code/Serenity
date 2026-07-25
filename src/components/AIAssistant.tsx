@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { pick5 } from '../i18n5';
 import { Brain, ChevronRight, Send, Loader2, X, Settings } from 'lucide-react';
 import { useUiStore } from '../store/uiStore';
 import { GlassCollapseToggle } from './GlassCollapseToggle';
@@ -337,7 +338,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ lang, sessionContext }
                 <Settings size={14} />
               </button>
               {/* Fermeture en MINI TOGGLE (cohérence graphique) : on = fenêtre ouverte. */}
-              <GlassCollapseToggle on onToggle={() => setIsOpen(false)} title="Fermer" />
+              <GlassCollapseToggle on onToggle={() => setIsOpen(false)} title={pick5(lang, 'Chiudi', 'Fermer', 'Close', 'Cerrar', 'Stäng')} />
             </div>
           </div>
 

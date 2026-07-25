@@ -143,7 +143,7 @@ export function ProcessusModal({
               </p>
             </div>
             {/* Fermeture en MINI TOGGLE (cohérence graphique) : on = panneau ouvert. */}
-            <GlassCollapseToggle on onToggle={() => { onClose(); setPendingFiles([]); setPendingTagInput(''); }} title="Fermer" />
+            <GlassCollapseToggle on onToggle={() => { onClose(); setPendingFiles([]); setPendingTagInput(''); }} title={t('tip_close')} />
           </div>
 
           {/* FIX #2: tag chips on their OWN full-width row — bigger, themed, with per-tag counts */}
@@ -198,7 +198,7 @@ export function ProcessusModal({
                       <button
                         onClick={() => setProcessusTagFilter(tag)}
                         onDoubleClick={() => { setEditingTag(tag); setEditingTagValue(tag); }}
-                        title="Cliquer pour filtrer · Double-clic pour renommer"
+                        title={t('tip_filter_rename')}
                         className="px-3.5 py-1.5 rounded-full text-[11px] font-mono tracking-widest uppercase transition-all flex items-center gap-1.5"
                         style={chipStyle(processusTagFilter === tag)}>
                         ⬡ {tag}

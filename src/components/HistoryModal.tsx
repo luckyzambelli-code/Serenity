@@ -258,7 +258,7 @@ export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps
                 <Trash2 size={12}/> {selected.size}
               </button>
             )}
-            <GlassCollapseToggle on onToggle={onClose} title="Fermer" />
+            <GlassCollapseToggle on onToggle={onClose} title={t('tip_close') as string} />
           </div>
         </div>
 
@@ -360,19 +360,19 @@ export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps
                           {pdfMap[session.id] && (
                             <>
                               <button onClick={() => openPdf(session)}
-                                title="Voir le rapport"
+                                title={t('tip_view_report') as string}
                                 className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 bg-slate-700 text-slate-100 rounded-lg hover:bg-slate-600 border border-slate-500 shadow-sm transition-colors">
                                 👁 View
                               </button>
                               <button onClick={() => downloadPdf(session)}
-                                title="Télécharger le PDF"
+                                title={t('tip_download_pdf') as string}
                                 className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 bg-cyan-700 text-white rounded-lg hover:bg-cyan-600 border border-cyan-500 shadow-sm transition-colors">
                                 ⬇ PDF
                               </button>
                             </>
                           )}
                           <button onClick={async e => { e.stopPropagation(); if (confirm('Supprimer cette session ?')) await deleteSessionById(session.id); }}
-                            title="Supprimer"
+                            title={t('tip_delete') as string}
                             className="flex items-center gap-1 text-xs font-semibold px-2 py-1 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 border border-red-200 shadow-sm transition-colors">
                             <Trash2 size={13}/>
                           </button>

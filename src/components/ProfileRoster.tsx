@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
+import { pick5 } from '../i18n5';
 import { UserRound, Eye, Plus, Pencil, Star, X, Camera, Upload, Trash2, Check } from 'lucide-react';
 import {
   UserProfile, getProfiles, getSessions, getSessionsByProfile, saveProfile, deleteProfile,
@@ -194,7 +195,7 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
         <p style={{ fontSize: 11, letterSpacing: '0.34em', color: 'rgba(200,214,234,0.6)', marginTop: 6 }}>
           {L('GESTIONE · SCEGLI O CREA', 'GESTION · CHOISIR OU CRÉER', 'MANAGE · SELECT OR CREATE')}
         </p>
-        <button onClick={() => setShowRoster(false)} title="Fermer" style={{ position: 'absolute', right: 0, top: -4, width: 38, height: 38, borderRadius: 10, border: '1px solid rgba(255,255,255,0.22)', background: 'rgba(255,255,255,0.06)', color: 'rgba(240,246,255,0.85)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={20} /></button>
+        <button onClick={() => setShowRoster(false)} title={pick5(lang, 'Chiudi', 'Fermer', 'Close', 'Cerrar', 'Stäng')} style={{ position: 'absolute', right: 0, top: -4, width: 38, height: 38, borderRadius: 10, border: '1px solid rgba(255,255,255,0.22)', background: 'rgba(255,255,255,0.06)', color: 'rgba(240,246,255,0.85)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={20} /></button>
       </div>
 
       <div style={{ flex: 1, marginTop: 20, borderRadius: 20, padding: 24, overflowY: 'auto', border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 10px 34px rgba(0,0,0,0.45)' }}>
@@ -220,8 +221,8 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
                     <Row l="Langue" v={(p.preferences?.lang || '—').toUpperCase()} />
                   </div>
                   <div style={{ position: 'absolute', right: 10, bottom: 8, display: 'flex', gap: 6 }}>
-                    <button onClick={(e) => { e.stopPropagation(); setEdit({ kind: 'auditor', id: p.id, name: p.name, photo: p.photo, sex: p.sex }); }} title="Modifier" style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid rgba(255,255,255,0.22)', background: 'rgba(255,255,255,0.06)', color: 'rgba(240,246,255,0.8)', cursor: 'pointer' }}><Pencil size={12} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); removeAuditor(p.id); }} title="Supprimer" style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.04)', color: 'rgba(240,246,255,0.6)', cursor: 'pointer' }}><Trash2 size={12} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); setEdit({ kind: 'auditor', id: p.id, name: p.name, photo: p.photo, sex: p.sex }); }} title={pick5(lang, 'Modifica', 'Modifier', 'Edit', 'Editar', 'Redigera')} style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid rgba(255,255,255,0.22)', background: 'rgba(255,255,255,0.06)', color: 'rgba(240,246,255,0.8)', cursor: 'pointer' }}><Pencil size={12} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); removeAuditor(p.id); }} title={pick5(lang, 'Elimina', 'Supprimer', 'Delete', 'Eliminar', 'Ta bort')} style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.04)', color: 'rgba(240,246,255,0.6)', cursor: 'pointer' }}><Trash2 size={12} /></button>
                   </div>
                   {active && <Star size={12} style={{ position: 'absolute', right: 78, bottom: 13, color: 'rgba(255,255,255,0.85)' }} />}
                 </div>
@@ -251,8 +252,8 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
                   <div style={{ fontSize: 22, fontWeight: 700, color: 'rgba(240,246,255,0.95)', marginTop: 5 }}>{pc.name}</div>
                   <div style={{ marginTop: 7 }}><Row l={L('Creato', 'Créé')} v={fmtDate(pc.createdAt)} /></div>
                   <div style={{ position: 'absolute', right: 10, bottom: 8, display: 'flex', gap: 6 }}>
-                    <button onClick={(e) => { e.stopPropagation(); setEdit({ kind: 'pc', id: pc.id, name: pc.name, photo: pc.photo, sex: pc.sex }); }} title="Modifier" style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid rgba(255,255,255,0.22)', background: 'rgba(255,255,255,0.06)', color: 'rgba(240,246,255,0.8)', cursor: 'pointer' }}><Pencil size={12} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); removePc(pc.id); }} title="Supprimer" style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.04)', color: 'rgba(240,246,255,0.6)', cursor: 'pointer' }}><Trash2 size={12} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); setEdit({ kind: 'pc', id: pc.id, name: pc.name, photo: pc.photo, sex: pc.sex }); }} title={pick5(lang, 'Modifica', 'Modifier', 'Edit', 'Editar', 'Redigera')} style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid rgba(255,255,255,0.22)', background: 'rgba(255,255,255,0.06)', color: 'rgba(240,246,255,0.8)', cursor: 'pointer' }}><Pencil size={12} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); removePc(pc.id); }} title={pick5(lang, 'Elimina', 'Supprimer', 'Delete', 'Eliminar', 'Ta bort')} style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.04)', color: 'rgba(240,246,255,0.6)', cursor: 'pointer' }}><Trash2 size={12} /></button>
                   </div>
                 </div>
               </div>

@@ -97,7 +97,7 @@ export function SidebarDrawer(props: SidebarDrawerProps) {
           {drawer === 'config'  && 'Interface'}
         </span>
         {/* Fermeture du panneau en MINI TOGGLE (cohérence graphique) : on = panneau ouvert. */}
-        <GlassCollapseToggle on onToggle={onClose} title="Fermer" />
+        <GlassCollapseToggle on onToggle={onClose} title={t('tip_close')} />
       </div>
 
       {/* CONN-99: the SESSIONE hub is now just mode + connection + the big
@@ -717,7 +717,7 @@ function ConfigDrawer({ t, theme, lang }: SubProps) {
               ...tile(isActiveNone),
               background: isLightTheme
                 ? 'linear-gradient(135deg,#dde1e8,#c9ced8)'
-                : 'linear-gradient(135deg,#2e2e33,#1e1e22)' }} title="Interface">
+                : 'linear-gradient(135deg,#2e2e33,#1e1e22)' }} title={t('tip_interface')}>
               <span style={{ fontSize: 9, fontFamily: 'monospace', color: isLightTheme ? '#1e293b' : 'rgba(240,246,255,0.85)', letterSpacing: '0.05em' }}>{
                 lang === 'fr' ? 'DÉFAUT' : lang === 'it' ? 'DEFAULT' : lang === 'es' ? 'DEFECTO' : lang === 'sv' ? 'STANDARD' : 'DEFAULT'
               }</span>

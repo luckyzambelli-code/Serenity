@@ -1,6 +1,7 @@
 import React from 'react';
 import type { EpValidationConditions } from '../hooks/useEpValidation';
 import { GlassCollapseToggle } from './GlassCollapseToggle';
+import { useI18n } from '../i18n';
 
 interface EpValidationModalProps {
   epValidationConditions: EpValidationConditions;
@@ -14,6 +15,7 @@ export function EpValidationModal({
   epValidationConditions, recentPcPhrases, epValidationStartTime,
   onValidate, onClose,
 }: EpValidationModalProps) {
+  const { t } = useI18n();
   return (
     <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6">
       <div
@@ -26,7 +28,7 @@ export function EpValidationModal({
             <div className="w-3 h-3 bg-white/80 rounded-full animate-pulse" />
             EP VALIDATION
           </h3>
-          <GlassCollapseToggle on onToggle={onClose} title="Fermer" />
+          <GlassCollapseToggle on onToggle={onClose} title={t('tip_close') as string} />
         </div>
 
         {/* Conditions Status */}

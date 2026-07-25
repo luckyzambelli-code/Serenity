@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { GlassCollapseToggle } from './GlassCollapseToggle';
 import { PANEL3D, glassSurface, type Tilt } from '../ui/panel3d';
+import { useI18n } from '../i18n';
 
 /**
  * Panel3D — WRAPPER de présentation réutilisable pour la refonte "verre en perspective".
@@ -26,6 +27,7 @@ export function Panel3D({
   style?: React.CSSProperties;
   bodyStyle?: React.CSSProperties;
 }) {
+  const { t } = useI18n();
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const g = isLightTheme ? PANEL3D.glass.light : PANEL3D.glass.dark;
   const iconBtn: React.CSSProperties = {
@@ -41,7 +43,7 @@ export function Panel3D({
           {title}
         </span>
         {onReset && (
-          <button onClick={onReset} title="Réinitialiser" style={{ ...iconBtn, fontSize: 12 }}>⤾</button>
+          <button onClick={onReset} title={t('tip_reset') as string} style={{ ...iconBtn, fontSize: 12 }}>⤾</button>
         )}
         <GlassCollapseToggle on={!collapsed} onToggle={() => setCollapsed(c => !c)} />
         {void onHide}

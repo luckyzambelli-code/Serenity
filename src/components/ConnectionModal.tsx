@@ -200,7 +200,7 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
                       {/* Lien — cliquable */}
                       <div
                         onClick={handleCopy}
-                        title="Cliquer pour copier"
+                        title={t('tip_copy') as string}
                         style={{
                           flex: 1, padding: '16px 18px',
                           background: 'rgba(0,0,0,0.5)',

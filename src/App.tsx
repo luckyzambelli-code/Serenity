@@ -4487,7 +4487,7 @@ export default function App() {
           {appMode !== 'local' && (
             <div
               onClick={() => setShowConnectionModal(true)}
-              title="Cliquer pour ouvrir la fenêtre de connexion"
+              title={t('tip_open_connection') as string}
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 // FIX CONN-32: badge is ALWAYS at the large size now (the user
@@ -5177,7 +5177,7 @@ export default function App() {
                     VALIDATE EP
                   </button>
                   {/* Rejet de la suggestion EP en MINI TOGGLE (cohérence graphique). */}
-                  <GlassCollapseToggle on onToggle={() => { setEpWindowOpen(false); if (epWindowTimerRef.current) clearTimeout(epWindowTimerRef.current); }} title="Fermer" />
+                  <GlassCollapseToggle on onToggle={() => { setEpWindowOpen(false); if (epWindowTimerRef.current) clearTimeout(epWindowTimerRef.current); }} title={t('tip_close') as string} />
                 </div>
               </div>
             )}
@@ -5220,7 +5220,7 @@ export default function App() {
                       </div>
                     </div>
                     {/* Fermeture EP en MINI TOGGLE (cohérence graphique) : on = panneau ouvert. */}
-                    <GlassCollapseToggle on onToggle={() => setEpManualOpen(false)} title="Fermer" />
+                    <GlassCollapseToggle on onToggle={() => setEpManualOpen(false)} title={t('tip_close') as string} />
                   </div>
 
                   {/* Réaction aiguille */}
