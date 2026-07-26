@@ -432,7 +432,7 @@ export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps
                             <span style={{color:'#10b981'}}>Diss. {dissStr} · {dissPct}%</span>
                           </div>
                           <div className="flex h-1.5 w-full rounded-full overflow-hidden" style={{ background: 'rgba(251,94,59,0.3)' }}>
-                            <div style={{ width: `${dissPct}%`, background: '#10b981' }} title={`${dissPct}% dissolved`} />
+                            <div style={{ width: `${dissPct}%`, background: '#10b981' }} title={`${dissPct}% ${t('tip_discharged')}`} />
                           </div>
                         </div>
                       )}

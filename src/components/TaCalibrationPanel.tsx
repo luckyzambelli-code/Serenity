@@ -38,7 +38,10 @@ function fitCalibration(pairs: Pair[]): TaCalibration | null {
 }
 
 export function TaCalibrationPanel({ lang = 'it', onClose }: { lang?: string; onClose: () => void }) {
-  const L = (it: string, fr: string, en: string) => (lang === 'it' ? it : lang === 'fr' ? fr : en);
+  // es/sv sont FACULTATIFS : les appels à 3 langues déjà en place continuent de retomber sur
+  // l'anglais, et on peut donner les 5 là où c'est utile — sans toucher tous les appels.
+  const L = (it: string, fr: string, en: string, es?: string, sv?: string) =>
+    lang === 'it' ? it : lang === 'fr' ? fr : lang === 'es' ? (es ?? en) : lang === 'sv' ? (sv ?? en) : en;
 
   // Valeurs de calibration (sliders) — initialisées depuis l'accumulateur, sauvées à chaque change.
   const [cal, setCal] = useState<TaCalibration>(() => taAccumulator.getCalibration());
@@ -148,7 +151,7 @@ export function TaCalibrationPanel({ lang = 'it', onClose }: { lang?: string; on
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase' }}>{L('Calibrazione TA', 'Calibrage TA', 'TA calibration')}</span>
-          <GlassCollapseToggle on onToggle={onClose} title={L('Chiudi', 'Fermer', 'Close')} />
+          <GlassCollapseToggle on onToggle={onClose} title={L('Chiudi', 'Fermer', 'Close', 'Cerrar', 'Stäng')} />
         </div>
 
         {/* Live readouts */}

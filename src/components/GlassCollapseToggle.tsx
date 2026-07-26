@@ -1,5 +1,6 @@
 import React from 'react';
 import { useUiStore } from '../store/uiStore';
+import { useI18n } from '../i18n';
 
 /**
  * GlassCollapseToggle — mini interrupteur en VERRE (même matière que le "Glass Toggle" de thème)
@@ -14,13 +15,16 @@ export function GlassCollapseToggle({
   title?: string;
 }) {
   const isLightTheme = useUiStore(s => s.isLightTheme);
+  const { t } = useI18n();
+  // Ce toggle est sur CHAQUE panneau repliable : son infobulle doit suivre la langue choisie.
+  const tip = title || (t(on ? 'tip_collapse' : 'tip_expand') as string);
   const W = 42, H = 22, THUMB = 26;
   return (
     <button
       type="button"
       onClick={onToggle}
-      aria-label={title || (on ? 'Réduire' : 'Développer')}
-      title={title || (on ? 'Réduire' : 'Développer')}
+      aria-label={tip}
+      title={tip}
       style={{ position: 'relative', width: W, height: H, border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, flexShrink: 0 }}
     >
       {/* piste creuse */}

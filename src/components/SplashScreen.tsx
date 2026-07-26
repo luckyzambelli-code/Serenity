@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { creditLines, creditCopyright } from '../credits';
+import { useI18n } from '../i18n';
 
 interface SplashScreenProps { onDismiss: () => void; }
 
@@ -13,6 +15,11 @@ export function SplashScreen({ onDismiss }: SplashScreenProps) {
   // Stable ref so timers are never reset by App re-renders
   const onDismissRef = useRef(onDismiss);
   useEffect(() => { onDismissRef.current = onDismiss; }, [onDismiss]);
+  // La boucle de dessin est montée UNE fois : la langue passe par une ref pour que les
+  // crédits suivent la langue choisie sans jamais relancer l'animation.
+  const { lang } = useI18n();
+  const langRef = useRef(lang);
+  useEffect(() => { langRef.current = lang; }, [lang]);
 
   useEffect(() => {
     const img = new Image();
@@ -340,6 +347,43 @@ export function SplashScreen({ onDismiss }: SplashScreenProps) {
       ctx.font = '400 8px monospace'; ctx.fillStyle = 'rgba(255,255,255,0.30)';
       ctx.textAlign = 'center';
       ctx.fillText(msgs[Math.min(Math.floor(progress * msgs.length), msgs.length - 1)], cx, barY + 14);
+
+      // ── CRÉDITS ────────────────────────────────────────────────────────────────
+      // Mêmes textes que la fenêtre ouverte par le logo (source unique : credits.ts).
+      // Ils apparaissent en fondu pour ne pas « sauter » à l'écran.
+      {
+        const fade = Math.min(1, Math.max(0, (t - 0.6) / 0.8));
+        if (fade > 0) {
+          ctx.save();
+          ctx.textAlign = 'center';
+          const lines = creditLines(langRef.current);
+          const cr    = creditCopyright(langRef.current);
+          const LH    = 13;                                  // interligne
+          let y = H - 24 - LH * lines.length;                // bloc calé en bas
+          for (const l of lines) {
+            ctx.font = '400 8px monospace';
+            ctx.fillStyle = `rgba(255,255,255,${0.30 * fade})`;
+            const lab = `${l.label.toUpperCase()}  ·  `;
+            const labW = ctx.measureText(lab).width;
+            ctx.font = '600 9px monospace';
+            const valW = ctx.measureText(l.value).width;
+            const x0 = cx - (labW + valW) / 2;               // libellé + nom centrés ensemble
+            ctx.textAlign = 'left';
+            ctx.font = '400 8px monospace';
+            ctx.fillStyle = `rgba(255,255,255,${0.30 * fade})`;
+            ctx.fillText(lab, x0, y);
+            ctx.font = '600 9px monospace';
+            ctx.fillStyle = `rgba(255,255,255,${0.62 * fade})`;
+            ctx.fillText(l.value, x0 + labW, y);
+            y += LH;
+          }
+          ctx.textAlign = 'center';
+          ctx.font = '600 8px monospace';
+          ctx.fillStyle = `rgba(255,255,255,${0.42 * fade})`;
+          ctx.fillText(`${cr.label}  ${cr.value}`, cx, y + 3);
+          ctx.restore();
+        }
+      }
 
       // keep bpm referenced (silences unused-var without changing visuals)
       void bpm;

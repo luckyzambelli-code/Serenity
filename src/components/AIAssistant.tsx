@@ -199,7 +199,11 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ lang, sessionContext }
           {/* Bouton API Key — bien visible */}
           <button
             onClick={(e) => { e.stopPropagation(); setShowKeyConfig(v => !v); }}
-            title={apiKey ? 'Gemini API key configured' : labels.configKey}
+            title={apiKey
+              ? pick5(lang, 'Chiave API Gemini configurata', 'Clé API Gemini configurée',
+                      'Gemini API key configured', 'Clave API Gemini configurada',
+                      'Gemini API-nyckel konfigurerad')
+              : labels.configKey}
             className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono font-bold uppercase tracking-wider transition-all"
             style={{
               color: apiKey ? (isLightTheme ? '#059669' : '#4ade80') : (isLightTheme ? '#dc2626' : '#fbbf24'),

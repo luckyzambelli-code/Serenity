@@ -95,6 +95,7 @@ import { primeFreqAudio } from './lib/primeFreqAudio';
 // (primeFreqEngine math now consumed via engine/PrimeFreqTracker — slice 2.)
 import { networkManager, parseSignalingUrl, parseConnectionLink, VOICE_AUDIO_CONSTRAINTS } from './lib/networkManager';
 import { SplashScreen } from './components/SplashScreen';
+import { CreditsModal } from './components/CreditsModal';
 import { EpValidationModal } from './components/EpValidationModal';
 import { ProcessusModal } from './components/ProcessusModal';
 import { MnaPanel } from './components/MnaPanel';
@@ -133,6 +134,8 @@ export default function App() {
   // l'auditeur pilote la langue de la séance et la pousse au téléphone (préclair).
   const langRef = useRef(lang); langRef.current = lang;
   const [showSplash, setShowSplash] = useState(true);
+  /** Crédits (clic sur le logo Alternative Scientology). */
+  const [showCredits, setShowCredits] = useState(false);
 
   const INITIAL_LOGS: LogEntry[] = [
     { time: 0, speaker: 'SYS', text: t('sys_init') }
@@ -4365,6 +4368,7 @@ export default function App() {
   return (
     <>
     {showSplash && <SplashScreen onDismiss={() => setShowSplash(false)} />}
+    {showCredits && <CreditsModal onClose={() => setShowCredits(false)} />}
 
     {/* CONN-48: connection status window with progress bar during handshake. */}
     <ConnectionProgress
@@ -4420,8 +4424,13 @@ export default function App() {
           zIndex: 60 }}>
         {/* LEFT: LOGO + STATIC METER + P2P STATUS BADGE */}
         <div className="flex items-center gap-2">
-          <img src="/logo-alt-scientology.png" alt="Alt. Scientology"
-            style={{ height: 44, width: 'auto', filter: isLightTheme ? 'none' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.45)) brightness(1.05)' }} />
+          {/* Le logo OUVRE les crédits (demande utilisateur) — mêmes textes que l'animation
+              d'ouverture, source unique dans credits.ts. */}
+          <button type="button" onClick={() => setShowCredits(true)} title={t('tip_credits') as string}
+            style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', lineHeight: 0, flexShrink: 0 }}>
+            <img src="/logo-alt-scientology.png" alt="Alt. Scientology"
+              style={{ height: 44, width: 'auto', filter: isLightTheme ? 'none' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.45)) brightness(1.05)' }} />
+          </button>
           <h1 className="text-base font-bold tracking-wide leading-tight uppercase"
             style={{
               color: isLightTheme ? '#1e293b' : '#eef4ff',

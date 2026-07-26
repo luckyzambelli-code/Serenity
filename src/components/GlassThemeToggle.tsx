@@ -1,6 +1,7 @@
 import React from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { useUiStore } from '../store/uiStore';
+import { useI18n } from '../i18n';
 
 /**
  * GlassThemeToggle — sélecteur de thème en VERRE (recréation fidèle de la réf. "Glass Toggle") :
@@ -13,7 +14,10 @@ import { useUiStore } from '../store/uiStore';
 export function GlassThemeToggle() {
   const isLightTheme  = useUiStore(s => s.isLightTheme);
   const setLightTheme = useUiStore(s => s.setLightTheme);
+  const { t } = useI18n();
   const dark = !isLightTheme;
+  // L'infobulle annonce CE QUE FAIT le clic (basculer vers l'autre thème), pas l'état courant.
+  const tip = t(dark ? 'tip_theme_light' : 'tip_theme_dark') as string;
 
   const W = 150, H = 52, THUMB = 62;
   const thumbCommon: React.CSSProperties = {
@@ -27,8 +31,8 @@ export function GlassThemeToggle() {
     <button
       type="button"
       onClick={() => setLightTheme(v => !v)}
-      aria-label={dark ? 'Passer en thème clair' : 'Passer en thème sombre'}
-      title={dark ? 'Thème sombre' : 'Thème clair'}
+      aria-label={tip}
+      title={tip}
       style={{ position: 'relative', width: W, height: H, border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, flexShrink: 0 }}
     >
       {/* Piste (creuse) */}

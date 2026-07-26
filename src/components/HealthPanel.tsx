@@ -70,7 +70,7 @@ export function HealthPanel({
         {/* Signal quality indicator (monochrome) */}
         <div
           className="flex items-center gap-1.5 shrink-0"
-          title={isRemote ? 'Preclear EEG signal quality' : 'Local EEG signal quality'}
+          title={t(isRemote ? 'tip_signal_remote' : 'tip_signal_local')}
         >
           {isRemote && (
             <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace', letterSpacing: '0.05em' }}>PC</span>
