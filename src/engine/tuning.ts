@@ -157,3 +157,45 @@ export const MOTION_WINDOW_SAMPLES = 32;
  *  movimento. Il radar del pannello salute usa 40 come fondo scala → 30 = movimento netto.
  *  DA TARARE IN SEDUTA: se troppe letture vere spariscono, ALZARLO. */
 export const MOTION_ARTIFACT_RMS = 30;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CAN METER — sonda di resistenza cutanea su ingresso audio (« le lattine »)
+// Cablaggio e procedura di taratura: docs/can-meter-cablaggio.md
+// ═══════════════════════════════════════════════════════════════════════════════
+/** Tono BASSO (Hz). Vicino al comportamento in continua: vede la PELLE, dove vive il sudore —
+ *  cioè la grandezza che legge un e-meter. PIÙ BASSO = più vicino alla continua, ma l'accoppiamento
+ *  in alternata della scheda audio taglia; sotto i ~20 Hz il segnale si affloscia. */
+export const CAN_TONE_LOW_HZ = 40;
+/** Tono ALTO (Hz). Lo strato corneo si comporta da condensatore e a questa frequenza è
+ *  cortocircuitato: vede quasi solo il percorso PROFONDO, che di elettrodermico non porta nulla.
+ *  La DIFFERENZA fra i due toni isola la componente cutanea. */
+export const CAN_TONE_HIGH_HZ = 990;
+/** Finestra di media del lock-in (ms). PIÙ LUNGA = meno rumore ma meno aggiornamenti.
+ *  100 ms → 10 letture/s: abbondanti per l'EDA, che è lenta (risposta in 1–3 s). */
+export const CAN_LOCKIN_WINDOW_MS = 100;
+/** Ampiezza del segnale d'uscita, 0..1 per tono (la somma dei due non deve saturare l'uscita).
+ *  PIÙ ALTA = miglior rapporto segnale/rumore ma più corrente nella persona. A 0.35 per tono
+ *  si resta abbondantemente sotto la soglia di percezione. */
+export const CAN_TONE_AMPLITUDE = 0.35;
+/** Resistenza di riferimento NOMINALE (Ω) — valore stampato sulla resistenza.
+ *  Quello VERO lo ricava la calibrazione a due punti: questo serve solo come ripiego. */
+export const CAN_R_REF_NOMINAL = 100_000;
+/** Resistenze campione per la calibrazione a due punti (Ω). Vanno DISTANTI (10× almeno). */
+export const CAN_CAL_R1 = 100_000;
+export const CAN_CAL_R2 = 1_000_000;
+/** Sotto questa ampiezza grezza il canale è considerato MUTO (lattine non impugnate, cavo
+ *  staccato, ingresso sbagliato): meglio dire « nessun contatto » che stampare un numero falso. */
+export const CAN_SILENCE_FLOOR = 1e-4;
+/** Lisciatura della resistenza letta (EMA, 0..1). PIÙ ALTO = più reattivo e più rumoroso. */
+export const CAN_SMOOTH = 0.25;
+
+// ── SCALA DEL TONO DI RON (−40 .. +40) ─────────────────────────────────────────────────────────
+/** Fondo scala della scala del tono: da −40 (resistenza TOTALE) a +40 (resistenza ZERO),
+ *  ottanta unità in otto divisioni da dieci. È la Scala del Tono intera, con la Morte allo zero. */
+export const TONE_SCALE_MAX = 40;
+/** « Resistenza totale » (Ω) = il valore che corrisponde a −40.
+ *  ⚠️ IN ATTESA DELLA RISPOSTA DI RON: non è ancora deciso se sia una costante del meter o un
+ *  valore della singola persona. Finché non si sa, il tono assoluto NON va mostrato come tale.
+ *  Nota fisica: dipende comunque dagli ELETTRODI (lattine più grandi = meno ohm), quindi una
+ *  costante universale è dubbia. */
+export const TONE_R_TOTAL = 2_000_000;
