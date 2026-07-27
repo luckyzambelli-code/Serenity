@@ -1,6 +1,43 @@
-import React from 'react';
-import { creditLines, creditCopyright } from '../credits';
+import React, { useState } from 'react';
+import { creditLines, creditCopyright, initialsOf } from '../credits';
 import { useI18n } from '../i18n';
+
+/**
+ * Portrait ROND. Si le fichier n'est pas là, on retombe sur les INITIALES : jamais l'icône
+ * d'image cassée. `objectFit: cover` recadre au centre, donc une photo carrée ou rectangulaire
+ * remplit le rond sans se déformer.
+ */
+function CreditAvatar({ src, name }: { src?: string; name: string }) {
+  const [failed, setFailed] = useState(false);
+  const SIZE = 46;
+  const commun: React.CSSProperties = {
+    width: SIZE, height: SIZE, borderRadius: '50%', flexShrink: 0,
+    border: '1px solid rgba(255,255,255,0.18)',
+    boxShadow: '0 2px 10px rgba(0,0,0,0.45)',
+  };
+
+  if (!src || failed) {
+    return (
+      <div style={{
+        ...commun, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'linear-gradient(150deg, rgba(255,255,255,0.13), rgba(255,255,255,0.04))',
+        fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 700,
+        letterSpacing: '0.04em', color: 'rgba(240,246,255,0.7)',
+      }}>
+        {initialsOf(name)}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={name}
+      onError={() => setFailed(true)}
+      style={{ ...commun, objectFit: 'cover', display: 'block' }}
+    />
+  );
+}
 
 /**
  * CreditsModal — s'ouvre au clic sur le logo Alternative Scientology (barre du haut).
@@ -35,17 +72,20 @@ export function CreditsModal({ onClose }: { onClose: () => void }) {
                    objectFit: 'contain', marginBottom: 20,
                    filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5)) brightness(1.05)' }} />
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {lines.map(l => (
-            <div key={l.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.14em',
-                             textTransform: 'uppercase', color: 'rgba(226,238,255,0.45)' }}>
-                {l.label}
-              </span>
-              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
-                             color: 'rgba(240,246,255,0.95)' }}>
-                {l.value}
-              </span>
+            <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+              <CreditAvatar src={l.photo} name={l.value} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.14em',
+                               textTransform: 'uppercase', color: 'rgba(226,238,255,0.45)' }}>
+                  {l.label}
+                </span>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
+                               color: 'rgba(240,246,255,0.95)' }}>
+                  {l.value}
+                </span>
+              </div>
             </div>
           ))}
         </div>
