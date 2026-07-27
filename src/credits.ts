@@ -20,7 +20,7 @@ export type CreditLine = {
 /** Libellés + noms, dans l'ordre d'affichage. `lang` = langue choisie dans l'interface. */
 export const creditLines = (lang: string): CreditLine[] => [
   { label: pick5(lang, 'Funzionalità', 'Fonctionnalités', 'Features', 'Funcionalidades', 'Funktioner'),
-    value: 'Lafayette Ron Hubbard', photo: '/credits/ron.jpg' },
+    value: 'Lafayette Ron Hubbard', photo: '/credits/ron.png' },
   { label: pick5(lang, 'Sviluppo', 'Développement', 'Development', 'Desarrollo', 'Utveckling'),
     value: 'Claudio Zambelli', photo: '/credits/claudio.jpg' },
   { label: pick5(lang, 'Test', 'Test', 'Testing', 'Pruebas', 'Test'),

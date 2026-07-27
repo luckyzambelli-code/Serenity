@@ -14,13 +14,15 @@ function CreditAvatar({ src, name }: { src?: string; name: string }) {
     width: SIZE, height: SIZE, borderRadius: '50%', flexShrink: 0,
     border: '1px solid rgba(255,255,255,0.18)',
     boxShadow: '0 2px 10px rgba(0,0,0,0.45)',
+    // Le fond vaut AUSSI pour les photos : un PNG détouré (fond transparent) donnerait
+    // sinon une tête flottant dans le noir du panneau, au lieu d'un portrait.
+    background: 'linear-gradient(150deg, rgba(255,255,255,0.13), rgba(255,255,255,0.04))',
   };
 
   if (!src || failed) {
     return (
       <div style={{
         ...commun, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'linear-gradient(150deg, rgba(255,255,255,0.13), rgba(255,255,255,0.04))',
         fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 700,
         letterSpacing: '0.04em', color: 'rgba(240,246,255,0.7)',
       }}>
