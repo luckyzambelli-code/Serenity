@@ -189,6 +189,22 @@ export const CAN_SILENCE_FLOOR = 1e-4;
 /** Lisciatura della resistenza letta (EMA, 0..1). PIÙ ALTO = più reattivo e più rumoroso. */
 export const CAN_SMOOTH = 0.25;
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// THETA-METER — e-meter USB dell'utente (HID vendor-defined, NXP LPC13xx)
+// Formato del report e come è stato ricavato: engine/thetaMeter.ts
+// ═══════════════════════════════════════════════════════════════════════════════
+/** Identificativi USB del dispositivo. */
+export const THETA_VENDOR_ID = 0x1fc9;   // NXP Semiconductors
+export const THETA_PRODUCT_ID = 0x0003;
+/** I due byte d'intestazione: unica verifica di sanità che il report sia dei nostri. */
+export const THETA_HEADER_0 = 0x01;
+export const THETA_HEADER_1 = 0x02;
+/** Sotto questa lunghezza il report non può contenere una lettura. */
+export const THETA_MIN_REPORT_LEN = 5;
+/** Lisciatura della lettura (EMA, 0..1). A 60 report/s il grezzo balla di qualche unità.
+ *  PIÙ ALTO = più reattivo e più tremolante; PIÙ BASSO = più stabile ma in ritardo. */
+export const THETA_SMOOTH = 0.2;
+
 // ── SCALA DEL TONO DI RON (−40 .. +40) ─────────────────────────────────────────────────────────
 /** Fondo scala della scala del tono: da −40 (resistenza TOTALE) a +40 (resistenza ZERO),
  *  ottanta unità in otto divisioni da dieci. È la Scala del Tono intera, con la Morte allo zero. */
