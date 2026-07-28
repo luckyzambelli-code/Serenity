@@ -1,0 +1,203 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Theta-Meter HID — scoperta del protocollo</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 22px; background: #0b0f16; color: #e6eefc;
+         font: 13px/1.5 ui-sans-serif, system-ui, sans-serif; }
+  h1 { font-size: 16px; letter-spacing: .08em; text-transform: uppercase; margin: 0 0 4px; }
+  .sub { color: #8ea0bd; margin-bottom: 18px; }
+  button { font: inherit; font-weight: 600; padding: 8px 14px; border-radius: 8px; cursor: pointer;
+           background: #16a3b8; border: 1px solid #2bd4ea; color: #041016; }
+  button.ghost { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.18); color: #cfe0f8; }
+  button:disabled { opacity: .4; cursor: default; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .card { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.10);
+          border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+  .lbl { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #7f93b4; margin-bottom: 8px; }
+  table { border-collapse: collapse; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  td, th { padding: 3px 8px; text-align: right; }
+  th { color: #7f93b4; font-weight: 600; font-size: 10px; }
+  .hex { font-family: ui-monospace, Menlo, monospace; font-size: 15px; letter-spacing: .06em; }
+  .hex b { color: #fbbf24; font-weight: 700; }   /* byte cambiato in questo report */
+  .move { color: #34d399; font-weight: 700; }    /* interpretazione che si muove di piu' */
+  .flat { color: #55627a; }                      /* ferma: non e' la nostra */
+  canvas { display: block; background: rgba(0,0,0,.35); border-radius: 6px; margin-top: 6px; }
+  code { background: rgba(255,255,255,.08); padding: 1px 5px; border-radius: 4px; }
+  ol { padding-left: 20px; } li { margin: 5px 0; }
+</style>
+
+<h1>Theta-Meter · scoperta del protocollo HID</h1>
+<div class="sub">NXP LPC13XX HID — VID <code>0x1FC9</code> · PID <code>0x0003</code> · 16 byte in ingresso, 2 in uscita</div>
+
+<div class="card">
+  <div class="lbl">Come si usa</div>
+  <ol>
+    <li>Il meter collegato via USB, e <b>Theta-Meter CHIUSO</b> (se ne appropria in esclusiva).</li>
+    <li>Premi <b>Collega</b> e scegli il dispositivo nel selettore.</li>
+    <li><b>Impugna le lattine e lascia andare</b>, più volte, lentamente.</li>
+    <li>Guarda la tabella: l'interpretazione con l'escursione più grande è la lettura del meter.</li>
+    <li>Se non arriva nulla, prova i comandi: il meter probabilmente aspetta un « avvia ».</li>
+  </ol>
+</div>
+
+<div class="row">
+  <button id="connect">Collega</button>
+  <button id="disconnect" class="ghost" disabled>Scollega</button>
+  <button id="reset" class="ghost" disabled>Azzera escursioni</button>
+  <span id="status" style="color:#8ea0bd"></span>
+</div>
+
+<div class="card">
+  <div class="lbl">Comandi in uscita — 2 byte (dal binario: « CMD C », « CMD V », « CMD X »)</div>
+  <div class="row" id="cmds"></div>
+  <div class="row">
+    <label>manuale: <input id="b0" size="4" value="0x43" style="background:#0b0f16;color:#e6eefc;border:1px solid #33405a;border-radius:5px;padding:4px 6px"></label>
+    <label><input id="b1" size="4" value="0x00" style="background:#0b0f16;color:#e6eefc;border:1px solid #33405a;border-radius:5px;padding:4px 6px"></label>
+    <button id="sendManual" class="ghost" disabled>Invia</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="lbl">Ultimo report — in giallo i byte cambiati</div>
+  <div class="hex" id="hex">—</div>
+  <div style="color:#7f93b4;margin-top:6px">report ricevuti: <span id="count">0</span> · <span id="rate">0</span>/s</div>
+</div>
+
+<div class="card">
+  <div class="lbl">Interpretazioni — quella che si muove di più è la lettura</div>
+  <table id="table"></table>
+</div>
+
+<div class="card">
+  <div class="lbl">Andamento del candidato migliore</div>
+  <canvas id="graph" width="900" height="140"></canvas>
+</div>
+
+<script>
+// ── Il meter e' un HID « vendor-defined » (usage page 0xFF00): nessun driver, nessuna porta
+//    seriale. Si legge con WebHID, la stessa famiglia di API con cui l'app parla gia' al Muse.
+const VID = 0x1FC9;
+
+let device = null, count = 0, tick = 0;
+const $ = id => document.getElementById(id);
+
+// Per ogni offset teniamo min/max di quattro letture possibili: uint16 e int16, LE e BE.
+// L'ESCURSIONE (max-min) dice quale interpretazione segue davvero l'ago: le altre restano piatte.
+const stats = new Map();
+const key = (off, kind) => off + '|' + kind;
+function note(off, kind, v) {
+  const k = key(off, kind), s = stats.get(k);
+  if (!s) stats.set(k, { off, kind, min: v, max: v, last: v });
+  else { s.min = Math.min(s.min, v); s.max = Math.max(s.max, v); s.last = v; }
+}
+
+const storia = [];            // andamento del candidato migliore
+let prev = null;
+
+function onReport(e) {
+  const d = e.data;                       // DataView, senza il report id
+  const n = d.byteLength;
+  const bytes = Array.from({ length: n }, (_, i) => d.getUint8(i));
+
+  // esadecimale, evidenziando cio' che e' cambiato rispetto al report precedente
+  $('hex').innerHTML = bytes.map((b, i) => {
+    const h = b.toString(16).padStart(2, '0');
+    return (prev && prev[i] !== b) ? '<b>' + h + '</b>' : h;
+  }).join(' ') + (e.reportId ? '   <span style="color:#7f93b4">(id ' + e.reportId + ')</span>' : '');
+  prev = bytes;
+
+  for (let off = 0; off + 1 < n; off++) {
+    note(off, 'u16le', d.getUint16(off, true));
+    note(off, 'u16be', d.getUint16(off, false));
+    note(off, 'i16le', d.getInt16(off, true));
+    note(off, 'i16be', d.getInt16(off, false));
+  }
+  count++; tick++;
+  $('count').textContent = count;
+  render();
+}
+
+function render() {
+  const righe = [...stats.values()]
+    .map(s => ({ ...s, span: s.max - s.min }))
+    .sort((a, b) => b.span - a.span);
+
+  const migliore = righe[0];
+  if (migliore) {
+    storia.push(migliore.last);
+    if (storia.length > 900) storia.shift();
+    disegna();
+  }
+
+  $('table').innerHTML =
+    '<tr><th>offset</th><th>tipo</th><th>valore</th><th>min</th><th>max</th><th>escursione</th></tr>' +
+    righe.slice(0, 12).map((s, i) =>
+      '<tr class="' + (s.span === 0 ? 'flat' : i === 0 ? 'move' : '') + '">' +
+      '<td>' + s.off + '</td><td>' + s.kind + '</td><td>' + s.last + '</td>' +
+      '<td>' + s.min + '</td><td>' + s.max + '</td><td>' + s.span + '</td></tr>').join('');
+}
+
+function disegna() {
+  const c = $('graph'), g = c.getContext('2d');
+  g.clearRect(0, 0, c.width, c.height);
+  if (storia.length < 2) return;
+  const min = Math.min(...storia), max = Math.max(...storia), amp = (max - min) || 1;
+  g.strokeStyle = '#34d399'; g.lineWidth = 1.5; g.beginPath();
+  storia.forEach((v, i) => {
+    const x = (i / (storia.length - 1)) * c.width;
+    const y = c.height - 8 - ((v - min) / amp) * (c.height - 16);
+    i ? g.lineTo(x, y) : g.moveTo(x, y);
+  });
+  g.stroke();
+}
+
+async function invia(b0, b1) {
+  if (!device) return;
+  // Report in uscita da 2 byte. L'id 0 significa « nessun report id » per i dispositivi
+  // che non li usano; se il meter li usa, si prova con 1.
+  for (const id of [0, 1]) {
+    try { await device.sendReport(id, new Uint8Array([b0, b1])); $('status').textContent = 'inviato ' + b0 + ',' + b1 + ' (id ' + id + ')'; return; }
+    catch (_) { /* si prova l'altro id */ }
+  }
+  $('status').textContent = 'invio fallito su entrambi gli id';
+}
+
+// I comandi trovati nel binario di Theta-Meter: « CMD C », « CMD V », « CMD X ».
+// Il secondo byte e' il parametro di SendCmd(%d) — si provano 0 e 1.
+[['C', 0x43], ['V', 0x56], ['X', 0x58]].forEach(([nome, code]) => {
+  [0, 1].forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'ghost'; b.disabled = true; b.dataset.cmd = '1';
+    b.textContent = 'CMD ' + nome + ' · ' + p;
+    b.onclick = () => invia(code, p);
+    $('cmds').appendChild(b);
+  });
+});
+
+$('connect').onclick = async () => {
+  if (!('hid' in navigator)) { $('status').textContent = 'WebHID non disponibile — serve Chrome o Electron, su http://localhost'; return; }
+  try {
+    const [d] = await navigator.hid.requestDevice({ filters: [{ vendorId: VID }] });
+    if (!d) { $('status').textContent = 'nessun dispositivo scelto'; return; }
+    device = d;
+    if (!d.opened) await d.open();
+    d.addEventListener('inputreport', onReport);
+    $('status').textContent = 'collegato: ' + d.productName;
+    $('connect').disabled = true;
+    document.querySelectorAll('#disconnect,#reset,#sendManual,[data-cmd]').forEach(b => b.disabled = false);
+  } catch (err) { $('status').textContent = 'errore: ' + err.message; }
+};
+
+$('disconnect').onclick = async () => {
+  if (device) { try { await device.close(); } catch (_) {} device = null; }
+  $('connect').disabled = false;
+  document.querySelectorAll('#disconnect,#reset,#sendManual,[data-cmd]').forEach(b => b.disabled = true);
+  $('status').textContent = 'scollegato';
+};
+
+$('reset').onclick = () => { stats.clear(); storia.length = 0; count = 0; $('count').textContent = 0; };
+$('sendManual').onclick = () => invia(parseInt($('b0').value), parseInt($('b1').value));
+
+setInterval(() => { $('rate').textContent = tick; tick = 0; }, 1000);
+</script>
