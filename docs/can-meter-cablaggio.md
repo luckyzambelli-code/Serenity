@@ -7,6 +7,10 @@ Misura a **due toni** con rivelazione sincrona (lock-in): la parte cutanea — q
 il segnale del sudore, cioè quello che legge un e-meter — si ricava dalla **differenza** fra
 la frequenza bassa e quella alta.
 
+> 🔧 **Per costruirlo**, segui [can-meter-montaggio.md](can-meter-montaggio.md): la procedura
+> passo passo, nell'ordine giusto. Questo documento è il riferimento — lo schema, i valori e il
+> *perché* di ogni scelta.
+
 > ⚠️ **Sedute a batteria.** Fai le sedute con il computer **scollegato dal caricabatterie**.
 > Le correnti in gioco sono ~10 µA, cento volte sotto la soglia di percezione e meno di quanto
 > faccia passare un e-meter vero. Ma a batteria non esiste proprio nessun percorso verso la rete,
