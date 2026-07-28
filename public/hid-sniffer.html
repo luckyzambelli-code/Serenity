@@ -73,19 +73,19 @@
   <table id="table"></table>
 </div>
 
-<div class="card" style="border-color:#34d39955">
-  <div class="lbl">24 bit sui byte 2·3·4 — e la DIFFERENZA fra report consecutivi</div>
+<div class="card" style="border-color:#34d39988">
+  <div class="lbl">★ LA LETTURA — 24 bit big-endian sui byte 2·3·4</div>
   <div class="hex" id="d24" style="font-size:14px">—</div>
   <div style="color:#7f93b4;margin-top:8px">
-    Se il meter conta gli impulsi di un oscillatore, è la <b>differenza</b> a essere la lettura,
-    non il valore. Il grafico qui sotto deve muoversi <b>dolcemente</b> quando stringi le lattine.
+    In <b>big-endian</b> il valore resta in una fascia stretta; in little-endian sbatte su tutto
+    l'intervallo. Quindi il byte 2 è il più significativo. Questo grafico deve seguire la mano.
   </div>
-  <canvas id="graphDelta" width="900" height="140"></canvas>
+  <canvas id="graph" width="900" height="140"></canvas>
 </div>
 
 <div class="card">
-  <div class="lbl">Andamento del valore grezzo (a denti di sega = contatore che si ribalta)</div>
-  <canvas id="graph" width="900" height="140"></canvas>
+  <div class="lbl">Differenza fra report consecutivi — solo diagnostica, NON è la lettura</div>
+  <canvas id="graphDelta" width="900" height="140"></canvas>
 </div>
 
 <div class="card">
@@ -158,8 +158,9 @@ function onReport(e) {
     note(90, 'u24be', be); note(91, 'u24le', le);
     note(92, 'DELTA be', dBe); note(93, 'DELTA le', dLe);
     $('d24').innerHTML =
-      '24 bit BE <b>' + be + '</b> · differenza <b style="color:#34d399">' + dBe + '</b><br>' +
-      '24 bit LE <b>' + le + '</b> · differenza <b style="color:#34d399">' + dLe + '</b>';
+      '<span style="font-size:22px;color:#34d399">' + be.toLocaleString('it') + '</span>' +
+      ' <span style="color:#7f93b4">← la lettura (24 bit BE)</span><br>' +
+      '<span style="color:#55627a">little-endian ' + le + ' — scartato: sbatte su tutto</span>';
     storiaDelta.push(dBe);
     if (storiaDelta.length > 900) storiaDelta.shift();
   }
@@ -174,9 +175,14 @@ function render() {
     .map(s => ({ ...s, span: s.max - s.min }))
     .sort((a, b) => b.span - a.span);
 
-  const migliore = righe[0];
-  if (migliore) {
-    storia.push(migliore.last);
+  // ── LA LETTURA E' u24be ────────────────────────────────────────────────────────────────
+  // Verificato sui dati: in big-endian il valore resta in una fascia stretta, in little-endian
+  // sbatte su tutto l'intervallo. Quindi il byte 2 e' il piu' significativo, il 4 il meno.
+  // (La « sega » vista prima era un artefatto: guardavamo 16 bit di un numero che ne ha 24, e
+  //  la fetta si ribalta ogni volta che il byte alto avanza. Non e' un contatore.)
+  const lettura = stats.get(key(90, 'u24be'));
+  if (lettura) {
+    storia.push(lettura.last);
     if (storia.length > 900) storia.shift();
     disegna();
   }
