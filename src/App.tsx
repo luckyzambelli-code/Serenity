@@ -16,6 +16,8 @@ import { useEpValidation } from './hooks/useEpValidation';
 import { useMnaModule } from './hooks/useMnaModule';
 import { useMediaRelayFallback } from './hooks/useMediaRelayFallback';
 import { ParticipantView } from './components/ParticipantView';
+import { LIGHT_THEME_CSS } from './ui/lightThemeCss';
+import { EpManualModal } from './components/EpManualModal';
 import { computeInstantRead } from './engine/instantRead';
 import { isAssessableItem } from './engine/assessItemFilter';
 import { decideNeedle } from './engine/needleDecision';
@@ -4496,106 +4498,8 @@ export default function App() {
       {/* ═══════════════════ MAIN AREA (existing layout) ═══════════════════ */}
       <div className="flex-1 flex flex-col p-2 gap-2 overflow-hidden relative min-w-0">
 
-      {/* ── Global light-theme overrides — COUVRE TOUTE L'INTERFACE ── */}
-      {isLightTheme && (
-        <style>{`
-          /* ─── BASE TEXT ─── */
-          [data-theme="light"] body, [data-theme="light"] * { color: #0f172a; }
-          [data-theme="light"] .text-white { color: #0f172a !important; }
-          [data-theme="light"] .text-white\\/90 { color: #1e293b !important; }
-          [data-theme="light"] .text-white\\/80 { color: #1e293b !important; }
-          [data-theme="light"] .text-white\\/70 { color: #334155 !important; }
-          [data-theme="light"] .text-white\\/60 { color: #475569 !important; }
-          [data-theme="light"] .text-white\\/50 { color: #475569 !important; }
-          [data-theme="light"] .text-white\\/40 { color: #64748b !important; }
-          [data-theme="light"] .text-white\\/30 { color: #94a3b8 !important; }
-          [data-theme="light"] .text-white\\/20 { color: #94a3b8 !important; }
-          [data-theme="light"] .text-slate-100 { color: #0f172a !important; }
-          [data-theme="light"] .text-slate-200 { color: #1e293b !important; }
-          [data-theme="light"] .text-slate-300 { color: #334155 !important; }
-          [data-theme="light"] .text-slate-400 { color: #475569 !important; }
-          [data-theme="light"] .text-slate-500 { color: #64748b !important; }
-          [data-theme="light"] .text-slate-600 { color: #475569 !important; }
-          [data-theme="light"] .text-slate-700 { color: #334155 !important; }
-          [data-theme="light"] .text-slate-800 { color: #1e293b !important; }
-
-          /* ─── CYAN/COLOR TEXT → MONOCHROME SLATE (glass light) ─── */
-          [data-theme="light"] .text-cyan-200 { color: #475569 !important; }
-          [data-theme="light"] .text-cyan-300 { color: #334155 !important; }
-          [data-theme="light"] .text-cyan-400 { color: #1e293b !important; }
-          [data-theme="light"] .text-cyan-500 { color: #1e293b !important; }
-          [data-theme="light"] .text-cyan-400\\/80 { color: #334155cc !important; }
-          [data-theme="light"] .text-cyan-400\\/70 { color: #334155bb !important; }
-          [data-theme="light"] .text-cyan-400\\/60 { color: #0369a1aa !important; }
-          [data-theme="light"] .text-emerald-300, [data-theme="light"] .text-emerald-400, [data-theme="light"] .text-green-400 { color: #059669 !important; }
-          [data-theme="light"] .text-yellow-400, [data-theme="light"] .text-amber-400 { color: #b45309 !important; }
-          [data-theme="light"] .text-red-400, [data-theme="light"] .text-red-500 { color: #b91c1c !important; }
-          [data-theme="light"] .text-pink-400 { color: #be185d !important; }
-          [data-theme="light"] .text-orange-400 { color: #c2410c !important; }
-
-          /* ─── BORDERS ─── */
-          [data-theme="light"] .border-white\\/5,
-          [data-theme="light"] .border-white\\/10,
-          [data-theme="light"] .border-white\\/15 { border-color: rgba(100,180,255,0.25) !important; }
-          [data-theme="light"] .border-white\\/20,
-          [data-theme="light"] .border-white\\/25 { border-color: rgba(100,180,255,0.35) !important; }
-          [data-theme="light"] .border-white\\/30,
-          [data-theme="light"] .border-white\\/40 { border-color: rgba(100,180,255,0.45) !important; }
-          [data-theme="light"] .border-cyan-300,
-          [data-theme="light"] .border-cyan-400,
-          [data-theme="light"] .border-cyan-500 { border-color: rgba(2,132,199,0.55) !important; }
-          [data-theme="light"] .border-cyan-500\\/40,
-          [data-theme="light"] .border-cyan-500\\/30 { border-color: rgba(2,132,199,0.40) !important; }
-          [data-theme="light"] .border-cyan-500\\/20 { border-color: rgba(2,132,199,0.25) !important; }
-
-          /* ─── BACKGROUNDS ─── */
-          [data-theme="light"] .bg-white\\/5  { background: rgba(255,255,255,0.55) !important; }
-          [data-theme="light"] .bg-white\\/10 { background: rgba(255,255,255,0.70) !important; }
-          [data-theme="light"] .bg-white\\/15 { background: rgba(255,255,255,0.75) !important; }
-          [data-theme="light"] .bg-white\\/20 { background: rgba(255,255,255,0.85) !important; }
-          [data-theme="light"] .bg-black\\/20,
-          [data-theme="light"] .bg-black\\/30,
-          [data-theme="light"] .bg-black\\/40,
-          [data-theme="light"] .bg-black\\/50 { background: rgba(255,255,255,0.55) !important; }
-          [data-theme="light"] .bg-cyan-500\\/10 { background: rgba(2,132,199,0.10) !important; }
-          [data-theme="light"] .bg-cyan-500\\/20 { background: rgba(2,132,199,0.18) !important; }
-          [data-theme="light"] .bg-cyan-500\\/30 { background: rgba(2,132,199,0.25) !important; }
-          [data-theme="light"] .bg-emerald-500\\/40 { background: rgba(5,150,105,0.30) !important; }
-
-          /* ─── INPUTS / BUTTONS ─── */
-          [data-theme="light"] select,
-          [data-theme="light"] input[type="text"],
-          [data-theme="light"] input[type="number"],
-          [data-theme="light"] input[type="search"],
-          [data-theme="light"] textarea {
-            color: #0f172a !important;
-            background: rgba(255,255,255,0.85) !important;
-            border-color: rgba(100,180,255,0.45) !important;
-          }
-          [data-theme="light"] input::placeholder,
-          [data-theme="light"] textarea::placeholder { color: #94a3b8 !important; }
-          [data-theme="light"] button { color: inherit; }
-
-          /* ─── PANELS UNIFORMISÉS ─── */
-          [data-theme="light"] .glass-panel,
-          [data-theme="light"] [data-light-panel] {
-            background: rgba(255,255,255,0.78) !important;
-            backdrop-filter: blur(20px) saturate(1.6);
-            -webkit-backdrop-filter: blur(20px) saturate(1.6);
-            border: 1px solid rgba(100,180,255,0.32) !important;
-            box-shadow: 0 4px 18px rgba(0,80,160,0.10) !important;
-            color: #0f172a !important;
-          }
-
-          /* ─── CUSTOM SCROLLBAR ─── */
-          [data-theme="light"] .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,120,220,0.3); }
-          [data-theme="light"] .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,80,160,0.05); }
-
-          /* ─── GLOW / SHADOWS ─── */
-          [data-theme="light"] .drop-shadow-md { filter: drop-shadow(0 1px 2px rgba(0,80,160,0.15)) !important; }
-          [data-theme="light"] [style*="text-shadow"] { text-shadow: none !important; }
-        `}</style>
-      )}
+      {/* ── Surcharges globales du THÈME CLAIR → ui/lightThemeCss ── */}
+      {isLightTheme && <style>{LIGHT_THEME_CSS}</style>}
       
             
       {/* BACKGROUND — fond futuriste holographique */}
@@ -4872,124 +4776,27 @@ export default function App() {
 
             </div>
 
-            {/* ── EP Manual Modal ─────────────────────────────────────────────── */}
+            {/* ── Saisie MANUELLE de l'EP → components/EpManualModal ── */}
             {epManualOpen && (
-              <div className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-auto"
-                style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)' }}>
-                <div className="rounded-2xl p-6 flex flex-col gap-4"
-                  style={{ background: 'rgba(26,26,30,0.96)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12)', minWidth: 420, maxWidth: 520 }}>
-                  {/* Header */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-mono font-bold text-lg tracking-widest" style={{ color: 'rgba(240,246,255,0.95)', textShadow: '0 0 12px rgba(255,255,255,0.6)' }}>✦ {t('ep_modal_title')}</div>
-                      <div className="text-[10px] font-mono opacity-50 mt-0.5" style={{ color: 'rgba(240,246,255,0.95)' }}>
-                        {epTimestamp !== null ? `${String(Math.floor(epTimestamp / 60)).padStart(2,'0')}:${String(Math.floor(epTimestamp % 60)).padStart(2,'0')}` : ''}
-                        {' '}— {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                      </div>
-                    </div>
-                    {/* Fermeture EP en MINI TOGGLE (cohérence graphique) : on = panneau ouvert. */}
-                    <GlassCollapseToggle on onToggle={() => setEpManualOpen(false)} title={t('tip_close') as string} />
-                  </div>
-
-                  {/* Réaction aiguille */}
-                  <div>
-                    <label className="text-[10px] font-mono uppercase tracking-widest opacity-60 block mb-1" style={{ color: 'rgba(240,246,255,0.95)' }}>{t('ep_needle_reaction')}</label>
-                    <select value={epReactionType} onChange={e => setEpReactionType(e.target.value)}
-                      className="w-full px-3 py-2 rounded outline-none tracking-normal"
-                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.30)', color: 'rgba(240,246,255,0.95)', fontSize: 13, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', letterSpacing: '0' }}>
-                      {['F/N (Floating)','LF Blow Down','Long Fall','Fall','SF'].map(r => (
-                        <option key={r} value={r} style={{ background: '#040e1e' }}>{r}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Réalisation du PC */}
-                  <div>
-                    <label className="text-[10px] font-mono uppercase tracking-widest opacity-60 block mb-1" style={{ color: 'rgba(240,246,255,0.95)' }}>{t('ep_pc_realization')}</label>
-                    <textarea
-                      value={epRealization} onChange={e => setEpRealization(e.target.value)}
-                      placeholder={t('ep_realization_placeholder')}
-                      rows={3}
-                      className="w-full px-3 py-2 rounded outline-none resize-none tracking-normal"
-                      style={{
-                        background: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.30)',
-                        color: 'rgba(240,246,255,0.95)',
-                        fontSize: 14,
-                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                        lineHeight: '1.6',
-                        letterSpacing: '0',
-                        wordSpacing: 'normal' }}
-                    />
-                  </div>
-
-                  {/* Indicatori del PC — chip cliccabili, mutuamente esclusive (niente
-                      etichetta separata: la scritta È il bottone). VVGI = PC troppo contento
-                      (indicatori ancora migliori di VGI). */}
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => { setEpVgi(v => !v); setEpVvgi(false); }}
-                      className="px-4 py-2 rounded font-mono text-[12px] font-bold transition-all"
-                      style={{
-                        background: epVgi ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.05)',
-                        border: `1px solid ${epVgi ? 'rgba(255,255,255,0.60)' : 'rgba(255,255,255,0.15)'}`,
-                        color: epVgi ? 'rgba(240,246,255,0.95)' : 'rgba(255,255,255,0.45)',
-                        cursor: 'pointer' }}>
-                      {epVgi ? '✓ VGI' : 'VGI'}
-                    </button>
-                    <button onClick={() => { setEpVvgi(v => !v); setEpVgi(false); }}
-                      className="px-4 py-2 rounded font-mono text-[12px] font-bold transition-all"
-                      style={{
-                        background: epVvgi ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.05)',
-                        border: `1px solid ${epVvgi ? 'rgba(255,255,255,0.60)' : 'rgba(255,255,255,0.15)'}`,
-                        color: epVvgi ? 'rgba(240,246,255,0.95)' : 'rgba(255,255,255,0.45)',
-                        cursor: 'pointer' }}>
-                      {epVvgi ? '✓ VVGI' : 'VVGI'}
-                    </button>
-                  </div>
-
-                  {/* Note auditeur */}
-                  <div>
-                    <label className="text-[10px] font-mono uppercase tracking-widest opacity-60 block mb-1" style={{ color: 'rgba(240,246,255,0.95)' }}>{t('ep_auditor_note_label')}</label>
-                    <input type="text"
-                      value={epAuditorNote} onChange={e => setEpAuditorNote(e.target.value)}
-                      placeholder={t('ep_observations')}
-                      className="w-full px-3 py-2 rounded outline-none"
-                      style={{
-                        background: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.30)',
-                        color: 'rgba(240,246,255,0.95)',
-                        fontSize: 13,
-                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                        letterSpacing: '0',
-                        wordSpacing: 'normal' }}
-                    />
-                  </div>
-
-                  {/* Boutons */}
-                  <div className="flex gap-3 pt-1">
-                    <button onClick={() => setEpManualOpen(false)}
-                      className="flex-1 py-2 rounded font-mono text-[11px] uppercase tracking-widest"
-                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.40)', cursor: 'pointer' }}>
-                      {t('cancel')}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEpValidated(true);
-                        setEpManualOpen(false);
-                        setEpWindowOpen(false);
-                        setAsIsnessState('ep');
-                        fnTracker.isEpValidated = true;
-                        addLog({ time: timeRef.current, speaker: 'SYS',
-                          text: `✦ ${t('ep_validated')} — ${t('ep_reaction_label')}: ${epReactionType}${epRealization ? ` — PC: "${epRealization}"` : ''}${epVvgi ? ' — VVGI' : epVgi ? ' — VGI' : ''}${epAuditorNote ? ` — ${t('ep_note_label')}: ${epAuditorNote}` : ''}`,
-                          type: 'highlight' });
-                      }}
-                      className="flex-1 py-2 rounded font-mono text-[11px] uppercase tracking-widest font-bold transition-all"
-                      style={{ background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.70)', color: 'rgba(240,246,255,0.95)', boxShadow: '0 0 16px rgba(255,255,255,0.30)', cursor: 'pointer' }}>
-                      {t('ep_validate_btn')}
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <EpManualModal
+                reactionType={epReactionType} setReactionType={setEpReactionType}
+                realization={epRealization}   setRealization={setEpRealization}
+                vgi={epVgi}                   setVgi={setEpVgi}
+                vvgi={epVvgi}                 setVvgi={setEpVvgi}
+                auditorNote={epAuditorNote}   setAuditorNote={setEpAuditorNote}
+                timestamp={epTimestamp}
+                onClose={() => setEpManualOpen(false)}
+                onValidate={() => {
+                  setEpValidated(true);
+                  setEpManualOpen(false);
+                  setEpWindowOpen(false);
+                  setAsIsnessState('ep');
+                  fnTracker.isEpValidated = true;
+                  addLog({ time: timeRef.current, speaker: 'SYS',
+                    text: `\u2726 ${t('ep_validated')} \u2014 ${t('ep_reaction_label')}: ${epReactionType}${epRealization ? ` \u2014 PC: "${epRealization}"` : ''}${epVvgi ? ' \u2014 VVGI' : epVgi ? ' \u2014 VGI' : ''}${epAuditorNote ? ` \u2014 ${t('ep_note_label')}: ${epAuditorNote}` : ''}`,
+                    type: 'highlight' });
+                }}
+              />
             )}
 
             {/* (SOL/SEC + STATE + REACTION are now shown together TOP-CENTRE for ALL
