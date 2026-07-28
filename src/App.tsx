@@ -14,6 +14,8 @@ import { useAppInitializer } from './hooks/useAppInitializer';
 // Existing call sites that destructured the hook's return now read selectors.
 import { useEpValidation } from './hooks/useEpValidation';
 import { useMnaModule } from './hooks/useMnaModule';
+import { useMediaRelayFallback } from './hooks/useMediaRelayFallback';
+import { ParticipantView } from './components/ParticipantView';
 import { computeInstantRead } from './engine/instantRead';
 import { isAssessableItem } from './engine/assessItemFilter';
 import { decideNeedle } from './engine/needleDecision';
@@ -3502,113 +3504,8 @@ export default function App() {
     }
   }, [signalQuality]);
 
-  // ── CONN-33: WebSocket video fallback — capture & send local camera frames ──
-  // Active only when WebRTC media failed (onVideoFallbackNeeded set the flag).
-  // Each side captures its own camera, downscales to 320×240, encodes JPEG at
-  // low quality, and sends ~6 fps over the relay WS (same channel as EEG —
-  // works on any network, no TURN). The peer renders the frames as an <img>.
-  useEffect(() => {
-    if (!videoFallbackActive || !isConnected) return;
-    const stream = (networkManager as unknown as { localStream: MediaStream | null }).localStream;
-    if (!stream || stream.getVideoTracks().length === 0) return;
-
-    const video = document.createElement('video');
-    video.srcObject = stream;
-    video.muted = true;
-    video.playsInline = true;
-    video.setAttribute('playsinline', '');
-    // FIX CONN-37: ATTACH the capture <video> to the DOM. A detached or
-    // display:none video is NOT rendered by mobile Chrome (power saving), so
-    // drawImage() pulls empty frames → the participant (Galaxy) sent nothing
-    // and the auditor saw black while the reverse worked (desktop renders
-    // detached videos fine). We append it 1×1, near-invisible but still
-    // "displayed" so the browser keeps producing frames.
-    video.style.cssText = 'position:fixed;width:2px;height:2px;opacity:0.01;pointer-events:none;left:0;bottom:0;z-index:-1;';
-    document.body.appendChild(video);
-    video.play().catch(() => {});
-    const canvas = document.createElement('canvas');
-    canvas.width = 320;
-    canvas.height = 240;
-    const ctx = canvas.getContext('2d');
-
-    const id = setInterval(() => {
-      if (!ctx || video.readyState < 2 || video.videoWidth === 0) return;
-      // Cover-fit the source frame into the 320×240 canvas.
-      const sAR = video.videoWidth / video.videoHeight;
-      const dAR = canvas.width / canvas.height;
-      let sw = video.videoWidth, sh = video.videoHeight, sx = 0, sy = 0;
-      if (sAR > dAR) { sw = video.videoHeight * dAR; sx = (video.videoWidth - sw) / 2; }
-      else           { sh = video.videoWidth / dAR; sy = (video.videoHeight - sh) / 2; }
-      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-      try {
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.4);
-        networkManager.sendVideoFrame(dataUrl);
-      } catch (_) { /* canvas not ready */ }
-    }, 160); // ~6 fps
-
-    return () => {
-      clearInterval(id);
-      video.srcObject = null;
-      try { video.remove(); } catch (_) {}
-    };
-  }, [videoFallbackActive, isConnected]);
-
-  // ── CONN-39: WebSocket AUDIO fallback — capture & send local mic audio ──
-  // WebRTC carries audio normally, but the JPEG-frame relay does NOT. So when
-  // we fall back to the relay (5G/NAT) the auditor would see the preclear but
-  // hear nothing. Here we tap the local stream's audio track, downsample to
-  // 16 kHz mono PCM16, and ship ~12 chunks/s over the same WS channel as the
-  // video frames and EEG. The peer plays it via the onAudioChunk handler above.
-  useEffect(() => {
-    if (!videoFallbackActive || !isConnected) return;
-    const stream = (networkManager as unknown as { localStream: MediaStream | null }).localStream;
-    if (!stream || stream.getAudioTracks().length === 0) return;
-
-    const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new AC();
-    const source = ctx.createMediaStreamSource(stream);
-    // FIX CONN-44: 2048 frames ≈ 43 ms at 48 kHz (was 4096 ≈ 85 ms) to halve
-    // the capture buffering latency → ~23 packets/s, still cheap bandwidth.
-    const node = ctx.createScriptProcessor(2048, 1, 1);
-    const TARGET_SR = 16000;
-    const ratio = ctx.sampleRate / TARGET_SR;
-
-    node.onaudioprocess = (e) => {
-      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-      const input = e.inputBuffer.getChannelData(0);
-      const outLen = Math.floor(input.length / ratio);
-      // Downsample (linear pick) + convert Float32 → Int16 little-endian bytes.
-      const bytes = new Uint8Array(outLen * 2);
-      for (let i = 0; i < outLen; i++) {
-        const s = Math.max(-1, Math.min(1, input[Math.floor(i * ratio)]));
-        const v = s < 0 ? s * 0x8000 : s * 0x7fff;
-        const iv = v | 0;
-        bytes[i * 2] = iv & 0xff;
-        bytes[i * 2 + 1] = (iv >> 8) & 0xff;
-      }
-      // Bytes → base64 (chunked to avoid call-stack limits on big arrays).
-      let bin = '';
-      for (let i = 0; i < bytes.length; i += 0x8000) {
-        bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + 0x8000)));
-      }
-      networkManager.sendAudioChunk(btoa(bin), TARGET_SR);
-    };
-
-    source.connect(node);
-    // Must connect to destination for onaudioprocess to fire; route through a
-    // muted gain so we don't echo our own mic locally.
-    const mute = ctx.createGain();
-    mute.gain.value = 0;
-    node.connect(mute);
-    mute.connect(ctx.destination);
-
-    return () => {
-      try { node.disconnect(); } catch (_) {}
-      try { source.disconnect(); } catch (_) {}
-      try { mute.disconnect(); } catch (_) {}
-      ctx.close().catch(() => {});
-    };
-  }, [videoFallbackActive, isConnected]);
+  // ── CONN-33/39 : le média de repli sur le relais WS vit dans son propre hook ──
+  useMediaRelayFallback();
 
   // ── CONN-53: graceful disconnect on tab/app close ──────────────────────────
   // Without this, quitting Chrome / killing the app left the peer waiting on the
@@ -4087,275 +3984,37 @@ export default function App() {
   const sdOnResume        = useEvent(() => { handleResume(); setSidebarDrawer(null); });
   const sdOnEnd           = useEvent(() => { handleEnd();    setSidebarDrawer(null); });
 
-  // ── VUE PARTICIPANT CONNECTÉ ─────────────────────────────────────────────────
-  // Quand le participant est connecté à l'auditeur, afficher une vue simplifiée :
-  // caméra de l'auditeur + statut Muse + batterie + indicateur connexion
+  // ── VUE PARTICIPANT CONNECTÉ → components/ParticipantView ────────────────────
+  // Quitter la séance côté PRÉCLAIR. Un SEUL chemin : le bandeau EOS et le bouton d'en-tête
+  // avaient deux gestionnaires identiques ligne pour ligne. #7/#8 (Roger) : le préclair ne doit
+  // PAS ramener la séance de l'auditeur en mode local, sinon elle reste « running/ended » et
+  // fabrique une entrée fantôme dans l'historique — d'où la remise à zéro complète.
+  const leaveSessionAsParticipant = () => {
+    auditorPeerIdRef.current = '';
+    if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
+    isReconnectingRef.current = false;
+    try { stopRecognition(); } catch (_) {}
+    try { networkManager.disconnect(); } catch (_) {}
+    setPcMicArmed(false); pcMicArmedRef.current = false;
+    setSessionState('idle');
+    setShowReport(false);
+    setSessionEndTime(null);
+    setIsConnected(false); setPeerId(''); setParticipantLink(''); setRemoteStream(null); setAppMode('local'); setPcCoLocated(false);
+  };
+
   if (appMode === 'participant' && isConnected) {
-    const bat = batteryLevel;
-    const batColor = bat === null ? '#64748b' : bat > 50 ? 'rgba(240,246,255,0.95)' : bat > 20 ? '#facc15' : '#f87171';
     return (
-      <div style={{ width: '100vw', height: '100vh', background: '#020617', display: 'flex', flexDirection: 'column', color: '#fff' }}>
-
-        {/* SÉANCE À DISTANCE : écran « Prêt pour la séance » COMPLET côté préclair (titre, badge
-            MUSE, baseline, respiration, readouts) EN MODE MIROIR — piloté par l'auditeur via le
-            message P2P READINESS. AUCUN bouton Démarrer/Refaire/Passer : c'est l'auditeur qui
-            décide. Le préclair connecte SON MUSE directement depuis le badge de cet écran (donc
-            plus de deadlock : l'overlay ne cache plus un bouton de connexion séparé). */}
-        {pcReadiness && (
-          <MetabolicCheck
-            mirror
-            lang={lang}
-            mirrorPhase={pcReadiness.phase as any}
-            mirrorInhale={pcReadiness.inhale}
-            mirrorAssessment={pcReadiness.assessment}
-            museConnected={museConnection === 'connected'}
-            museWorn={museContact}
-            museOnMac={pcCoLocated}
-            museConnecting={museConnection === 'searching'}
-            onConnectMuse={handleConnectMuse}
-            onProceed={() => {}}
-            onCancel={() => {}}
-            onPhase={() => {}}
-          />
-        )}
-
-        {/* CONN-77: EOS overlay — when the auditor ends the session the synced
-            sessionState becomes 'ended'; show the preclear a clear "End of
-            Session" banner so they know recording has stopped. */}
-        {sessionState === 'ended' && (
-          <div style={{
-            position: 'fixed', inset: 0, zIndex: 9000,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
-            background: 'rgba(2,6,23,0.82)', backdropFilter: 'blur(8px)' }}>
-            <div style={{
-              fontSize: 'clamp(28px, 9vw, 64px)', fontWeight: 900, letterSpacing: '0.12em',
-              color: '#eaf3ff', textShadow: '0 0 24px rgba(34,211,238,0.5)' }}>EOS</div>
-            <div style={{ fontSize: 'clamp(13px, 3.4vw, 20px)', fontWeight: 700, color: 'rgba(235,244,255,0.92)', letterSpacing: '0.06em', textAlign: 'center', padding: '0 20px' }}>
-              {t('eos_end_of_session')}
-            </div>
-            {/* #9 (Roger): the preclear was stuck on EOS until the auditor quit.
-                Give them their own button to leave the session and return to the
-                initial screen — same clean reset as the disconnect button. */}
-            <button
-              onClick={() => {
-                auditorPeerIdRef.current = '';
-                if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
-                isReconnectingRef.current = false;
-                try { stopRecognition(); } catch (_) {}
-                try { networkManager.disconnect(); } catch (_) {}
-                setPcMicArmed(false); pcMicArmedRef.current = false;
-                setSessionState('idle');
-                setShowReport(false);
-                setSessionEndTime(null);
-                setIsConnected(false); setPeerId(''); setParticipantLink(''); setRemoteStream(null); setAppMode('local'); setPcCoLocated(false);
-              }}
-              style={{
-                marginTop: 18, display: 'flex', alignItems: 'center', gap: 8,
-                fontSize: 15, fontWeight: 'bold', letterSpacing: '0.04em', color: '#fff',
-                background: 'rgba(220,38,38,0.85)', border: '1px solid rgba(248,113,113,0.7)',
-                borderRadius: 10, padding: '12px 24px', cursor: 'pointer',
-                boxShadow: '0 0 16px rgba(220,38,38,0.4)' }}>
-              <Power size={18} strokeWidth={2.2} />
-              {t('conn_disconnect')}
-            </button>
-          </div>
-        )}
-
-        {/* ── Header ── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(0,8,20,0.8)', borderBottom: '1px solid rgba(0,230,255,0.15)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(240,246,255,0.95)', boxShadow: '0 0 8px rgba(240,246,255,0.95)' }} />
-            <span style={{ fontSize: 14, fontWeight: 'bold', color: 'rgba(240,246,255,0.95)', letterSpacing: '0.1em' }}>{t('conn_badge_preclear_ok')}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            {/* FIX CONN-7: clickable Muse connect button (was just a label).
-                The participant on the Galaxy is the PRECLEAR — they wear the
-                Muse — but the simplified participant view had no UI to actually
-                connect it. Tapping launches the Web Bluetooth picker on the
-                participant's device.
-                SATELLITE (co-located, pcCoLocated) : le MUSE est accouplé au MAC (design).
-                On CACHE donc ce bouton sur le téléphone (sinon il tenterait un appairage
-                Bluetooth qui VOLE le MUSE au Mac) et on affiche juste un rappel. */}
-            {pcCoLocated ? (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', color: 'rgba(200,214,234,0.75)' }}>
-                <Headphones size={15} strokeWidth={1.8} />
-                🎧 {lang === 'fr' ? 'MUSE sur le Mac' : lang === 'it' ? 'MUSE sul Mac' : lang === 'es' ? 'MUSE en el Mac' : lang === 'sv' ? 'MUSE på datorn' : 'MUSE on the Mac'}
-              </span>
-            ) : (
-            <button
-              onClick={() => {
-                if (museConnection === 'connected') return; // already connected
-                handleConnectMuse();
-              }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '5px 10px', borderRadius: 6,
-                background: museConnection === 'connected' ? 'rgba(34,197,94,0.15)'
-                          : museConnection === 'searching' ? 'rgba(251,191,36,0.15)'
-                          : 'rgba(0,230,255,0.10)',
-                border: `1px solid ${
-                  museConnection === 'connected' ? 'rgba(34,197,94,0.4)'
-                  : museConnection === 'searching' ? 'rgba(251,191,36,0.4)'
-                  : 'rgba(0,230,255,0.30)'}`,
-                color: museConnection === 'connected' ? 'rgba(240,246,255,0.95)'
-                     : museConnection === 'searching' ? '#fbbf24'
-                     : 'rgba(235,244,255,0.92)',
-                fontSize: 11, fontWeight: 600, letterSpacing: '0.05em',
-                cursor: museConnection === 'connected' ? 'default' : 'pointer',
-                transition: 'all 0.2s',
-                // FIX CONN-36: pulse the button when the MUSE is not connected
-                // so the preclear knows they must pair their headset.
-                animation: museConnection === 'disconnected' ? 'pulse 1.5s infinite' : 'none' }}
-            >
-              {/* FIX CONN-34: MUSE (Headphones) icon instead of the brain emoji. */}
-              <Headphones size={15} strokeWidth={1.8} />
-              {museConnection === 'connected' ? t('connected')
-                  : museConnection === 'searching' ? `${t('searching') || 'searching'}…`
-                  : `${t('connect_muse') || 'Connect Muse'}`}
-            </button>
-            )}
-            {/* Battery */}
-            {bat !== null && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 32, height: 12, border: `1.5px solid ${batColor}`, borderRadius: 3, padding: 1, position: 'relative' }}>
-                  <div style={{ height: '100%', width: `${bat}%`, background: batColor, borderRadius: 2 }} />
-                  <div style={{ position: 'absolute', right: -5, top: '50%', transform: 'translateY(-50%)', width: 3, height: 6, background: batColor, borderRadius: '0 2px 2px 0' }} />
-                </div>
-                <span style={{ fontSize: 10, color: batColor, fontFamily: 'monospace' }}>{bat.toFixed(0)}%</span>
-              </div>
-            )}
-            <button
-              onClick={() => {
-                // Cancel any pending auto-reconnect before manually disconnecting
-                auditorPeerIdRef.current = '';
-                if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
-                isReconnectingRef.current = false;
-                networkManager.disconnect();
-                setPcMicArmed(false); pcMicArmedRef.current = false;
-                // #7 (Roger): the PRECLEAR must NOT carry the auditor's active
-                // session back into local mode — otherwise it stays "running/ended"
-                // and produces a phantom session-history entry. Fully reset the
-                // session lifecycle on disconnect. #8: also drop the remote stream
-                // and recognition so a later LOCAL session (camera + new link)
-                // starts from a clean state.
-                try { stopRecognition(); } catch (_) {}
-                setSessionState('idle');
-                setShowReport(false);
-                setSessionEndTime(null);
-                setIsConnected(false); setPeerId(''); setParticipantLink(''); setRemoteStream(null); setAppMode('local'); setPcCoLocated(false);
-              }}
-              /* FIX CONN-42: bigger + red disconnect button. */
-              style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 'bold', letterSpacing: '0.04em', color: '#fff', background: 'rgba(220,38,38,0.85)', border: '1px solid rgba(248,113,113,0.7)', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', boxShadow: '0 0 14px rgba(220,38,38,0.4)' }}>
-              <Power size={16} strokeWidth={2.2} />
-              {t('conn_disconnect')}
-            </button>
-          </div>
-        </div>
-
-        {/* CONN-83: the preclear no longer needs to do ANYTHING to be transcribed
-            — the auditor captions the preclear's voice from the WebRTC audio on
-            its side. Passive reassurance only (no tap, no Android limitations). */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          width: '100%', padding: '6px 16px', flexShrink: 0,
-          background: 'rgba(255,255,255,0.10)', borderBottom: '1px solid rgba(255,255,255,0.22)',
-          color: 'rgba(240,246,255,0.95)', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em' }}>
-          <Mic size={13} strokeWidth={2} />
-          {t('pc_mic_active')}
-        </div>
-
-        {/* ── Caméra auditeur ── */}
-        {/* CONN-33: in fallback mode show the relayed JPEG frames; otherwise
-            the live WebRTC <video>.
-            FIX CONN-47: do NOT stretch full-screen (objectFit contain keeps the
-            aspect). Larger contained panel (user request: bigger auditor video) —
-            capped at min(98vw, 1100px) / 86vh, centred on black. The relayed JPEG
-            path is lower-res so it may soften at this size, but never distorts. */}
-        <div style={{ flex: 1, position: 'relative', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {videoFallbackActive && remoteVideoFrame ? (
-            <div style={{ position: 'relative', maxWidth: 'min(98vw, 1100px)', maxHeight: '86vh' }}>
-              <img
-                src={remoteVideoFrame}
-                alt=""
-                style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain', borderRadius: 10, border: '1px solid rgba(255,255,255,0.08)' }}
-              />
-              <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(0,0,0,0.6)', borderRadius: 4, padding: '3px 8px', fontSize: 9, color: '#fbbf24', fontFamily: 'monospace', letterSpacing: '0.1em' }}>
-                📷 {t('cam1')} · RELAY
-              </div>
-            </div>
-          ) : remoteStream ? (
-            <div style={{ position: 'relative', maxWidth: 'min(98vw, 1100px)', maxHeight: '86vh' }}>
-              <video
-                ref={participantVideoRef}
-                autoPlay
-                playsInline
-                style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain', borderRadius: 10, border: '1px solid rgba(255,255,255,0.08)' }}
-              />
-              <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(0,0,0,0.6)', borderRadius: 4, padding: '3px 8px', fontSize: 9, color: 'rgba(235,244,255,0.92)', fontFamily: 'monospace', letterSpacing: '0.1em' }}>
-                📷 {t('cam1')}
-              </div>
-            </div>
-          ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-              <div style={{ fontSize: 40 }}>👁</div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>{t('conn_waiting_video')}</div>
-              <div style={{ fontSize: 10, color: '#334155' }}>{t('conn_video_hint')}</div>
-            </div>
-          )}
-
-          {/* FIX CONN-41: MUSE connect button overlaid ON the video, centred,
-              so the preclear can't miss it. Disappears once the headset pairs.
-              Satellite: hidden — the Muse is paired on the auditor's Mac. */}
-          {museConnection !== 'connected' && !pcCoLocated && (
-            <button
-              onClick={() => { if (museConnection !== 'searching') handleConnectMuse(); }}
-              style={{
-                position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)',
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '16px 24px', borderRadius: 14, cursor: 'pointer',
-                background: museConnection === 'searching' ? 'rgba(251,191,36,0.92)' : 'rgba(6,182,212,0.92)',
-                border: '2px solid rgba(255,255,255,0.85)',
-                color: '#021018', fontSize: 17, fontWeight: 800, letterSpacing: '0.03em',
-                boxShadow: '0 6px 30px rgba(0,0,0,0.55)',
-                animation: museConnection === 'disconnected' ? 'pulse 1.4s infinite' : 'none' }}
-            >
-              <Headphones size={24} strokeWidth={2.2} />
-              {museConnection === 'searching'
-                ? `${t('searching') || 'Recherche'}…`
-                : `${t('connect_muse') || 'Connectez votre MUSE'}`}
-            </button>
-          )}
-        </div>
-
-        {/* FIX CONN-36: prominent reminder banner when the preclear hasn't
-            connected their MUSE — no EEG flows until they do. Tapping it
-            launches the BLE picker. Satellite: hidden (Muse is on the Mac). */}
-        {museConnection !== 'connected' && !pcCoLocated && (
-          <button
-            onClick={() => { if (museConnection !== 'searching') handleConnectMuse(); }}
-            style={{
-              padding: '14px 16px', border: 'none', cursor: 'pointer',
-              background: 'rgba(251,191,36,0.18)',
-              borderTop: '1px solid rgba(251,191,36,0.45)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-              color: '#fbbf24', fontSize: 15, fontWeight: 'bold', letterSpacing: '0.04em',
-              animation: museConnection === 'disconnected' ? 'pulse 1.5s infinite' : 'none',
-              flexShrink: 0 }}
-          >
-            <Headphones size={20} strokeWidth={1.8} />
-            {museConnection === 'searching'
-              ? `${t('searching') || 'Recherche'}…`
-              : `⚠ ${t('connect_muse') || 'Connectez votre MUSE'}`}
-          </button>
-        )}
-
-        {/* ── Barre de statut bas ── */}
-        <div style={{ padding: '8px 16px', background: 'rgba(0,8,20,0.8)', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24, flexShrink: 0 }}>
-          <span style={{ fontSize: 12, color: '#475569', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Headphones size={14} strokeWidth={1.8} /> EEG · PPG · {t('conn_preclear_ok_detail')}
-          </span>
-        </div>
-      </div>
+      <ParticipantView
+        batteryLevel={batteryLevel}
+        pcReadiness={pcReadiness}
+        museConnection={museConnection}
+        museContact={museContact}
+        pcCoLocated={pcCoLocated}
+        sessionState={sessionState}
+        videoRef={participantVideoRef}
+        onConnectMuse={handleConnectMuse}
+        onLeaveSession={leaveSessionAsParticipant}
+      />
     );
   }
 
