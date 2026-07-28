@@ -15,6 +15,11 @@ import { useAppInitializer } from './hooks/useAppInitializer';
 import { useEpValidation } from './hooks/useEpValidation';
 import { useMnaModule } from './hooks/useMnaModule';
 import { useMediaRelayFallback } from './hooks/useMediaRelayFallback';
+import { useThetaMeter } from './hooks/useThetaMeter';
+
+/** Ambra dell'ago e dei valori delle LATTINE — deve restare identico a QuantumSphere,
+ *  altrimenti l'ago sul quadrante e il numero a lato non si riconoscono come la stessa cosa. */
+const THETA_AMBER = '#f59e0b';
 import { ParticipantView } from './components/ParticipantView';
 import { LIGHT_THEME_CSS } from './ui/lightThemeCss';
 import { EpManualModal } from './components/EpManualModal';
@@ -3509,6 +3514,12 @@ export default function App() {
   // ── CONN-33/39 : le média de repli sur le relais WS vit dans son propre hook ──
   useMediaRelayFallback();
 
+  // ── THETA-METER : l'e-meter USB (les « lattine ») ────────────────────────────
+  // Pour l'instant il vit À CÔTÉ de l'aiguille EEG — deux aiguilles sur le même cadran — pour
+  // qu'on VOIE l'écart entre la mesure réelle et celle reconstruite du cerveau. Le TA, lui,
+  // vient des lattine : c'est une vraie résistance, pas une reconstruction.
+  const theta = useThetaMeter();
+
   // ── CONN-53: graceful disconnect on tab/app close ──────────────────────────
   // Without this, quitting Chrome / killing the app left the peer waiting on the
   // heartbeat watchdog (~10-15 s) before it showed "waiting for PC" again. We
@@ -4808,6 +4819,55 @@ export default function App() {
                 style={{ fontFamily: 'var(--font-sans)', color: isLightTheme ? '#64748b' : 'rgba(148,163,184,0.7)' }}>TONE ARM</span>
               <ToneArmReadout isLightTheme={isLightTheme} />
 
+              {/* ── LATTINE (Theta-Meter) : le TA qui vient d'une VRAIE résistance ─────────
+                  Affiché SOUS le TA reconstruit de l'EEG, pas à sa place : tant que les deux
+                  coexistent, on peut comparer. L'aiguille des lattine est sur le cadran, en
+                  ambre. Le bouton doit rester actionnable — WebHID exige un GESTE de
+                  l'utilisateur, on ne peut pas se connecter tout seul au démarrage. */}
+              {!theta.unavailable && (
+                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+                  <span className="text-[10px] font-light uppercase tracking-[0.2em]"
+                    style={{ fontFamily: 'var(--font-sans)', color: THETA_AMBER }}>{t('theta_cans') as string}</span>
+
+                  {theta.status === 'connected' ? (
+                    <>
+                      <span style={{ fontFamily: 'monospace', fontSize: 20, fontWeight: 700, lineHeight: 1.1, color: THETA_AMBER }}>
+                        {theta.totalTa.toFixed(1)}
+                      </span>
+                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: isLightTheme ? '#64748b' : 'rgba(148,163,184,0.7)' }}>
+                        {t('theta_total_ta') as string}
+                      </span>
+                      {/* Diagnostic honnête : si les rejets montent, l'en-tête 01 02 n'est pas
+                          constante et le format est à revoir — mieux vaut le VOIR. */}
+                      {theta.counters.rejected > 0 && (
+                        <span style={{ fontFamily: 'monospace', fontSize: 9, color: '#f87171' }}>
+                          {theta.counters.rejected} scartati
+                        </span>
+                      )}
+                      {theta.offScale && (
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.1em', color: '#fbbf24' }}>
+                          {t('theta_offscale') as string}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <button type="button" onClick={() => { void theta.connect(); }}
+                      title={t('theta_connect_tip') as string}
+                      style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
+                               textTransform: 'uppercase', padding: '5px 10px', borderRadius: 7, cursor: 'pointer',
+                               background: 'rgba(245,158,11,0.14)', border: '1px solid rgba(245,158,11,0.45)', color: THETA_AMBER }}>
+                      {theta.status === 'connecting' ? `${t('searching') as string}…` : (t('theta_connect') as string)}
+                    </button>
+                  )}
+
+                  {theta.lastError && (
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, maxWidth: 210, textAlign: 'right', color: '#f87171' }}>
+                      {theta.lastError}
+                    </span>
+                  )}
+                </div>
+              )}
+
               {/* PROGRESSIVE DISCLOSURE — Total TA + velocità dietro un solo toggle
                   "diagnostica", chiuso di default → l'angolo resta un solo meter pulito.
                   Reso chiaramente APRIBILE: pill con bordo + chevron (non un'etichetta). */}
@@ -4889,6 +4949,7 @@ export default function App() {
                   couleur remplit l'arc avec l'avancement de la décharge. */}
               <QuantumSphere
                 needleOffsetProp={needleOffset}
+                thetaOffset={theta.status === 'connected' ? theta.offset : null}
                 needleReactionKey={needleReactionKey}
                 asIsnessState={asIsnessState}
                 onClick={resetNeedle}

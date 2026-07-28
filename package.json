@@ -1,7 +1,7 @@
 {
   "name": "staticmeter",
   "private": true,
-  "version": "1.0.385",
+  "version": "1.0.386",
   "main": "main.cjs",
   "type": "module",
   "scripts": {

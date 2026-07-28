@@ -59,6 +59,24 @@ dispositivo dentro EQUILIBRIUM — finora solo dalla pagina di scoperta.
 - [ ] se Theta-Meter è aperto, compare il messaggio che dice di chiuderlo — e non un errore
       di sistema incomprensibile.
 
+### L'aggancio all'interfaccia (v1.0.386) — provabile SUBITO, senza Muse
+
+- [ ] il bottone **COLLEGA IL METER** (in alto a destra, sotto TONE ARM) apre e aggancia;
+- [ ] compare un **secondo ago AMBRA** sul quadrante, sotto quello EEG;
+- [ ] stringendo le lattine l'ago ambra **CADE a destra**, e torna lasciando;
+- [ ] tenendo la stretta a lungo l'ago **rientra da solo** verso il riposo (è il braccio che
+      insegue, come la manopola di un meter vero) e il **Total TA sale**;
+- [ ] l'app resta **fluida** (le letture arrivano a 60/s ma si pubblicano a 50 Hz);
+- [ ] chiudendo l'app e riaprendola il meter si **riaggancia senza richiedere il permesso**.
+
+**Tarature che quasi certamente serviranno**, tutte in `engine/tuning.ts`:
+- `THETA_NEEDLE_SCALE` — ampiezza delle reazioni. Reazioni minuscole → ALZARLO; ago che sbatte
+  ai bordi → ABBASSARLO. È la prima da toccare.
+- `THETA_ARM_ALPHA` — quanto è lento il braccio. Se le reazioni si spengono troppo in fretta,
+  ABBASSARLO.
+- `THETA_TOTAL_TA_STEP` — quanto grezzo vale un decimo di divisione. Da confrontare col Total TA
+  che mostra Theta-Meter sulla stessa stretta.
+
 ### Da verificare, non ancora saputo
 
 - [ ] **il legame grezzo → ohm è lineare?** L'ho assunto, non è provato. Si misurano tre

@@ -7,6 +7,9 @@ import { floatOffset, type FnMode } from '../engine/FloatGenerator';
 
 interface QuantumSphereProps {
   needleOffsetProp: number;
+  /** Deviazione dell'ago delle LATTINE (Theta-Meter), [-1, 1]. `null` = meter non collegato:
+   *  in quel caso l'ago non si disegna affatto, invece di mostrarne uno fermo che sembrerebbe vero. */
+  thetaOffset?: number | null;
   asIsnessState: 'persist' | 'as-is' | 'fn' | 'ep';
   onClick: () => void;
   tZone?: string; rhoG?: number; vProc?: number; eta?: number;
@@ -48,6 +51,10 @@ const SET_OFFSET = -0.35; // Spec §18 NEURAL CORE: "SET_OFFSET = -0.35 (fin zon
 
 function deg2rad(d: number) { return d * Math.PI / 180; }
 function off2ang(offset: number): number { return 90 - offset * SWEEP; }
+
+/** Colore dell'ago delle lattine — ambra, distinto da tutti gli stati di carica dell'ago EEG
+ *  (che vanno sui verdi/ciano/violetti), così i due non si confondono mai a colpo d'occhio. */
+const THETA_NEEDLE_COLOR = '#f59e0b';
 function pt(angleDeg: number, r: number) {
   const a = deg2rad(angleDeg);
   return { x: PX + r * Math.cos(a), y: PY - r * Math.sin(a) };
@@ -86,7 +93,7 @@ function reactionKeyToOffset(key: string): number {
 }
 
 export function QuantumSphere({
-  needleOffsetProp, asIsnessState, onClick,
+  needleOffsetProp, thetaOffset = null, asIsnessState, onClick,
   asIsnessConfidence = 0,
   sessionState = 'idle', museConnection = 'disconnected',
   needleReactionKey, epValidated = false,
@@ -501,6 +508,22 @@ export function QuantumSphere({
             />
           </>
         )}
+
+        {/* ── AIGUILLE DES LATTINE (Theta-Meter) ────────────────────────────────────────────
+            L'aiguille du VRAI meter, à côté de celle déduite de l'EEG, pour voir l'écart entre
+            les deux. Dessinée AVANT (donc DESSOUS) et plus fine : c'est la comparaison qui
+            compte, l'aiguille EEG doit rester lisible par-dessus. Absente si le meter n'est
+            pas branché — `null`, pas 0, sinon on afficherait une aiguille au repos qui n'existe
+            pas et qu'on croirait vraie. */}
+        {thetaOffset !== null && thetaOffset !== undefined && (() => {
+          const a = off2ang(Math.max(-1, Math.min(1, thetaOffset)));
+          const t = pt(a, tipR);
+          return (
+            <line x1={PX} y1={PY} x2={t.x} y2={t.y}
+              stroke={THETA_NEEDLE_COLOR} strokeWidth="3" strokeLinecap="round"
+              opacity={0.75} style={{ transition: 'none' }}/>
+          );
+        })()}
 
         {/* ── NEEDLE ── */}
         <line x1={PX} y1={PY} x2={tip.x} y2={tip.y}
