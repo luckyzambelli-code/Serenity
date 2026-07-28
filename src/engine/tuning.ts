@@ -205,6 +205,30 @@ export const THETA_MIN_REPORT_LEN = 5;
  *  PIÙ ALTO = più reattivo e più tremolante; PIÙ BASSO = più stabile ma in ritardo. */
 export const THETA_SMOOTH = 0.2;
 
+// ── AGO E BRACCIO dalle lattine (engine/thetaNeedle.ts) ────────────────────────────────────
+/** Quanto è LENTO il braccio, cioè la manopola del TA (EMA, 0..1). Volutamente molto lento:
+ *  se insegue troppo in fretta si mangia le reazioni, perché l'ago misura lo scarto DA LUI.
+ *  PIÙ BASSO = reazioni più visibili e più lunghe, ma l'ago va fuori scala più spesso. */
+export const THETA_ARM_ALPHA = 0.0008;
+/** Quanto insegue il braccio QUANDO l'ago è fuori scala — l'auditor che gira la manopola per
+ *  riportarlo nel quadrante. Deve essere molto più rapido, o l'ago resta incollato al bordo. */
+export const THETA_ARM_FOLLOW_FAST = 0.02;
+/** Unità grezze → offset del quadrante. È la manopola della SENSIBILITÀ.
+ *  DA TARARE IN SEDUTA: se le reazioni sono minuscole ALZARLO, se l'ago sbatte ABBASSARLO.
+ *  Punto di partenza: sui dati veri una stretta muoveva il grezzo di ~2 milioni; con 1/300000
+ *  ciò porta l'ago da fondo a fondo. */
+export const THETA_NEEDLE_SCALE = 1 / 300_000;
+/** Oltre questo scarto (in unità di quadrante) l'ago è considerato FUORI SCALA. Sopra 1 è
+ *  già oltre il bordo; si lascia un margine per non far scattare l'inseguimento veloce a ogni
+ *  reazione ampia ma legittima. */
+export const THETA_OFFSCALE = 1.3;
+/** Quanto braccio vale un decimo di divisione di Total TA, in unità grezze.
+ *  DA TARARE contro il meter vero: si guarda di quanto scende il grezzo per una divisione. */
+export const THETA_TOTAL_TA_STEP = 120_000;
+/** Un picco conta come nuovo solo oltre questo margine: senza, il rumore del braccio
+ *  rialzerebbe il riferimento in continuazione e il Total TA non salirebbe mai. */
+export const THETA_TOTAL_TA_DEADBAND = 24_000;
+
 // ── SCALA DEL TONO DI RON (−40 .. +40) ─────────────────────────────────────────────────────────
 /** Fondo scala della scala del tono: da −40 (resistenza TOTALE) a +40 (resistenza ZERO),
  *  ottanta unità in otto divisioni da dieci. È la Scala del Tono intera, con la Morte allo zero. */
