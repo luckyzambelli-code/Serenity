@@ -50,6 +50,10 @@
 
 <div class="card">
   <div class="lbl">Comandi in uscita — 2 byte (dal binario: « CMD C », « CMD V », « CMD X »)</div>
+  <div id="hintCmd" style="color:#fbbf24;margin-bottom:10px">
+    ⚠ Questi bottoni restano <b>spenti finché il meter non è collegato</b>: senza dispositivo
+    non avrebbero a chi mandare il comando. Premi prima <b>Collega</b> qui sopra.
+  </div>
   <div class="row" id="cmds"></div>
   <div class="row">
     <label>manuale: <input id="b0" size="4" value="0x43" style="background:#0b0f16;color:#e6eefc;border:1px solid #33405a;border-radius:5px;padding:4px 6px"></label>
@@ -69,9 +73,28 @@
   <table id="table"></table>
 </div>
 
+<div class="card" style="border-color:#34d39955">
+  <div class="lbl">24 bit sui byte 2·3·4 — e la DIFFERENZA fra report consecutivi</div>
+  <div class="hex" id="d24" style="font-size:14px">—</div>
+  <div style="color:#7f93b4;margin-top:8px">
+    Se il meter conta gli impulsi di un oscillatore, è la <b>differenza</b> a essere la lettura,
+    non il valore. Il grafico qui sotto deve muoversi <b>dolcemente</b> quando stringi le lattine.
+  </div>
+  <canvas id="graphDelta" width="900" height="140"></canvas>
+</div>
+
 <div class="card">
-  <div class="lbl">Andamento del candidato migliore</div>
+  <div class="lbl">Andamento del valore grezzo (a denti di sega = contatore che si ribalta)</div>
   <canvas id="graph" width="900" height="140"></canvas>
+</div>
+
+<div class="card">
+  <div class="lbl">Dati grezzi da mandare a Claude</div>
+  <div class="row">
+    <button id="dump" class="ghost" disabled>Prepara i dati registrati</button>
+    <span style="color:#7f93b4">registrati: <span id="nrec">0</span> report</span>
+  </div>
+  <textarea id="out" style="width:100%;height:110px;background:#070a10;color:#9fb4d6;border:1px solid #33405a;border-radius:8px;font-family:ui-monospace,Menlo,monospace;font-size:11px;display:none"></textarea>
 </div>
 
 <script>
@@ -92,8 +115,18 @@ function note(off, kind, v) {
   else { s.min = Math.min(s.min, v); s.max = Math.max(s.max, v); s.last = v; }
 }
 
-const storia = [];            // andamento del candidato migliore
+const storia = [];            // andamento del candidato migliore (valore grezzo)
+const storiaDelta = [];       // andamento della DIFFERENZA fra report consecutivi
 let prev = null;
+let prev24 = { be: null, le: null };
+const grezzi = [];            // registrazione per l'analisi
+
+// I tre byte che variano (2,3,4) sono 24 bit. Se il meter conta impulsi di un oscillatore
+// la cui frequenza dipende dalla resistenza — com'e' tipico degli e-meter — allora la LETTURA
+// non e' il valore ma la DIFFERENZA fra due report: impulsi al 1/60 di secondo = frequenza.
+// La differenza va presa in modulo 2^24, altrimenti a ogni giro del contatore esce un salto.
+const M24 = 0x1000000;
+const delta24 = (cur, pre) => pre === null ? 0 : ((cur - pre + M24) % M24);
 
 function onReport(e) {
   const d = e.data;                       // DataView, senza il report id
@@ -107,12 +140,30 @@ function onReport(e) {
   }).join(' ') + (e.reportId ? '   <span style="color:#7f93b4">(id ' + e.reportId + ')</span>' : '');
   prev = bytes;
 
+  if (grezzi.length < 4000) grezzi.push(bytes.slice(0, 6).join(','));
+
   for (let off = 0; off + 1 < n; off++) {
     note(off, 'u16le', d.getUint16(off, true));
     note(off, 'u16be', d.getUint16(off, false));
     note(off, 'i16le', d.getInt16(off, true));
     note(off, 'i16be', d.getInt16(off, false));
   }
+
+  // ── 24 bit sui byte 2-3-4, e la loro differenza ────────────────────────────────────────
+  if (n >= 5) {
+    const be = (bytes[2] << 16) | (bytes[3] << 8) | bytes[4];
+    const le = (bytes[4] << 16) | (bytes[3] << 8) | bytes[2];
+    const dBe = delta24(be, prev24.be), dLe = delta24(le, prev24.le);
+    prev24 = { be, le };
+    note(90, 'u24be', be); note(91, 'u24le', le);
+    note(92, 'DELTA be', dBe); note(93, 'DELTA le', dLe);
+    $('d24').innerHTML =
+      '24 bit BE <b>' + be + '</b> · differenza <b style="color:#34d399">' + dBe + '</b><br>' +
+      '24 bit LE <b>' + le + '</b> · differenza <b style="color:#34d399">' + dLe + '</b>';
+    storiaDelta.push(dBe);
+    if (storiaDelta.length > 900) storiaDelta.shift();
+  }
+
   count++; tick++;
   $('count').textContent = count;
   render();
@@ -138,18 +189,26 @@ function render() {
       '<td>' + s.min + '</td><td>' + s.max + '</td><td>' + s.span + '</td></tr>').join('');
 }
 
-function disegna() {
-  const c = $('graph'), g = c.getContext('2d');
+function traccia(canvasId, serie, colore) {
+  const c = $(canvasId), g = c.getContext('2d');
   g.clearRect(0, 0, c.width, c.height);
-  if (storia.length < 2) return;
-  const min = Math.min(...storia), max = Math.max(...storia), amp = (max - min) || 1;
-  g.strokeStyle = '#34d399'; g.lineWidth = 1.5; g.beginPath();
-  storia.forEach((v, i) => {
-    const x = (i / (storia.length - 1)) * c.width;
+  if (serie.length < 2) return;
+  const min = Math.min(...serie), max = Math.max(...serie), amp = (max - min) || 1;
+  g.strokeStyle = colore; g.lineWidth = 1.5; g.beginPath();
+  serie.forEach((v, i) => {
+    const x = (i / (serie.length - 1)) * c.width;
     const y = c.height - 8 - ((v - min) / amp) * (c.height - 16);
     i ? g.lineTo(x, y) : g.moveTo(x, y);
   });
   g.stroke();
+  g.fillStyle = '#7f93b4'; g.font = '10px ui-monospace, monospace';
+  g.fillText(String(max), 4, 12); g.fillText(String(min), 4, c.height - 4);
+}
+
+function disegna() {
+  traccia('graph', storia, '#8ea0bd');
+  traccia('graphDelta', storiaDelta, '#34d399');
+  $('nrec').textContent = grezzi.length;
 }
 
 async function invia(b0, b1) {
@@ -185,8 +244,14 @@ $('connect').onclick = async () => {
     d.addEventListener('inputreport', onReport);
     $('status').textContent = 'collegato: ' + d.productName;
     $('connect').disabled = true;
+    $('hintCmd').style.display = 'none';
     document.querySelectorAll('#disconnect,#reset,#sendManual,[data-cmd]').forEach(b => b.disabled = false);
-  } catch (err) { $('status').textContent = 'errore: ' + err.message; }
+  } catch (err) {
+    // Il pannello incorporato puo' non saper mostrare il selettore di sistema: in quel caso
+    // la pagina va aperta in Chrome vero, dove il selettore esiste.
+    $('status').innerHTML = '<span style="color:#f87171">non riuscito: ' + err.message +
+      ' — apri questa pagina in <b>Chrome</b> su <code>http://localhost:3002/hid-sniffer.html</code></span>';
+  }
 };
 
 $('disconnect').onclick = async () => {
@@ -196,7 +261,22 @@ $('disconnect').onclick = async () => {
   $('status').textContent = 'scollegato';
 };
 
-$('reset').onclick = () => { stats.clear(); storia.length = 0; count = 0; $('count').textContent = 0; };
+$('reset').onclick = () => {
+  stats.clear(); storia.length = 0; storiaDelta.length = 0; grezzi.length = 0;
+  count = 0; $('count').textContent = 0; prev24 = { be: null, le: null };
+};
+
+// Un campione dei report registrati, in chiaro: e' quello che serve per capire il formato
+// con certezza invece che a occhio su un grafico.
+$('dump').onclick = () => {
+  const passo = Math.max(1, Math.floor(grezzi.length / 400));   // al massimo 400 righe
+  const campione = grezzi.filter((_, i) => i % passo === 0);
+  $('out').style.display = 'block';
+  $('out').value =
+    '# Theta-Meter HID — byte 0..5 di ' + grezzi.length + ' report a 60/s (1 riga ogni ' + passo + ')\n' +
+    campione.join('\n');
+  $('out').select();
+};
 $('sendManual').onclick = () => invia(parseInt($('b0').value), parseInt($('b1').value));
 
 setInterval(() => { $('rate').textContent = tick; tick = 0; }, 1000);
