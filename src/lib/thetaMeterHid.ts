@@ -1,0 +1,122 @@
+/**
+ * THETA-METER — dialogo col dispositivo via WebHID.
+ *
+ * La DECODIFICA non sta qui: sta in engine/thetaMeter.ts, che è puro e ha 15 test. Qui c'è
+ * solo il contorno — aprire il dispositivo, ascoltare i report, riagganciarsi se sparisce.
+ *
+ * Perché WebHID e non un modulo nativo: funziona sia in Electron sia in Chrome, con la stessa
+ * riga di codice, esattamente come Web Bluetooth fa già per il Muse. Nessuna compilazione per
+ * architettura, nessun driver da installare. Lato Electron il selettore è già gestito in
+ * main.cjs, che sceglie il meter da solo grazie al suo VID/PID univoco.
+ *
+ * ⚠️ Il programma **Theta-Meter deve essere chiuso**: prende il dispositivo in esclusiva via
+ * libusb, e finché è aperto qui non arriva nulla.
+ */
+import { ThetaMeter, type ThetaReading } from '../engine/thetaMeter';
+import { THETA_VENDOR_ID, THETA_PRODUCT_ID } from '../engine/tuning';
+
+/** Stato del collegamento, per l'interfaccia. */
+export type ThetaStatus = 'disconnected' | 'connecting' | 'connected';
+
+export interface ThetaMeterHidOptions {
+  /** Ogni lettura valida (~60 al secondo). */
+  onReading?: (r: ThetaReading) => void;
+  onStatus?: (s: ThetaStatus) => void;
+  onError?: (e: Error) => void;
+}
+
+/** WebHID esiste? (In un contesto non sicuro o su un browser che non lo ha, no.) */
+export const isHidAvailable = (): boolean =>
+  typeof navigator !== 'undefined' && 'hid' in navigator;
+
+export class ThetaMeterHid {
+  private device: HIDDevice | null = null;
+  private readonly meter = new ThetaMeter();
+  private readonly onInput = (e: HIDInputReportEvent) => {
+    const d = e.data;
+    const bytes = new Uint8Array(d.byteLength);
+    for (let i = 0; i < d.byteLength; i++) bytes[i] = d.getUint8(i);
+    const r = this.meter.push(bytes);
+    if (r) this.opts.onReading?.(r);
+  };
+
+  status: ThetaStatus = 'disconnected';
+
+  constructor(private readonly opts: ThetaMeterHidOptions = {}) {}
+
+  /** Quanti report validi sono arrivati e quanti scartati — diagnostica onesta. */
+  get counters(): { ok: number; rejected: number } {
+    return { ok: this.meter.count, rejected: this.meter.rejected };
+  }
+
+  private setStatus(s: ThetaStatus): void {
+    this.status = s;
+    this.opts.onStatus?.(s);
+  }
+
+  /**
+   * Si aggancia al meter. Prima cerca fra i dispositivi GIÀ autorizzati: se c'è, nessun
+   * selettore da mostrare all'utente. Altrimenti chiede — e in quel caso DEVE partire da un
+   * gesto dell'utente (un clic), altrimenti il browser rifiuta la richiesta.
+   */
+  async connect(): Promise<boolean> {
+    if (!isHidAvailable()) {
+      this.opts.onError?.(new Error('WebHID non disponibile in questo contesto'));
+      return false;
+    }
+    if (this.device) return true;
+
+    this.setStatus('connecting');
+    try {
+      const filtro = { vendorId: THETA_VENDOR_ID, productId: THETA_PRODUCT_ID };
+      const gia = await navigator.hid.getDevices();
+      let d = gia.find(x => x.vendorId === filtro.vendorId && x.productId === filtro.productId);
+      if (!d) [d] = await navigator.hid.requestDevice({ filters: [filtro] });
+
+      if (!d) { this.setStatus('disconnected'); return false; }
+      if (!d.opened) await d.open();
+
+      d.addEventListener('inputreport', this.onInput);
+      this.device = d;
+      this.setStatus('connected');
+      return true;
+    } catch (e) {
+      this.setStatus('disconnected');
+      const err = e instanceof Error ? e : new Error(String(e));
+      // Il caso di gran lunga più comune, e il messaggio del sistema non lo dice.
+      if (/open|access|busy/i.test(err.message)) {
+        this.opts.onError?.(new Error(
+          'Impossibile aprire il meter — il programma Theta-Meter è aperto? Va chiuso: ' +
+          'prende il dispositivo in esclusiva. (' + err.message + ')'));
+      } else {
+        this.opts.onError?.(err);
+      }
+      return false;
+    }
+  }
+
+  /**
+   * Manda un comando da 2 byte. I comandi noti — « CMD C », « CMD V », « CMD X » — vengono
+   * dalle stringhe del programma Theta-Meter; il meter trasmette comunque da solo, quindi
+   * finora non è servito mandarne nessuno. Tenuto per quando servisse.
+   */
+  async sendCommand(b0: number, b1 = 0): Promise<boolean> {
+    if (!this.device) return false;
+    for (const reportId of [0, 1]) {
+      try { await this.device.sendReport(reportId, new Uint8Array([b0, b1])); return true; }
+      catch (_) { /* si prova l'altro id */ }
+    }
+    return false;
+  }
+
+  async disconnect(): Promise<void> {
+    const d = this.device;
+    this.device = null;
+    this.meter.reset();
+    if (d) {
+      d.removeEventListener('inputreport', this.onInput);
+      try { await d.close(); } catch (_) { /* già chiuso */ }
+    }
+    this.setStatus('disconnected');
+  }
+}

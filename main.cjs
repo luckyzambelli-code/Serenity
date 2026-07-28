@@ -230,11 +230,32 @@ function createWindow() {
   // SECURITY (A5): only grant the permissions the app actually needs (camera/mic
   // for remote sessions, Web Bluetooth for the Muse) instead of approving every
   // permission unconditionally.
-  const ALLOWED_PERMS = ['media', 'audioCapture', 'videoCapture', 'bluetooth'];
+  const ALLOWED_PERMS = ['media', 'audioCapture', 'videoCapture', 'bluetooth', 'hid'];
   win.webContents.session.setPermissionCheckHandler((_wc, permission) => ALLOWED_PERMS.includes(permission));
   win.webContents.session.setPermissionRequestHandler((_wc, permission, callback) => {
     callback(ALLOWED_PERMS.includes(permission));
   });
+
+  // ── Theta-Meter : sélecteur HID ────────────────────────────────────────────
+  // L'e-meter USB de l'utilisateur est un NXP LPC13xx qui se présente en HID
+  // « vendor-defined » (PAS un port série, malgré les traces FTDI dans le logiciel
+  // Theta-Meter). Comme son VID/PID est unique, on le choisit AUTOMATIQUEMENT —
+  // même approche que le Muse plus haut : aucune interface de sélection à écrire.
+  const THETA_VID = 0x1fc9;   // NXP Semiconductors
+  const THETA_PID = 0x0003;
+  const estLeMeter = d => d && d.vendorId === THETA_VID && d.productId === THETA_PID;
+
+  win.webContents.session.on('select-hid-device', (event, details, callback) => {
+    event.preventDefault();
+    const meter = (details.deviceList || []).find(estLeMeter);
+    // null = « aucun choix » : le renderer reçoit un rejet propre au lieu d'attendre.
+    callback(meter ? meter.deviceId : null);
+  });
+
+  // Sans ceci l'autorisation est oubliée à chaque redémarrage et il faudrait
+  // re-choisir l'appareil à chaque session. On n'autorise QUE ce meter.
+  win.webContents.session.setDevicePermissionHandler(
+    details => details.deviceType === 'hid' && estLeMeter(details.device));
 
   // Notify the renderer when SM moves or resizes so TM can follow
   win.on('move',   () => { if (!win.isDestroyed()) win.webContents.send('window-moved'); });

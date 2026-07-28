@@ -45,7 +45,35 @@ da sola senza toccare le altre.
 
 ---
 
+## THETA-METER (e-meter USB)
+
+Protocollo decodificato e coperto da 15 test; il **driver WebHID non è mai girato** contro il
+dispositivo dentro EQUILIBRIUM — finora solo dalla pagina di scoperta.
+
+- [ ] con **Theta-Meter chiuso**, il meter si aggancia da solo (VID/PID univoci: nessun
+      selettore da mostrare, come per il Muse);
+- [ ] arrivano ~60 letture/s e il numero **scende stringendo** le lattine;
+- [ ] i report scartati restano a **zero** (se salgono, l'intestazione `01 02` non è costante
+      come credo e il formato va rivisto);
+- [ ] l'autorizzazione **sopravvive al riavvio** dell'app (`setDevicePermissionHandler`);
+- [ ] se Theta-Meter è aperto, compare il messaggio che dice di chiuderlo — e non un errore
+      di sistema incomprensibile.
+
+### Da verificare, non ancora saputo
+
+- [ ] **il legame grezzo → ohm è lineare?** L'ho assunto, non è provato. Si misurano tre
+      resistenze note al posto delle lattine e si guarda con `linearityError()` se la terza
+      cade sulla retta. Se non ci cade, il legame è probabilmente reciproco (frequenza) e la
+      taratura a due punti non basta. Finché non è verificato: **valori relativi sì, ohm
+      assoluti no**.
+
+---
+
 ## CAN METER
+
+⚠️ **Forse non serve più**: l'utente possiede già un e-meter USB funzionante (vedi sopra).
+La sonda sul jack audio nasceva dal fatto che il Muse non misura resistenza — problema che il
+Theta-Meter risolve da sé. Da riprendere solo se quella strada si rivelasse insufficiente.
 
 Tutta la catena hardware è **mai girata**: `lib/canMeterAudio.ts` non ha mai visto una scheda
 audio vera. Procedura completa in [can-meter-montaggio.md](can-meter-montaggio.md).
