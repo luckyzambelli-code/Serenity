@@ -26,7 +26,7 @@
  */
 import {
   THETA_ARM_ALPHA, THETA_NEEDLE_SCALE, THETA_ARM_FOLLOW_FAST,
-  THETA_OFFSCALE, THETA_TOTAL_TA_STEP, THETA_TOTAL_TA_DEADBAND,
+  THETA_OFFSCALE, THETA_RECENTRE, THETA_TOTAL_TA_STEP, THETA_TOTAL_TA_DEADBAND,
 } from './tuning';
 
 export interface ThetaNeedleState {
@@ -58,6 +58,8 @@ export class ThetaNeedle {
   /** Massimo storico del braccio, per contare solo le discese nette. */
   private peak = 0;
   private started = false;
+  /** true mentre il braccio sta RIPORTANDO l'ago dentro il quadrante (isteresi). */
+  private recentring = false;
 
   /** Una lettura grezza dal meter. Restituisce lo stato aggiornato. */
   push(raw: number): ThetaNeedleState {
@@ -73,11 +75,22 @@ export class ThetaNeedle {
     // il braccio inseguirebbe già in parte la deviazione e l'ago risulterebbe smorzato.
     const scarto = (this.arm - raw) * THETA_NEEDLE_SCALE;
     this.offset = Math.max(-1, Math.min(1, scarto));
-    this.offScale = Math.abs(scarto) > THETA_OFFSCALE;
 
-    // Il braccio insegue lentamente — è la manopola. Quando l'ago è fuori scala insegue in
-    // fretta: è quel che fa l'auditor, che gira la manopola per riportare l'ago nel quadrante.
-    const alpha = this.offScale ? THETA_ARM_FOLLOW_FAST : THETA_ARM_ALPHA;
+    // ── RICENTRAGGIO, con ISTERESI ────────────────────────────────────────────────────────
+    // Si comincia a inseguire in fretta quando l'ago SBATTE contro il bordo, e si smette solo
+    // quando è tornato BEN DENTRO il quadrante — non appena rientra di un soffio.
+    //
+    // È quel che fa l'auditor: l'ago esce, lui gira la manopola finché l'ago è di nuovo in
+    // mezzo. Con una sola soglia — e per giunta SOPRA 1.0, com'era prima — l'inseguimento
+    // veloce si fermava mentre l'ago era ancora fuori dal quadrante visibile: restava
+    // incollato al bordo e da lì rientrava solo al passo lento, cioè in pratica mai.
+    const ampiezza = Math.abs(scarto);
+    if (ampiezza >= THETA_OFFSCALE) this.recentring = true;
+    else if (ampiezza <= THETA_RECENTRE) this.recentring = false;
+    this.offScale = this.recentring;
+
+    // Il braccio insegue lentamente — è la manopola. Mentre ricentra, in fretta.
+    const alpha = this.recentring ? THETA_ARM_FOLLOW_FAST : THETA_ARM_ALPHA;
     this.arm = this.arm * (1 - alpha) + raw * alpha;
 
     // ── TOTAL TA : solo le DISCESE nette dal picco ──────────────────────────────────────────
@@ -100,6 +113,6 @@ export class ThetaNeedle {
 
   reset(): void {
     this.arm = 0; this.offset = 0; this.offScale = false;
-    this.totalTa = 0; this.peak = 0; this.started = false;
+    this.totalTa = 0; this.peak = 0; this.started = false; this.recentring = false;
   }
 }

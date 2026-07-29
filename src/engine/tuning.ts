@@ -215,13 +215,19 @@ export const THETA_ARM_ALPHA = 0.0008;
 export const THETA_ARM_FOLLOW_FAST = 0.02;
 /** Unità grezze → offset del quadrante. È la manopola della SENSIBILITÀ.
  *  DA TARARE IN SEDUTA: se le reazioni sono minuscole ALZARLO, se l'ago sbatte ABBASSARLO.
- *  Punto di partenza: sui dati veri una stretta muoveva il grezzo di ~2 milioni; con 1/300000
- *  ciò porta l'ago da fondo a fondo. */
-export const THETA_NEEDLE_SCALE = 1 / 300_000;
-/** Oltre questo scarto (in unità di quadrante) l'ago è considerato FUORI SCALA. Sopra 1 è
- *  già oltre il bordo; si lascia un margine per non far scattare l'inseguimento veloce a ogni
- *  reazione ampia ma legittima. */
-export const THETA_OFFSCALE = 1.3;
+ *  1/1.500.000 = una stretta forte (che sui dati veri muove il grezzo di ~2 milioni) porta
+ *  l'ago poco oltre il bordo, quindi fa scattare il ricentraggio; una reazione vera, molto
+ *  più piccola di una stretta, resta ben dentro il quadrante.
+ *  (Il primo valore, 1/300.000, era 5 volte troppo alto: TUTTO sbatteva.) */
+export const THETA_NEEDLE_SCALE = 1 / 1_500_000;
+/** Oltre questo scarto l'ago SBATTE e il braccio comincia a ricentrare.
+ *  ⚠️ DEVE stare SOTTO 1.0, cioè dentro il quadrante visibile: se sta sopra, l'inseguimento
+ *  si ferma mentre l'ago è ancora fuori e resta incollato al bordo per sempre. */
+export const THETA_OFFSCALE = 0.9;
+/** …e si smette di ricentrare solo QUI, non appena l'ago rientra: è l'ISTERESI, cioè
+ *  l'auditor che gira la manopola finché l'ago è di nuovo in mezzo, non solo dentro di un
+ *  soffio. PIÙ BASSO = ricentra più a fondo ma può mangiarsi la coda della reazione. */
+export const THETA_RECENTRE = 0.2;
 /** Quanto braccio vale un decimo di divisione di Total TA, in unità grezze.
  *  DA TARARE contro il meter vero: si guarda di quanto scende il grezzo per una divisione. */
 export const THETA_TOTAL_TA_STEP = 120_000;
