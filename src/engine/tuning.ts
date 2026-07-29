@@ -236,6 +236,27 @@ export const THETA_TOTAL_TA_STEP = 120_000;
  *  culmine della caduta che ne segue, senza raccogliere movimenti successivi che falserebbero
  *  il picco. */
 export const SQUEEZE_TEST_MS = 9000;
+/** MOVIMENTO CORPOREO — su quanti campioni si guarda l'escursione dell'ago (60 = 1 s). */
+export const THETA_MOTION_WINDOW = 120;   // 2 s
+/** Se in quella finestra l'ago spazza PIÙ di tanto quadrante, non è carica: è la persona che si
+ *  muove o stringe. Il conteggio del Total TA si SOSPENDE, come fa il Theta-Meter, che in quel
+ *  caso non conta nulla (noi contavamo fino a 4,5 divisioni).
+ *  PIÙ ALTO = più permissivo (si conta di più, ma rientrano gli artefatti);
+ *  PIÙ BASSO = più severo (nessun artefatto, ma una reazione ampia potrebbe non contare). */
+export const THETA_MOTION_RANGE = 0.5;
+/** Per quanti campioni il conteggio resta sospeso DOPO che l'agitazione è cessata: il braccio
+ *  ha ancora da riassestarsi, e quella coda non è carica. */
+export const THETA_MOTION_COOLDOWN = 180;   // 3 s
+/** Per quanti CAMPIONI una discesa deve reggere prima di contare come TA (60 campioni = 1 s).
+ *  È il rifiuto del MOVIMENTO CORPOREO: stringere e lasciare le lattine fa scendere la
+ *  resistenza per un attimo, ma rientra subito — il Theta-Meter non lo conta, noi contavamo
+ *  fino a 4,5 divisioni di roba che non è carica. Un blowdown vero invece RESTA.
+ *  PIÙ ALTO = più severo (nessun artefatto, ma un blowdown si conta più tardi). */
+export const THETA_TA_CONFIRM_SAMPLES = 180;   // 3 s
+/** Per quanti campioni l'ago deve restare fuori scala prima che il braccio cominci a
+ *  ricentrare. Senza questa attesa il braccio riportava l'ago a SET durante un blowdown vero,
+ *  che sul meter resta giù finché l'auditor non abbassa la manopola. */
+export const THETA_OFFSCALE_HOLD_SAMPLES = 150;   // 2,5 s
 /** Passo del Total TA quando l'apparecchio È tarato, in DIVISIONI di TA.
  *  Un decimo, come il Total TA classico. */
 export const THETA_TOTAL_TA_STEP_DIV = 0.1;

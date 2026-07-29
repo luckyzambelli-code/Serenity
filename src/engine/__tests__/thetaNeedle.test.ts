@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ThetaNeedle } from '../thetaNeedle';
 import { THETA_NEEDLE_SCALE, THETA_TOTAL_TA_STEP, THETA_OFFSCALE, THETA_RECENTRE,
-         NEEDLE_REST_OFFSET } from '../tuning';
+         NEEDLE_REST_OFFSET, THETA_OFFSCALE_HOLD_SAMPLES, THETA_TA_CONFIRM_SAMPLES } from '../tuning';
 
 /** Deviazione dell'ago RISPETTO A SET — è questa la grandezza che conta. L'ago in equilibrio
  *  riposa a SET (−0,35 su questo quadrante), non al centro: misurare l'offset assoluto
@@ -27,6 +27,13 @@ const tieni = (n: ThetaNeedle, raw: number, volte: number) => {
 };
 
 const RIPOSO = 9_000_000;   // grezzo tipico osservato sul meter dell'utente
+
+/** Scende GRADUALMENTE da `da` a `a`. La resistenza non fa mai salti istantanei, e un salto
+ *  farebbe scattare il rilevatore di movimento corporeo — che è lì apposta per non contare gli
+ *  strappi. Passi piccoli, tanti campioni ciascuno: è così che si comporta una vera discesa. */
+const scendi = (n: ThetaNeedle, da: number, a: number, passi = 60) => {
+  for (let i = 1; i <= passi; i++) tieni(n, da + (a - da) * (i / passi), 60);
+};
 
 describe('ThetaNeedle', () => {
   it('il braccio parte DOVE si trova la persona, non da zero', () => {
@@ -115,11 +122,34 @@ describe('ThetaNeedle', () => {
   it('ISTERESI: non smette di ricentrare appena rientra di un soffio', () => {
     const n = new ThetaNeedle();
     n.push(RIPOSO);
-    n.push(RIPOSO - perOffset(3));                   // scatta il ricentraggio
+    // Il ricentraggio parte solo dopo che il fuori scala ha RETTO — vedi il test qui sotto.
+    tieni(n, RIPOSO - perOffset(3), THETA_OFFSCALE_HOLD_SAMPLES + 5);
     // deviazione appena sotto la soglia di scatto: il ricentraggio deve PROSEGUIRE,
     // altrimenti l'ago resterebbe a ridosso del bordo.
-    const s = n.push(RIPOSO - perOffset(THETA_OFFSCALE - 0.05));
-    expect(s.offScale).toBe(true);
+    n.push(RIPOSO - perOffset(THETA_OFFSCALE - 0.05));
+    expect(n.offScale).toBe(false);        // non è più oltre la soglia…
+    // …ma il braccio insegue ancora in fretta: lo si vede dal recupero.
+    const prima = n.arm;
+    tieni(n, RIPOSO - perOffset(THETA_OFFSCALE - 0.05), 60);
+    expect(prima - n.arm).toBeGreaterThan(0);
+  });
+
+  // ── IL BLOWDOWN DEVE RESTARE VISIBILE ────────────────────────────────────────────────────
+  // Segnalato in seduta: sul Theta-Meter l'ago va in blowdown e ci RESTA, da noi rientrava
+  // subito perché il braccio si metteva a ricentrare all'istante.
+  it('l ago resta GIU per qualche secondo prima che il braccio lo riporti', () => {
+    const n = new ThetaNeedle();
+    n.push(RIPOSO);
+    const giu = RIPOSO - perOffset(3);
+    // Poco dopo l'inizio: fuori scala e il braccio NON si è ancora mosso apprezzabilmente.
+    const deviazione = RIPOSO - giu;
+    tieni(n, giu, Math.floor(THETA_OFFSCALE_HOLD_SAMPLES / 2));
+    expect(n.offScale).toBe(true);
+    // Il braccio lento si muove comunque un poco: il punto è che ha recuperato POCO.
+    expect((RIPOSO - n.arm) / deviazione).toBeLessThan(0.1);
+    // Molto dopo, il ricentraggio è partito e ne ha recuperata una fetta ben maggiore.
+    tieni(n, giu, THETA_OFFSCALE_HOLD_SAMPLES + 400);
+    expect((RIPOSO - n.arm) / deviazione).toBeGreaterThan(0.4);
   });
 
   it('il recupero è MOLTO più rapido mentre ricentra', () => {
@@ -142,6 +172,46 @@ describe('ThetaNeedle', () => {
 
     tieni(n, RIPOSO, 60_000);                    // risale allo stesso punto
     expect(n.totalTa).toBe(dopoDiscesa);         // la risalita NON si conta
+  });
+
+  // ── RIFIUTO DEL MOVIMENTO CORPOREO ───────────────────────────────────────────────────────
+  // Segnalato in seduta: stringendo e lasciando le lattine più volte il Theta-Meter NON conta
+  // TA (riconosce il movimento corporeo), mentre noi arrivavamo a 4,5 divisioni.
+  it('STRINGERE e lasciare le lattine NON conta come TA', () => {
+    const n = new ThetaNeedle();
+    n.push(RIPOSO);
+    n.setTaConverter((raw: number) => raw / 1_000_000);   // scala fittizia ma monotona
+    for (let i = 0; i < 8; i++) {
+      tieni(n, RIPOSO - 2_000_000, 40);   // stretta: forte ma BREVE (0,7 s)
+      tieni(n, RIPOSO, 40);               // rilascio
+    }
+    // Stringere ripetutamente ABBASSA davvero la resistenza media, quindi il braccio scende
+    // davvero: a distinguerlo dalla carica non basta aspettare, serve riconoscere
+    // l'AGITAZIONE — l'ago spazza invece di scendere e restare.
+    expect(n.bodyMotion).toBe(true);
+    expect(n.totalTa).toBe(0);
+  });
+
+  it('e lo DICE, invece di lasciare il totale fermo senza spiegazione', () => {
+    const n = new ThetaNeedle();
+    n.push(RIPOSO);
+    expect(n.bodyMotion).toBe(false);              // a riposo, nessuna agitazione
+    for (let i = 0; i < 4; i++) {
+      tieni(n, RIPOSO - 2_000_000, 40);
+      tieni(n, RIPOSO, 40);
+    }
+    expect(n.bodyMotion).toBe(true);
+  });
+
+  it('una discesa SOSTENUTA invece si conta', () => {
+    const n = new ThetaNeedle();
+    n.push(RIPOSO);
+    n.setTaConverter((raw: number) => raw / 1_000_000);
+    // Stessa ampiezza della stretta, ma che RESTA: è un blowdown vero. Si scende in modo
+    // GRADUALE, come avviene davvero, per non far scattare il rilevatore di agitazione.
+    scendi(n, RIPOSO, RIPOSO - 2_000_000);
+    tieni(n, RIPOSO - 2_000_000, THETA_TA_CONFIRM_SAMPLES + 20_000);
+    expect(n.totalTa).toBeGreaterThan(0);
   });
 
   it('un ago che oscilla NON gonfia il totale', () => {
@@ -194,13 +264,17 @@ describe('ThetaNeedle', () => {
     it('una discesa di UNA divisione conta 1.0, ovunque sulla scala', () => {
       // In BASSO (fra TA 3 e 2) e in ALTO (fra TA 5 e 4) la stessa divisione corrisponde a
       // numeri di grezzi molto diversi — ma il totale dev'essere lo stesso.
+      // Si scende GRADUALMENTE, come avviene davvero: un salto istantaneo farebbe scattare il
+      // rilevatore di movimento corporeo, che è lì apposta per non contare gli strappi.
       const basso = new ThetaNeedle(); basso.setTaConverter(scala);
       basso.push(2_217_756);                       // TA 3
-      tieni(basso, 941_759, 200_000);              // scende a TA 2
+      scendi(basso, 2_217_756, 941_759);           // scende a TA 2
+      tieni(basso, 941_759, 200_000);
 
       const alto = new ThetaNeedle(); alto.setTaConverter(scala);
       alto.push(6_721_229);                        // TA 5
-      tieni(alto, 3_935_104, 200_000);             // scende a TA 4
+      scendi(alto, 6_721_229, 3_935_104);          // scende a TA 4
+      tieni(alto, 3_935_104, 200_000);
 
       // È QUESTO il punto: lo stesso salto di TA vale UGUALE in fondo e in cima alla scala,
       // benché corrisponda a un numero di grezzi molto diverso. Contando in grezzi, il totale
@@ -216,9 +290,9 @@ describe('ThetaNeedle', () => {
       // Contro-prova senza scala: le stesse due discese, di UNA divisione ciascuna, danno
       // totali molto diversi. È il difetto che la conversione in divisioni elimina.
       const basso = new ThetaNeedle();
-      basso.push(2_217_756); tieni(basso, 941_759, 200_000);
+      basso.push(2_217_756); scendi(basso, 2_217_756, 941_759); tieni(basso, 941_759, 200_000);
       const alto = new ThetaNeedle();
-      alto.push(6_721_229);  tieni(alto, 3_935_104, 200_000);
+      alto.push(6_721_229);  scendi(alto, 6_721_229, 3_935_104); tieni(alto, 3_935_104, 200_000);
       expect(alto.totalTa).toBeGreaterThan(basso.totalTa * 1.8);
     });
 

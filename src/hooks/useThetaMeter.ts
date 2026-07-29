@@ -58,6 +58,8 @@ export interface ThetaMeterState {
   breathOk: boolean | null;
   /** L'ago è finito fuori dal quadrante. */
   offScale: boolean;
+  /** L'ago spazza troppo per essere carica: MOVIMENTO CORPOREO, Total TA sospeso. */
+  bodyMotion: boolean;
   /** Letture valide e report scartati — se i secondi salgono, il formato non è quello che credo. */
   counters: { ok: number; rejected: number };
   /** Il dispositivo non è utilizzabile in questo contesto (niente WebHID). */
@@ -75,10 +77,12 @@ export function useThetaMeter() {
   /** Ultima lettura, in attesa della prossima pubblicazione. */
   /** Prova in corso + picco osservato. */
   const testRef = useRef({ on: false, peak: 0 });
-  const pendingRef = useRef<{ offset: number; arm: number; raw: number; totalTa: number; offScale: boolean } | null>(null);
+  const pendingRef = useRef<{ offset: number; arm: number; raw: number; totalTa: number;
+                              offScale: boolean; bodyMotion: boolean } | null>(null);
 
   const [state, setState] = useState<ThetaMeterState>({
-    status: 'disconnected', offset: 0, arm: 0, raw: 0, rawSmooth: 0, totalTa: 0, offScale: false,
+    status: 'disconnected', offset: 0, arm: 0, raw: 0, rawSmooth: 0, totalTa: 0,
+    offScale: false, bodyMotion: false,
     ta: null, taNow: null, taScale: loadTaScale(),
     setup: loadSetup(THETA_NEEDLE_SCALE), testing: null, testPeak: 0, breathOk: null,
     counters: { ok: 0, rejected: 0 }, unavailable: !isHidAvailable(), lastError: null,
@@ -149,7 +153,8 @@ export function useThetaMeter() {
   const disconnect = useCallback(async () => {
     await hidRef.current?.disconnect();
     needleRef.current.reset();
-    setState(p => ({ ...p, offset: 0, arm: 0, raw: 0, rawSmooth: 0, totalTa: 0, offScale: false }));
+    setState(p => ({ ...p, offset: 0, arm: 0, raw: 0, rawSmooth: 0, totalTa: 0,
+                     offScale: false, bodyMotion: false }));
   }, []);
 
   /** Azzera il Total TA all'inizio di una seduta, SENZA perdere l'aggancio al preclear

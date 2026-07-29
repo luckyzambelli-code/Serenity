@@ -28,6 +28,8 @@ import {
   THETA_ARM_ALPHA, THETA_NEEDLE_SCALE, THETA_ARM_FOLLOW_FAST,
   THETA_OFFSCALE, THETA_RECENTRE, THETA_TOTAL_TA_STEP, THETA_TOTAL_TA_DEADBAND,
   THETA_TOTAL_TA_STEP_DIV, THETA_TOTAL_TA_DEADBAND_DIV, NEEDLE_REST_OFFSET,
+  THETA_TA_CONFIRM_SAMPLES, THETA_OFFSCALE_HOLD_SAMPLES,
+  THETA_MOTION_WINDOW, THETA_MOTION_RANGE, THETA_MOTION_COOLDOWN,
 } from './tuning';
 
 export interface ThetaNeedleState {
@@ -38,6 +40,9 @@ export interface ThetaNeedleState {
   /** true quando l'ago è finito fuori scala: il braccio si mette a inseguire in fretta,
    *  come farebbe l'auditor girando la manopola per riportarlo dentro. */
   offScale: boolean;
+  /** true quando l'ago spazza troppo per essere carica: è MOVIMENTO CORPOREO, e il Total TA
+   *  resta fermo. Va mostrato, o l'auditor si chiederebbe perché il totale non sale. */
+  bodyMotion: boolean;
   /** Total TA accumulato: somma delle DISCESE nette del braccio, in decimi di divisione. */
   totalTa: number;
 }
@@ -58,6 +63,8 @@ export class ThetaNeedle {
   lastRaw = 0;
   offset = 0;
   offScale = false;
+  /** L'ago sta spazzando troppo per essere carica: movimento corporeo, conteggio sospeso. */
+  bodyMotion = false;
   totalTa = 0;
 
   /** Massimo storico, per contare solo le discese nette — in DIVISIONI se l'apparecchio è
@@ -77,6 +84,16 @@ export class ThetaNeedle {
   private started = false;
   /** true mentre il braccio sta RIPORTANDO l'ago dentro il quadrante (isteresi). */
   private recentring = false;
+  /** Da quanti campioni l'ago è fuori scala. Il ricentraggio non parte subito: un blowdown vero
+   *  deve restare visibile, come sul meter resta giù finché non si abbassa la manopola. */
+  private offScaleFor = 0;
+  /** Finestra scorrevole della misura, per contare solo le discese SOSTENUTE. Il massimo su
+   *  questa finestra scende solo se il valore ci resta. */
+  private window: number[] = [];
+  /** Escursione recente dell'ago, per riconoscere il movimento corporeo. */
+  private devWindow: number[] = [];
+  /** Campioni residui di sospensione dopo che l'agitazione è cessata. */
+  private motionCooldown = 0;
 
   /**
    * Aggancia (o stacca) la scala tarata. Da chiamare quando la taratura cambia.
@@ -88,6 +105,7 @@ export class ThetaNeedle {
     if (fn === this.toTa) return;
     this.toTa = fn;
     this.totalTa = 0; this.tenths = 0;
+    this.window = []; this.devWindow = []; this.motionCooldown = 0;
     this.peak = this.misura(this.arm);
   }
 
@@ -128,9 +146,12 @@ export class ThetaNeedle {
     // veloce si fermava mentre l'ago era ancora fuori dal quadrante visibile: restava
     // incollato al bordo e da lì rientrava solo al passo lento, cioè in pratica mai.
     const ampiezza = Math.abs(scarto);
-    if (ampiezza >= THETA_OFFSCALE) this.recentring = true;
+    // L'ago è fuori scala SUBITO (lo si segnala), ma il braccio non si muove per riportarlo
+    // finché la condizione non REGGE: un blowdown vero deve restare visibile come tale.
+    this.offScale = ampiezza >= THETA_OFFSCALE;
+    this.offScaleFor = this.offScale ? this.offScaleFor + 1 : 0;
+    if (this.offScaleFor >= THETA_OFFSCALE_HOLD_SAMPLES) this.recentring = true;
     else if (ampiezza <= THETA_RECENTRE) this.recentring = false;
-    this.offScale = this.recentring;
 
     // Il braccio insegue lentamente — è la manopola. Mentre ricentra, in fretta.
     const alpha = this.recentring ? THETA_ARM_FOLLOW_FAST : THETA_ARM_ALPHA;
@@ -141,7 +162,36 @@ export class ThetaNeedle {
     // Theta-Meter è marcatamente NON LINEARE (scarto dalla retta 0,25 TA sui punti misurati),
     // quindi uno stesso numero di grezzi vale MOLTO più TA vicino a 2 che vicino a 5. Contarli
     // in grezzi darebbe un totale sbagliato in modo diverso a seconda di dove sta il preclear.
-    const ora = this.misura(this.arm);
+    // ── MOVIMENTO CORPOREO ─────────────────────────────────────────────────────────────────
+    // Stringere e lasciare le lattine abbassa DAVVERO la resistenza media, quindi il braccio
+    // scende davvero: una semplice attesa non basta a distinguerlo da una carica. Il segno che
+    // lo tradisce è l'AGITAZIONE — l'ago spazza avanti e indietro invece di scendere e restare.
+    // Finché dura, il conteggio si sospende, come fa il Theta-Meter (che in quel caso non conta
+    // nulla, mentre noi arrivavamo a 4,5 divisioni).
+    this.devWindow.push(scarto);
+    if (this.devWindow.length > THETA_MOTION_WINDOW) this.devWindow.shift();
+    const escursione = this.devWindow.length > 1
+      ? Math.max(...this.devWindow) - Math.min(...this.devWindow) : 0;
+    if (escursione > THETA_MOTION_RANGE) this.motionCooldown = THETA_MOTION_COOLDOWN;
+    else if (this.motionCooldown > 0) this.motionCooldown--;
+    this.bodyMotion = this.motionCooldown > 0;
+
+    // ── RIFIUTO DELLE DISCESE NON SOSTENUTE ────────────────────────────────────────────────
+    // Si conta sul MASSIMO della finestra scorrevole, non sul valore istantaneo: una discesa
+    // che rientra prima di THETA_TA_CONFIRM_SAMPLES non abbassa mai quel massimo, quindi non
+    // viene contata. Stringere e lasciare le lattine, che rientra in un secondo, sparisce; un
+    // blowdown vero, che resta, viene contato con quel ritardo.
+    this.window.push(this.misura(this.arm));
+    if (this.window.length > THETA_TA_CONFIRM_SAMPLES) this.window.shift();
+    const ora = Math.max(...this.window);
+
+    // Durante l'agitazione il riferimento SEGUE il valore: così la discesa avvenuta mentre la
+    // persona si muoveva non resta « in banca » per essere contata appena si ferma.
+    if (this.bodyMotion) {
+      this.peak = ora;
+      return { arm: this.arm, offset: this.offset, offScale: this.offScale,
+               bodyMotion: true, totalTa: this.totalTa };
+    }
     const passo = this.toTa ? THETA_TOTAL_TA_STEP_DIV : THETA_TOTAL_TA_STEP;
     const bandaMorta = this.toTa ? THETA_TOTAL_TA_DEADBAND_DIV : THETA_TOTAL_TA_DEADBAND;
 
@@ -156,11 +206,12 @@ export class ThetaNeedle {
       }
     }
 
-    return { arm: this.arm, offset: this.offset, offScale: this.offScale, totalTa: this.totalTa };
+    return { arm: this.arm, offset: this.offset, offScale: this.offScale,
+             bodyMotion: this.bodyMotion, totalTa: this.totalTa };
   }
 
   /** Azzera il Total TA senza perdere l'aggancio al preclear (inizio seduta). */
-  resetTotal(): void { this.totalTa = 0; this.tenths = 0; this.peak = this.misura(this.arm); }
+  resetTotal(): void { this.totalTa = 0; this.tenths = 0; this.window = []; this.peak = this.misura(this.arm); }
 
   reset(): void {
     this.arm = 0; this.lastRaw = 0; this.offset = 0; this.offScale = false;

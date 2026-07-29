@@ -4892,6 +4892,13 @@ export default function App() {
                           {theta.counters.rejected} scartati
                         </span>
                       )}
+                      {/* Il totale si ferma durante l'agitazione: se non lo si dice, sembra
+                          rotto. Il Theta-Meter fa lo stesso — non conta il movimento corporeo. */}
+                      {theta.bodyMotion && (
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.08em', color: '#fbbf24' }}>
+                          {t('theta_body_motion') as string}
+                        </span>
+                      )}
                       {theta.offScale && (
                         <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.1em', color: '#fbbf24' }}>
                           {t('theta_offscale') as string}
