@@ -4050,6 +4050,7 @@ export default function App() {
         clearTaCalibration={theta.clearTaCalibration}
         taScale={theta.taScale}
         connected={theta.status === 'connected'}
+        taNow={theta.taNow}
         onClose={() => setShowThetaCal(false)}
       />
     )}

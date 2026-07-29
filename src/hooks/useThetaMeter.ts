@@ -30,8 +30,13 @@ export interface ThetaMeterState {
   /** Total TA accumulato dalle lattine, in divisioni. */
   totalTa: number;
   /** TONE ARM vero, sulla scala del meter — solo se l'apparecchio è stato tarato con
-   *  l'artefatto. `null` senza taratura: meglio nessun numero che un numero inventato. */
+   *  l'artefatto. `null` senza taratura: meglio nessun numero che un numero inventato.
+   *  Viene dal BRACCIO, cioè dalla manopola: in seduta dev'essere stabile e non seguire ogni
+   *  reazione, esattamente come la manopola di un meter fisico non si muove da sola. */
   ta: number | null;
+  /** Il TA della lettura ISTANTANEA. Serve a VERIFICARE contro l'artefatto — lì si vuole il
+   *  valore subito, non fra venti secondi. Non è il TA di seduta. */
+  taNow: number | null;
   /** La taratura in uso, se c'è. */
   taScale: ThetaTaScale | null;
   /** L'ago è finito fuori dal quadrante. */
@@ -55,7 +60,7 @@ export function useThetaMeter() {
 
   const [state, setState] = useState<ThetaMeterState>({
     status: 'disconnected', offset: 0, arm: 0, raw: 0, totalTa: 0, offScale: false,
-    ta: null, taScale: loadTaScale(),
+    ta: null, taNow: null, taScale: loadTaScale(),
     counters: { ok: 0, rejected: 0 }, unavailable: !isHidAvailable(), lastError: null,
   });
 
@@ -81,6 +86,7 @@ export function useThetaMeter() {
         // Il TA vero è la posizione del BRACCIO letta sulla scala tarata — cioè esattamente
         // la manopola di un meter fisico. Senza taratura resta null: non si inventa un numero.
         ta: prev.taScale ? taFromRaw(p.arm, prev.taScale) : null,
+        taNow: prev.taScale ? taFromRaw(needleRef.current.lastRaw, prev.taScale) : null,
         counters: hidRef.current!.counters,
       }));
     }, UI_PERIOD_MS);
@@ -110,8 +116,12 @@ export function useThetaMeter() {
   }, []);
 
   // ── TARATURA con l'artefatto fisico ────────────────────────────────────────────────────
-  /** Il grezzo IN QUESTO ISTANTE — da chiamare con un pulsante dell'artefatto premuto. */
-  const captureRaw = useCallback(() => needleRef.current.arm, []);
+  /** La LETTURA in questo istante — da chiamare con un pulsante dell'artefatto premuto.
+   *  ⚠️ NON il braccio: quello insegue con una costante di tempo di ~20 s, e registrarlo dava
+   *  punti presi a metà strada fra un valore e il successivo, quindi compressi fra loro — la
+   *  scala usciva dilatata (TA 2 letto 1,3 · TA 5 letto 7,0). La lettura lisciata si assesta
+   *  invece in un decimo di secondo. */
+  const captureRaw = useCallback(() => needleRef.current.lastRaw, []);
 
   /** Fissa la scala dai punti raccolti. Restituisce false se sono inutilizzabili (troppo pochi,
    *  o due letture identiche: segno che l'artefatto non era attaccato). */

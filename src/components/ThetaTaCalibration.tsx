@@ -28,11 +28,14 @@ export interface ThetaTaCalibrationProps {
   taScale: ThetaTaScale | null;
   /** Il meter è collegato? Senza, non c'è nulla da leggere. */
   connected: boolean;
+  /** Il TA della lettura ISTANTANEA con la taratura in uso — per verificare contro l'artefatto
+   *  senza aspettare che il braccio arrivi. `null` se non ancora tarato. */
+  taNow: number | null;
   onClose: () => void;
 }
 
 export function ThetaTaCalibration({
-  captureRaw, applyTaPoints, clearTaCalibration, taScale, connected, onClose,
+  captureRaw, applyTaPoints, clearTaCalibration, taScale, connected, taNow, onClose,
 }: ThetaTaCalibrationProps) {
   const { t } = useI18n();
   const [punti, setPunti] = useState<Record<number, number>>({});
@@ -109,6 +112,19 @@ export function ThetaTaCalibration({
             </div>
           ))}
         </div>
+
+        {/* VERIFICA DAL VIVO: con la taratura in uso, che TA legge l'artefatto ADESSO.
+            È la lettura istantanea, non il braccio — premuto un pulsante, il numero qui sotto
+            deve corrispondere SUBITO. */}
+        {taScale && (
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.10)',
+                        display: 'flex', alignItems: 'baseline', gap: 10 }}>
+            <span style={eti}>{t('theta_cal_live') as string}</span>
+            <span style={{ fontFamily: 'monospace', fontSize: 22, fontWeight: 700, color: '#34d399' }}>
+              {taNow !== null ? taNow.toFixed(2) : '—'}
+            </span>
+          </div>
+        )}
 
         {/* Lo scarto dalla retta: informazione sull'apparecchio, non un ostacolo. */}
         {anteprima && elenco.length >= 3 && (

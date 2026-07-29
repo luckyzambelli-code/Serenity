@@ -51,6 +51,10 @@ export interface ThetaNeedleState {
  */
 export class ThetaNeedle {
   arm = 0;
+  /** L'ULTIMA lettura ricevuta (già lisciata). Distinta dal braccio, che la insegue lentamente:
+   *  per TARARE serve QUESTA — il braccio ci mette una ventina di secondi ad arrivarci, e
+   *  registrarlo dava punti presi a metà strada, quindi compressi fra loro. */
+  lastRaw = 0;
   offset = 0;
   offScale = false;
   totalTa = 0;
@@ -70,6 +74,8 @@ export class ThetaNeedle {
       this.peak = raw;
       this.started = true;
     }
+
+    this.lastRaw = raw;
 
     // L'ago è lo scarto dal braccio. Si calcola PRIMA di muovere il braccio, altrimenti
     // il braccio inseguirebbe già in parte la deviazione e l'ago risulterebbe smorzato.
@@ -112,7 +118,7 @@ export class ThetaNeedle {
   resetTotal(): void { this.totalTa = 0; this.peak = this.arm; }
 
   reset(): void {
-    this.arm = 0; this.offset = 0; this.offScale = false;
+    this.arm = 0; this.lastRaw = 0; this.offset = 0; this.offScale = false;
     this.totalTa = 0; this.peak = 0; this.started = false; this.recentring = false;
   }
 }
