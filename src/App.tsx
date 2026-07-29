@@ -4060,6 +4060,8 @@ export default function App() {
         clearTaCalibration={theta.clearTaCalibration}
         taScale={theta.taScale}
         connected={theta.status === 'connected'}
+        info={theta.info}
+        onConnect={() => { void theta.connect(); }}
         taNow={theta.taNow}
         rawNow={theta.rawSmooth}
         setup={theta.setup}
@@ -4913,7 +4915,10 @@ export default function App() {
                   Resta solo cio' che NON e' un doppione: l'accesso alla taratura, e i report
                   scartati se ce ne sono — se quel numero sale, l'intestazione 01 02 non e'
                   costante e il formato va rivisto. */}
-              {theta.status === 'connected' && (
+              {/* Raggiungibile ANCHE da scollegati: se il meter non si aggancia, il pannello è
+                  l'unico posto che dice PERCHÉ. Nascondendolo, su una macchina altrui restava
+                  solo « non appare il TA e non si può tarare », che non è diagnosticabile. */}
+              {!theta.unavailable && (
                 <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
                   <button type="button" onClick={() => setShowThetaCal(true)}
                     style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.08em',

@@ -65,6 +65,9 @@ export interface ThetaMeterState {
   counters: { ok: number; rejected: number };
   /** Il dispositivo non è utilizzabile in questo contesto (niente WebHID). */
   unavailable: boolean;
+  /** Che dispositivo si è agganciato (nome · VID:PID). Senza, su una macchina altrui un
+   *  « non funziona » non è diagnosticabile. */
+  info: string | null;
   lastError: string | null;
 }
 
@@ -86,7 +89,7 @@ export function useThetaMeter() {
     offScale: false, bodyMotion: false,
     ta: null, taNow: null, taScale: loadTaScale(),
     setup: loadSetup(THETA_NEEDLE_SCALE), testing: null, testPeak: 0, breathOk: null,
-    counters: { ok: 0, rejected: 0 }, unavailable: !isHidAvailable(), lastError: null,
+    counters: { ok: 0, rejected: 0 }, unavailable: !isHidAvailable(), info: null, lastError: null,
   });
 
   // Il driver si crea UNA volta: ricrearlo a ogni render lascerebbe dietro dispositivi aperti.
@@ -104,7 +107,7 @@ export function useThetaMeter() {
         }
         pendingRef.current = { ...st, raw: r.raw };
       },
-      onStatus: s => setState(p => ({ ...p, status: s })),
+      onStatus: s => setState(p => ({ ...p, status: s, info: hidRef.current?.info ?? null })),
       onError: e => setState(p => ({ ...p, lastError: e.message })),
     });
   }

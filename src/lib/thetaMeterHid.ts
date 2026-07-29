@@ -26,6 +26,8 @@ export interface ThetaMeterHidOptions {
   onError?: (e: Error) => void;
 }
 
+const hex = (n: number) => '0x' + n.toString(16).padStart(4, '0');
+
 /** WebHID esiste? (In un contesto non sicuro o su un browser che non lo ha, no.) */
 export const isHidAvailable = (): boolean =>
   typeof navigator !== 'undefined' && 'hid' in navigator;
@@ -42,6 +44,9 @@ export class ThetaMeterHid {
   };
 
   status: ThetaStatus = 'disconnected';
+  /** Che dispositivo si è agganciato — nome, VID e PID. Serve a capire, su una macchina
+   *  altrui, SE si è collegato qualcosa e cosa: senza, un « non funziona » non è diagnosticabile. */
+  info: string | null = null;
 
   constructor(private readonly opts: ThetaMeterHidOptions = {}) {}
 
@@ -69,16 +74,33 @@ export class ThetaMeterHid {
 
     this.setStatus('connecting');
     try {
-      const filtro = { vendorId: THETA_VENDOR_ID, productId: THETA_PRODUCT_ID };
+      // ── FILTRO LARGO, POI LARGHISSIMO ────────────────────────────────────────────────────
+      // Il filtro stretto (VID **e** PID) era preso dall'apparecchio di UNA persona. Esistono
+      // più modelli di Theta-Meter — sei programmi diversi nella cartella dell'utente — e su un
+      // altro modello il PID cambia: il dispositivo non compariva nemmeno nel selettore, e
+      // senza collegamento non si vedeva né il TA né il modo di tararlo.
+      // Si prova quindi: già autorizzati → stesso VID (qualunque modello NXP) → TUTTI, che
+      // lascia scegliere a mano e non lascia nessuno bloccato.
       const gia = await navigator.hid.getDevices();
-      let d = gia.find(x => x.vendorId === filtro.vendorId && x.productId === filtro.productId);
-      if (!d) [d] = await navigator.hid.requestDevice({ filters: [filtro] });
+      let d = gia.find(x => x.vendorId === THETA_VENDOR_ID);
+
+      if (!d) {
+        [d] = await navigator.hid.requestDevice({
+          filters: [{ vendorId: THETA_VENDOR_ID }],
+        });
+      }
+      if (!d) {
+        // Ultima spiaggia: nessun filtro. Se il meter di quella persona ha un altro vendor,
+        // è l'unico modo di trovarlo — la scelta la fa lei, vedendo l'elenco.
+        [d] = await navigator.hid.requestDevice({ filters: [] });
+      }
 
       if (!d) { this.setStatus('disconnected'); return false; }
       if (!d.opened) await d.open();
 
       d.addEventListener('inputreport', this.onInput);
       this.device = d;
+      this.info = `${d.productName || '?'} · ${hex(d.vendorId)}:${hex(d.productId)}`;
       this.setStatus('connected');
       return true;
     } catch (e) {
@@ -112,6 +134,7 @@ export class ThetaMeterHid {
   async disconnect(): Promise<void> {
     const d = this.device;
     this.device = null;
+    this.info = null;
     this.meter.reset();
     if (d) {
       d.removeEventListener('inputreport', this.onInput);

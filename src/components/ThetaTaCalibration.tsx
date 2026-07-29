@@ -37,6 +37,10 @@ export interface ThetaTaCalibrationProps {
   taScale: ThetaTaScale | null;
   /** Il meter è collegato? Senza, non c'è nulla da leggere. */
   connected: boolean;
+  /** Che dispositivo si è agganciato (nome · VID:PID), per capire cosa sta succedendo. */
+  info?: string | null;
+  /** Per collegarlo direttamente da qui, senza dover chiudere e cercare il badge. */
+  onConnect?: () => void;
   /** Il TA della lettura ISTANTANEA con la taratura SALVATA. `null` se non ancora tarato. */
   taNow: number | null;
   /** La lettura grezza in questo istante — serve a verificare con la scala in ANTEPRIMA,
@@ -55,7 +59,7 @@ export interface ThetaTaCalibrationProps {
 }
 
 export function ThetaTaCalibration({
-  captureRaw, applyTaPoints, clearTaCalibration, taScale, connected, taNow, rawNow,
+  captureRaw, applyTaPoints, clearTaCalibration, taScale, connected, info, onConnect, taNow, rawNow,
   setup, setConfig, addPointFromReference, startSqueezeTest, startBreathTest, testing, testPeak, breathOk, onClose,
 }: ThetaTaCalibrationProps) {
   const { t } = useI18n();
@@ -120,9 +124,27 @@ export function ThetaTaCalibration({
           {t('theta_cal_intro') as string}
         </div>
 
-        {!connected && (
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#f87171', marginBottom: 12 }}>
-            {t('theta_cal_not_connected') as string}
+        {!connected ? (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#f87171', marginBottom: 8 }}>
+              {t('theta_cal_not_connected') as string}
+            </div>
+            {onConnect && (
+              <button type="button" onClick={onConnect}
+                style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700,
+                         letterSpacing: '0.08em', textTransform: 'uppercase',
+                         padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
+                         background: 'rgba(245,158,11,0.18)', border: '1px solid rgba(245,158,11,0.6)',
+                         color: '#f59e0b' }}>
+                {t('theta_connect') as string}
+              </button>
+            )}
+          </div>
+        ) : (
+          // Che cosa si è agganciato davvero. Su una macchina altrui è l'unico modo di sapere
+          // se il dispositivo trovato è il meter o qualcos'altro.
+          <div style={{ fontFamily: 'monospace', fontSize: 10, color: 'rgba(226,238,255,0.45)', marginBottom: 12 }}>
+            {info || '—'}
           </div>
         )}
 

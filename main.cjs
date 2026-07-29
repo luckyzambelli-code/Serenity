@@ -241,9 +241,11 @@ function createWindow() {
   // « vendor-defined » (PAS un port série, malgré les traces FTDI dans le logiciel
   // Theta-Meter). Comme son VID/PID est unique, on le choisit AUTOMATIQUEMENT —
   // même approche que le Muse plus haut : aucune interface de sélection à écrire.
+  // VID seul, PAS le PID : il existe plusieurs modèles de Theta-Meter, et sur un autre modèle
+  // le PID change — l'appareil n'apparaissait alors même pas dans le sélecteur, et sans
+  // connexion on ne voyait ni le TA ni le moyen de l'étalonner (constaté chez un testeur).
   const THETA_VID = 0x1fc9;   // NXP Semiconductors
-  const THETA_PID = 0x0003;
-  const estLeMeter = d => d && d.vendorId === THETA_VID && d.productId === THETA_PID;
+  const estLeMeter = d => d && d.vendorId === THETA_VID;
 
   win.webContents.session.on('select-hid-device', (event, details, callback) => {
     event.preventDefault();
