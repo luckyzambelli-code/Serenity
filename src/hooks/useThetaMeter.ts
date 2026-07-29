@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ThetaMeterHid, isHidAvailable, type ThetaStatus } from '../lib/thetaMeterHid';
 import { ThetaNeedle } from '../engine/thetaNeedle';
+import {
+  buildTaScale, taFromRaw, loadTaScale, saveTaScale, clearTaScale,
+  type ThetaTaPoint, type ThetaTaScale,
+} from '../engine/thetaTaScale';
 
 /**
  * useThetaMeter — l'e-meter USB dell'utente dentro EQUILIBRIUM.
@@ -25,6 +29,11 @@ export interface ThetaMeterState {
   raw: number;
   /** Total TA accumulato dalle lattine, in divisioni. */
   totalTa: number;
+  /** TONE ARM vero, sulla scala del meter — solo se l'apparecchio è stato tarato con
+   *  l'artefatto. `null` senza taratura: meglio nessun numero che un numero inventato. */
+  ta: number | null;
+  /** La taratura in uso, se c'è. */
+  taScale: ThetaTaScale | null;
   /** L'ago è finito fuori dal quadrante. */
   offScale: boolean;
   /** Letture valide e report scartati — se i secondi salgono, il formato non è quello che credo. */
@@ -46,6 +55,7 @@ export function useThetaMeter() {
 
   const [state, setState] = useState<ThetaMeterState>({
     status: 'disconnected', offset: 0, arm: 0, raw: 0, totalTa: 0, offScale: false,
+    ta: null, taScale: loadTaScale(),
     counters: { ok: 0, rejected: 0 }, unavailable: !isHidAvailable(), lastError: null,
   });
 
@@ -66,7 +76,13 @@ export function useThetaMeter() {
       const p = pendingRef.current;
       if (!p) return;
       pendingRef.current = null;
-      setState(prev => ({ ...prev, ...p, counters: hidRef.current!.counters }));
+      setState(prev => ({
+        ...prev, ...p,
+        // Il TA vero è la posizione del BRACCIO letta sulla scala tarata — cioè esattamente
+        // la manopola di un meter fisico. Senza taratura resta null: non si inventa un numero.
+        ta: prev.taScale ? taFromRaw(p.arm, prev.taScale) : null,
+        counters: hidRef.current!.counters,
+      }));
     }, UI_PERIOD_MS);
     return () => clearInterval(id);
   }, []);
@@ -93,5 +109,24 @@ export function useThetaMeter() {
     setState(p => ({ ...p, totalTa: 0 }));
   }, []);
 
-  return { ...state, connect, disconnect, resetTotal };
+  // ── TARATURA con l'artefatto fisico ────────────────────────────────────────────────────
+  /** Il grezzo IN QUESTO ISTANTE — da chiamare con un pulsante dell'artefatto premuto. */
+  const captureRaw = useCallback(() => needleRef.current.arm, []);
+
+  /** Fissa la scala dai punti raccolti. Restituisce false se sono inutilizzabili (troppo pochi,
+   *  o due letture identiche: segno che l'artefatto non era attaccato). */
+  const applyTaPoints = useCallback((points: ThetaTaPoint[], now: number) => {
+    const scale = buildTaScale(points, now);
+    if (!scale) return false;
+    saveTaScale(scale);
+    setState(p => ({ ...p, taScale: scale }));
+    return true;
+  }, []);
+
+  const clearTaCalibration = useCallback(() => {
+    clearTaScale();
+    setState(p => ({ ...p, taScale: null, ta: null }));
+  }, []);
+
+  return { ...state, connect, disconnect, resetTotal, captureRaw, applyTaPoints, clearTaCalibration };
 }

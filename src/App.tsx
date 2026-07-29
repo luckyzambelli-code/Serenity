@@ -16,6 +16,7 @@ import { useEpValidation } from './hooks/useEpValidation';
 import { useMnaModule } from './hooks/useMnaModule';
 import { useMediaRelayFallback } from './hooks/useMediaRelayFallback';
 import { useThetaMeter } from './hooks/useThetaMeter';
+import { ThetaTaCalibration } from './components/ThetaTaCalibration';
 
 /** Ambra dell'ago e dei valori delle LATTINE — deve restare identico a QuantumSphere,
  *  altrimenti l'ago sul quadrante e il numero a lato non si riconoscono come la stessa cosa. */
@@ -3519,6 +3520,7 @@ export default function App() {
   // qu'on VOIE l'écart entre la mesure réelle et celle reconstruite du cerveau. Le TA, lui,
   // vient des lattine : c'est une vraie résistance, pas une reconstruction.
   const theta = useThetaMeter();
+  const [showThetaCal, setShowThetaCal] = useState(false);
 
   // ── CONN-53: graceful disconnect on tab/app close ──────────────────────────
   // Without this, quitting Chrome / killing the app left the peer waiting on the
@@ -4041,6 +4043,16 @@ export default function App() {
     <>
     {showSplash && <SplashScreen onDismiss={() => setShowSplash(false)} />}
     {showCredits && <CreditsModal onClose={() => setShowCredits(false)} />}
+    {showThetaCal && (
+      <ThetaTaCalibration
+        captureRaw={theta.captureRaw}
+        applyTaPoints={theta.applyTaPoints}
+        clearTaCalibration={theta.clearTaCalibration}
+        taScale={theta.taScale}
+        connected={theta.status === 'connected'}
+        onClose={() => setShowThetaCal(false)}
+      />
+    )}
 
     {/* CONN-48: connection status window with progress bar during handshake. */}
     <ConnectionProgress
@@ -4817,7 +4829,18 @@ export default function App() {
             <div className="sm-glass absolute top-10 right-10 flex flex-col items-end z-10 pointer-events-auto" style={{ ...scenePerspective('50%', '28%'), ...frontTilt(12) }}>
               <span className="text-[10px] font-light uppercase tracking-[0.2em]"
                 style={{ fontFamily: 'var(--font-sans)', color: isLightTheme ? '#64748b' : 'rgba(148,163,184,0.7)' }}>TONE ARM</span>
-              <ToneArmReadout isLightTheme={isLightTheme} />
+              {/* Le TONE ARM vient des LATTINE dès qu'il est disponible : c'est une vraie
+                  résistance mesurée, pas une reconstruction. On retombe sur celui déduit de
+                  l'EEG quand le meter n'est pas là ou n'est pas encore étalonné — et dans ce
+                  cas on le DIT, au lieu de laisser croire que le 2.0 vient des lattine. */}
+              {theta.status === 'connected' && theta.ta !== null ? (
+                <span style={{ fontFamily: 'monospace', fontSize: 34, fontWeight: 700, lineHeight: 1,
+                               color: THETA_AMBER }}>
+                  {theta.ta.toFixed(1)}
+                </span>
+              ) : (
+                <ToneArmReadout isLightTheme={isLightTheme} />
+              )}
 
               {/* ── LATTINE (Theta-Meter) : le TA qui vient d'une VRAIE résistance ─────────
                   Affiché SOUS le TA reconstruit de l'EEG, pas à sa place : tant que les deux
@@ -4837,6 +4860,15 @@ export default function App() {
                       <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: isLightTheme ? '#64748b' : 'rgba(148,163,184,0.7)' }}>
                         {t('theta_total_ta') as string}
                       </span>
+                      {/* Senza taratura il TA non si puo' mostrare: si dice, e si offre di tararlo. */}
+                      <button type="button" onClick={() => setShowThetaCal(true)}
+                        style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.08em',
+                                 textTransform: 'uppercase', padding: '3px 8px', borderRadius: 6,
+                                 marginTop: 2, cursor: 'pointer', background: 'transparent',
+                                 border: `1px solid ${theta.taScale ? 'rgba(148,163,184,0.35)' : 'rgba(245,158,11,0.55)'}`,
+                                 color: theta.taScale ? 'rgba(148,163,184,0.8)' : THETA_AMBER }}>
+                        {theta.taScale ? (t('theta_cal_title') as string) : (t('theta_uncalibrated') as string)}
+                      </button>
                       {/* Diagnostic honnête : si les rejets montent, l'en-tête 01 02 n'est pas
                           constante et le format est à revoir — mieux vaut le VOIR. */}
                       {theta.counters.rejected > 0 && (
