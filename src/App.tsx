@@ -4843,10 +4843,16 @@ export default function App() {
                   résistance mesurée, pas une reconstruction. On retombe sur celui déduit de
                   l'EEG quand le meter n'est pas là ou n'est pas encore étalonné — et dans ce
                   cas on le DIT, au lieu de laisser croire que le 2.0 vient des lattine. */}
-              {theta.status === 'connected' && theta.ta !== null ? (
+              {/* Il TA viene dalla lettura CORRENTE, non dal braccio.
+                  Il braccio è la media lenta (~20 s): usandolo, il nostro TA restava indietro
+                  rispetto a quello del Theta-Meter, che lo calcola dalla resistenza corrente —
+                  misurato in seduta: noi 6,8 · loro 5,98, con la resistenza in discesa.
+                  Il braccio resta quello che regge l'AGO (la deviazione si misura da lui) e il
+                  Total TA: quelli devono restare lenti, o ogni reazione conterebbe come TA. */}
+              {theta.status === 'connected' && theta.taNow !== null ? (
                 <span style={{ fontFamily: 'monospace', fontSize: 34, fontWeight: 700, lineHeight: 1,
                                color: THETA_AMBER }}>
-                  {theta.ta.toFixed(1)}
+                  {theta.taNow.toFixed(2)}
                 </span>
               ) : (
                 <ToneArmReadout isLightTheme={isLightTheme} />
