@@ -39,6 +39,9 @@ export interface ThetaTaCalibrationProps {
   connected: boolean;
   /** Che dispositivo si è agganciato (nome · VID:PID), per capire cosa sta succedendo. */
   info?: string | null;
+  /** Letture valide e report scartati. È la diagnosi DECISIVA: collegato ma con zero letture
+   *  significa che si è agganciato a qualcosa che non è il meter, o che il meter non parla. */
+  counters?: { ok: number; rejected: number };
   /** Per collegarlo direttamente da qui, senza dover chiudere e cercare il badge. */
   onConnect?: () => void;
   /** Il TA della lettura ISTANTANEA con la taratura SALVATA. `null` se non ancora tarato. */
@@ -59,7 +62,7 @@ export interface ThetaTaCalibrationProps {
 }
 
 export function ThetaTaCalibration({
-  captureRaw, applyTaPoints, clearTaCalibration, taScale, connected, info, onConnect, taNow, rawNow,
+  captureRaw, applyTaPoints, clearTaCalibration, taScale, connected, info, counters, onConnect, taNow, rawNow,
   setup, setConfig, addPointFromReference, startSqueezeTest, startBreathTest, testing, testPeak, breathOk, onClose,
 }: ThetaTaCalibrationProps) {
   const { t } = useI18n();
@@ -120,8 +123,14 @@ export function ThetaTaCalibration({
 
         <div style={{ ...eti, color: '#f59e0b', marginBottom: 4 }}>{t('theta_cal_title') as string}</div>
         <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, lineHeight: 1.5,
-                      color: 'rgba(226,238,255,0.72)', marginBottom: 16 }}>
+                      color: 'rgba(226,238,255,0.72)', marginBottom: 10 }}>
           {t('theta_cal_intro') as string}
+        </div>
+        {/* Senza artefatto si tara comunque, confrontandosi col programma Theta-Meter: sono
+            due strade per la stessa cosa, e non dirlo lasciava bloccato chi non ce l'ha. */}
+        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, lineHeight: 1.5,
+                      color: '#34d399', marginBottom: 16 }}>
+          {t('theta_cal_no_artifact') as string}
         </div>
 
         {!connected ? (
@@ -143,8 +152,19 @@ export function ThetaTaCalibration({
         ) : (
           // Che cosa si è agganciato davvero. Su una macchina altrui è l'unico modo di sapere
           // se il dispositivo trovato è il meter o qualcos'altro.
-          <div style={{ fontFamily: 'monospace', fontSize: 10, color: 'rgba(226,238,255,0.45)', marginBottom: 12 }}>
-            {info || '—'}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontFamily: 'monospace', fontSize: 10, color: 'rgba(226,238,255,0.45)' }}>
+              {info || (t('theta_no_name') as string)}
+            </div>
+            {/* LA diagnosi che conta: collegato è una cosa, RICEVERE è un'altra. Zero letture
+                significa che si è agganciato a qualcosa che non è il meter, o che il meter non
+                parla — e senza questo numero i due casi sono indistinguibili. */}
+            <div style={{ fontFamily: 'monospace', fontSize: 11, marginTop: 3,
+                          color: (counters?.ok ?? 0) > 0 ? '#34d399' : '#f87171' }}>
+              {(counters?.ok ?? 0) > 0
+                ? `${counters!.ok} ✓${counters!.rejected ? ` · ${counters!.rejected} ✕` : ''}`
+                : (t('theta_no_reading') as string)}
+            </div>
           </div>
         )}
 
@@ -253,10 +273,13 @@ export function ThetaTaCalibration({
                        background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.2)',
                        color: 'rgba(240,246,255,0.92)', outline: 'none' }} />
             <button type="button"
-              disabled={!connected || taNow === null || !Number.isFinite(parseFloat(rif))}
+              /* NON si richiede una taratura preesistente: era un circolo vizioso — senza
+                 artefatto non si poteva cominciare, perché il pulsante restava spento finché
+                 non c'era già una scala. I primi due punti la CREANO. */
+              disabled={!connected || !rawNow || !Number.isFinite(parseFloat(rif))}
               onClick={() => { addPointFromReference(parseFloat(rif)); setRif(''); }}
               style={{ height: 26, padding: '0 10px', borderRadius: 6,
-                       cursor: 'pointer', opacity: connected && taNow !== null && Number.isFinite(parseFloat(rif)) ? 1 : 0.4,
+                       cursor: 'pointer', opacity: connected && rawNow && Number.isFinite(parseFloat(rif)) ? 1 : 0.4,
                        fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.06em',
                        textTransform: 'uppercase', background: 'rgba(255,255,255,0.05)',
                        border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(226,238,255,0.75)' }}>

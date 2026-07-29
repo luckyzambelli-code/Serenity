@@ -4061,6 +4061,7 @@ export default function App() {
         taScale={theta.taScale}
         connected={theta.status === 'connected'}
         info={theta.info}
+        counters={theta.counters}
         onConnect={() => { void theta.connect(); }}
         taNow={theta.taNow}
         rawNow={theta.rawSmooth}
