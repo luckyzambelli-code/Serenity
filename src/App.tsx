@@ -44,7 +44,7 @@ import { TranscriptLog, type LogEntry } from './components/TranscriptLog';
 import { CameraFeed } from './components/CameraFeed';
 import { ConnectionModal } from './components/ConnectionModal';
 import { ConnectionProgress } from './components/ConnectionProgress';
-import { AlertTriangle, BookOpen, Headphones, Power, Play, Mic, Square, ClipboardList } from 'lucide-react';
+import { AlertTriangle, BookOpen, Headphones, Power, Play, Mic, Square, ClipboardList, Gauge } from 'lucide-react';
 import { cn } from './lib/utils';
 import { useI18n } from './i18n.tsx';
 import { Language } from './i18n';
@@ -4158,9 +4158,9 @@ export default function App() {
           {((appMode === 'local' && !satelliteMode) || satelliteMode) && (
             <div
               onClick={() => { if (museConnection === 'disconnected') handleConnectMuse(); }}
-              title={museConnection === 'connected' ? 'MUSE connesso'
-                   : museConnection === 'searching' ? 'Ricerca MUSE…'
-                   : 'Clicca per (ri)connettere il MUSE al Mac'}
+              title={(museConnection === 'connected' ? t('muse_tip_ok')
+                   : museConnection === 'searching' ? t('muse_tip_searching')
+                   : t('muse_tip_connect')) as string}
               style={{
               display: 'flex', alignItems: 'center', gap: 9,
               padding: '3px 14px 3px 3px', borderRadius: 999,
@@ -4194,6 +4194,41 @@ export default function App() {
               )}
             </div>
           )}
+          {/* ── BADGE THETA-METER, accanto a quello del MUSE ─────────────────────────────
+              Gli strumenti da collegare stanno TUTTI qui, in un unico posto: prima il meter
+              si collegava da sotto il TONE ARM, cioè da tutt'altra parte. Ciò che riguarda le
+              boîtes compare solo quando il meter è collegato — e altrettanto per il MUSE. */}
+          {!theta.unavailable && appMode === 'local' && (
+            <div
+              onClick={() => { if (theta.status === 'disconnected') void theta.connect(); }}
+              title={(theta.status === 'connected' ? t('theta_tip_ok')
+                   : theta.status === 'connecting' ? t('theta_tip_searching')
+                   : t('theta_tip_connect')) as string}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 9,
+                padding: '3px 14px 3px 3px', borderRadius: 999,
+                cursor: theta.status === 'disconnected' ? 'pointer' : 'default',
+                background: isLightTheme ? '#b7b7be' : '#17171b',
+                boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
+              <span style={{
+                width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', flexShrink: 0,
+                background: theta.status === 'connected' ? THETA_AMBER : 'rgba(255,255,255,0.10)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.45), inset 0 2px 4px rgba(255,255,255,0.55)' }}>
+                <Gauge size={16} strokeWidth={1.8}
+                  style={{ color: theta.status === 'connected' ? '#1a1a1a' : '#ffffff' }} />
+              </span>
+              <span style={{
+                fontSize: 13, fontWeight: 'bold', letterSpacing: '0.08em',
+                color: isLightTheme ? '#3a3a40' : '#e8ecf2', whiteSpace: 'nowrap' }}>
+                {theta.status === 'connected' ? `${t('theta_cans')} ✓`
+                  : theta.status === 'connecting' ? `${t('searching')}…`
+                  : (t('theta_connect') as string)}
+              </span>
+            </div>
+          )}
+
           {/* Phone-satellite entry now lives in the SESSION/mode drawer
               (SidebarDrawer › LinkDrawer), per user request — not the top bar. */}
           {/* P2P connection badge — visible only in auditor/participant mode */}
@@ -4871,18 +4906,17 @@ export default function App() {
                 <ToneArmReadout isLightTheme={isLightTheme} />
               )}
 
-              {/* ── LATTINE (Theta-Meter) : le TA qui vient d'une VRAIE résistance ─────────
+              {/* ── BOÎTES (Theta-Meter) : le TA qui vient d'une VRAIE résistance ─────────
                   Affiché SOUS le TA reconstruit de l'EEG, pas à sa place : tant que les deux
-                  coexistent, on peut comparer. L'aiguille des lattine est sur le cadran, en
-                  ambre. Le bouton doit rester actionnable — WebHID exige un GESTE de
-                  l'utilisateur, on ne peut pas se connecter tout seul au démarrage. */}
-              {!theta.unavailable && (
+                  coexistent, on peut comparer. L'aiguille des boîtes est sur le cadran, en ambre. */}
+              {/* Le LETTURE delle boîtes. Compaiono solo a meter collegato: il bottone di
+                  connessione sta in alto, insieme a quello del MUSE. */}
+              {theta.status === 'connected' && (
                 <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
                   <span className="text-[10px] font-light uppercase tracking-[0.2em]"
                     style={{ fontFamily: 'var(--font-sans)', color: THETA_AMBER }}>{t('theta_cans') as string}</span>
 
-                  {theta.status === 'connected' ? (
-                    <>
+                  <>
                       <span style={{ fontFamily: 'monospace', fontSize: 20, fontWeight: 700, lineHeight: 1.1, color: THETA_AMBER }}>
                         {theta.totalTa.toFixed(1)}
                       </span>
@@ -4917,16 +4951,7 @@ export default function App() {
                           {t('theta_offscale') as string}
                         </span>
                       )}
-                    </>
-                  ) : (
-                    <button type="button" onClick={() => { void theta.connect(); }}
-                      title={t('theta_connect_tip') as string}
-                      style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
-                               textTransform: 'uppercase', padding: '5px 10px', borderRadius: 7, cursor: 'pointer',
-                               background: 'rgba(245,158,11,0.14)', border: '1px solid rgba(245,158,11,0.45)', color: THETA_AMBER }}>
-                      {theta.status === 'connecting' ? `${t('searching') as string}…` : (t('theta_connect') as string)}
-                    </button>
-                  )}
+                  </>
 
                   {theta.lastError && (
                     <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, maxWidth: 210, textAlign: 'right', color: '#f87171' }}>

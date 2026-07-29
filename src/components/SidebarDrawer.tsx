@@ -471,14 +471,14 @@ function TrimDrawer({ needleTrim, setNeedleTrim, needleInertia, setNeedleInertia
   return (
     <>
       <div style={{ fontSize: 9, color: labelColor, lineHeight: 1.5 }}>
-        Ajuster le centrage de l'aiguille d'Equilibrium.
+        {t('trim_centering') as string}
       </div>
 
-      {/* ── SENSIBILITÉ DES LATTINE (Theta-Meter) ──────────────────────────────────────────
+      {/* ── SENSIBILITÉ DES BOÎTES (Theta-Meter) ────────────────────────────────────────────
           Ici et pas dans la fenêtre d'étalonnage : celle-ci COUVRE le cadran, et on règle une
           sensibilité en REGARDANT l'aiguille. Le tiroir, lui, est latéral.
           À refaire à chaque séance : la sensibilité dépend de la façon dont CE préclair tient
-          les lattine (l'épreuve de la pression donne le point de départ, ceci l'affine). */}
+          les boîtes (l'épreuve de la pression donne le point de départ, ceci l'affine). */}
       {thetaConnected && setThetaSensTrim && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.10)' }}>
           <div className="flex items-center justify-between">
