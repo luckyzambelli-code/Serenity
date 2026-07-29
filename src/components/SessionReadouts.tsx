@@ -16,8 +16,18 @@ export const ToneArmReadout = React.memo(function ToneArmReadout({ isLightTheme 
   );
 });
 
-export const TotalTaReadout = React.memo(function TotalTaReadout({ isLightTheme, label }: { isLightTheme: boolean; label: string }) {
-  const totalTa = useMetric(m => m.totalTa);
+export const TotalTaReadout = React.memo(function TotalTaReadout(
+  { isLightTheme, label, override, bodyMotion = false }:
+  { isLightTheme: boolean; label: string;
+    /** Total TA delle BOÎTES, quando il meter è collegato: è una resistenza MISURATA e
+     *  prevale su quella ricostruita dall'EEG. Un solo numero a schermo, come chiesto —
+     *  ma la SORGENTE deve cambiare, o si mostrerebbe in silenzio il totale dell'EEG,
+     *  che è un'altra grandezza e non coincide col Theta-Meter. */
+    override?: number | null;
+    /** Il conteggio è sospeso perché la persona si muove: va detto, o sembra rotto. */
+    bodyMotion?: boolean }) {
+  const eeg = useMetric(m => m.totalTa);
+  const totalTa = override ?? eeg;
   // Two lines (label over value), right-aligned — keeps the top-right column tidy
   // now that the live T-ZONES sit just below.
   return (
@@ -25,6 +35,11 @@ export const TotalTaReadout = React.memo(function TotalTaReadout({ isLightTheme,
       style={{ color: isLightTheme ? '#64748b' : 'rgba(148,163,184,0.60)' }}>
       <span className="text-[11px] uppercase tracking-wider" style={{ fontFamily: 'var(--font-sans)' }}>{label}</span>
       <span className="text-base tabular-nums font-mono">{totalTa.toFixed(2)}</span>
+      {bodyMotion && (
+        <span className="text-[9px] uppercase tracking-wider" style={{ color: '#fbbf24' }}>
+          {'\u2014'} motion
+        </span>
+      )}
     </span>
   );
 });

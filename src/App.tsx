@@ -4899,60 +4899,35 @@ export default function App() {
                   Total TA: quelli devono restare lenti, o ogni reazione conterebbe come TA. */}
               {theta.status === 'connected' && theta.taNow !== null ? (
                 <span style={{ fontFamily: 'monospace', fontSize: 34, fontWeight: 700, lineHeight: 1,
-                               color: THETA_AMBER }}>
+                               color: isLightTheme ? '#1e293b' : 'rgba(240,246,255,0.95)' }}>
                   {theta.taNow.toFixed(2)}
                 </span>
               ) : (
                 <ToneArmReadout isLightTheme={isLightTheme} />
               )}
 
-              {/* ── BOÎTES (Theta-Meter) : le TA qui vient d'une VRAIE résistance ─────────
-                  Affiché SOUS le TA reconstruit de l'EEG, pas à sa place : tant que les deux
-                  coexistent, on peut comparer. L'aiguille des boîtes est sur le cadran, en ambre. */}
-              {/* Le LETTURE delle boîtes. Compaiono solo a meter collegato: il bottone di
-                  connessione sta in alto, insieme a quello del MUSE. */}
+              {/* Il TA e' UNO SOLO: quello delle boites quando il meter c'e', altrimenti
+                  quello ricostruito dall'EEG. Nessuna etichetta « boites », nessun colore sui
+                  numeri, nessun Total TA in doppio — quello sta in DIAGNOSTICA e viene ora
+                  alimentato dalle boites (vedi l'override di TotalTaReadout).
+                  Resta solo cio' che NON e' un doppione: l'accesso alla taratura, e i report
+                  scartati se ce ne sono — se quel numero sale, l'intestazione 01 02 non e'
+                  costante e il formato va rivisto. */}
               {theta.status === 'connected' && (
-                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
-                  <span className="text-[10px] font-light uppercase tracking-[0.2em]"
-                    style={{ fontFamily: 'var(--font-sans)', color: THETA_AMBER }}>{t('theta_cans') as string}</span>
-
-                  <>
-                      <span style={{ fontFamily: 'monospace', fontSize: 20, fontWeight: 700, lineHeight: 1.1, color: THETA_AMBER }}>
-                        {theta.totalTa.toFixed(1)}
-                      </span>
-                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: isLightTheme ? '#64748b' : 'rgba(148,163,184,0.7)' }}>
-                        {t('theta_total_ta') as string}
-                      </span>
-                      {/* Senza taratura il TA non si puo' mostrare: si dice, e si offre di tararlo. */}
-                      <button type="button" onClick={() => setShowThetaCal(true)}
-                        style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.08em',
-                                 textTransform: 'uppercase', padding: '3px 8px', borderRadius: 6,
-                                 marginTop: 2, cursor: 'pointer', background: 'transparent',
-                                 border: `1px solid ${theta.taScale ? 'rgba(148,163,184,0.35)' : 'rgba(245,158,11,0.55)'}`,
-                                 color: theta.taScale ? 'rgba(148,163,184,0.8)' : THETA_AMBER }}>
-                        {theta.taScale ? (t('theta_cal_title') as string) : (t('theta_uncalibrated') as string)}
-                      </button>
-                      {/* Diagnostic honnête : si les rejets montent, l'en-tête 01 02 n'est pas
-                          constante et le format est à revoir — mieux vaut le VOIR. */}
-                      {theta.counters.rejected > 0 && (
-                        <span style={{ fontFamily: 'monospace', fontSize: 9, color: '#f87171' }}>
-                          {theta.counters.rejected} scartati
-                        </span>
-                      )}
-                      {/* Il totale si ferma durante l'agitazione: se non lo si dice, sembra
-                          rotto. Il Theta-Meter fa lo stesso — non conta il movimento corporeo. */}
-                      {theta.bodyMotion && (
-                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.08em', color: '#fbbf24' }}>
-                          {t('theta_body_motion') as string}
-                        </span>
-                      )}
-                      {theta.offScale && (
-                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.1em', color: '#fbbf24' }}>
-                          {t('theta_offscale') as string}
-                        </span>
-                      )}
-                  </>
-
+                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+                  <button type="button" onClick={() => setShowThetaCal(true)}
+                    style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.08em',
+                             textTransform: 'uppercase', padding: '3px 8px', borderRadius: 6,
+                             cursor: 'pointer', background: 'transparent',
+                             border: `1px solid ${theta.taScale ? 'rgba(148,163,184,0.3)' : 'rgba(245,158,11,0.55)'}`,
+                             color: theta.taScale ? 'rgba(148,163,184,0.7)' : THETA_AMBER }}>
+                    {theta.taScale ? (t('theta_cal_title') as string) : (t('theta_uncalibrated') as string)}
+                  </button>
+                  {theta.counters.rejected > 0 && (
+                    <span style={{ fontFamily: 'monospace', fontSize: 9, color: '#f87171' }}>
+                      {theta.counters.rejected} ✕
+                    </span>
+                  )}
                   {theta.lastError && (
                     <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, maxWidth: 210, textAlign: 'right', color: '#f87171' }}>
                       {theta.lastError}
@@ -4961,7 +4936,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* PROGRESSIVE DISCLOSURE — Total TA + velocità dietro un solo toggle
+        {/* PROGRESSIVE DISCLOSURE — Total TA + velocità dietro un solo toggle
                   "diagnostica", chiuso di default → l'angolo resta un solo meter pulito.
                   Reso chiaramente APRIBILE: pill con bordo + chevron (non un'etichetta). */}
               {!showDiag && (
@@ -4978,7 +4953,9 @@ export default function App() {
                   onHide={() => setShowDiag(false)}
                   style={{ marginTop: 8, minWidth: 160 }}
                   bodyStyle={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                  <TotalTaReadout isLightTheme={isLightTheme} label={t('total_ta')} />
+                  <TotalTaReadout isLightTheme={isLightTheme} label={t('total_ta')}
+                    override={theta.status === 'connected' ? theta.totalTa : null}
+                    bodyMotion={theta.bodyMotion} />
                   <SpeedReadout isLightTheme={isLightTheme} label={t('mental_processing_velocity') as string} />
                 </Panel3D>
               )}
