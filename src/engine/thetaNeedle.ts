@@ -219,6 +219,20 @@ export class ThetaNeedle {
              bodyMotion: this.bodyMotion, totalTa: this.totalTa };
   }
 
+  /** Riporta l'ago su SET, senza toccare il Total TA né perdere l'aggancio al preclear.
+   *  È il gesto dell'auditor che ricentra a mano — sul meter, girare la manopola.
+   *  Il braccio si porta sulla lettura corrente, quindi lo scarto si annulla. */
+  resetToSet(): void {
+    this.arm = this.lastRaw;
+    this.offset = NEEDLE_REST_OFFSET;
+    this.recentring = false;
+    this.offScaleFor = 0;
+    this.offScale = false;
+    // Il riferimento del totale segue: il salto appena fatto a mano non è carica.
+    this.peak = this.misura(this.arm);
+    this.window = [];
+  }
+
   /** Azzera il Total TA senza perdere l'aggancio al preclear (inizio seduta). */
   resetTotal(): void { this.totalTa = 0; this.tenths = 0; this.window = []; this.peak = this.misura(this.arm); }
 

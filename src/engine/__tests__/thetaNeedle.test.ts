@@ -322,3 +322,36 @@ describe('ThetaNeedle', () => {
     expect(n.push(RIPOSO).arm).toBe(RIPOSO);    // riaggancia da capo
   });
 });
+
+describe('resetToSet — il clic sul quadrante', () => {
+  it('riporta l ago ESATTAMENTE su SET', () => {
+    const n = new ThetaNeedle();
+    n.push(RIPOSO);
+    n.push(RIPOSO - 800_000);          // l'ago è deviato
+    n.resetToSet();
+    expect(n.offset).toBe(NEEDLE_REST_OFFSET);
+  });
+
+  it('NON azzera il Total TA: ricentrare a mano non è carica smaltita', () => {
+    const n = new ThetaNeedle();
+    n.push(RIPOSO);
+    n.setTaConverter((raw: number) => raw / 1_000_000);
+    scendi(n, RIPOSO, RIPOSO - 2_000_000);
+    tieni(n, RIPOSO - 2_000_000, 20_000);
+    const prima = n.totalTa;
+    expect(prima).toBeGreaterThan(0);
+    n.resetToSet();
+    expect(n.totalTa).toBe(prima);
+  });
+
+  it('e il salto fatto a mano non viene contato dopo', () => {
+    const n = new ThetaNeedle();
+    n.push(RIPOSO);
+    n.setTaConverter((raw: number) => raw / 1_000_000);
+    n.push(RIPOSO - 3_000_000);
+    n.resetToSet();
+    const dopo = tieni(n, RIPOSO - 3_000_000, 20_000);
+    // Il riferimento è stato riportato sul valore corrente: nessuna discesa « in banca ».
+    expect(dopo.totalTa).toBe(0);
+  });
+});

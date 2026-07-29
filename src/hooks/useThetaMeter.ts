@@ -6,7 +6,7 @@ import {
   type ThetaTaPoint, type ThetaTaScale,
 } from '../engine/thetaTaScale';
 import {
-  loadSetup, saveSetup, scaleFromSqueeze, breathIsValid, offsetFromReference, taWithSetup,
+  loadSetup, saveSetup, scaleFromSqueeze, breathIsValid, taWithSetup,
   effectiveScale,
   type ElectrodeConfig, type ThetaSetup,
 } from '../engine/thetaSetup';
@@ -159,6 +159,10 @@ export function useThetaMeter() {
                      offScale: false, bodyMotion: false }));
   }, []);
 
+  /** Riporta l'ago su SET — stesso gesto che ricentra quello dell'EEG (clic sul quadrante).
+   *  Non tocca il Total TA: ricentrare a mano non è carica smaltita. */
+  const resetToSet = useCallback(() => { needleRef.current.resetToSet(); }, []);
+
   /** Azzera il Total TA all'inizio di una seduta, SENZA perdere l'aggancio al preclear
    *  (il braccio resta dov'è, quindi l'ago non salta). */
   const resetTotal = useCallback(() => {
@@ -207,18 +211,28 @@ export function useThetaMeter() {
   const setSensTrim = useCallback((v: number) => {
     setState(p => ({ ...p, setup: { ...p.setup, sensTrim: Math.max(-10, Math.min(10, v)) } }));
   }, []);
-  /** Correzione dal confronto affiancato col meter vero: si inserisce il valore che LUI legge,
-   *  e si ricava quanto va sommato al nostro. Vale per la configurazione IN USO. */
-  const setOffsetFromReference = useCallback((taRiferimento: number) => {
+  /**
+   * Aggiunge un PUNTO DI TARATURA dal confronto affiancato: si legge il TA sul Theta-Meter e lo
+   * si scrive, e la coppia (grezzo corrente, quel TA) entra nella scala.
+   *
+   * Perché un punto e non una correzione costante: l'artefatto arriva a TA 5, ma in seduta si
+   * lavora anche più in alto — lì la scala PROLUNGA l'ultimo segmento, con un errore che è
+   * massimo in cima e si annulla rientrando nella zona tarata. Ed è esattamente quel che si
+   * osserva: uno scarto di 0,6–0,7 che si riduce col tempo, mentre la resistenza scende.
+   * Una costante non può correggerlo — sposta anche dove era giusto. Un punto in più sì:
+   * corregge la FORMA proprio dove manca.
+   */
+  const addPointFromReference = useCallback((taRiferimento: number) => {
     setState(p => {
-      if (p.ta === null) return p;                    // senza taratura non c'è nulla da correggere
-      // Si parte dalla lettura GREZZA di TA, senza la correzione attuale: altrimenti applicando
-      // due volte la stessa correzione si andrebbe a rincorrere il valore.
-      const nostroGrezzo = p.ta - (p.setup.offsets[p.setup.config] ?? 0);
-      const offsets = { ...p.setup.offsets, [p.setup.config]: offsetFromReference(taRiferimento, nostroGrezzo) };
-      const setup = { ...p.setup, offsets };
-      saveSetup(setup);
-      return { ...p, setup };
+      const raw = needleRef.current.lastRaw;
+      if (!raw || !Number.isFinite(taRiferimento)) return p;
+      // Si sostituisce un eventuale punto quasi coincidente invece di affiancarlo: due punti
+      // sullo stesso grezzo renderebbero la scala indeterminata.
+      const tenuti = (p.taScale?.points ?? []).filter(q => Math.abs(q.raw - raw) > raw * 0.01);
+      const scale = buildTaScale([...tenuti, { ta: taRiferimento, raw }], Date.now());
+      if (!scale) return p;
+      saveTaScale(scale);
+      return { ...p, taScale: scale };
     });
   }, []);
 
@@ -261,6 +275,6 @@ export function useThetaMeter() {
 
   return {
     ...state, connect, disconnect, resetTotal, captureRaw, applyTaPoints, clearTaCalibration,
-    setConfig, setOffsetFromReference, startSqueezeTest, startBreathTest, setSensTrim,
+    setConfig, addPointFromReference, startSqueezeTest, startBreathTest, setSensTrim, resetToSet,
   };
 }

@@ -778,6 +778,9 @@ export default function App() {
   const needleVirtualRef = useRef<{ time: number; offset: number }[]>([]);
 
   // ── FUNZIONE DI RESET CENTRALIZZATA ──
+  /** Rimando al ricentraggio delle lattine — vedi la nota accanto all'assegnazione. */
+  const thetaResetRef = useRef<(() => void) | null>(null);
+
   const resetNeedle = useCallback(() => {
     needleEngine.reset(() => {
       if (workerRef.current) {
@@ -788,6 +791,10 @@ export default function App() {
     // Keep the hidden classifier spring + its history in sync with the reset.
     virtualNeedle.reset();
     needleVirtualRef.current = [];
+    // L'ago delle LATTINE torna a SET con lo STESSO gesto: clic sul quadrante o barra
+    // spaziatrice. Sono due aghi sullo stesso quadrante, ricentrarne uno solo lascerebbe
+    // l'altro dov'era senza che si capisca perché.
+    thetaResetRef.current?.();
   }, []);
 
   // Allow resetting needle with spacebar
@@ -3520,6 +3527,9 @@ export default function App() {
   // qu'on VOIE l'écart entre la mesure réelle et celle reconstruite du cerveau. Le TA, lui,
   // vient des lattine : c'est une vraie résistance, pas une reconstruction.
   const theta = useThetaMeter();
+  // resetNeedle è definita più in alto e con dipendenze vuote: si passa per un ref, altrimenti
+  // catturerebbe la prima versione della callback e non ricentrerebbe mai le lattine.
+  useEffect(() => { thetaResetRef.current = theta.resetToSet; }, [theta.resetToSet]);
   const [showThetaCal, setShowThetaCal] = useState(false);
 
   // ── CONN-53: graceful disconnect on tab/app close ──────────────────────────
@@ -4054,7 +4064,7 @@ export default function App() {
         rawNow={theta.rawSmooth}
         setup={theta.setup}
         setConfig={theta.setConfig}
-        setOffsetFromReference={theta.setOffsetFromReference}
+        addPointFromReference={theta.addPointFromReference}
         startSqueezeTest={theta.startSqueezeTest}
         startBreathTest={theta.startBreathTest}
         testing={theta.testing}

@@ -45,7 +45,7 @@ export interface ThetaTaCalibrationProps {
   /** Assetto: configurazione elettrodi + sensibilità. */
   setup: ThetaSetup;
   setConfig: (c: ElectrodeConfig) => void;
-  setOffsetFromReference: (taRiferimento: number) => void;
+  addPointFromReference: (taRiferimento: number) => void;
   startSqueezeTest: () => void;
   startBreathTest: () => void;
   testing: null | 'squeeze' | 'breath';
@@ -56,7 +56,7 @@ export interface ThetaTaCalibrationProps {
 
 export function ThetaTaCalibration({
   captureRaw, applyTaPoints, clearTaCalibration, taScale, connected, taNow, rawNow,
-  setup, setConfig, setOffsetFromReference, startSqueezeTest, startBreathTest, testing, testPeak, breathOk, onClose,
+  setup, setConfig, addPointFromReference, startSqueezeTest, startBreathTest, testing, testPeak, breathOk, onClose,
 }: ThetaTaCalibrationProps) {
   const { t } = useI18n();
   const [punti, setPunti] = useState<Record<number, number>>({});
@@ -229,7 +229,7 @@ export function ThetaTaCalibration({
                        color: 'rgba(240,246,255,0.92)', outline: 'none' }} />
             <button type="button"
               disabled={!connected || taNow === null || !Number.isFinite(parseFloat(rif))}
-              onClick={() => { setOffsetFromReference(parseFloat(rif)); setRif(''); }}
+              onClick={() => { addPointFromReference(parseFloat(rif)); setRif(''); }}
               style={{ height: 26, padding: '0 10px', borderRadius: 6,
                        cursor: 'pointer', opacity: connected && taNow !== null && Number.isFinite(parseFloat(rif)) ? 1 : 0.4,
                        fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.06em',
@@ -237,9 +237,13 @@ export function ThetaTaCalibration({
                        border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(226,238,255,0.75)' }}>
               {t('theta_ref_apply') as string}
             </button>
-            <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(226,238,255,0.55)', minWidth: 46, textAlign: 'right' }}>
-              {setup.offsets[setup.config] ? (setup.offsets[setup.config] > 0 ? '+' : '') + setup.offsets[setup.config].toFixed(3) : '—'}
+            <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(226,238,255,0.55)', minWidth: 52, textAlign: 'right' }}>
+              {taScale ? `${taScale.points.length} pt` : '—'}
             </span>
+          </div>
+          <div style={{ marginTop: -4, marginBottom: 10, fontFamily: 'var(--font-sans)', fontSize: 9,
+                        lineHeight: 1.5, color: 'rgba(226,238,255,0.45)' }}>
+            {t('theta_ref_hint') as string}
           </div>
 
           {/* LE DUE PROVE, in sequenza. La STRETTA fissa la sensibilità (un terzo di quadrante,

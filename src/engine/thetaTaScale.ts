@@ -34,6 +34,12 @@ export interface ThetaTaScale {
   madeAt: number;
 }
 
+/** Estremi della scala del TONE ARM. Sopra 6,5 non è più una lettura: è il prolungamento
+ *  dell'ultimo segmento che se ne va per conto suo (si erano visti valori come 8,59).
+ *  Meglio fermarsi al fondo scala vero che stampare un numero che non esiste. */
+export const TA_MIN = 0;
+export const TA_MAX = 6.5;
+
 /** Servono almeno due punti per definire una scala. */
 export const MIN_TA_POINTS = 2;
 
@@ -60,7 +66,13 @@ export const buildTaScale = (points: ThetaTaPoint[], madeAt: number): ThetaTaSca
  * crescenti in entrambi — ma non lo si dà per scontato: si ordina per grezzo e si interpola,
  * così la funzione regge anche se l'apparecchio andasse al contrario.
  */
-export const taFromRaw = (raw: number, scale: ThetaTaScale): number => {
+export const taFromRaw = (raw: number, scale: ThetaTaScale): number =>
+  clampTa(taFromRawUnclamped(raw, scale));
+
+/** Limita al fondo scala del meter. Fuori da lì il numero non significa più nulla. */
+export const clampTa = (ta: number): number => Math.max(TA_MIN, Math.min(TA_MAX, ta));
+
+const taFromRawUnclamped = (raw: number, scale: ThetaTaScale): number => {
   const p = scale.points;
   if (p.length === 1) return p[0].ta;
 
