@@ -316,6 +316,10 @@ export function QuantumSphere({
     targetRef.current = SET_OFFSET;
     springRef.current = { pos: SET_OFFSET, vel: 0, target: SET_OFFSET };
     setNeedleOffset(SET_OFFSET);
+    // …e si AVVISA il chiamante. Senza questa riga il clic rimetteva a posto solo la molla
+    // LOCALE di questo componente: il motore dell'ago non veniva azzerato e l'ago delle boîtes
+    // restava dov'era. Funzionava solo la barra spaziatrice, che chiama App direttamente.
+    onClick();
   };
 
   // Trail arc: two paths (glow + core) computed inline

@@ -34,5 +34,5 @@ export const initialsOf = (name: string): string =>
 /** Ligne de copyright, présentée à part (en capitales, sous un filet). */
 export const creditCopyright = (lang: string): CreditLine => ({
   label: pick5(lang, 'COPYRIGHT', 'COPYRIGHT', 'COPYRIGHT', 'COPYRIGHT', 'COPYRIGHT'),
-  value: 'LRH',
+  value: 'LRH 2026',
 });
