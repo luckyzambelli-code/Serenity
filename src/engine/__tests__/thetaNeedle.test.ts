@@ -158,6 +158,66 @@ describe('ThetaNeedle', () => {
     expect(n.arm).toBe(braccio);      // il braccio resta dov'era: nessun salto dell'ago
   });
 
+  // ── IL TOTALE SI CONTA IN DIVISIONI DI TA QUANDO L'APPARECCHIO È TARATO ──────────────────
+  // Il Theta-Meter è marcatamente NON LINEARE (scarto dalla retta 0,25 TA sui punti misurati
+  // dall'utente): lo stesso numero di grezzi vale MOLTO più TA vicino a 2 che vicino a 5.
+  // Contare in grezzi darebbe un totale sbagliato in modo diverso secondo dove sta il preclear.
+  describe('Total TA con apparecchio tarato', () => {
+    /** Scala volutamente NON lineare, come quella vera: il passo raddoppia. */
+    const scala = (raw: number) => {
+      const p = [[941_759, 2], [2_217_756, 3], [3_935_104, 4], [6_721_229, 5]];
+      if (raw <= p[0][0]) return 2;
+      for (let i = 1; i < p.length; i++) {
+        if (raw <= p[i][0]) {
+          const [r0, t0] = p[i - 1], [r1, t1] = p[i];
+          return t0 + ((raw - r0) / (r1 - r0)) * (t1 - t0);
+        }
+      }
+      return 5;
+    };
+
+    it('una discesa di UNA divisione conta 1.0, ovunque sulla scala', () => {
+      // In BASSO (fra TA 3 e 2) e in ALTO (fra TA 5 e 4) la stessa divisione corrisponde a
+      // numeri di grezzi molto diversi — ma il totale dev'essere lo stesso.
+      const basso = new ThetaNeedle(); basso.setTaConverter(scala);
+      basso.push(2_217_756);                       // TA 3
+      tieni(basso, 941_759, 200_000);              // scende a TA 2
+
+      const alto = new ThetaNeedle(); alto.setTaConverter(scala);
+      alto.push(6_721_229);                        // TA 5
+      tieni(alto, 3_935_104, 200_000);             // scende a TA 4
+
+      // È QUESTO il punto: lo stesso salto di TA vale UGUALE in fondo e in cima alla scala,
+      // benché corrisponda a un numero di grezzi molto diverso. Contando in grezzi, il totale
+      // in alto sarebbe stato piu' del doppio di quello in basso.
+      expect(basso.totalTa).toBeCloseTo(alto.totalTa, 6);
+      // …e vale circa una divisione. Il totale avanza a scatti di 0,1 e il braccio si avvicina
+      // asintoticamente senza mai arrivarci: l'ultimo scatto resta indietro, quindi 0,9.
+      expect(basso.totalTa).toBeGreaterThanOrEqual(0.9);
+      expect(basso.totalTa).toBeLessThanOrEqual(1.0);
+    });
+
+    it('contando in GREZZI lo stesso salto varrebbe il doppio in cima — ecco perché no', () => {
+      // Contro-prova senza scala: le stesse due discese, di UNA divisione ciascuna, danno
+      // totali molto diversi. È il difetto che la conversione in divisioni elimina.
+      const basso = new ThetaNeedle();
+      basso.push(2_217_756); tieni(basso, 941_759, 200_000);
+      const alto = new ThetaNeedle();
+      alto.push(6_721_229);  tieni(alto, 3_935_104, 200_000);
+      expect(alto.totalTa).toBeGreaterThan(basso.totalTa * 1.8);
+    });
+
+    it('agganciare una scala AZZERA il totale invece di mescolare le unità', () => {
+      const n = new ThetaNeedle();
+      n.push(6_721_229);
+      tieni(n, 3_935_104, 100_000);                // accumula in unità GREZZE
+      expect(n.totalTa).toBeGreaterThan(0);
+      n.setTaConverter(scala);
+      // Metà in grezzi e metà in divisioni sarebbe un numero senza significato.
+      expect(n.totalTa).toBe(0);
+    });
+  });
+
   it('reset riporta tutto allo stato iniziale', () => {
     const n = new ThetaNeedle();
     n.push(RIPOSO);

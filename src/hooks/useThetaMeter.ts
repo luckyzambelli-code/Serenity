@@ -98,6 +98,14 @@ export function useThetaMeter() {
     return () => clearInterval(id);
   }, []);
 
+  // La scala tarata va data al MODELLO, non solo alla visualizzazione: il Total TA si conta in
+  // DIVISIONI di TA, e senza scala si conterebbe in unità grezze — sbagliato su un apparecchio
+  // non lineare, dove uno stesso numero di grezzi vale più TA in basso che in alto.
+  useEffect(() => {
+    const sc = state.taScale;
+    needleRef.current.setTaConverter(sc ? (raw: number) => taFromRaw(raw, sc) : null);
+  }, [state.taScale]);
+
   // Alla chiusura il dispositivo va rilasciato, o resta preso e la volta dopo non si apre.
   useEffect(() => () => { void hidRef.current?.disconnect(); }, []);
 

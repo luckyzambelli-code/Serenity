@@ -229,8 +229,14 @@ export const THETA_OFFSCALE = 0.9;
  *  soffio. PIÙ BASSO = ricentra più a fondo ma può mangiarsi la coda della reazione. */
 export const THETA_RECENTRE = 0.2;
 /** Quanto braccio vale un decimo di divisione di Total TA, in unità grezze.
- *  DA TARARE contro il meter vero: si guarda di quanto scende il grezzo per una divisione. */
+ *  Usato SOLO finché l'apparecchio non è tarato con l'artefatto: senza scala il totale è una
+ *  grandezza relativa e questo numero è un ripiego. Tarato, si conta in divisioni vere. */
 export const THETA_TOTAL_TA_STEP = 120_000;
+/** Passo del Total TA quando l'apparecchio È tarato, in DIVISIONI di TA.
+ *  Un decimo, come il Total TA classico. */
+export const THETA_TOTAL_TA_STEP_DIV = 0.1;
+/** Banda morta del picco, in divisioni: sotto questa, un rialzo non sposta il riferimento. */
+export const THETA_TOTAL_TA_DEADBAND_DIV = 0.02;
 /** Un picco conta come nuovo solo oltre questo margine: senza, il rumore del braccio
  *  rialzerebbe il riferimento in continuazione e il Total TA non salirebbe mai. */
 export const THETA_TOTAL_TA_DEADBAND = 24_000;

@@ -27,6 +27,7 @@
 import {
   THETA_ARM_ALPHA, THETA_NEEDLE_SCALE, THETA_ARM_FOLLOW_FAST,
   THETA_OFFSCALE, THETA_RECENTRE, THETA_TOTAL_TA_STEP, THETA_TOTAL_TA_DEADBAND,
+  THETA_TOTAL_TA_STEP_DIV, THETA_TOTAL_TA_DEADBAND_DIV,
 } from './tuning';
 
 export interface ThetaNeedleState {
@@ -59,11 +60,35 @@ export class ThetaNeedle {
   offScale = false;
   totalTa = 0;
 
-  /** Massimo storico del braccio, per contare solo le discese nette. */
+  /** Massimo storico, per contare solo le discese nette — in DIVISIONI se l'apparecchio è
+   *  tarato, altrimenti in unità grezze. */
   private peak = 0;
+  /** Decimi di divisione accumulati, come INTERO. Sommare 0,1 alla volta in virgola mobile
+   *  deriva (nove volte 0,1 fa 0,8999999999999999, che finirebbe anche a schermo): si contano
+   *  decimi interi e si divide solo alla lettura. */
+  private tenths = 0;
+  /** Conversione grezzo → TA, quando l'apparecchio è stato tarato con l'artefatto.
+   *  Senza, il Total TA si conta in unità grezze e vale solo come grandezza relativa. */
+  private toTa: ((raw: number) => number) | null = null;
   private started = false;
   /** true mentre il braccio sta RIPORTANDO l'ago dentro il quadrante (isteresi). */
   private recentring = false;
+
+  /**
+   * Aggancia (o stacca) la scala tarata. Da chiamare quando la taratura cambia.
+   *
+   * ⚠️ Cambiare unità di misura a metà strada renderebbe il totale accumulato incoerente —
+   * metà in grezzi e metà in divisioni. Si riparte quindi dal punto attuale.
+   */
+  setTaConverter(fn: ((raw: number) => number) | null): void {
+    if (fn === this.toTa) return;
+    this.toTa = fn;
+    this.totalTa = 0; this.tenths = 0;
+    this.peak = this.misura(this.arm);
+  }
+
+  /** Il valore su cui si conta il Total TA: divisioni di TA se tarato, grezzo altrimenti. */
+  private misura(raw: number): number { return this.toTa ? this.toTa(raw) : raw; }
 
   /** Una lettura grezza dal meter. Restituisce lo stato aggiornato. */
   push(raw: number): ThetaNeedleState {
@@ -71,7 +96,7 @@ export class ThetaNeedle {
       // Il braccio parte DOVE SI TROVA la persona: partire da zero manderebbe l'ago a fondo
       // scala per i primi secondi, e sembrerebbe una reazione violenta che non c'è stata.
       this.arm = raw;
-      this.peak = raw;
+      this.peak = this.misura(raw);
       this.started = true;
     }
 
@@ -100,14 +125,22 @@ export class ThetaNeedle {
     this.arm = this.arm * (1 - alpha) + raw * alpha;
 
     // ── TOTAL TA : solo le DISCESE nette dal picco ──────────────────────────────────────────
-    if (this.arm > this.peak + THETA_TOTAL_TA_DEADBAND) {
-      this.peak = this.arm;                       // picco nuovo e vero → si riparte da qui
-    } else if (this.arm < this.peak) {
-      const disceso = this.peak - this.arm;
-      const passi = Math.floor(disceso / THETA_TOTAL_TA_STEP);
+    // Si conta in DIVISIONI di TA quando l'apparecchio è tarato, non in unità grezze: il
+    // Theta-Meter è marcatamente NON LINEARE (scarto dalla retta 0,25 TA sui punti misurati),
+    // quindi uno stesso numero di grezzi vale MOLTO più TA vicino a 2 che vicino a 5. Contarli
+    // in grezzi darebbe un totale sbagliato in modo diverso a seconda di dove sta il preclear.
+    const ora = this.misura(this.arm);
+    const passo = this.toTa ? THETA_TOTAL_TA_STEP_DIV : THETA_TOTAL_TA_STEP;
+    const bandaMorta = this.toTa ? THETA_TOTAL_TA_DEADBAND_DIV : THETA_TOTAL_TA_DEADBAND;
+
+    if (ora > this.peak + bandaMorta) {
+      this.peak = ora;                            // picco nuovo e vero → si riparte da qui
+    } else if (ora < this.peak) {
+      const passi = Math.floor((this.peak - ora) / passo);
       if (passi > 0) {
-        this.totalTa += passi / 10;               // in decimi di divisione, come il TA da EEG
-        this.peak -= passi * THETA_TOTAL_TA_STEP; // si consuma solo ciò che è stato contato
+        this.tenths += passi;                     // un passo = un decimo di divisione
+        this.totalTa = this.tenths / 10;
+        this.peak -= passi * passo;               // si consuma solo ciò che è stato contato
       }
     }
 
@@ -115,10 +148,10 @@ export class ThetaNeedle {
   }
 
   /** Azzera il Total TA senza perdere l'aggancio al preclear (inizio seduta). */
-  resetTotal(): void { this.totalTa = 0; this.peak = this.arm; }
+  resetTotal(): void { this.totalTa = 0; this.tenths = 0; this.peak = this.misura(this.arm); }
 
   reset(): void {
     this.arm = 0; this.lastRaw = 0; this.offset = 0; this.offScale = false;
-    this.totalTa = 0; this.peak = 0; this.started = false; this.recentring = false;
+    this.totalTa = 0; this.tenths = 0; this.peak = 0; this.started = false; this.recentring = false;
   }
 }
