@@ -4052,6 +4052,14 @@ export default function App() {
         connected={theta.status === 'connected'}
         taNow={theta.taNow}
         rawNow={theta.rawSmooth}
+        setup={theta.setup}
+        setConfig={theta.setConfig}
+        setSoloOffset={theta.setSoloOffset}
+        startSqueezeTest={theta.startSqueezeTest}
+        startBreathTest={theta.startBreathTest}
+        testing={theta.testing}
+        testPeak={theta.testPeak}
+        breathOk={theta.breathOk}
         onClose={() => setShowThetaCal(false)}
       />
     )}

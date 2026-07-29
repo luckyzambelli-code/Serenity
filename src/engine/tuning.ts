@@ -232,6 +232,10 @@ export const THETA_RECENTRE = 0.2;
  *  Usato SOLO finché l'apparecchio non è tarato con l'artefatto: senza scala il totale è una
  *  grandezza relativa e questo numero è un ripiego. Tarato, si conta in divisioni vere. */
 export const THETA_TOTAL_TA_STEP = 120_000;
+/** Durata della finestra delle PROVE (stretta e respiro), in ms. Deve coprire il gesto e il
+ *  culmine della caduta che ne segue, senza raccogliere movimenti successivi che falserebbero
+ *  il picco. */
+export const SQUEEZE_TEST_MS = 9000;
 /** Passo del Total TA quando l'apparecchio È tarato, in DIVISIONI di TA.
  *  Un decimo, come il Total TA classico. */
 export const THETA_TOTAL_TA_STEP_DIV = 0.1;

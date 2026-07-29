@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useI18n } from '../i18n';
 import { linearitaResidua, buildTaScale, taFromRaw, type ThetaTaPoint, type ThetaTaScale } from '../engine/thetaTaScale';
+import { SQUEEZE_TARGET_OFFSET, type ElectrodeConfig, type ThetaSetup } from '../engine/thetaSetup';
 
 /**
  * ThetaTaCalibration — taratura del TONE ARM con l'ARTEFATTO FISICO del Theta-Meter.
@@ -33,14 +34,26 @@ export interface ThetaTaCalibrationProps {
   /** La lettura grezza in questo istante — serve a verificare con la scala in ANTEPRIMA,
    *  cioè con i punti appena registrati, prima ancora di salvare. */
   rawNow: number;
+  /** Assetto: configurazione elettrodi + sensibilità. */
+  setup: ThetaSetup;
+  setConfig: (c: ElectrodeConfig) => void;
+  setSoloOffset: (taTwoCans: number, taSolo: number) => void;
+  startSqueezeTest: () => void;
+  startBreathTest: () => void;
+  testing: null | 'squeeze' | 'breath';
+  testPeak: number;
+  breathOk: boolean | null;
   onClose: () => void;
 }
 
 export function ThetaTaCalibration({
-  captureRaw, applyTaPoints, clearTaCalibration, taScale, connected, taNow, rawNow, onClose,
+  captureRaw, applyTaPoints, clearTaCalibration, taScale, connected, taNow, rawNow,
+  setup, setConfig, setSoloOffset, startSqueezeTest, startBreathTest, testing, testPeak, breathOk, onClose,
 }: ThetaTaCalibrationProps) {
   const { t } = useI18n();
   const [punti, setPunti] = useState<Record<number, number>>({});
+  /** Le due letture per lo scarto SOLO: si prende prima quella a due lattine, poi quella in solo. */
+  const [taDue, setTaDue] = useState<number | null>(null);
   const [errore, setErrore] = useState<string | null>(null);
 
   const registra = (ta: number) => {
@@ -150,6 +163,86 @@ export function ThetaTaCalibration({
             {errore}
           </div>
         )}
+
+        {/* ── ASSETTO ─────────────────────────────────────────────────────────────────────
+            La scala del TA sopra si tara UNA VOLTA e vale per chiunque. Qui invece c'è ciò che
+            dipende da COME si audita, e va rifatto se cambia la disposizione degli elettrodi. */}
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.10)' }}>
+          <div style={{ ...eti, marginBottom: 8 }}>{t('theta_setup') as string}</div>
+
+          {/* Due lattine (una per mano) oppure, in SOLO AUDITING, una lattina sola fatta di
+              due mezze lattine. La geometria cambia la resistenza, quindi il TA letto. */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+            {(['two-cans', 'solo-can'] as ElectrodeConfig[]).map(c => (
+              <button key={c} type="button" onClick={() => setConfig(c)}
+                style={{ flex: 1, height: 30, borderRadius: 8, cursor: 'pointer',
+                         fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600,
+                         letterSpacing: '0.06em', textTransform: 'uppercase',
+                         background: setup.config === c ? 'rgba(245,158,11,0.18)' : 'rgba(255,255,255,0.05)',
+                         border: `1px solid ${setup.config === c ? 'rgba(245,158,11,0.55)' : 'rgba(255,255,255,0.16)'}`,
+                         color: setup.config === c ? '#f59e0b' : 'rgba(226,238,255,0.6)' }}>
+                {t(c === 'two-cans' ? 'theta_two_cans' : 'theta_solo_can') as string}
+              </button>
+            ))}
+          </div>
+
+          {/* Lo scarto fra le due configurazioni: si legge il TA con le due lattine, poi con
+              la lattina solo, e si registra la differenza. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <button type="button" disabled={!connected || taNow === null}
+              onClick={() => { if (taDue === null) setTaDue(taNow); else { setSoloOffset(taDue, taNow!); setTaDue(null); } }}
+              style={{ flex: 1, height: 28, borderRadius: 7,
+                       cursor: connected && taNow !== null ? 'pointer' : 'default',
+                       opacity: connected && taNow !== null ? 1 : 0.4,
+                       fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.06em',
+                       textTransform: 'uppercase', background: 'rgba(255,255,255,0.05)',
+                       border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(226,238,255,0.75)' }}>
+              {taDue === null ? (t('theta_solo_step1') as string) : (t('theta_solo_step2') as string)}
+            </button>
+            <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(226,238,255,0.55)', minWidth: 54, textAlign: 'right' }}>
+              {setup.soloOffsetTa ? (setup.soloOffsetTa > 0 ? '+' : '') + setup.soloOffsetTa.toFixed(2) : '—'}
+            </span>
+          </div>
+
+          {/* LE DUE PROVE, in sequenza. La STRETTA fissa la sensibilità (un terzo di quadrante,
+              come la manopola del Theta-Meter); il RESPIRO la VERIFICA — l'ago deve cadere
+              almeno un minimo. Sono cose distinte: la seconda non ritocca la sensibilità. */}
+          {([
+            { k: 'squeeze' as const, start: startSqueezeTest, lbl: 'theta_squeeze' as const, hint: 'theta_squeeze_hint' as const },
+            { k: 'breath' as const,  start: startBreathTest,  lbl: 'theta_breath' as const,  hint: 'theta_breath_hint' as const },
+          ]).map(pr => (
+            <div key={pr.k} style={{ marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button type="button" disabled={!connected || testing !== null} onClick={pr.start}
+                  style={{ flex: 1, height: 28, borderRadius: 7,
+                           cursor: connected && testing === null ? 'pointer' : 'default',
+                           opacity: connected ? 1 : 0.4,
+                           fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600,
+                           letterSpacing: '0.06em', textTransform: 'uppercase',
+                           background: testing === pr.k ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.05)',
+                           border: `1px solid ${testing === pr.k ? 'rgba(52,211,153,0.6)' : 'rgba(255,255,255,0.18)'}`,
+                           color: testing === pr.k ? '#34d399' : 'rgba(226,238,255,0.75)' }}>
+                  {testing === pr.k ? (t('theta_test_running') as string) : (t(pr.lbl) as string)}
+                </button>
+                <span style={{ fontFamily: 'monospace', fontSize: 11, minWidth: 60, textAlign: 'right',
+                               color: pr.k === 'breath' && breathOk === false ? '#f87171' : 'rgba(226,238,255,0.55)' }}>
+                  {pr.k === 'squeeze'
+                    ? (setup.needleScale ? (SQUEEZE_TARGET_OFFSET / setup.needleScale / 1000).toFixed(0) + 'k' : '—')
+                    : (breathOk === null ? '—' : breathOk ? '✓' : '✗')}
+                </span>
+              </div>
+              <div style={{ marginTop: 4, fontFamily: 'var(--font-sans)', fontSize: 9, lineHeight: 1.5,
+                            color: 'rgba(226,238,255,0.45)' }}>
+                {t(pr.hint) as string}
+              </div>
+            </div>
+          ))}
+          {testing !== null && (
+            <div style={{ fontFamily: 'monospace', fontSize: 10, color: '#34d399' }}>
+              {Math.round(testPeak).toLocaleString('it')}
+            </div>
+          )}
+        </div>
 
         <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
           <button type="button" onClick={onClose}

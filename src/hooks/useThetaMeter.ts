@@ -5,6 +5,11 @@ import {
   buildTaScale, taFromRaw, loadTaScale, saveTaScale, clearTaScale,
   type ThetaTaPoint, type ThetaTaScale,
 } from '../engine/thetaTaScale';
+import {
+  loadSetup, saveSetup, scaleFromSqueeze, breathIsValid, soloOffsetFrom, taWithSetup,
+  type ElectrodeConfig, type ThetaSetup,
+} from '../engine/thetaSetup';
+import { THETA_NEEDLE_SCALE, SQUEEZE_TEST_MS } from '../engine/tuning';
 
 /**
  * useThetaMeter — l'e-meter USB dell'utente dentro EQUILIBRIUM.
@@ -43,6 +48,14 @@ export interface ThetaMeterState {
   taNow: number | null;
   /** La taratura in uso, se c'è. */
   taScale: ThetaTaScale | null;
+  /** Assetto: configurazione degli elettrodi e sensibilità dell'ago. */
+  setup: ThetaSetup;
+  /** Quale prova è in corso, se una. */
+  testing: null | 'squeeze' | 'breath';
+  /** Deviazione di picco osservata durante la prova (unità grezze). */
+  testPeak: number;
+  /** Esito dell'ultimo test del respiro: null se non fatto. */
+  breathOk: boolean | null;
   /** L'ago è finito fuori dal quadrante. */
   offScale: boolean;
   /** Letture valide e report scartati — se i secondi salgono, il formato non è quello che credo. */
@@ -60,11 +73,14 @@ export function useThetaMeter() {
   const hidRef = useRef<ThetaMeterHid | null>(null);
   const needleRef = useRef(new ThetaNeedle());
   /** Ultima lettura, in attesa della prossima pubblicazione. */
+  /** Prova in corso + picco osservato. */
+  const testRef = useRef({ on: false, peak: 0 });
   const pendingRef = useRef<{ offset: number; arm: number; raw: number; totalTa: number; offScale: boolean } | null>(null);
 
   const [state, setState] = useState<ThetaMeterState>({
     status: 'disconnected', offset: 0, arm: 0, raw: 0, rawSmooth: 0, totalTa: 0, offScale: false,
     ta: null, taNow: null, taScale: loadTaScale(),
+    setup: loadSetup(THETA_NEEDLE_SCALE), testing: null, testPeak: 0, breathOk: null,
     counters: { ok: 0, rejected: 0 }, unavailable: !isHidAvailable(), lastError: null,
   });
 
@@ -73,7 +89,16 @@ export function useThetaMeter() {
     hidRef.current = new ThetaMeterHid({
       // Il modello lavora sul valore LISCIATO (a 60/s il grezzo balla), ma si tiene anche il
       // grezzo: serve in diagnostica e per la taratura contro resistenze note.
-      onReading: r => { pendingRef.current = { ...needleRef.current.push(r.smooth), raw: r.raw }; },
+      onReading: r => {
+        const st = needleRef.current.push(r.smooth);
+        // Il picco si insegue a OGNI lettura (60/s), non alla pubblicazione (50 Hz): il culmine
+        // di una caduta dura pochi campioni e alla pubblicazione si perderebbe.
+        if (testRef.current.on) {
+          const dev = Math.abs(needleRef.current.arm - r.smooth);
+          if (dev > testRef.current.peak) testRef.current.peak = dev;
+        }
+        pendingRef.current = { ...st, raw: r.raw };
+      },
       onStatus: s => setState(p => ({ ...p, status: s })),
       onError: e => setState(p => ({ ...p, lastError: e.message })),
     });
@@ -89,9 +114,12 @@ export function useThetaMeter() {
         ...prev, ...p,
         // Il TA vero è la posizione del BRACCIO letta sulla scala tarata — cioè esattamente
         // la manopola di un meter fisico. Senza taratura resta null: non si inventa un numero.
-        ta: prev.taScale ? taFromRaw(p.arm, prev.taScale) : null,
+        // La configurazione degli elettrodi cambia la resistenza: in SOLO si applica lo
+        // scarto misurato, per riportare la lettura al riferimento delle due lattine.
+        ta: prev.taScale ? taWithSetup(taFromRaw(p.arm, prev.taScale), prev.setup) : null,
         rawSmooth: needleRef.current.lastRaw,
-        taNow: prev.taScale ? taFromRaw(needleRef.current.lastRaw, prev.taScale) : null,
+        taNow: prev.taScale ? taWithSetup(taFromRaw(needleRef.current.lastRaw, prev.taScale), prev.setup) : null,
+        testPeak: testRef.current.peak,
         counters: hidRef.current!.counters,
       }));
     }, UI_PERIOD_MS);
@@ -105,6 +133,9 @@ export function useThetaMeter() {
     const sc = state.taScale;
     needleRef.current.setTaConverter(sc ? (raw: number) => taFromRaw(raw, sc) : null);
   }, [state.taScale]);
+
+  // La sensibilità misurata col respiro scende nel modello.
+  useEffect(() => { needleRef.current.setScale(state.setup.needleScale); }, [state.setup.needleScale]);
 
   // Alla chiusura il dispositivo va rilasciato, o resta preso e la volta dopo non si apre.
   useEffect(() => () => { void hidRef.current?.disconnect(); }, []);
@@ -151,5 +182,54 @@ export function useThetaMeter() {
     setState(p => ({ ...p, taScale: null, ta: null }));
   }, []);
 
-  return { ...state, connect, disconnect, resetTotal, captureRaw, applyTaPoints, clearTaCalibration };
+  // ── ASSETTO ────────────────────────────────────────────────────────────────────────────
+  const updateSetup = useCallback((patch: Partial<ThetaSetup>) => {
+    setState(p => { const s = { ...p.setup, ...patch }; saveSetup(s); return { ...p, setup: s }; });
+  }, []);
+
+  const setConfig = useCallback((config: ElectrodeConfig) => updateSetup({ config }), [updateSetup]);
+  const setSoloOffset = useCallback((taTwoCans: number, taSolo: number) =>
+    updateSetup({ soloOffsetTa: soloOffsetFrom(taTwoCans, taSolo) }), [updateSetup]);
+
+  /**
+   * PROVA DELLA STRETTA — fissa la SENSIBILITÀ: stringendo le lattine l'ago deve cadere di un
+   * terzo di quadrante. È la manopola di sensibilità del Theta-Meter, qui MISURATA invece che
+   * scelta a tavolino (il primo valore scelto così era cinque volte troppo alto: tutto sbatteva).
+   */
+  const startSqueezeTest = useCallback(() => {
+    testRef.current = { on: true, peak: 0 };
+    setState(p => ({ ...p, testing: 'squeeze', testPeak: 0 }));
+    setTimeout(() => {
+      testRef.current.on = false;
+      const scala = scaleFromSqueeze(testRef.current.peak);
+      // Una misura nulla o assurda NON deve rovinare la sensibilità che c'è: azzerarla
+      // bloccherebbe l'ago, o lo manderebbe fuori scala.
+      setState(p => ({
+        ...p, testing: null, testPeak: testRef.current.peak,
+        ...(scala ? { setup: (() => { const s = { ...p.setup, needleScale: scala }; saveSetup(s); return s; })() } : {}),
+      }));
+    }, SQUEEZE_TEST_MS);
+  }, []);
+
+  /**
+   * TEST DEL RESPIRO — VERIFICA, non taratura. Dopo la stretta, un respiro profondo e il
+   * rilascio devono far cadere l'ago almeno un minimo. NON tocca la sensibilità: se la
+   * ritoccasse, la taratura fatta con la stretta verrebbe disfatta da ogni verifica.
+   */
+  const startBreathTest = useCallback(() => {
+    testRef.current = { on: true, peak: 0 };
+    setState(p => ({ ...p, testing: 'breath', testPeak: 0, breathOk: null }));
+    setTimeout(() => {
+      testRef.current.on = false;
+      setState(p => ({
+        ...p, testing: null, testPeak: testRef.current.peak,
+        breathOk: breathIsValid(testRef.current.peak, p.setup.needleScale),
+      }));
+    }, SQUEEZE_TEST_MS);
+  }, []);
+
+  return {
+    ...state, connect, disconnect, resetTotal, captureRaw, applyTaPoints, clearTaCalibration,
+    setConfig, setSoloOffset, startSqueezeTest, startBreathTest,
+  };
 }

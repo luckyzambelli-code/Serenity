@@ -63,6 +63,10 @@ export class ThetaNeedle {
   /** Massimo storico, per contare solo le discese nette — in DIVISIONI se l'apparecchio è
    *  tarato, altrimenti in unità grezze. */
   private peak = 0;
+  /** Sensibilità in uso: unità grezze → offset del quadrante. Parte dal valore di ripiego in
+   *  tuning e viene SOSTITUITA da quella misurata col test del respiro (un terzo di quadrante).
+   *  Il primo valore scelto a tavolino era cinque volte troppo alto: tutto sbatteva. */
+  private scale = THETA_NEEDLE_SCALE;
   /** Decimi di divisione accumulati, come INTERO. Sommare 0,1 alla volta in virgola mobile
    *  deriva (nove volte 0,1 fa 0,8999999999999999, che finirebbe anche a schermo): si contano
    *  decimi interi e si divide solo alla lettura. */
@@ -87,6 +91,10 @@ export class ThetaNeedle {
     this.peak = this.misura(this.arm);
   }
 
+  /** Cambia la sensibilità dell'ago (dal test del respiro). Non tocca né il braccio né il
+   *  totale: cambia solo QUANTO si vede una data variazione, non cosa è stato misurato. */
+  setScale(scale: number): void { if (scale > 0 && Number.isFinite(scale)) this.scale = scale; }
+
   /** Il valore su cui si conta il Total TA: divisioni di TA se tarato, grezzo altrimenti. */
   private misura(raw: number): number { return this.toTa ? this.toTa(raw) : raw; }
 
@@ -104,7 +112,7 @@ export class ThetaNeedle {
 
     // L'ago è lo scarto dal braccio. Si calcola PRIMA di muovere il braccio, altrimenti
     // il braccio inseguirebbe già in parte la deviazione e l'ago risulterebbe smorzato.
-    const scarto = (this.arm - raw) * THETA_NEEDLE_SCALE;
+    const scarto = (this.arm - raw) * this.scale;
     this.offset = Math.max(-1, Math.min(1, scarto));
 
     // ── RICENTRAGGIO, con ISTERESI ────────────────────────────────────────────────────────
