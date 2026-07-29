@@ -6,7 +6,7 @@ import {
   type ThetaTaPoint, type ThetaTaScale,
 } from '../engine/thetaTaScale';
 import {
-  loadSetup, saveSetup, scaleFromSqueeze, breathIsValid, soloOffsetFrom, taWithSetup,
+  loadSetup, saveSetup, scaleFromSqueeze, breathIsValid, offsetFromReference, taWithSetup,
   type ElectrodeConfig, type ThetaSetup,
 } from '../engine/thetaSetup';
 import { THETA_NEEDLE_SCALE, SQUEEZE_TEST_MS } from '../engine/tuning';
@@ -188,8 +188,20 @@ export function useThetaMeter() {
   }, []);
 
   const setConfig = useCallback((config: ElectrodeConfig) => updateSetup({ config }), [updateSetup]);
-  const setSoloOffset = useCallback((taTwoCans: number, taSolo: number) =>
-    updateSetup({ soloOffsetTa: soloOffsetFrom(taTwoCans, taSolo) }), [updateSetup]);
+  /** Correzione dal confronto affiancato col meter vero: si inserisce il valore che LUI legge,
+   *  e si ricava quanto va sommato al nostro. Vale per la configurazione IN USO. */
+  const setOffsetFromReference = useCallback((taRiferimento: number) => {
+    setState(p => {
+      if (p.ta === null) return p;                    // senza taratura non c'è nulla da correggere
+      // Si parte dalla lettura GREZZA di TA, senza la correzione attuale: altrimenti applicando
+      // due volte la stessa correzione si andrebbe a rincorrere il valore.
+      const nostroGrezzo = p.ta - (p.setup.offsets[p.setup.config] ?? 0);
+      const offsets = { ...p.setup.offsets, [p.setup.config]: offsetFromReference(taRiferimento, nostroGrezzo) };
+      const setup = { ...p.setup, offsets };
+      saveSetup(setup);
+      return { ...p, setup };
+    });
+  }, []);
 
   /**
    * PROVA DELLA STRETTA — fissa la SENSIBILITÀ: stringendo le lattine l'ago deve cadere di un
@@ -230,6 +242,6 @@ export function useThetaMeter() {
 
   return {
     ...state, connect, disconnect, resetTotal, captureRaw, applyTaPoints, clearTaCalibration,
-    setConfig, setSoloOffset, startSqueezeTest, startBreathTest,
+    setConfig, setOffsetFromReference, startSqueezeTest, startBreathTest,
   };
 }

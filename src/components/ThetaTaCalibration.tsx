@@ -6,6 +6,9 @@ import { SQUEEZE_TARGET_OFFSET, type ElectrodeConfig, type ThetaSetup } from '..
 /**
  * ThetaTaCalibration — taratura del TONE ARM con l'ARTEFATTO FISICO del Theta-Meter.
  *
+ * Il programma Theta-Meter può restare APERTO: i due leggono il dispositivo insieme, ed è anzi
+ * il modo migliore di verificare — quadranti affiancati.
+ *
  * L'artefatto si attacca al posto delle lattine e ha un pulsante per ciascun valore di TA
  * (2, 3, 4, 5). Premendone uno, il meter legge la resistenza corrispondente a QUEL TA: si
  * registra il grezzo, e con quattro coppie il TA diventa un numero VERO sulla scala del meter
@@ -37,7 +40,7 @@ export interface ThetaTaCalibrationProps {
   /** Assetto: configurazione elettrodi + sensibilità. */
   setup: ThetaSetup;
   setConfig: (c: ElectrodeConfig) => void;
-  setSoloOffset: (taTwoCans: number, taSolo: number) => void;
+  setOffsetFromReference: (taRiferimento: number) => void;
   startSqueezeTest: () => void;
   startBreathTest: () => void;
   testing: null | 'squeeze' | 'breath';
@@ -48,12 +51,12 @@ export interface ThetaTaCalibrationProps {
 
 export function ThetaTaCalibration({
   captureRaw, applyTaPoints, clearTaCalibration, taScale, connected, taNow, rawNow,
-  setup, setConfig, setSoloOffset, startSqueezeTest, startBreathTest, testing, testPeak, breathOk, onClose,
+  setup, setConfig, setOffsetFromReference, startSqueezeTest, startBreathTest, testing, testPeak, breathOk, onClose,
 }: ThetaTaCalibrationProps) {
   const { t } = useI18n();
   const [punti, setPunti] = useState<Record<number, number>>({});
-  /** Le due letture per lo scarto SOLO: si prende prima quella a due lattine, poi quella in solo. */
-  const [taDue, setTaDue] = useState<number | null>(null);
+  /** Il TA che legge il Theta-Meter in questo momento, digitato dall'utente. */
+  const [rif, setRif] = useState('');
   const [errore, setErrore] = useState<string | null>(null);
 
   const registra = (ta: number) => {
@@ -186,21 +189,29 @@ export function ThetaTaCalibration({
             ))}
           </div>
 
-          {/* Lo scarto fra le due configurazioni: si legge il TA con le due lattine, poi con
-              la lattina solo, e si registra la differenza. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <button type="button" disabled={!connected || taNow === null}
-              onClick={() => { if (taDue === null) setTaDue(taNow); else { setSoloOffset(taDue, taNow!); setTaDue(null); } }}
-              style={{ flex: 1, height: 28, borderRadius: 7,
-                       cursor: connected && taNow !== null ? 'pointer' : 'default',
-                       opacity: connected && taNow !== null ? 1 : 0.4,
+          {/* CORREZIONE contro il meter vero. I due programmi leggono il dispositivo NELLO STESSO
+              momento, quindi si guardano i quadranti affiancati e si scrive qui il valore che
+              legge il Theta-Meter: la correzione si ricava da sola, per questa configurazione. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ ...eti, whiteSpace: 'nowrap' }}>{t('theta_ref_label') as string}</span>
+            <input value={rif} onChange={e => setRif(e.target.value)} placeholder="5.796"
+              inputMode="decimal"
+              style={{ width: 70, height: 26, borderRadius: 6, padding: '0 8px',
+                       fontFamily: 'monospace', fontSize: 12, textAlign: 'right',
+                       background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.2)',
+                       color: 'rgba(240,246,255,0.92)', outline: 'none' }} />
+            <button type="button"
+              disabled={!connected || taNow === null || !Number.isFinite(parseFloat(rif))}
+              onClick={() => { setOffsetFromReference(parseFloat(rif)); setRif(''); }}
+              style={{ height: 26, padding: '0 10px', borderRadius: 6,
+                       cursor: 'pointer', opacity: connected && taNow !== null && Number.isFinite(parseFloat(rif)) ? 1 : 0.4,
                        fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.06em',
                        textTransform: 'uppercase', background: 'rgba(255,255,255,0.05)',
                        border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(226,238,255,0.75)' }}>
-              {taDue === null ? (t('theta_solo_step1') as string) : (t('theta_solo_step2') as string)}
+              {t('theta_ref_apply') as string}
             </button>
-            <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(226,238,255,0.55)', minWidth: 54, textAlign: 'right' }}>
-              {setup.soloOffsetTa ? (setup.soloOffsetTa > 0 ? '+' : '') + setup.soloOffsetTa.toFixed(2) : '—'}
+            <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(226,238,255,0.55)', minWidth: 46, textAlign: 'right' }}>
+              {setup.offsets[setup.config] ? (setup.offsets[setup.config] > 0 ? '+' : '') + setup.offsets[setup.config].toFixed(3) : '—'}
             </span>
           </div>
 

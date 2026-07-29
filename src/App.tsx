@@ -4054,7 +4054,7 @@ export default function App() {
         rawNow={theta.rawSmooth}
         setup={theta.setup}
         setConfig={theta.setConfig}
-        setSoloOffset={theta.setSoloOffset}
+        setOffsetFromReference={theta.setOffsetFromReference}
         startSqueezeTest={theta.startSqueezeTest}
         startBreathTest={theta.startBreathTest}
         testing={theta.testing}

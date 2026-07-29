@@ -9,8 +9,9 @@
  * architettura, nessun driver da installare. Lato Electron il selettore è già gestito in
  * main.cjs, che sceglie il meter da solo grazie al suo VID/PID univoco.
  *
- * ⚠️ Il programma **Theta-Meter deve essere chiuso**: prende il dispositivo in esclusiva via
- * libusb, e finché è aperto qui non arriva nulla.
+ * NB: il programma Theta-Meter e EQUILIBRIUM possono leggere il dispositivo **nello stesso
+ * momento** — verificato in seduta. HID si legge da più clienti; l'esclusiva di libusb che
+ * temevo non c'è. È anzi il modo migliore di tarare: si guardano i due quadranti affiancati.
  */
 import { ThetaMeter, type ThetaReading } from '../engine/thetaMeter';
 import { THETA_VENDOR_ID, THETA_PRODUCT_ID } from '../engine/tuning';
@@ -86,8 +87,7 @@ export class ThetaMeterHid {
       // Il caso di gran lunga più comune, e il messaggio del sistema non lo dice.
       if (/open|access|busy/i.test(err.message)) {
         this.opts.onError?.(new Error(
-          'Impossibile aprire il meter — il programma Theta-Meter è aperto? Va chiuso: ' +
-          'prende il dispositivo in esclusiva. (' + err.message + ')'));
+          'Impossibile aprire il meter — verifica che sia collegato. (' + err.message + ')'));
       } else {
         this.opts.onError?.(err);
       }

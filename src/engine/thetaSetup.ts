@@ -8,7 +8,15 @@
  *   · l'ASSETTO qui dipende invece da COME si audita: due lattine (una per mano) oppure, in
  *     SOLO AUDITING, una lattina sola composta da due mezze lattine. La geometria degli
  *     elettrodi cambia la resistenza, quindi lo stesso preclear legge un TA diverso nelle due
- *     configurazioni. Si misura la DIFFERENZA una volta e la si applica.
+ *     configurazioni.
+ *
+ * ── LO SCARTO SI MISURA CONTRO IL METER VERO, AFFIANCATI ───────────────────────────────────
+ * Il programma Theta-Meter e EQUILIBRIUM possono leggere il dispositivo **nello stesso momento**
+ * (HID si legge da più clienti; l'esclusiva di libusb che temevo non c'è). Si guardano quindi i
+ * due quadranti affiancati e si registra il valore del meter vero: da lì esce la correzione,
+ * senza procedure a due passaggi né conti a mano.
+ *
+ * Lo scarto è PER CONFIGURAZIONE: due lattine e lattina solo ne hanno uno ciascuna.
  *
  * ── LA SENSIBILITÀ SI MISURA, NON SI INDOVINA ──────────────────────────────────────────────
  * La procedura standard del Theta-Meter dà un riferimento oggettivo, in DUE prove distinte:
@@ -34,9 +42,9 @@ export const BREATH_MIN_OFFSET = 0.08;
 export interface ThetaSetup {
   /** Configurazione in uso. */
   config: ElectrodeConfig;
-  /** TA(due lattine) − TA(lattina solo) per la STESSA persona. Si somma alla lettura in
-   *  configurazione solo, per riportarla al riferimento delle due lattine. 0 = non misurato. */
-  soloOffsetTa: number;
+  /** Correzione da sommare alla nostra lettura, PER CONFIGURAZIONE, per farla coincidere con
+   *  quella del meter vero. 0 = non misurata. */
+  offsets: Record<ElectrodeConfig, number>;
   /** Unità grezze → offset del quadrante. Ricavata dalla PROVA DELLA STRETTA. */
   needleScale: number;
 }
@@ -44,7 +52,7 @@ export interface ThetaSetup {
 /** Assetto di partenza, con la sensibilità di ripiego finché la stretta non l'ha misurata. */
 export const defaultSetup = (fallbackScale: number): ThetaSetup => ({
   config: 'two-cans',
-  soloOffsetTa: 0,
+  offsets: { 'two-cans': 0, 'solo-can': 0 },
   needleScale: fallbackScale,
 });
 
@@ -71,16 +79,15 @@ export const breathIsValid = (deviazioneGrezza: number, scale: number): boolean 
   Math.abs(deviazioneGrezza) * scale >= BREATH_MIN_OFFSET;
 
 /**
- * Scarto di TA fra le due configurazioni, misurato sulla stessa persona a breve distanza.
- * Si sottrae la lettura in solo da quella a due lattine: sommando il risultato alle letture
- * in solo, le due configurazioni tornano confrontabili.
+ * Correzione ricavata dal confronto affiancato: quanto va sommato alla NOSTRA lettura perché
+ * coincida con quella del meter vero.
  */
-export const soloOffsetFrom = (taDueLattine: number, taLattinaSolo: number): number =>
-  taDueLattine - taLattinaSolo;
+export const offsetFromReference = (taRiferimento: number, taNostro: number): number =>
+  taRiferimento - taNostro;
 
-/** Applica l'assetto a una lettura di TA. */
+/** Applica la correzione della configurazione in uso. */
 export const taWithSetup = (ta: number, setup: ThetaSetup): number =>
-  setup.config === 'solo-can' ? ta + setup.soloOffsetTa : ta;
+  ta + (setup.offsets?.[setup.config] ?? 0);
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════
 // PERSISTENZA — l'assetto è dello strumento e del modo di auditare, non della persona
@@ -101,7 +108,10 @@ export const loadSetup = (fallbackScale: number): ThetaSetup => {
     // manderebbe l'ago fuori scala o lo bloccherebbe fermo, e non sarebbe ovvio perché.
     return {
       config: o.config === 'solo-can' ? 'solo-can' : 'two-cans',
-      soloOffsetTa: Number.isFinite(o.soloOffsetTa) ? (o.soloOffsetTa as number) : 0,
+      offsets: {
+        'two-cans': Number.isFinite(o.offsets?.['two-cans']) ? o.offsets!['two-cans'] : 0,
+        'solo-can': Number.isFinite(o.offsets?.['solo-can']) ? o.offsets!['solo-can'] : 0,
+      },
       needleScale: Number.isFinite(o.needleScale) && (o.needleScale as number) > 0
         ? (o.needleScale as number) : fallbackScale,
     };

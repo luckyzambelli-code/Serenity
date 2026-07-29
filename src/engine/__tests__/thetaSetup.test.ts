@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  scaleFromSqueeze, breathIsValid, soloOffsetFrom, taWithSetup, defaultSetup,
+  scaleFromSqueeze, breathIsValid, offsetFromReference, taWithSetup, defaultSetup,
   SQUEEZE_TARGET_OFFSET, BREATH_MIN_OFFSET, type ThetaSetup,
 } from '../thetaSetup';
 
@@ -54,29 +54,32 @@ describe('test del respiro — verifica, non taratura', () => {
   });
 });
 
-describe('configurazione degli elettrodi', () => {
-  const base: ThetaSetup = { config: 'two-cans', soloOffsetTa: 0.7, needleScale: 1e-6 };
+describe('correzione per configurazione, dal confronto col meter vero', () => {
+  const base: ThetaSetup = {
+    config: 'solo-can',
+    offsets: { 'two-cans': 0, 'solo-can': -0.404 },
+    needleScale: 1e-6,
+  };
 
-  it('a DUE LATTINE la lettura non si corregge: è il riferimento', () => {
-    expect(taWithSetup(3.4, base)).toBe(3.4);
+  it('lo scarto misurato in seduta: noi 6,2 · meter vero 5,796', () => {
+    // Caso reale, lattina solo. La correzione e' NEGATIVA: leggevamo troppo alto.
+    const off = offsetFromReference(5.796, 6.2);
+    expect(off).toBeCloseTo(-0.404, 9);
+    expect(taWithSetup(6.2, { ...base, offsets: { 'two-cans': 0, 'solo-can': off } }))
+      .toBeCloseTo(5.796, 9);
   });
 
-  it('in SOLO si applica lo scarto, per tornare al riferimento delle due lattine', () => {
-    expect(taWithSetup(3.4, { ...base, config: 'solo-can' })).toBeCloseTo(4.1, 9);
+  it('ogni configurazione ha la SUA correzione', () => {
+    // Cambiando configurazione cambia la geometria degli elettrodi, quindi la resistenza:
+    // una correzione sola per entrambe sarebbe sbagliata in una delle due.
+    const s: ThetaSetup = { ...base, offsets: { 'two-cans': 0.1, 'solo-can': -0.404 } };
+    expect(taWithSetup(6.2, { ...s, config: 'two-cans' })).toBeCloseTo(6.3, 9);
+    expect(taWithSetup(6.2, { ...s, config: 'solo-can' })).toBeCloseTo(5.796, 9);
   });
 
-  it('lo scarto è TA(due lattine) − TA(solo), misurati sulla stessa persona', () => {
-    // Con la lattina solo la resistenza cambia: la stessa persona legge un TA diverso.
-    const off = soloOffsetFrom(3.4, 2.7);
-    expect(off).toBeCloseTo(0.7, 9);
-    // …e applicandolo le due configurazioni tornano confrontabili.
-    expect(taWithSetup(2.7, { ...base, config: 'solo-can', soloOffsetTa: off })).toBeCloseTo(3.4, 9);
-  });
-
-  it('senza scarto misurato la correzione è nulla, non inventata', () => {
+  it('senza misura la correzione è nulla, non inventata', () => {
     const d = defaultSetup(1e-6);
-    expect(d.soloOffsetTa).toBe(0);
-    expect(d.config).toBe('two-cans');
+    expect(taWithSetup(3.4, d)).toBe(3.4);
     expect(taWithSetup(3.4, { ...d, config: 'solo-can' })).toBe(3.4);
   });
 });
