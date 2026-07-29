@@ -109,7 +109,10 @@ export function ThetaTaCalibration({
         style={{ cursor: 'default', minWidth: 380, maxWidth: 460, padding: '24px 26px 20px',
                  borderRadius: 16, border: '1px solid rgba(245,158,11,0.35)',
                  background: 'linear-gradient(160deg, #2c2c31 0%, #1c1c20 100%)',
-                 boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}>
+                 boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
+                 // Il pannello è cresciuto sezione dopo sezione e senza questo la parte bassa
+                 // finiva FUORI dallo schermo, irraggiungibile: « non vedo aggiungi punto ».
+                 maxHeight: '90vh', overflowY: 'auto' }}>
 
         <div style={{ ...eti, color: '#f59e0b', marginBottom: 4 }}>{t('theta_cal_title') as string}</div>
         <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, lineHeight: 1.5,
