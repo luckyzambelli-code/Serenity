@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { ThetaNeedle } from '../thetaNeedle';
-import { THETA_NEEDLE_SCALE, THETA_TOTAL_TA_STEP, THETA_OFFSCALE, THETA_RECENTRE } from '../tuning';
+import { THETA_NEEDLE_SCALE, THETA_TOTAL_TA_STEP, THETA_OFFSCALE, THETA_RECENTRE,
+         NEEDLE_REST_OFFSET } from '../tuning';
+
+/** Deviazione dell'ago RISPETTO A SET — è questa la grandezza che conta. L'ago in equilibrio
+ *  riposa a SET (−0,35 su questo quadrante), non al centro: misurare l'offset assoluto
+ *  legherebbe i test alla posizione di riposo invece che al comportamento. */
+const dev = (offset: number) => offset - NEEDLE_REST_OFFSET;
 
 /** Unità grezze che producono una data deviazione sul quadrante. I test si esprimono COSÌ e non
  *  con numeri fissi: la scala è una manopola da tarare in seduta, e ritararla non deve rompere
@@ -29,7 +35,7 @@ describe('ThetaNeedle', () => {
     // Partire da zero manderebbe l'ago a fondo scala per i primi secondi: sembrerebbe una
     // reazione violenta che non è avvenuta.
     expect(s.arm).toBe(RIPOSO);
-    expect(s.offset).toBe(0);
+    expect(s.offset).toBe(NEEDLE_REST_OFFSET);   // a riposo l'ago sta su SET, non al centro
   });
 
   // ── IL VERSO: la cosa che non si può sbagliare ────────────────────────────────────────────
@@ -38,20 +44,29 @@ describe('ThetaNeedle', () => {
     n.push(RIPOSO);
     // Stringere le lattine abbassa la resistenza → il grezzo scende (verificato sul meter).
     const s = n.push(RIPOSO - 300_000);
-    expect(s.offset).toBeGreaterThan(0);      // positivo = destra = caduta
+    expect(dev(s.offset)).toBeGreaterThan(0);      // si allontana da SET verso destra = caduta
   });
 
   it('la resistenza che SALE porta l ago a sinistra', () => {
     const n = new ThetaNeedle();
     n.push(RIPOSO);
-    expect(n.push(RIPOSO + 300_000).offset).toBeLessThan(0);
+    expect(dev(n.push(RIPOSO + 300_000).offset)).toBeLessThan(0);
   });
 
   it('l ampiezza della deviazione segue la scala dichiarata', () => {
     const n = new ThetaNeedle();
     n.push(RIPOSO);
     const scarto = 150_000;
-    expect(n.push(RIPOSO - scarto).offset).toBeCloseTo(scarto * THETA_NEEDLE_SCALE, 6);
+    expect(dev(n.push(RIPOSO - scarto).offset)).toBeCloseTo(scarto * THETA_NEEDLE_SCALE, 6);
+  });
+
+  it('DOPO una reazione l ago torna su SET, non al centro', () => {
+    // Segnalato in seduta: « l'ago quando si preme non torna su set ». Riposava a 0.
+    const n = new ThetaNeedle();
+    n.push(RIPOSO);
+    tieni(n, RIPOSO - perOffset(0.5), 60);        // reazione
+    const s = tieni(n, RIPOSO, 60);               // rilascio
+    expect(s.offset).toBeCloseTo(NEEDLE_REST_OFFSET, 1);
   });
 
   it('l offset non sfora mai il quadrante', () => {
@@ -67,14 +82,14 @@ describe('ThetaNeedle', () => {
     n.push(RIPOSO);
     // Una caduta che dura un paio di secondi (120 letture a 60/s) deve restare BEN visibile.
     const s = tieni(n, RIPOSO - perOffset(0.7), 120);
-    expect(s.offset).toBeGreaterThan(0.5);
+    expect(dev(s.offset)).toBeGreaterThan(0.5);
   });
 
   it('ma su una carica PROLUNGATA il braccio finisce per raggiungerla', () => {
     const n = new ThetaNeedle();
     n.push(RIPOSO);
     const s = tieni(n, RIPOSO - perOffset(0.7), 40_000);   // ~11 minuti a 60/s
-    expect(Math.abs(s.offset)).toBeLessThan(0.2);   // l'ago è tornato verso il riposo
+    expect(Math.abs(dev(s.offset))).toBeLessThan(0.2);   // l'ago è tornato su SET
     expect(s.arm).toBeLessThan(RIPOSO);             // …perché il braccio è sceso
   });
 
@@ -94,7 +109,7 @@ describe('ThetaNeedle', () => {
     expect(n.push(enorme).offScale).toBe(true);
     const s = tieni(n, enorme, 600);                 // 10 secondi a 60/s
     expect(s.offScale).toBe(false);                  // ha smesso di ricentrare…
-    expect(Math.abs(s.offset)).toBeLessThanOrEqual(THETA_RECENTRE + 1e-9);  // …perché è DENTRO
+    expect(Math.abs(dev(s.offset))).toBeLessThanOrEqual(THETA_RECENTRE + 1e-9);  // …perché è DENTRO
   });
 
   it('ISTERESI: non smette di ricentrare appena rientra di un soffio', () => {

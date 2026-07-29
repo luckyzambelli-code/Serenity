@@ -27,7 +27,7 @@
 import {
   THETA_ARM_ALPHA, THETA_NEEDLE_SCALE, THETA_ARM_FOLLOW_FAST,
   THETA_OFFSCALE, THETA_RECENTRE, THETA_TOTAL_TA_STEP, THETA_TOTAL_TA_DEADBAND,
-  THETA_TOTAL_TA_STEP_DIV, THETA_TOTAL_TA_DEADBAND_DIV,
+  THETA_TOTAL_TA_STEP_DIV, THETA_TOTAL_TA_DEADBAND_DIV, NEEDLE_REST_OFFSET,
 } from './tuning';
 
 export interface ThetaNeedleState {
@@ -113,7 +113,11 @@ export class ThetaNeedle {
     // L'ago è lo scarto dal braccio. Si calcola PRIMA di muovere il braccio, altrimenti
     // il braccio inseguirebbe già in parte la deviazione e l'ago risulterebbe smorzato.
     const scarto = (this.arm - raw) * this.scale;
-    this.offset = Math.max(-1, Math.min(1, scarto));
+    // ── L'AGO RIPOSA A « SET », NON AL CENTRO ──────────────────────────────────────────────
+    // Su un e-meter in equilibrio l'ago sta a SET, che su questo quadrante è a −0,35. Facendolo
+    // riposare a 0 tornava al CENTRO dopo ogni reazione invece che a SET — segnalato in seduta:
+    // « l'ago quando si preme non torna su set ».
+    this.offset = Math.max(-1, Math.min(1, NEEDLE_REST_OFFSET + scarto));
 
     // ── RICENTRAGGIO, con ISTERESI ────────────────────────────────────────────────────────
     // Si comincia a inseguire in fretta quando l'ago SBATTE contro il bordo, e si smette solo

@@ -36,8 +36,11 @@
 /** Come sono disposti gli elettrodi. */
 export type ElectrodeConfig = 'two-cans' | 'solo-can';
 
-/** Caduta attesa dell'ago sulla PROVA DELLA STRETTA: un terzo di quadrante. */
-export const SQUEEZE_TARGET_OFFSET = 1 / 3;
+/** Caduta attesa dell'ago sulla PROVA DELLA STRETTA: un terzo di QUADRANTE.
+ *  ⚠️ Il quadrante va da −1 a +1, quindi è largo **2**: un terzo di esso vale 2/3 in unità di
+ *  offset, non 1/3. Presa per 1/3 la caduta risultava METÀ di quella del Theta-Meter — l'utente
+ *  ha infatti segnalato che il loro ago si muove di più. */
+export const SQUEEZE_TARGET_OFFSET = 2 / 3;
 /** Caduta MINIMA attesa sul test del respiro. Sotto questa la persona non sta reagendo (o gli
  *  elettrodi fanno contatto male): è una verifica, non una taratura. */
 export const BREATH_MIN_OFFSET = 0.08;

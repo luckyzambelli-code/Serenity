@@ -18,7 +18,9 @@ describe('sensibilità dalla PROVA DELLA STRETTA', () => {
     const dev = 450_000;
     const scala = scaleFromSqueeze(dev)!;
     expect(dev * scala).toBeCloseTo(SQUEEZE_TARGET_OFFSET, 9);
-    expect(SQUEEZE_TARGET_OFFSET).toBeCloseTo(1 / 3, 9);
+    // Un terzo di QUADRANTE: l'asse va da −1 a +1, quindi è largo 2 e un terzo vale 2/3.
+    // Preso per 1/3 l'ago si muoveva METÀ del Theta-Meter (segnalato in seduta).
+    expect(SQUEEZE_TARGET_OFFSET).toBeCloseTo(2 / 3, 9);
   });
 
   it('più ampia è la stretta, MINORE la sensibilità necessaria', () => {
