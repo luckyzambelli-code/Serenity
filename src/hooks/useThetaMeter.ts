@@ -7,6 +7,7 @@ import {
 } from '../engine/thetaTaScale';
 import {
   loadSetup, saveSetup, scaleFromSqueeze, breathIsValid, offsetFromReference, taWithSetup,
+  adjustSensitivity,
   type ElectrodeConfig, type ThetaSetup,
 } from '../engine/thetaSetup';
 import { THETA_NEEDLE_SCALE, SQUEEZE_TEST_MS } from '../engine/tuning';
@@ -199,6 +200,15 @@ export function useThetaMeter() {
   }, []);
 
   const setConfig = useCallback((config: ElectrodeConfig) => updateSetup({ config }), [updateSetup]);
+
+  /** La MANOPOLA della sensibilità, come sul Theta-Meter. La prova della stretta dà un punto di
+   *  partenza; il ritocco fine lo fa l'auditor guardando l'ago, che è l'unico giudice. */
+  const bumpSensitivity = useCallback((verso: 1 | -1) => {
+    setState(p => ({
+      ...p,
+      setup: { ...p.setup, needleScale: adjustSensitivity(p.setup.needleScale, verso), scaleMeasured: true },
+    }));
+  }, []);
   /** Correzione dal confronto affiancato col meter vero: si inserisce il valore che LUI legge,
    *  e si ricava quanto va sommato al nostro. Vale per la configurazione IN USO. */
   const setOffsetFromReference = useCallback((taRiferimento: number) => {
@@ -253,6 +263,6 @@ export function useThetaMeter() {
 
   return {
     ...state, connect, disconnect, resetTotal, captureRaw, applyTaPoints, clearTaCalibration,
-    setConfig, setOffsetFromReference, startSqueezeTest, startBreathTest,
+    setConfig, setOffsetFromReference, startSqueezeTest, startBreathTest, bumpSensitivity,
   };
 }

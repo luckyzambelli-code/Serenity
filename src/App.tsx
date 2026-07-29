@@ -4056,6 +4056,7 @@ export default function App() {
         setConfig={theta.setConfig}
         setOffsetFromReference={theta.setOffsetFromReference}
         startSqueezeTest={theta.startSqueezeTest}
+        bumpSensitivity={theta.bumpSensitivity}
         startBreathTest={theta.startBreathTest}
         testing={theta.testing}
         testPeak={theta.testPeak}

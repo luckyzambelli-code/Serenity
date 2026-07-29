@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  scaleFromSqueeze, breathIsValid, offsetFromReference, taWithSetup, defaultSetup,
+  scaleFromSqueeze, breathIsValid, offsetFromReference, taWithSetup, defaultSetup, adjustSensitivity,
   SQUEEZE_TARGET_OFFSET, BREATH_MIN_OFFSET, type ThetaSetup,
 } from '../thetaSetup';
 
@@ -18,9 +18,10 @@ describe('sensibilità dalla PROVA DELLA STRETTA', () => {
     const dev = 450_000;
     const scala = scaleFromSqueeze(dev)!;
     expect(dev * scala).toBeCloseTo(SQUEEZE_TARGET_OFFSET, 9);
-    // Un terzo di QUADRANTE: l'asse va da −1 a +1, quindi è largo 2 e un terzo vale 2/3.
-    // Preso per 1/3 l'ago si muoveva METÀ del Theta-Meter (segnalato in seduta).
-    expect(SQUEEZE_TARGET_OFFSET).toBeCloseTo(2 / 3, 9);
+    // Un terzo della CORSA DI CADUTA — da SET (−0,35) al bordo destro. Preso per 1/3 dell'asse
+    // (0,333) l'ago si muoveva MENO del Theta-Meter; portato a 1/3 della larghezza intera
+    // (0,667) si muoveva TROPPO. Entrambe misurate in seduta.
+    expect(SQUEEZE_TARGET_OFFSET).toBeCloseTo(1.35 / 3, 9);
   });
 
   it('più ampia è la stretta, MINORE la sensibilità necessaria', () => {
@@ -36,6 +37,28 @@ describe('sensibilità dalla PROVA DELLA STRETTA', () => {
     expect(scaleFromSqueeze(0)).toBeNull();
     expect(scaleFromSqueeze(0.5)).toBeNull();
     expect(scaleFromSqueeze(NaN)).toBeNull();
+  });
+});
+
+// La prova della stretta dà un PUNTO DI PARTENZA; il valore giusto dipende dalla persona e da
+// come tiene le lattine. Serve quindi la manopola, come sul Theta-Meter — nessun numero scelto
+// a tavolino può indovinarlo, e infatti ne ho sbagliati due di fila.
+describe('manopola della sensibilità', () => {
+  it('un colpo in su la alza, uno in giù la abbassa', () => {
+    const s0 = 1e-6;
+    expect(adjustSensitivity(s0, 1)).toBeGreaterThan(s0);
+    expect(adjustSensitivity(s0, -1)).toBeLessThan(s0);
+  });
+
+  it('su e giù si annullano: si può tornare esattamente dov era', () => {
+    const s0 = 1e-6;
+    expect(adjustSensitivity(adjustSensitivity(s0, 1), -1)).toBeCloseTo(s0, 15);
+  });
+
+  it('resta sempre positiva', () => {
+    let s0 = 1e-6;
+    for (let i = 0; i < 40; i++) s0 = adjustSensitivity(s0, -1);
+    expect(s0).toBeGreaterThan(0);
   });
 });
 

@@ -36,11 +36,21 @@
 /** Come sono disposti gli elettrodi. */
 export type ElectrodeConfig = 'two-cans' | 'solo-can';
 
-/** Caduta attesa dell'ago sulla PROVA DELLA STRETTA: un terzo di QUADRANTE.
- *  ⚠️ Il quadrante va da −1 a +1, quindi è largo **2**: un terzo di esso vale 2/3 in unità di
- *  offset, non 1/3. Presa per 1/3 la caduta risultava METÀ di quella del Theta-Meter — l'utente
- *  ha infatti segnalato che il loro ago si muove di più. */
-export const SQUEEZE_TARGET_OFFSET = 2 / 3;
+/** Caduta attesa dell'ago sulla PROVA DELLA STRETTA: un terzo della CORSA DI CADUTA, cioè del
+ *  tratto da SET al bordo destro.
+ *
+ *  Storia di questo numero, perché non se ne rifaccia il giro: preso prima per 1/3 dell'asse
+ *  (0,333) l'ago si muoveva MENO del Theta-Meter; portato a 1/3 della larghezza dell'asse
+ *  intero (0,667) si muoveva TROPPO. Il riferimento giusto è la corsa che l'ago compie davvero
+ *  quando cade — da SET (−0,35) al bordo — che vale 1,35.
+ *
+ *  Resta comunque un punto di PARTENZA: la sensibilità si regola poi a mano, come la manopola
+ *  del Theta-Meter, perché dipende dalla persona e dalla presa. */
+export const SQUEEZE_TARGET_OFFSET = (1 - (-0.35)) / 3;
+
+/** Di quanto si muove la sensibilità a ogni scatto della manopola. Un quarto per scatto: si
+ *  arriva in fretta senza saltare il punto giusto. */
+export const SENSITIVITY_STEP = 1.25;
 /** Caduta MINIMA attesa sul test del respiro. Sotto questa la persona non sta reagendo (o gli
  *  elettrodi fanno contatto male): è una verifica, non una taratura. */
 export const BREATH_MIN_OFFSET = 0.08;
@@ -83,6 +93,10 @@ export const scaleFromSqueeze = (deviazioneGrezza: number): number | null => {
   const scala = SQUEEZE_TARGET_OFFSET / d;
   return Number.isFinite(scala) && scala > 0 ? scala : null;
 };
+
+/** Un colpo di manopola: `verso` +1 alza la sensibilità, −1 la abbassa. */
+export const adjustSensitivity = (scale: number, verso: 1 | -1): number =>
+  verso > 0 ? scale * SENSITIVITY_STEP : scale / SENSITIVITY_STEP;
 
 /** Il respiro ha prodotto una caduta sufficiente? Verifica, non taratura. */
 export const breathIsValid = (deviazioneGrezza: number, scale: number): boolean =>
