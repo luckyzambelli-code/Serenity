@@ -54,11 +54,26 @@ describe('test del respiro — verifica, non taratura', () => {
   });
 });
 
+// ⚠️ La SENSIBILITÀ è della SEDUTA, non di tutti: dipende da come QUEL preclear tiene le
+// lattine, e le due prove vanno rifatte prima di ogni seduta. Non deve quindi sopravvivere al
+// riavvio — applicata a un altro preclear darebbe letture false senza che nulla lo segnali.
+describe('la sensibilità NON sopravvive al riavvio', () => {
+  it('un assetto nuovo parte da « non misurata »', () => {
+    expect(defaultSetup(1e-6).scaleMeasured).toBe(false);
+  });
+
+  it('la SCALA DEL TA invece resta: quella si tara una volta e vale per chiunque', () => {
+    // (verificato in thetaTaScale.test.ts — qui si fissa solo la distinzione)
+    expect(defaultSetup(1e-6).offsets).toEqual({ 'two-cans': 0, 'solo-can': 0 });
+  });
+});
+
 describe('correzione per configurazione, dal confronto col meter vero', () => {
   const base: ThetaSetup = {
     config: 'solo-can',
     offsets: { 'two-cans': 0, 'solo-can': -0.404 },
     needleScale: 1e-6,
+    scaleMeasured: true,
   };
 
   it('lo scarto misurato in seduta: noi 6,2 · meter vero 5,796', () => {

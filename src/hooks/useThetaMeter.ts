@@ -173,7 +173,13 @@ export function useThetaMeter() {
     const scale = buildTaScale(points, now);
     if (!scale) return false;
     saveTaScale(scale);
-    setState(p => ({ ...p, taScale: scale }));
+    // Le correzioni per configurazione erano misurate contro la scala PRECEDENTE: con una scala
+    // nuova non significano più nulla, e lasciarle applicate falserebbe le letture in silenzio.
+    setState(p => {
+      const setup = { ...p.setup, offsets: { 'two-cans': 0, 'solo-can': 0 } };
+      saveSetup(setup);
+      return { ...p, taScale: scale, setup };
+    });
     return true;
   }, []);
 
@@ -218,7 +224,7 @@ export function useThetaMeter() {
       // bloccherebbe l'ago, o lo manderebbe fuori scala.
       setState(p => ({
         ...p, testing: null, testPeak: testRef.current.peak,
-        ...(scala ? { setup: (() => { const s = { ...p.setup, needleScale: scala }; saveSetup(s); return s; })() } : {}),
+        ...(scala ? { setup: { ...p.setup, needleScale: scala, scaleMeasured: true } } : {}),
       }));
     }, SQUEEZE_TEST_MS);
   }, []);

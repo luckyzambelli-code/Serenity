@@ -190,7 +190,15 @@ export function ThetaTaCalibration({
             La scala del TA sopra si tara UNA VOLTA e vale per chiunque. Qui invece c'è ciò che
             dipende da COME si audita, e va rifatto se cambia la disposizione degli elettrodi. */}
         <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.10)' }}>
-          <div style={{ ...eti, marginBottom: 8 }}>{t('theta_setup') as string}</div>
+          <div style={{ ...eti, marginBottom: 4 }}>{t('theta_setup') as string}</div>
+          {/* La sensibilità NON è acquisita una volta per tutte: dipende da come QUEL preclear
+              tiene le lattine. Va detto, o si crederebbe che una volta fatta valga sempre. */}
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, lineHeight: 1.5, marginBottom: 10,
+                        color: setup.scaleMeasured ? 'rgba(226,238,255,0.5)' : '#fbbf24' }}>
+            {setup.scaleMeasured
+              ? (t('theta_setup_done') as string)
+              : (t('theta_setup_todo') as string)}
+          </div>
 
           {/* Due lattine (una per mano) oppure, in SOLO AUDITING, una lattina sola fatta di
               due mezze lattine. La geometria cambia la resistenza, quindi il TA letto. */}

@@ -18,16 +18,19 @@
  *
  * Lo scarto è PER CONFIGURAZIONE: due lattine e lattina solo ne hanno uno ciascuna.
  *
- * ── LA SENSIBILITÀ SI MISURA, NON SI INDOVINA ──────────────────────────────────────────────
- * La procedura standard del Theta-Meter dà un riferimento oggettivo, in DUE prove distinte:
+ * ── LA SENSIBILITÀ È PER SEDUTA, NON PER SEMPRE ────────────────────────────────────────────
+ * ⚠️ Le due prove vanno rifatte **PRIMA DI OGNI SEDUTA**: servono a stabilire come QUEL
+ * preclear tiene le lattine, e da lì la sensibilità. Non è quindi una configurazione valida per
+ * tutti, e infatti la sensibilità **NON viene salvata**: ogni avvio riparte da non impostata.
+ * (In prima stesura la salvavo insieme al resto — sbagliato: la sensibilità di ieri applicata
+ * a un altro preclear darebbe letture false senza che nulla lo segnali.)
  *
  *   1. **PROVA DELLA STRETTA** — stringendo le lattine l'ago deve cadere di **un terzo di
  *      quadrante**. È QUESTA che fissa la sensibilità (sul Theta-Meter è la manopola apposita).
  *   2. **TEST DEL RESPIRO** — poi, respirando a fondo e rilasciando, l'ago deve cadere almeno
  *      un minimo. È una VERIFICA che la persona reagisca, non una taratura.
  *
- * Senza questo riferimento la sensibilità era un numero scelto a tavolino, e il primo valore
- * era cinque volte troppo alto: tutto sbatteva contro i bordi.
+ * La SCALA DEL TA invece sì: si tara una volta con l'artefatto e resta per chiunque.
  */
 
 /** Come sono disposti gli elettrodi. */
@@ -45,8 +48,11 @@ export interface ThetaSetup {
   /** Correzione da sommare alla nostra lettura, PER CONFIGURAZIONE, per farla coincidere con
    *  quella del meter vero. 0 = non misurata. */
   offsets: Record<ElectrodeConfig, number>;
-  /** Unità grezze → offset del quadrante. Ricavata dalla PROVA DELLA STRETTA. */
+  /** Unità grezze → offset del quadrante, dalla PROVA DELLA STRETTA.
+   *  ⚠️ NON persistita: vale per la seduta in corso. Vedi la nota in testa. */
   needleScale: number;
+  /** false finché la stretta non l'ha misurata in QUESTA seduta. */
+  scaleMeasured: boolean;
 }
 
 /** Assetto di partenza, con la sensibilità di ripiego finché la stretta non l'ha misurata. */
@@ -54,6 +60,7 @@ export const defaultSetup = (fallbackScale: number): ThetaSetup => ({
   config: 'two-cans',
   offsets: { 'two-cans': 0, 'solo-can': 0 },
   needleScale: fallbackScale,
+  scaleMeasured: false,
 });
 
 /**
@@ -95,8 +102,11 @@ export const taWithSetup = (ta: number, setup: ThetaSetup): number =>
 
 const CHIAVE = 'sm_theta_setup';
 
+/** Si salva SOLO ciò che vale per tutti. La sensibilità no: è della seduta. */
 export const saveSetup = (s: ThetaSetup): void => {
-  try { localStorage.setItem(CHIAVE, JSON.stringify(s)); } catch (_) { /* quota o modalità privata */ }
+  try {
+    localStorage.setItem(CHIAVE, JSON.stringify({ config: s.config, offsets: s.offsets }));
+  } catch (_) { /* quota o modalità privata */ }
 };
 
 export const loadSetup = (fallbackScale: number): ThetaSetup => {
@@ -112,8 +122,9 @@ export const loadSetup = (fallbackScale: number): ThetaSetup => {
         'two-cans': Number.isFinite(o.offsets?.['two-cans']) ? o.offsets!['two-cans'] : 0,
         'solo-can': Number.isFinite(o.offsets?.['solo-can']) ? o.offsets!['solo-can'] : 0,
       },
-      needleScale: Number.isFinite(o.needleScale) && (o.needleScale as number) > 0
-        ? (o.needleScale as number) : fallbackScale,
+      // La sensibilità riparte SEMPRE da non misurata: va rifatta prima di ogni seduta.
+      needleScale: fallbackScale,
+      scaleMeasured: false,
     };
   } catch (_) { return defaultSetup(fallbackScale); }
 };
