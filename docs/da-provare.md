@@ -77,6 +77,20 @@ dispositivo dentro EQUILIBRIUM — finora solo dalla pagina di scoperta.
 - `THETA_TOTAL_TA_STEP` — quanto grezzo vale un decimo di divisione. Da confrontare col Total TA
   che mostra Theta-Meter sulla stessa stretta.
 
+### ✅ Fatto e verificato (29/07/2026)
+
+- [x] protocollo HID decodificato e letto dentro EQUILIBRIUM;
+- [x] scala del TA tarata con l'artefatto — **usando i valori che mostra il meter vero**
+      (2,034 · 3,056 · 4,068 · 5,041), non quelli incisi;
+- [x] **il TA dei due strumenti coincide**;
+- [x] l'ago combacia col Theta-Meter a **sensibilità 10**;
+- [x] i due programmi convivono, quadranti affiancati.
+
+### Da fare a ogni seduta (non è taratura, è procedura)
+
+- [ ] **prova della stretta** → fissa la sensibilità (un terzo di quadrante);
+- [ ] **test del respiro** → verifica che il preclear reagisca.
+
 ### Da verificare, non ancora saputo
 
 - [ ] **il legame grezzo → ohm è lineare?** L'ho assunto, non è provato. Si misurano tre
