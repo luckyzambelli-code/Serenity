@@ -19,7 +19,12 @@ import { SQUEEZE_TARGET_OFFSET, type ElectrodeConfig, type ThetaSetup } from '..
  * dice che tarare due soli punti non sarebbe bastato.
  */
 
-/** I valori incisi sull'artefatto. */
+/** I valori INCISI sull'artefatto — solo i valori di partenza dei campi.
+ *  Il TA che il Theta-Meter MOSTRA premendo un pulsante può non coincidere: il suo programma
+ *  applica correzioni sue (nelle preferenze ci sono correction/booster/gain). Ancorare la
+ *  scala ai valori nominali invece che a quelli letti produce un errore che VARIA lungo la
+ *  scala — misurato in seduta: +0,40 in una zona e −0,67 in un'altra, segno ribaltato.
+ *  Quindi i valori sono MODIFICABILI: si scrive quello che mostra il meter vero. */
 const VALORI_TA = [2, 3, 4, 5];
 
 export interface ThetaTaCalibrationProps {
@@ -55,6 +60,10 @@ export function ThetaTaCalibration({
 }: ThetaTaCalibrationProps) {
   const { t } = useI18n();
   const [punti, setPunti] = useState<Record<number, number>>({});
+  /** Il TA effettivo di ciascun pulsante, come lo mostra il Theta-Meter. Parte dal valore
+   *  inciso e si corregge se il meter vero dice altro. */
+  const [taReali, setTaReali] = useState<Record<number, string>>(
+    Object.fromEntries(VALORI_TA.map(v => [v, String(v)])));
   /** Il TA che legge il Theta-Meter in questo momento, digitato dall'utente. */
   const [rif, setRif] = useState('');
   const [errore, setErrore] = useState<string | null>(null);
@@ -66,7 +75,10 @@ export function ThetaTaCalibration({
     setPunti(p => ({ ...p, [ta]: raw }));
   };
 
-  const elenco: ThetaTaPoint[] = Object.entries(punti).map(([ta, raw]) => ({ ta: Number(ta), raw }));
+  // Si usa il TA EFFETTIVO digitato, non quello inciso sul pulsante.
+  const elenco: ThetaTaPoint[] = Object.entries(punti)
+    .map(([k, raw]) => ({ ta: parseFloat(taReali[Number(k)] ?? k), raw }))
+    .filter(p => Number.isFinite(p.ta));
   // Si costruisce la scala SUBITO, per poter mostrare lo scarto dalla retta prima di salvare.
   const anteprima = elenco.length >= 2 ? buildTaScale(elenco, 0) : null;
   const scarto = anteprima ? linearitaResidua(anteprima) : 0;
@@ -115,8 +127,15 @@ export function ThetaTaCalibration({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {VALORI_TA.map(ta => (
             <div key={ta} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontFamily: 'monospace', fontSize: 16, fontWeight: 700,
-                             color: '#f59e0b', width: 34 }}>TA {ta}</span>
+              <span style={{ fontFamily: 'monospace', fontSize: 13, color: 'rgba(226,238,255,0.45)', width: 22 }}>{ta}</span>
+              {/* Il TA che mostra il METER VERO premendo questo pulsante. Modificabile: se il
+                  suo display non dice esattamente il valore inciso, è QUELLO che conta. */}
+              <input value={taReali[ta] ?? ''} onChange={e => setTaReali(p => ({ ...p, [ta]: e.target.value }))}
+                inputMode="decimal"
+                style={{ width: 54, height: 24, borderRadius: 5, padding: '0 6px',
+                         fontFamily: 'monospace', fontSize: 12, textAlign: 'right',
+                         background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(245,158,11,0.4)',
+                         color: '#f59e0b', outline: 'none' }} />
               <button type="button" disabled={!connected} onClick={() => registra(ta)}
                 style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600,
                          letterSpacing: '0.06em', textTransform: 'uppercase',
