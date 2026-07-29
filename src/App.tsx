@@ -4051,6 +4051,7 @@ export default function App() {
         taScale={theta.taScale}
         connected={theta.status === 'connected'}
         taNow={theta.taNow}
+        rawNow={theta.rawSmooth}
         onClose={() => setShowThetaCal(false)}
       />
     )}

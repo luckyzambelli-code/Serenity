@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useI18n } from '../i18n';
-import { linearitaResidua, buildTaScale, type ThetaTaPoint, type ThetaTaScale } from '../engine/thetaTaScale';
+import { linearitaResidua, buildTaScale, taFromRaw, type ThetaTaPoint, type ThetaTaScale } from '../engine/thetaTaScale';
 
 /**
  * ThetaTaCalibration — taratura del TONE ARM con l'ARTEFATTO FISICO del Theta-Meter.
@@ -28,14 +28,16 @@ export interface ThetaTaCalibrationProps {
   taScale: ThetaTaScale | null;
   /** Il meter è collegato? Senza, non c'è nulla da leggere. */
   connected: boolean;
-  /** Il TA della lettura ISTANTANEA con la taratura in uso — per verificare contro l'artefatto
-   *  senza aspettare che il braccio arrivi. `null` se non ancora tarato. */
+  /** Il TA della lettura ISTANTANEA con la taratura SALVATA. `null` se non ancora tarato. */
   taNow: number | null;
+  /** La lettura grezza in questo istante — serve a verificare con la scala in ANTEPRIMA,
+   *  cioè con i punti appena registrati, prima ancora di salvare. */
+  rawNow: number;
   onClose: () => void;
 }
 
 export function ThetaTaCalibration({
-  captureRaw, applyTaPoints, clearTaCalibration, taScale, connected, taNow, onClose,
+  captureRaw, applyTaPoints, clearTaCalibration, taScale, connected, taNow, rawNow, onClose,
 }: ThetaTaCalibrationProps) {
   const { t } = useI18n();
   const [punti, setPunti] = useState<Record<number, number>>({});
@@ -52,6 +54,9 @@ export function ThetaTaCalibration({
   // Si costruisce la scala SUBITO, per poter mostrare lo scarto dalla retta prima di salvare.
   const anteprima = elenco.length >= 2 ? buildTaScale(elenco, 0) : null;
   const scarto = anteprima ? linearitaResidua(anteprima) : 0;
+  // Si preferisce l'ANTEPRIMA alla scala salvata: durante la taratura si vuole vedere l'effetto
+  // dei punti che si stanno registrando, non di quelli vecchi.
+  const vivo = anteprima ? taFromRaw(rawNow, anteprima) : taNow;
 
   const salva = () => {
     if (!applyTaPoints(elenco, Date.now())) {
@@ -113,16 +118,22 @@ export function ThetaTaCalibration({
           ))}
         </div>
 
-        {/* VERIFICA DAL VIVO: con la taratura in uso, che TA legge l'artefatto ADESSO.
-            È la lettura istantanea, non il braccio — premuto un pulsante, il numero qui sotto
-            deve corrispondere SUBITO. */}
-        {taScale && (
+        {/* VERIFICA DAL VIVO — che TA legge l'artefatto ADESSO.
+            Usa la scala in ANTEPRIMA (i punti appena registrati) appena ce ne sono due, e
+            ricade su quella salvata altrimenti: serve MENTRE si tara, non solo dopo. Prima la
+            si mostrava solo a taratura salvata, cioè proprio quando non serviva.
+            È la lettura ISTANTANEA, non il braccio: premuto un pulsante deve rispondere SUBITO. */}
+        {connected && (
           <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.10)',
                         display: 'flex', alignItems: 'baseline', gap: 10 }}>
             <span style={eti}>{t('theta_cal_live') as string}</span>
             <span style={{ fontFamily: 'monospace', fontSize: 22, fontWeight: 700, color: '#34d399' }}>
-              {taNow !== null ? taNow.toFixed(2) : '—'}
+              {vivo !== null ? vivo.toFixed(2) : '—'}
             </span>
+            <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'rgba(226,238,255,0.4)' }}>
+              {Math.round(rawNow).toLocaleString('it')}
+            </span>
+            {anteprima && <span style={eti}>{t('theta_cal_preview') as string}</span>}
           </div>
         )}
 

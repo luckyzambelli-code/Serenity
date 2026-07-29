@@ -25,8 +25,12 @@ export interface ThetaMeterState {
   offset: number;
   /** Il braccio, in unità grezze — la « manopola ». */
   arm: number;
-  /** Ultimo grezzo ricevuto: utile in diagnostica e per la taratura. */
+  /** Ultimo grezzo ricevuto, NON lisciato: utile in diagnostica. */
   raw: number;
+  /** La lettura LISCIATA — la stessa che registra la taratura. È questa che va mostrata
+   *  quando si verifica contro l'artefatto, o il numero tremolerebbe e non combacerebbe
+   *  con i punti registrati. */
+  rawSmooth: number;
   /** Total TA accumulato dalle lattine, in divisioni. */
   totalTa: number;
   /** TONE ARM vero, sulla scala del meter — solo se l'apparecchio è stato tarato con
@@ -59,7 +63,7 @@ export function useThetaMeter() {
   const pendingRef = useRef<{ offset: number; arm: number; raw: number; totalTa: number; offScale: boolean } | null>(null);
 
   const [state, setState] = useState<ThetaMeterState>({
-    status: 'disconnected', offset: 0, arm: 0, raw: 0, totalTa: 0, offScale: false,
+    status: 'disconnected', offset: 0, arm: 0, raw: 0, rawSmooth: 0, totalTa: 0, offScale: false,
     ta: null, taNow: null, taScale: loadTaScale(),
     counters: { ok: 0, rejected: 0 }, unavailable: !isHidAvailable(), lastError: null,
   });
@@ -86,6 +90,7 @@ export function useThetaMeter() {
         // Il TA vero è la posizione del BRACCIO letta sulla scala tarata — cioè esattamente
         // la manopola di un meter fisico. Senza taratura resta null: non si inventa un numero.
         ta: prev.taScale ? taFromRaw(p.arm, prev.taScale) : null,
+        rawSmooth: needleRef.current.lastRaw,
         taNow: prev.taScale ? taFromRaw(needleRef.current.lastRaw, prev.taScale) : null,
         counters: hidRef.current!.counters,
       }));
@@ -105,7 +110,7 @@ export function useThetaMeter() {
   const disconnect = useCallback(async () => {
     await hidRef.current?.disconnect();
     needleRef.current.reset();
-    setState(p => ({ ...p, offset: 0, arm: 0, raw: 0, totalTa: 0, offScale: false }));
+    setState(p => ({ ...p, offset: 0, arm: 0, raw: 0, rawSmooth: 0, totalTa: 0, offScale: false }));
   }, []);
 
   /** Azzera il Total TA all'inizio di una seduta, SENZA perdere l'aggancio al preclear
