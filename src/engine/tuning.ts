@@ -220,14 +220,18 @@ export const THETA_ARM_FOLLOW_FAST = 0.02;
  *  più piccola di una stretta, resta ben dentro il quadrante.
  *  (Il primo valore, 1/300.000, era 5 volte troppo alto: TUTTO sbatteva.) */
 export const THETA_NEEDLE_SCALE = 1 / 1_500_000;
-/** Oltre questo scarto l'ago SBATTE e il braccio comincia a ricentrare.
- *  ⚠️ DEVE stare SOTTO 1.0, cioè dentro il quadrante visibile: se sta sopra, l'inseguimento
- *  si ferma mentre l'ago è ancora fuori e resta incollato al bordo per sempre. */
-export const THETA_OFFSCALE = 0.9;
-/** …e si smette di ricentrare solo QUI, non appena l'ago rientra: è l'ISTERESI, cioè
- *  l'auditor che gira la manopola finché l'ago è di nuovo in mezzo, non solo dentro di un
- *  soffio. PIÙ BASSO = ricentra più a fondo ma può mangiarsi la coda della reazione. */
-export const THETA_RECENTRE = 0.2;
+/** CORSA DI CADUTA: da SET (−0,35) al bordo destro (+1) ci sono 1,35, non 1. Le soglie qui
+ *  sotto si esprimono come frazione di QUESTA corsa, non dell'asse intero: erano tarate come se
+ *  l'ago riposasse al centro, e dichiaravano l'ago « fuori range » mentre era ancora in zona
+ *  LONG FALL — con il ricentraggio che gli tagliava la corsa prima del bordo (sul Theta-Meter
+ *  l'ago in quel caso sbatte a destra). */
+export const THETA_FALL_RANGE = 1 - NEEDLE_REST_OFFSET;
+/** L'ago SBATTE: praticamente al bordo. Sotto questa soglia deve poter correre liberamente. */
+export const THETA_OFFSCALE = 0.97 * THETA_FALL_RANGE;
+/** …e si smette di ricentrare solo QUI: è l'ISTERESI, cioè l'auditor che gira la manopola
+ *  finché l'ago è di nuovo in mezzo, non solo dentro di un soffio.
+ *  PIÙ BASSO = ricentra più a fondo ma può mangiarsi la coda della reazione. */
+export const THETA_RECENTRE = 0.25 * THETA_FALL_RANGE;
 /** Quanto braccio vale un decimo di divisione di Total TA, in unità grezze.
  *  Usato SOLO finché l'apparecchio non è tarato con l'artefatto: senza scala il totale è una
  *  grandezza relativa e questo numero è un ripiego. Tarato, si conta in divisioni vere. */

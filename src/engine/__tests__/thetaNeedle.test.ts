@@ -104,8 +104,15 @@ describe('ThetaNeedle', () => {
   // La soglia di fuori scala stava SOPRA il bordo del quadrante (1.3 su un asse che arriva a 1):
   // l'inseguimento veloce si fermava mentre l'ago era ANCORA fuori, quindi restava incollato al
   // bordo e da lì rientrava solo al passo lento — in pratica mai. Serve un'isteresi.
-  it('la soglia di ricentraggio sta DENTRO il quadrante, non oltre il bordo', () => {
-    expect(THETA_OFFSCALE).toBeLessThan(1);
+  it('si dichiara « fuori scala » quando l ago è DAVVERO al bordo, non prima', () => {
+    // Due errori opposti, entrambi commessi:
+    //  · soglia OLTRE il bordo (1,3 su un asse che arriva a 1) → l'ago restava incollato fuori;
+    //  · soglia troppo BASSA rispetto alla corsa da SET → si diceva « fuori range » con l'ago
+    //    ancora in zona LONG FALL, e il ricentraggio gli tagliava la corsa.
+    // L'invariante giusto: alla soglia, l'ago è appena dentro il bordo visibile.
+    const doveArriva = NEEDLE_REST_OFFSET + THETA_OFFSCALE;
+    expect(doveArriva).toBeLessThanOrEqual(1);
+    expect(doveArriva).toBeGreaterThan(0.9);
     expect(THETA_RECENTRE).toBeLessThan(THETA_OFFSCALE);
   });
 
