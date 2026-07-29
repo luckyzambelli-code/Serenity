@@ -47,7 +47,6 @@ export interface ThetaTaCalibrationProps {
   setConfig: (c: ElectrodeConfig) => void;
   setOffsetFromReference: (taRiferimento: number) => void;
   startSqueezeTest: () => void;
-  bumpSensitivity: (verso: 1 | -1) => void;
   startBreathTest: () => void;
   testing: null | 'squeeze' | 'breath';
   testPeak: number;
@@ -57,7 +56,7 @@ export interface ThetaTaCalibrationProps {
 
 export function ThetaTaCalibration({
   captureRaw, applyTaPoints, clearTaCalibration, taScale, connected, taNow, rawNow,
-  setup, setConfig, setOffsetFromReference, startSqueezeTest, bumpSensitivity, startBreathTest, testing, testPeak, breathOk, onClose,
+  setup, setConfig, setOffsetFromReference, startSqueezeTest, startBreathTest, testing, testPeak, breathOk, onClose,
 }: ThetaTaCalibrationProps) {
   const { t } = useI18n();
   const [punti, setPunti] = useState<Record<number, number>>({});
@@ -276,26 +275,7 @@ export function ThetaTaCalibration({
               </div>
             </div>
           ))}
-          {/* LA MANOPOLA. La prova della stretta dà un punto di partenza; il ritocco lo fa
-              l'auditor guardando l'ago — dipende dalla persona e da come tiene le lattine, e
-              nessun numero scelto a tavolino può indovinarlo. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-            <span style={{ ...eti, whiteSpace: 'nowrap' }}>{t('theta_sensitivity') as string}</span>
-            {([-1, 1] as const).map(v => (
-              <button key={v} type="button" onClick={() => bumpSensitivity(v)}
-                style={{ width: 30, height: 26, borderRadius: 6, cursor: 'pointer',
-                         fontFamily: 'monospace', fontSize: 15, fontWeight: 700,
-                         background: 'rgba(255,255,255,0.06)',
-                         border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(235,244,255,0.85)' }}>
-                {v > 0 ? '+' : '−'}
-              </button>
-            ))}
-            <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(226,238,255,0.55)' }}>
-              {(SQUEEZE_TARGET_OFFSET / setup.needleScale / 1000).toFixed(0)}k
-            </span>
-          </div>
-
-          {testing !== null && (
+                    {testing !== null && (
             <div style={{ fontFamily: 'monospace', fontSize: 10, color: '#34d399' }}>
               {Math.round(testPeak).toLocaleString('it')}
             </div>

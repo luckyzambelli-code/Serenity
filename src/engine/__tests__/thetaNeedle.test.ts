@@ -126,19 +126,16 @@ describe('ThetaNeedle', () => {
     expect(Math.abs(dev(s.offset))).toBeLessThanOrEqual(THETA_RECENTRE + 1e-9);  // …perché è DENTRO
   });
 
-  it('ISTERESI: non smette di ricentrare appena rientra di un soffio', () => {
+  it('USCITO dal quadrante, l ago TORNA ESATTAMENTE su SET', () => {
+    // È quel che fa il Theta-Meter. Prima il braccio inseguiva gradualmente e l'ago restava a
+    // metà strada per secondi; ora il braccio si porta SULLA lettura, quindi lo scarto si
+    // annulla e l'ago si ritrova su SET.
     const n = new ThetaNeedle();
     n.push(RIPOSO);
-    // Il ricentraggio parte solo dopo che il fuori scala ha RETTO — vedi il test qui sotto.
-    tieni(n, RIPOSO - perOffset(3), THETA_OFFSCALE_HOLD_SAMPLES + 5);
-    // deviazione appena sotto la soglia di scatto: il ricentraggio deve PROSEGUIRE,
-    // altrimenti l'ago resterebbe a ridosso del bordo.
-    n.push(RIPOSO - perOffset(THETA_OFFSCALE - 0.05));
-    expect(n.offScale).toBe(false);        // non è più oltre la soglia…
-    // …ma il braccio insegue ancora in fretta: lo si vede dal recupero.
-    const prima = n.arm;
-    tieni(n, RIPOSO - perOffset(THETA_OFFSCALE - 0.05), 60);
-    expect(prima - n.arm).toBeGreaterThan(0);
+    const fuori = RIPOSO - perOffset(3);
+    const s = tieni(n, fuori, THETA_OFFSCALE_HOLD_SAMPLES + 2);
+    expect(s.offset).toBeCloseTo(NEEDLE_REST_OFFSET, 6);
+    expect(n.arm).toBeCloseTo(fuori, 6);
   });
 
   // ── IL BLOWDOWN DEVE RESTARE VISIBILE ────────────────────────────────────────────────────
@@ -235,6 +232,7 @@ describe('ThetaNeedle', () => {
   it('il totale è in decimi di divisione', () => {
     const n = new ThetaNeedle();
     n.push(RIPOSO);
+    scendi(n, RIPOSO, RIPOSO - THETA_TOTAL_TA_STEP * 30);
     tieni(n, RIPOSO - THETA_TOTAL_TA_STEP * 30, 80_000);
     expect(n.totalTa).toBeGreaterThan(0);
     expect(Math.round(n.totalTa * 10)).toBeCloseTo(n.totalTa * 10, 6);   // multiplo di 0,1
@@ -306,7 +304,8 @@ describe('ThetaNeedle', () => {
     it('agganciare una scala AZZERA il totale invece di mescolare le unità', () => {
       const n = new ThetaNeedle();
       n.push(6_721_229);
-      tieni(n, 3_935_104, 100_000);                // accumula in unità GREZZE
+      scendi(n, 6_721_229, 3_935_104);             // accumula in unità GREZZE
+      tieni(n, 3_935_104, 100_000);
       expect(n.totalTa).toBeGreaterThan(0);
       n.setTaConverter(scala);
       // Metà in grezzi e metà in divisioni sarebbe un numero senza significato.

@@ -7,7 +7,7 @@ import {
 } from '../engine/thetaTaScale';
 import {
   loadSetup, saveSetup, scaleFromSqueeze, breathIsValid, offsetFromReference, taWithSetup,
-  adjustSensitivity,
+  effectiveScale,
   type ElectrodeConfig, type ThetaSetup,
 } from '../engine/thetaSetup';
 import { THETA_NEEDLE_SCALE, SQUEEZE_TEST_MS } from '../engine/tuning';
@@ -140,7 +140,8 @@ export function useThetaMeter() {
   }, [state.taScale]);
 
   // La sensibilità misurata col respiro scende nel modello.
-  useEffect(() => { needleRef.current.setScale(state.setup.needleScale); }, [state.setup.needleScale]);
+  useEffect(() => { needleRef.current.setScale(effectiveScale(state.setup)); },
+            [state.setup.needleScale, state.setup.sensTrim]);
 
   // Alla chiusura il dispositivo va rilasciato, o resta preso e la volta dopo non si apre.
   useEffect(() => () => { void hidRef.current?.disconnect(); }, []);
@@ -201,13 +202,10 @@ export function useThetaMeter() {
 
   const setConfig = useCallback((config: ElectrodeConfig) => updateSetup({ config }), [updateSetup]);
 
-  /** La MANOPOLA della sensibilità, come sul Theta-Meter. La prova della stretta dà un punto di
-   *  partenza; il ritocco fine lo fa l'auditor guardando l'ago, che è l'unico giudice. */
-  const bumpSensitivity = useCallback((verso: 1 | -1) => {
-    setState(p => ({
-      ...p,
-      setup: { ...p.setup, needleScale: adjustSensitivity(p.setup.needleScale, verso), scaleMeasured: true },
-    }));
+  /** Il TRIM della sensibilità, −10..+10 — vive nel pannello TRIM insieme a quello dell'ago
+   *  EEG, perché è LATERALE: regolare guardando l'ago è impossibile se il pannello lo copre. */
+  const setSensTrim = useCallback((v: number) => {
+    setState(p => ({ ...p, setup: { ...p.setup, sensTrim: Math.max(-10, Math.min(10, v)) } }));
   }, []);
   /** Correzione dal confronto affiancato col meter vero: si inserisce il valore che LUI legge,
    *  e si ricava quanto va sommato al nostro. Vale per la configurazione IN USO. */
@@ -263,6 +261,6 @@ export function useThetaMeter() {
 
   return {
     ...state, connect, disconnect, resetTotal, captureRaw, applyTaPoints, clearTaCalibration,
-    setConfig, setOffsetFromReference, startSqueezeTest, startBreathTest, bumpSensitivity,
+    setConfig, setOffsetFromReference, startSqueezeTest, startBreathTest, setSensTrim,
   };
 }

@@ -99,6 +99,7 @@ describe('correzione per configurazione, dal confronto col meter vero', () => {
     offsets: { 'two-cans': 0, 'solo-can': -0.404 },
     needleScale: 1e-6,
     scaleMeasured: true,
+    sensTrim: 0,
   };
 
   it('lo scarto misurato in seduta: noi 6,2 · meter vero 5,796', () => {

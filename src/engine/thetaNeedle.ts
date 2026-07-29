@@ -153,9 +153,18 @@ export class ThetaNeedle {
     if (this.offScaleFor >= THETA_OFFSCALE_HOLD_SAMPLES) this.recentring = true;
     else if (ampiezza <= THETA_RECENTRE) this.recentring = false;
 
-    // Il braccio insegue lentamente — è la manopola. Mentre ricentra, in fretta.
-    const alpha = this.recentring ? THETA_ARM_FOLLOW_FAST : THETA_ARM_ALPHA;
-    this.arm = this.arm * (1 - alpha) + raw * alpha;
+    // ── USCITO DAL QUADRANTE: L'AGO TORNA A SET ───────────────────────────────────────────
+    // È quel che fa il Theta-Meter. Il braccio si porta SULLA lettura, quindi lo scarto si
+    // annulla e l'ago si ritrova esattamente su SET. Non è un inseguimento graduale: quello
+    // lasciava l'ago a metà strada per secondi. La ATTESA prima di farlo resta — un blowdown
+    // deve restare visibile finché sta dentro il quadrante.
+    if (this.recentring) {
+      this.arm = raw;
+      this.recentring = false;
+      this.offScaleFor = 0;
+    } else {
+      this.arm = this.arm * (1 - THETA_ARM_ALPHA) + raw * THETA_ARM_ALPHA;
+    }
 
     // ── TOTAL TA : solo le DISCESE nette dal picco ──────────────────────────────────────────
     // Si conta in DIVISIONI di TA quando l'apparecchio è tarato, non in unità grezze: il

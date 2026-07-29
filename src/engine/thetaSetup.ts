@@ -66,6 +66,10 @@ export interface ThetaSetup {
   needleScale: number;
   /** false finché la stretta non l'ha misurata in QUESTA seduta. */
   scaleMeasured: boolean;
+  /** TRIM della sensibilità, −10..+10. Tenuto SEPARATO da needleScale: la prova della stretta
+   *  fissa la BASE, il trim la ritocca attorno. Mescolarli significherebbe perdere il punto di
+   *  partenza al primo ritocco, e non poterci più tornare. */
+  sensTrim: number;
 }
 
 /** Assetto di partenza, con la sensibilità di ripiego finché la stretta non l'ha misurata. */
@@ -74,6 +78,7 @@ export const defaultSetup = (fallbackScale: number): ThetaSetup => ({
   offsets: { 'two-cans': 0, 'solo-can': 0 },
   needleScale: fallbackScale,
   scaleMeasured: false,
+  sensTrim: 0,
 });
 
 /**
@@ -97,6 +102,11 @@ export const scaleFromSqueeze = (deviazioneGrezza: number): number | null => {
 /** Un colpo di manopola: `verso` +1 alza la sensibilità, −1 la abbassa. */
 export const adjustSensitivity = (scale: number, verso: 1 | -1): number =>
   verso > 0 ? scale * SENSITIVITY_STEP : scale / SENSITIVITY_STEP;
+
+/** Sensibilità EFFETTIVA = base (dalla stretta) × trim. Ogni tacca vale un rapporto fisso,
+ *  non un'aggiunta: così un colpo in su e uno in giù riportano esattamente dov'era. */
+export const effectiveScale = (setup: ThetaSetup): number =>
+  setup.needleScale * Math.pow(SENSITIVITY_STEP, setup.sensTrim);
 
 /** Il respiro ha prodotto una caduta sufficiente? Verifica, non taratura. */
 export const breathIsValid = (deviazioneGrezza: number, scale: number): boolean =>
@@ -142,6 +152,7 @@ export const loadSetup = (fallbackScale: number): ThetaSetup => {
       // La sensibilità riparte SEMPRE da non misurata: va rifatta prima di ogni seduta.
       needleScale: fallbackScale,
       scaleMeasured: false,
+      sensTrim: 0,
     };
   } catch (_) { return defaultSetup(fallbackScale); }
 };

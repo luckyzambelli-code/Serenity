@@ -42,6 +42,11 @@ interface SidebarDrawerProps {
 
   /* TRIM */
   needleTrim:    number;
+  /** Sensibilità dell'ago delle LATTINE, −10..+10. Sta QUI e non nel pannello di taratura
+   *  perché il TRIM è laterale: regolare guardando l'ago è impossibile se il pannello lo copre. */
+  thetaSensTrim?: number;
+  setThetaSensTrim?: (v: number) => void;
+  thetaConnected?: boolean;
   setNeedleTrim: React.Dispatch<React.SetStateAction<number>>;
   needleInertia?:    number;
   setNeedleInertia?: React.Dispatch<React.SetStateAction<number>>;
@@ -459,7 +464,8 @@ function PcDrawer({ capturePcPhoto, t, theme }: SubProps) {
 // ============================================================================
 // TRIM
 // ============================================================================
-function TrimDrawer({ needleTrim, setNeedleTrim, needleInertia, setNeedleInertia, t, theme }: SubProps) {
+function TrimDrawer({ needleTrim, setNeedleTrim, needleInertia, setNeedleInertia,
+                     thetaSensTrim = 0, setThetaSensTrim, thetaConnected = false, t, theme }: SubProps) {
   const { titleColor, labelColor, inputBg, inputBorder } = theme;
   const inertia = needleInertia ?? 90;
   return (
@@ -467,6 +473,33 @@ function TrimDrawer({ needleTrim, setNeedleTrim, needleInertia, setNeedleInertia
       <div style={{ fontSize: 9, color: labelColor, lineHeight: 1.5 }}>
         Ajuster le centrage de l'aiguille d'Equilibrium.
       </div>
+
+      {/* ── SENSIBILITÉ DES LATTINE (Theta-Meter) ──────────────────────────────────────────
+          Ici et pas dans la fenêtre d'étalonnage : celle-ci COUVRE le cadran, et on règle une
+          sensibilité en REGARDANT l'aiguille. Le tiroir, lui, est latéral.
+          À refaire à chaque séance : la sensibilité dépend de la façon dont CE préclair tient
+          les lattine (l'épreuve de la pression donne le point de départ, ceci l'affine). */}
+      {thetaConnected && setThetaSensTrim && (
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.10)' }}>
+          <div className="flex items-center justify-between">
+            <span style={{ fontSize: 9, color: '#f59e0b', letterSpacing: '0.15em' }}>
+              {(t('theta_cans') || 'LATTINE').toUpperCase()}
+            </span>
+            <span style={{ fontSize: 11, fontWeight: 'bold', padding: '2px 8px', borderRadius: 4,
+                           color: '#f59e0b', background: 'rgba(245,158,11,0.15)' }}>
+              {thetaSensTrim > 0 ? '+' : ''}{thetaSensTrim}
+            </span>
+          </div>
+          <input
+            type="range" min={-10} max={10} step={1} value={thetaSensTrim}
+            onChange={e => setThetaSensTrim(parseFloat(e.target.value))}
+            className="glass-range" style={{ width: '100%' }}
+          />
+          <div className="flex justify-between" style={{ fontSize: 8, color: labelColor }}>
+            <span>−10</span><span>0</span><span>+10</span>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between" style={{ marginTop: 4 }}>
         <span style={{ fontSize: 9, color: labelColor, letterSpacing: '0.15em' }}>{(t('trim_sensitivity') || 'SENSIBILITÀ').toUpperCase()}</span>
         <span

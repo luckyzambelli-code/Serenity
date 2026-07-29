@@ -4056,7 +4056,6 @@ export default function App() {
         setConfig={theta.setConfig}
         setOffsetFromReference={theta.setOffsetFromReference}
         startSqueezeTest={theta.startSqueezeTest}
-        bumpSensitivity={theta.bumpSensitivity}
         startBreathTest={theta.startBreathTest}
         testing={theta.testing}
         testPeak={theta.testPeak}
@@ -4498,6 +4497,9 @@ export default function App() {
       {/* ═══════════════════ SIDEBAR DRAWER ═══════════════════ */}
       {sidebarDrawer && (
         <SidebarDrawer
+            thetaSensTrim={theta.setup.sensTrim}
+            setThetaSensTrim={theta.setSensTrim}
+            thetaConnected={theta.status === 'connected'}
           drawer={sidebarDrawer}
           onClose={sdOnClose}
           t={t}
