@@ -40,6 +40,27 @@ export interface ThetaTaScale {
 export const TA_MIN = 0;
 export const TA_MAX = 6.5;
 
+/**
+ * TARATURA DI FABBRICA — misurata con l'artefatto fisico il 29/07/2026.
+ *
+ * Va DENTRO il programma, non solo in localStorage: la scala è una proprietà dell'APPARECCHIO,
+ * quindi vale per chiunque abbia un Theta-Meter, non solo per chi l'ha misurata. Tenendola solo
+ * sulla macchina di chi ha l'artefatto, su ogni altro computer il TA non compariva affatto —
+ * e non c'era modo di capirlo (segnalato da un tester).
+ *
+ * ⚠️ I TA NON sono quelli incisi sull'artefatto: sono quelli che il programma Theta-Meter
+ * MOSTRA premendo ciascun pulsante. Il suo software applica correzioni sue, e ancorare la scala
+ * ai valori nominali produce un errore che varia lungo la scala e ne inverte pure il segno.
+ *
+ * Chi ritara, sovrascrive: la sua misura vince su questa.
+ */
+export const FACTORY_TA_POINTS: ThetaTaPoint[] = [
+  { ta: 2.034, raw:   947_945 },
+  { ta: 3.056, raw: 2_188_003 },
+  { ta: 4.068, raw: 3_938_419 },
+  { ta: 5.041, raw: 6_699_352 },
+];
+
 /** Servono almeno due punti per definire una scala. */
 export const MIN_TA_POINTS = 2;
 
@@ -128,17 +149,31 @@ export const saveTaScale = (scale: ThetaTaScale): void => {
   try { localStorage.setItem(CHIAVE, JSON.stringify(scale)); } catch (_) { /* quota o modalità privata */ }
 };
 
+/** La taratura di fabbrica, sempre disponibile. */
+export const factoryTaScale = (): ThetaTaScale | null => buildTaScale(FACTORY_TA_POINTS, 0);
+
+/**
+ * La taratura in uso: quella misurata su QUESTA macchina se c'è, altrimenti quella di fabbrica.
+ * Non restituisce più null quando localStorage è vuoto — era il motivo per cui su un computer
+ * diverso da quello dell'artefatto non compariva alcun TA.
+ */
 export const loadTaScale = (): ThetaTaScale | null => {
   try {
     const s = localStorage.getItem(CHIAVE);
-    if (!s) return null;
+    if (!s) return factoryTaScale();
     const o = JSON.parse(s) as ThetaTaScale;
     // Si ricostruisce invece di fidarsi: un file scritto a mano, o di una versione precedente,
     // non deve poter produrre una scala non ordinata o con punti doppi.
-    return Array.isArray(o?.points) ? buildTaScale(o.points, o.madeAt ?? 0) : null;
-  } catch (_) { return null; }
+    const propria = Array.isArray(o?.points) ? buildTaScale(o.points, o.madeAt ?? 0) : null;
+    return propria ?? factoryTaScale();
+  } catch (_) { return factoryTaScale(); }
 };
 
+/** Cancella la taratura PROPRIA e torna a quella di fabbrica — non al nulla. */
 export const clearTaScale = (): void => {
   try { localStorage.removeItem(CHIAVE); } catch (_) { /* niente da fare */ }
 };
+
+/** true se la scala in uso è quella di fabbrica (nessuna misura propria salvata). */
+export const isFactoryScale = (scale: ThetaTaScale | null): boolean =>
+  !!scale && scale.madeAt === 0;

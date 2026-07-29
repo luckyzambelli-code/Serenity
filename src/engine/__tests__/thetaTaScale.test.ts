@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildTaScale, taFromRaw, linearitaResidua, MIN_TA_POINTS, TA_MAX, TA_MIN,
+  factoryTaScale, isFactoryScale, FACTORY_TA_POINTS,
   type ThetaTaPoint,
 } from '../thetaTaScale';
 
@@ -146,5 +147,33 @@ describe('sopra l ultimo punto tarato', () => {
     const erroreInAlto = taFromRaw(14_000_000, s) - 5.8;
     // Applicando quella stessa costante in basso, dove la scala era ESATTA, si sbaglierebbe.
     expect(Math.abs(taFromRaw(PUNTI[0].raw, s) - erroreInAlto - PUNTI[0].ta)).toBeGreaterThan(0.1);
+  });
+});
+
+// ── LA TARATURA VA DENTRO IL PROGRAMMA, NON SOLO SULLA MACCHINA DI CHI L'HA FATTA ──────────
+// Richiesta esplicita dell'utente: « il TA deve essere calibrato nel software una volta e poi
+// restare per tutti ». La tenevo solo in localStorage: su ogni ALTRO computer il TA non
+// compariva affatto, e non c'era modo di capire perché (segnalato da un tester).
+describe('taratura di fabbrica', () => {
+  it('esiste ed è utilizzabile senza aver misurato nulla', () => {
+    const s = factoryTaScale()!;
+    expect(s).not.toBeNull();
+    expect(s.points.length).toBeGreaterThanOrEqual(MIN_TA_POINTS);
+  });
+
+  it('è ancorata ai valori che mostra il METER, non a quelli incisi', () => {
+    // L'artefatto dice 2·3·4·5, il suo programma mostra 2,034 · 3,056 · 4,068 · 5,041.
+    // Ancorare ai nominali produce un errore che varia lungo la scala e ne inverte il segno.
+    expect(FACTORY_TA_POINTS.some(p => p.ta !== Math.round(p.ta))).toBe(true);
+  });
+
+  it('rende esattamente i TA misurati', () => {
+    const s = factoryTaScale()!;
+    for (const p of FACTORY_TA_POINTS) expect(taFromRaw(p.raw, s)).toBeCloseTo(p.ta, 9);
+  });
+
+  it('si riconosce da una taratura propria', () => {
+    expect(isFactoryScale(factoryTaScale())).toBe(true);
+    expect(isFactoryScale(buildTaScale(PUNTI, Date.now()))).toBe(false);
   });
 });

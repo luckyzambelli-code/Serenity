@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useI18n } from '../i18n';
-import { linearitaResidua, buildTaScale, taFromRaw, type ThetaTaPoint, type ThetaTaScale } from '../engine/thetaTaScale';
+import { linearitaResidua, buildTaScale, taFromRaw, isFactoryScale,
+         type ThetaTaPoint, type ThetaTaScale } from '../engine/thetaTaScale';
 import { SQUEEZE_TARGET_OFFSET, type ElectrodeConfig, type ThetaSetup } from '../engine/thetaSetup';
 
 /**
@@ -285,9 +286,17 @@ export function ThetaTaCalibration({
                        border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(226,238,255,0.75)' }}>
               {t('theta_ref_apply') as string}
             </button>
-            <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(226,238,255,0.55)', minWidth: 52, textAlign: 'right' }}>
+            {/* Da dove viene la scala in uso: di fabbrica (misurata una volta con l'artefatto e
+                spedita col programma) o misurata QUI. Aggiungere un punto parte sempre da quella
+                in uso e ci somma il nuovo, quindi si affina senza mai ripartire da zero. */}
+            <span style={{ fontFamily: 'monospace', fontSize: 11, minWidth: 52, textAlign: 'right',
+                           color: isFactoryScale(taScale) ? 'rgba(226,238,255,0.4)' : '#34d399' }}>
               {taScale ? `${taScale.points.length} pt` : '—'}
             </span>
+          </div>
+          <div style={{ marginTop: -6, marginBottom: 8, fontFamily: 'var(--font-sans)', fontSize: 9,
+                        color: isFactoryScale(taScale) ? 'rgba(226,238,255,0.45)' : '#34d399' }}>
+            {(isFactoryScale(taScale) ? t('theta_scale_factory') : t('theta_scale_own')) as string}
           </div>
           <div style={{ marginTop: -4, marginBottom: 10, fontFamily: 'var(--font-sans)', fontSize: 9,
                         lineHeight: 1.5, color: 'rgba(226,238,255,0.45)' }}>

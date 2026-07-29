@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ThetaMeterHid, isHidAvailable, type ThetaStatus } from '../lib/thetaMeterHid';
 import { ThetaNeedle } from '../engine/thetaNeedle';
 import {
-  buildTaScale, taFromRaw, loadTaScale, saveTaScale, clearTaScale,
+  buildTaScale, taFromRaw, loadTaScale, saveTaScale, clearTaScale, factoryTaScale,
   type ThetaTaPoint, type ThetaTaScale,
 } from '../engine/thetaTaScale';
 import {
@@ -197,9 +197,10 @@ export function useThetaMeter() {
     return true;
   }, []);
 
+  /** Torna alla taratura DI FABBRICA, non al nulla: senza scala il TA sparirebbe del tutto. */
   const clearTaCalibration = useCallback(() => {
     clearTaScale();
-    setState(p => ({ ...p, taScale: null, ta: null }));
+    setState(p => ({ ...p, taScale: factoryTaScale(), ta: null }));
   }, []);
 
   // ── ASSETTO ────────────────────────────────────────────────────────────────────────────
