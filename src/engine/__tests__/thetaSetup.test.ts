@@ -65,7 +65,9 @@ describe('sensibilità effettiva = base × trim', () => {
 describe('test del respiro — verifica, non taratura', () => {
   it('una caduta sufficiente passa', () => {
     const scala = scaleFromSqueeze(450_000)!;      // stretta = 1/3 di quadrante
-    expect(breathIsValid(450_000, scala)).toBe(true);
+    // Volutamente SOPRA la soglia e non esattamente su di essa: le due ora coincidono, e sul
+    // confine esatto il risultato dipenderebbe dall'ultima cifra in virgola mobile.
+    expect(breathIsValid(450_000 * 1.2, scala)).toBe(true);
   });
 
   it('un accenno di caduta NON basta più: serve una fall', () => {
@@ -74,13 +76,11 @@ describe('test del respiro — verifica, non taratura', () => {
     expect(breathIsValid(450_000 * 0.25, scala)).toBe(false);
   });
 
-  it('la soglia del respiro è quella di una FALL VERA, non di un accenno', () => {
-    // Criterio dell'utente: se rilasciando il fiato non si ottiene almeno una fall, il
-    // metabolismo del preclear non è a posto. 0,42 è l'ampiezza con cui il quadrante
-    // disegna una fall. (Prima era 0,08 — troppo permissivo per essere una verifica.)
-    expect(BREATH_MIN_OFFSET).toBeCloseTo(0.42, 9);
-    // Resta comunque sotto la stretta, che è il riferimento della sensibilità.
-    expect(BREATH_MIN_OFFSET).toBeLessThan(SQUEEZE_TARGET_OFFSET);
+  it('la soglia del respiro è LA STESSA della stretta: un terzo di quadrante', () => {
+    // Non è un caso che coincidano: la stretta REGOLA la sensibilità perché un terzo sia un
+    // terzo, e il respiro VERIFICA che il preclear ci arrivi. Se non ci arriva, il metabolismo
+    // non è a posto. (È passata per 0,08 — un accenno — e per 0,42, l'ampiezza di una fall.)
+    expect(BREATH_MIN_OFFSET).toBeCloseTo(SQUEEZE_TARGET_OFFSET, 9);
   });
 });
 

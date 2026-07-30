@@ -3624,24 +3624,15 @@ export default function App() {
     // common on mobile networks and we don't want a "No Muses found" dialog
     // popping up on the auditor's screen between reconnect attempts.
     const isAuditorMode = (appMode === 'auditor');
-    // ── IL MUSE NON È PIÙ L'UNICO STRUMENTO ──────────────────────────────────────────────
-    // Col THETA-METER collegato si audita eccome: ago vero, TA vero, Total TA. Il blocco qui
-    // pretendeva il Muse e faceva abortire l'avvio — con le sole boîtes la seduta non partiva
-    // affatto. Ora il Muse si TENTA (comodo: se c'è, si aggancia da solo) ma la sua assenza
-    // ferma l'avvio SOLO se non c'è nemmeno il meter.
-    // Col METER collegato NON si va a cercare il Muse: e' una configurazione scelta, non una
-    // mancanza da rimediare. Tentarlo comunque apriva la ricerca a ogni avvio — segnalato in
-    // seduta. Chi vuole entrambi collega il Muse dal suo badge, deliberatamente.
+    // ── NESSUNO STRUMENTO: SI CHIEDE QUALE, non si sceglie per l'utente ──────────────────
+    // Prima si TENTAVA il Muse e si mostrava la scelta solo se falliva: premendo START partiva
+    // comunque la sua ricerca, e il pannello di scelta non si vedeva mai. Ora la scelta viene
+    // PRIMA. Con uno dei due già collegato non si chiede nulla e non si va a cercare l'altro:
+    // è una configurazione scelta, non una mancanza da rimediare.
     const thetaLive = thetaConnectedRef.current;
     if (!isAuditorMode && museConnection !== 'connected' && !thetaLive) {
-      const connected = await handleConnectMuse();
-      if (!connected) {
-        // FIX CONN-60: make it clear WHY nothing started — la seduta ha bisogno di ALMENO
-        // uno strumento. Flash a transient hint instead of silently aborting.
-        // Non svanisce piu' da solo: e' una SCELTA da fare, non una notifica di passaggio.
-        setMuseHint(true);
-        return;
-      }
+      setMuseHint(true);
+      return;
     }
 
     voiceToneAnalyzer.init(); // fire-and-forget, le micro peut prendre quelques ms
