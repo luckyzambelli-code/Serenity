@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useSyncExternalStore, memo, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useSyncExternalStore, memo, lazy, Suspense } from 'react';
 import { pick5 } from './i18n5';
 import { needleEngine, virtualNeedle } from './runtime/NeedleEngine';
 import { bpmSmoother, integrityTracker } from './runtime/SmoothingEngine';
@@ -16,6 +16,7 @@ import { useEpValidation } from './hooks/useEpValidation';
 import { useMnaModule } from './hooks/useMnaModule';
 import { useMediaRelayFallback } from './hooks/useMediaRelayFallback';
 import { useThetaMeter } from './hooks/useThetaMeter';
+import { effectiveModules } from './engine/instrumentModules';
 import { ThetaTaCalibration } from './components/ThetaTaCalibration';
 
 /** Ambra dell'ago e dei valori delle LATTINE — deve restare identico a QuantumSphere,
@@ -182,7 +183,7 @@ export default function App() {
   const [transcriptVisible, setTranscriptVisible] = useState(true);
 
   // ── Layout / module visibility — PHASE-B step 4: now from layoutStore ────
-  const moduleVis        = useLayoutStore(s => s.moduleVis);
+  const moduleVisChosen  = useLayoutStore(s => s.moduleVis);
   const setModuleVis     = useLayoutStore(s => s.setModuleVis);
   // (other layout fields read directly by ConfigDrawer — no longer drilled)
 
@@ -3530,6 +3531,20 @@ export default function App() {
   // resetNeedle è definita più in alto e con dipendenze vuote: si passa per un ref, altrimenti
   // catturerebbe la prima versione della callback e non ricentrerebbe mai le lattine.
   useEffect(() => { thetaResetRef.current = theta.resetToSet; }, [theta.resetToSet]);
+
+  // ── QUALI MODULI, secondo cosa è collegato ───────────────────────────────────
+  // Senza MUSE, i moduli che vivono di EEG (salute, integrità, MNA) non hanno sorgente:
+  // mostrarli fermi o vuoti è peggio che nasconderli — chi guarda non sa se sono rotti.
+  // La PREFERENZA dell'utente non viene toccata: riattaccando il Muse tornano com'erano.
+  const instruments = useMemo(
+    // In seduta a distanza il MUSE è quello del PRECLEAR: qui conta se ARRIVA l'EEG, non se
+    // il Mac dell'auditor ha un casco (non ce l'ha) — vedi remoteMuseConnected.
+    () => ({ muse: museConnection === 'connected' || remoteMuseConnected,
+             theta: theta.status === 'connected' }),
+    [museConnection, remoteMuseConnected, theta.status]);
+  const moduleVis = useMemo(
+    () => effectiveModules(moduleVisChosen, instruments),
+    [moduleVisChosen, instruments]);
   const [showThetaCal, setShowThetaCal] = useState(false);
 
   // ── CONN-53: graceful disconnect on tab/app close ──────────────────────────
