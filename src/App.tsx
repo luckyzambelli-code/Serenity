@@ -4276,14 +4276,19 @@ export default function App() {
               boîtes compare solo quando il meter è collegato — e altrettanto per il MUSE. */}
           {!theta.unavailable && appMode === 'local' && (
             <div
-              onClick={() => { if (theta.status === 'disconnected') void theta.connect(); }}
-              title={(theta.status === 'connected' ? t('theta_tip_ok')
+              // Il badge COMMUTA: collega se staccato, SCOLLEGA se collegato. Prima collegava
+              // soltanto, quindi un clic per sbaglio era senza ritorno.
+              onClick={() => {
+                if (theta.status === 'connected') void theta.disconnect();
+                else if (theta.status === 'disconnected') void theta.connect();
+              }}
+              title={(theta.status === 'connected' ? t('theta_tip_disconnect')
                    : theta.status === 'connecting' ? t('theta_tip_searching')
                    : t('theta_tip_connect')) as string}
               style={{
                 display: 'flex', alignItems: 'center', gap: 9,
                 padding: '3px 14px 3px 3px', borderRadius: 999,
-                cursor: theta.status === 'disconnected' ? 'pointer' : 'default',
+                cursor: theta.status === 'connecting' ? 'default' : 'pointer',
                 background: isLightTheme ? '#b7b7be' : '#17171b',
                 boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
               <span style={{
