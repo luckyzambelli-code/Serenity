@@ -17,6 +17,7 @@ import { useMnaModule } from './hooks/useMnaModule';
 import { useMediaRelayFallback } from './hooks/useMediaRelayFallback';
 import { useThetaMeter } from './hooks/useThetaMeter';
 import { effectiveModules } from './engine/instrumentModules';
+import { ThetaReadyCheck } from './components/ThetaReadyCheck';
 import { ThetaTaCalibration } from './components/ThetaTaCalibration';
 
 /** Ambra dell'ago e dei valori delle LATTINE — deve restare identico a QuantumSphere,
@@ -5488,6 +5489,27 @@ export default function App() {
         // Local / satellite (co-localisé) : le Mac porte le MUSE → on garde le MUSE local.
         const remoteAuditor = appMode === 'auditor' && isConnected && !satelliteMode;
         const readinessMuseOk = remoteAuditor ? remoteMuseConnected : (museConnection === 'connected');
+
+        // ── SOLO BOÎTES: prontezza con le prove del METER, non col respiro guidato ─────────
+        // Senza EEG la timeline del respiro del Muse non ha nulla da valutare. Le due prove
+        // sono quelle della procedura: stretta (un terzo di quadrante, fissa la sensibilità) e
+        // respiro fino a ottenere almeno una FALL al rilascio — se non arriva, il metabolismo
+        // del preclear non è a posto, ed è proprio ciò che questa schermata deve accertare.
+        if (!readinessMuseOk && theta.status === 'connected') {
+          return (
+            <ThetaReadyCheck
+              scaleMeasured={theta.setup.scaleMeasured}
+              breathOk={theta.breathOk}
+              testing={theta.testing}
+              peakOffset={theta.testPeakOffset}
+              startSqueezeTest={theta.startSqueezeTest}
+              startBreathTest={theta.startBreathTest}
+              onProceed={() => { setMetabolicOpen(false); void handleStart(); }}
+              onCancel={() => setMetabolicOpen(false)}
+            />
+          );
+        }
+
         return (
         <MetabolicCheck
           lang={lang}

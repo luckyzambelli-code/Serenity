@@ -55,6 +55,9 @@ export interface ThetaMeterState {
   testing: null | 'squeeze' | 'breath';
   /** Deviazione di picco osservata durante la prova (unità grezze). */
   testPeak: number;
+  /** Lo stesso picco in unità di QUADRANTE: è così che si confronta con le soglie delle prove
+   *  (un terzo di quadrante, una fall). In grezzi il confronto non si potrebbe fare. */
+  testPeakOffset: number;
   /** Esito dell'ultimo test del respiro: null se non fatto. */
   breathOk: boolean | null;
   /** L'ago è finito fuori dal quadrante. */
@@ -89,6 +92,7 @@ export function useThetaMeter() {
     offScale: false, bodyMotion: false,
     ta: null, taNow: null, taScale: loadTaScale(),
     setup: loadSetup(THETA_NEEDLE_SCALE), testing: null, testPeak: 0, breathOk: null,
+    testPeakOffset: 0,
     counters: { ok: 0, rejected: 0 }, unavailable: !isHidAvailable(), info: null, lastError: null,
   });
 
@@ -128,6 +132,7 @@ export function useThetaMeter() {
         rawSmooth: needleRef.current.lastRaw,
         taNow: prev.taScale ? taWithSetup(taFromRaw(needleRef.current.lastRaw, prev.taScale), prev.setup) : null,
         testPeak: testRef.current.peak,
+        testPeakOffset: testRef.current.peak * effectiveScale(prev.setup),
         counters: hidRef.current!.counters,
       }));
     }, UI_PERIOD_MS);

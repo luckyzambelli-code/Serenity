@@ -51,9 +51,15 @@ export const SQUEEZE_TARGET_OFFSET = (1 - (-0.35)) / 3;
 /** Di quanto si muove la sensibilità a ogni scatto della manopola. Un quarto per scatto: si
  *  arriva in fretta senza saltare il punto giusto. */
 export const SENSITIVITY_STEP = 1.25;
-/** Caduta MINIMA attesa sul test del respiro. Sotto questa la persona non sta reagendo (o gli
- *  elettrodi fanno contatto male): è una verifica, non una taratura. */
-export const BREATH_MIN_OFFSET = 0.08;
+/** Caduta MINIMA attesa sul test del respiro: **una FALL vera**, non un accenno.
+ *
+ *  0,42 è l'ampiezza con cui il quadrante disegna una FALL (`reaction_fall`). Il criterio è
+ *  dell'utente e non è arbitrario: se rilasciando il fiato non si ottiene almeno una fall, il
+ *  **metabolismo del preclear non è a posto** — ed è esattamente ciò che la schermata di
+ *  prontezza deve accertare prima di cominciare.
+ *
+ *  (Prima era 0,08, cioè « un minimo »: troppo permissivo per essere una verifica.) */
+export const BREATH_MIN_OFFSET = 0.42;
 
 export interface ThetaSetup {
   /** Configurazione in uso. */

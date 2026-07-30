@@ -68,14 +68,19 @@ describe('test del respiro — verifica, non taratura', () => {
     expect(breathIsValid(450_000, scala)).toBe(true);
   });
 
-  it('una caduta troppo piccola NON passa: la persona non reagisce, o il contatto è cattivo', () => {
+  it('un accenno di caduta NON basta più: serve una fall', () => {
     const scala = scaleFromSqueeze(450_000)!;
-    expect(breathIsValid(450_000 * (BREATH_MIN_OFFSET / SQUEEZE_TARGET_OFFSET) * 0.5, scala)).toBe(false);
+    // Una caduta pari a un quarto di quella della stretta: visibile, ma non è una fall.
+    expect(breathIsValid(450_000 * 0.25, scala)).toBe(false);
   });
 
-  it('la soglia del respiro è MOLTO sotto quella della stretta', () => {
-    // Il respiro non deve dare un terzo di quadrante: deve solo dare qualcosa.
-    expect(BREATH_MIN_OFFSET).toBeLessThan(SQUEEZE_TARGET_OFFSET / 2);
+  it('la soglia del respiro è quella di una FALL VERA, non di un accenno', () => {
+    // Criterio dell'utente: se rilasciando il fiato non si ottiene almeno una fall, il
+    // metabolismo del preclear non è a posto. 0,42 è l'ampiezza con cui il quadrante
+    // disegna una fall. (Prima era 0,08 — troppo permissivo per essere una verifica.)
+    expect(BREATH_MIN_OFFSET).toBeCloseTo(0.42, 9);
+    // Resta comunque sotto la stretta, che è il riferimento della sensibilità.
+    expect(BREATH_MIN_OFFSET).toBeLessThan(SQUEEZE_TARGET_OFFSET);
   });
 });
 
