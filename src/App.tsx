@@ -782,6 +782,8 @@ export default function App() {
   // ── FUNZIONE DI RESET CENTRALIZZATA ──
   /** Rimando al ricentraggio delle lattine — vedi la nota accanto all'assegnazione. */
   const thetaResetRef = useRef<(() => void) | null>(null);
+  /** Le boîtes sono collegate? Serve dentro handleStart, che è definita PRIMA del hook. */
+  const thetaConnectedRef = useRef(false);
 
   const resetNeedle = useCallback(() => {
     needleEngine.reset(() => {
@@ -3532,6 +3534,7 @@ export default function App() {
   // resetNeedle è definita più in alto e con dipendenze vuote: si passa per un ref, altrimenti
   // catturerebbe la prima versione della callback e non ricentrerebbe mai le lattine.
   useEffect(() => { thetaResetRef.current = theta.resetToSet; }, [theta.resetToSet]);
+  useEffect(() => { thetaConnectedRef.current = theta.status === 'connected'; }, [theta.status]);
 
   // ── QUALI MODULI, secondo cosa è collegato ───────────────────────────────────
   // Senza MUSE, i moduli che vivono di EEG (salute, integrità, MNA) non hanno sorgente:
@@ -3619,11 +3622,17 @@ export default function App() {
     // common on mobile networks and we don't want a "No Muses found" dialog
     // popping up on the auditor's screen between reconnect attempts.
     const isAuditorMode = (appMode === 'auditor');
+    // ── IL MUSE NON È PIÙ L'UNICO STRUMENTO ──────────────────────────────────────────────
+    // Col THETA-METER collegato si audita eccome: ago vero, TA vero, Total TA. Il blocco qui
+    // pretendeva il Muse e faceva abortire l'avvio — con le sole boîtes la seduta non partiva
+    // affatto. Ora il Muse si TENTA (comodo: se c'è, si aggancia da solo) ma la sua assenza
+    // ferma l'avvio SOLO se non c'è nemmeno il meter.
+    const thetaLive = thetaConnectedRef.current;
     if (!isAuditorMode && museConnection !== 'connected') {
       const connected = await handleConnectMuse();
-      if (!connected) {
-        // FIX CONN-60: make it clear WHY nothing started — the session needs the
-        // MUSE. Flash a transient hint instead of silently aborting.
+      if (!connected && !thetaLive) {
+        // FIX CONN-60: make it clear WHY nothing started — la seduta ha bisogno di ALMENO
+        // uno strumento. Flash a transient hint instead of silently aborting.
         setMuseHint(true);
         setTimeout(() => setMuseHint(false), 4000);
         return;
@@ -5007,8 +5016,12 @@ export default function App() {
               {/* FIX CONN-56: elegant "press START" prompt centred on the dial —
                   far more visible than the small top badge. Same Play icon as the
                   sidebar START button for visual coherence. Click → start session. */}
+              {/* Il « premi START » compare con QUALUNQUE strumento pronto — comprese le sole
+                  boîtes: prima era legato al solo Muse (locale o remoto) e in configurazione
+                  Theta non appariva mai, quindi la seduta non si poteva nemmeno avviare. */}
               {((appMode === 'auditor' && isConnected && remoteMuseConnected) ||
-                (satelliteMode && museConnection === 'connected')) &&
+                (satelliteMode && museConnection === 'connected') ||
+                (appMode === 'local' && (museConnection === 'connected' || theta.status === 'connected'))) &&
                 (sessionState === 'idle' || sessionState === 'ended') && (
                 <button
                   onClick={() => requestStart()}

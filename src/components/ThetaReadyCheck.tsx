@@ -19,6 +19,12 @@ import { SQUEEZE_TARGET_OFFSET, BREATH_MIN_OFFSET } from '../engine/thetaSetup';
  *
  * Si può procedere lo stesso: la decisione resta dell'auditor, che magari sa perché quel
  * preclear oggi non reagisce. Ma glielo si dice, invece di lasciarlo partire alla cieca.
+ *
+ * ── PERCHÉ A COLONNA E NON A TUTTO SCHERMO ─────────────────────────────────────────────────
+ * Le due prove si giudicano GUARDANDO L'AGO: « un terzo di quadrante » e « almeno una fall »
+ * sono ampiezze sul quadrante vero, con la sua scala. Un velo a tutto schermo lo copriva, e il
+ * test diventava impossibile — segnalato in seduta. Sta quindi in una colonna a sinistra, senza
+ * oscurare il resto: il quadrante resta scoperto e a grandezza piena.
  */
 
 export interface ThetaReadyCheckProps {
@@ -70,19 +76,30 @@ export function ThetaReadyCheck({
   const tuttoFatto = scaleMeasured && breathOk === true;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9000,
-                  background: 'rgba(2,6,23,0.93)', backdropFilter: 'blur(10px)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ width: '100%', maxWidth: 520, display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div style={{ position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: 9000,
+                  width: 'min(420px, 34vw)', overflowY: 'auto',
+                  // NIENTE velo sul resto: il quadrante deve restare visibile e leggibile.
+                  background: 'linear-gradient(100deg, rgba(2,6,23,0.97) 0%, rgba(2,6,23,0.93) 100%)',
+                  backdropFilter: 'blur(10px)',
+                  borderRight: '1px solid rgba(245,158,11,0.3)',
+                  boxShadow: '18px 0 50px rgba(0,0,0,0.5)',
+                  padding: '24px 22px',
+                  display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         <div>
           <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.2em',
                         textTransform: 'uppercase', color: '#f59e0b', marginBottom: 6 }}>
             {t('theta_cans') as string}
           </div>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 700,
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 19, fontWeight: 700,
                         letterSpacing: '0.04em', color: 'rgba(240,246,255,0.95)' }}>
             {t('ready_for_session') as string}
+          </div>
+          {/* Si dice esplicitamente dove guardare: il giudizio si fa sull'ago, non qui. */}
+          <div style={{ marginTop: 6, fontFamily: 'var(--font-sans)', fontSize: 11, lineHeight: 1.5,
+                        color: '#f59e0b' }}>
+            {t('theta_watch_needle') as string}
           </div>
         </div>
 
