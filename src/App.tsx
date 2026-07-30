@@ -74,7 +74,6 @@ const ASSESS_READ_META = (reaction: string): { short: string; color: string; bor
 };
 const HistoryModal = lazy(() => import('./components/HistoryModal').then(m => ({ default: m.HistoryModal })));
 import { ProfileRoster } from './components/ProfileRoster';
-import { TaCalibrationPanel } from './components/TaCalibrationPanel';
 import { AIAssistant } from './components/AIAssistant';
 import { getProfiles, setActiveProfileId, saveProfile, saveSession, getSessions, getSessionsByProfile, saveSessionDraft, loadSessionDraftAsync, clearSessionDraft, SessionDraft } from './lib/storage';
 import { isServerAvailable, serverSaveProfiles, serverSaveSessions } from './lib/serverStorage';
@@ -444,8 +443,6 @@ export default function App() {
   const wallpaperUrl    = useUiStore(s => s.wallpaperUrl);
   const showRoster      = useUiStore(s => s.showRoster);      // CONN-98: profiles roster
   const setShowRoster   = useUiStore(s => s.setShowRoster);
-  const showTaCalib     = useUiStore(s => s.showTaCalib);     // panneau calibration TA
-  const setShowTaCalib  = useUiStore(s => s.setShowTaCalib);
   const fnMode          = useUiStore(s => s.fnMode);          // style Floating Needle (5 modes)
 
   // (Wallpaper default now lives in uiStore initial state '/wallpapers/galaxy.jpg'
@@ -4093,14 +4090,6 @@ export default function App() {
         onConnect={() => { void theta.connect(); }}
         taNow={theta.taNow}
         rawNow={theta.rawSmooth}
-        setup={theta.setup}
-        setConfig={theta.setConfig}
-        addPointFromReference={theta.addPointFromReference}
-        startSqueezeTest={theta.startSqueezeTest}
-        startBreathTest={theta.startBreathTest}
-        testing={theta.testing}
-        testPeak={theta.testPeak}
-        breathOk={theta.breathOk}
         onClose={() => setShowThetaCal(false)}
       />
     )}
@@ -4576,6 +4565,11 @@ export default function App() {
             thetaSensTrim={theta.setup.sensTrim}
             setThetaSensTrim={theta.setSensTrim}
             thetaConnected={theta.status === 'connected'}
+            thetaConfig={theta.setup.config}
+            setThetaConfig={theta.setConfig}
+            thetaAddPoint={theta.addPointFromReference}
+            thetaTaNow={theta.taNow}
+            onOpenThetaTester={() => { setSidebarDrawer(null); setShowThetaCal(true); }}
           drawer={sidebarDrawer}
           onClose={sdOnClose}
           t={t}
@@ -4949,14 +4943,6 @@ export default function App() {
                   solo « non appare il TA e non si può tarare », che non è diagnosticabile. */}
               {!theta.unavailable && (
                 <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
-                  <button type="button" onClick={() => setShowThetaCal(true)}
-                    style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.08em',
-                             textTransform: 'uppercase', padding: '3px 8px', borderRadius: 6,
-                             cursor: 'pointer', background: 'transparent',
-                             border: `1px solid ${theta.taScale ? 'rgba(148,163,184,0.3)' : 'rgba(245,158,11,0.55)'}`,
-                             color: theta.taScale ? 'rgba(148,163,184,0.7)' : THETA_AMBER }}>
-                    {theta.taScale ? (t('theta_cal_title') as string) : (t('theta_uncalibrated') as string)}
-                  </button>
                   {theta.counters.rejected > 0 && (
                     <span style={{ fontFamily: 'monospace', fontSize: 9, color: '#f87171' }}>
                       {theta.counters.rejected} ✕
@@ -5516,6 +5502,7 @@ export default function App() {
             <ThetaReadyCheck
               scaleMeasured={theta.setup.scaleMeasured}
               breathOk={theta.breathOk}
+              squeezeOk={theta.squeezeOk}
               testing={theta.testing}
               peakOffset={theta.testPeakOffset}
               startSqueezeTest={theta.startSqueezeTest}
@@ -5719,10 +5706,6 @@ export default function App() {
             setShowRoster(false);
           }}
         />
-      )}
-
-      {showTaCalib && (
-        <TaCalibrationPanel lang={lang} onClose={() => setShowTaCalib(false)} />
       )}
 
       {showHistoryModal && (

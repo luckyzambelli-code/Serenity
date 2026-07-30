@@ -7,10 +7,11 @@ import {
 } from '../engine/thetaTaScale';
 import {
   loadSetup, saveSetup, scaleFromSqueeze, breathIsValid, taWithSetup,
+  SQUEEZE_TARGET_OFFSET, SQUEEZE_TOLERANCE,
   effectiveScale,
   type ElectrodeConfig, type ThetaSetup,
 } from '../engine/thetaSetup';
-import { THETA_NEEDLE_SCALE, SQUEEZE_TEST_MS } from '../engine/tuning';
+import { THETA_NEEDLE_SCALE, SQUEEZE_TEST_MS, BREATH_TEST_MS } from '../engine/tuning';
 
 /**
  * useThetaMeter — l'e-meter USB dell'utente dentro EQUILIBRIUM.
@@ -60,6 +61,10 @@ export interface ThetaMeterState {
   testPeakOffset: number;
   /** Esito dell'ultimo test del respiro: null se non fatto. */
   breathOk: boolean | null;
+  /** Esito dell'ultima prova della stretta: la caduta CORRISPONDE al terzo di quadrante?
+   *  null se non fatta. Alla PRIMA prova la sensibilità si fissa da sé, quindi corrisponde per
+   *  costruzione; dalla seconda in poi la prova VERIFICA, ed è lì che il verdetto informa. */
+  squeezeOk: boolean | null;
   /** L'ago è finito fuori dal quadrante. */
   offScale: boolean;
   /** L'ago spazza troppo per essere carica: MOVIMENTO CORPOREO, Total TA sospeso. */
@@ -91,7 +96,7 @@ export function useThetaMeter() {
     status: 'disconnected', offset: 0, arm: 0, raw: 0, rawSmooth: 0, totalTa: 0,
     offScale: false, bodyMotion: false,
     ta: null, taNow: null, taScale: loadTaScale(),
-    setup: loadSetup(THETA_NEEDLE_SCALE), testing: null, testPeak: 0, breathOk: null,
+    setup: loadSetup(THETA_NEEDLE_SCALE), testing: null, testPeak: 0, breathOk: null, squeezeOk: null,
     testPeakOffset: 0,
     counters: { ok: 0, rejected: 0 }, unavailable: !isHidAvailable(), info: null, lastError: null,
   });
@@ -252,16 +257,24 @@ export function useThetaMeter() {
    */
   const startSqueezeTest = useCallback(() => {
     testRef.current = { on: true, peak: 0 };
-    setState(p => ({ ...p, testing: 'squeeze', testPeak: 0 }));
+    setState(p => ({ ...p, testing: 'squeeze', testPeak: 0, squeezeOk: null }));
     setTimeout(() => {
       testRef.current.on = false;
-      const scala = scaleFromSqueeze(testRef.current.peak);
-      // Una misura nulla o assurda NON deve rovinare la sensibilità che c'è: azzerarla
-      // bloccherebbe l'ago, o lo manderebbe fuori scala.
-      setState(p => ({
-        ...p, testing: null, testPeak: testRef.current.peak,
-        ...(scala ? { setup: { ...p.setup, needleScale: scala, scaleMeasured: true } } : {}),
-      }));
+      const picco = testRef.current.peak;
+      setState(p => {
+        // ── PRIMA PROVA: FISSA · PROVE SUCCESSIVE: VERIFICA ────────────────────────────────
+        // Se ogni prova ri-fissasse la sensibilità, corrisponderebbe SEMPRE per costruzione e
+        // il verdetto non direbbe nulla — e soprattutto disferebbe ogni ritocco fatto a mano
+        // con la manopola. La prima volta si parte da qui; poi si verifica soltanto.
+        const scala = scaleFromSqueeze(picco);
+        if (!p.setup.scaleMeasured && scala) {
+          return { ...p, testing: null, testPeak: picco, squeezeOk: true,
+                   setup: { ...p.setup, needleScale: scala, scaleMeasured: true } };
+        }
+        const raggiunto = picco * effectiveScale(p.setup);
+        return { ...p, testing: null, testPeak: picco,
+                 squeezeOk: Math.abs(raggiunto - SQUEEZE_TARGET_OFFSET) <= SQUEEZE_TOLERANCE };
+      });
     }, SQUEEZE_TEST_MS);
   }, []);
 
@@ -279,7 +292,7 @@ export function useThetaMeter() {
         ...p, testing: null, testPeak: testRef.current.peak,
         breathOk: breathIsValid(testRef.current.peak, p.setup.needleScale),
       }));
-    }, SQUEEZE_TEST_MS);
+    }, BREATH_TEST_MS);
   }, []);
 
   return {

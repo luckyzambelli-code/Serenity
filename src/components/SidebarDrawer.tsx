@@ -47,6 +47,15 @@ interface SidebarDrawerProps {
   thetaSensTrim?: number;
   setThetaSensTrim?: (v: number) => void;
   thetaConnected?: boolean;
+  /** Configurazione degli elettrodi: due boîtes o boîte solo (SOLO AUDITING). */
+  thetaConfig?: 'two-cans' | 'solo-can';
+  setThetaConfig?: (c: 'two-cans' | 'solo-can') => void;
+  /** Aggiunge un punto alla scala del TA leggendo il valore sul Theta-Meter. */
+  thetaAddPoint?: (ta: number) => void;
+  /** Il TA che leggiamo NOI in questo istante, per il confronto affiancato. */
+  thetaTaNow?: number | null;
+  /** Apre l'E-meter Tester (taratura con l'artefatto fisico). */
+  onOpenThetaTester?: () => void;
   setNeedleTrim: React.Dispatch<React.SetStateAction<number>>;
   needleInertia?:    number;
   setNeedleInertia?: React.Dispatch<React.SetStateAction<number>>;
@@ -465,8 +474,12 @@ function PcDrawer({ capturePcPhoto, t, theme }: SubProps) {
 // TRIM
 // ============================================================================
 function TrimDrawer({ needleTrim, setNeedleTrim, needleInertia, setNeedleInertia,
-                     thetaSensTrim = 0, setThetaSensTrim, thetaConnected = false, t, theme }: SubProps) {
+                     thetaSensTrim = 0, setThetaSensTrim, thetaConnected = false,
+                     thetaConfig = 'two-cans', setThetaConfig, thetaAddPoint,
+                     thetaTaNow = null, onOpenThetaTester, t, theme }: SubProps) {
   const { titleColor, labelColor, inputBg, inputBorder } = theme;
+  /** Il TA che il Theta-Meter mostra ADESSO, digitato per il confronto affiancato. */
+  const [rifTa, setRifTa] = React.useState('');
   const inertia = needleInertia ?? 90;
   return (
     <>
@@ -498,6 +511,73 @@ function TrimDrawer({ needleTrim, setNeedleTrim, needleInertia, setNeedleInertia
           <div className="flex justify-between" style={{ fontSize: 8, color: labelColor }}>
             <span>−10</span><span>0</span><span>+10</span>
           </div>
+
+          {/* ── COME SONO TENUTE LE BOÎTES ────────────────────────────────────────────────
+              Due boîtes, una per mano — oppure, in SOLO AUDITING, una boîte sola fatta di due
+              mezze boîtes. Cambia la geometria degli elettrodi, quindi la resistenza: lo stesso
+              preclear legge un TA diverso nelle due configurazioni. */}
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 9, color: labelColor, letterSpacing: '0.15em', marginBottom: 6 }}>
+              {(t('theta_how_held') || '').toUpperCase()}
+            </div>
+            <div className="flex gap-2">
+              {(['two-cans', 'solo-can'] as const).map(c => (
+                <button key={c} onClick={() => setThetaConfig?.(c)}
+                  style={{ flex: 1, padding: '7px 4px', borderRadius: 6, fontSize: 10, cursor: 'pointer',
+                           background: thetaConfig === c ? 'rgba(245,158,11,0.18)' : inputBg,
+                           border: thetaConfig === c ? '1px solid rgba(245,158,11,0.6)' : inputBorder,
+                           color: thetaConfig === c ? '#f59e0b' : titleColor }}>
+                  {t(c === 'two-cans' ? 'theta_two_cans' : 'theta_solo_can')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── AFFINARE LA SCALA CONFRONTANDOSI COL THETA-METER ──────────────────────────
+              I due programmi leggono il dispositivo insieme: si guardano i quadranti affiancati
+              e si scrive il TA che mostra il meter. Non è una correzione costante — AGGIUNGE un
+              punto alla scala, quindi corregge la forma proprio dove serve. */}
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 9, color: labelColor, letterSpacing: '0.15em', marginBottom: 4 }}>
+              {(t('theta_refine') || '').toUpperCase()}
+            </div>
+            <div style={{ fontSize: 9, color: labelColor, lineHeight: 1.5, marginBottom: 6 }}>
+              {t('theta_refine_hint')}
+            </div>
+            <div className="flex items-center gap-2">
+              <span style={{ fontSize: 10, color: labelColor, whiteSpace: 'nowrap' }}>
+                {t('theta_we_read')}
+              </span>
+              <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 700, color: '#f59e0b' }}>
+                {thetaTaNow !== null ? thetaTaNow.toFixed(2) : '—'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2" style={{ marginTop: 6 }}>
+              <input value={rifTa} onChange={e => setRifTa(e.target.value)} placeholder="5.80"
+                inputMode="decimal"
+                style={{ width: 62, height: 26, borderRadius: 5, padding: '0 7px',
+                         fontFamily: 'monospace', fontSize: 12, textAlign: 'right',
+                         background: inputBg, border: inputBorder, color: titleColor, outline: 'none' }} />
+              <button
+                disabled={!Number.isFinite(parseFloat(rifTa))}
+                onClick={() => { thetaAddPoint?.(parseFloat(rifTa)); setRifTa(''); }}
+                style={{ flex: 1, padding: '6px', borderRadius: 5, fontSize: 10, cursor: 'pointer',
+                         opacity: Number.isFinite(parseFloat(rifTa)) ? 1 : 0.4,
+                         background: inputBg, border: inputBorder, color: titleColor }}>
+                {t('theta_ref_apply')}
+              </button>
+            </div>
+          </div>
+
+          {/* L'artefatto è uno strumento da laboratorio: dietro un bottone, per non mettere
+              quattro campi numerici senza contesto davanti a chi non sa cosa sia. */}
+          {onOpenThetaTester && (
+            <button onClick={onOpenThetaTester} className="glass-btn"
+              style={{ width: '100%', marginTop: 12, padding: '8px', fontSize: 10,
+                       letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              🎚 {t('theta_tester')}
+            </button>
+          )}
         </div>
       )}
       <div className="flex items-center justify-between" style={{ marginTop: 4 }}>

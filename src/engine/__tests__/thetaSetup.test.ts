@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  scaleFromSqueeze, breathIsValid, offsetFromReference, taWithSetup, defaultSetup, adjustSensitivity,
+  scaleFromSqueeze, breathIsValid, taWithSetup, defaultSetup,
   SQUEEZE_TARGET_OFFSET, BREATH_MIN_OFFSET, type ThetaSetup,
 } from '../thetaSetup';
 
@@ -37,28 +37,6 @@ describe('sensibilità dalla PROVA DELLA STRETTA', () => {
     expect(scaleFromSqueeze(0)).toBeNull();
     expect(scaleFromSqueeze(0.5)).toBeNull();
     expect(scaleFromSqueeze(NaN)).toBeNull();
-  });
-});
-
-// La prova della stretta dà un PUNTO DI PARTENZA; il valore giusto dipende dalla persona e da
-// come tiene le lattine. Serve quindi la manopola, come sul Theta-Meter — nessun numero scelto
-// a tavolino può indovinarlo, e infatti ne ho sbagliati due di fila.
-describe('manopola della sensibilità', () => {
-  it('un colpo in su la alza, uno in giù la abbassa', () => {
-    const s0 = 1e-6;
-    expect(adjustSensitivity(s0, 1)).toBeGreaterThan(s0);
-    expect(adjustSensitivity(s0, -1)).toBeLessThan(s0);
-  });
-
-  it('su e giù si annullano: si può tornare esattamente dov era', () => {
-    const s0 = 1e-6;
-    expect(adjustSensitivity(adjustSensitivity(s0, 1), -1)).toBeCloseTo(s0, 15);
-  });
-
-  it('resta sempre positiva', () => {
-    let s0 = 1e-6;
-    for (let i = 0; i < 40; i++) s0 = adjustSensitivity(s0, -1);
-    expect(s0).toBeGreaterThan(0);
   });
 });
 
@@ -106,14 +84,6 @@ describe('correzione per configurazione, dal confronto col meter vero', () => {
     scaleMeasured: true,
     sensTrim: 0,
   };
-
-  it('lo scarto misurato in seduta: noi 6,2 · meter vero 5,796', () => {
-    // Caso reale, lattina solo. La correzione e' NEGATIVA: leggevamo troppo alto.
-    const off = offsetFromReference(5.796, 6.2);
-    expect(off).toBeCloseTo(-0.404, 9);
-    expect(taWithSetup(6.2, { ...base, offsets: { 'two-cans': 0, 'solo-can': off } }))
-      .toBeCloseTo(5.796, 9);
-  });
 
   it('ogni configurazione ha la SUA correzione', () => {
     // Cambiando configurazione cambia la geometria degli elettrodi, quindi la resistenza:

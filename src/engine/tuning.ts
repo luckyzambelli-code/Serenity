@@ -236,10 +236,13 @@ export const THETA_RECENTRE = 0.25 * THETA_FALL_RANGE;
  *  Usato SOLO finché l'apparecchio non è tarato con l'artefatto: senza scala il totale è una
  *  grandezza relativa e questo numero è un ripiego. Tarato, si conta in divisioni vere. */
 export const THETA_TOTAL_TA_STEP = 120_000;
-/** Durata della finestra delle PROVE (stretta e respiro), in ms. Deve coprire il gesto e il
- *  culmine della caduta che ne segue, senza raccogliere movimenti successivi che falserebbero
- *  il picco. */
-export const SQUEEZE_TEST_MS = 9000;
+/** Durata della finestra della PROVA DELLA STRETTA (ms). Si stringe e si rilascia: il gesto
+ *  dura un paio di secondi, e nove erano un'attesa inutile che faceva anche raccogliere
+ *  movimenti successivi. */
+export const SQUEEZE_TEST_MS = 4000;
+/** Durata della finestra del TEST DEL RESPIRO (ms). Più lunga della stretta: inspirare a fondo,
+ *  trattenere e rilasciare non si fa in due secondi. */
+export const BREATH_TEST_MS = 9000;
 /** MOVIMENTO CORPOREO — su quanti campioni si guarda l'escursione dell'ago (60 = 1 s). */
 export const THETA_MOTION_WINDOW = 120;   // 2 s
 /** Se in quella finestra l'ago spazza PIÙ di tanto quadrante, non è carica: è la persona che si

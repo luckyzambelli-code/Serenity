@@ -43,7 +43,6 @@ interface UiState {
   /** CONN-98: profiles roster (auditors + PCs) overlay open. Volatile. */
   showRoster: boolean;
   /** Panneau de calibration TA (vs meter réel) ouvert. Volatile. */
-  showTaCalib: boolean;
   /** Glass: opacity of the overlay/panel UI (0.45–1). 1 = solid. Persisted. */
   uiAlpha: number;
   /** STYLE du Floating Needle (5 modes, cf. engine/FloatGenerator). Volatile. */
@@ -55,7 +54,6 @@ interface UiState {
   toggleTheme:     () => void;
   setWallpaperUrl: (url:   SetStateAction<string>)  => void;
   setShowRoster:   (value: SetStateAction<boolean>) => void;
-  setShowTaCalib:  (value: SetStateAction<boolean>) => void;
   setUiAlpha:      (value: SetStateAction<number>)  => void;
   setFnMode:       (value: SetStateAction<FnMode>)  => void;
 }
@@ -75,7 +73,6 @@ export const useUiStore = create<UiState>()(
       // sono più attivi"). Now persisted (see partialize/merge) → choice sticks.
       wallpaperUrl: '/wallpapers/thumb-galaxy.jpg',
       showRoster: false,
-      showTaCalib: false,
       uiAlpha: 1,
       fnMode: 'normal',
 
@@ -83,7 +80,6 @@ export const useUiStore = create<UiState>()(
       toggleTheme:     ()      => set((s) => ({ isLightTheme: !s.isLightTheme })),
       setWallpaperUrl: (url)   => set((s) => ({ wallpaperUrl: applyAction(url,   s.wallpaperUrl) })),
       setShowRoster:   (value) => set((s) => ({ showRoster:   applyAction(value, s.showRoster) })),
-      setShowTaCalib:  (value) => set((s) => ({ showTaCalib:  applyAction(value, s.showTaCalib) })),
       setUiAlpha:      (value) => set((s) => ({ uiAlpha: Math.max(0.45, Math.min(1, applyAction(value, s.uiAlpha))) })),
       setFnMode:       (value) => set((s) => ({ fnMode:    applyAction(value, s.fnMode) })),
     }),

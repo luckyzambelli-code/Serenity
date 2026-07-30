@@ -48,6 +48,11 @@ export type ElectrodeConfig = 'two-cans' | 'solo-can';
  *  del Theta-Meter, perché dipende dalla persona e dalla presa. */
 export const SQUEEZE_TARGET_OFFSET = (1 - (-0.35)) / 3;
 
+/** Quanto può scostarsi la caduta dal terzo di quadrante e valere ancora « corrisponde ».
+ *  Nessuno stringe due volte con la stessa forza: pretendere l'esatto sarebbe un verdetto
+ *  sempre negativo, e quindi inutile. */
+export const SQUEEZE_TOLERANCE = 0.12;
+
 /** Di quanto si muove la sensibilità a ogni scatto della manopola. Un quarto per scatto: si
  *  arriva in fretta senza saltare il punto giusto. */
 export const SENSITIVITY_STEP = 1.25;
@@ -105,10 +110,6 @@ export const scaleFromSqueeze = (deviazioneGrezza: number): number | null => {
   return Number.isFinite(scala) && scala > 0 ? scala : null;
 };
 
-/** Un colpo di manopola: `verso` +1 alza la sensibilità, −1 la abbassa. */
-export const adjustSensitivity = (scale: number, verso: 1 | -1): number =>
-  verso > 0 ? scale * SENSITIVITY_STEP : scale / SENSITIVITY_STEP;
-
 /** Sensibilità EFFETTIVA = base (dalla stretta) × trim. Ogni tacca vale un rapporto fisso,
  *  non un'aggiunta: così un colpo in su e uno in giù riportano esattamente dov'era. */
 export const effectiveScale = (setup: ThetaSetup): number =>
@@ -117,13 +118,6 @@ export const effectiveScale = (setup: ThetaSetup): number =>
 /** Il respiro ha prodotto una caduta sufficiente? Verifica, non taratura. */
 export const breathIsValid = (deviazioneGrezza: number, scale: number): boolean =>
   Math.abs(deviazioneGrezza) * scale >= BREATH_MIN_OFFSET;
-
-/**
- * Correzione ricavata dal confronto affiancato: quanto va sommato alla NOSTRA lettura perché
- * coincida con quella del meter vero.
- */
-export const offsetFromReference = (taRiferimento: number, taNostro: number): number =>
-  taRiferimento - taNostro;
 
 /** Applica la correzione della configurazione in uso. */
 export const taWithSetup = (ta: number, setup: ThetaSetup): number =>

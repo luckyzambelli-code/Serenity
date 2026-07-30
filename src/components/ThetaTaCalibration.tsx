@@ -1,79 +1,62 @@
 import React, { useState } from 'react';
 import { useI18n } from '../i18n';
-import { linearitaResidua, buildTaScale, taFromRaw, isFactoryScale,
-         type ThetaTaPoint, type ThetaTaScale } from '../engine/thetaTaScale';
-import { SQUEEZE_TARGET_OFFSET, type ElectrodeConfig, type ThetaSetup } from '../engine/thetaSetup';
+import {
+  linearitaResidua, buildTaScale, taFromRaw, isFactoryScale,
+  type ThetaTaPoint, type ThetaTaScale,
+} from '../engine/thetaTaScale';
 
 /**
- * ThetaTaCalibration — taratura del TONE ARM con l'ARTEFATTO FISICO del Theta-Meter.
+ * E-METER TESTER — taratura della scala del TA con l'ARTEFATTO FISICO.
  *
- * Il programma Theta-Meter può restare APERTO: i due leggono il dispositivo insieme, ed è anzi
- * il modo migliore di verificare — quadranti affiancati.
+ * L'artefatto si attacca al posto delle boîtes e ha un pulsante per ciascun valore di TA.
+ * Premendone uno, il meter legge la resistenza corrispondente: si registra, e con più coppie
+ * il TA diventa un numero VERO sulla scala del meter.
  *
- * L'artefatto si attacca al posto delle lattine e ha un pulsante per ciascun valore di TA
- * (2, 3, 4, 5). Premendone uno, il meter legge la resistenza corrispondente a QUEL TA: si
- * registra il grezzo, e con quattro coppie il TA diventa un numero VERO sulla scala del meter
- * invece di una grandezza relativa.
+ * ── PERCHÉ DIETRO UN BOTTONE ────────────────────────────────────────────────────────────────
+ * È uno strumento da laboratorio, non un comando di seduta: un auditor che non sa cosa sia
+ * l'artefatto non deve trovarsi davanti quattro campi numerici senza contesto. Si apre solo
+ * chiedendolo. Chi non ce l'ha non ne ha bisogno: la taratura di fabbrica è già dentro il
+ * programma, e si affina dal pannello TRIM confrontandosi col Theta-Meter.
  *
- * La lettura finale interpola FRA i punti, quindi non serve che il legame sia una retta. Lo
- * scarto dalla retta viene comunque mostrato: è un'informazione sull'apparecchio, e se è grande
- * dice che tarare due soli punti non sarebbe bastato.
+ * Qui NON stanno più: la configurazione degli elettrodi, il punto dal meter di riferimento e
+ * le due prove di inizio seduta. Le prime due sono regolazioni, e vivono nel TRIM accanto a
+ * quella dell'ago; le prove stanno nella schermata di prontezza, dove si guarda il quadrante.
  */
 
 /** I valori INCISI sull'artefatto — solo i valori di partenza dei campi.
  *  Il TA che il Theta-Meter MOSTRA premendo un pulsante può non coincidere: il suo programma
- *  applica correzioni sue (nelle preferenze ci sono correction/booster/gain). Ancorare la
- *  scala ai valori nominali invece che a quelli letti produce un errore che VARIA lungo la
- *  scala — misurato in seduta: +0,40 in una zona e −0,67 in un'altra, segno ribaltato.
- *  Quindi i valori sono MODIFICABILI: si scrive quello che mostra il meter vero. */
+ *  applica correzioni sue. Ancorare la scala ai nominali invece che ai valori letti produce un
+ *  errore che VARIA lungo la scala e ne inverte pure il segno — misurato: +0,40 in una zona e
+ *  −0,67 in un'altra. Quindi i campi sono MODIFICABILI: si scrive ciò che mostra il meter. */
 const VALORI_TA = [2, 3, 4, 5];
 
 export interface ThetaTaCalibrationProps {
-  /** Il grezzo in questo istante — si legge quando l'utente conferma un punto. */
+  /** La lettura in questo istante — si registra quando l'utente conferma un punto. */
   captureRaw: () => number;
-  /** Fissa la scala. Restituisce false se i punti sono inutilizzabili. */
   applyTaPoints: (points: ThetaTaPoint[], now: number) => boolean;
   clearTaCalibration: () => void;
-  /** La taratura già in uso, se c'è. */
   taScale: ThetaTaScale | null;
-  /** Il meter è collegato? Senza, non c'è nulla da leggere. */
   connected: boolean;
-  /** Che dispositivo si è agganciato (nome · VID:PID), per capire cosa sta succedendo. */
+  /** Che dispositivo si è agganciato (nome · VID:PID). */
   info?: string | null;
-  /** Letture valide e report scartati. È la diagnosi DECISIVA: collegato ma con zero letture
-   *  significa che si è agganciato a qualcosa che non è il meter, o che il meter non parla. */
+  /** Letture valide e scartate: « collegato » e « riceve » sono due cose diverse. */
   counters?: { ok: number; rejected: number };
-  /** Per collegarlo direttamente da qui, senza dover chiudere e cercare il badge. */
   onConnect?: () => void;
-  /** Il TA della lettura ISTANTANEA con la taratura SALVATA. `null` se non ancora tarato. */
+  /** Il TA istantaneo con la taratura salvata. */
   taNow: number | null;
-  /** La lettura grezza in questo istante — serve a verificare con la scala in ANTEPRIMA,
-   *  cioè con i punti appena registrati, prima ancora di salvare. */
+  /** La lettura grezza lisciata in questo istante. */
   rawNow: number;
-  /** Assetto: configurazione elettrodi + sensibilità. */
-  setup: ThetaSetup;
-  setConfig: (c: ElectrodeConfig) => void;
-  addPointFromReference: (taRiferimento: number) => void;
-  startSqueezeTest: () => void;
-  startBreathTest: () => void;
-  testing: null | 'squeeze' | 'breath';
-  testPeak: number;
-  breathOk: boolean | null;
   onClose: () => void;
 }
 
 export function ThetaTaCalibration({
-  captureRaw, applyTaPoints, clearTaCalibration, taScale, connected, info, counters, onConnect, taNow, rawNow,
-  setup, setConfig, addPointFromReference, startSqueezeTest, startBreathTest, testing, testPeak, breathOk, onClose,
+  captureRaw, applyTaPoints, clearTaCalibration, taScale, connected, info, counters,
+  onConnect, taNow, rawNow, onClose,
 }: ThetaTaCalibrationProps) {
   const { t } = useI18n();
   const [punti, setPunti] = useState<Record<number, number>>({});
-  /** Il TA effettivo di ciascun pulsante, come lo mostra il Theta-Meter. Parte dal valore
-   *  inciso e si corregge se il meter vero dice altro. */
   const [taReali, setTaReali] = useState<Record<number, string>>(
     Object.fromEntries(VALORI_TA.map(v => [v, String(v)])));
-  /** Il TA che legge il Theta-Meter in questo momento, digitato dall'utente. */
-  const [rif, setRif] = useState('');
   const [errore, setErrore] = useState<string | null>(null);
 
   const registra = (ta: number) => {
@@ -87,16 +70,13 @@ export function ThetaTaCalibration({
   const elenco: ThetaTaPoint[] = Object.entries(punti)
     .map(([k, raw]) => ({ ta: parseFloat(taReali[Number(k)] ?? k), raw }))
     .filter(p => Number.isFinite(p.ta));
-  // Si costruisce la scala SUBITO, per poter mostrare lo scarto dalla retta prima di salvare.
+  // Si costruisce la scala SUBITO, per mostrare l'effetto prima di salvare.
   const anteprima = elenco.length >= 2 ? buildTaScale(elenco, 0) : null;
   const scarto = anteprima ? linearitaResidua(anteprima) : 0;
-  // Si preferisce l'ANTEPRIMA alla scala salvata: durante la taratura si vuole vedere l'effetto
-  // dei punti che si stanno registrando, non di quelli vecchi.
   const vivo = anteprima ? taFromRaw(rawNow, anteprima) : taNow;
 
   const salva = () => {
     if (!applyTaPoints(elenco, Date.now())) {
-      // Il caso tipico: l'artefatto non era attaccato, quindi due punti hanno la stessa lettura.
       setErrore(t('theta_cal_bad_points') as string);
       return;
     }
@@ -118,20 +98,12 @@ export function ThetaTaCalibration({
                  borderRadius: 16, border: '1px solid rgba(245,158,11,0.35)',
                  background: 'linear-gradient(160deg, #2c2c31 0%, #1c1c20 100%)',
                  boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
-                 // Il pannello è cresciuto sezione dopo sezione e senza questo la parte bassa
-                 // finiva FUORI dallo schermo, irraggiungibile: « non vedo aggiungi punto ».
                  maxHeight: '90vh', overflowY: 'auto' }}>
 
-        <div style={{ ...eti, color: '#f59e0b', marginBottom: 4 }}>{t('theta_cal_title') as string}</div>
+        <div style={{ ...eti, color: '#f59e0b', marginBottom: 4 }}>{t('theta_tester') as string}</div>
         <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, lineHeight: 1.5,
-                      color: 'rgba(226,238,255,0.72)', marginBottom: 10 }}>
+                      color: 'rgba(226,238,255,0.72)', marginBottom: 14 }}>
           {t('theta_cal_intro') as string}
-        </div>
-        {/* Senza artefatto si tara comunque, confrontandosi col programma Theta-Meter: sono
-            due strade per la stessa cosa, e non dirlo lasciava bloccato chi non ce l'ha. */}
-        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, lineHeight: 1.5,
-                      color: '#34d399', marginBottom: 16 }}>
-          {t('theta_cal_no_artifact') as string}
         </div>
 
         {!connected ? (
@@ -151,15 +123,12 @@ export function ThetaTaCalibration({
             )}
           </div>
         ) : (
-          // Che cosa si è agganciato davvero. Su una macchina altrui è l'unico modo di sapere
-          // se il dispositivo trovato è il meter o qualcos'altro.
-          <div style={{ marginBottom: 12 }}>
+          <div style={{ marginBottom: 14 }}>
             <div style={{ fontFamily: 'monospace', fontSize: 10, color: 'rgba(226,238,255,0.45)' }}>
               {info || (t('theta_no_name') as string)}
             </div>
-            {/* LA diagnosi che conta: collegato è una cosa, RICEVERE è un'altra. Zero letture
-                significa che si è agganciato a qualcosa che non è il meter, o che il meter non
-                parla — e senza questo numero i due casi sono indistinguibili. */}
+            {/* « Collegato » e « riceve » sono due cose diverse: senza questo numero un
+                « non funziona » su una macchina altrui non è diagnosticabile. */}
             <div style={{ fontFamily: 'monospace', fontSize: 11, marginTop: 3,
                           color: (counters?.ok ?? 0) > 0 ? '#34d399' : '#f87171' }}>
               {(counters?.ok ?? 0) > 0
@@ -169,13 +138,12 @@ export function ThetaTaCalibration({
           </div>
         )}
 
-        {/* Una riga per valore inciso sull'artefatto. */}
+        {/* Una riga per pulsante dell'artefatto. Il campo ambra è il TA che mostra il METER,
+            non quello inciso: è quello che conta. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {VALORI_TA.map(ta => (
             <div key={ta} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ fontFamily: 'monospace', fontSize: 13, color: 'rgba(226,238,255,0.45)', width: 22 }}>{ta}</span>
-              {/* Il TA che mostra il METER VERO premendo questo pulsante. Modificabile: se il
-                  suo display non dice esattamente il valore inciso, è QUELLO che conta. */}
               <input value={taReali[ta] ?? ''} onChange={e => setTaReali(p => ({ ...p, [ta]: e.target.value }))}
                 inputMode="decimal"
                 style={{ width: 54, height: 24, borderRadius: 5, padding: '0 6px',
@@ -199,11 +167,8 @@ export function ThetaTaCalibration({
           ))}
         </div>
 
-        {/* VERIFICA DAL VIVO — che TA legge l'artefatto ADESSO.
-            Usa la scala in ANTEPRIMA (i punti appena registrati) appena ce ne sono due, e
-            ricade su quella salvata altrimenti: serve MENTRE si tara, non solo dopo. Prima la
-            si mostrava solo a taratura salvata, cioè proprio quando non serviva.
-            È la lettura ISTANTANEA, non il braccio: premuto un pulsante deve rispondere SUBITO. */}
+        {/* VERIFICA DAL VIVO — usa i punti appena registrati (anteprima) appena ce ne sono due:
+            serve MENTRE si tara, non solo dopo. */}
         {connected && (
           <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.10)',
                         display: 'flex', alignItems: 'baseline', gap: 10 }}>
@@ -220,128 +185,23 @@ export function ThetaTaCalibration({
 
         {/* Lo scarto dalla retta: informazione sull'apparecchio, non un ostacolo. */}
         {anteprima && elenco.length >= 3 && (
-          <div style={{ marginTop: 14, fontFamily: 'var(--font-sans)', fontSize: 10,
+          <div style={{ marginTop: 12, fontFamily: 'var(--font-sans)', fontSize: 10,
                         color: scarto > 0.05 ? '#fbbf24' : 'rgba(226,238,255,0.5)' }}>
             {(t('theta_cal_linearity') as string).replace('{v}', scarto.toFixed(3))}
           </div>
         )}
+
+        <div style={{ marginTop: 12, fontFamily: 'var(--font-sans)', fontSize: 9,
+                      color: isFactoryScale(taScale) ? 'rgba(226,238,255,0.45)' : '#34d399' }}>
+          {(isFactoryScale(taScale) ? t('theta_scale_factory') : t('theta_scale_own')) as string}
+          {taScale ? ` · ${taScale.points.length} pt` : ''}
+        </div>
 
         {errore && (
           <div style={{ marginTop: 12, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#f87171' }}>
             {errore}
           </div>
         )}
-
-        {/* ── ASSETTO ─────────────────────────────────────────────────────────────────────
-            La scala del TA sopra si tara UNA VOLTA e vale per chiunque. Qui invece c'è ciò che
-            dipende da COME si audita, e va rifatto se cambia la disposizione degli elettrodi. */}
-        <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.10)' }}>
-          <div style={{ ...eti, marginBottom: 4 }}>{t('theta_setup') as string}</div>
-          {/* La sensibilità NON è acquisita una volta per tutte: dipende da come QUEL preclear
-              tiene le lattine. Va detto, o si crederebbe che una volta fatta valga sempre. */}
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, lineHeight: 1.5, marginBottom: 10,
-                        color: setup.scaleMeasured ? 'rgba(226,238,255,0.5)' : '#fbbf24' }}>
-            {setup.scaleMeasured
-              ? (t('theta_setup_done') as string)
-              : (t('theta_setup_todo') as string)}
-          </div>
-
-          {/* Due lattine (una per mano) oppure, in SOLO AUDITING, una lattina sola fatta di
-              due mezze lattine. La geometria cambia la resistenza, quindi il TA letto. */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            {(['two-cans', 'solo-can'] as ElectrodeConfig[]).map(c => (
-              <button key={c} type="button" onClick={() => setConfig(c)}
-                style={{ flex: 1, height: 30, borderRadius: 8, cursor: 'pointer',
-                         fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600,
-                         letterSpacing: '0.06em', textTransform: 'uppercase',
-                         background: setup.config === c ? 'rgba(245,158,11,0.18)' : 'rgba(255,255,255,0.05)',
-                         border: `1px solid ${setup.config === c ? 'rgba(245,158,11,0.55)' : 'rgba(255,255,255,0.16)'}`,
-                         color: setup.config === c ? '#f59e0b' : 'rgba(226,238,255,0.6)' }}>
-                {t(c === 'two-cans' ? 'theta_two_cans' : 'theta_solo_can') as string}
-              </button>
-            ))}
-          </div>
-
-          {/* CORREZIONE contro il meter vero. I due programmi leggono il dispositivo NELLO STESSO
-              momento, quindi si guardano i quadranti affiancati e si scrive qui il valore che
-              legge il Theta-Meter: la correzione si ricava da sola, per questa configurazione. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <span style={{ ...eti, whiteSpace: 'nowrap' }}>{t('theta_ref_label') as string}</span>
-            <input value={rif} onChange={e => setRif(e.target.value)} placeholder="5.796"
-              inputMode="decimal"
-              style={{ width: 70, height: 26, borderRadius: 6, padding: '0 8px',
-                       fontFamily: 'monospace', fontSize: 12, textAlign: 'right',
-                       background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.2)',
-                       color: 'rgba(240,246,255,0.92)', outline: 'none' }} />
-            <button type="button"
-              /* NON si richiede una taratura preesistente: era un circolo vizioso — senza
-                 artefatto non si poteva cominciare, perché il pulsante restava spento finché
-                 non c'era già una scala. I primi due punti la CREANO. */
-              disabled={!connected || !rawNow || !Number.isFinite(parseFloat(rif))}
-              onClick={() => { addPointFromReference(parseFloat(rif)); setRif(''); }}
-              style={{ height: 26, padding: '0 10px', borderRadius: 6,
-                       cursor: 'pointer', opacity: connected && rawNow && Number.isFinite(parseFloat(rif)) ? 1 : 0.4,
-                       fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.06em',
-                       textTransform: 'uppercase', background: 'rgba(255,255,255,0.05)',
-                       border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(226,238,255,0.75)' }}>
-              {t('theta_ref_apply') as string}
-            </button>
-            {/* Da dove viene la scala in uso: di fabbrica (misurata una volta con l'artefatto e
-                spedita col programma) o misurata QUI. Aggiungere un punto parte sempre da quella
-                in uso e ci somma il nuovo, quindi si affina senza mai ripartire da zero. */}
-            <span style={{ fontFamily: 'monospace', fontSize: 11, minWidth: 52, textAlign: 'right',
-                           color: isFactoryScale(taScale) ? 'rgba(226,238,255,0.4)' : '#34d399' }}>
-              {taScale ? `${taScale.points.length} pt` : '—'}
-            </span>
-          </div>
-          <div style={{ marginTop: -6, marginBottom: 8, fontFamily: 'var(--font-sans)', fontSize: 9,
-                        color: isFactoryScale(taScale) ? 'rgba(226,238,255,0.45)' : '#34d399' }}>
-            {(isFactoryScale(taScale) ? t('theta_scale_factory') : t('theta_scale_own')) as string}
-          </div>
-          <div style={{ marginTop: -4, marginBottom: 10, fontFamily: 'var(--font-sans)', fontSize: 9,
-                        lineHeight: 1.5, color: 'rgba(226,238,255,0.45)' }}>
-            {t('theta_ref_hint') as string}
-          </div>
-
-          {/* LE DUE PROVE, in sequenza. La STRETTA fissa la sensibilità (un terzo di quadrante,
-              come la manopola del Theta-Meter); il RESPIRO la VERIFICA — l'ago deve cadere
-              almeno un minimo. Sono cose distinte: la seconda non ritocca la sensibilità. */}
-          {([
-            { k: 'squeeze' as const, start: startSqueezeTest, lbl: 'theta_squeeze' as const, hint: 'theta_squeeze_hint' as const },
-            { k: 'breath' as const,  start: startBreathTest,  lbl: 'theta_breath' as const,  hint: 'theta_breath_hint' as const },
-          ]).map(pr => (
-            <div key={pr.k} style={{ marginBottom: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button type="button" disabled={!connected || testing !== null} onClick={pr.start}
-                  style={{ flex: 1, height: 28, borderRadius: 7,
-                           cursor: connected && testing === null ? 'pointer' : 'default',
-                           opacity: connected ? 1 : 0.4,
-                           fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600,
-                           letterSpacing: '0.06em', textTransform: 'uppercase',
-                           background: testing === pr.k ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.05)',
-                           border: `1px solid ${testing === pr.k ? 'rgba(52,211,153,0.6)' : 'rgba(255,255,255,0.18)'}`,
-                           color: testing === pr.k ? '#34d399' : 'rgba(226,238,255,0.75)' }}>
-                  {testing === pr.k ? (t('theta_test_running') as string) : (t(pr.lbl) as string)}
-                </button>
-                <span style={{ fontFamily: 'monospace', fontSize: 11, minWidth: 60, textAlign: 'right',
-                               color: pr.k === 'breath' && breathOk === false ? '#f87171' : 'rgba(226,238,255,0.55)' }}>
-                  {pr.k === 'squeeze'
-                    ? (setup.needleScale ? (SQUEEZE_TARGET_OFFSET / setup.needleScale / 1000).toFixed(0) + 'k' : '—')
-                    : (breathOk === null ? '—' : breathOk ? '✓' : '✗')}
-                </span>
-              </div>
-              <div style={{ marginTop: 4, fontFamily: 'var(--font-sans)', fontSize: 9, lineHeight: 1.5,
-                            color: 'rgba(226,238,255,0.45)' }}>
-                {t(pr.hint) as string}
-              </div>
-            </div>
-          ))}
-                    {testing !== null && (
-            <div style={{ fontFamily: 'monospace', fontSize: 10, color: '#34d399' }}>
-              {Math.round(testPeak).toLocaleString('it')}
-            </div>
-          )}
-        </div>
 
         <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
           <button type="button" onClick={onClose}
@@ -363,7 +223,7 @@ export function ThetaTaCalibration({
           </button>
         </div>
 
-        {taScale && (
+        {!isFactoryScale(taScale) && (
           <button type="button" onClick={() => { clearTaCalibration(); setPunti({}); }}
             style={{ marginTop: 10, width: '100%', height: 26, borderRadius: 7, cursor: 'pointer',
                      fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.1em',

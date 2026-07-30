@@ -32,6 +32,8 @@ export interface ThetaReadyCheckProps {
   scaleMeasured: boolean;
   /** Esito dell'ultimo respiro: null = non fatto, false = sotto la fall. */
   breathOk: boolean | null;
+  /** Esito dell'ultima stretta: la caduta corrisponde al terzo di quadrante? */
+  squeezeOk: boolean | null;
   /** Quale prova è in corso. */
   testing: null | 'squeeze' | 'breath';
   /** Deviazione di picco della prova in corso, in unità di quadrante — si vede salire. */
@@ -48,7 +50,7 @@ export interface ThetaReadyCheckProps {
 }
 
 export function ThetaReadyCheck({
-  scaleMeasured, breathOk, testing, peakOffset,
+  scaleMeasured, breathOk, squeezeOk, testing, peakOffset,
   startSqueezeTest, startBreathTest, sensTrim, setSensTrim, onProceed, onCancel,
 }: ThetaReadyCheckProps) {
   const { t } = useI18n();
@@ -59,8 +61,8 @@ export function ThetaReadyCheck({
       titolo: t('theta_squeeze') as string,
       spiega: t('theta_squeeze_hint') as string,
       soglia: SQUEEZE_TARGET_OFFSET,
-      fatto: scaleMeasured,
-      fallito: false,
+      fatto: scaleMeasured && squeezeOk !== false,
+      fallito: squeezeOk === false,
       start: startSqueezeTest,
       // Il respiro non si può giudicare finché la sensibilità non è fissata: si leggerebbe
       // un'ampiezza su una scala che non è ancora quella giusta.
@@ -130,14 +132,29 @@ export function ThetaReadyCheck({
                          padding: '7px 14px', borderRadius: 8,
                          cursor: testing === null && p.pronto ? 'pointer' : 'default',
                          opacity: p.pronto ? 1 : 0.35,
-                         background: testing === p.k ? 'rgba(52,211,153,0.2)' : 'rgba(245,158,11,0.16)',
-                         border: `1px solid ${testing === p.k ? 'rgba(52,211,153,0.6)' : 'rgba(245,158,11,0.5)'}`,
-                         color: testing === p.k ? '#34d399' : '#f59e0b' }}>
+                         // Una volta riuscita, « rifai » va in GRIGIO: in arancione sembrava un
+                         // avviso, e contraddiceva il segno di spunta verde a sinistra —
+                         // segnalato in seduta come fonte di errori di lettura.
+                         background: testing === p.k ? 'rgba(52,211,153,0.2)'
+                                   : p.fatto ? 'rgba(255,255,255,0.06)' : 'rgba(245,158,11,0.16)',
+                         border: `1px solid ${testing === p.k ? 'rgba(52,211,153,0.6)'
+                                   : p.fatto ? 'rgba(255,255,255,0.2)' : 'rgba(245,158,11,0.5)'}`,
+                         color: testing === p.k ? '#34d399'
+                              : p.fatto ? 'rgba(226,238,255,0.6)' : '#f59e0b' }}>
                 {testing === p.k ? (t('theta_test_running') as string)
                   : p.fatto ? (t('theta_cal_again') as string)
                   : (t('theta_cal_record') as string)}
               </button>
             </div>
+
+            {/* VERDETTO esplicito: « corrisponde » o « non corrisponde ». Il segno di spunta
+                da solo non bastava a dirlo, e il colore del bottone diceva il contrario. */}
+            {testing !== p.k && (p.fatto || p.fallito) && (
+              <div style={{ marginTop: 6, fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 700,
+                            letterSpacing: '0.06em', color: p.fatto ? '#34d399' : '#f87171' }}>
+                {(p.fatto ? t('theta_matches') : t('theta_matches_not')) as string}
+              </div>
+            )}
 
             <div style={{ marginTop: 8, fontFamily: 'var(--font-sans)', fontSize: 11, lineHeight: 1.5,
                           color: 'rgba(226,238,255,0.5)' }}>
@@ -155,14 +172,17 @@ export function ThetaReadyCheck({
                 </span>
                 {([-1, 1] as const).map(v => (
                   <button key={v} type="button" onClick={() => setSensTrim(sensTrim + v)}
-                    style={{ width: 28, height: 24, borderRadius: 6, cursor: 'pointer',
-                             fontFamily: 'monospace', fontSize: 14, fontWeight: 700,
-                             background: 'rgba(255,255,255,0.06)',
-                             border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(235,244,255,0.85)' }}>
+                    /* Erano 28×24 e non si vedevano: qui si regola guardando l'ago, quindi il
+                       bersaglio dev'essere grande abbastanza da colpirlo senza guardarlo. */
+                    style={{ width: 46, height: 38, borderRadius: 9, cursor: 'pointer',
+                             fontFamily: 'monospace', fontSize: 22, fontWeight: 700, lineHeight: 1,
+                             background: 'rgba(245,158,11,0.14)',
+                             border: '1px solid rgba(245,158,11,0.5)', color: '#f59e0b' }}>
                     {v > 0 ? '+' : '−'}
                   </button>
                 ))}
-                <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(226,238,255,0.55)' }}>
+                <span style={{ fontFamily: 'monospace', fontSize: 16, fontWeight: 700,
+                               color: 'rgba(240,246,255,0.9)', minWidth: 30, textAlign: 'right' }}>
                   {sensTrim > 0 ? '+' : ''}{sensTrim}
                 </span>
               </div>
