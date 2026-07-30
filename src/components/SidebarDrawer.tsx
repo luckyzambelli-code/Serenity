@@ -654,7 +654,6 @@ function ConfigDrawer({ t, theme, lang }: SubProps) {
   const setWallpaperUrl = useUiStore(s => s.setWallpaperUrl);
   const uiAlpha         = useUiStore(s => s.uiAlpha);
   const setUiAlpha      = useUiStore(s => s.setUiAlpha);
-  const setShowTaCalib  = useUiStore(s => s.setShowTaCalib);
 
   const moduleVis        = useLayoutStore(s => s.moduleVis);
   const setModuleVis     = useLayoutStore(s => s.setModuleVis);
@@ -840,16 +839,6 @@ function ConfigDrawer({ t, theme, lang }: SubProps) {
         </button>
       </div>
 
-      <div style={{ height: 1, background: `${labelColor}33`, margin: '8px 0 6px' }} />
-
-      {/* Calibration TA (vs meter réel) */}
-      <button
-        onClick={() => setShowTaCalib(true)}
-        className="glass-btn"
-        style={{ width: '100%', padding: '9px', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}
-      >
-        🎚 {lang === 'it' ? 'Calibrazione TA' : lang === 'fr' ? 'Calibrage TA' : lang === 'es' ? 'Calibración TA' : lang === 'sv' ? 'TA-kalibrering' : 'TA calibration'}
-      </button>
 
       <div style={{ height: 1, background: `${labelColor}33`, margin: '8px 0 6px' }} />
 

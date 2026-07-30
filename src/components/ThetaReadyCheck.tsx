@@ -38,13 +38,18 @@ export interface ThetaReadyCheckProps {
   peakOffset: number;
   startSqueezeTest: () => void;
   startBreathTest: () => void;
+  /** La MANOPOLA della sensibilità, −10..+10. Sta qui perché è QUI che serve: la stretta esiste
+   *  proprio per tarare l'ago, e se non dà un terzo di quadrante si corregge sul posto invece di
+   *  dover chiudere, aprire un altro pannello e tornare. */
+  sensTrim: number;
+  setSensTrim: (v: number) => void;
   onProceed: () => void;
   onCancel: () => void;
 }
 
 export function ThetaReadyCheck({
   scaleMeasured, breathOk, testing, peakOffset,
-  startSqueezeTest, startBreathTest, onProceed, onCancel,
+  startSqueezeTest, startBreathTest, sensTrim, setSensTrim, onProceed, onCancel,
 }: ThetaReadyCheckProps) {
   const { t } = useI18n();
 
@@ -138,6 +143,30 @@ export function ThetaReadyCheck({
                           color: 'rgba(226,238,255,0.5)' }}>
               {p.spiega}
             </div>
+
+            {/* LA MANOPOLA, sotto la stretta: è la prova che TARA la sensibilità, quindi se la
+                caduta non arriva a un terzo di quadrante si corregge qui, guardando l'ago, senza
+                andare a cercarla altrove. La stretta la fissa da sola; questo è il ritocco. */}
+            {p.k === 'squeeze' && (
+              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.12em',
+                               textTransform: 'uppercase', color: 'rgba(226,238,255,0.45)' }}>
+                  {t('theta_sensitivity') as string}
+                </span>
+                {([-1, 1] as const).map(v => (
+                  <button key={v} type="button" onClick={() => setSensTrim(sensTrim + v)}
+                    style={{ width: 28, height: 24, borderRadius: 6, cursor: 'pointer',
+                             fontFamily: 'monospace', fontSize: 14, fontWeight: 700,
+                             background: 'rgba(255,255,255,0.06)',
+                             border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(235,244,255,0.85)' }}>
+                    {v > 0 ? '+' : '−'}
+                  </button>
+                ))}
+                <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(226,238,255,0.55)' }}>
+                  {sensTrim > 0 ? '+' : ''}{sensTrim}
+                </span>
+              </div>
+            )}
 
             {/* Barra dell'ampiezza raggiunta, durante la prova: si VEDE se si sta arrivando
                 alla soglia, invece di scoprirlo solo alla fine. */}

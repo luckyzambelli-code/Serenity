@@ -3627,10 +3627,13 @@ export default function App() {
     // pretendeva il Muse e faceva abortire l'avvio — con le sole boîtes la seduta non partiva
     // affatto. Ora il Muse si TENTA (comodo: se c'è, si aggancia da solo) ma la sua assenza
     // ferma l'avvio SOLO se non c'è nemmeno il meter.
+    // Col METER collegato NON si va a cercare il Muse: e' una configurazione scelta, non una
+    // mancanza da rimediare. Tentarlo comunque apriva la ricerca a ogni avvio — segnalato in
+    // seduta. Chi vuole entrambi collega il Muse dal suo badge, deliberatamente.
     const thetaLive = thetaConnectedRef.current;
-    if (!isAuditorMode && museConnection !== 'connected') {
+    if (!isAuditorMode && museConnection !== 'connected' && !thetaLive) {
       const connected = await handleConnectMuse();
-      if (!connected && !thetaLive) {
+      if (!connected) {
         // FIX CONN-60: make it clear WHY nothing started — la seduta ha bisogno di ALMENO
         // uno strumento. Flash a transient hint instead of silently aborting.
         setMuseHint(true);
@@ -5517,6 +5520,8 @@ export default function App() {
               peakOffset={theta.testPeakOffset}
               startSqueezeTest={theta.startSqueezeTest}
               startBreathTest={theta.startBreathTest}
+              sensTrim={theta.setup.sensTrim}
+              setSensTrim={theta.setSensTrim}
               onProceed={() => { setMetabolicOpen(false); void handleStart(); }}
               onCancel={() => setMetabolicOpen(false)}
             />
