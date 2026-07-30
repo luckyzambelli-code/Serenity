@@ -45,13 +45,18 @@ export interface ThetaReadyCheckProps {
    *  dover chiudere, aprire un altro pannello e tornare. */
   sensTrim: number;
   setSensTrim: (v: number) => void;
+  /** Come sono tenute le boîtes. Va scelto PRIMA delle prove: la geometria degli elettrodi
+   *  cambia la resistenza, quindi la sensibilità misurata con due boîtes non vale per una
+   *  boîte sola — si tarerebbe su una configurazione e si auditerebbe su un'altra. */
+  config: 'two-cans' | 'solo-can';
+  setConfig: (c: 'two-cans' | 'solo-can') => void;
   onProceed: () => void;
   onCancel: () => void;
 }
 
 export function ThetaReadyCheck({
   scaleMeasured, breathOk, squeezeOk, testing, peakOffset,
-  startSqueezeTest, startBreathTest, sensTrim, setSensTrim, onProceed, onCancel,
+  startSqueezeTest, startBreathTest, sensTrim, setSensTrim, config, setConfig, onProceed, onCancel,
 }: ThetaReadyCheckProps) {
   const { t } = useI18n();
 
@@ -107,6 +112,29 @@ export function ThetaReadyCheck({
           <div style={{ marginTop: 6, fontFamily: 'var(--font-sans)', fontSize: 11, lineHeight: 1.5,
                         color: '#f59e0b' }}>
             {t('theta_watch_needle') as string}
+          </div>
+        </div>
+
+        {/* PRIMA di tutto: come sono tenute. La sensibilità misurata con due boîtes non vale
+            per una boîte sola, quindi sceglierlo dopo le prove significherebbe tararsi su una
+            configurazione e auditare su un'altra. */}
+        <div>
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.14em',
+                        textTransform: 'uppercase', color: 'rgba(226,238,255,0.45)', marginBottom: 6 }}>
+            {t('theta_how_held') as string}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(['two-cans', 'solo-can'] as const).map(c => (
+              <button key={c} type="button" onClick={() => setConfig(c)}
+                style={{ flex: 1, height: 36, borderRadius: 9, cursor: 'pointer',
+                         fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600,
+                         letterSpacing: '0.05em',
+                         background: config === c ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)',
+                         border: `1px solid ${config === c ? 'rgba(245,158,11,0.65)' : 'rgba(255,255,255,0.16)'}`,
+                         color: config === c ? '#f59e0b' : 'rgba(226,238,255,0.65)' }}>
+                {t(c === 'two-cans' ? 'theta_two_cans' : 'theta_solo_can') as string}
+              </button>
+            ))}
           </div>
         </div>
 

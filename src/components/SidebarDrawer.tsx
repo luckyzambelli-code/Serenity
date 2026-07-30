@@ -47,6 +47,9 @@ interface SidebarDrawerProps {
   thetaSensTrim?: number;
   setThetaSensTrim?: (v: number) => void;
   thetaConnected?: boolean;
+  /** Il MUSE è collegato? Le sue manopole compaiono solo allora: mescolate a quelle delle
+   *  boîtes senza etichetta, non si capiva quale muovesse quale ago. */
+  museConnected?: boolean;
   /** Configurazione degli elettrodi: due boîtes o boîte solo (SOLO AUDITING). */
   thetaConfig?: 'two-cans' | 'solo-can';
   setThetaConfig?: (c: 'two-cans' | 'solo-can') => void;
@@ -474,7 +477,7 @@ function PcDrawer({ capturePcPhoto, t, theme }: SubProps) {
 // TRIM
 // ============================================================================
 function TrimDrawer({ needleTrim, setNeedleTrim, needleInertia, setNeedleInertia,
-                     thetaSensTrim = 0, setThetaSensTrim, thetaConnected = false,
+                     thetaSensTrim = 0, setThetaSensTrim, thetaConnected = false, museConnected = false,
                      thetaConfig = 'two-cans', setThetaConfig, thetaAddPoint,
                      thetaTaNow = null, onOpenThetaTester, t, theme }: SubProps) {
   const { titleColor, labelColor, inputBg, inputBorder } = theme;
@@ -483,103 +486,19 @@ function TrimDrawer({ needleTrim, setNeedleTrim, needleInertia, setNeedleInertia
   const inertia = needleInertia ?? 90;
   return (
     <>
+      {/* ── MUSE ─────────────────────────────────────────────────────────────────────────
+          Compare SOLO col Muse collegato, e dice a chiare lettere che è la sensibilità del
+          SUO ago: mescolata a quella delle boîtes senza etichetta, non si capiva quale
+          manopola muovesse quale ago. */}
+      {museConnected && (<>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.18em',
+                    color: titleColor, textTransform: 'uppercase', marginBottom: 2 }}>
+        MUSE
+      </div>
       <div style={{ fontSize: 9, color: labelColor, lineHeight: 1.5 }}>
         {t('trim_centering') as string}
       </div>
 
-      {/* ── SENSIBILITÉ DES BOÎTES (Theta-Meter) ────────────────────────────────────────────
-          Ici et pas dans la fenêtre d'étalonnage : celle-ci COUVRE le cadran, et on règle une
-          sensibilité en REGARDANT l'aiguille. Le tiroir, lui, est latéral.
-          À refaire à chaque séance : la sensibilité dépend de la façon dont CE préclair tient
-          les boîtes (l'épreuve de la pression donne le point de départ, ceci l'affine). */}
-      {thetaConnected && setThetaSensTrim && (
-        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.10)' }}>
-          <div className="flex items-center justify-between">
-            <span style={{ fontSize: 9, color: '#f59e0b', letterSpacing: '0.15em' }}>
-              {(t('theta_cans') || 'LATTINE').toUpperCase()}
-            </span>
-            <span style={{ fontSize: 11, fontWeight: 'bold', padding: '2px 8px', borderRadius: 4,
-                           color: '#f59e0b', background: 'rgba(245,158,11,0.15)' }}>
-              {thetaSensTrim > 0 ? '+' : ''}{thetaSensTrim}
-            </span>
-          </div>
-          <input
-            type="range" min={-10} max={10} step={1} value={thetaSensTrim}
-            onChange={e => setThetaSensTrim(parseFloat(e.target.value))}
-            className="glass-range" style={{ width: '100%' }}
-          />
-          <div className="flex justify-between" style={{ fontSize: 8, color: labelColor }}>
-            <span>−10</span><span>0</span><span>+10</span>
-          </div>
-
-          {/* ── COME SONO TENUTE LE BOÎTES ────────────────────────────────────────────────
-              Due boîtes, una per mano — oppure, in SOLO AUDITING, una boîte sola fatta di due
-              mezze boîtes. Cambia la geometria degli elettrodi, quindi la resistenza: lo stesso
-              preclear legge un TA diverso nelle due configurazioni. */}
-          <div style={{ marginTop: 12 }}>
-            <div style={{ fontSize: 9, color: labelColor, letterSpacing: '0.15em', marginBottom: 6 }}>
-              {(t('theta_how_held') || '').toUpperCase()}
-            </div>
-            <div className="flex gap-2">
-              {(['two-cans', 'solo-can'] as const).map(c => (
-                <button key={c} onClick={() => setThetaConfig?.(c)}
-                  style={{ flex: 1, padding: '7px 4px', borderRadius: 6, fontSize: 10, cursor: 'pointer',
-                           background: thetaConfig === c ? 'rgba(245,158,11,0.18)' : inputBg,
-                           border: thetaConfig === c ? '1px solid rgba(245,158,11,0.6)' : inputBorder,
-                           color: thetaConfig === c ? '#f59e0b' : titleColor }}>
-                  {t(c === 'two-cans' ? 'theta_two_cans' : 'theta_solo_can')}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* ── AFFINARE LA SCALA CONFRONTANDOSI COL THETA-METER ──────────────────────────
-              I due programmi leggono il dispositivo insieme: si guardano i quadranti affiancati
-              e si scrive il TA che mostra il meter. Non è una correzione costante — AGGIUNGE un
-              punto alla scala, quindi corregge la forma proprio dove serve. */}
-          <div style={{ marginTop: 12 }}>
-            <div style={{ fontSize: 9, color: labelColor, letterSpacing: '0.15em', marginBottom: 4 }}>
-              {(t('theta_refine') || '').toUpperCase()}
-            </div>
-            <div style={{ fontSize: 9, color: labelColor, lineHeight: 1.5, marginBottom: 6 }}>
-              {t('theta_refine_hint')}
-            </div>
-            <div className="flex items-center gap-2">
-              <span style={{ fontSize: 10, color: labelColor, whiteSpace: 'nowrap' }}>
-                {t('theta_we_read')}
-              </span>
-              <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 700, color: '#f59e0b' }}>
-                {thetaTaNow !== null ? thetaTaNow.toFixed(2) : '—'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2" style={{ marginTop: 6 }}>
-              <input value={rifTa} onChange={e => setRifTa(e.target.value)} placeholder="5.80"
-                inputMode="decimal"
-                style={{ width: 62, height: 26, borderRadius: 5, padding: '0 7px',
-                         fontFamily: 'monospace', fontSize: 12, textAlign: 'right',
-                         background: inputBg, border: inputBorder, color: titleColor, outline: 'none' }} />
-              <button
-                disabled={!Number.isFinite(parseFloat(rifTa))}
-                onClick={() => { thetaAddPoint?.(parseFloat(rifTa)); setRifTa(''); }}
-                style={{ flex: 1, padding: '6px', borderRadius: 5, fontSize: 10, cursor: 'pointer',
-                         opacity: Number.isFinite(parseFloat(rifTa)) ? 1 : 0.4,
-                         background: inputBg, border: inputBorder, color: titleColor }}>
-                {t('theta_ref_apply')}
-              </button>
-            </div>
-          </div>
-
-          {/* L'artefatto è uno strumento da laboratorio: dietro un bottone, per non mettere
-              quattro campi numerici senza contesto davanti a chi non sa cosa sia. */}
-          {onOpenThetaTester && (
-            <button onClick={onOpenThetaTester} className="glass-btn"
-              style={{ width: '100%', marginTop: 12, padding: '8px', fontSize: 10,
-                       letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              🎚 {t('theta_tester')}
-            </button>
-          )}
-        </div>
-      )}
       <div className="flex items-center justify-between" style={{ marginTop: 4 }}>
         <span style={{ fontSize: 9, color: labelColor, letterSpacing: '0.15em' }}>{(t('trim_sensitivity') || 'SENSIBILITÀ').toUpperCase()}</span>
         <span
@@ -635,6 +554,121 @@ function TrimDrawer({ needleTrim, setNeedleTrim, needleInertia, setNeedleInertia
           <div className="flex justify-between" style={{ fontSize: 8, color: labelColor }}>
             <span>0</span><span>50</span><span>100</span>
           </div>
+        </div>
+      )}
+      </>)}
+
+      {/* ── BOÎTES ───────────────────────────────────────────────────────────────────────
+          Intestazione grande e separata: mescolate al MUSE senza stacco, non si capiva
+          quale manopola muovesse quale ago. */}
+      {thetaConnected && (
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(245,158,11,0.28)' }}>
+          <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: '0.16em',
+                        color: '#f59e0b', textTransform: 'uppercase', marginBottom: 10 }}>
+            {t('theta_cans')}
+          </div>
+      {/* ── SENSIBILITÉ DES BOÎTES (Theta-Meter) ────────────────────────────────────────────
+          Ici et pas dans la fenêtre d'étalonnage : celle-ci COUVRE le cadran, et on règle une
+          sensibilité en REGARDANT l'aiguille. Le tiroir, lui, est latéral.
+          À refaire à chaque séance : la sensibilité dépend de la façon dont CE préclair tient
+          les boîtes (l'épreuve de la pression donne le point de départ, ceci l'affine). */}
+          {setThetaSensTrim && (
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.10)' }}>
+          <div className="flex items-center justify-between">
+            <span style={{ fontSize: 9, color: labelColor, letterSpacing: '0.15em' }}>
+              {(t('theta_needle_sens') || '').toUpperCase()}
+            </span>
+            <span style={{ fontSize: 11, fontWeight: 'bold', padding: '2px 8px', borderRadius: 4,
+                           color: '#f59e0b', background: 'rgba(245,158,11,0.15)' }}>
+              {thetaSensTrim > 0 ? '+' : ''}{thetaSensTrim}
+            </span>
+          </div>
+          <input
+            type="range" min={-10} max={10} step={1} value={thetaSensTrim}
+            onChange={e => setThetaSensTrim(parseFloat(e.target.value))}
+            className="glass-range" style={{ width: '100%' }}
+          />
+          <div className="flex justify-between" style={{ fontSize: 8, color: labelColor }}>
+            <span>−10</span><span>0</span><span>+10</span>
+          </div>
+
+          {/* ── COME SONO TENUTE LE BOÎTES ────────────────────────────────────────────────
+              Due boîtes, una per mano — oppure, in SOLO AUDITING, una boîte sola fatta di due
+              mezze boîtes. Cambia la geometria degli elettrodi, quindi la resistenza: lo stesso
+              preclear legge un TA diverso nelle due configurazioni. */}
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 9, color: labelColor, letterSpacing: '0.15em', marginBottom: 6 }}>
+              {(t('theta_how_held') || '').toUpperCase()}
+            </div>
+            <div className="flex gap-2">
+              {(['two-cans', 'solo-can'] as const).map(c => (
+                <button key={c} onClick={() => setThetaConfig?.(c)}
+                  style={{ flex: 1, padding: '7px 4px', borderRadius: 6, fontSize: 10, cursor: 'pointer',
+                           background: thetaConfig === c ? 'rgba(245,158,11,0.18)' : inputBg,
+                           border: thetaConfig === c ? '1px solid rgba(245,158,11,0.6)' : inputBorder,
+                           color: thetaConfig === c ? '#f59e0b' : titleColor }}>
+                  {t(c === 'two-cans' ? 'theta_two_cans' : 'theta_solo_can')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── AFFINARE LA SCALA CONFRONTANDOSI COL THETA-METER ──────────────────────────
+              I due programmi leggono il dispositivo insieme: si guardano i quadranti affiancati
+              e si scrive il TA che mostra il meter. Non è una correzione costante — AGGIUNGE un
+              punto alla scala, quindi corregge la forma proprio dove serve. */}
+          <div style={{ marginTop: 12 }}>
+            {/* « Affinare la scala » da solo non diceva DI COSA: e' la scala del TA. */}
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em',
+                          color: titleColor, marginBottom: 4 }}>
+              TA — {t('theta_refine')}
+            </div>
+            <div style={{ fontSize: 9, color: labelColor, lineHeight: 1.5, marginBottom: 6 }}>
+              {t('theta_refine_hint')}
+            </div>
+            <div className="flex items-center gap-2">
+              <span style={{ fontSize: 10, color: labelColor, whiteSpace: 'nowrap' }}>
+                {t('theta_we_read')}
+              </span>
+              <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 700, color: '#f59e0b' }}>
+                {thetaTaNow !== null ? thetaTaNow.toFixed(2) : '—'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2" style={{ marginTop: 6 }}>
+              <input value={rifTa} onChange={e => setRifTa(e.target.value)} placeholder="5.80"
+                inputMode="decimal"
+                style={{ width: 62, height: 26, borderRadius: 5, padding: '0 7px',
+                         fontFamily: 'monospace', fontSize: 12, textAlign: 'right',
+                         background: inputBg, border: inputBorder, color: titleColor, outline: 'none' }} />
+              <button
+                disabled={!Number.isFinite(parseFloat(rifTa))}
+                onClick={() => { thetaAddPoint?.(parseFloat(rifTa)); setRifTa(''); }}
+                style={{ flex: 1, padding: '6px', borderRadius: 5, fontSize: 10, cursor: 'pointer',
+                         opacity: Number.isFinite(parseFloat(rifTa)) ? 1 : 0.4,
+                         background: inputBg, border: inputBorder, color: titleColor }}>
+                {t('theta_ref_apply')}
+              </button>
+            </div>
+          </div>
+
+          {/* L'artefatto è uno strumento da laboratorio: dietro un bottone, per non mettere
+              quattro campi numerici senza contesto davanti a chi non sa cosa sia. */}
+          {onOpenThetaTester && (
+            <>
+              <button onClick={onOpenThetaTester} className="glass-btn"
+                style={{ width: '100%', marginTop: 12, padding: '8px', fontSize: 10,
+                         letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                🎚 {t('theta_tester')}
+              </button>
+              {/* Chi non ha l'artefatto non deve nemmeno aprirlo: la taratura di fabbrica
+                  e' gia' dentro, e si affina qui sopra col Theta-Meter affiancato. */}
+              <div style={{ fontSize: 9, color: labelColor, lineHeight: 1.5, marginTop: 4 }}>
+                {t('theta_tester_hint')}
+              </div>
+            </>
+          )}
+          </div>
+          )}
         </div>
       )}
     </>

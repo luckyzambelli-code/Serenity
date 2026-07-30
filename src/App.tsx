@@ -4565,6 +4565,7 @@ export default function App() {
             thetaSensTrim={theta.setup.sensTrim}
             setThetaSensTrim={theta.setSensTrim}
             thetaConnected={theta.status === 'connected'}
+            museConnected={instruments.muse}
             thetaConfig={theta.setup.config}
             setThetaConfig={theta.setConfig}
             thetaAddPoint={theta.addPointFromReference}
@@ -5509,6 +5510,8 @@ export default function App() {
               startBreathTest={theta.startBreathTest}
               sensTrim={theta.setup.sensTrim}
               setSensTrim={theta.setSensTrim}
+              config={theta.setup.config}
+              setConfig={theta.setConfig}
               onProceed={() => { setMetabolicOpen(false); void handleStart(); }}
               onCancel={() => setMetabolicOpen(false)}
             />
