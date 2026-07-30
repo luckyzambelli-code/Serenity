@@ -4977,7 +4977,12 @@ export default function App() {
                   <TotalTaReadout isLightTheme={isLightTheme} label={t('total_ta')}
                     override={theta.status === 'connected' ? theta.totalTa : null}
                     bodyMotion={theta.bodyMotion} />
-                  <SpeedReadout isLightTheme={isLightTheme} label={t('mental_processing_velocity') as string} />
+                  {/* VELOCITÀ DI RILASCIO: viene dalla velocità di elaborazione mentale, cioè
+                      dall'EEG. Con le sole boîtes non ha sorgente — mostrarla ferma accanto a
+                      numeri veri la farebbe passare per una misura. */}
+                  {instruments.muse && (
+                    <SpeedReadout isLightTheme={isLightTheme} label={t('mental_processing_velocity') as string} />
+                  )}
                 </Panel3D>
               )}
 

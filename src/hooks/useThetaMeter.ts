@@ -290,7 +290,11 @@ export function useThetaMeter() {
       testRef.current.on = false;
       setState(p => ({
         ...p, testing: null, testPeak: testRef.current.peak,
-        breathOk: breathIsValid(testRef.current.peak, p.setup.needleScale),
+        // ⚠️ effectiveScale, NON needleScale: quest'ultima è la BASE, senza il ritocco della
+        // manopola. L'ago si muove secondo la sensibilità EFFETTIVA (base × trim), quindi
+        // giudicare con la base sottostimava la caduta — si vedeva una fall ampia e il verdetto
+        // diceva « non corrisponde ». La stretta usava già quella giusta; il respiro no.
+        breathOk: breathIsValid(testRef.current.peak, effectiveScale(p.setup)),
       }));
     }, BREATH_TEST_MS);
   }, []);

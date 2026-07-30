@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  scaleFromSqueeze, breathIsValid, taWithSetup, defaultSetup,
+  scaleFromSqueeze, breathIsValid, taWithSetup, defaultSetup, effectiveScale,
   SQUEEZE_TARGET_OFFSET, BREATH_MIN_OFFSET, type ThetaSetup,
 } from '../thetaSetup';
 
@@ -37,6 +37,28 @@ describe('sensibilità dalla PROVA DELLA STRETTA', () => {
     expect(scaleFromSqueeze(0)).toBeNull();
     expect(scaleFromSqueeze(0.5)).toBeNull();
     expect(scaleFromSqueeze(NaN)).toBeNull();
+  });
+});
+
+// ── IL TRIM VA INCLUSO NEL GIUDIZIO ────────────────────────────────────────────────────────
+// Segnalato in seduta: caduta ben oltre una fall, e il verdetto diceva « non corrisponde ».
+// Il respiro giudicava con la sensibilità di BASE, ignorando il ritocco della manopola — ma
+// l'ago si muove secondo quella EFFETTIVA.
+describe('sensibilità effettiva = base × trim', () => {
+  it('il trim POSITIVO alza la sensibilità effettiva', () => {
+    const s: ThetaSetup = { config: 'two-cans', offsets: { 'two-cans': 0, 'solo-can': 0 },
+                            needleScale: 1e-6, scaleMeasured: true, sensTrim: 4 };
+    expect(effectiveScale(s)).toBeGreaterThan(s.needleScale);
+  });
+
+  it('una caduta giudicata NO con la base può essere SÌ con quella effettiva', () => {
+    const base = 1e-6;
+    const s: ThetaSetup = { config: 'two-cans', offsets: { 'two-cans': 0, 'solo-can': 0 },
+                            needleScale: base, scaleMeasured: true, sensTrim: 8 };
+    // Deviazione che con la BASE non arriva alla fall, ma con il trim sì.
+    const dev = 300_000;
+    expect(breathIsValid(dev, base)).toBe(false);
+    expect(breathIsValid(dev, effectiveScale(s))).toBe(true);
   });
 });
 
