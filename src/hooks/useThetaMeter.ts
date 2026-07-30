@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ThetaMeterHid, isHidAvailable, type ThetaStatus } from '../lib/thetaMeterHid';
 import { ThetaNeedle } from '../engine/thetaNeedle';
+import { ThetaReactionTracker, type ThetaReaction } from '../engine/thetaReactions';
 import {
   buildTaScale, taFromRaw, loadTaScale, saveTaScale, clearTaScale, factoryTaScale,
   type ThetaTaPoint, type ThetaTaScale,
@@ -11,7 +12,7 @@ import {
   effectiveScale,
   type ElectrodeConfig, type ThetaSetup,
 } from '../engine/thetaSetup';
-import { THETA_NEEDLE_SCALE, SQUEEZE_TEST_MS, BREATH_TEST_MS } from '../engine/tuning';
+import { THETA_NEEDLE_SCALE, SQUEEZE_TEST_MS, BREATH_TEST_MS, NEEDLE_REST_OFFSET } from '../engine/tuning';
 
 /**
  * useThetaMeter — l'e-meter USB dell'utente dentro EQUILIBRIUM.
@@ -83,7 +84,21 @@ export interface ThetaMeterState {
  *  e comunque un terzo dei render che farebbe una pubblicazione a ogni lettura. */
 const UI_PERIOD_MS = 20;
 
-export function useThetaMeter() {
+export interface UseThetaMeterOptions {
+  /** Chiamata quando l'ago delle boîtes ha completato una REAZIONE. È da qui che ASSESSMENT e
+   *  le scritte sull'arco prendono le letture col solo meter: senza, ogni item risultava NULL
+   *  mentre l'ago si muoveva sotto gli occhi dell'auditor. */
+  onReaction?: (r: ThetaReaction) => void;
+  /** Tempo di seduta in secondi — serve a datare le reazioni come quelle dell'EEG. */
+  nowSec?: () => number;
+}
+
+export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
+  /** Le opzioni passano da un ref: il chiamante le ricrea a ogni render, e il driver si
+   *  costruisce una volta sola. */
+  const optsRef = useRef(opts);
+  optsRef.current = opts;
+  const reactRef = useRef(new ThetaReactionTracker());
   const hidRef = useRef<ThetaMeterHid | null>(null);
   const needleRef = useRef(new ThetaNeedle());
   /** Ultima lettura, in attesa della prossima pubblicazione. */
@@ -114,6 +129,11 @@ export function useThetaMeter() {
           const dev = Math.abs(needleRef.current.arm - r.smooth);
           if (dev > testRef.current.peak) testRef.current.peak = dev;
         }
+        // REAZIONI sull'ago vero. Si passa la deviazione RISPETTO A SET, che è la grandezza in
+        // cui sono espresse le ampiezze delle reazioni.
+        const reaction = reactRef.current.push(
+          st.offset - NEEDLE_REST_OFFSET, optsRef.current.nowSec?.() ?? 0, st.bodyMotion);
+        if (reaction) optsRef.current.onReaction?.(reaction);
         pendingRef.current = { ...st, raw: r.raw };
       },
       onStatus: s => setState(p => ({ ...p, status: s, info: hidRef.current?.info ?? null })),
@@ -168,6 +188,7 @@ export function useThetaMeter() {
   const disconnect = useCallback(async () => {
     await hidRef.current?.disconnect();
     needleRef.current.reset();
+    reactRef.current.reset();
     setState(p => ({ ...p, offset: 0, arm: 0, raw: 0, rawSmooth: 0, totalTa: 0,
                      offScale: false, bodyMotion: false }));
   }, []);

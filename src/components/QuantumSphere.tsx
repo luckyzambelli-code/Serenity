@@ -552,10 +552,22 @@ export function QuantumSphere({
         {thetaOffset !== null && thetaOffset !== undefined && (() => {
           const a = off2ang(Math.max(-1, Math.min(1, thetaOffset)));
           const t = pt(a, tipR);
+          // Punta a FRECCIA come quella dell'ago EEG, ma nel colore delle boîtes: due aghi
+          // fatti diversamente si leggerebbero come due cose diverse, e invece sono due
+          // misure della stessa grandezza.
+          const rad = deg2rad(a);
+          const dxT = Math.cos(rad), dyT = -Math.sin(rad);
+          const pxT = -dyT, pyT = dxT;
+          const aTip = { x: t.x + dxT * arrowSize, y: t.y + dyT * arrowSize };
+          const aL   = { x: t.x - pxT * 5,         y: t.y - pyT * 5 };
+          const aR   = { x: t.x + pxT * 5,         y: t.y + pyT * 5 };
           return (
-            <line x1={PX} y1={PY} x2={t.x} y2={t.y}
-              stroke={THETA_NEEDLE_COLOR} strokeWidth="3" strokeLinecap="round"
-              opacity={0.75} style={{ transition: 'none' }}/>
+            <g opacity={0.8} style={{ transition: 'none' }}>
+              <line x1={PX} y1={PY} x2={t.x} y2={t.y}
+                stroke={THETA_NEEDLE_COLOR} strokeWidth="3" strokeLinecap="round"/>
+              <polygon points={`${aTip.x},${aTip.y} ${aL.x},${aL.y} ${aR.x},${aR.y}`}
+                fill={THETA_NEEDLE_COLOR}/>
+            </g>
           );
         })()}
 

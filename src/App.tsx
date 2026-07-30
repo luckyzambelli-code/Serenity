@@ -32,7 +32,7 @@ import { isAssessableItem } from './engine/assessItemFilter';
 import { decideNeedle } from './engine/needleDecision';
 import { isMotionArtifact } from './engine/motionArtifact';
 import type { NestWorkerMessage } from './workers/nestMessages';
-import { KICK_FLYBACK_MS, NEEDLE_REST_OFFSET, ITEM_INTERRUPT_MS,
+import { KICK_MS, KICK_MS_DEFAULT, KICK_FLYBACK_MS, NEEDLE_REST_OFFSET, ITEM_INTERRUPT_MS,
          SHOWN_READS_CAP, READ_WINDOW_AFTER_S } from './engine/tuning';
 import { QuantumSphere } from './components/QuantumSphere';
 import { chargeStateById, type ChargeStateId } from './lib/chargeState';
@@ -3530,7 +3530,30 @@ export default function App() {
   // Pour l'instant il vit À CÔTÉ de l'aiguille EEG — deux aiguilles sur le même cadran — pour
   // qu'on VOIE l'écart entre la mesure réelle et celle reconstruite du cerveau. Le TA, lui,
   // vient des lattine : c'est une vraie résistance, pas une reconstruction.
-  const theta = useThetaMeter();
+  /** Reazione in corso sull'ago delle boîtes — alimenta le scritte sull'arco e ASSESSMENT. */
+  const [thetaReactionKey, setThetaReactionKey] = useState('');
+  const thetaReactionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const theta = useThetaMeter({
+    nowSec: () => timeRef.current,
+    // ── LE LETTURE DELLE BOÎTES ENTRANO DOVE ENTRANO QUELLE DELL'EEG ────────────────────
+    // shownReadsRef è la fonte di ASSESSMENT, e conteneva SOLO le reazioni EEG: col meter da
+    // solo ogni item risultava NULL mentre l'ago si muoveva. La reazione si data all'ISTANTE
+    // IN CUI IL MOVIMENTO È PARTITO, non a quando rientra: una caduta appartiene a quando
+    // comincia, ed è così che il read istantaneo la ritrova accanto al suo item.
+    onReaction: r => {
+      const label = REACTION_LABELS[r.key] || '';
+      shownReadsRef.current.push({ time: r.startedAtSec, reaction: label });
+      if (shownReadsRef.current.length > SHOWN_READS_CAP) {
+        shownReadsRef.current.splice(0, Math.floor(SHOWN_READS_CAP / 2));
+      }
+      // La scritta resta il tempo previsto per quel tipo di reazione, come per l'EEG.
+      setThetaReactionKey(r.key);
+      if (thetaReactionTimerRef.current) clearTimeout(thetaReactionTimerRef.current);
+      thetaReactionTimerRef.current = setTimeout(
+        () => setThetaReactionKey(''), KICK_MS[r.key] ?? KICK_MS_DEFAULT);
+    },
+  });
   // resetNeedle è definita più in alto e con dipendenze vuote: si passa per un ref, altrimenti
   // catturerebbe la prima versione della callback e non ricentrerebbe mai le lattine.
   useEffect(() => { thetaResetRef.current = theta.resetToSet; }, [theta.resetToSet]);
@@ -5113,7 +5136,7 @@ export default function App() {
                 thetaOffset={theta.status === 'connected' ? theta.offset : null}
                 targetOffset={theta.testing ? NEEDLE_REST_OFFSET + SQUEEZE_TARGET_OFFSET : null}
                 showEegNeedle={instruments.muse}
-                needleReactionKey={needleReactionKey}
+                needleReactionKey={instruments.muse ? needleReactionKey : thetaReactionKey}
                 asIsnessState={asIsnessState}
                 onClick={resetNeedle}
                 showTrail={viewMode !== 'needle_pure'}
@@ -5131,11 +5154,16 @@ export default function App() {
               style={{ top: '2.5%', left: '50%', transform: 'translateX(-50%)', width: 500, textAlign: 'left' }}>
               {/* AUDITING ITEM bar — the auditor types the question and ARMS the cycle
                   BEFORE asking it. The cycle indicators below only show while armed;
-                  the engines keep computing (recorded for the report + Ron's Lag). */}
+                  the engines keep computing (recorded for the report + Ron's Lag).
+                  ⚠️ Sparisce con i cicli: il campo esiste per scrivere la domanda E armare il
+                  ciclo. Senza cicli il gesto per cui è fatto non c'è più, e resterebbe un
+                  campo di testo che non fa nulla. Gli item si danno da ASSESSMENT. */}
               {/* DEUX RANGÉES (demande utilisateur : « la domanda non è più leggibile, spostala sopra
                   i bottoni ») : la QUESTION occupe TOUTE la largeur en haut — avec les compteurs et
                   les boutons sur la même ligne elle était écrasée à néant. Commandes en dessous. */}
-              <div style={{ width: '100%', marginBottom: 18, pointerEvents: 'auto', display: viewMode === 'mirror' ? 'none' : 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ width: '100%', marginBottom: 18, pointerEvents: 'auto',
+                            display: (viewMode === 'mirror' || eegModulesHidden(instruments)) ? 'none' : 'flex',
+                            flexDirection: 'column', gap: 6 }}>
                 <textarea
                   value={auditingQuestion}
                   onChange={(e) => setAuditingQuestion(e.target.value)}

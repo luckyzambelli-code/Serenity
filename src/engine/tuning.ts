@@ -273,6 +273,19 @@ export const THETA_TOTAL_TA_DEADBAND_DIV = 0.02;
  *  rialzerebbe il riferimento in continuazione e il Total TA non salirebbe mai. */
 export const THETA_TOTAL_TA_DEADBAND = 24_000;
 
+// ── REAZIONI SULL'AGO DELLE BOÎTES (engine/thetaReactions.ts) ──────────────────────────────
+// Le soglie sono le AMPIEZZE con cui il quadrante disegna ciascuna reazione (le stesse di
+// QuantumSphere): così la lettura scritta corrisponde a quello che si è visto muoversi.
+export const THETA_REACT_TICK = 0.07;
+export const THETA_REACT_SF = 0.20;
+export const THETA_REACT_FALL = 0.42;
+export const THETA_REACT_LONG_FALL = 0.68;
+export const THETA_REACT_BLOW_DOWN = 0.90;
+/** Sotto questa deviazione l'ago è « rientrato » e l'episodio si chiude. Volutamente PIÙ BASSA
+ *  del tick: chiudere alla stessa soglia con cui si apre farebbe sfarfallare l'episodio a ogni
+ *  oscillazione sul confine, con una raffica di letture per una sola caduta. */
+export const THETA_EPISODE_RELEASE = 0.04;
+
 // ── SCALA DEL TONO DI RON (−40 .. +40) ─────────────────────────────────────────────────────────
 /** Fondo scala della scala del tono: da −40 (resistenza TOTALE) a +40 (resistenza ZERO),
  *  ottanta unità in otto divisioni da dieci. È la Scala del Tono intera, con la Morte allo zero. */
