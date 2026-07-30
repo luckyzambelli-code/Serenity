@@ -3532,6 +3532,11 @@ export default function App() {
   // catturerebbe la prima versione della callback e non ricentrerebbe mai le lattine.
   useEffect(() => { thetaResetRef.current = theta.resetToSet; }, [theta.resetToSet]);
   useEffect(() => { thetaConnectedRef.current = theta.status === 'connected'; }, [theta.status]);
+  // La scelta dello strumento sparisce da sé appena UNO dei due si aggancia: lasciarla lì
+  // dopo il collegamento la farebbe sembrare un errore ancora in corso.
+  useEffect(() => {
+    if (museConnection === 'connected' || theta.status === 'connected') setMuseHint(false);
+  }, [museConnection, theta.status]);
 
   // ── QUALI MODULI, secondo cosa è collegato ───────────────────────────────────
   // Senza MUSE, i moduli che vivono di EEG (salute, integrità, MNA) non hanno sorgente:
@@ -3633,8 +3638,8 @@ export default function App() {
       if (!connected) {
         // FIX CONN-60: make it clear WHY nothing started — la seduta ha bisogno di ALMENO
         // uno strumento. Flash a transient hint instead of silently aborting.
+        // Non svanisce piu' da solo: e' una SCELTA da fare, non una notifica di passaggio.
         setMuseHint(true);
-        setTimeout(() => setMuseHint(false), 4000);
         return;
       }
     }
@@ -4103,17 +4108,46 @@ export default function App() {
       onClose={() => setConnPhase('idle')}
     />
 
-    {/* CONN-60: transient "connect the MUSE first" hint (local START w/o MUSE). */}
+    {/* ── NESSUNO STRUMENTO: si SCEGLIE quale collegare ────────────────────────────────
+        Prima era un avviso « collega prima il MUSE », scritto quando il Muse era l'unico
+        strumento possibile. Ora ce ne sono due e si audita anche con le sole boîtes: dire
+        soltanto « MUSE » manda fuori strada, e non offre nemmeno il meter. */}
     {museHint && (
       <div style={{
         position: 'fixed', top: 70, left: '50%', transform: 'translateX(-50%)',
-        zIndex: 9000, display: 'flex', alignItems: 'center', gap: 10,
-        padding: '12px 20px', borderRadius: 10,
-        background: 'rgba(251,191,36,0.16)', border: '1px solid rgba(251,191,36,0.5)',
-        backdropFilter: 'blur(8px)', boxShadow: '0 8px 30px rgba(0,0,0,0.45)',
-        color: '#fbbf24', fontSize: 14, fontWeight: 'bold', letterSpacing: '0.03em',
+        zIndex: 9000, display: 'flex', flexDirection: 'column', gap: 12,
+        padding: '16px 20px', borderRadius: 12,
+        background: 'rgba(2,6,23,0.95)', border: '1px solid rgba(251,191,36,0.45)',
+        backdropFilter: 'blur(8px)', boxShadow: '0 10px 34px rgba(0,0,0,0.5)',
         animation: 'smFadeIn 0.3s ease-out' }}>
-        <Headphones size={20} strokeWidth={2} /> ⚠ {t('hint_connect_muse_first')}
+        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700,
+                       letterSpacing: '0.03em', color: '#fbbf24' }}>
+          ⚠ {t('connect_an_instrument') as string}
+        </span>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button type="button" onClick={() => { setMuseHint(false); void handleConnectMuse(); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px',
+                     borderRadius: 9, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                     fontSize: 12, fontWeight: 700, letterSpacing: '0.05em',
+                     background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.3)',
+                     color: 'rgba(240,246,255,0.95)' }}>
+            <Headphones size={16} strokeWidth={2} /> MUSE
+          </button>
+          {!theta.unavailable && (
+            <button type="button" onClick={() => { setMuseHint(false); void theta.connect(); }}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px',
+                       borderRadius: 9, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                       fontSize: 12, fontWeight: 700, letterSpacing: '0.05em',
+                       background: 'rgba(245,158,11,0.16)', border: '1px solid rgba(245,158,11,0.55)',
+                       color: '#f59e0b' }}>
+              <Gauge size={16} strokeWidth={2} /> {t('theta_cans') as string}
+            </button>
+          )}
+        </div>
+        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, lineHeight: 1.5,
+                       color: 'rgba(226,238,255,0.5)' }}>
+          {t('connect_either_hint') as string}
+        </span>
       </div>
     )}
 
@@ -5093,7 +5127,12 @@ export default function App() {
                     border: `1px solid ${cycleArmed ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.22)'}`,
                     color: 'rgba(235,244,255,0.92)', outline: 'none' } as React.CSSProperties}
                 />
-                {/* Rangée des COMMANDES : compteurs + les deux cycles + mock-up. */}
+                {/* Rangée des COMMANDES : compteurs + les deux cycles + mock-up.
+                    ⚠️ SOLO COL MUSE. I cicli CONTACT e NULL vivono della CARICA (qL) e dell'F/N,
+                    che vengono dall'EEG: con le sole boîtes non hanno sorgente. Mostrarli
+                    lascerebbe armare un ciclo che non può né avanzare né concludersi, e
+                    l'auditor aspetterebbe un AS-IS che non può arrivare. */}
+                {instruments.muse && (
                 <div className="flex items-center gap-2" style={{ width: '100%' }}>
                 {/* CYCLE COUNTERS — SÉPARÉS par type (demande utilisateur) : armés · menés à leur fin.
                     CONTACT → AS-IS (teal) · NULL → CLEAR READ (ardoise) — mêmes teintes que les boutons. */}
@@ -5160,6 +5199,7 @@ export default function App() {
                   );
                 })}
                 </div>
+                )}
               </div>
 
               {/* ── BARRE MIRROR (vue à part) : item + un SEUL geste (aggancio) + readouts. Ni CONTACT
