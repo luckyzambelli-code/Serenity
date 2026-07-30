@@ -16,7 +16,8 @@ import { useEpValidation } from './hooks/useEpValidation';
 import { useMnaModule } from './hooks/useMnaModule';
 import { useMediaRelayFallback } from './hooks/useMediaRelayFallback';
 import { useThetaMeter } from './hooks/useThetaMeter';
-import { effectiveModules } from './engine/instrumentModules';
+import { effectiveModules, eegModulesHidden } from './engine/instrumentModules';
+import { SQUEEZE_TARGET_OFFSET } from './engine/thetaSetup';
 import { ThetaReadyCheck } from './components/ThetaReadyCheck';
 import { ThetaTaCalibration } from './components/ThetaTaCalibration';
 
@@ -367,6 +368,8 @@ export default function App() {
   const [connDetail, setConnDetail] = useState<string>('');
   // CONN-60: transient hint shown when START is pressed (local) without a MUSE.
   const [museHint, setMuseHint] = useState(false);
+  /** Quali strumenti si è scelto di collegare, PRIMA di far partire le connessioni. */
+  const [connSel, setConnSel] = useState({ muse: false, theta: false });
 
   // ── Auto-reconnect refs (participant side) ────────────────────────────────
   // Keep track of what to reconnect to after a drop
@@ -3742,6 +3745,16 @@ export default function App() {
     // request). It used to be gated on a live signal, so a START before the headband
     // settled skipped it entirely. It's advisory and shows live contact — if there's
     // no signal yet, the auditor sees it and can wait or skip.
+    // ── LA SCELTA DELLO STRUMENTO VIENE PRIMA DI TUTTO ────────────────────────────────────
+    // Prima stava in handleStart, cioe' DOPO la schermata di prontezza: e quella, senza Muse,
+    // mostrava la propria richiesta di connessione: bisognava saltarla per arrivare alla
+    // scelta. Qui invece si decide con che cosa si audita, e solo dopo si prepara la seduta.
+    if (appModeRef.current !== 'auditor'
+        && museConnection !== 'connected' && !thetaConnectedRef.current) {
+      setMuseHint(true);
+      return;
+    }
+
     if (fresh) {
       metabolicBaseline.reset();
       setMetabAssessment(null);                  // clear any previous reading
@@ -4100,41 +4113,59 @@ export default function App() {
     />
 
     {/* ── NESSUNO STRUMENTO: si SCEGLIE quale collegare ────────────────────────────────
-        Prima era un avviso « collega prima il MUSE », scritto quando il Muse era l'unico
-        strumento possibile. Ora ce ne sono due e si audita anche con le sole boîtes: dire
-        soltanto « MUSE » manda fuori strada, e non offre nemmeno il meter. */}
+        Si SELEZIONA prima e si collega dopo, invece di partire al primo clic: chi vuole
+        lavorare con tutti e due deve poterli spuntare entrambi in una volta, senza che la
+        connessione parta appena tocca il primo. */}
     {museHint && (
       <div style={{
         position: 'fixed', top: 70, left: '50%', transform: 'translateX(-50%)',
         zIndex: 9000, display: 'flex', flexDirection: 'column', gap: 12,
-        padding: '16px 20px', borderRadius: 12,
-        background: 'rgba(2,6,23,0.95)', border: '1px solid rgba(251,191,36,0.45)',
+        padding: '18px 22px', borderRadius: 12, minWidth: 340,
+        background: 'rgba(2,6,23,0.96)', border: '1px solid rgba(251,191,36,0.45)',
         backdropFilter: 'blur(8px)', boxShadow: '0 10px 34px rgba(0,0,0,0.5)',
         animation: 'smFadeIn 0.3s ease-out' }}>
         <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700,
                        letterSpacing: '0.03em', color: '#fbbf24' }}>
-          ⚠ {t('connect_an_instrument') as string}
+          {t('connect_an_instrument') as string}
         </span>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button type="button" onClick={() => { setMuseHint(false); void handleConnectMuse(); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px',
+
+        {([
+          { k: 'muse' as const, on: connSel.muse, label: 'MUSE', icon: <Headphones size={17} strokeWidth={2} />,
+            col: 'rgba(240,246,255,0.95)', bg: 'rgba(255,255,255,0.10)', bd: 'rgba(255,255,255,0.45)', show: true },
+          { k: 'theta' as const, on: connSel.theta, label: t('theta_cans') as string, icon: <Gauge size={17} strokeWidth={2} />,
+            col: '#f59e0b', bg: 'rgba(245,158,11,0.16)', bd: 'rgba(245,158,11,0.6)', show: !theta.unavailable },
+        ]).filter(o => o.show).map(o => (
+          <button key={o.k} type="button"
+            onClick={() => setConnSel(p => ({ ...p, [o.k]: !p[o.k] }))}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
                      borderRadius: 9, cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                     fontSize: 12, fontWeight: 700, letterSpacing: '0.05em',
-                     background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.3)',
-                     color: 'rgba(240,246,255,0.95)' }}>
-            <Headphones size={16} strokeWidth={2} /> MUSE
+                     fontSize: 13, fontWeight: 700, letterSpacing: '0.05em', textAlign: 'left',
+                     background: o.on ? o.bg : 'rgba(255,255,255,0.04)',
+                     border: `1px solid ${o.on ? o.bd : 'rgba(255,255,255,0.16)'}`,
+                     color: o.on ? o.col : 'rgba(226,238,255,0.55)' }}>
+            <span style={{ fontFamily: 'monospace', fontSize: 15, width: 16 }}>{o.on ? '✓' : '·'}</span>
+            {o.icon} {o.label}
           </button>
-          {!theta.unavailable && (
-            <button type="button" onClick={() => { setMuseHint(false); void theta.connect(); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px',
-                       borderRadius: 9, cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                       fontSize: 12, fontWeight: 700, letterSpacing: '0.05em',
-                       background: 'rgba(245,158,11,0.16)', border: '1px solid rgba(245,158,11,0.55)',
-                       color: '#f59e0b' }}>
-              <Gauge size={16} strokeWidth={2} /> {t('theta_cans') as string}
-            </button>
-          )}
-        </div>
+        ))}
+
+        <button type="button"
+          disabled={!connSel.muse && !connSel.theta}
+          onClick={async () => {
+            setMuseHint(false);
+            // In sequenza: due selettori di dispositivo aperti insieme si ostacolerebbero.
+            if (connSel.muse)  await handleConnectMuse();
+            if (connSel.theta) await theta.connect();
+          }}
+          style={{ height: 38, borderRadius: 9,
+                   cursor: (connSel.muse || connSel.theta) ? 'pointer' : 'default',
+                   opacity: (connSel.muse || connSel.theta) ? 1 : 0.4,
+                   fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700,
+                   letterSpacing: '0.1em', textTransform: 'uppercase',
+                   background: 'rgba(52,211,153,0.18)', border: '1px solid rgba(52,211,153,0.6)',
+                   color: '#34d399' }}>
+          {t('connect') as string}
+        </button>
+
         <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, lineHeight: 1.5,
                        color: 'rgba(226,238,255,0.5)' }}>
           {t('connect_either_hint') as string}
@@ -5005,7 +5036,7 @@ export default function App() {
                   {/* VELOCITÀ DI RILASCIO: viene dalla velocità di elaborazione mentale, cioè
                       dall'EEG. Con le sole boîtes non ha sorgente — mostrarla ferma accanto a
                       numeri veri la farebbe passare per una misura. */}
-                  {instruments.muse && (
+                  {!eegModulesHidden(instruments) && (
                     <SpeedReadout isLightTheme={isLightTheme} label={t('mental_processing_velocity') as string} />
                   )}
                 </Panel3D>
@@ -5075,6 +5106,8 @@ export default function App() {
               <QuantumSphere
                 needleOffsetProp={needleOffset}
                 thetaOffset={theta.status === 'connected' ? theta.offset : null}
+                targetOffset={theta.testing ? NEEDLE_REST_OFFSET + SQUEEZE_TARGET_OFFSET : null}
+                showEegNeedle={instruments.muse}
                 needleReactionKey={needleReactionKey}
                 asIsnessState={asIsnessState}
                 onClick={resetNeedle}
@@ -5123,7 +5156,7 @@ export default function App() {
                     che vengono dall'EEG: con le sole boîtes non hanno sorgente. Mostrarli
                     lascerebbe armare un ciclo che non può né avanzare né concludersi, e
                     l'auditor aspetterebbe un AS-IS che non può arrivare. */}
-                {instruments.muse && (
+                {!eegModulesHidden(instruments) && (
                 <div className="flex items-center gap-2" style={{ width: '100%' }}>
                 {/* CYCLE COUNTERS — SÉPARÉS par type (demande utilisateur) : armés · menés à leur fin.
                     CONTACT → AS-IS (teal) · NULL → CLEAR READ (ardoise) — mêmes teintes que les boutons. */}

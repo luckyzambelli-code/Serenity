@@ -32,6 +32,17 @@ export const MUSE_ONLY_MODULES = ['health', 'biometric', 'mna'] as const;
 export type MuseOnlyModule = (typeof MUSE_ONLY_MODULES)[number];
 
 /**
+ * I moduli EEG si nascondono? SOLO in una configurazione SCELTA che li esclude — cioè col
+ * meter collegato e il Muse no.
+ *
+ * ⚠️ Non basta l'assenza del Muse. Prima di collegare qualunque cosa non si sa ancora come si
+ * auditerà, e nascondere in quel momento faceva sparire integrità e MNA già all'avvio, senza
+ * che l'utente avesse scelto nulla — e in CONFIG risultavano accesi. Nascondere è la
+ * conseguenza di una scelta, non di un cavo ancora da attaccare.
+ */
+export const eegModulesHidden = (i: Instruments): boolean => i.theta && !i.muse;
+
+/**
  * Filtra la visibilità scelta dall'utente con quella POSSIBILE.
  *
  * Non si TOCCA la preferenza salvata: si nasconde soltanto ciò che non ha sorgente. Riattaccando
@@ -39,7 +50,7 @@ export type MuseOnlyModule = (typeof MUSE_ONLY_MODULES)[number];
  * un cavo è staccato sarebbe un modo silenzioso di perdergliele.
  */
 export const effectiveModules = <T extends object>(scelti: T, instruments: Instruments): T => {
-  if (instruments.muse) return scelti;
+  if (!eegModulesHidden(instruments)) return scelti;
   const out = { ...scelti } as Record<string, unknown>;
   for (const m of MUSE_ONLY_MODULES) {
     if (m in out) out[m] = false;

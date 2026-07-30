@@ -10,6 +10,14 @@ interface QuantumSphereProps {
   /** Deviazione dell'ago delle LATTINE (Theta-Meter), [-1, 1]. `null` = meter non collegato:
    *  in quel caso l'ago non si disegna affatto, invece di mostrarne uno fermo che sembrerebbe vero. */
   thetaOffset?: number | null;
+  /** L'ago dell'EEG si disegna? Senza MUSE non ha sorgente: lasciarlo fermo a SET lo farebbe
+   *  passare per un ago vero che non reagisce, invece che per un ago che non c'è. Stessa regola
+   *  già applicata a quello delle boîtes, che sparisce senza meter. */
+  showEegNeedle?: boolean;
+  /** BERSAGLIO durante le prove d'inizio seduta: dove l'ago DEVE arrivare (offset del
+   *  quadrante). Senza, « un terzo di quadrante » era un'ampiezza da stimare a occhio; con il
+   *  segno lì disegnato la prova si legge da sé. `null` = nessuna prova in corso. */
+  targetOffset?: number | null;
   asIsnessState: 'persist' | 'as-is' | 'fn' | 'ep';
   onClick: () => void;
   tZone?: string; rhoG?: number; vProc?: number; eta?: number;
@@ -93,7 +101,8 @@ function reactionKeyToOffset(key: string): number {
 }
 
 export function QuantumSphere({
-  needleOffsetProp, thetaOffset = null, asIsnessState, onClick,
+  needleOffsetProp, thetaOffset = null, targetOffset = null, showEegNeedle = true,
+  asIsnessState, onClick,
   asIsnessConfidence = 0,
   sessionState = 'idle', museConnection = 'disconnected',
   needleReactionKey, epValidated = false,
@@ -513,6 +522,27 @@ export function QuantumSphere({
           </>
         )}
 
+        {/* ── BERSAGLIO DELLE PROVE ─────────────────────────────────────────────────────────
+            Dove l'ago deve arrivare con una stretta LEGGERA. Disegnato attraverso tutta la
+            corona, così si vede senza cercarlo, con la sua etichetta. */}
+        {targetOffset !== null && targetOffset !== undefined && (() => {
+          const a = off2ang(Math.max(-1, Math.min(1, targetOffset)));
+          const p1 = pt(a, R_IN - 30), p2 = pt(a, R_OUT + 16), lbl = pt(a, R_OUT + 44);
+          return (
+            <g>
+              <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+                stroke="#34d399" strokeWidth="4" strokeLinecap="round" strokeDasharray="10 7"
+                opacity={0.9}/>
+              <circle cx={p2.x} cy={p2.y} r={9} fill="#34d399" opacity={0.9}/>
+              <text x={lbl.x} y={lbl.y} textAnchor="middle" dominantBaseline="middle"
+                fill="#34d399" fontSize="30" fontWeight="700"
+                style={{ fontFamily: 'var(--font-sans)', letterSpacing: '0.08em' }}>
+                1/3
+              </text>
+            </g>
+          );
+        })()}
+
         {/* ── AIGUILLE DES LATTINE (Theta-Meter) ────────────────────────────────────────────
             L'aiguille du VRAI meter, à côté de celle déduite de l'EEG, pour voir l'écart entre
             les deux. Dessinée AVANT (donc DESSOUS) et plus fine : c'est la comparaison qui
@@ -530,6 +560,7 @@ export function QuantumSphere({
         })()}
 
         {/* ── NEEDLE ── */}
+        {showEegNeedle && (<>
         <line x1={PX} y1={PY} x2={tip.x} y2={tip.y}
           stroke={needleColor} strokeWidth={isFN ? 2.5 : 2} strokeLinecap="round"
           filter={!isLightTheme ? 'url(#needle_glow)' : isFN ? 'url(#gst)' : 'url(#gs)'}
@@ -538,6 +569,7 @@ export function QuantumSphere({
           points={`${arrowTip.x},${arrowTip.y} ${arrowL.x},${arrowL.y} ${arrowR.x},${arrowR.y}`}
           fill={needleColor}
           filter={!isLightTheme ? 'url(#needle_glow)' : isFN ? 'url(#gst)' : 'url(#gs)'}/>
+        </>)}
 
         {/* ── Pivot hub ── */}
         <circle cx={PX} cy={PY} r={14} fill={hubFill} stroke={hubStroke} strokeWidth="1.5"/>

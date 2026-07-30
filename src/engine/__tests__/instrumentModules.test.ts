@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { effectiveModules, noInstruments, taSource, MUSE_ONLY_MODULES } from '../instrumentModules';
+import { effectiveModules, eegModulesHidden, noInstruments, taSource, MUSE_ONLY_MODULES } from '../instrumentModules';
 
 const TUTTI = { journal: true, health: true, cam1: true, cam2: true, ri: true, biometric: true, mna: true };
 
@@ -9,9 +9,16 @@ describe('quali moduli secondo gli strumenti', () => {
     expect(effectiveModules(TUTTI, { muse: true, theta: true })).toEqual(TUTTI);
   });
 
-  it('SENZA Muse spariscono i moduli che vivono di EEG', () => {
+  it('col SOLO METER spariscono i moduli che vivono di EEG', () => {
     const r = effectiveModules(TUTTI, { muse: false, theta: true });
     for (const m of MUSE_ONLY_MODULES) expect(r[m]).toBe(false);
+  });
+
+  it('PRIMA di collegare qualunque cosa NON si nasconde nulla', () => {
+    // L'assenza del Muse non è ancora una scelta: nascondere in quel momento faceva sparire
+    // integrità e MNA già all'avvio, mentre in CONFIG risultavano accesi.
+    expect(effectiveModules(TUTTI, { muse: false, theta: false })).toEqual(TUTTI);
+    expect(eegModulesHidden({ muse: false, theta: false })).toBe(false);
   });
 
   it('…ma NON gli altri: la voce e le camere non dipendono dagli strumenti', () => {
