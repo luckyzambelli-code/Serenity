@@ -103,20 +103,23 @@ export function AssessmentPanel({ items, onHide, t, readMeta, openSignal,
         <span className={`text-xs uppercase tracking-wider shrink-0 ${collapsed ? (isLightTheme ? 'text-slate-400' : 'text-white/35') : (isLightTheme ? 'text-slate-700' : 'text-white/80')}`}>
           {vista === 'assess' ? 'ASSESSMENT' : 'R&I'}{righe.length > 0 ? ` · ${righe.length}` : ''}
         </span>
-        {!collapsed && onIndica && (
-          <div className="flex gap-0.5 rounded" style={{ padding: 2,
-                 background: chiaro ? 'rgba(148,163,184,0.16)' : 'rgba(255,255,255,0.06)' }}>
-            <button type="button" style={pill(vista === 'assess')} onClick={() => setVista('assess')}>
-              {t('ri_view_assess')}
-            </button>
-            <button type="button" style={pill(vista === 'ri')} onClick={() => setVista('ri')}>
-              {t('ri_view_indication')}
-            </button>
-          </div>
-        )}
         <GlassCollapseToggle on={!collapsed} onToggle={() => setCollapsed(c => !c)} />
         {void onHide}
       </div>
+
+      {/* Il selettore di vista sta su una RIGA SUA: accanto al titolo usciva dal pannello
+          (la colonna è stretta ~250 px) e « Indicazione » restava tagliato a metà. */}
+      {!collapsed && onIndica && (
+        <div className="flex gap-0.5 rounded self-start" style={{ padding: 2,
+               background: chiaro ? 'rgba(148,163,184,0.16)' : 'rgba(255,255,255,0.06)' }}>
+          <button type="button" style={pill(vista === 'assess')} onClick={() => setVista('assess')}>
+            {t('ri_view_assess')}
+          </button>
+          <button type="button" style={pill(vista === 'ri')} onClick={() => setVista('ri')}>
+            {t('ri_view_indication')}
+          </button>
+        </div>
+      )}
 
       {!collapsed && (
         <div className="flex-1 overflow-y-auto flex flex-col gap-1 min-h-0">
@@ -132,7 +135,12 @@ export function AssessmentPanel({ items, onHide, t, readMeta, openSignal,
                 key={a.id}
                 // `items-start` e non `items-center`: con un item su due righe, il READ deve
                 // restare in alto accanto alla prima, non scivolare a metà del blocco.
-                className="flex items-start justify-between gap-2 px-2 py-1 rounded"
+                // In R&I la riga va su DUE LINEE: item sopra, letture e bottoni sotto. Nella
+                // colonna di destra (~250 px) affiancarli spremeva l'item fino a mandarlo a capo
+                // UNA LETTERA PER RIGA — verificato in pagina.
+                className={vista === 'ri'
+                  ? 'flex flex-col gap-1 px-2 py-1 rounded'
+                  : 'flex items-start justify-between gap-2 px-2 py-1 rounded'}
                 style={{
                   background:  isLightTheme ? 'rgba(226,232,240,0.7)' : 'rgba(255,255,255,0.05)',
                   border:      `1px solid ${a.indica === true ? 'rgba(52,211,153,0.55)'
@@ -162,7 +170,7 @@ export function AssessmentPanel({ items, onHide, t, readMeta, openSignal,
                     ) : null}
                   </span>
                 ) : (
-                  <span className="shrink-0 flex items-center gap-2">
+                  <span className="flex items-center gap-2 justify-between w-full">
                     {/* LE DUE LETTURE, SEPARATE. Con un ago solo si mostra quella che c'è. */}
                     {dueAghi ? (
                       <span className="flex items-center gap-1.5">

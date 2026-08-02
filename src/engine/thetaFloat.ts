@@ -37,7 +37,7 @@
 import {
   THETA_FN_MIN_SWEEP, THETA_FN_MIN_SWEEPS, THETA_FN_HALF_MIN_S, THETA_FN_HALF_MAX_S,
   THETA_FN_AMP_SPREAD, THETA_FN_PERIOD_SPREAD, THETA_FN_CENTRE_DRIFT,
-  THETA_FN_EXPIRE_S, THETA_FN_TURN_HYST,
+  THETA_FN_WINDOW_S, THETA_FN_SILENCE_MULT, THETA_FN_SILENCE_MIN_S, THETA_FN_TURN_HYST,
 } from './tuning';
 
 /** Una mezza spazzata: da un punto di svolta al successivo. */
@@ -126,31 +126,72 @@ export class ThetaFloatDetector {
       }
     }
 
-    // Spazzate troppo vecchie: un F/N di dieci secondi fa non dice niente su adesso.
-    const limite = nowSec - THETA_FN_EXPIRE_S * 2;
-    this.sweeps = this.sweeps.filter(s => s.endedAtSec >= limite);
+    // Spazzate troppo vecchie: un F/N di venti secondi fa non dice niente su adesso.
+    this.sweeps = this.sweeps.filter(s => s.endedAtSec >= nowSec - THETA_FN_WINDOW_S);
 
     return this.valuta(nowSec, bodyMotion);
   }
 
   private valuta(nowSec: number, bodyMotion: boolean): ThetaFloatState {
-    const recenti = this.sweeps.filter(s => s.endedAtSec >= nowSec - THETA_FN_EXPIRE_S);
-    const ok = this.qualifica(recenti);
+    const recenti = this.sweeps.filter(s => s.endedAtSec >= nowSec - THETA_FN_WINDOW_S);
 
-    if (ok) {
+    // ── PRIMA DI TUTTO: l'ago sta ancora spazzando? ─────────────────────────────────────────
+    // Va guardato PRIMA di riqualificare, non dopo. Con la finestra a 15 s le spazzate di un
+    // float finito ci restano dentro a lungo, la qualifica continua a riuscire e l'F/N non si
+    // spegneva più — l'ago fermo da sei secondi risultava ancora « in F/N ».
+    if (this.since !== null && this.silenzio(recenti, nowSec)) {
+      this.since = null;
+      this.motionSeen = false;
+      return this.state(recenti);
+    }
+
+    // ── E il CENTRO? ────────────────────────────────────────────────────────────────────────
+    // Si misura sulla finestra INTERA, non sulla corsa scelta: « l'ago sta andando da qualche
+    // parte » è una proprietà di tutto il tratto. Cercandola solo dentro la corsa, una deriva
+    // lunga si nascondeva scegliendo tre spazzate che, prese da sole, derivano poco.
+    const prova = this.centroStabile(recenti) ? this.miglioreCorsa(recenti) : null;
+
+    if (prova) {
       if (this.since === null) {
         // L'F/N è cominciato quando è partita la PRIMA delle spazzate che lo dimostrano, non
         // adesso: il riconoscimento arriva per forza dopo la terza spazzata, e datarlo qui
         // sposterebbe l'F/N di qualche secondo — proprio la grandezza che vogliamo misurare.
-        this.since = recenti[0].endedAtSec - recenti[0].dur;
+        this.since = prova[0].endedAtSec - prova[0].dur;
         this.motionSeen = bodyMotion;
       }
       if (bodyMotion) this.motionSeen = true;
-    } else if (this.since !== null && recenti.length < THETA_FN_MIN_SWEEPS) {
-      this.since = null;
-      this.motionSeen = false;
     }
     return this.state(recenti);
+  }
+
+  /** L'ago ha smesso di spazzare? Il tempo concesso segue il RITMO osservato, non un valore
+   *  fisso: su un F/N rapido due mezze spazzate sono pochi decimi, su uno lento sono otto
+   *  secondi, e una soglia unica sbaglierebbe da una parte o dall'altra. */
+  private silenzio(recenti: Sweep[], nowSec: number): boolean {
+    if (!recenti.length) return true;
+    const ultima = recenti[recenti.length - 1];
+    const media = recenti.reduce((a, s) => a + s.dur, 0) / recenti.length;
+    const concesso = Math.max(THETA_FN_SILENCE_MIN_S, media * THETA_FN_SILENCE_MULT);
+    return nowSec - ultima.endedAtSec > concesso;
+  }
+
+  /**
+   * La più lunga CORSA di spazzate CONSECUTIVE che qualifica come F/N, o null.
+   *
+   * Non si chiede che TUTTA la finestra sia regolare: un F/N è preceduto dal movimento con cui
+   * l'ago ci arriva, e quello non è il float. Misurato sull'INSTANT F/N del video: dieci mezze
+   * spazzate da 0,13–0,29 precedute da una da 0,98 (l'ingresso) — chiedendo la regolarità
+   * sull'insieme il rapporto saliva a 7,6 e il float spariva; sulle dieci vale 2,3.
+   *
+   * Si cerca dalla corsa PIÙ LUNGA che finisce sull'ultima spazzata: il float è ciò che sta
+   * accadendo ADESSO, non un tratto regolare di dieci secondi fa.
+   */
+  private miglioreCorsa(sw: Sweep[]): Sweep[] | null {
+    for (let da = 0; da <= sw.length - THETA_FN_MIN_SWEEPS; da++) {
+      const corsa = sw.slice(da);
+      if (this.qualifica(corsa)) return corsa;
+    }
+    return null;
   }
 
   /** Le quattro condizioni. Basta che una manchi e non è un F/N. */
@@ -161,13 +202,24 @@ export class ThetaFloatDetector {
     if (Math.min(...amps) < THETA_FN_MIN_SWEEP) return false;
     if (durs.some(d => d < THETA_FN_HALF_MIN_S || d > THETA_FN_HALF_MAX_S)) return false;
     if (spread(amps) > THETA_FN_AMP_SPREAD) return false;
-    if (spread(durs) > THETA_FN_PERIOD_SPREAD) return false;
-    // Centro = media dei punti di svolta. Se scivola, l'ago sta andando da qualche parte.
-    const pts = sw.map(s => s.at);
-    const meta = Math.ceil(pts.length / 2);
-    const media = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
-    const deriva = Math.abs(media(pts.slice(-meta)) - media(pts.slice(0, meta)));
-    return deriva <= THETA_FN_CENTRE_DRIFT;
+    return spread(durs) <= THETA_FN_PERIOD_SPREAD;
+  }
+
+  /** Il CENTRO dello spazzare sta fermo? Un F/N galleggia attorno a uno stesso punto; se il
+   *  centro scivola, l'ago sta andando da qualche parte — è una caduta lenta o una salita.
+   *  Si valuta sulla finestra intera: vedi `valuta`. */
+  private centroStabile(sw: Sweep[]): boolean {
+    if (sw.length < THETA_FN_MIN_SWEEPS) return false;
+    // Il centro di una spazzata è il punto MEDIO fra due svolte consecutive: prendere la media
+    // dei punti di svolta non basta, perché si alternano in alto e in basso e su una manciata
+    // di spazzate quell'alternanza copre la deriva. Misurato: un centro che scivolava di 0,18
+    // per spazzata passava per « stabile ».
+    const centri: number[] = [];
+    for (let i = 0; i + 1 < sw.length; i++) centri.push((sw[i].at + sw[i + 1].at) / 2);
+    if (centri.length < 2) return true;      // con due sole spazzate non c'è deriva da misurare
+    // PER SPAZZATA: un limite totale dipenderebbe da quante ne sono entrate nella finestra.
+    const perSpazzata = Math.abs(centri[centri.length - 1] - centri[0]) / (centri.length - 1);
+    return perSpazzata <= THETA_FN_CENTRE_DRIFT;
   }
 
   private state(sw: Sweep[] = this.sweeps): ThetaFloatState {

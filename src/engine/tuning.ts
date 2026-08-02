@@ -479,29 +479,83 @@ export const THETA_EPISODE_SETTLE_S = 0.8;
 // L'F/N non è un'AMPIEZZA: è una FORMA NEL TEMPO. L'ago spazza avanti e indietro, libero,
 // ritmicamente, attorno a uno stesso centro. Le manopole qui sotto descrivono quella forma, e
 // vanno TARATE SUI VIDEO come i profili del generatore F/N — non sono derivate da una teoria.
-/** Ampiezza minima di una spazzata (unità di quadrante). Ron parla di « almeno un terzo di
- *  quadrante » per un F/N franco, ma ne ammette di più piccoli: si sta sotto quel terzo (0,45)
- *  per non perdere i piccoli, e la REGOLARITÀ fa il lavoro di discriminare. */
-export const THETA_FN_MIN_SWEEP = 0.22;
+/**
+ * ⚠️ TARATE SUL VIDEO — « Floating Needle Types » (Vimeo), quattro tipi ripresi dal quadrante
+ * vero: FLOATING NEEDLE, PERSISTENT, INSTANT, FLOATING TONE ARM. (Il quinto, « that springs »,
+ * l'utente lo ha escluso.) La lancetta è stata inseguita immagine per immagine leggendo dove
+ * attraversa una riga del quadrante, e l'angolo convertito in unità di offset sapendo che la
+ * corsa totale dell'ago sul video (~100°) È il quadrante, cioè 2,0 → 1° = 0,02.
+ *
+ * Prima di questa taratura il rilevatore vedeva **ZERO dei quattro** — e in 14 sedute vere aveva
+ * prodotto 2 F/N contro i 95 del MUSE. Non era severo: era cieco. Ogni soglia qui sotto era
+ * sbagliata, e tutte nello stesso verso.
+ */
+/** Ampiezza minima di una mezza spazzata (unità di quadrante).
+ *  MISURATO: l'INSTANT F/N ha mezze spazzate di 0,157 in mediana — sotto il vecchio 0,22, che
+ *  quindi lo tagliava via per intero. 0,10 sta dieci volte sopra il rumore dell'ago (0,01) ed è
+ *  dello stesso ordine del minimo che usa il classificatore del MUSE (0,06 di ampiezza totale). */
+export const THETA_FN_MIN_SWEEP = 0.08;
 /** Quante mezze spazzate servono per dichiarare. Tre = l'ago è andato a destra, tornato e
  *  ripartito: due sole potrebbero essere una caduta con rientro, che non è un F/N. */
 export const THETA_FN_MIN_SWEEPS = 3;
-/** Durata plausibile di una mezza spazzata (s). Sotto è tremolio, sopra è deriva lenta. */
+/** Durata plausibile di una mezza spazzata (s). Sotto è tremolio, sopra è deriva lenta.
+ *  MISURATO col criterio di svolta definitivo: il FLOATING TONE ARM ha mezze spazzate da
+ *  4,07 · 4,52 · 5,42 s — regolarissime fra loro (rapporto 1,3) e tutte oltre il vecchio 3,0,
+ *  che quindi lo escludeva. 6,0 le contiene con un margine, e resta ben sotto la deriva del
+ *  braccio (venti secondi). */
 export const THETA_FN_HALF_MIN_S = 0.25;
-export const THETA_FN_HALF_MAX_S = 3.0;
-/** Quanto possono differire fra loro le ampiezze delle spazzate (rapporto max/min). È QUESTO
- *  il criterio che separa un F/N da un corpo che si agita: l'agitazione è irregolare. */
-export const THETA_FN_AMP_SPREAD = 2.6;
-/** Quanto può differire la durata delle mezze spazzate (rapporto max/min): un F/N è RITMICO. */
-export const THETA_FN_PERIOD_SPREAD = 2.6;
-/** Quanto può spostarsi il CENTRO dello spazzare durante la finestra. Un F/N galleggia attorno
- *  a uno stesso punto; se il centro scivola è una caduta lenta o una salita, non un F/N. */
-export const THETA_FN_CENTRE_DRIFT = 0.30;
-/** Dopo quanto senza spazzate l'F/N è finito (s). */
+export const THETA_FN_HALF_MAX_S = 6.0;
+/** Quanto possono differire fra loro le ampiezze delle spazzate (rapporto max/min).
+ *  ⚠️ Resta il criterio che separa un F/N da un corpo che si agita — ma un F/N VERO si smorza:
+ *  misurato 6,3× sul FLOATING NEEDLE (0,63 poi 0,10) mentre si spegne. Il vecchio 2,6 pretendeva
+ *  una regolarità che l'ago vero non ha. */
+export const THETA_FN_AMP_SPREAD = 7.0;
+/** Quanto può differire la durata delle mezze spazzate (rapporto max/min): un F/N è RITMICO —
+ *  ma non un metronomo. MISURATO sull'INSTANT: da 0,39 a 1,68 s, cioè 4,3×. */
+export const THETA_FN_PERIOD_SPREAD = 4.5;
+/**
+ * Quanto può spostarsi il CENTRO dello spazzare, **per ogni mezza spazzata**. Un F/N galleggia
+ * attorno a uno stesso punto; se il centro scivola è una caduta lenta o una salita, non un F/N.
+ *
+ * ⚠️ PER SPAZZATA, non in totale: un limite totale dipende da quante spazzate sono entrate nella
+ * finestra, e con tre soltanto lasciava passare un centro che scivolava di 0,18 ogni volta.
+ * MISURATO sui quattro video: 0,015 (instant e tone arm) e 0,044 (floating needle) per spazzata
+ * — contro 0,18 dell'agitazione. La separazione è netta, e 0,08 ci sta in mezzo con margine.
+ * È anche `THETA_FN_MIN_SWEEP`: il centro non deve spostarsi, fra una spazzata e l'altra, di
+ * quanto vale una spazzata leggibile.
+ */
+export const THETA_FN_CENTRE_DRIFT = 0.08;
+/** Dopo quanto senza spazzate l'F/N è finito (s). Usato ANCHE da App per non riaprire una riga
+ *  d'archivio sull'F/N dell'EEG che dura. */
 export const THETA_FN_EXPIRE_S = 4.0;
-/** Un punto di svolta conta solo se l'ago ha invertito di almeno tanto: senza questo il rumore
- *  produrrebbe centinaia di micro-inversioni e ogni finestra sembrerebbe ritmica. */
-export const THETA_FN_TURN_HYST = 0.05;
+/**
+ * FINESTRA in cui cercare le spazzate che dimostrano l'F/N (s).
+ *
+ * Deve poter contenere `THETA_FN_MIN_SWEEPS` mezze spazzate alla durata MASSIMA ammessa:
+ * 3 × 6,0 = 18 s, e si tiene 20 per margine. Prima si riusava `THETA_FN_EXPIRE_S` (4 s) per entrambe le cose, e un F/N
+ * lento era invisibile per costruzione — tre spazzate da 2,6 s occupano 7,8 s e nella finestra
+ * non ci stavano mai. È questo il difetto che rendeva il TONE ARM introvabile a QUALUNQUE
+ * ampiezza.
+ */
+export const THETA_FN_WINDOW_S = 20.0;
+/**
+ * SILENZIO che chiude l'F/N: quanto si aspetta una NUOVA spazzata prima di dire che è finito,
+ * in multipli della mezza spazzata osservata. Adattivo di proposito — con una finestra di 15 s,
+ * una regola a tempo fisso terrebbe acceso l'F/N per quindici secondi dopo che si è fermato.
+ */
+export const THETA_FN_SILENCE_MULT = 2.2;
+/** …con un minimo, perché su un F/N rapidissimo 2,2 mezze spazzate sono pochi decimi. */
+export const THETA_FN_SILENCE_MIN_S = 2.0;
+/**
+ * Un punto di svolta conta solo se l'ago ha invertito di almeno tanto.
+ *
+ * Vale `THETA_FN_MIN_SWEEP`, e non meno: una svolta che non arriva a essere una spazzata
+ * LEGGIBILE non è una svolta. Col vecchio 0,05 il TONE ARM del video produceva, fra due spazzate
+ * da 1,9, dei sussulti da 0,05–0,06 — l'ago che preme contro il bordo — che venivano contati
+ * come mezze spazzate e poi facevano fallire proprio il minimo di ampiezza. Rapporto max/min
+ * 39,6 su un movimento che a occhio è il più regolare dei quattro.
+ */
+export const THETA_FN_TURN_HYST = THETA_FN_MIN_SWEEP;
 
 // ── SCALA DEL TONO DI RON (−40 .. +40) ─────────────────────────────────────────────────────────
 /** Fondo scala della scala del tono: da −40 (resistenza TOTALE) a +40 (resistenza ZERO),
