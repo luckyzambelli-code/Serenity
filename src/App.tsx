@@ -4950,7 +4950,8 @@ export default function App() {
               // annulla se sta cercando. Prima collegava soltanto, quindi un clic per sbaglio
               // non si poteva disfare. (`handleConnectMuse` sa già gestire i tre stati.)
               onClick={() => { void handleConnectMuse(); }}
-              title={(museConnection === 'connected' ? t('muse_tip_disconnect')
+              title={(museConnection === 'connected'
+                     ? (museContact ? t('muse_tip_disconnect') : t('muse_tip_not_worn'))
                    : museConnection === 'searching' ? t('muse_tip_searching')
                    : t('muse_tip_connect')) as string}
               style={{
@@ -4960,9 +4961,15 @@ export default function App() {
               // MINI TOGGLE monochrome : piste en creux + pouce en verre (cuffie), texte actuel.
               background: isLightTheme ? '#b7b7be' : '#17171b',
               boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
+              {/* ── VERDE = COLLEGATO **E INDOSSATO** ────────────────────────────────────
+                  Non è una sfumatura: un casco appaiato ma posato sul tavolo non fa contatto,
+                  quindi non produce carica e l'ago non reagisce. Il badge diceva « MUSE ✓ » in
+                  bianco nei due casi, e non c'era modo di distinguerli a colpo d'occhio.
+                  Bianco = collegato, in attesa di contatto. Verde = pronto davvero. */}
               <span style={{
                 width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                background: museConnection === 'connected' ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.10)',
+                background: museConnection !== 'connected' ? 'rgba(255,255,255,0.10)'
+                  : museContact ? '#34d399' : 'rgba(255,255,255,0.92)',
                 border: '1px solid rgba(255,255,255,0.3)',
                 boxShadow: '0 4px 10px rgba(0,0,0,0.45), inset 0 2px 4px rgba(255,255,255,0.55)',
                 animation: museConnection !== 'connected' ? 'pulse 1.5s infinite' : 'none' }}>
@@ -4972,7 +4979,7 @@ export default function App() {
               <span style={{
                 fontSize: 13, fontWeight: 'bold', letterSpacing: '0.08em',
                 color: isLightTheme ? '#3a3a40' : '#e8ecf2', whiteSpace: 'nowrap' }}>
-                {museConnection === 'connected' ? 'MUSE ✓'
+                {museConnection === 'connected' ? (museContact ? 'MUSE ✓' : `MUSE · ${t('muse_not_worn')}`)
                   : museConnection === 'searching' ? `${t('searching') || 'Recherche'}…`
                   : museEverConnected ? `⚠ ${t('muse_reconnect')}` : t('muse_connect')}
               </span>
