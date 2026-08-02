@@ -337,10 +337,10 @@ describe('resaAgo', () => {
 
   it('conta presi, mancati e falsi', () => {
     const rs = [
-      it_(10, { pcCarico: true,  readMuse: 'Fall',  readMeter: 'NULL' }),
-      it_(20, { pcCarico: true,  readMuse: 'NULL',  readMeter: 'Tick' }),
-      it_(30, { pcCarico: false, readMuse: 'Tick',  readMeter: 'NULL' }),
-      it_(40, { pcCarico: false, readMuse: 'NULL',  readMeter: 'NULL' }),
+      it_(10, { indica: true,  readMuse: 'Fall',  readMeter: 'NULL' }),
+      it_(20, { indica: true,  readMuse: 'NULL',  readMeter: 'Tick' }),
+      it_(30, { indica: false, readMuse: 'Tick',  readMeter: 'NULL' }),
+      it_(40, { indica: false, readMuse: 'NULL',  readMeter: 'NULL' }),
     ];
     const M = resaAgo(rs, r => r.readMuse);
     expect(M).toEqual({ n: 4, carichi: 2, presi: 1, falsi: 1, mancati: 1 });
@@ -348,8 +348,8 @@ describe('resaAgo', () => {
     expect(T).toEqual({ n: 4, carichi: 2, presi: 1, falsi: 0, mancati: 1 });
   });
 
-  it('un item SENZA giudizio del preclear non entra', () => {
-    // Se il preclear non ha risposto (o la prova cieca era spenta) non c'è criterio: contarlo
+  it('una riga SENZA giudizio del preclear non entra', () => {
+    // Se il preclear non ha ancora risposto non c'è criterio: contarla
     // come « scarico » regalerebbe specificità a chi non legge mai.
     const r = resaAgo([it_(10, { readMuse: 'Fall' })], x => x.readMuse);
     expect(r.n).toBe(0);
@@ -357,7 +357,7 @@ describe('resaAgo', () => {
 
   it('uno strumento ASSENTE non colleziona mancati', () => {
     // Senza il meter collegato, `readMeter` non esiste: quegli item non sono suoi fallimenti.
-    const rs = [it_(10, { pcCarico: true, readMuse: 'Fall' })];
+    const rs = [it_(10, { indica: true, readMuse: 'Fall' })];
     expect(resaAgo(rs, r => r.readMeter).n).toBe(0);
     expect(resaAgo(rs, r => r.readMuse).presi).toBe(1);
   });
@@ -365,9 +365,9 @@ describe('resaAgo', () => {
   it('un ago che legge TUTTO prende tutti i carichi — e tutti gli scarichi', () => {
     // È l'avvertimento che il rapporto stampa: la sensibilità da sola non dice niente.
     const rs = [
-      it_(10, { pcCarico: true,  readMuse: 'Fall' }),
-      it_(20, { pcCarico: false, readMuse: 'Fall' }),
-      it_(30, { pcCarico: false, readMuse: 'Fall' }),
+      it_(10, { indica: true,  readMuse: 'Fall' }),
+      it_(20, { indica: false, readMuse: 'Fall' }),
+      it_(30, { indica: false, readMuse: 'Fall' }),
     ];
     const M = resaAgo(rs, r => r.readMuse);
     expect(M.presi).toBe(M.carichi);      // « trova il 100 % dei carichi »…
@@ -376,45 +376,42 @@ describe('resaAgo', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════
-// R&I contro PROVA CIECA — due domande, due criteri, MAI sommati
-// « aveva carica? » si chiede PRIMA di mostrare la lettura (esperimento); « ti indica? » si
-// chiede DOPO averla indicata (procedura). Mescolarli vorrebbe dire non sapere più quale delle
-// due si sta misurando.
+// UN GIUDIZIO PER RIGA, NON UNO PER CLIC
+// L'archivio è in aggiunta e mai riscritto: se l'auditor cambia idea, la stessa riga ne produce
+// un'altra. Misurato il 02/08/2026 su sedute vere — un solo item (tSec 45,29) aveva quattro
+// giudizi, due sì e due no, e il rapporto li contava come quattro item distinti.
 // ═══════════════════════════════════════════════════════════════════════════════════════════
-describe('resaAgo — i due criteri restano separati', () => {
+describe('resaAgo — l auditor può cambiare idea', () => {
   const it_ = (tSec: number, d: Record<string, unknown>): CorpusRecord =>
     itemRecord('s1', '2026-08-02T10:00:00.000Z', tSec, d);
 
-  const righe = [
-    it_(10, { pcCarico: true,  readMuse: 'Fall' }),          // solo prova cieca
-    it_(20, { indica: true,    readMuse: 'Long Fall' }),     // solo R&I
-    it_(30, { pcCarico: false, indica: true, readMuse: 'Tick' }),  // tutte e due, in disaccordo
-  ];
-
-  it('la prova cieca conta SOLO le righe con pcCarico', () => {
-    const r = resaAgo(righe, x => x.readMuse, 'pcCarico');
-    expect(r.n).toBe(2);          // la riga di solo R&I non entra
+  it('vale l ULTIMO giudizio, non tutti', () => {
+    const r = resaAgo([
+      it_(45.29, { indica: false, readMuse: 'Fall' }),
+      it_(45.29, { indica: true,  readMuse: 'Fall' }),
+      it_(45.29, { indica: false, readMuse: 'Fall' }),
+      it_(45.29, { indica: true,  readMuse: 'Fall' }),   // ← quello che l'auditor ha lasciato
+    ], x => x.readMuse);
+    expect(r.n).toBe(1);
     expect(r.carichi).toBe(1);
-    expect(r.falsi).toBe(1);      // la terza: scarica ma l'ago ha letto
+    expect(r.presi).toBe(1);
   });
 
-  it('l R&I conta SOLO le righe con indica', () => {
-    const r = resaAgo(righe, x => x.readMuse, 'indica');
+  it('due item DIVERSI restano due', () => {
+    const r = resaAgo([
+      it_(10, { indica: true,  readMuse: 'Fall' }),
+      it_(20, { indica: false, readMuse: 'Fall' }),
+    ], x => x.readMuse);
     expect(r.n).toBe(2);
-    expect(r.carichi).toBe(2);    // entrambe indicano
-    expect(r.presi).toBe(2);
   });
 
-  it('la stessa riga può dire cose OPPOSTE ai due criteri', () => {
-    // Terza riga: il preclear NON sentiva carica, ma la reazione gli indica. È un caso vero
-    // (una lettura può indicare senza che il preclear l'avesse riconosciuta prima) e i due
-    // conteggi devono poterlo mostrare invece di annullarlo.
-    const sola = [righe[2]];
-    expect(resaAgo(sola, x => x.readMuse, 'pcCarico').falsi).toBe(1);
-    expect(resaAgo(sola, x => x.readMuse, 'indica').presi).toBe(1);
-  });
-
-  it('per difetto guarda la prova cieca', () => {
-    expect(resaAgo(righe, x => x.readMuse)).toEqual(resaAgo(righe, x => x.readMuse, 'pcCarico'));
+  it('lo stesso istante in SEDUTE diverse non si fonde', () => {
+    const s2 = (tSec: number, d: Record<string, unknown>): CorpusRecord =>
+      itemRecord('s2', '2026-08-02T11:00:00.000Z', tSec, d);
+    const r = resaAgo([
+      it_(45.29, { indica: true,  readMuse: 'Fall' }),
+      s2(45.29,  { indica: false, readMuse: 'Fall' }),
+    ], x => x.readMuse);
+    expect(r.n).toBe(2);
   });
 });

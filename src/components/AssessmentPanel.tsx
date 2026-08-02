@@ -17,9 +17,9 @@ import { glassSurface } from '../ui/panel3d';
  * Per questo, in vista INDICAZIONE, le due letture si mostrano SEPARATE: leggono item diversi, e
  * un verdetto unico nasconderebbe proprio il dato che si cerca.
  *
- * Le righe non sono solo gli item: in seduta l'ago reagisce anche fuori dall'assessment — sul
- * processo, su ciò che il preclear dice — e l'auditor indica QUELLE reazioni. Ogni reazione
- * mostrata apre quindi una riga validabile (`kind: 'reaction'`).
+ * La vista MANUALE contiene SOLO ciò che l'auditor ci scrive. Le reazioni di seduta vi aprivano
+ * una riga ciascuna: in una seduta sono decine, e gli item scritti a mano ci si perdevano
+ * dentro. Restano nel journal e nell'archivio, dove servono.
  */
 export interface AssessmentItem {
   id: string;
@@ -29,7 +29,7 @@ export interface AssessmentItem {
   beforeMs?: number;
   /**
    * `item`     — dato a voce durante un ASSESSMENT.
-   * `reaction` — l'ago ha reagito in seduta, senza che sia stato dato un item.
+   * `reaction` — l'ago ha reagito in seduta (non più prodotto: resta per le sedute vecchie).
    * `manual`   — l'auditor ha TROVATO un item in un altro modo e l'ha scritto: detto dal
    *              preclear, uscito da una domanda di auditing, oppure indicato al preclear anche
    *              senza reazione. È il caso per cui esiste la vista INDICAZIONE.
@@ -44,8 +44,6 @@ export interface AssessmentItem {
   readSrc?: 'eeg' | 'theta';
   /** Il preclear ha confermato? `undefined` = non ancora validata. */
   indica?: boolean;
-  /** Prova cieca: il preclear aveva dichiarato carica su questo item. */
-  pcCarico?: boolean;
 }
 
 type Vista = 'assess' | 'ri';

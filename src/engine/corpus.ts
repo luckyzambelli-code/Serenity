@@ -187,24 +187,11 @@ export interface ItemRecord extends Base {
   readMuse?: string;
   readMeter?: string;
   /**
-   * IL GIUDIZIO DEL PRECLEAR: quell'item aveva carica?
-   *
-   * È il solo criterio ESTERNO ai due aghi. Nessuno dei due può validare l'altro — si sono
-   * trovati d'accordo una volta su 89 — mentre il preclear sa se un item lo ha smosso.
-   * Si raccoglie ALLA CIECA: il verdetto dell'app resta nascosto finché non ha risposto.
-   *
-   * ⚠️ Cieco sul VERDETTO, non sull'ago: il quadrante si muove sotto gli occhi del preclear, e
-   * questo tira il giudizio verso l'ago MOSTRATO. Va tenuto presente leggendo il risultato — e
-   * rende più forte, non più debole, un esito a favore dell'ago che NON era mostrato.
-   */
-  pcCarico?: boolean;
-  /**
    * R&I — la reazione INDICA al preclear?
    *
-   * È la domanda della procedura, sorella di `pcCarico` ma posta in un altro momento:
-   * `pcCarico` si raccoglie ALLA CIECA prima di mostrare la lettura (l'esperimento), `indica`
-   * dopo che l'auditor l'ha indicata (la seduta). Servono a due cose diverse e si tengono
-   * separate: mescolarle vorrebbe dire non sapere più quale delle due si sta misurando.
+   * L'auditor indica la lettura al preclear, il preclear dice se gli indica, e questo si
+   * archivia. È il solo criterio ESTERNO ai due aghi: su 89 item si sono trovati d'accordo una
+   * volta (κ = −0,09), quindi nessuno dei due può giudicare l'altro — il preclear sì.
    *
    * Vale anche per le righe che NON sono item — in seduta l'ago reagisce sul processo, e
    * l'auditor indica quelle reazioni.

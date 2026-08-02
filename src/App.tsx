@@ -117,7 +117,6 @@ import { ProcessusModal } from './components/ProcessusModal';
 import { MnaPanel } from './components/MnaPanel';
 import { BiometricPanel } from './components/BiometricPanel';
 import { AssessmentPanel, type AssessmentItem } from './components/AssessmentPanel';
-import { PcChargePrompt } from './components/PcChargePrompt';
 import { AppBackground } from './components/AppBackground';
 import { HealthPanel } from './components/HealthPanel';
 import { SidebarDrawer as SidebarDrawerBase } from './components/SidebarDrawer';
@@ -1163,59 +1162,12 @@ export default function App() {
       type: erased ? 'success' : 'normal' });
   };
 
-  // ═══════════════════════════════════════════════════════════════════════════════════════
-  // PROVA CIECA — il giudizio del preclear come criterio ESTERNO ai due aghi
-  //
-  // Misurato il 02/08/2026 su 89 item con MUSE e METER insieme: hanno letto lo STESSO item
-  // **una volta** (solo MUSE 31, solo METER 6, nessuno 51 — κ di Cohen −0,09). Nessuno dei due
-  // può quindi validare l'altro: si sono guardati in faccia 89 volte e trovati d'accordo una.
-  //
-  // Il preclear invece sa se un item lo ha smosso. Se dichiara la carica PRIMA di vedere il
-  // verdetto dell'app, si può contare quale dei due aghi trova gli item carichi — che è la
-  // domanda vera, e la sola che decida se vadano usati insieme o separati.
-  //
-  // ⚠️ Cieco sul VERDETTO, non sull'ago: il quadrante si muove sotto gli occhi del preclear.
-  //    Il giudizio è quindi tirato verso l'ago MOSTRATO — il che rende più forte, non più
-  //    debole, un risultato a favore dell'altro.
-  // ═══════════════════════════════════════════════════════════════════════════════════════
-  /** Quanto si aspetta il giudizio del preclear prima di uscire lo stesso: la seduta non si
-   *  blocca perché una domanda è rimasta senza risposta. */
-  const PC_ATTESA_MS = 12_000;
-  const [provaCieca, setProvaCieca] = useState(false);
-  const provaCiecaRef = useRef(false);
-  useEffect(() => { provaCiecaRef.current = provaCieca; }, [provaCieca]);
-  /** L'item in attesa di giudizio (null = nessuna domanda aperta). */
-  const [pcDomanda, setPcDomanda] = useState<{ id: string; parola: string } | null>(null);
-  /** id item → cosa fare quando risponde. Una mappa e non un solo callback: se il preclear
-   *  tarda e intanto arriva l'item dopo, la risposta deve andare all'item GIUSTO. */
-  const attesaPcRef = useRef(new Map<string, (carico?: boolean) => void>());
-  const rispondiPc = useCallback((carico: boolean) => {
-    const d = pcDomanda;
-    if (!d) return;
-    const f = attesaPcRef.current.get(d.id);
-    attesaPcRef.current.delete(d.id);
-    if (f) f(carico);
-    else setPcDomanda(null);
-  }, [pcDomanda]);
-  // Tastiera: C = carica, N = niente. In seduta le mani sono sulle lattine, e un bersaglio da
-  // centrare col mouse è un ritardo che entra nella misura.
-  useEffect(() => {
-    if (!pcDomanda) return;
-    const h = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      const k = e.key.toLowerCase();
-      if (k === 'c') { e.preventDefault(); rispondiPc(true); }
-      else if (k === 'n') { e.preventDefault(); rispondiPc(false); }
-    };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [pcDomanda, rispondiPc]);
-
   // ── R&I — SOLO GLI ITEM CHE L'AUDITOR SCRIVE ───────────────────────────────────────────
   // Le reazioni di seduta aprivano una riga da validare ciascuna. In una seduta sono decine:
   // la vista MANUALE si riempiva di « DISSOLUZIONE · Tick » e l'auditor non ci trovava più
   // quello che aveva scritto lui. Restano nel journal e nell'archivio, dove servono.
   const riIdRef = useRef(0);
+
   /**
    * L'auditor ha trovato un item in un ALTRO modo e lo scrive: il preclear l'ha detto, oppure è
    * uscito da una domanda di auditing, oppure non ha fatto reagire l'ago ma gli indica lo stesso.
@@ -1343,9 +1295,7 @@ export default function App() {
       // l'auditor non ha davanti agli occhi.
       const r = computeInstantRead(shownReadsRef.current, tSpeak, notBefore, notAfter,
                                    agoPrincipale);   // 'NULL' si rien de vu
-      // In PROVA CIECA la lettura NON si mostra: il preclear deve dire se l'item aveva carica
-      // senza sapere cosa ha deciso l'app. Si continua a calcolarla — serve appena risponde.
-      if (r.read !== 'NULL' && r.read !== ultimaMostrata && !provaCiecaRef.current) {
+      if (r.read !== 'NULL' && r.read !== ultimaMostrata) {
         ultimaMostrata = r.read;
         rec.reaction = r.read; rec.beforeMs = r.beforeMs;   // le record du rapport partage l'objet
         setAssessItems(prev => prev.map(a => a.id === id ? { ...a, reaction: r.read, beforeMs: r.beforeMs } : a));
@@ -1355,31 +1305,6 @@ export default function App() {
     };
     const chiudi = () => {
       const { read, beforeMs, afterMs } = guarda();
-      // ── PROVA CIECA: si aspetta il giudizio del preclear ────────────────────────────────
-      // La lettura è decisa, ma non si mostra e non si archivia finché il preclear non ha detto
-      // se quell'item aveva carica. Il suo giudizio è il solo criterio ESTERNO ai due aghi:
-      // nessuno dei due può validare l'altro (d'accordo una volta su 89), lui sì. Se sapesse
-      // già cosa ha deciso l'app, non sarebbe più un criterio indipendente.
-      if (provaCiecaRef.current) {
-        setPcDomanda({ id, parola: w });
-        attesaPcRef.current.set(id, (carico?: boolean) => {
-          setPcDomanda(d => (d && d.id === id ? null : d));
-          mostraEsito(read, beforeMs, afterMs, carico);
-        });
-        // Se non risponde, la seduta non si blocca: dopo l'attesa l'esito esce senza giudizio.
-        const _t = window.setTimeout(() => {
-          const f = attesaPcRef.current.get(id);
-          if (f) { attesaPcRef.current.delete(id); f(undefined); }
-        }, PC_ATTESA_MS);
-        pendingTimersRef.current.add(_t);
-        return;
-      }
-      mostraEsito(read, beforeMs, afterMs, undefined);
-    };
-    /** Mostra la lettura, la scrive nel journal e nell'archivio. In prova cieca arriva qui solo
-     *  DOPO che il preclear ha risposto — o dopo l'attesa, se tace. */
-    const mostraEsito = (read: string, beforeMs: number, afterMs: number,
-                         pcCarico: boolean | undefined) => {
       // ── LE DUE LETTURE, SEPARATE ────────────────────────────────────────────────────────
       // `read` è quella dell'ago mostrato. Ma i due leggono item DIVERSI — su 89 item ne hanno
       // letto uno solo insieme — e la vista INDICAZIONE le mette a confronto riga per riga: un
@@ -1389,10 +1314,10 @@ export default function App() {
       const rMuse  = computeInstantRead(shownReadsRef.current, tSpeak, notBefore, nA, 'eeg').read;
       const rMeter = computeInstantRead(shownReadsRef.current, tSpeak, notBefore, nA, 'theta').read;
       {
-        // La scritta compare adesso in ogni caso: in prova cieca `guarda()` l'aveva soppressa,
-        // e senza questo l'item resterebbe sul suo « ⏳ » per sempre.
+        // La scritta compare adesso in ogni caso, anche se `guarda()` non l'aveva mostrata:
+        // senza questo un item senza reazione resterebbe sul suo « ⏳ » per sempre.
         rec.reaction = read; rec.beforeMs = beforeMs;
-        const patch = { reaction: read, beforeMs, pcCarico, readSrc: agoPrincipale,
+        const patch = { reaction: read, beforeMs, readSrc: agoPrincipale,
                         readMuse: instruments.muse ? rMuse : undefined,
                         readMeter: instruments.theta ? rMeter : undefined };
         setAssessItems(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
@@ -1452,8 +1377,7 @@ export default function App() {
         corpusWrite(itemRecord(corpusSessionRef.current, new Date().toISOString(), tSpeak,
           { g: gruppo, read, offMs: beforeMs > 0 ? -beforeMs : afterMs,
             readMuse: instruments.muse ? rMuse : undefined,
-            readMeter: instruments.theta ? rMeter : undefined,
-            pcCarico }));
+            readMeter: instruments.theta ? rMeter : undefined }));
       }
       // Journal : read + l'écart (− avant l'item, + après). Aucun changement → « NULL ».
       const nulla = LC('nessuna reazione (NULL)', 'aucune réaction (NULL)', 'no read (NULL)',
@@ -1465,17 +1389,6 @@ export default function App() {
             + (instruments.muse && instruments.theta
                 ? `   [MUSE ${rMuse} · METER ${rMeter}]` : ''),
         type: read === 'NULL' ? 'normal' : 'success' });
-      // Il giudizio del preclear, su una riga sua: è un DATO, non un commento alla lettura.
-      if (pcCarico !== undefined) {
-        logBufferRef.current.push({ time: tSpeak, speaker: 'PC',
-          text: pcCarico
-            ? LC('sentivo carica su questo item', 'je sentais de la charge sur cet item',
-                 'I felt charge on this item', 'sentía carga en este ítem',
-                 'jag kände laddning på detta item')
-            : LC('nessuna carica sentita', 'aucune charge ressentie', 'no charge felt',
-                 'ninguna carga sentida', 'ingen laddning kändes'),
-          type: pcCarico ? 'success' : 'normal' });
-      }
     };
     const passo = () => {
       const _tid = window.setTimeout(() => {
@@ -5435,8 +5348,6 @@ export default function App() {
             thetaAddPoint={theta.addPointFromReference}
             thetaTaNow={theta.taNow}
             onOpenThetaTester={() => { setSidebarDrawer(null); setShowThetaCal(true); }}
-            provaCieca={provaCieca}
-            setProvaCieca={setProvaCieca}
           drawer={sidebarDrawer}
           onClose={sdOnClose}
           t={t}
@@ -6365,24 +6276,6 @@ export default function App() {
               </div>
               )}
             </div>
-            )}
-
-            {/* PROVA CIECA — la domanda al preclear. Fissa in basso: vedi PcChargePrompt. */}
-            {pcDomanda && (
-              <PcChargePrompt
-                parola={pcDomanda.parola}
-                onCarico={() => rispondiPc(true)}
-                onNiente={() => rispondiPc(false)}
-                titolo={LC('aveva carica?', 'y avait-il de la charge ?', 'was there charge?',
-                           '¿había carga?', 'fanns det laddning?')}
-                siLbl={LC('SÌ, CARICA', 'OUI, CHARGE', 'YES, CHARGE', 'SÍ, CARGA', 'JA, LADDNING')}
-                noLbl={LC('NIENTE', 'RIEN', 'NOTHING', 'NADA', 'INGET')}
-                nota={LC('C = carica · N = niente — la lettura compare dopo',
-                         'C = charge · N = rien — la lecture apparaît après',
-                         'C = charge · N = nothing — the read appears after',
-                         'C = carga · N = nada — la lectura aparece después',
-                         'C = laddning · N = inget — avläsningen visas efter')}
-              />
             )}
 
             {/* Module ASSESSMENT (ex R&I) — mots donnés à voix haute + leur READ, TOUTE la séance. */}

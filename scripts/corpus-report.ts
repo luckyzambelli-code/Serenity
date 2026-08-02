@@ -197,49 +197,36 @@ tit('RIPETIBILITÀ — lo stesso item dato più volte');
 }
 
 // È la sola domanda a cui i due aghi non possono rispondere fra loro: si sono trovati d'accordo
-// una volta su 89. Il preclear sì. Due criteri, TENUTI SEPARATI perché sono due domande diverse:
-// la prova cieca chiede « aveva carica? » prima di mostrare la lettura, l'R&I chiede « ti
-// indica? » dopo averla indicata.
-for (const [tit_, crit, spiega] of [
-  ['IL GIUDIZIO DEL PRECLEAR — prova cieca (« aveva carica? »)', 'pcCarico',
-   'Si accende in CONFIG → TRIM → « Prova cieca ». Dopo ogni item la lettura resta\n  nascosta finché il preclear non ha detto se c\'era carica.'],
-  ['R&I — la reazione INDICA al preclear?', 'indica',
-   'Nel modulo R&I, vista « Indicazione »: due bottoni per riga. Vale anche sulle\n  reazioni di seduta, non solo sugli item.'],
-] as const) {
-  tit(tit_);
-  const M = resaAgo(due, r => r.readMuse, crit);
-  const T = resaAgo(due, r => r.readMeter, crit);
+// una volta su 89. Il preclear sì — e il criterio si raccoglie nel modulo R&I, vista MANUALE
+// o direttamente sulla riga dell'item assessato.
+tit('R&I — la reazione INDICA al preclear?');
+{
+  const M = resaAgo(due, r => r.readMuse);
+  const T = resaAgo(due, r => r.readMeter);
   if (!M.n && !T.n) {
     console.log('  Nessuna riga con questo giudizio.');
-    console.log(`  ${spiega}`);
-    continue;
-  }
-  const nome1 = crit === 'indica' ? 'indicanti' : 'carichi';
-  const riga = (nome: string, x: ResaAgo) => {
-    if (!x.n) { console.log(`  ${nome.padEnd(6)} — non era collegato`); return; }
-    const sens = x.carichi ? (100 * x.presi) / x.carichi : NaN;
-    const altri = x.n - x.carichi;
-    const spec = altri ? (100 * (altri - x.falsi)) / altri : NaN;
-    console.log(`  ${nome.padEnd(6)} trova ${x.presi}/${x.carichi} ${nome1}` +
-      `${Number.isNaN(sens) ? '' : ` (${sens.toFixed(0)} %)`}` +
-      ` · legge ${x.falsi}/${altri} degli altri` +
-      `${Number.isNaN(spec) ? '' : ` (ne lascia stare il ${spec.toFixed(0)} %)`}`);
-  };
-  console.log(`  ${Math.max(M.n, T.n)} righe giudicate · ${Math.max(M.carichi, T.carichi)} ${nome1}\n`);
-  riga('MUSE', M);
-  riga('METER', T);
-  // ⚠️ Un ago che legge TUTTO trova tutto senza sapere niente. I due numeri vanno letti
-  // insieme, sempre — è lo stesso errore della « corrispondenza » senza baseline.
-  console.log('\n  ⚠️  I due numeri si leggono INSIEME: un ago che legge ogni riga trova il');
-  console.log('     100 % senza sapere niente.');
-  if (crit === 'pcCarico') {
-    console.log('  ⚠️  Cieco sul VERDETTO, non sull\'ago: il quadrante si muove sotto gli occhi');
-    console.log('     del preclear. Il giudizio è tirato verso l\'ago MOSTRATO — quindi un');
-    console.log('     risultato a favore dell\'ago NASCOSTO vale di più, non di meno.');
+    console.log('  Nel modulo R&I: due bottoni « INDICA AL PC? » sotto ogni item assessato, e');
+    console.log('  nella vista MANUALE per gli item trovati in un altro modo.');
   } else {
+    const riga = (nome: string, x: ResaAgo) => {
+      if (!x.n) { console.log(`  ${nome.padEnd(6)} — non era collegato`); return; }
+      const sens = x.carichi ? (100 * x.presi) / x.carichi : NaN;
+      const altri = x.n - x.carichi;
+      const spec = altri ? (100 * (altri - x.falsi)) / altri : NaN;
+      console.log(`  ${nome.padEnd(6)} trova ${x.presi}/${x.carichi} indicanti` +
+        `${Number.isNaN(sens) ? '' : ` (${sens.toFixed(0)} %)`}` +
+        ` · legge ${x.falsi}/${altri} degli altri` +
+        `${Number.isNaN(spec) ? '' : ` (ne lascia stare il ${spec.toFixed(0)} %)`}`);
+    };
+    console.log(`  ${Math.max(M.n, T.n)} righe giudicate · ${Math.max(M.carichi, T.carichi)} indicanti\n`);
+    riga('MUSE', M);
+    riga('METER', T);
+    // ⚠️ Un ago che legge TUTTO trova tutto senza sapere niente: i due numeri si leggono
+    // insieme, sempre — è lo stesso errore della « corrispondenza » senza baseline.
+    console.log('\n  ⚠️  I due numeri si leggono INSIEME: un ago che legge ogni riga trova il');
+    console.log('     100 % senza sapere niente.');
     console.log('  ⚠️  Qui il preclear ha VISTO la reazione indicata: è la procedura, non un');
-    console.log('     esperimento cieco. Dice se lo strumento è utilizzabile in seduta, non');
-    console.log('     quale dei due misuri la carica — per quello serve la prova cieca.');
+    console.log('     esperimento cieco. Dice se lo strumento è utilizzabile in seduta.');
   }
 }
 

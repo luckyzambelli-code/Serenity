@@ -59,10 +59,6 @@ interface SidebarDrawerProps {
   thetaTaNow?: number | null;
   /** Apre l'E-meter Tester (taratura con l'artefatto fisico). */
   onOpenThetaTester?: () => void;
-  /** PROVA CIECA: dopo ogni item il preclear dichiara la carica PRIMA di vedere la lettura.
-   *  È l'unico criterio esterno ai due aghi — vedi `components/PcChargePrompt.tsx`. */
-  provaCieca?: boolean;
-  setProvaCieca?: (v: boolean) => void;
   setNeedleTrim: React.Dispatch<React.SetStateAction<number>>;
   needleInertia?:    number;
   setNeedleInertia?: React.Dispatch<React.SetStateAction<number>>;
@@ -492,7 +488,7 @@ function PcDrawer({ capturePcPhoto, t, theme }: SubProps) {
 function TrimDrawer({ needleTrim, setNeedleTrim, needleInertia, setNeedleInertia,
                      thetaSensTrim = 0, setThetaSensTrim, thetaConnected = false, museConnected = false,
                      thetaConfig = 'two-cans', setThetaConfig, thetaAddPoint,
-                     thetaTaNow = null, onOpenThetaTester, provaCieca = false, setProvaCieca,
+                     thetaTaNow = null, onOpenThetaTester,
                      t, theme }: SubProps) {
   const { titleColor, labelColor, inputBg, inputBorder } = theme;
   /** Il TA che il Theta-Meter mostra ADESSO, digitato per il confronto affiancato. */
@@ -687,36 +683,6 @@ function TrimDrawer({ needleTrim, setNeedleTrim, needleInertia, setNeedleInertia
         </div>
       )}
 
-      {/* ── PROVA CIECA ──────────────────────────────────────────────────────────────────────
-          FUORI dal blocco « meter collegato »: si accende PRIMA di attaccare gli strumenti, e
-          serve anche col solo MUSE. Dentro, restava invisibile proprio a chi doveva attivarla.
-
-          I due aghi non possono validarsi a vicenda — su 89 item hanno letto lo stesso item una
-          volta sola. Il preclear sì: acceso, l'app tiene nascosta la lettura finché lui non ha
-          detto se quell'item aveva carica. */}
-      {setProvaCieca && (
-        <div style={{ marginTop: 16, paddingTop: 14,
-                      borderTop: '1px solid rgba(255,255,255,0.10)' }}>
-          {/* ⚠️ `.glass-btn` impone bordo e colore con `!important`: uno stile in linea su
-              `borderColor`/`color` non si vede (verificato in pagina). L'acceso si segna quindi
-              con l'OUTLINE — che la classe non tocca — e col colore su uno SPAN, che vince
-              sull'ereditarietà. */}
-          <button
-            onClick={() => setProvaCieca(!provaCieca)}
-            className="glass-btn"
-            style={{ width: '100%', padding: '8px', fontSize: 10, letterSpacing: '0.08em',
-                     textTransform: 'uppercase',
-                     outline: provaCieca ? '1px solid rgba(251,191,36,0.85)' : 'none',
-                     outlineOffset: -1 }}>
-            <span style={{ color: provaCieca ? '#fbbf24' : 'inherit' }}>
-              {provaCieca ? '● ' : '○ '}{t('blind_test')}
-            </span>
-          </button>
-          <div style={{ fontSize: 9, color: labelColor, lineHeight: 1.5, marginTop: 4 }}>
-            {t('blind_test_hint')}
-          </div>
-        </div>
-      )}
     </>
   );
 }

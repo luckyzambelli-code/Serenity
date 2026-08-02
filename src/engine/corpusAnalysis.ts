@@ -437,24 +437,29 @@ export interface ResaAgo {
 }
 
 /**
- * Come si comporta UN ago rispetto al giudizio del preclear. `leggi` estrae la sua lettura.
+ * Come si comporta UN ago rispetto al giudizio del preclear (R&I). `leggi` estrae la sua lettura.
  *
- * `criterio` sceglie QUALE giudizio si usa, e i due NON si mescolano:
- *   'pcCarico' — prova cieca: il preclear dichiara la carica PRIMA di vedere la lettura;
- *   'indica'   — R&I: l'auditor indica la reazione e il preclear dice se gli indica.
- * Sono due domande diverse poste in due momenti diversi. Sommarle vorrebbe dire non sapere più
- * quale delle due si sta misurando.
+ * Il criterio è « la reazione INDICA al preclear? », raccolto nel modulo R&I: l'auditor indica
+ * la lettura, il preclear dice se gli indica. È il solo criterio ESTERNO ai due aghi — su 89
+ * item si sono trovati d'accordo una volta (κ = −0,09), quindi nessuno dei due può giudicare
+ * l'altro.
  */
 export const resaAgo = (
   records: CorpusRecord[],
   leggi: (it: ItemRecord) => string | undefined,
-  criterio: 'pcCarico' | 'indica' = 'pcCarico',
 ): ResaAgo => {
   const out: ResaAgo = { n: 0, carichi: 0, presi: 0, falsi: 0, mancati: 0 };
+  // ⚠️ UN GIUDIZIO PER RIGA, NON UNO PER CLIC. L'archivio è in aggiunta e mai riscritto: se
+  // l'auditor cambia idea, la stessa riga ne produce un'altra. Misurato il 02/08/2026 — un
+  // solo item (tSec 45,29) aveva quattro giudizi, due sì e due no, e il rapporto li contava
+  // come quattro item. Vale l'ULTIMO: è quello che l'auditor ha lasciato.
+  const ultimo = new Map<string, ItemRecord>();
   for (const r of records) {
-    if (r.t !== 'item') continue;
-    const giudizio = criterio === 'indica' ? r.indica : r.pcCarico;
-    if (giudizio === undefined) continue;
+    if (r.t !== 'item' || r.indica === undefined) continue;
+    ultimo.set(`${r.s}#${r.tSec}`, r);          // le righe arrivano in ordine di scrittura
+  }
+  for (const r of ultimo.values()) {
+    const giudizio = r.indica;
     const l = leggi(r);
     if (l === undefined) continue;          // quello strumento non c'era: non è un mancato
     out.n++;
