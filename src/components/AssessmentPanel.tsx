@@ -27,8 +27,14 @@ export interface AssessmentItem {
   item: string;
   reaction: string;
   beforeMs?: number;
-  /** `item` = dato a voce in assessment · `reaction` = l'ago ha reagito in seduta, senza item. */
-  kind?: 'item' | 'reaction';
+  /**
+   * `item`     — dato a voce durante un ASSESSMENT.
+   * `reaction` — l'ago ha reagito in seduta, senza che sia stato dato un item.
+   * `manual`   — l'auditor ha TROVATO un item in un altro modo e l'ha scritto: detto dal
+   *              preclear, uscito da una domanda di auditing, oppure indicato al preclear anche
+   *              senza reazione. È il caso per cui esiste la vista INDICAZIONE.
+   */
+  kind?: 'item' | 'reaction' | 'manual';
   /** Le due letture prese SEPARATAMENTE. Non si fondono: vedi sopra. */
   readMuse?: string;
   readMeter?: string;
@@ -51,16 +57,32 @@ interface AssessmentPanelProps {
   openSignal?: number;
   /** L'auditor registra la risposta del preclear. */
   onIndica?: (id: string, indica: boolean) => void;
+  /** L'auditor SCRIVE un item trovato in un altro modo (vista INDICAZIONE).
+   *  `quandoSec` = l'istante a cui attribuirlo, se si accetta una proposta. */
+  onAggiungiItem?: (testo: string, quandoSec?: number) => void;
+  /**
+   * Cerca, fra le parole DETTE in seduta, l'ultima che contiene quello che l'auditor sta
+   * scrivendo — e dice cosa ha fatto l'ago in quel momento.
+   *
+   * Serve perché un item trovato « in un altro modo » di solito il preclear l'ha già detto:
+   * scriverlo a mano e datarlo ADESSO gli attribuirebbe un ago che in quel momento non stava
+   * reagendo a lui. Con la proposta, la riga porta l'istante vero e la lettura vera.
+   */
+  cercaLettura?: (testo: string) => {
+    tSec: number; frase: string; read: string; readMuse?: string; readMeter?: string;
+  } | null;
   /** Ci sono entrambi gli strumenti: solo allora ha senso mostrare due colonne. */
   dueAghi?: boolean;
 }
 
 export function AssessmentPanel({ items, onHide, t, readMeta, openSignal,
-                                 onIndica, dueAghi = false }: AssessmentPanelProps) {
+                                 onIndica, onAggiungiItem, cercaLettura,
+                                 dueAghi = false }: AssessmentPanelProps) {
   const isLightTheme = useUiStore(s => s.isLightTheme);
   // Collassabile: chiuso di default (solo header), si espande a richiesta.
   const [collapsed, setCollapsed] = React.useState(true);
   const [vista, setVista] = React.useState<Vista>('assess');
+  const [bozza, setBozza] = React.useState('');
   // …e si apre da sé quando parte un ASSESSMENT.
   React.useEffect(() => { if (openSignal) setCollapsed(false); }, [openSignal]);
 
@@ -68,10 +90,24 @@ export function AssessmentPanel({ items, onHide, t, readMeta, openSignal,
   const testo = chiaro ? '#0f172a' : 'rgba(255,255,255,0.92)';
   const tenue = chiaro ? '#94a3b8' : 'rgba(255,255,255,0.4)';
 
-  // In ASSESSMENT si guardano gli item: le reazioni sciolte di seduta sarebbero rumore. In
-  // INDICAZIONE si guarda tutto, perché l'auditor indica anche fuori dall'assessment.
-  const righe = vista === 'assess' ? items.filter(a => a.kind !== 'reaction') : items;
+  // ASSESSMENT = gli item dati a voce. INDICAZIONE = tutto il resto, cioè gli item trovati in
+  // un ALTRO modo: l'ago che reagisce su una domanda di auditing, o un item che l'auditor scrive
+  // perché il preclear l'ha detto. Le due viste non si sovrappongono — l'indicazione degli item
+  // assessati si dà nella loro riga, in ASSESSMENT, senza cambiare vista.
+  const righe = vista === 'assess'
+    ? items.filter(a => a.kind === undefined || a.kind === 'item')
+    : items.filter(a => a.kind === 'reaction' || a.kind === 'manual');
   const validate = items.filter(a => a.indica !== undefined);
+  // La proposta si ricalcola a ogni battuta: è una scansione delle frasi della seduta, costa
+  // niente, e mostrarla solo « dopo un attimo » la renderebbe imprevedibile.
+  const proposta = vista === 'ri' && bozza.trim().length >= 2
+    ? cercaLettura?.(bozza.trim()) ?? null : null;
+  const aggiungi = () => {
+    const w = bozza.trim();
+    if (!w) return;
+    onAggiungiItem?.(w, proposta?.tSec);
+    setBozza('');
+  };
 
   /** Quante volte la lettura di UN ago ha indicato al preclear. Il denominatore conta solo le
    *  righe in cui quell'ago aveva letto qualcosa: un ago che tace non sbaglia. */
@@ -121,6 +157,52 @@ export function AssessmentPanel({ items, onHide, t, readMeta, openSignal,
         </div>
       )}
 
+      {/* ── SCRIVERE UN ITEM TROVATO IN UN ALTRO MODO ────────────────────────────────────────
+          Non tutti gli item arrivano da un assessment: il preclear ne dice uno e l'ago reagisce,
+          una domanda di auditing ne fa uscire uno, oppure non reagisce affatto ma all'auditor
+          indica lo stesso. Qui si scrive e si valida. */}
+      {!collapsed && vista === 'ri' && onAggiungiItem && (
+        <div className="flex flex-col gap-1">
+          <div className="flex gap-1">
+            <input
+              value={bozza}
+              onChange={e => setBozza(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') aggiungi(); }}
+              placeholder={t('ri_write_item')}
+              className="flex-1 min-w-0 text-[12px] px-2 py-1 rounded font-mono"
+              style={{ background: chiaro ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.35)',
+                       border: `1px solid ${chiaro ? 'rgba(100,116,139,0.35)' : 'rgba(255,255,255,0.18)'}`,
+                       color: testo, outline: 'none' }}
+            />
+            <button type="button" onClick={aggiungi} disabled={!bozza.trim()}
+              className="text-[10px] px-2 rounded shrink-0"
+              style={{ border: `1px solid ${chiaro ? 'rgba(100,116,139,0.45)' : 'rgba(255,255,255,0.24)'}`,
+                       background: 'transparent', color: bozza.trim() ? testo : tenue,
+                       cursor: bozza.trim() ? 'pointer' : 'default' }}>
+              +
+            </button>
+          </div>
+          {/* LA PROPOSTA — quella parola è già stata detta in seduta, ed ecco cosa fece l'ago
+              in quel momento. Datare l'item ad ADESSO gli attribuirebbe un ago che non stava
+              reagendo a lui. */}
+          {proposta && (
+            <button type="button" onClick={aggiungi}
+              className="text-left text-[10px] px-2 py-1 rounded"
+              style={{ background: chiaro ? 'rgba(251,191,36,0.12)' : 'rgba(251,191,36,0.10)',
+                       border: '1px solid rgba(251,191,36,0.45)', cursor: 'pointer',
+                       color: chiaro ? '#92400e' : '#fbbf24' }}>
+              <span style={{ opacity: 0.8 }}>{t('ri_said_at')} {proposta.tSec.toFixed(0)}s · </span>
+              <span style={{ fontWeight: 700 }}>
+                {proposta.read === 'NULL' ? t('ri_no_read') : proposta.read}
+              </span>
+              <span className="block font-mono" style={{ opacity: 0.7, marginTop: 2 }}>
+                « {proposta.frase} »
+              </span>
+            </button>
+          )}
+        </div>
+      )}
+
       {!collapsed && (
         <div className="flex-1 overflow-y-auto flex flex-col gap-1 min-h-0">
           {righe.length === 0 && (
@@ -162,36 +244,45 @@ export function AssessmentPanel({ items, onHide, t, readMeta, openSignal,
                   </span>
                 </span>
 
-                {vista === 'assess' ? (
-                  <span className="text-[13px] font-mono font-bold shrink-0 flex items-baseline gap-1" style={{ color: m.color }}>
-                    {m.short}
-                    {a.reaction !== 'NULL' && a.reaction !== '⏳' && a.beforeMs ? (
-                      <span className="text-[10px] font-normal" style={{ color: isLightTheme ? '#64748b' : 'rgba(255,255,255,0.5)' }}>−{a.beforeMs}ms</span>
-                    ) : null}
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2 justify-between w-full">
-                    {/* LE DUE LETTURE, SEPARATE. Con un ago solo si mostra quella che c'è. */}
-                    {dueAghi ? (
-                      <span className="flex items-center gap-1.5">
-                        <Lettura sigla="M" valore={a.readMuse} colore="#8ab4ff" tenue={tenue} />
-                        <Lettura sigla="T" valore={a.readMeter} colore="#fbbf24" tenue={tenue} />
-                      </span>
-                    ) : (
-                      <span className="text-[12px] font-mono font-bold" style={{ color: m.color }}>{m.short}</span>
-                    )}
-                    {a.indica === undefined ? (
+                {/* ── LA LETTURA, e SOTTO l'indicazione ─────────────────────────────────────
+                    L'indicazione sta accanto alla lettura dell'item, in ASSESSMENT: è lì che
+                    l'auditor la dà, e mandarlo in un'altra vista per registrarla vorrebbe dire
+                    perdere di vista la lista che sta assessando. */}
+                <span className={vista === 'assess'
+                  ? 'shrink-0 flex flex-col items-end gap-0.5'
+                  : 'flex items-center gap-2 justify-between w-full'}>
+                  {vista === 'assess' ? (
+                    <span className="text-[13px] font-mono font-bold flex items-baseline gap-1" style={{ color: m.color }}>
+                      {m.short}
+                      {a.reaction !== 'NULL' && a.reaction !== '⏳' && a.beforeMs ? (
+                        <span className="text-[10px] font-normal" style={{ color: isLightTheme ? '#64748b' : 'rgba(255,255,255,0.5)' }}>−{a.beforeMs}ms</span>
+                      ) : null}
+                    </span>
+                  ) : dueAghi ? (
+                    // LE DUE LETTURE, SEPARATE: leggono item diversi (κ = −0,09) e un verdetto
+                    // unico nasconderebbe proprio il dato che si cerca.
+                    <span className="flex items-center gap-1.5">
+                      <Lettura sigla="M" valore={a.readMuse} colore="#8ab4ff" tenue={tenue} />
+                      <Lettura sigla="T" valore={a.readMeter} colore="#fbbf24" tenue={tenue} />
+                    </span>
+                  ) : (
+                    <span className="text-[12px] font-mono font-bold" style={{ color: m.color }}>{m.short}</span>
+                  )}
+
+                  {/* La lettura non è ancora decisa: non si può indicare ciò che non si è visto. */}
+                  {onIndica && a.reaction !== '⏳' && (
+                    a.indica === undefined ? (
                       <span className="flex gap-1">
                         {/* Due bottoni sulla riga, non una finestra: l'auditor indica QUANDO
                             decide lui, e può validare anche tre item dopo. */}
-                        <button type="button" onClick={() => onIndica?.(a.id, true)}
+                        <button type="button" onClick={() => onIndica(a.id, true)}
                           title={t('ri_indicates')}
                           className="text-[10px] px-2 py-0.5 rounded"
                           style={{ border: '1px solid rgba(52,211,153,0.5)', color: '#34d399',
                                    background: 'transparent', cursor: 'pointer' }}>
                           {t('ri_yes')}
                         </button>
-                        <button type="button" onClick={() => onIndica?.(a.id, false)}
+                        <button type="button" onClick={() => onIndica(a.id, false)}
                           title={t('ri_does_not_indicate')}
                           className="text-[10px] px-2 py-0.5 rounded"
                           style={{ border: `1px solid ${chiaro ? 'rgba(100,116,139,0.5)' : 'rgba(255,255,255,0.28)'}`,
@@ -201,15 +292,15 @@ export function AssessmentPanel({ items, onHide, t, readMeta, openSignal,
                       </span>
                     ) : (
                       // Si può cambiare idea: un clic sulla scritta rimette i due bottoni.
-                      <button type="button" onClick={() => onIndica?.(a.id, !a.indica)}
+                      <button type="button" onClick={() => onIndica(a.id, !a.indica)}
                         className="text-[10px] px-1.5 py-0.5 rounded"
                         style={{ background: 'transparent', cursor: 'pointer', border: 'none',
                                  color: a.indica ? '#34d399' : tenue }}>
                         {a.indica ? `✓ ${t('ri_indicates')}` : `✗ ${t('ri_does_not_indicate')}`}
                       </button>
-                    )}
-                  </span>
-                )}
+                    )
+                  )}
+                </span>
               </div>
             );
           })}
@@ -220,7 +311,7 @@ export function AssessmentPanel({ items, onHide, t, readMeta, openSignal,
           Quante volte la lettura di ciascun ago ha indicato al preclear. È la sola forma in cui
           « quale dei due segue la carica » ha una risposta, perché il criterio non viene da
           nessuno dei due strumenti. Compare solo quando c'è qualcosa da contare. */}
-      {!collapsed && vista === 'ri' && validate.length > 0 && (
+      {!collapsed && validate.length > 0 && (
         <div className="flex gap-2 pt-1 border-t"
              style={{ borderColor: chiaro ? 'rgba(60,64,72,0.18)' : 'rgba(255,255,255,0.10)' }}>
           {dueAghi ? (

@@ -176,6 +176,9 @@ export default function App() {
   // FIX cleanup: dropped `[data, setData]` — write-only state, no consumer.
   // Full-resolution history still lives in sessionHistoryRef (used by report).
   const [logs, setLogs] = useState<LogEntry[]>(INITIAL_LOGS);
+  // Specchio in ref: la ricerca « questa parola è già stata detta? » parte da una callback
+  // stabile, che senza questo leggerebbe la trascrizione com'era a inizio seduta.
+  const logsRef = useRef<LogEntry[]>(INITIAL_LOGS); logsRef.current = logs;
   // STALE-CLOSURE FIX: the worker onmessage handler is created ONCE (deps []),
   // so reading state there would capture the FIRST render's value forever — e.g.
   // `t` (journal entries froze in the boot language) and `epWindowOpen` (the
@@ -1231,6 +1234,57 @@ export default function App() {
     };
     setAssessSession(prev => [...prev, riga]);
   }, []);
+  /**
+   * L'auditor ha trovato un item in un ALTRO modo e lo scrive: il preclear l'ha detto, oppure è
+   * uscito da una domanda di auditing, oppure non ha fatto reagire l'ago ma gli indica lo stesso.
+   * `quandoSec` viene dalla proposta (l'istante in cui quella parola è stata DETTA); senza, la
+   * riga si data ad adesso.
+   */
+  const aggiungiItemManuale = useCallback((testo: string, quandoSec?: number) => {
+    const t = quandoSec ?? timeRef.current;
+    const muse  = computeInstantRead(shownReadsRef.current, t, -Infinity, Infinity, 'eeg').read;
+    const meter = computeInstantRead(shownReadsRef.current, t, -Infinity, Infinity, 'theta').read;
+    const scelta = agoPrincipaleRef.current === 'theta' ? meter : muse;
+    setAssessSession(prev => [...prev, {
+      id: `ri-${++riIdRef.current}`, time: t, kind: 'manual', item: testo,
+      reaction: scelta,
+      readMuse: instrumentsRef.current.muse ? muse : undefined,
+      readMeter: instrumentsRef.current.theta ? meter : undefined,
+    }]);
+    logBufferRef.current.push({ time: t, speaker: 'NEEDLE',
+      text: `◎ R&I · ${testo} → ${scelta === 'NULL'
+        ? LC('nessuna reazione (NULL)', 'aucune réaction (NULL)', 'no read (NULL)',
+             'sin reacción (NULL)', 'ingen reaktion (NULL)') : scelta}`,
+      type: scelta === 'NULL' ? 'normal' : 'success' });
+  }, []);
+
+  /**
+   * Quella parola è già stata DETTA in seduta? E che cosa fece l'ago in quel momento?
+   *
+   * Cerca l'ultima frase del preclear o dell'auditor che la contiene — a meno di maiuscole e
+   * accenti, perché la trascrizione non restituisce mai la stessa stringa due volte. Senza
+   * questa proposta l'item scritto a mano verrebbe datato ADESSO, e gli si attribuirebbe un ago
+   * che in quel momento non stava reagendo a lui.
+   */
+  const cercaLetturaPerParola = useCallback((testo: string) => {
+    const ago = chiaveItem(testo);
+    if (!ago) return null;
+    // Dalla PIÙ RECENTE all'indietro: se una parola ricorre, quella che interessa è l'ultima.
+    for (let i = logsRef.current.length - 1; i >= 0; i--) {
+      const l = logsRef.current[i];
+      if (l.speaker !== 'PC' && l.speaker !== 'Aud') continue;
+      if (!chiaveItem(l.text).includes(ago)) continue;
+      const muse  = computeInstantRead(shownReadsRef.current, l.time, -Infinity, Infinity, 'eeg').read;
+      const meter = computeInstantRead(shownReadsRef.current, l.time, -Infinity, Infinity, 'theta').read;
+      return {
+        tSec: l.time, frase: l.text,
+        read: agoPrincipaleRef.current === 'theta' ? meter : muse,
+        readMuse: muse, readMeter: meter,
+      };
+    }
+    return null;
+  }, []);
+
   /** L'auditor registra la risposta del preclear. Si può cambiare idea: la riga si riscrive. */
   const segnaIndicazione = useCallback((id: string, indica: boolean) => {
     setAssessSession(prev => prev.map(a => (a.id === id ? { ...a, indica } : a)));
@@ -6325,6 +6379,8 @@ export default function App() {
                 t={t as (key: string) => string}
                 readMeta={ASSESS_READ_META}
                 onIndica={segnaIndicazione}
+                onAggiungiItem={aggiungiItemManuale}
+                cercaLettura={cercaLetturaPerParola}
                 dueAghi={instruments.muse && instruments.theta}
               />
             )}
