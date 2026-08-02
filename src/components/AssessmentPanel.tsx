@@ -38,6 +38,10 @@ export interface AssessmentItem {
   /** Le due letture prese SEPARATAMENTE. Non si fondono: vedi sopra. */
   readMuse?: string;
   readMeter?: string;
+  /** Da QUALE ago viene la lettura ufficiale — quello che era mostrato quando l'item è stato
+   *  dato. Con due strumenti si può cambiare in seduta, e senza questa sigla la colonna delle
+   *  letture mescolerebbe due sorgenti senza dirlo. Stessa regola del journal. */
+  readSrc?: 'eeg' | 'theta';
   /** Il preclear ha confermato? `undefined` = non ancora validata. */
   indica?: boolean;
   /** Prova cieca: il preclear aveva dichiarato carica su questo item. */
@@ -248,6 +252,14 @@ export function AssessmentPanel({ items, onHide, t, readMeta, openSignal,
                 <span className="flex items-center gap-2 justify-between w-full">
                   {vista === 'assess' ? (
                     <span className="text-[13px] font-mono font-bold flex items-baseline gap-1" style={{ color: m.color }}>
+                      {/* DA QUALE AGO — con due strumenti la sorgente può cambiare in seduta, e
+                          una colonna di letture che non dice da dove vengono mescola due cose. */}
+                      {dueAghi && a.readSrc && (
+                        <span className="text-[9px] font-normal" style={{
+                          color: a.readSrc === 'eeg' ? '#8ab4ff' : '#fbbf24', letterSpacing: '0.06em' }}>
+                          {a.readSrc === 'eeg' ? 'MUSE' : 'METER'}
+                        </span>
+                      )}
                       {m.short}
                       {a.reaction !== 'NULL' && a.reaction !== '⏳' && a.beforeMs ? (
                         <span className="text-[10px] font-normal" style={{ color: isLightTheme ? '#64748b' : 'rgba(255,255,255,0.5)' }}>−{a.beforeMs}ms</span>

@@ -47,6 +47,14 @@ interface QuantumSphereProps {
   bothInstruments?: boolean;
   pickedNeedle?: 'eeg' | 'theta';
   onPickNeedle?: (k: 'eeg' | 'theta') => void;
+  /** Un ciclo CONTACT/NULL è in corso: gira sull'EEG, quindi l'ago è per forza quello del MUSE
+   *  e il METER non si può scegliere. La scelta dell'auditor NON si perde — torna a fine ciclo. */
+  cycleLocked?: boolean;
+  /** QUALE ago è imposto mentre è bloccato: il MUSE durante un ciclo (gira sull'EEG), le
+   *  boîtes durante la prova della stretta e del soffio (tara la LORO sensibilità). */
+  cycleLockedPick?: 'eeg' | 'theta';
+  /** Perché è bloccato, per il tooltip. */
+  cycleLockedWhy?: string;
   /** APERÇU F/N : force le float (pour régler le style sans MUSE). Défaut false. */
 }
 
@@ -120,6 +128,7 @@ export function QuantumSphere({
   showTrail = true,
   releaseActive = false,
   bothInstruments = false, pickedNeedle = 'theta', onPickNeedle,
+  cycleLocked = false, cycleLockedPick = 'eeg', cycleLockedWhy,
   fnMode = 'normal' }: QuantumSphereProps) {
   const { t } = useI18n();
   const isLightTheme = useUiStore(s => s.isLightTheme);
@@ -650,10 +659,15 @@ export function QuantumSphere({
             <g>
               {opts.map((o, i) => {
                 const x = PX + (i === 0 ? -W - GAP / 2 : GAP / 2);
-                const on = pickedNeedle === o.k;
+                // Durante un ciclo l'ago È quello del MUSE: il METER non si può scegliere, e
+                // si vede che non si può — spento, non semplicemente inefficace al clic.
+                const bloccato = cycleLocked && o.k !== cycleLockedPick;
+                const on = !bloccato && (cycleLocked ? o.k === cycleLockedPick : pickedNeedle === o.k);
                 return (
-                  <g key={o.k} style={{ cursor: 'pointer' }}
-                     onClick={e => { e.stopPropagation(); onPickNeedle(o.k); }}>
+                  <g key={o.k} style={{ cursor: bloccato ? 'not-allowed' : 'pointer' }}
+                     opacity={bloccato ? 0.35 : 1}
+                     onClick={e => { e.stopPropagation(); if (!bloccato) onPickNeedle(o.k); }}>
+                    {bloccato && cycleLockedWhy && <title>{cycleLockedWhy}</title>}
                     <rect x={x} y={Y} width={W} height={H} rx={9}
                           fill={on ? o.col : 'rgba(0,0,0,0.35)'}
                           fillOpacity={on ? 0.18 : 1}
@@ -664,6 +678,11 @@ export function QuantumSphere({
                           letterSpacing="1.5" style={{ pointerEvents: 'none' }}>
                       {o.lbl}
                     </text>
+                    {/* Barra sul bottone spento: dice « non si può », non « non è selezionato ». */}
+                    {bloccato && (
+                      <line x1={x + 8} y1={Y + H / 2} x2={x + W - 8} y2={Y + H / 2}
+                            stroke="rgba(226,238,255,0.55)" strokeWidth={1.5}/>
+                    )}
                   </g>
                 );
               })}

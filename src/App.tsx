@@ -1211,29 +1211,11 @@ export default function App() {
     return () => window.removeEventListener('keydown', h);
   }, [pcDomanda, rispondiPc]);
 
-  // ── R&I — UNA RIGA VALIDABILE PER OGNI REAZIONE MOSTRATA ────────────────────────────────
-  // L'auditor indica al preclear una REAZIONE, non solo un item: in seduta l'ago reagisce sul
-  // processo e su ciò che il preclear dice. La riga porta le letture dei DUE aghi prese
-  // separatamente — leggono cose diverse (κ = −0,09) e un verdetto unico nasconderebbe proprio
-  // ciò che vogliamo sapere: quale dei due indica davvero.
+  // ── R&I — SOLO GLI ITEM CHE L'AUDITOR SCRIVE ───────────────────────────────────────────
+  // Le reazioni di seduta aprivano una riga da validare ciascuna. In una seduta sono decine:
+  // la vista MANUALE si riempiva di « DISSOLUZIONE · Tick » e l'auditor non ci trovava più
+  // quello che aveva scritto lui. Restano nel journal e nell'archivio, dove servono.
   const riIdRef = useRef(0);
-  const aggiungiRigaReazione = useCallback((etichetta: string, carica: string) => {
-    const t = timeRef.current;
-    // Cosa hanno visto i due aghi ATTORNO a questo istante. Niente `notBefore`: qui non c'è un
-    // item precedente da cui difendersi, c'è solo il movimento appena mostrato.
-    const muse  = computeInstantRead(shownReadsRef.current, t, -Infinity, Infinity, 'eeg').read;
-    const meter = computeInstantRead(shownReadsRef.current, t, -Infinity, Infinity, 'theta').read;
-    const riga: AssessItem = {
-      id: `ri-${++riIdRef.current}`, time: t, kind: 'reaction',
-      // Il « testo » di una riga di reazione è lo stato di carica, non una parola: è quello che
-      // l'auditor ha davanti quando decide se indicare.
-      item: carica || etichetta,
-      reaction: etichetta,
-      readMuse: instrumentsRef.current.muse ? muse : undefined,
-      readMeter: instrumentsRef.current.theta ? meter : undefined,
-    };
-    setAssessSession(prev => [...prev, riga]);
-  }, []);
   /**
    * L'auditor ha trovato un item in un ALTRO modo e lo scrive: il preclear l'ha detto, oppure è
    * uscito da una domanda di auditing, oppure non ha fatto reagire l'ago ma gli indica lo stesso.
@@ -1247,7 +1229,7 @@ export default function App() {
     const scelta = agoPrincipaleRef.current === 'theta' ? meter : muse;
     setAssessSession(prev => [...prev, {
       id: `ri-${++riIdRef.current}`, time: t, kind: 'manual', item: testo,
-      reaction: scelta,
+      reaction: scelta, readSrc: agoPrincipaleRef.current,
       readMuse: instrumentsRef.current.muse ? muse : undefined,
       readMeter: instrumentsRef.current.theta ? meter : undefined,
     }]);
@@ -1410,7 +1392,7 @@ export default function App() {
         // La scritta compare adesso in ogni caso: in prova cieca `guarda()` l'aveva soppressa,
         // e senza questo l'item resterebbe sul suo « ⏳ » per sempre.
         rec.reaction = read; rec.beforeMs = beforeMs;
-        const patch = { reaction: read, beforeMs, pcCarico,
+        const patch = { reaction: read, beforeMs, pcCarico, readSrc: agoPrincipale,
                         readMuse: instruments.muse ? rMuse : undefined,
                         readMeter: instruments.theta ? rMeter : undefined };
         setAssessItems(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
@@ -2189,11 +2171,10 @@ export default function App() {
             // che il preclear dice. Senza queste righe l'R&I varrebbe solo durante un
             // assessment, cioè quasi mai. Stessa cadenza del journal: ciò che è stato SCRITTO
             // è ciò che si può indicare, e niente si scrive senza essere stato visto.
-            // …ma solo se il MUSE è l'ago MOSTRATO: una riga da indicare su un movimento che
-            // l'auditor non ha davanti agli occhi sarebbe da validare alla cieca.
-            if (!assessActiveRef.current && agoPrincipaleRef.current === 'eeg') {
-              aggiungiRigaReazione(reactionLabel, _cLbl);
-            }
+            // ⚠️ NIENTE riga R&I automatica. Le reazioni di seduta sono decine: riempivano la
+            // vista MANUALE di « DISSOLUZIONE · Tick » da validare, e l'auditor non ci trovava
+            // più gli item che aveva scritto lui. In MANUALE si scrive SOLO ciò che scrive
+            // l'auditor; le reazioni restano nel journal e nell'archivio, dove servono.
           }
         }
 
@@ -4142,23 +4123,16 @@ export default function App() {
           assess: assessActiveRef.current || undefined,
         }));
       }
-      // ── R&I: la riga validabile, quando l'ago MOSTRATO è questo ─────────────────────────
-      // Solo sul verdetto (`final`): i gradi intermedi sono la stessa oscillazione che cresce,
-      // e ne farebbero tre righe per un movimento solo. Fuori assessment, perché lì la riga
-      // dell'item c'è già.
-      // Senza stato di carica: quello viene dal ciclo EEG, e con le boîtes come ago principale
-      // il MUSE può non esserci nemmeno. Meglio la sola etichetta che un campo inventato.
-      if (r.final && !assessActiveRef.current && agoPrincipaleRef.current === 'theta') {
-        aggiungiRigaReazione(label, '');
-      }
       // ── JOURNAL — la reazione dell'AGO VERO ────────────────────────────────────────────
       // Mancava del tutto: col meter davanti agli occhi, il journal registrava solo le reazioni
       // del MUSE. Solo il verdetto (`final`), altrimenti una caduta che cresce SF→FALL→LONG
       // FALL lascerebbe tre righe per un movimento solo.
       if (r.final && sessionStateRef.current === 'running') {
         const _due = instrumentsRef.current.muse && instrumentsRef.current.theta;
+        // Colore dell'ago delle boîtes (ambra): nel journal si riconosce da quale strumento
+        // viene una reazione senza doverne leggere la sigla.
         logBufferRef.current.push({ time: r.startedAtSec, speaker: 'NEEDLE',
-          text: `⊙ ${_due ? 'METER · ' : ''}${label}`, type: 'normal' });
+          text: `⊙ ${_due ? 'METER · ' : ''}${label}`, type: 'meter' });
       }
       if (shownReadsRef.current.length > SHOWN_READS_CAP) {
         shownReadsRef.current.splice(0, Math.floor(SHOWN_READS_CAP / 2));
@@ -4210,6 +4184,11 @@ export default function App() {
     if (ult && ult.episodeId === u.id) shownReadsRef.current.pop();
     setThetaReactionKey('');
     if (thetaReactionTimerRef.current) { clearTimeout(thetaReactionTimerRef.current); thetaReactionTimerRef.current = null; }
+    // ⚠️ SI MOSTRA SOLO SE SI STA GUARDANDO L'AGO DELLE BOÎTES. Col MUSE davanti non si sta
+    // misurando la resistenza: una riga « lettura ritirata » parlerebbe di un ago che non è
+    // sullo schermo, e sembrerebbe riferita alla reazione del MUSE. Resta nel corpus, dove
+    // serve all'analisi, e sparisce dal journal, dove confonderebbe.
+    if (agoPrincipaleRef.current !== 'theta') return;
     logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
       text: LC('lettura ritirata — era una stretta delle lattine',
                'lecture retirée — c\'était une pression sur les boîtes',
@@ -4278,8 +4257,21 @@ export default function App() {
     return v === 'eeg' || v === 'theta' ? v : 'theta';
   });
   useEffect(() => { localStorage.setItem('equilibrium_ago', agoScelto); }, [agoScelto]);
+  // ── DURANTE UN CICLO L'AGO È QUELLO DEL MUSE, E NON SI SCEGLIE ──────────────────────────
+  // I cicli CONTACT e NULL girano su `qL`, cioè sull'EEG: `cycleStateMachine.update(qL, …)`.
+  // Mostrare l'ago delle boîtes mentre si segue un ciclo vorrebbe dire guardare uno strumento
+  // che al ciclo non partecipa — e leggerne le fasi su un movimento che non le ha prodotte.
+  // La scelta dell'auditor non si perde: torna com'era appena il ciclo finisce.
+  const cicloInCorso = cycleArmed && instruments.muse;
+  // ── E DURANTE LE PROVE DELLE BOÎTES, L'AGO È QUELLO DELLE BOÎTES ────────────────────────
+  // La stretta e il soffio tarano la SENSIBILITÀ del meter guardando dove arriva il SUO ago
+  // rispetto al segno di un terzo. Farli col MUSE davanti vorrebbe dire tarare uno strumento
+  // guardandone un altro — un errore che non si vede, perché l'ago si muove lo stesso.
+  const provaBoiteInCorso = !!theta.testing && instruments.theta;
   const agoPrincipale: ReadSrc =
-    instruments.muse && instruments.theta ? agoScelto
+    provaBoiteInCorso ? 'theta'
+    : cicloInCorso ? 'eeg'
+    : instruments.muse && instruments.theta ? agoScelto
     : instruments.theta ? 'theta' : 'eeg';
   // Specchio in ref: il gestore del worker si aggancia una volta sola, e l'ago si può cambiare
   // in seduta — senza questo continuerebbe a usare quello scelto all'avvio.
@@ -5939,6 +5931,14 @@ export default function App() {
                 bothInstruments={instruments.muse && instruments.theta}
                 pickedNeedle={agoScelto}
                 onPickNeedle={setAgoScelto}
+                cycleLocked={cicloInCorso || provaBoiteInCorso}
+                cycleLockedPick={provaBoiteInCorso ? 'theta' : 'eeg'}
+                cycleLockedWhy={LC(
+                  'Ciclo in corso: gira sull\'EEG, quindi l\'ago è quello del MUSE',
+                  'Cycle en cours : il tourne sur l\'EEG, donc l\'aiguille est celle du MUSE',
+                  'Cycle running: it runs on the EEG, so the needle is the MUSE one',
+                  'Ciclo en curso: gira sobre el EEG, así que la aguja es la del MUSE',
+                  'Cykel pågår: den går på EEG, så nålen är MUSE:s')}
                 asIsnessState={asIsnessState}
                 onClick={resetNeedle}
                 showTrail={viewMode !== 'needle_pure'}
@@ -6485,6 +6485,7 @@ export default function App() {
         return (
         <MetabolicCheck
           lang={lang}
+          meterAlreadyCalibrated={instruments.theta && theta.setup.scaleMeasured}
           museConnected={readinessMuseOk}
           museWorn={museContact}
           museConnecting={remoteAuditor ? false : (museConnection === 'searching')}

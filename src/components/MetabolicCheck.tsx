@@ -27,6 +27,7 @@ const STR = {
   en: { title: 'Ready for session', sub: 'Physiological check before you begin.',
     muse_on: 'MUSE 2 connected', muse_off: 'MUSE 2 disconnected', muse_not_worn: 'MUSE 2 not worn', wear_muse: 'Put the MUSE on to begin', muse_on_mac: 'MUSE 2 on the Mac', muse_tap: 'connect', muse_busy: 'connecting…', sec_left: 's left', wait_muse: 'Connect the MUSE to begin',
     baseline: 'Settle — soft eyes, breathe normally', breath: 'One deep breath in, then let it go', inhale: 'Inhale', exhale: 'Let it go',
+    meterDone: 'The cans are already calibrated — that test is done. This one is the MUSE: it is a different instrument and it is calibrated separately.',
     why: 'One breath is enough: the release is what is measured. It tells us the electrodes are making contact, how calm the body is, whether the pulse is readable, and how fast it responds — the four numbers below. They are read again every session because they change with the day.',
     result: 'Readiness', contact: 'Contact', calm: 'Calm', heart: 'Heart', reactivity: 'Reactivity', reactivity_hint: 'response to the breath',
     go: 'Ready', nogo: 'Not ready', start: 'Start session', redo: 'Redo', skip: 'Skip',
@@ -36,6 +37,7 @@ const STR = {
   fr: { title: 'Prêt pour la séance', sub: 'Contrôle physiologique avant de commencer.',
     muse_on: 'MUSE 2 connecté', muse_off: 'MUSE 2 déconnecté', muse_not_worn: 'MUSE 2 non porté', wear_muse: 'Portez le MUSE pour commencer', muse_on_mac: 'MUSE 2 sur le Mac', muse_tap: 'connecter', muse_busy: 'connexion…', sec_left: 's restantes', wait_muse: 'Connectez le MUSE pour commencer',
     baseline: 'Posez-vous — regard doux, respiration normale', breath: 'Une inspiration profonde, puis laissez aller', inhale: 'Inspirez', exhale: 'Laissez aller',
+    meterDone: 'Les boîtes sont déjà taraudées — ce test-là est fait. Celui-ci est celui du MUSE : c\'est un autre instrument, il se tare à part.',
     why: 'Une seule inspiration suffit : c\'est le relâchement qu\'on mesure. Il nous dit si les électrodes font contact, si le corps est calme, si le pouls est lisible et à quelle vitesse il répond — les quatre valeurs ci-dessous. On les relit à chaque séance parce qu\'elles changent avec le jour.',
     result: 'État de préparation', contact: 'Contact', calm: 'Calme', heart: 'Cœur', reactivity: 'Réactivité', reactivity_hint: 'réponse à la respiration',
     go: 'Prêt', nogo: 'Pas prêt', start: 'Démarrer la séance', redo: 'Refaire', skip: 'Passer',
@@ -45,6 +47,7 @@ const STR = {
   it: { title: 'Pronto per la session', sub: 'Controllo fisiologico prima di iniziare.',
     muse_on: 'MUSE 2 connesso', muse_off: 'MUSE 2 disconnesso', muse_not_worn: 'MUSE 2 non indossato', wear_muse: 'Indossa il MUSE per iniziare', muse_on_mac: 'MUSE 2 sul Mac', muse_tap: 'connetti', muse_busy: 'connessione…', sec_left: 's rimanenti', wait_muse: 'Connetti il MUSE per iniziare',
     baseline: 'Rilassati — occhi morbidi, respira normalmente', breath: 'Una inspirazione profonda, poi lascia andare', inhale: 'Inspira', exhale: 'Lascia andare',
+    meterDone: 'Le boîtes sono già tarate — quel test è fatto. Questo è quello del MUSE: è un altro strumento, e si tara a parte.',
     why: 'Basta un respiro: è il rilascio che si misura. Dice se gli elettrodi fanno contatto, quanto è calmo il corpo, se il battito è leggibile e con che prontezza risponde — i quattro valori qui sotto. Si rileggono a ogni seduta perché cambiano col giorno.',
     result: 'Prontezza', contact: 'Contatto', calm: 'Calma', heart: 'Cuore', reactivity: 'Reattività', reactivity_hint: 'risposta al respiro',
     go: 'Pronto', nogo: 'Non pronto', start: 'Inizia sessione', redo: 'Rifai', skip: 'Salta',
@@ -54,6 +57,7 @@ const STR = {
   es: { title: 'Listo para la sesión', sub: 'Comprobación fisiológica antes de empezar.',
     muse_on: 'MUSE 2 conectado', muse_off: 'MUSE 2 desconectado', muse_not_worn: 'MUSE 2 no puesto', wear_muse: 'Ponte el MUSE para empezar', muse_on_mac: 'MUSE 2 en el Mac', muse_tap: 'conectar', muse_busy: 'conectando…', sec_left: 's restantes', wait_muse: 'Conecta el MUSE para empezar',
     baseline: 'Relájate — mirada suave, respira normal', breath: 'Una inspiración profunda, luego suéltalo', inhale: 'Inspira', exhale: 'Suéltalo',
+    meterDone: 'Las latas ya están calibradas — esa prueba está hecha. Esta es la del MUSE: es otro instrumento y se calibra aparte.',
     why: 'Basta una inspiración: se mide la soltura. Dice si los electrodos hacen contacto, qué tan calmado está el cuerpo, si el pulso es legible y con qué rapidez responde — los cuatro valores de abajo. Se releen cada sesión porque cambian con el día.',
     result: 'Preparación', contact: 'Contacto', calm: 'Calma', heart: 'Corazón', reactivity: 'Reactividad', reactivity_hint: 'respuesta a la respiración',
     go: 'Listo', nogo: 'No listo', start: 'Iniciar sesión', redo: 'Repetir', skip: 'Omitir',
@@ -63,6 +67,7 @@ const STR = {
   sv: { title: 'Redo för session', sub: 'Fysiologisk kontroll innan du börjar.',
     muse_on: 'MUSE 2 ansluten', muse_off: 'MUSE 2 frånkopplad', muse_not_worn: 'MUSE 2 bärs inte', wear_muse: 'Ta på MUSE för att börja', muse_on_mac: 'MUSE 2 på datorn', muse_tap: 'anslut', muse_busy: 'ansluter…', sec_left: 's kvar', wait_muse: 'Anslut MUSE för att börja',
     baseline: 'Landa — mjuk blick, andas normalt', breath: 'Ett djupt andetag in, släpp sedan taget', inhale: 'Andas in', exhale: 'Släpp taget',
+    meterDone: 'Burkarna är redan kalibrerade — det testet är gjort. Detta är MUSE:s: det är ett annat instrument och kalibreras separat.',
     why: 'Ett andetag räcker: det är utsläppet som mäts. Det säger om elektroderna har kontakt, hur lugn kroppen är, om pulsen går att läsa och hur snabbt den svarar — de fyra värdena nedan. De läses om varje session eftersom de ändras med dagen.',
     result: 'Beredskap', contact: 'Kontakt', calm: 'Lugn', heart: 'Hjärta', reactivity: 'Reaktivitet', reactivity_hint: 'respons på andningen',
     go: 'Redo', nogo: 'Ej redo', start: 'Starta session', redo: 'Gör om', skip: 'Hoppa över',
@@ -76,9 +81,13 @@ const RATE_COLOR: Record<Rating, string> = { good: '#34d399', ok: '#fbbf24', poo
 // tells the story); intermediate level shows an amber dot beside the result label.
 const LEVEL_COLOR = { go: '#34d399', wait: '#fbbf24', nogo: '#fb5e3b' } as const;
 
-export function MetabolicCheck({ lang, museConnected = true, museWorn = false, museConnecting = false, museOnMac = false, onConnectMuse, onProceed, onCancel, onPhase, onCue,
+export function MetabolicCheck({ lang, meterAlreadyCalibrated = false, museConnected = true, museWorn = false, museConnecting = false, museOnMac = false, onConnectMuse, onProceed, onCancel, onPhase, onCue,
   mirror = false, mirrorPhase, mirrorInhale, mirrorAssessment = null }: {
   lang: string;
+  /** Le boîtes sono già state tarate in questa seduta (stretta e soffio fatti). Riprendendo una
+   *  seduta, questa schermata sembra chiedere di rifare quella prova: sono due strumenti
+   *  diversi e si tarano separatamente, e va detto. */
+  meterAlreadyCalibrated?: boolean;
   museConnected?: boolean;
   /** PORTÉ sur la tête (contact réel des électrodes), pas seulement appairé. La préparation
    *  EXIGE le casque PORTÉ : connecté mais posé sur la table ne doit RIEN débloquer. */
@@ -284,6 +293,15 @@ export function MetabolicCheck({ lang, museConnected = true, museWorn = false, m
                             fontSize: 11, lineHeight: 1.55, color: 'rgba(226,238,255,0.55)' }}>
                 {L.why}
               </div>
+              {/* ⚠️ Riprendendo una seduta con le boîtes GIÀ tarate, questa schermata sembra
+                  chiedere di rifare la stessa prova. Sono due strumenti diversi e si tarano
+                  separatamente: dirlo evita di rifare il lavoro o, peggio, di saltarlo. */}
+              {meterAlreadyCalibrated && (
+                <div style={{ marginTop: 8, maxWidth: 460, marginLeft: 'auto', marginRight: 'auto',
+                              fontSize: 11, lineHeight: 1.55, color: '#fbbf24' }}>
+                  {L.meterDone}
+                </div>
+              )}
               <div style={{ marginTop: 4, fontSize: 11, fontFamily: 'monospace', color: 'rgba(200,214,234,0.55)' }}>{remaining}{L.sec_left}</div>
             </div>
           );

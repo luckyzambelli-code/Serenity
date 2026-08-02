@@ -11,7 +11,10 @@ export interface LogEntry {
   /** `retracted` = una lettura che era stata scritta e poi RITIRATA (una stretta delle lattine,
    *  non una caduta). Si scrive in ARANCIONE: rileggendo il journal si deve vedere a colpo
    *  d'occhio quali righe NON sono letture, senza doverle rileggere una per una. */
-  type?: 'normal' | 'highlight' | 'success' | 'retracted';
+  /** `meter` = reazione dell'ago delle BOÎTES. Si scrive nel colore di QUEL ago (ambra), come
+   *  sul quadrante: rileggendo il journal si sa da quale strumento viene ogni riga senza
+   *  doverne decifrare la sigla. Le reazioni del MUSE restano nel colore di sempre. */
+  type?: 'normal' | 'highlight' | 'success' | 'retracted' | 'meter';
   tone?: { label: 'calm' | 'neutral' | 'tense' | 'stressed'; pitch: number; energy: number };
 }
 
@@ -89,6 +92,7 @@ export function TranscriptLog({ logs, isVisible, onToggle, onDisable, hideSpeech
                   // Transcript NORMAL (pas d'italique) · TOUT en BLANC sauf les infos SYSTÈME.
                   (log.type === 'highlight' || log.type === 'success') && "font-bold",
                   log.type === 'retracted' ? "text-orange-400"
+                    : log.type === 'meter' ? "text-amber-500"
                     : log.speaker === 'SYS' ? "text-white/45" : "text-white/90"
                 )}>
                   {log.speaker && log.speaker !== 'NEEDLE' && (

@@ -244,7 +244,12 @@ export function SplashScreen({ onDismiss }: SplashScreenProps) {
       ctx.restore();
 
       // ── Central indicator ─────────────────────────────────────────────────────
-      const indY   = figTop + figH * 1.04;
+      // ⚠️ Non solo « sotto la figura »: i CREDITI sono ancorati al fondo della finestra, e
+      // l'indicatore alla figura. Su una finestra bassa i due si incontravano — verificato a
+      // 1280×720, dove « READINESS SIGNAL » finiva sopra la prima riga dei crediti. Si alza
+      // quindi tutto il blocco quel tanto che basta, senza toccare le finestre alte.
+      const creditsH = 13 * (creditLines(langRef.current).length + 1) + 10;
+      const indY   = Math.min(figTop + figH * 1.04, H - creditsH - 44);
       const isOnline = t > 0.5;
       const indPulse = 0.7 + 0.3 * Math.sin(t * 4.5);
       for (let gi = 3; gi >= 1; gi--) {
@@ -292,7 +297,11 @@ export function SplashScreen({ onDismiss }: SplashScreenProps) {
       // text half (brightness(0)+invert → white) so the lettering reads on the dark bg.
       if (logoImgRef.current) {
         const img = logoImgRef.current;
-        const split = 0.35; // infinity ends ~0.27 of the artwork, text starts ~0.43
+        // ⚠️ MISURATO sul PNG (4020 px di larghezza), non stimato: i pixel BLU dell'infinito
+        // vanno da 3,4 % a 41,4 %, quelli scuri del testo da 43,1 % a 98,5 %. Il taglio era a
+        // 0,35 — dentro l'infinito — e la sua coda destra finiva nella metà sbiancata: si vedeva
+        // un pezzo di simbolo BIANCO (segnalato dall'utente). 0,42 cade nel vuoto fra i due.
+        const split = 0.42;
         const sxSplit = img.width * split;
         const dSplitW = logoW * split;
         const lx = cx - logoW / 2;
@@ -359,7 +368,9 @@ export function SplashScreen({ onDismiss }: SplashScreenProps) {
           const lines = creditLines(langRef.current);
           const cr    = creditCopyright(langRef.current);
           const LH    = 13;                                  // interligne
-          let y = H - 24 - LH * lines.length;                // bloc calé en bas
+          // Calés en bas, MAIS jamais au-dessus du message de chargement : sur une fenêtre
+          // basse le bloc remontait jusqu'à toucher « LOADING… ». Le plancher gagne.
+          let y = Math.max(H - 24 - LH * lines.length, barY + 28);
           for (const l of lines) {
             ctx.font = '400 8px monospace';
             ctx.fillStyle = `rgba(255,255,255,${0.30 * fade})`;
