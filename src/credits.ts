@@ -24,7 +24,7 @@ export const creditLines = (lang: string): CreditLine[] => [
   { label: pick5(lang, 'Sviluppo', 'Développement', 'Development', 'Desarrollo', 'Utveckling'),
     value: 'Claudio Zambelli', photo: '/credits/claudio.jpg' },
   { label: pick5(lang, 'Test', 'Test', 'Testing', 'Pruebas', 'Test'),
-    value: 'Roger Martin', photo: '/credits/roger.jpg' },
+    value: 'Senior CS Roger Martin', photo: '/credits/roger.jpg' },
 ];
 
 /** Initiales d'un nom — repli quand le portrait n'est pas (encore) là. */

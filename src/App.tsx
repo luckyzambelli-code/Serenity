@@ -4484,8 +4484,19 @@ export default function App() {
                `Idioma cambiado — reconocimiento de voz reiniciado en ${lang}`,
                `Språk ändrat — taligenkänningen omstartad på ${lang}`), type: 'normal' });
     stopRecognition();
+    // ⚠️ SENZA QUESTA RIGA IL RICONOSCITORE NON RIPARTE PIÙ. `stopRecognition` conserva
+    // `isUsingLocalRecognition` di proposito — serve a sapere cosa rilanciare riprendendo una
+    // seduta in pausa — ma `startLocalRecognition` esce subito se lo trova vero (« già in
+    // corso »). Risultato: si fermava e basta, e con lui sparivano la TRASCRIZIONE e
+    // l'ASSESSMENT, che vive sulle parole trascritte. Qui il riconoscitore è appena stato
+    // fermato: non è più in corso, e va detto.
+    isUsingLocalRecognition.current = false;
     void startLocalRecognition();
-  }, [lang, sessionState, stopRecognition, startLocalRecognition, LC]);
+    // `LC` NON sta nelle dipendenze di proposito: si ricrea a ogni render e ci farebbe
+    // rientrare in questo effetto di continuo. Serve solo a comporre una frase, e la guardia
+    // sopra (`sttLangRef.current === lang`) decide da sola quando c'è qualcosa da fare.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang, sessionState, stopRecognition, startLocalRecognition]);
 
   const handleEnd = () => {
     stopRecognition();

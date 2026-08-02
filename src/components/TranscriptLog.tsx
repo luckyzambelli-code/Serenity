@@ -60,9 +60,16 @@ export function TranscriptLog({ logs, isVisible, onToggle, onDisable, hideSpeech
     );
   }
 
+  // ── ORDINATO PER TEMPO, non per ordine di scrittura ──────────────────────────────────
+  // Una reazione dell'ago vero porta l'istante in cui il movimento è PARTITO, ma si scrive
+  // quando l'episodio si chiude — fino a due secondi dopo. Senza ordinamento finiva sotto
+  // righe più recenti di lei, e il journal non si poteva più leggere come una cronologia.
+  // `sort` è stabile in JS: due righe con lo stesso istante restano nell'ordine d'arrivo.
   const reversedLogs = (hideSpeech
     ? logs.filter(l => l.speaker !== 'Aud' && l.speaker !== 'PC')
-    : [...logs]).reverse();
+    : [...logs])
+    .sort((a, b) => (a.time ?? 0) - (b.time ?? 0))
+    .reverse();
 
   return (
     <div className="flex flex-col h-full overflow-hidden relative">
