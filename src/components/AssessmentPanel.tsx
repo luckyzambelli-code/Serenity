@@ -137,7 +137,7 @@ export function AssessmentPanel({ items, onHide, t, readMeta, openSignal,
         style={{ borderColor: isLightTheme ? 'rgba(60,64,72,0.18)' : 'rgba(255,255,255,0.10)' }}
       >
         <span className={`text-xs uppercase tracking-wider shrink-0 ${collapsed ? (isLightTheme ? 'text-slate-400' : 'text-white/35') : (isLightTheme ? 'text-slate-700' : 'text-white/80')}`}>
-          {vista === 'assess' ? 'ASSESSMENT' : 'R&I'}{righe.length > 0 ? ` · ${righe.length}` : ''}
+          {vista === 'assess' ? 'ASSESSMENT' : t('ri_title_manual')}{righe.length > 0 ? ` · ${righe.length}` : ''}
         </span>
         <GlassCollapseToggle on={!collapsed} onToggle={() => setCollapsed(c => !c)} />
         {void onHide}
@@ -215,14 +215,11 @@ export function AssessmentPanel({ items, onHide, t, readMeta, openSignal,
             return (
               <div
                 key={a.id}
-                // `items-start` e non `items-center`: con un item su due righe, il READ deve
-                // restare in alto accanto alla prima, non scivolare a metà del blocco.
-                // In R&I la riga va su DUE LINEE: item sopra, letture e bottoni sotto. Nella
-                // colonna di destra (~250 px) affiancarli spremeva l'item fino a mandarlo a capo
-                // UNA LETTERA PER RIGA — verificato in pagina.
-                className={vista === 'ri'
-                  ? 'flex flex-col gap-1 px-2 py-1 rounded'
-                  : 'flex items-start justify-between gap-2 px-2 py-1 rounded'}
+                // ⚠️ SEMPRE su due linee — item e lettura sopra, l'indicazione sotto. Nella
+                // colonna di destra (~250 px) affiancare item, lettura, la domanda « indica al
+                // PC? » e i due bottoni spremeva l'item fino a mandarlo a capo UNA LETTERA PER
+                // RIGA. Verificato in pagina due volte, con e senza la domanda scritta.
+                className="flex flex-col gap-1 px-2 py-1 rounded"
                 style={{
                   background:  isLightTheme ? 'rgba(226,232,240,0.7)' : 'rgba(255,255,255,0.05)',
                   border:      `1px solid ${a.indica === true ? 'rgba(52,211,153,0.55)'
@@ -244,13 +241,11 @@ export function AssessmentPanel({ items, onHide, t, readMeta, openSignal,
                   </span>
                 </span>
 
-                {/* ── LA LETTURA, e SOTTO l'indicazione ─────────────────────────────────────
-                    L'indicazione sta accanto alla lettura dell'item, in ASSESSMENT: è lì che
+                {/* ── SECONDA LINEA: la lettura a sinistra, l'indicazione a destra ──────────
+                    L'indicazione sta sulla riga dell'item anche in ASSESSMENT: è lì che
                     l'auditor la dà, e mandarlo in un'altra vista per registrarla vorrebbe dire
                     perdere di vista la lista che sta assessando. */}
-                <span className={vista === 'assess'
-                  ? 'shrink-0 flex flex-col items-end gap-0.5'
-                  : 'flex items-center gap-2 justify-between w-full'}>
+                <span className="flex items-center gap-2 justify-between w-full">
                   {vista === 'assess' ? (
                     <span className="text-[13px] font-mono font-bold flex items-baseline gap-1" style={{ color: m.color }}>
                       {m.short}
@@ -272,7 +267,14 @@ export function AssessmentPanel({ items, onHide, t, readMeta, openSignal,
                   {/* La lettura non è ancora decisa: non si può indicare ciò che non si è visto. */}
                   {onIndica && a.reaction !== '⏳' && (
                     a.indica === undefined ? (
-                      <span className="flex gap-1">
+                      <span className="flex items-center gap-1">
+                        {/* ⚠️ « Sì / No » da soli non dicono a COSA rispondono. La domanda va
+                            scritta: non si sta giudicando la lettura, si sta registrando se il
+                            preclear la riconosce. */}
+                        <span className="text-[9px] uppercase tracking-wide mr-0.5"
+                              style={{ color: tenue, letterSpacing: '0.06em' }}>
+                          {t('ri_indicates_pc')}
+                        </span>
                         {/* Due bottoni sulla riga, non una finestra: l'auditor indica QUANDO
                             decide lui, e può validare anche tre item dopo. */}
                         <button type="button" onClick={() => onIndica(a.id, true)}

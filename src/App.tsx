@@ -2173,10 +2173,16 @@ export default function App() {
             // Integrate the CHARGE STATE with the needle reaction so it appears
             // both on-screen and in the History PDF / end-session summary.
             const _cLbl = _chargeNow.labelKey ? (tRef.current(_chargeNow.labelKey as any) as string) : '';
+            // ── DA QUALE AGO ────────────────────────────────────────────────────────────
+            // Con entrambi gli strumenti il journal si riempiva di reazioni del MUSE mentre sul
+            // quadrante c'era l'ago del METER — e del METER non scriveva niente. Rileggendo la
+            // seduta sembravano tutte reazioni di ciò che si stava guardando. Ora ogni riga
+            // porta la sigla del suo ago.
+            const _due = instrumentsRef.current.muse && instrumentsRef.current.theta;
             logBufferRef.current.push({
               time: timeRef.current,
               speaker: 'NEEDLE',
-              text: `⊙ ${reactionLabel}${_cLbl ? ` · ${_cLbl}` : ''}`,
+              text: `⊙ ${_due ? 'MUSE · ' : ''}${reactionLabel}${_cLbl ? ` · ${_cLbl}` : ''}`,
               type: 'normal' });
             // ── R&I: una riga VALIDABILE per ogni reazione mostrata ─────────────────────
             // In seduta l'auditor indica anche fuori dall'assessment — sul processo, su ciò
@@ -4144,6 +4150,15 @@ export default function App() {
       // il MUSE può non esserci nemmeno. Meglio la sola etichetta che un campo inventato.
       if (r.final && !assessActiveRef.current && agoPrincipaleRef.current === 'theta') {
         aggiungiRigaReazione(label, '');
+      }
+      // ── JOURNAL — la reazione dell'AGO VERO ────────────────────────────────────────────
+      // Mancava del tutto: col meter davanti agli occhi, il journal registrava solo le reazioni
+      // del MUSE. Solo il verdetto (`final`), altrimenti una caduta che cresce SF→FALL→LONG
+      // FALL lascerebbe tre righe per un movimento solo.
+      if (r.final && sessionStateRef.current === 'running') {
+        const _due = instrumentsRef.current.muse && instrumentsRef.current.theta;
+        logBufferRef.current.push({ time: r.startedAtSec, speaker: 'NEEDLE',
+          text: `⊙ ${_due ? 'METER · ' : ''}${label}`, type: 'normal' });
       }
       if (shownReadsRef.current.length > SHOWN_READS_CAP) {
         shownReadsRef.current.splice(0, Math.floor(SHOWN_READS_CAP / 2));
