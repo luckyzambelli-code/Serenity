@@ -13,6 +13,10 @@ release/
 *.dmg
 *.blockmap
 
-# video di riferimento per la taratura (F/N reali filmati sul Theta-Meter).
-# Servono a TARARE, non a far girare l'app: 115 MB che in git non tornerebbero mai indietro.
-public/theta-meter-real.mov/
+# Riferimenti per la TARATURA (video degli F/N reali filmati sul Theta-Meter).
+# Servono a tarare, non a far girare l'app: 115 MB che in git non tornerebbero mai indietro.
+#
+# ⚠️ FUORI da `public/`, e non per ordine: Vite copia `public/` DENTRO `dist/`, e `dist/` è
+# l'applicazione. Il video finiva così in ogni DMG — 128 MB su 138 di `dist/` — per un file che
+# nessuna riga di codice apre. Qui resta a disposizione senza viaggiare.
+riferimenti/
