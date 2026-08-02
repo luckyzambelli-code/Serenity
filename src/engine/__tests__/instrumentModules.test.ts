@@ -14,6 +14,15 @@ describe('quali moduli secondo gli strumenti', () => {
     for (const m of MUSE_ONLY_MODULES) expect(r[m]).toBe(false);
   });
 
+  it('con TUTTI E DUE non si nasconde niente — segnalato in seduta', () => {
+    // « Con MUSE e METER certi moduli non sono attivi »: la regola dice il contrario, e questo
+    // test lo fissa. Se un modulo manca con i due strumenti insieme, la causa NON è qui.
+    const tutto = { journal: true, health: true, cam1: true, cam2: true,
+                    ri: true, biometric: true, mna: true };
+    expect(effectiveModules(tutto, { muse: true, theta: true })).toEqual(tutto);
+    expect(eegModulesHidden({ muse: true, theta: true })).toBe(false);
+  });
+
   it('PRIMA di collegare qualunque cosa NON si nasconde nulla', () => {
     // L'assenza del Muse non è ancora una scelta: nascondere in quel momento faceva sparire
     // integrità e MNA già all'avvio, mentre in CONFIG risultavano accesi.

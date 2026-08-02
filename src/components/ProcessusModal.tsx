@@ -7,6 +7,8 @@ import {
 } from '../lib/serverStorage';
 import { saveProcessusFile, deleteProcessusFile } from '../lib/storage';
 import { useUiStore } from '../store/uiStore';
+import { useI18n } from '../i18n';
+import { pick5 } from '../i18n5';
 
 export interface ProcessusEntry {
   name: string;
@@ -42,6 +44,10 @@ export function ProcessusModal({
   editingTagValue, setEditingTagValue,
   onSelectProcessus, onClose, t,
 }: ProcessusModalProps) {
+  // La lingua non arrivava fra le props: il segnaposto del campo restava in francese per tutti.
+  const { lang } = useI18n();
+  const L = (it: string, fr: string, en: string, es: string, sv: string) =>
+    pick5(lang as string, it, fr, en, es, sv);
   const allTags      = Array.from(new Set(processusPdfs.map(p => p.tag || 'General'))).sort();
   const visiblePdfs  = processusTagFilter === 'all'
     ? processusPdfs
@@ -226,7 +232,7 @@ export function ProcessusModal({
                   value={pendingTagInput}
                   onChange={e => setPendingTagInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') commitPendingFiles(pendingTagInput.trim() || 'General'); }}
-                  placeholder="ex: SUPPRESSION · LISTE · ARC · DIANÉTIQUE"
+                  placeholder={L('es: SUPPRESSION · LISTE · ARC · DIANETICS', "ex : SUPPRESSION · LISTE · ARC · DIANÉTIQUE", 'e.g. SUPPRESSION · LIST · ARC · DIANETICS', 'p. ej.: SUPPRESSION · LISTE · ARC · DIANETICS', 't.ex. SUPPRESSION · LISTE · ARC · DIANETICS')}
                   autoFocus
                   className="flex-1 bg-transparent border-b px-2 py-1 text-xs font-mono outline-none placeholder:opacity-30"
                   style={{ borderColor: 'rgba(255,255,255,0.4)', color: 'rgba(240,246,255,0.95)' }}

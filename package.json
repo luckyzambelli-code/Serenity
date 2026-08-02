@@ -1,7 +1,7 @@
 {
   "name": "staticmeter",
   "private": true,
-  "version": "2.0.19",
+  "version": "2.0.70",
   "main": "main.cjs",
   "type": "module",
   "scripts": {
@@ -18,7 +18,8 @@
     "lint:strict": "eslint src --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "corpus": "tsx scripts/corpus-report.ts"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

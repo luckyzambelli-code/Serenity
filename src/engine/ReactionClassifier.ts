@@ -75,6 +75,16 @@ const FN_MIN_AMPL = 0.06;
 const FN_MIN_DURATION = 0.8;
 
 export class ReactionClassifier {
+  /**
+   * L'ULTIMO `moveR` calcolato — la caduta a destra dell'ago virtuale in ~0,5 s, cioè la
+   * grandezza su cui il grado è deciso davvero.
+   *
+   * Serve perché l'ampiezza archiviata per il MUSE era `REACTION_OFFSETS[chiave]`, cioè un
+   * valore RICAVATO DALL'ETICHETTA: due Long Fall diversissimi finivano nell'archivio con lo
+   * stesso numero, e ogni correlazione di ampiezza col meter era condannata in partenza. Questa
+   * è la misura, non la sua ricaduta.
+   */
+  lastMoveR = 0;
   /** When the current dirty-range stretch began (null = not in range). */
   private dirtyStart: number | null = null;
   /** Session-seconds when the CURRENT continuous symmetric oscillation began (null = none). */
@@ -96,6 +106,7 @@ export class ReactionClassifier {
       if (offH[i].time <= nowS - 0.5) { pastOff = offH[i].offset; break; }
     }
     const moveR = curOff - pastOff;
+    this.lastMoveR = moveR;
 
     // CONN-96: PROPER F/N — a SMOOTH, RHYTHMIC, SUSTAINED, BALANCED back-and-forth over
     // ~2.5 s. The key discriminator against a "small movement": a real float travels
@@ -186,6 +197,7 @@ export class ReactionClassifier {
     this.dirtyStart = null;
     this.floatStart = null;
     this.lastOscT = null;
+    this.lastMoveR = 0;
   }
 }
 

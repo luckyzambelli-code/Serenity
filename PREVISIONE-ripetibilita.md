@@ -1,4 +1,32 @@
-# Previsione registrata PRIMA della seduta
+# Previsione registrata PRIMA della seduta — ❌ SMENTITA
+
+> **ESITO, 02/08/2026.** La previsione è **falsa**. Zero gruppi su quattro finiscono a NULL;
+> la soglia di smentita che avevo fissato era *due su quattro*.
+>
+> ```
+> #1  NULL → Long Fall → NULL → F/N → NULL → NULL → Long Fall
+> #2  Long Fall ×6                                     COSTANTE
+> #3  Long Fall → Tick → Long Fall → NULL → SF → Fall
+> #4  Tick → NULL → Long Fall → Long Fall → Tick → F/N
+> ```
+>
+> **Perché il risultato precedente sembrava forte: ARRESTO OPZIONALE.** Nelle due sedute che
+> avevano dato 6/6 (permutazione 0,02 %) gli item erano stati dati **a blocchi**, e l'auditor
+> passava al successivo *quando l'item smetteva di leggere*. La lunghezza del gruppo era quindi
+> un ESITO, non un piano — e il mio test teneva fisse lunghezze decise dal risultato. In questa
+> seduta gli item erano **alternati**, la regola di arresto sparisce, e con lei il risultato.
+>
+> L'indizio era nei dati di allora: lunghezze 5·7·5 e 3·6·2, cioè variabili. Bastava guardarle.
+>
+> **Il risultato del 01/08 è ritratto.** `ripetizioni()` ora marca queste sequenze
+> (`bloccoChiusoSuNull`) e il rapporto le esclude dal conteggio.
+>
+> Resta aperta la domanda vera, che questa prova non ha toccato: *dato lo stesso item con un
+> numero di ripetizioni deciso prima, le letture si somigliano?* Su 5 sequenze utilizzabili:
+> 1 costante, 4 scorrelate.
+
+---
+
 
 Scritta il **01/08/2026**, con EQUILIBRIUM v2.0.68, **prima** che la seduta esista.
 

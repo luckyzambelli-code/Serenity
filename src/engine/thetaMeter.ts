@@ -65,11 +65,27 @@ export class ThetaMeter {
   count = 0;
   /** Quanti report sono stati scartati perché l'intestazione non tornava. */
   rejected = 0;
+  /** I primi report NON riconosciuti, in esadecimale.
+   *
+   *  Esistono più modelli di Theta-Meter, e il formato qui dentro è quello decodificato su UN
+   *  apparecchio. Su un modello diverso il dispositivo si collega e non si muove niente: senza
+   *  vedere i byte veri non si può scrivere il decodificatore giusto — e a chi ha quel modello
+   *  non si può chiedere di aprire una console. Si tengono quindi qui i primi report, pronti da
+   *  copiare e mandare. Pochi e DIVERSI fra loro: mille copie della stessa riga non dicono nulla. */
+  readonly samples: string[] = [];
 
   /** Un report grezzo dal dispositivo. Restituisce la lettura, o null se il report non è dei nostri. */
   push(bytes: ArrayLike<number>): ThetaReading | null {
     const raw = parseThetaReport(bytes);
-    if (raw === null) { this.rejected++; return null; }
+    if (raw === null) {
+      this.rejected++;
+      if (this.samples.length < 8) {
+        const hex = Array.from(bytes as ArrayLike<number>, b =>
+          b.toString(16).padStart(2, '0')).join(' ');
+        if (!this.samples.includes(hex)) this.samples.push(hex);
+      }
+      return null;
+    }
     this.raw = raw;
     // Il primo valore entra tale e quale: partire da zero farebbe salire la lettura da sotto
     // per qualche secondo, e sullo schermo sembrerebbe una reazione che non c'è stata.
@@ -78,7 +94,8 @@ export class ThetaMeter {
     return { raw, smooth: this.smooth };
   }
 
-  reset(): void { this.raw = 0; this.smooth = 0; this.count = 0; this.rejected = 0; }
+  reset(): void { this.raw = 0; this.smooth = 0; this.count = 0; this.rejected = 0;
+                  this.samples.length = 0; }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════

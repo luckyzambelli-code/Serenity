@@ -8,7 +8,10 @@ export interface LogEntry {
   time: number;
   speaker?: 'Aud' | 'PC' | 'SYS' | 'NEEDLE';
   text: string;
-  type?: 'normal' | 'highlight' | 'success';
+  /** `retracted` = una lettura che era stata scritta e poi RITIRATA (una stretta delle lattine,
+   *  non una caduta). Si scrive in ARANCIONE: rileggendo il journal si deve vedere a colpo
+   *  d'occhio quali righe NON sono letture, senza doverle rileggere una per una. */
+  type?: 'normal' | 'highlight' | 'success' | 'retracted';
   tone?: { label: 'calm' | 'neutral' | 'tense' | 'stressed'; pitch: number; energy: number };
 }
 
@@ -74,7 +77,9 @@ export function TranscriptLog({ logs, isVisible, onToggle, onDisable, hideSpeech
           {reversedLogs.map((log, i) => (
               <div key={i} className={cn(
                 "flex items-start gap-2 py-1 border-b border-white/5 last:border-0",
-                log.speaker === 'NEEDLE' && "opacity-70"
+                // Una lettura RITIRATA non si sbiadisce come le altre righe dell'ago: è
+                // un'informazione che serve leggere, non un rumore di fondo.
+                log.speaker === 'NEEDLE' && log.type !== 'retracted' && "opacity-70"
               )}>
                 <span className="text-[10px] text-white/35 mt-0.5 w-10 shrink-0 leading-tight">
                   {`${(log.time || 0).toFixed(1)}s`}
@@ -83,7 +88,8 @@ export function TranscriptLog({ logs, isVisible, onToggle, onDisable, hideSpeech
                   "flex-1",
                   // Transcript NORMAL (pas d'italique) · TOUT en BLANC sauf les infos SYSTÈME.
                   (log.type === 'highlight' || log.type === 'success') && "font-bold",
-                  log.speaker === 'SYS' ? "text-white/45" : "text-white/90"
+                  log.type === 'retracted' ? "text-orange-400"
+                    : log.speaker === 'SYS' ? "text-white/45" : "text-white/90"
                 )}>
                   {log.speaker && log.speaker !== 'NEEDLE' && (
                     <span className={cn(

@@ -42,6 +42,39 @@ function CreditAvatar({ src, name }: { src?: string; name: string }) {
 }
 
 /**
+ * BOBTAIL — le chien de Claudio, en médaillon rond sous le nom du logiciel.
+ *
+ * ROND comme les portraits : un détourage du poil blanc sur fond blanc laissait des accrocs
+ * dans la fourrure (le poil et le papier ont la même clarté) — le cercle règle la question sans
+ * rien découper. Volontairement en sourdine, et un peu plus petit que les portraits : c'est un
+ * clin d'œil, pas un crédit. Il s'éclaire au survol, pour qui le remarque.
+ */
+function Bobtail({ title }: { title: string }) {
+  const [survol, setSurvol] = useState(false);
+  const [rate, setRate] = useState(false);
+  if (rate) return null;      // pas de vignette d'image cassée : il disparaît, simplement
+  return (
+    <img
+      src="/credits/bobtail.jpg"
+      alt={title}
+      title={title}
+      onError={() => setRate(true)}
+      onMouseEnter={() => setSurvol(true)}
+      onMouseLeave={() => setSurvol(false)}
+      style={{
+        // 40 px : un peu moins que les 46 des portraits — assez pour qu'on VOIE le chien,
+        // assez peu pour qu'il ne se prenne pas pour un crédit.
+        width: 40, height: 40, borderRadius: '50%', flexShrink: 0, objectFit: 'cover',
+        border: '1px solid rgba(255,255,255,0.18)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.45)',
+        opacity: survol ? 1 : 0.8,
+        transition: 'opacity 220ms ease',
+      }}
+    />
+  );
+}
+
+/**
  * CreditsModal — s'ouvre au clic sur le logo Alternative Scientology (barre du haut).
  * PRÉSENTATION SEULE : aucun état métier, aucun calcul. Les textes viennent de `credits.ts`,
  * la MÊME source que ceux dessinés pendant l'animation d'ouverture.
@@ -71,8 +104,28 @@ export function CreditsModal({ onClose }: { onClose: () => void }) {
       >
         <img src="/logo-alt-scientology.png" alt="Alternative Scientology"
           style={{ display: 'block', width: '100%', height: 'auto', maxHeight: 54,
-                   objectFit: 'contain', marginBottom: 20,
+                   objectFit: 'contain', marginBottom: 10,
                    filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5)) brightness(1.05)' }} />
+
+        {/* Le NOM du logiciel, sous le logo de la maison. Le bobtail se tient à côté — discret,
+            décalé vers le bas pour ne pas concurrencer le mot. */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                      marginBottom: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 17, fontWeight: 300,
+                           letterSpacing: '0.30em', textIndent: '0.30em',
+                           color: 'rgba(240,246,255,0.92)',
+                           textShadow: '0 0 18px rgba(180,210,255,0.20)' }}>
+              EQUILIBRIUM
+            </span>
+            {/* La versione sta QUI, sotto il nome: è del programma, non del copyright. */}
+            <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 13,
+                           letterSpacing: '0.10em', color: 'rgba(226,238,255,0.62)' }}>
+              v{__APP_VERSION__}
+            </span>
+          </div>
+          <Bobtail title="Bobtail" />
+        </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {lines.map(l => (

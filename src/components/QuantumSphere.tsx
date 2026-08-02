@@ -38,6 +38,15 @@ interface QuantumSphereProps {
   releaseActive?: boolean;
   /** Style du Floating Needle (engine/FloatGenerator). Défaut 'normal'. */
   fnMode?: FnMode;
+  /** ── QUALE AGO, quando ci sono ENTRAMBI gli strumenti ────────────────────────────────────
+   *  Si mostra un ago solo (due confondono), ma quale lo sceglie l'AUDITOR: i due misurano cose
+   *  diverse — su 89 item ne hanno letto uno solo insieme, κ = −0,09 — e finché non si sa quale
+   *  segua la carica del preclear, sceglierlo al suo posto sarebbe chiudere di nascosto una
+   *  questione aperta. Il selettore sta sotto il perno, dove si guarda già.
+   *  `bothInstruments` false → niente selettore: con uno strumento solo non c'è scelta. */
+  bothInstruments?: boolean;
+  pickedNeedle?: 'eeg' | 'theta';
+  onPickNeedle?: (k: 'eeg' | 'theta') => void;
   /** APERÇU F/N : force le float (pour régler le style sans MUSE). Défaut false. */
 }
 
@@ -110,6 +119,7 @@ export function QuantumSphere({
   showColorBands = true,
   showTrail = true,
   releaseActive = false,
+  bothInstruments = false, pickedNeedle = 'theta', onPickNeedle,
   fnMode = 'normal' }: QuantumSphereProps) {
   const { t } = useI18n();
   const isLightTheme = useUiStore(s => s.isLightTheme);
@@ -287,6 +297,29 @@ export function QuantumSphere({
     }
     prevOffsetRef.current = renderOffset;
   }, [renderOffset]);
+
+  // ── SCIA DELL'AGO DELLE BOÎTES ───────────────────────────────────────────────────────
+  // L'ago dell'EEG lascia una scia colorata che dice a colpo d'occhio QUANTO è andato giù;
+  // quello del meter era una linea nuda, e nella vista completa sembrava non reagire.
+  // Stessa scia, stessa scala di colore: quello che si vede muoversi si legge allo stesso modo.
+  const [thetaTrailTo, setThetaTrailTo]   = useState(SET_OFFSET);
+  const [thetaTrailOp, setThetaTrailOp]   = useState(0);
+  const thetaTrailTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const thetaPrevRef    = useRef(SET_OFFSET);
+  useEffect(() => {
+    if (thetaOffset === null || thetaOffset === undefined) return;
+    if (Math.abs(thetaOffset - thetaPrevRef.current) > 0.004) {
+      setThetaTrailTo(thetaOffset);
+      setThetaTrailOp(0.85);
+      if (thetaTrailTimer.current) clearTimeout(thetaTrailTimer.current);
+      thetaTrailTimer.current = setTimeout(() => setThetaTrailOp(0), 1400);
+    }
+    thetaPrevRef.current = thetaOffset;
+  }, [thetaOffset]);
+  const thetaTrailInt   = Math.max(0, Math.min(1, (thetaTrailTo - SET_OFFSET) / (1.0 - SET_OFFSET)));
+  const thetaTrailColor = `rgb(${Math.round(thetaTrailInt * 255)},`
+                        + `${Math.max(0, Math.round(230 - thetaTrailInt * 200))},`
+                        + `${Math.max(0, Math.round(255 - thetaTrailInt * 255))})`;
 
   // ── Trail color / intensity tied to needle position ───────────────────────
   // offset: SET_OFFSET(~-0.2) → 0 normal zone → 0.45 FALL → 0.72 LONG FALL → 1.0 BLOW DOWN
@@ -549,6 +582,20 @@ export function QuantumSphere({
             compte, l'aiguille EEG doit rester lisible par-dessus. Absente si le meter n'est
             pas branché — `null`, pas 0, sinon on afficherait une aiguille au repos qui n'existe
             pas et qu'on croirait vraie. */}
+        {/* La scia delle boîtes: sotto il suo ago, con la stessa scala di colore dell'EEG. */}
+        {showTrail && !isLightTheme && thetaTrailOp > 0 && Math.abs(thetaTrailTo - SET_OFFSET) > 0.01 && (
+          <>
+            <path d={arcPath(R_MID + 2, Math.min(SET_OFFSET, thetaTrailTo), Math.max(SET_OFFSET, thetaTrailTo))}
+              fill="none" stroke={thetaTrailColor} strokeWidth={trailWidth * 1.8} strokeLinecap="round"
+              opacity={thetaTrailOp * 0.30} filter="url(#trail_glow)"
+              style={{ transition: 'opacity 1.4s ease-out', pointerEvents: 'none' }}/>
+            <path d={arcPath(R_MID + 2, Math.min(SET_OFFSET, thetaTrailTo), Math.max(SET_OFFSET, thetaTrailTo))}
+              fill="none" stroke={thetaTrailColor} strokeWidth={trailWidth * 0.45} strokeLinecap="round"
+              opacity={thetaTrailOp * 0.9} filter="url(#trail_glow)"
+              style={{ transition: 'opacity 1.4s ease-out', pointerEvents: 'none' }}/>
+          </>
+        )}
+
         {thetaOffset !== null && thetaOffset !== undefined && (() => {
           const a = off2ang(Math.max(-1, Math.min(1, thetaOffset)));
           const t = pt(a, tipR);
@@ -586,6 +633,43 @@ export function QuantumSphere({
         {/* ── Pivot hub ── */}
         <circle cx={PX} cy={PY} r={14} fill={hubFill} stroke={hubStroke} strokeWidth="1.5"/>
         <circle cx={PX} cy={PY} r={5}  fill={isLightTheme ? '#475569' : 'rgba(255,255,255,0.95)'}/>
+
+        {/* ── QUALE AGO ────────────────────────────────────────────────────────────────────
+            Un ago solo, ma QUALE si sceglie a mano. I due strumenti misurano cose diverse —
+            su 89 item hanno letto lo stesso item una volta (κ = −0,09) — e non c'è ancora
+            niente che dica quale abbia ragione: sceglierlo al posto dell'auditor sarebbe
+            decidere di nascosto una questione aperta.
+            Compare SOLO con entrambi collegati: con uno solo non c'è nulla da scegliere. */}
+        {onPickNeedle && showEegNeedle !== undefined && bothInstruments && (() => {
+          const W = 96, H = 30, GAP = 8, Y = PY + 18;
+          const opts: { k: 'eeg' | 'theta'; lbl: string; col: string }[] = [
+            { k: 'eeg',   lbl: 'MUSE',  col: '#8ab4ff' },
+            { k: 'theta', lbl: 'METER', col: '#fbbf24' },
+          ];
+          return (
+            <g>
+              {opts.map((o, i) => {
+                const x = PX + (i === 0 ? -W - GAP / 2 : GAP / 2);
+                const on = pickedNeedle === o.k;
+                return (
+                  <g key={o.k} style={{ cursor: 'pointer' }}
+                     onClick={e => { e.stopPropagation(); onPickNeedle(o.k); }}>
+                    <rect x={x} y={Y} width={W} height={H} rx={9}
+                          fill={on ? o.col : 'rgba(0,0,0,0.35)'}
+                          fillOpacity={on ? 0.18 : 1}
+                          stroke={on ? o.col : 'rgba(255,255,255,0.22)'} strokeWidth={on ? 2 : 1}/>
+                    <text x={x + W / 2} y={Y + H / 2 + 6} textAnchor="middle"
+                          fill={on ? o.col : 'rgba(226,238,255,0.55)'}
+                          fontSize="16" fontFamily="var(--font-sans)" fontWeight={on ? 700 : 500}
+                          letterSpacing="1.5" style={{ pointerEvents: 'none' }}>
+                      {o.lbl}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
+          );
+        })()}
 
         {/* Reaction label REMOVED (see note above) — reactions are shown in the top data-stack. */}
 

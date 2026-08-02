@@ -17,6 +17,9 @@ import { useMnaModule } from './hooks/useMnaModule';
 import { useMediaRelayFallback } from './hooks/useMediaRelayFallback';
 import { useThetaMeter } from './hooks/useThetaMeter';
 import { effectiveModules, eegModulesHidden } from './engine/instrumentModules';
+import { sessionRecord, reactionRecord, cycleRecord, fnRecord, itemRecord,
+         chiaveItem } from './engine/corpus';
+import { corpusWrite, corpusFlushNow, corpusStato, corpusAvailable } from './lib/corpusWriter';
 import { SQUEEZE_TARGET_OFFSET } from './engine/thetaSetup';
 import { ThetaReadyCheck } from './components/ThetaReadyCheck';
 import { ThetaTaCalibration } from './components/ThetaTaCalibration';
@@ -27,13 +30,14 @@ const THETA_AMBER = '#f59e0b';
 import { ParticipantView } from './components/ParticipantView';
 import { LIGHT_THEME_CSS } from './ui/lightThemeCss';
 import { EpManualModal } from './components/EpManualModal';
-import { computeInstantRead } from './engine/instantRead';
+import { computeInstantRead, readWaitSeconds, readWindow, type ReadSrc } from './engine/instantRead';
 import { isAssessableItem } from './engine/assessItemFilter';
 import { decideNeedle } from './engine/needleDecision';
 import { isMotionArtifact } from './engine/motionArtifact';
 import type { NestWorkerMessage } from './workers/nestMessages';
-import { KICK_MS, KICK_MS_DEFAULT, KICK_FLYBACK_MS, NEEDLE_REST_OFFSET, ITEM_INTERRUPT_MS,
-         SHOWN_READS_CAP, READ_WINDOW_AFTER_S } from './engine/tuning';
+import { KICK_FLYBACK_MS, NEEDLE_REST_OFFSET, ITEM_INTERRUPT_MS,
+         SHOWN_READS_CAP, READ_WINDOW_AFTER_S, THETA_FN_EXPIRE_S,
+         THETA_LABEL_AFTER_MS, THETA_REACT_TICK, THETA_RETRACT_MS } from './engine/tuning';
 import { QuantumSphere } from './components/QuantumSphere';
 import { chargeStateById, type ChargeStateId } from './lib/chargeState';
 import { cycleStateMachine } from './engine/CycleStateMachine';
@@ -112,7 +116,8 @@ import { EpValidationModal } from './components/EpValidationModal';
 import { ProcessusModal } from './components/ProcessusModal';
 import { MnaPanel } from './components/MnaPanel';
 import { BiometricPanel } from './components/BiometricPanel';
-import { AssessmentPanel } from './components/AssessmentPanel';
+import { AssessmentPanel, type AssessmentItem } from './components/AssessmentPanel';
+import { PcChargePrompt } from './components/PcChargePrompt';
 import { AppBackground } from './components/AppBackground';
 import { HealthPanel } from './components/HealthPanel';
 import { SidebarDrawer as SidebarDrawerBase } from './components/SidebarDrawer';
@@ -234,7 +239,8 @@ export default function App() {
   //    items à voix haute ; comme le R&I on inscrit le READ instantané (même calcul, fenêtre de
   //    réaction). Les items s'affichent SOUS l'arc. Re-presser → arrête (les items restent) ; presser
   //    à nouveau → nouveau cycle (on efface les items du cycle précédent). Tout est mis au rapport/PDF.
-  interface AssessItem { id: string; time: number; item: string; reaction: string; beforeMs?: number; }
+  // La forma delle righe vive nel pannello che le disegna: qui si riusa, così non si sfasano.
+  type AssessItem = AssessmentItem;
   interface AssessCycle { n: number; tStartSec: number; tEndSec: number; items: Array<{ item: string; reaction: string; time: number; beforeMs?: number }>; }
   const [assessActive, setAssessActive] = useState(false);
   const assessActiveRef = useRef(false); assessActiveRef.current = assessActive;
@@ -242,6 +248,9 @@ export default function App() {
   // Liste de TOUTE la séance (module ASSESSMENT) : les mots restent inscrits avec leur read pendant
   // toute la session (demande utilisateur). Le module ASSESSMENT (ex R&I) affiche CECI.
   const [assessSession, setAssessSession] = useState<AssessItem[]>([]);
+  // Specchio in ref: le righe si validano da callback stabili (l'auditor clicca quando vuole,
+  // anche molto dopo), e senza questo leggerebbero una lista vecchia.
+  const assessSessionRef = useRef<AssessItem[]>([]); assessSessionRef.current = assessSession;
   // Visibilité SOUS l'arc : ON pendant l'assessment, puis OFF 5 s après la fin (demande utilisateur ;
   // ensuite les mots restent seulement dans le module ASSESSMENT).
   const [showUnderArc, setShowUnderArc] = useState(false);
@@ -784,6 +793,8 @@ export default function App() {
   const thetaResetRef = useRef<(() => void) | null>(null);
   /** Le boîtes sono collegate? Serve dentro handleStart, che è definita PRIMA del hook. */
   const thetaConnectedRef = useRef(false);
+  /** TA dell'ago VERO, per i punti del codice che girano fuori dal render (cicli, archivio). */
+  const thetaTaRef = useRef<number | null>(null);
 
   const resetNeedle = useCallback(() => {
     needleEngine.reset(() => {
@@ -1001,13 +1012,60 @@ export default function App() {
   // Gamma baseline (slow EMA) → a γ SPIKE is the earliest leading-edge marker (the
   // "Pre-Read": γ precedes the needle ~420–500 ms, measured in the Jan 2026 tests).
   const gammaEmaRef = useRef(0);
+  // ── CORPUS — riferimenti per le righe d'archivio ─────────────────────────────────────────
+  /** Identificativo della seduta corrente. Lega fra loro le sue righe; vuoto fuori seduta,
+   *  perché una reazione senza seduta non si sa a che configurazione appartenga. */
+  const corpusSessionRef = useRef('');
+  /** Carica (qL) al CONTATTO e TA all'inizio del ciclo. Vanno presi quando succedono: a fine
+   *  ciclo la carica è per definizione andata, e leggerla lì darebbe sempre ~0. */
+  const cycleQlAtContactRef = useRef<number | null>(null);
+  const cycleTaStartRef = useRef<number | null>(null);
+  /** Specchio del procedimento indicato: finalizeCycle viene chiamato anche da callback
+   *  registrati una volta sola, dove lo stato React sarebbe quello di allora. */
+  const sessionProcObjRef = useRef('');
+  /** F/N dell'EEG in attesa di scrittura. Si TIENE in sospeso perché il campo che conta —
+   *  « su questo F/N è stato dichiarato l'AS-IS » — si sa solo DOPO, quando l'auditor valida.
+   *  Scritto alla validazione, all'F/N successivo, o a fine seduta. */
+  const pendingEegFnRef = useRef<{ tSec: number; ta: number } | null>(null);
+  /** F/N dell'ago vero in corso: si scrive quando FINISCE, con ampiezza, ritmo e durata veri. */
+  const thetaFnOpenRef = useRef<{ tSec: number } | null>(null);
+  /** Scrive l'F/N dell'EEG rimasto in sospeso. `asIs` dice se l'auditor ha dichiarato l'AS-IS
+   *  su QUESTO F/N: è il legame fra l'indicatore e la decisione, e senza di esso non si potrebbe
+   *  sapere se un AS-IS dichiarato fosse confermato dall'ago vero. */
+  const flushEegFn = (asIs: boolean) => {
+    const p = pendingEegFnRef.current;
+    pendingEegFnRef.current = null;
+    if (!p || !corpusSessionRef.current) return;
+    corpusWrite(fnRecord(corpusSessionRef.current, new Date().toISOString(), {
+      src: 'eeg', tSec: p.tSec, ta: p.ta,
+      durSec: Math.max(0, timeRef.current - p.tSec) || undefined,
+      asIs: asIs || undefined,
+      proc: sessionProcObjRef.current.trim() || undefined,
+    }));
+  };
   const finalizeCycle = (completed: boolean) => {
     const c = curCycleRef.current;
     if (c) {
       // TA at the AS-IS moment (end of cycle) — the auditor wants it recorded per cycle
       // in the report alongside the AS-IS. Snapshot the live tone-arm now.
-      auditingCyclesRef.current.push({ ...c, tEndSec: timeRef.current, completed, falseAsIs: asIsFalseRef.current, io: asIsIORef.current, taAtAsIs: metricsStore.get().toneArm,
+      const taFine = metricsStore.get().toneArm;
+      auditingCyclesRef.current.push({ ...c, tEndSec: timeRef.current, completed, falseAsIs: asIsFalseRef.current, io: asIsIORef.current, taAtAsIs: taFine,
         kind: cycleKindRef.current, noRecharging: nullNoRechargeRef.current, clearRead: clearReadValidRef.current, vgi: clearReadVgiRef.current });
+      // ── CORPUS: il ciclo, concluso o abbandonato ───────────────────────────────────────────
+      // Si scrive in ENTRAMBI i casi: un ciclo abbandonato dice quanto spesso un procedimento
+      // non arriva in fondo, che è informazione clinica quanto un AS-IS raggiunto.
+      if (corpusSessionRef.current) {
+        corpusWrite(cycleRecord(corpusSessionRef.current, new Date().toISOString(), {
+          kind: cycleKindRef.current || 'charge',
+          durSec: Math.max(0, timeRef.current - c.tStartSec),
+          qlAtContact: cycleQlAtContactRef.current ?? undefined,
+          taStart: cycleTaStartRef.current ?? undefined,
+          taEnd: taFine,
+          done: completed,
+          falseAsIs: asIsFalseRef.current || undefined,
+          proc: sessionProcObjRef.current.trim() || undefined,
+        }));
+      }
       if (completed) {
         // Validé par l'auditeur → ligne de journal (avec le n° de cycle) + compteur. Le cycle NULL
         // se termine sur un CLEAR READ (avec les VGI's inscrits), pas sur un AS-IS.
@@ -1017,6 +1075,8 @@ export default function App() {
             : `✓ #${c.n} ${c.question || LC('ciclo', 'cycle', 'cycle', 'ciclo', 'cykel')} — AS-IS`,
           type: 'success' });
         cyclesAsIsRef.current += 1;
+        // CORPUS: l'AS-IS è stato dichiarato → l'F/N su cui si è deciso porta il flag.
+        flushEegFn(true);
         if (cycleKindRef.current === 'null') nDoneRef.current += 1; else cDoneRef.current += 1;
         pushCycleStats();
         // AS-IS reached → also CLOSE any running neuro-acoustic sonification: the charge
@@ -1100,6 +1160,97 @@ export default function App() {
       type: erased ? 'success' : 'normal' });
   };
 
+  // ═══════════════════════════════════════════════════════════════════════════════════════
+  // PROVA CIECA — il giudizio del preclear come criterio ESTERNO ai due aghi
+  //
+  // Misurato il 02/08/2026 su 89 item con MUSE e METER insieme: hanno letto lo STESSO item
+  // **una volta** (solo MUSE 31, solo METER 6, nessuno 51 — κ di Cohen −0,09). Nessuno dei due
+  // può quindi validare l'altro: si sono guardati in faccia 89 volte e trovati d'accordo una.
+  //
+  // Il preclear invece sa se un item lo ha smosso. Se dichiara la carica PRIMA di vedere il
+  // verdetto dell'app, si può contare quale dei due aghi trova gli item carichi — che è la
+  // domanda vera, e la sola che decida se vadano usati insieme o separati.
+  //
+  // ⚠️ Cieco sul VERDETTO, non sull'ago: il quadrante si muove sotto gli occhi del preclear.
+  //    Il giudizio è quindi tirato verso l'ago MOSTRATO — il che rende più forte, non più
+  //    debole, un risultato a favore dell'altro.
+  // ═══════════════════════════════════════════════════════════════════════════════════════
+  /** Quanto si aspetta il giudizio del preclear prima di uscire lo stesso: la seduta non si
+   *  blocca perché una domanda è rimasta senza risposta. */
+  const PC_ATTESA_MS = 12_000;
+  const [provaCieca, setProvaCieca] = useState(false);
+  const provaCiecaRef = useRef(false);
+  useEffect(() => { provaCiecaRef.current = provaCieca; }, [provaCieca]);
+  /** L'item in attesa di giudizio (null = nessuna domanda aperta). */
+  const [pcDomanda, setPcDomanda] = useState<{ id: string; parola: string } | null>(null);
+  /** id item → cosa fare quando risponde. Una mappa e non un solo callback: se il preclear
+   *  tarda e intanto arriva l'item dopo, la risposta deve andare all'item GIUSTO. */
+  const attesaPcRef = useRef(new Map<string, (carico?: boolean) => void>());
+  const rispondiPc = useCallback((carico: boolean) => {
+    const d = pcDomanda;
+    if (!d) return;
+    const f = attesaPcRef.current.get(d.id);
+    attesaPcRef.current.delete(d.id);
+    if (f) f(carico);
+    else setPcDomanda(null);
+  }, [pcDomanda]);
+  // Tastiera: C = carica, N = niente. In seduta le mani sono sulle lattine, e un bersaglio da
+  // centrare col mouse è un ritardo che entra nella misura.
+  useEffect(() => {
+    if (!pcDomanda) return;
+    const h = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const k = e.key.toLowerCase();
+      if (k === 'c') { e.preventDefault(); rispondiPc(true); }
+      else if (k === 'n') { e.preventDefault(); rispondiPc(false); }
+    };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [pcDomanda, rispondiPc]);
+
+  // ── R&I — UNA RIGA VALIDABILE PER OGNI REAZIONE MOSTRATA ────────────────────────────────
+  // L'auditor indica al preclear una REAZIONE, non solo un item: in seduta l'ago reagisce sul
+  // processo e su ciò che il preclear dice. La riga porta le letture dei DUE aghi prese
+  // separatamente — leggono cose diverse (κ = −0,09) e un verdetto unico nasconderebbe proprio
+  // ciò che vogliamo sapere: quale dei due indica davvero.
+  const riIdRef = useRef(0);
+  const aggiungiRigaReazione = useCallback((etichetta: string, carica: string) => {
+    const t = timeRef.current;
+    // Cosa hanno visto i due aghi ATTORNO a questo istante. Niente `notBefore`: qui non c'è un
+    // item precedente da cui difendersi, c'è solo il movimento appena mostrato.
+    const muse  = computeInstantRead(shownReadsRef.current, t, -Infinity, Infinity, 'eeg').read;
+    const meter = computeInstantRead(shownReadsRef.current, t, -Infinity, Infinity, 'theta').read;
+    const riga: AssessItem = {
+      id: `ri-${++riIdRef.current}`, time: t, kind: 'reaction',
+      // Il « testo » di una riga di reazione è lo stato di carica, non una parola: è quello che
+      // l'auditor ha davanti quando decide se indicare.
+      item: carica || etichetta,
+      reaction: etichetta,
+      readMuse: instrumentsRef.current.muse ? muse : undefined,
+      readMeter: instrumentsRef.current.theta ? meter : undefined,
+    };
+    setAssessSession(prev => [...prev, riga]);
+  }, []);
+  /** L'auditor registra la risposta del preclear. Si può cambiare idea: la riga si riscrive. */
+  const segnaIndicazione = useCallback((id: string, indica: boolean) => {
+    setAssessSession(prev => prev.map(a => (a.id === id ? { ...a, indica } : a)));
+    const riga = assessSessionRef.current.find(a => a.id === id);
+    if (corpusSessionRef.current && riga) {
+      // In archivio è una riga `item` come le altre: porta le due letture e il verdetto del
+      // preclear. Il TESTO non ci entra mai — solo la classificazione.
+      corpusWrite(itemRecord(corpusSessionRef.current, new Date().toISOString(), riga.time,
+        { read: riga.reaction, readMuse: riga.readMuse, readMeter: riga.readMeter,
+          indica }));
+    }
+    logBufferRef.current.push({ time: timeRef.current, speaker: 'PC',
+      text: indica
+        ? LC('la reazione indica', 'la réaction indique', 'the read indicates',
+             'la reacción indica', 'avläsningen indikerar')
+        : LC('la reazione NON indica', 'la réaction n\'indique PAS', 'the read does NOT indicate',
+             'la reacción NO indica', 'avläsningen indikerar INTE'),
+      type: indica ? 'success' : 'normal' });
+  }, []);
+
   // ── ASSESSMENT — ajoute un item assessé + calcule son READ instantané. Le read est un
   //    CHANGEMENT de la réaction (pas l'état déjà en cours) à l'instant = fin du mot − retard de
   //    comm (même logique que R&I → computeInstantRead). Aucun changement → « — » (NUL). ──
@@ -1109,7 +1260,7 @@ export default function App() {
     const id = `as-${++assessIdRef.current}`;
     const pending = '⏳';
     freeNeedleForNewItem();   // l'aiguille se libère pour pouvoir réagir à CET item
-    const item = { id, time: tSpeak, item: w, reaction: pending, beforeMs: 0 };
+    const item: AssessItem = { id, time: tSpeak, item: w, reaction: pending, beforeMs: 0, kind: 'item' };
     setAssessItems(prev => [...prev, item]);       // SOUS l'arc (cycle courant)
     setAssessSession(prev => [...prev, { ...item }]); // module ASSESSMENT (toute la séance)
     const cyc = assessCyclesRef.current[assessCyclesRef.current.length - 1];
@@ -1117,22 +1268,189 @@ export default function App() {
     if (cyc) cyc.items.push(rec);
     // PAS de slittamento : le read est cherché AUTOUR de l'item ; beforeMs = combien AVANT il est
     // survenu (toujours signe « − » côté UI ; pas de read latent).
-    const wait = Math.max(50, (tSpeak + READ_WINDOW_AFTER_S - timeRef.current) * 1000);   // stessa manopola della finestra
+    // Attesa = la finestra dell'ago che si sta usando. Con le boîtes collegate bisogna dare
+    // tempo alla latenza elettrodermica: decidere a 0,15 s vorrebbe dire concludere « NULL »
+    // prima che l'ago abbia cominciato a muoversi.
+    const attesaS = readWaitSeconds(thetaConnectedRef.current);
     const notBefore = assessPrevAtRef.current + 0.05;   // jamais la lecture de l'item PRÉCÉDENT
     assessPrevAtRef.current = tSpeak;
-    const _tid = window.setTimeout(() => {
-      pendingTimersRef.current.delete(_tid);
+    assessTimesRef.current.push(tSpeak);
+    ultimoItemSecRef.current = tSpeak;
+    // GRUPPO di ripetizione: se queste parole sono già state date, l'item riceve lo STESSO
+    // numero. È così che l'archivio sa « questo è lo stesso item del terzo » senza contenere
+    // la parola. La riga si scrive quando la lettura è decisa (in `chiudi`), non adesso.
+    const chiave = chiaveItem(w);
+    let gruppo = gruppiItemRef.current.get(chiave);
+    if (gruppo === undefined) {
+      gruppo = gruppiItemRef.current.size + 1;
+      gruppiItemRef.current.set(chiave, gruppo);
+    }
+    if (assessTimesRef.current.length > SHOWN_READS_CAP) assessTimesRef.current.shift();
+    // ── SI SCRIVE APPENA L'AGO REAGISCE, NON A FINE FINESTRA ──────────────────────────────
+    // Aspettare i 3,5 s della latenza elettrodermica prima di dire QUALUNQUE cosa lasciava
+    // l'auditor davanti a una clessidra mentre l'ago era già caduto: la lettura arrivava sempre
+    // in ritardo. Si guarda quindi la finestra a piccoli passi e si SCRIVE SUBITO la lettura
+    // appena c'è. `computeInstantRead` rende sempre la lettura più FORTE della finestra, quindi
+    // ripetendola il valore può solo salire: se dopo la SF arriva una fall, la scritta si
+    // aggiorna. Il journal, lui, si scrive UNA volta sola, alla chiusura, col valore definitivo.
+    const PASSO_MS = 200;
+    const finoASec = tSpeak + attesaS;
+    let ultimaMostrata = '';
+    const guarda = () => {
+      // Limite in AVANTI = l'item SEGUENTE, se c'è già stato. Con la finestra delle boîtes
+      // (3,5 s avanti) e item dati ogni secondo, senza questo il primo item si prenderebbe le
+      // reazioni di quelli dopo. Si conosce solo ADESSO: quando l'item è stato dato non c'era.
+      const next = assessTimesRef.current.find(x => x > tSpeak + 0.05);
+      const notAfter = next !== undefined ? next - 0.05 : Infinity;
       // SOURCE = réactions RÉELLEMENT MONTRÉES (jamais le flux brut du classifieur)
-      const { read, beforeMs } = computeInstantRead(shownReadsRef.current, tSpeak, notBefore);   // 'NULL' si rien de vu
-      rec.reaction = read; rec.beforeMs = beforeMs;   // le record du rapport partage l'objet
-      setAssessItems(prev => prev.map(a => a.id === id ? { ...a, reaction: read, beforeMs } : a));
-      setAssessSession(prev => prev.map(a => a.id === id ? { ...a, reaction: read, beforeMs } : a));
-      // Journal : read + combien de ms AVANT (−). Aucun changement → « NULL ».
+      // …e SOLO dall'ago mostrato: una lettura presa dall'altro racconterebbe un movimento che
+      // l'auditor non ha davanti agli occhi.
+      const r = computeInstantRead(shownReadsRef.current, tSpeak, notBefore, notAfter,
+                                   agoPrincipale);   // 'NULL' si rien de vu
+      // In PROVA CIECA la lettura NON si mostra: il preclear deve dire se l'item aveva carica
+      // senza sapere cosa ha deciso l'app. Si continua a calcolarla — serve appena risponde.
+      if (r.read !== 'NULL' && r.read !== ultimaMostrata && !provaCiecaRef.current) {
+        ultimaMostrata = r.read;
+        rec.reaction = r.read; rec.beforeMs = r.beforeMs;   // le record du rapport partage l'objet
+        setAssessItems(prev => prev.map(a => a.id === id ? { ...a, reaction: r.read, beforeMs: r.beforeMs } : a));
+        setAssessSession(prev => prev.map(a => a.id === id ? { ...a, reaction: r.read, beforeMs: r.beforeMs } : a));
+      }
+      return r;
+    };
+    const chiudi = () => {
+      const { read, beforeMs, afterMs } = guarda();
+      // ── PROVA CIECA: si aspetta il giudizio del preclear ────────────────────────────────
+      // La lettura è decisa, ma non si mostra e non si archivia finché il preclear non ha detto
+      // se quell'item aveva carica. Il suo giudizio è il solo criterio ESTERNO ai due aghi:
+      // nessuno dei due può validare l'altro (d'accordo una volta su 89), lui sì. Se sapesse
+      // già cosa ha deciso l'app, non sarebbe più un criterio indipendente.
+      if (provaCiecaRef.current) {
+        setPcDomanda({ id, parola: w });
+        attesaPcRef.current.set(id, (carico?: boolean) => {
+          setPcDomanda(d => (d && d.id === id ? null : d));
+          mostraEsito(read, beforeMs, afterMs, carico);
+        });
+        // Se non risponde, la seduta non si blocca: dopo l'attesa l'esito esce senza giudizio.
+        const _t = window.setTimeout(() => {
+          const f = attesaPcRef.current.get(id);
+          if (f) { attesaPcRef.current.delete(id); f(undefined); }
+        }, PC_ATTESA_MS);
+        pendingTimersRef.current.add(_t);
+        return;
+      }
+      mostraEsito(read, beforeMs, afterMs, undefined);
+    };
+    /** Mostra la lettura, la scrive nel journal e nell'archivio. In prova cieca arriva qui solo
+     *  DOPO che il preclear ha risposto — o dopo l'attesa, se tace. */
+    const mostraEsito = (read: string, beforeMs: number, afterMs: number,
+                         pcCarico: boolean | undefined) => {
+      // ── LE DUE LETTURE, SEPARATE ────────────────────────────────────────────────────────
+      // `read` è quella dell'ago mostrato. Ma i due leggono item DIVERSI — su 89 item ne hanno
+      // letto uno solo insieme — e la vista INDICAZIONE le mette a confronto riga per riga: un
+      // verdetto unico nasconderebbe proprio il dato che si cerca.
+      const nextT = assessTimesRef.current.find(x => x > tSpeak + 0.05);
+      const nA = nextT !== undefined ? nextT - 0.05 : Infinity;
+      const rMuse  = computeInstantRead(shownReadsRef.current, tSpeak, notBefore, nA, 'eeg').read;
+      const rMeter = computeInstantRead(shownReadsRef.current, tSpeak, notBefore, nA, 'theta').read;
+      {
+        // La scritta compare adesso in ogni caso: in prova cieca `guarda()` l'aveva soppressa,
+        // e senza questo l'item resterebbe sul suo « ⏳ » per sempre.
+        rec.reaction = read; rec.beforeMs = beforeMs;
+        const patch = { reaction: read, beforeMs, pcCarico,
+                        readMuse: instruments.muse ? rMuse : undefined,
+                        readMeter: instruments.theta ? rMeter : undefined };
+        setAssessItems(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
+        setAssessSession(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
+      }
+      // ── DIAGNOSI ASSESSMENT (temporanea, da togliere quando avremo capito) ─────────────
+      // « Nessuna reattività col meter » può venire da quattro punti diversi, e senza numeri
+      // sarebbe l'ennesima ipotesi. Questa riga dice, per OGNI item: quando è finita la parola,
+      // di quanto l'ho retrodatata (e se il riconoscitore me l'ha detto o l'ho indovinato), che
+      // letture c'erano intorno, e quali sono cadute fuori dalla finestra.
+      {
+        const b = sttBackdateRef.current;
+        const fin = readWindow('theta');
+        const vicine = shownReadsRef.current
+          .filter(r => Math.abs(r.time - tSpeak) <= 4)
+          .map(r => {
+            const d = r.time - tSpeak;
+            const w = readWindow(r.src);
+            const dentro = d >= -w.before && d <= w.after;
+            return `${r.src ?? 'eeg'}:${r.reaction}${d >= 0 ? '+' : ''}${Math.round(d * 1000)}ms${dentro ? '' : '✗'}`;
+          });
+        // L'AGO SI È MOSSO? Domanda diversa da « ha prodotto una lettura », e senza risposta
+        // non si sa se il difetto è nella sensibilità, nelle soglie o nel classificatore.
+        const e = theta.escursione(tSpeak - 1, tSpeak + 3);
+        const verdettoAgo = e.campioni === 0 ? 'nessun dato dall\'ago'
+          : e.span < 0.02 ? `ago FERMO (span ${e.span.toFixed(3)}, posato a ${e.a.toFixed(2)})`
+          : `ago mosso di ${e.span.toFixed(3)} [${e.da.toFixed(2)}→${e.a.toFixed(2)}]`
+              // QUANDO è avvenuto il movimento, rispetto alla fine della parola. È la sola cosa
+              // che distingue una reazione da una deriva: una reazione segue l'item, una deriva
+              // capita quando capita. Senza questo, abbassare la soglia sarebbe tirare a caso.
+              + ` · picco a ${((e.tMax - tSpeak) >= 0 ? '+' : '')}${((e.tMax - tSpeak) * 1000).toFixed(0)}ms`
+              + (e.deriva ? ' · DERIVA (va in una direzione sola, non è una reazione)' : '')
+              + `${e.span < THETA_REACT_TICK ? ` — SOTTO il tick (${THETA_REACT_TICK})` : ' — sopra il tick'}`;
+        logBufferRef.current.push({ time: tSpeak, speaker: 'SYS',
+          text: `⟨diag⟩ « ${w} » fineParola=${tSpeak.toFixed(2)}s · `
+              + `strumenti ${[instruments.muse && 'MUSE', instruments.theta && 'METER'].filter(Boolean).join('+') || 'nessuno'} · `
+              + `moduli ${Object.entries(moduleVis).filter(([, v]) => v).map(([k]) => k).join(',') || 'nessuno'} · `
+              + `${isElectron ? 'desktop' : 'BROWSER'} · STT ${sttEngineRef.current} · `
+              + (() => { const c = corpusStato();
+                  return `corpus ${c.disco ? '' : 'SENZA DISCO '}${c.scritte}/${c.accodate}`
+                       + `${c.perse ? ` (${c.perse} perse)` : ''}${c.inCoda ? ` +${c.inCoda} in coda` : ''}`
+                       + `${corpusSessionRef.current ? '' : ' · SEDUTA NON APERTA'} · `; })()
+              + `retrodatata ${(b.s * 1000).toFixed(0)}ms `
+              + `${b.misurato ? `(${b.fonte ?? 'misurata'})` : '(NON misurata)'} · `
+              + `sens ${theta.setup.scaleMeasured ? 'tarata' : 'DI FABBRICA (stretta non fatta)'}`
+              + `${theta.setup.sensTrim ? ` ${theta.setup.sensTrim > 0 ? '+' : ''}${theta.setup.sensTrim}` : ''} · `
+              + `${verdettoAgo}${e.motion ? ' · AGITAZIONE rilevata' : ''} · `
+              + `finestra −${fin.before}/+${fin.after}s · `
+              + (vicine.length ? `letture: ${vicine.join(' , ')}` : 'nessuna lettura entro 4 s')
+              + ` → ${read}`,
+          type: 'normal' });
+      }
+      // CORPUS: l'occorrenza dell'item — istante, gruppo di ripetizione e LETTURA. Si scrive
+      // adesso e non quando l'item è stato dato, perché la lettura si sa solo ora; l'istante
+      // resta quello della fine parola. È questa riga che permette la prova della ripetibilità.
+      if (corpusSessionRef.current) {
+        corpusWrite(itemRecord(corpusSessionRef.current, new Date().toISOString(), tSpeak,
+          { g: gruppo, read, offMs: beforeMs > 0 ? -beforeMs : afterMs,
+            readMuse: instruments.muse ? rMuse : undefined,
+            readMeter: instruments.theta ? rMeter : undefined,
+            pcCarico }));
+      }
+      // Journal : read + l'écart (− avant l'item, + après). Aucun changement → « NULL ».
+      const nulla = LC('nessuna reazione (NULL)', 'aucune réaction (NULL)', 'no read (NULL)',
+                       'sin reacción (NULL)', 'ingen reaktion (NULL)');
       logBufferRef.current.push({ time: tSpeak, speaker: 'NEEDLE',
-        text: `ASSESSMENT · ${w} → ${read === 'NULL' ? LC('nessuna reazione (NULL)', 'aucune réaction (NULL)', 'no read (NULL)', 'sin reacción (NULL)', 'ingen reaktion (NULL)') : `${read}${beforeMs > 0 ? ` −${beforeMs}ms` : ''}`}`,
+        text: `ASSESSMENT · ${w} → ${read === 'NULL' ? nulla : `${read}${beforeMs > 0 ? ` −${beforeMs}ms` : afterMs > 0 ? ` +${afterMs}ms` : ''}`}`
+            // I DUE AGHI SEPARATAMENTE, quando ci sono entrambi. Leggono item diversi (κ = −0,09):
+            // un verdetto solo nasconderebbe proprio il dato che stiamo cercando.
+            + (instruments.muse && instruments.theta
+                ? `   [MUSE ${rMuse} · METER ${rMeter}]` : ''),
         type: read === 'NULL' ? 'normal' : 'success' });
-    }, wait);
-    pendingTimersRef.current.add(_tid);
+      // Il giudizio del preclear, su una riga sua: è un DATO, non un commento alla lettura.
+      if (pcCarico !== undefined) {
+        logBufferRef.current.push({ time: tSpeak, speaker: 'PC',
+          text: pcCarico
+            ? LC('sentivo carica su questo item', 'je sentais de la charge sur cet item',
+                 'I felt charge on this item', 'sentía carga en este ítem',
+                 'jag kände laddning på detta item')
+            : LC('nessuna carica sentita', 'aucune charge ressentie', 'no charge felt',
+                 'ninguna carga sentida', 'ingen laddning kändes'),
+          type: pcCarico ? 'success' : 'normal' });
+      }
+    };
+    const passo = () => {
+      const _tid = window.setTimeout(() => {
+        pendingTimersRef.current.delete(_tid);
+        if (timeRef.current >= finoASec) { chiudi(); return; }
+        guarda();
+        passo();
+      }, Math.max(50, Math.min(PASSO_MS, (finoASec - timeRef.current) * 1000)));
+      pendingTimersRef.current.add(_tid);
+    };
+    passo();
   };
   /** Bouton ASSESSMENT : 1er appui = démarre (efface les items du cycle précédent) ; 2e = arrête
    *  (les items restent affichés) ; 3e = nouveau cycle (efface + recommence). */
@@ -1158,6 +1476,11 @@ export default function App() {
       assessCyclesRef.current.push({ n, tStartSec: timeRef.current, tEndSec: timeRef.current, items: [] });
       assessStartRef.current = timeRef.current;
       assessLogCursorRef.current = logs.length;   // ne capter QUE les nouvelles paroles
+      // Le module ASSESSMENT s'OUVRE de lui-même : on démarre un assessment pour VOIR les items
+      // et leurs reads. S'il était masqué, il fallait aller le rouvrir dans CONFIG pendant que
+      // le préclear parlait déjà. (Il reste refermable à la main, et son état est mémorisé.)
+      setModuleVis(v => (v.ri ? v : { ...v, ri: true }));
+      setAssessOpenSignal(n => n + 1);   // …e non solo visibile: APERTO
       setAssessActive(true);
       logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
         text: `◎ ASSESSMENT — ${LC('inizio · dai gli item a voce', 'début · donne les items à voix', 'start · give items aloud', 'inicio · da los ítems en voz', 'start · ge items högt')}`, type: 'normal' });
@@ -1171,6 +1494,11 @@ export default function App() {
     if (kind === 'null') nStartedRef.current += 1; else cStartedRef.current += 1;
     pushCycleStats();
     curCycleRef.current = { n, question: q, tItemMs: Date.now(), tStartSec: timeRef.current, phaseReached: 'neutral', leadMs: null };
+    // CORPUS: il TA di partenza del ciclo. Con le boîtes è quello dell'ago vero, se no l'EEG:
+    // è lo stesso numero che l'auditor vede in cima al quadrante.
+    ultimoItemSecRef.current = timeRef.current;
+    cycleTaStartRef.current = thetaTaRef.current ?? metricsStore.get().toneArm;
+    cycleQlAtContactRef.current = null;
     // fresh cycle: reset FSM/predictor/episode so the next contact is THIS item's.
     cycleStateMachine.reset(); chargeEpisode.resetSession(); contactPredictor.reset();
     falseAsIsDetector.reset();
@@ -1245,7 +1573,18 @@ export default function App() {
   /** RÉACTIONS RÉELLEMENT MONTRÉES (aiguille + libellé), horodatées. C'est la SEULE source de
    *  l'ASSESSMENT / R&I : le flux brut du classifieur contient des réactions jamais affichées
    *  (avalées par le verrou de l'aiguille / le hold F/N) qu'il ne faut PAS attribuer aux items. */
-  const shownReadsRef = useRef<{ time: number; reaction: string }[]>([]);
+  const shownReadsRef = useRef<{ time: number; reaction: string; src?: ReadSrc; episodeId?: number }[]>([]);
+  /** L'ultimo item dato — in ASSESSMENT o armando un ciclo. Serve all'archivio: senza, la
+   *  distanza fra una reazione e l'item non esiste, e « vede di più » non si distingue da
+   *  « legge troppo ». Prima veniva solo dai cicli armati, che in assessment non ci sono: 43
+   *  reazioni su 46 finivano in archivio senza sapere a che distanza dall'item fossero. */
+  const ultimoItemSecRef = useRef<number | null>(null);
+  /** Parole già date → numero di gruppo. Riparte a ogni seduta: i gruppi hanno senso DENTRO
+   *  una seduta, non fra sedute diverse. */
+  const gruppiItemRef = useRef<Map<string, number>>(new Map());
+  /** Istanti degli item dati in assessment: servono a chiudere in AVANTI la finestra di un item
+   *  quando ne arriva un altro (la finestra delle boîtes guarda avanti, non indietro). */
+  const assessTimesRef = useRef<number[]>([]);
   /** Dernier instant (s) où une F/N était AFFICHÉE. Sert à traiter la F/N comme un ÉPISODE
    *  CONTINU : une F/N déjà en cours qui persiste (ou qui clignote une fraction de seconde et
    *  revient) n'est PAS une nouvelle réaction. Définition de l'AGO NULLO : « nessun cambiamento
@@ -1538,6 +1877,11 @@ export default function App() {
         if (cycleArmedRef.current && curCycleRef.current) {
           const _cc = curCycleRef.current;
           if (phaseOrder[_phase] > phaseOrder[_cc.phaseReached]) _cc.phaseReached = _phase;
+          // CORPUS: la carica al CONTATTO, presa una volta sola — è « quanta ce n'era » in
+          // partenza, il termine di paragone di tutto quello che il ciclo poi scarica.
+          if (cycleQlAtContactRef.current == null && _phase === 'contact') {
+            cycleQlAtContactRef.current = _qlDisp;
+          }
           // LAG-METER: the FIRST leading-edge after arming (γ spike or qL rising edge)
           // → reaction time t_LE − t_Item. Median across cycles = Δt* (Ron's Lag).
           if (_cc.leadMs == null && _validSignal && (_gammaSpike || _pred.contactEvent)) {
@@ -1742,7 +2086,16 @@ export default function App() {
         // liberation) so the History PDF + end-session summary can show it next
         // to the needle reaction. Same model as the sphere/needle dicitura.
         const _chargeNow = chargeStateById(_phase);
-        sessionRecorder.pushReaction({ time: timeRef.current, reaction: reactionLabel, charge: _chargeNow.id });
+        // ── IN PAUSA NON SI REGISTRA ────────────────────────────────────────────────────────
+        // L'orologio della seduta è fermo, ma il tubo EEG continua a girare: senza questa
+        // guardia ogni ciclo scriveva una lettura con lo STESSO istante congelato. Misurato in
+        // seduta: una pausa di due secondi ha lasciato 44 letture identiche a 100,70 s, che poi
+        // sono entrate nella finestra dell'item successivo. L'ago continua a muoversi — è
+        // biofeedback, e serve — ma niente di ciò che accade in pausa è parte della seduta.
+        const _inSeduta = sessionStateRef.current === 'running';
+        if (_inSeduta) {
+          sessionRecorder.pushReaction({ time: timeRef.current, reaction: reactionLabel, charge: _chargeNow.id });
+        }
         // Push aussi les métriques brutes pour permettre analyse post-hoc (R&I)
         sessionRecorder.pushMetrics({
           time: timeRef.current,
@@ -1752,7 +2105,7 @@ export default function App() {
         // ── JOURNAL DE SESSION — log des réactions d'aiguille significatives ──
         // Seulement les réactions visibles (pas tick/none), avec anti-spam :
         // même réaction : pas avant 4 s ; réaction différente : pas avant 1.5 s.
-        if (LOGGABLE_REACTIONS.has(reactionKey)) {
+        if (_inSeduta && LOGGABLE_REACTIONS.has(reactionKey)) {
           const last = lastLoggedReactionRef.current;
           const sameReaction = last?.reaction === reactionKey;
           // ROGER-FIX (#4, v2): reactions were signaled TOO promptly — a new one
@@ -1771,6 +2124,16 @@ export default function App() {
               speaker: 'NEEDLE',
               text: `⊙ ${reactionLabel}${_cLbl ? ` · ${_cLbl}` : ''}`,
               type: 'normal' });
+            // ── R&I: una riga VALIDABILE per ogni reazione mostrata ─────────────────────
+            // In seduta l'auditor indica anche fuori dall'assessment — sul processo, su ciò
+            // che il preclear dice. Senza queste righe l'R&I varrebbe solo durante un
+            // assessment, cioè quasi mai. Stessa cadenza del journal: ciò che è stato SCRITTO
+            // è ciò che si può indicare, e niente si scrive senza essere stato visto.
+            // …ma solo se il MUSE è l'ago MOSTRATO: una riga da indicare su un movimento che
+            // l'auditor non ha davanti agli occhi sarebbe da validare alla cieca.
+            if (!assessActiveRef.current && agoPrincipaleRef.current === 'eeg') {
+              aggiungiRigaReazione(reactionLabel, _cLbl);
+            }
           }
         }
 
@@ -1835,13 +2198,42 @@ export default function App() {
 
         // 2) SCRITTA + traccia di ciò che è REALMENTE MOSTRATO (la fonte dell'ASSESSMENT).
         if (_dec.commitLabel) {
-          if (_dec.recordShownRead) {
-            shownReadsRef.current.push({ time: timeRef.current, reaction: reactionLabel });
+          if (_dec.recordShownRead && _inSeduta) {
+            shownReadsRef.current.push({ time: timeRef.current, reaction: reactionLabel, src: 'eeg' });
             if (shownReadsRef.current.length > SHOWN_READS_CAP) {
               shownReadsRef.current.splice(0, Math.floor(SHOWN_READS_CAP / 2));
             }
+            // ── CORPUS: la reazione dell'ago EEG, col suo PROPRIO istante ────────────────────
+            // Si scrive solo ciò che è stato MOSTRATO: è quello che l'auditor ha visto e su cui
+            // ha deciso. Sorgente e istante restano separati da quelli delle boîtes — se l'EEG
+            // anticipa la risposta cutanea di 1–3 s, un tempo medio cancellerebbe l'anticipo.
+            if (corpusSessionRef.current) {
+              corpusWrite(reactionRecord(corpusSessionRef.current, new Date().toISOString(), {
+                // `peak` = la CADUTA MISURATA dell'ago virtuale in 0,5 s (moveR), la grandezza
+                // su cui il grado è deciso. Prima qui finiva `targetOffset − SET`, che è
+                // `REACTION_OFFSETS[chiave]`: un numero ricavato dall'etichetta, quindi identico
+                // per tutte le reazioni dello stesso nome. Confrontarlo col picco del meter non
+                // poteva dare niente. ⚠️ Non è la stessa grandezza del `peak` delle boîtes
+                // (là è l'escursione TOTALE da SET): il rapporto va stabilito, non presunto.
+                src: 'eeg', key: reactionKey, peak: reactionClassifier.lastMoveR,
+                tSec: timeRef.current, ql: _qlDisp,
+                ta: thetaTaRef.current ?? metricsStore.get().toneArm,
+                sinceItemSec: ultimoItemSecRef.current != null
+                  ? Math.max(0, timeRef.current - ultimoItemSecRef.current) : undefined,
+                assess: assessActiveRef.current || undefined,
+              }));
+            }
           }
-          if (reactionKey === 'reaction_fn') lastFnShownAtRef.current = timeRef.current;
+          if (reactionKey === 'reaction_fn') {
+            // CORPUS: fronte di salita dell'F/N EEG. Un F/N è una CONDIZIONE che dura: si apre
+            // una riga sola e le ripetizioni entro la finestra non ne aprono altre.
+            if (timeRef.current - lastFnShownAtRef.current > THETA_FN_EXPIRE_S) {
+              flushEegFn(false);
+              pendingEegFnRef.current = { tSec: timeRef.current,
+                ta: thetaTaRef.current ?? metricsStore.get().toneArm };
+            }
+            lastFnShownAtRef.current = timeRef.current;
+          }
           setNeedleReactionKey(reactionKey);
           setNeedleReaction(reactionLabel);
           needleReactionRef.current = reactionLabel;
@@ -2032,7 +2424,26 @@ export default function App() {
           if (event.results && event.results.length > 0) {
             const result = event.results[0];
             if (result.isFinal && result.transcript) {
-              const currentTime = timeRef.current; // session-relative seconds
+              // ── L'ORA DELLA PAROLA, NON QUELLA DELLA TRASCRIZIONE ────────────────────────
+              // Il riconoscitore dichiara la frase 900 ms DOPO che si è smesso di parlare
+              // (attende il silenzio). Datare l'item a questo istante lo spostava di quasi un
+              // secondo: l'instant read dell'ago — che avviene ALLA FINE DELLA PAROLA — cadeva
+              // fuori dalla sua finestra, e la lettura arrivava tardi o non arrivava affatto.
+              // `speechEndMs` riporta l'istante dell'ultima ipotesi parziale, cioè la fine vera.
+              // Fine della parola: la dice il riconoscitore se può (nativo), altrimenti la
+              // prende dal MICROFONO — l'ultimo istante con voce. Con Web Speech e con Whisper
+              // è l'unica sorgente possibile, e senza di essa l'item finiva datato quasi un
+              // secondo dopo la fine vera, con la lettura dell'ago fuori finestra.
+              const fineParolaMs = event.speechEndMs || voiceToneAnalyzer.speechEndMs();
+              const ritardoS = fineParolaMs
+                ? Math.min(3, Math.max(0, (performance.now() - fineParolaMs) / 1000)) : 0;
+              // DIAGNOSI ASSESSMENT (temporanea): quanto è stata retrodatata la parola, e se il
+              // riconoscitore ha dato l'informazione o si è dovuto tirare a indovinare.
+              sttBackdateRef.current = { s: ritardoS, misurato: !!fineParolaMs,
+                                         fonte: event.speechEndMs ? 'riconoscitore' : 'microfono',
+                                         mic: voiceToneAnalyzer.speechEndMs()
+                                           ? Math.min(3, (performance.now() - voiceToneAnalyzer.speechEndMs()) / 1000) : -1 };
+              const currentTime = Math.max(0, timeRef.current - ritardoS); // session-relative seconds
               const transcript = result.transcript.trim();
               // FIX CONN-40: attribute the speaker by DEVICE ROLE.
               const spk = appModeRef.current === 'participant' ? 'PC' : 'Aud';
@@ -2083,6 +2494,8 @@ export default function App() {
         nativeSpeechRecognition.onerror = () => {}; // stay quiet during the probe
         const nativeOk = await nativeSpeechRecognition.init();
         if (nativeOk) {
+          sttEngineRef.current = 'nativo';
+          sttLangRef.current = lang;
           wireHandlers(nativeSpeechRecognition);
           localRecognitionRef.current = nativeSpeechRecognition as any;
           nativeSpeechRecognition.start();
@@ -2091,7 +2504,12 @@ export default function App() {
           return;
         }
         console.log('[STT] native unavailable (permission denied/exited) → Whisper fallback');
-        logSttOnce('native_denied', lang === 'fr' ? '🎙 STT natif refusé — autorise « Reconnaissance vocale » + « Micro » dans Réglages, puis relance' : lang === 'it' ? '🎙 STT nativo negato — autorizza « Riconoscimento vocale » + « Microfono » in Impostazioni, poi riavvia' : '🎙 Native STT denied — allow "Speech Recognition" + "Microphone" in Settings, then restart', 'highlight');
+        logSttOnce('native_denied', LC(
+          '🎙 STT nativo negato — autorizza « Riconoscimento vocale » + « Microfono » in Impostazioni, poi riavvia',
+          '🎙 STT natif refusé — autorise « Reconnaissance vocale » + « Micro » dans Réglages, puis relance',
+          '🎙 Native STT denied — allow "Speech Recognition" + "Microphone" in Settings, then restart',
+          '🎙 STT nativo denegado — permite « Reconocimiento de voz » + « Micrófono » en Ajustes y reinicia',
+          '🎙 Inbyggd STT nekad — tillåt « Taligenkänning » + « Mikrofon » i Systeminställningar och starta om'), 'highlight');
       }
 
       // ── Fallback: offline Whisper (WASM) ──────────────────────────────────
@@ -2109,6 +2527,7 @@ export default function App() {
 
       if (initialized) {
         localRecognitionRef.current = offlineSpeechRecognition;
+        sttEngineRef.current = 'whisper';
         wireHandlers(offlineSpeechRecognition);
         offlineSpeechRecognition.lang = langMap[lang] || 'en-US';
         offlineSpeechRecognition.start();
@@ -2137,15 +2556,45 @@ export default function App() {
     // @ts-ignore
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
+      sttEngineRef.current = 'web';
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = false;
+      // ESITI INTERMEDI ACCESI — non per mostrarli (si scartano), ma per SAPERE QUANDO SI È
+      // SMESSO DI PARLARE. Web Speech consegna la frase definitiva a pausa finita, cioè quasi
+      // un secondo dopo: datare l'item lì buttava fuori finestra l'instant read dell'ago
+      // (misurato in seduta: letture a −600, −1000, −1200 ms, tutte scartate). L'ultimo esito
+      // intermedio è invece l'ultima volta che si sono riconosciute parole: quella è la fine.
+      recognitionRef.current.interimResults = true;
 
       // langMap already defined above (shared reference)
       recognitionRef.current.lang = langMap[lang] || 'en-US';
       
       recognitionRef.current.onresult = (event: any) => {
-        const currentTime = timeRef.current; // session-relative seconds (not Unix timestamp)
+        // Un esito NON definitivo non si scrive da nessuna parte: serve solo a marcare l'ora.
+        let soloIntermedi = true;
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) soloIntermedi = false;
+        }
+        if (soloIntermedi) { webInterimMsRef.current = performance.now(); return; }
+        // Fine della parola = ultimo esito intermedio. Se non ce n'è stato (frase corta chiusa
+        // di colpo), si resta sull'ora d'arrivo: meglio un dato imperfetto che uno inventato.
+        // ── LA FINE DELLA PAROLA VIENE DAL MICROFONO ─────────────────────────────────────
+        // Confrontati su una seduta vera (31/07/2026), i due candidati:
+        //   esito intermedio  0 · 0 · 0 · 303 · 303 · 304 · 403 · 503 · 603 · 703 ms
+        //   microfono       753 · 753 · 754 · 754 · 797 · 852 · 854 · 897 · 897 · 953 ms
+        // L'intermedio manca un terzo delle volte (frasi corte chiuse di colpo) ed è sparso;
+        // il microfono c'è sempre e sta raccolto. È anche l'unico dei due a misurare la cosa
+        // vera invece di un effetto collaterale del riconoscitore.
+        const micMs = voiceToneAnalyzer.speechEndMs();
+        const ritardoMicS = micMs ? Math.min(3, Math.max(0, (performance.now() - micMs) / 1000)) : -1;
+        const ritardoIntS = webInterimMsRef.current
+          ? Math.min(3, Math.max(0, (performance.now() - webInterimMsRef.current) / 1000)) : -1;
+        const ritardoS = ritardoMicS >= 0 ? ritardoMicS : Math.max(0, ritardoIntS);
+        sttBackdateRef.current = { s: ritardoS, misurato: ritardoMicS >= 0 || ritardoIntS >= 0,
+                                   fonte: ritardoMicS >= 0 ? 'microfono' : 'intermedio',
+                                   mic: ritardoMicS };
+        webInterimMsRef.current = 0;
+        const currentTime = Math.max(0, timeRef.current - ritardoS); // fine parola, non arrivo
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
             const transcript = event.results[i][0].transcript.trim();
@@ -2886,6 +3335,27 @@ export default function App() {
   // Tear down on App unmount.
   useEffect(() => () => { sessionClock.destroy(); }, []);
 
+  // ── USCIRE CON UNA SEDUTA APERTA ─────────────────────────────────────────────────────
+  // Il processo principale non sa se si sta auditando: glielo diciamo noi, ed è lui a fermare
+  // la chiusura e a chiedercelo. Senza, chiudere la finestra buttava via la seduta in silenzio.
+  useEffect(() => {
+    const api = (window as any).electronAPI;
+    try { api?.setSessionActive?.(sessionState === 'running'); } catch (_) { /* fuori da Electron */ }
+  }, [sessionState]);
+
+  useEffect(() => {
+    const api = (window as any).electronAPI;
+    if (!api?.onCloseRequest) return;
+    return api.onCloseRequest(() => setQuitAsk(true));
+  }, []);
+
+  /** Esce davvero. */
+  const quitNow = useCallback(() => {
+    quitAfterSaveRef.current = false;
+    try { void corpusFlushNow(); } catch (_) { /* l'archivio non deve impedire l'uscita */ }
+    try { (window as any).electronAPI?.confirmClose?.(); } catch (_) {}
+  }, []);
+
   const addLog = useCallback((entry: Omit<LogEntry, 'time'> & { time?: number }) => {
     const newEntry = {
       ...entry,
@@ -2907,7 +3377,12 @@ export default function App() {
       const e = logs[i];
       // FILTRE : l'auditeur parle aussi HORS des items (« ok », « bien », un commentaire). On
       // n'inscrit que ce qui ressemble à un item — le filtre est PRUDENT (dans le doute, ça passe).
-      if (e.speaker === 'Aud' && e.time >= assessStartRef.current && isAssessableItem(e.text)) {
+      // ⚠️ TOLLERANZA sull'inizio: da quando la parola è datata alla sua FINE VERA (retrodatata
+      // di 700–950 ms dal microfono), un item detto subito dopo aver premuto ASSESSMENT riceve
+      // un'ora ANTERIORE all'avvio — e veniva scartato in silenzio. Difetto introdotto con la
+      // retrodatazione stessa: il primo item spariva senza lasciare traccia.
+      if (e.speaker === 'Aud' && e.time >= assessStartRef.current - AVVIO_TOLLERANZA_S
+          && isAssessableItem(e.text)) {
         addAssessItem(e.text.trim(), e.time);
       }
     }
@@ -3532,6 +4007,39 @@ export default function App() {
   // vient des lattine : c'est une vraie résistance, pas une reconstruction.
   /** Reazione in corso sull'ago delle boîtes — alimenta le scritte sull'arco e ASSESSMENT. */
   const [thetaReactionKey, setThetaReactionKey] = useState('');
+  /** Sale a ogni avvio di ASSESSMENT: dice al modulo di aprirsi. */
+  const [assessOpenSignal, setAssessOpenSignal] = useState(0);
+  /** Quanto si tollera che un item risulti ANTERIORE all'avvio dell'assessment (s). È il
+   *  massimo della retrodatazione: senza, il primo item detto subito dopo il pulsante sparisce. */
+  const AVVIO_TOLLERANZA_S = 1.5;
+  /** La lingua con cui il riconoscitore vocale è stato avviato. Serve ad accorgersi che è
+   *  cambiata IN SEDUTA: il riconoscitore si configura all'avvio, e cambiando lingua dopo
+   *  continuava a trascrivere nella vecchia — l'interfaccia in francese e le parole capite in
+   *  inglese (segnalato in seduta: « Cato cinema », « Cana Seo mall »). */
+  const sttLangRef = useRef<string>('');
+  /** Quanti campioni servono al MUSE per un giudizio onesto senza rifare la respirazione
+   *  guidata. Sotto questa soglia si passa alla sua prova invece di dichiarare su due dati. */
+  const METAB_MIN_SAMPLES = 60;
+  /** DIAGNOSI (temporanea): l'ultima correzione applicata all'istante di fine parola. */
+  const sttBackdateRef = useRef<{ s: number; misurato: boolean; mic?: number; fonte?: string }>(
+    { s: 0, misurato: false });
+  /** Ultimo esito intermedio di Web Speech (performance.now()): la fine della parola. */
+  const webInterimMsRef = useRef(0);
+  /** L'ultima lettura delle boîtes annunciata, con quando: se subito dopo si scopre che era
+   *  una stretta, si RITIRA. */
+  const ultimaLetturaRef = useRef<{ id: number; tSec: number } | null>(null);
+  /** Quale motore di trascrizione sta lavorando: cambia TUTTO sull'istante della parola.
+   *  Il nativo è in tempo reale; Whisper trascrive a blocchi e consegna con secondi di ritardo. */
+  const sttEngineRef = useRef<'nativo' | 'whisper' | 'web'>('web');
+  /** La prontezza delle boîtes è già stata fatta per QUESTO avvio. Con i due strumenti insieme
+   *  si fanno entrambe le prove, una dopo l'altra, e questo dice a che punto siamo. */
+  const [thetaReadyDone, setThetaReadyDone] = useState(false);
+  /** Si sta uscendo con una seduta aperta: si CHIEDE prima di perdere tutto. */
+  const [quitAsk, setQuitAsk] = useState(false);
+  /** « Salva ed esci » è stato scelto: appena il salvataggio è avvenuto, si esce davvero.
+   *  Un flag e non un'attesa a tempo: il salvataggio passa dal rapporto, e indovinare quanto
+   *  ci mette vorrebbe dire uscire a metà scrittura. */
+  const quitAfterSaveRef = useRef(false);
   const thetaReactionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const theta = useThetaMeter({
@@ -3542,22 +4050,127 @@ export default function App() {
     // IN CUI IL MOVIMENTO È PARTITO, non a quando rientra: una caduta appartiene a quando
     // comincia, ed è così che il read istantaneo la ritrova accanto al suo item.
     onReaction: r => {
+      // In pausa l'orologio è fermo: una lettura registrata adesso porterebbe l'istante
+      // congelato e cadrebbe nella finestra dell'item successivo. Stessa regola dell'EEG.
+      if (sessionStateRef.current !== 'running') return;
       const label = REACTION_LABELS[r.key] || '';
-      shownReadsRef.current.push({ time: r.startedAtSec, reaction: label });
+      // ── UNA LETTURA PER MOVIMENTO, aggiornata mentre l'ago scende ──────────────────────
+      // L'ago annuncia SUBITO e poi rilancia se continua a scendere (SF → FALL → LONG FALL):
+      // tutte le emissioni di una stessa oscillazione portano lo stesso `id`, e qui si
+      // SOSTITUISCE la lettura invece di accumularne una per grado. La sorgente viaggia con
+      // la lettura, perché la finestra temporale non è la stessa dell'EEG.
+      // Si cerca INDIETRO la lettura di questo stesso episodio, non solo l'ultima della lista:
+      // fra un'emissione e la successiva ci si infila una reazione dell'EEG, e allora l'ultima
+      // non è più la nostra — si accodava un doppione invece di aggiornare. Misurato nel log del
+      // 01/08: « theta:Tick+800ms » e « theta:SF+800ms », lo stesso movimento contato due volte,
+      // con la finestra dell'instant read che ne vedeva due dove ce n'era una.
+      const sr = shownReadsRef.current;
+      let i = sr.length - 1;
+      while (i >= 0 && sr[i].episodeId !== r.id) i--;
+      if (i >= 0) sr[i].reaction = label;
+      else sr.push({ time: r.startedAtSec, reaction: label, src: 'theta', episodeId: r.id });
+      // ── CORPUS: la reazione delle BOÎTES, col suo PROPRIO istante ──────────────────────
+      // Si archivia solo il VERDETTO (`final`), non i gradi intermedi: l'archivio vuole una
+      // riga per movimento, con il picco vero e la durata vera.
+      if (r.final && corpusSessionRef.current) {
+        corpusWrite(reactionRecord(corpusSessionRef.current, new Date().toISOString(), {
+          src: 'theta', key: r.key, peak: r.peak,
+          tSec: r.startedAtSec, durSec: r.durationSec,
+          ta: theta.taNow ?? undefined, motion: theta.bodyMotion || undefined,
+          sinceItemSec: ultimoItemSecRef.current != null
+            ? Math.max(0, r.startedAtSec - ultimoItemSecRef.current) : undefined,
+          assess: assessActiveRef.current || undefined,
+        }));
+      }
+      // ── R&I: la riga validabile, quando l'ago MOSTRATO è questo ─────────────────────────
+      // Solo sul verdetto (`final`): i gradi intermedi sono la stessa oscillazione che cresce,
+      // e ne farebbero tre righe per un movimento solo. Fuori assessment, perché lì la riga
+      // dell'item c'è già.
+      // Senza stato di carica: quello viene dal ciclo EEG, e con le boîtes come ago principale
+      // il MUSE può non esserci nemmeno. Meglio la sola etichetta che un campo inventato.
+      if (r.final && !assessActiveRef.current && agoPrincipaleRef.current === 'theta') {
+        aggiungiRigaReazione(label, '');
+      }
       if (shownReadsRef.current.length > SHOWN_READS_CAP) {
         shownReadsRef.current.splice(0, Math.floor(SHOWN_READS_CAP / 2));
       }
-      // La scritta resta il tempo previsto per quel tipo di reazione, come per l'EEG.
+      // ── LA SCRITTA SEGUE L'AGO ────────────────────────────────────────────────────────
+      // Finché il movimento è in corso la scritta RESTA, senza scadenza: è quello che l'ago sta
+      // facendo. Quando rientra (r.final) si lascia solo il tempo di leggerla e sparisce. Prima
+      // durava KICK_MS — la durata dell'oscillazione dell'ago dell'EEG, fino a 1,5 s — e la
+      // scritta continuava a dire « LONG FALL » con l'ago già fermo a SET.
+      ultimaLetturaRef.current = { id: r.id, tSec: timeRef.current };
       setThetaReactionKey(r.key);
-      if (thetaReactionTimerRef.current) clearTimeout(thetaReactionTimerRef.current);
-      thetaReactionTimerRef.current = setTimeout(
-        () => setThetaReactionKey(''), KICK_MS[r.key] ?? KICK_MS_DEFAULT);
+      if (thetaReactionTimerRef.current) { clearTimeout(thetaReactionTimerRef.current); thetaReactionTimerRef.current = null; }
+      if (r.final) {
+        thetaReactionTimerRef.current = setTimeout(
+          () => setThetaReactionKey(''), THETA_LABEL_AFTER_MS);
+      }
     },
   });
   // resetNeedle è definita più in alto e con dipendenze vuote: si passa per un ref, altrimenti
   // catturerebbe la prima versione della callback e non ricentrerebbe mai le lattine.
   useEffect(() => { thetaResetRef.current = theta.resetToSet; }, [theta.resetToSet]);
   useEffect(() => { thetaConnectedRef.current = theta.status === 'connected'; }, [theta.status]);
+  useEffect(() => { thetaTaRef.current = theta.ta; }, [theta.ta]);
+
+  // ── UN RESPIRO SOLO PER TUTTI E DUE ──────────────────────────────────────────────────────
+  // Con MUSE e METER insieme, fare prima il soffio sulle lattine e poi la respirazione guidata
+  // del Muse è due volte la stessa cosa — « altrimenti è troppo noioso » (richiesta in seduta).
+  // Il Muse raccoglie dai suoi flussi appena la fase è 'baseline' o 'breath': basta quindi
+  // metterlo in 'breath' PROPRIO MENTRE si soffia nelle lattine, e il suo giudizio esce dallo
+  // stesso respiro. Nessuna misura inventata: sono i suoi dati, presi nel momento giusto.
+  useEffect(() => {
+    const conMuse = museConnection === 'connected' || remoteMuseConnected;
+    if (!metabolicOpen || !conMuse || theta.status !== 'connected') return;
+    metabolicPhaseRef.current = theta.testing === 'breath' ? 'breath' : 'baseline';
+  }, [metabolicOpen, museConnection, remoteMuseConnected, theta.status, theta.testing]);
+
+  // ── SI RITIRA UNA LETTURA CHE ERA UNA STRETTA ────────────────────────────────────────────
+  // Mentre avviene, una stretta delle lattine è indistinguibile da una caduta: preme, la
+  // resistenza scende, l'ago va giù. La differenza è il RITORNO, e si sa solo dopo — quindi
+  // l'agitazione arriva quando la lettura è già scritta (« la FALL sono io che ho schiacciato
+  // le lattine »). Invece di rallentare tutte le letture per colpa di questa, si annuncia
+  // subito e si RITIRA quella sbagliata: sparisce dalla scritta e dall'ASSESSMENT.
+  useEffect(() => {
+    if (!theta.bodyMotion) return;
+    const u = ultimaLetturaRef.current;
+    if (!u || (timeRef.current - u.tSec) * 1000 > THETA_RETRACT_MS) return;
+    ultimaLetturaRef.current = null;
+    const ult = shownReadsRef.current[shownReadsRef.current.length - 1];
+    if (ult && ult.episodeId === u.id) shownReadsRef.current.pop();
+    setThetaReactionKey('');
+    if (thetaReactionTimerRef.current) { clearTimeout(thetaReactionTimerRef.current); thetaReactionTimerRef.current = null; }
+    logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
+      text: LC('lettura ritirata — era una stretta delle lattine',
+               'lecture retirée — c\'était une pression sur les boîtes',
+               'read withdrawn — it was a squeeze on the cans',
+               'lectura retirada — era un apretón de las latas',
+               'avläsning tillbakadragen — det var ett grepp om burkarna'), type: 'retracted' });
+  }, [theta.bodyMotion]);
+  // ── CORPUS: l'F/N dell'ago VERO ──────────────────────────────────────────────────────────
+  // Si scrive quando FINISCE, non quando comincia: alla fine si conoscono durata, ampiezza e
+  // ritmo veri, e la riga porta comunque l'istante d'INIZIO, quindi l'accoppiamento con l'F/N
+  // dell'EEG non ci perde niente.
+  useEffect(() => {
+    const f = theta.fn;
+    if (f.fn && f.sinceSec != null) {
+      if (!thetaFnOpenRef.current) thetaFnOpenRef.current = { tSec: f.sinceSec };
+      return;
+    }
+    const open = thetaFnOpenRef.current;
+    if (!open) return;
+    thetaFnOpenRef.current = null;
+    if (!corpusSessionRef.current) return;
+    corpusWrite(fnRecord(corpusSessionRef.current, new Date().toISOString(), {
+      src: 'theta', tSec: open.tSec,
+      durSec: Math.max(0, timeRef.current - open.tSec) || undefined,
+      width: f.widthAvg || undefined, periodSec: f.periodSec || undefined,
+      ta: theta.ta ?? undefined, motion: f.motion || undefined,
+      proc: sessionProcObjRef.current.trim() || undefined,
+    }));
+  }, [theta.fn, theta.ta]);
+  useEffect(() => { sessionProcObjRef.current = sessionProcessObjective; }, [sessionProcessObjective]);
   // La scelta dello strumento sparisce da sé appena UNO dei due si aggancia: lasciarla lì
   // dopo il collegamento la farebbe sembrare un errore ancora in corso.
   useEffect(() => {
@@ -3574,9 +4187,34 @@ export default function App() {
     () => ({ muse: museConnection === 'connected' || remoteMuseConnected,
              theta: theta.status === 'connected' }),
     [museConnection, remoteMuseConnected, theta.status]);
+  // Il gestore del worker si aggancia UNA volta sola (deps vuote): senza specchio in ref
+  // leggerebbe per sempre gli strumenti collegati all'avvio.
+  const instrumentsRef = useRef(instruments); instrumentsRef.current = instruments;
   const moduleVis = useMemo(
     () => effectiveModules(moduleVisChosen, instruments),
     [moduleVisChosen, instruments]);
+
+  // ── UN AGO SOLO — e QUALE lo sceglie l'auditor ───────────────────────────────────────────
+  // Due aghi sullo stesso quadrante confondono, e i dati dicono che non si possono fondere: su
+  // 89 item con entrambi gli strumenti hanno letto lo STESSO item una volta sola (κ = −0,09).
+  //
+  // Ma NON si sceglie al posto dell'auditor. I due servono a cose diverse e in momenti diversi:
+  // il METER ha il TA in ohm veri (quello del MUSE è ricostruito, cioè un modello); il MUSE ha
+  // i cicli CONTACT/NULL, l'MNA e il COM LAG, che l'ago vero non può dare. Il selettore sta
+  // sotto il perno (vedi QuantumSphere) e si cambia in seduta.
+  //
+  // Con UN solo strumento non c'è scelta: vince quello che c'è.
+  const [agoScelto, setAgoScelto] = useState<ReadSrc>(() => {
+    const v = localStorage.getItem('equilibrium_ago');
+    return v === 'eeg' || v === 'theta' ? v : 'theta';
+  });
+  useEffect(() => { localStorage.setItem('equilibrium_ago', agoScelto); }, [agoScelto]);
+  const agoPrincipale: ReadSrc =
+    instruments.muse && instruments.theta ? agoScelto
+    : instruments.theta ? 'theta' : 'eeg';
+  // Specchio in ref: il gestore del worker si aggancia una volta sola, e l'ago si può cambiare
+  // in seduta — senza questo continuerebbe a usare quello scelto all'avvio.
+  const agoPrincipaleRef = useRef(agoPrincipale); agoPrincipaleRef.current = agoPrincipale;
   const [showThetaCal, setShowThetaCal] = useState(false);
 
   // ── CONN-53: graceful disconnect on tab/app close ──────────────────────────
@@ -3687,6 +4325,38 @@ export default function App() {
       timeRef.current = 0;
       setSessionStartTime(new Date());
       setSessionEndTime(null);
+      // ── CORPUS: apertura di seduta ────────────────────────────────────────────────────────
+      // Va scritta ADESSO, non alla fine: è la configurazione con cui si leggerà tutto il
+      // resto, e se la seduta si interrompe le reazioni già scritte devono restare
+      // interpretabili. L'identificativo è l'ora d'inizio: unico in pratica, e ordinabile.
+      {
+        const at = new Date().toISOString();
+        corpusSessionRef.current = at;
+        const sc = theta.taScale;
+        // ⚠️ NEL BROWSER NON C'È ARCHIVIO, e va detto SUBITO. In Chrome funzionano il meter
+        // (WebHID), il Muse (Web Bluetooth) e la trascrizione: tutto sembra a posto, e la
+        // seduta non viene archiviata. Ci sono volute due sedute intere per accorgersene.
+        if (!corpusAvailable()) {
+          logBufferRef.current.push({ time: 0, speaker: 'SYS',
+            text: LC('⚠ ARCHIVIO NON ATTIVO — sei in un browser: questa seduta NON verrà archiviata. Usa l\'applicazione EQUILIBRIUM.',
+                     '⚠ ARCHIVE INACTIVE — vous êtes dans un navigateur : cette séance NE SERA PAS archivée. Utilisez l\'application EQUILIBRIUM.',
+                     '⚠ ARCHIVE INACTIVE — you are in a browser: this session will NOT be archived. Use the EQUILIBRIUM application.',
+                     '⚠ ARCHIVO INACTIVO — estás en un navegador: esta sesión NO se archivará. Usa la aplicación EQUILIBRIUM.',
+                     '⚠ ARKIVET AV — du är i en webbläsare: den här sessionen arkiveras INTE. Använd EQUILIBRIUM-appen.'),
+            type: 'highlight' });
+        }
+        corpusWrite(sessionRecord(at, at, {
+          inst: { muse: museConnection === 'connected', theta: thetaConnectedRef.current },
+          cans: thetaConnectedRef.current ? theta.setup.config : undefined,
+          sens: thetaConnectedRef.current ? theta.setup.needleScale : undefined,
+          sensTrim: thetaConnectedRef.current ? theta.setup.sensTrim : undefined,
+          taPoints: sc ? sc.points.length : undefined,
+          taFactory: sc ? sc.madeAt === 0 : undefined,
+          // Il PROCEDIMENTO, se l'auditor l'ha indicato: senza di esso le reazioni sono numeri
+          // senza contesto; con esso si può chiedere quale processo dà quali reazioni.
+          proc: sessionProcessObjective.trim() || undefined,
+        }));
+      }
       sessionRecorder.reset(); // chart + reactions + metrics + qL + needle-offset + CSV
       tzoneStore.reset();      // live T-ZONES distribution
       chargeEpisode.resetSession(); // charge-lifecycle (AS-IS) episode tracker
@@ -3712,6 +4382,9 @@ export default function App() {
       mirrorVoiceModeRef.current = false; mirrorAwaitItemRef.current = false; mirrorLogCursorRef.current = 0;
       setAssessActive(false); setAssessItems([]); setAssessSession([]); setShowUnderArc(false); assessCyclesRef.current = []; assessNRef.current = 0; assessPrevAtRef.current = -Infinity;
       shownReadsRef.current = [];   // trace des réactions montrées : repart à zéro
+      assessTimesRef.current = [];
+      ultimoItemSecRef.current = null;
+      gruppiItemRef.current = new Map();
       lastFnShownAtRef.current = -Infinity;
       if (underArcHideTimerRef.current) { window.clearTimeout(underArcHideTimerRef.current); underArcHideTimerRef.current = null; }
       assessStartRef.current = 0; assessLogCursorRef.current = 0; assessIdRef.current = 0;
@@ -3782,6 +4455,7 @@ export default function App() {
       metabolicBaseline.reset();
       setMetabAssessment(null);                  // clear any previous reading
       metabolicPhaseRef.current = 'baseline';
+      setThetaReadyDone(false);   // le prove si rifanno a OGNI avvio
       setMetabolicOpen(true);
     } else {
       handleStart();
@@ -3821,6 +4495,24 @@ export default function App() {
     }
   };
 
+  // ── LA LINGUA CAMBIATA IN SEDUTA RIAVVIA IL RICONOSCITORE ────────────────────────────
+  // Il riconoscitore si configura UNA VOLTA, all'avvio della seduta. Cambiando lingua dopo,
+  // l'interfaccia passava alla nuova e la trascrizione restava nella vecchia: parole francesi
+  // capite come inglesi, e ovviamente nessun item riconoscibile.
+  useEffect(() => {
+    if (sessionState !== 'running') return;
+    if (!sttLangRef.current || sttLangRef.current === lang) return;
+    sttLangRef.current = lang;
+    logBufferRef.current.push({ time: timeRef.current, speaker: 'SYS',
+      text: LC(`Lingua cambiata — riconoscitore vocale riavviato in ${lang}`,
+               `Langue changée — reconnaissance vocale relancée en ${lang}`,
+               `Language changed — speech recogniser restarted in ${lang}`,
+               `Idioma cambiado — reconocimiento de voz reiniciado en ${lang}`,
+               `Språk ändrat — taligenkänningen omstartad på ${lang}`), type: 'normal' });
+    stopRecognition();
+    void startLocalRecognition();
+  }, [lang, sessionState, stopRecognition, startLocalRecognition, LC]);
+
   const handleEnd = () => {
     stopRecognition();
     isUsingLocalRecognition.current = false;
@@ -3832,7 +4524,25 @@ export default function App() {
     }
     setTimeout(() => voiceToneAnalyzer.stop(), 3000);
     // Close any still-armed cycle as "not completed" so it appears in the report.
-    if (curCycleRef.current) { auditingCyclesRef.current.push({ ...curCycleRef.current, tEndSec: timeRef.current, completed: false }); curCycleRef.current = null; }
+    if (curCycleRef.current) {
+      const _c = curCycleRef.current;
+      auditingCyclesRef.current.push({ ..._c, tEndSec: timeRef.current, completed: false });
+      // CORPUS: anche questo ciclo lasciato aperto va archiviato. Questa via non passa da
+      // finalizeCycle (non deve incrementare i contatori né scrivere nel journal), ma per
+      // l'archivio è un ciclo non concluso come gli altri, e sparirebbe.
+      if (corpusSessionRef.current) {
+        corpusWrite(cycleRecord(corpusSessionRef.current, new Date().toISOString(), {
+          kind: cycleKindRef.current || 'charge',
+          durSec: Math.max(0, timeRef.current - _c.tStartSec),
+          qlAtContact: cycleQlAtContactRef.current ?? undefined,
+          taStart: cycleTaStartRef.current ?? undefined,
+          taEnd: thetaTaRef.current ?? metricsStore.get().toneArm,
+          done: false,
+          proc: sessionProcObjRef.current.trim() || undefined,
+        }));
+      }
+      curCycleRef.current = null;
+    }
     // Idem pour un cycle MIRROR encore armé : on l'enregistre avec son état courant.
     if (mirrorArmedRef.current && mirrorCurRef.current) { stopMirror(); }
     // ASSESSMENT encore actif → on fige le dernier cycle pour le rapport.
@@ -3843,6 +4553,11 @@ export default function App() {
     }
     setCycleArmed(false);
     setAsIsPending(false); asIsPendingRef.current = false;
+    // CORPUS: si scrive quel che resta in coda SUBITO. Le righe della fine — l'ultimo ciclo,
+    // le ultime reazioni — sono spesso le più interessanti, e aspettare il prossimo giro
+    // vorrebbe dire perderle se l'applicazione si chiude qui.
+    corpusSessionRef.current = '';
+    void corpusFlushNow();
     setShowReport(true);
   };
 
@@ -4234,19 +4949,20 @@ export default function App() {
             <img src="/logo-alt-scientology.png" alt="Alt. Scientology"
               style={{ height: 44, width: 'auto', filter: isLightTheme ? 'none' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.45)) brightness(1.05)' }} />
           </button>
-          <h1 className="text-base font-bold tracking-wide leading-tight uppercase"
-            style={{
-              color: isLightTheme ? '#1e293b' : '#eef4ff',
-              textShadow: isLightTheme ? '0 0 8px rgba(3,105,161,0.25)' : 'none'
-            }}>
-            EQUILIBRIUM
-          </h1>
-          {/* CONN-113: build version, shown next to the title so the running build
-              is always identifiable at a glance. */}
-          <span style={{
-            fontSize: 9, fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.05em',
-            alignSelf: 'flex-end', marginBottom: 3, marginLeft: -2,
-            color: isLightTheme ? '#64748b' : 'rgba(226,232,240,0.42)' }}>v{__APP_VERSION__}</span>
+          {/* Il NOME e SOTTO la versione, allineati in alto col logo. Prima la versione stava
+              di fianco al titolo, in coda, minuscola: sembrava una parte del nome. */}
+          <div className="flex flex-col" style={{ lineHeight: 1.05 }}>
+            <h1 className="text-base font-bold tracking-wide leading-tight uppercase"
+              style={{
+                color: isLightTheme ? '#1e293b' : '#eef4ff',
+                textShadow: isLightTheme ? '0 0 8px rgba(3,105,161,0.25)' : 'none'
+              }}>
+              EQUILIBRIUM
+            </h1>
+            <span style={{
+              fontSize: 11, fontFamily: 'monospace', letterSpacing: '0.06em', marginTop: 1,
+              color: isLightTheme ? '#64748b' : 'rgba(226,232,240,0.50)' }}>v{__APP_VERSION__}</span>
+          </div>
           {/* FIX CONN-58: local-mode MUSE badge. In a local (single-machine)
               session there is no P2P badge, so the auditor had no top-bar cue
               that the headset was paired (only the HEALTH panel showed it). Mirror
@@ -4256,14 +4972,17 @@ export default function App() {
               (phone) is connected, otherwise it's confusing before the session. */}
           {((appMode === 'local' && !satelliteMode) || satelliteMode) && (
             <div
-              onClick={() => { if (museConnection === 'disconnected') handleConnectMuse(); }}
-              title={(museConnection === 'connected' ? t('muse_tip_ok')
+              // COMMUTA, come quello del METER: collega se staccato, SCOLLEGA se collegato,
+              // annulla se sta cercando. Prima collegava soltanto, quindi un clic per sbaglio
+              // non si poteva disfare. (`handleConnectMuse` sa già gestire i tre stati.)
+              onClick={() => { void handleConnectMuse(); }}
+              title={(museConnection === 'connected' ? t('muse_tip_disconnect')
                    : museConnection === 'searching' ? t('muse_tip_searching')
                    : t('muse_tip_connect')) as string}
               style={{
               display: 'flex', alignItems: 'center', gap: 9,
               padding: '3px 14px 3px 3px', borderRadius: 999,
-              cursor: museConnection === 'disconnected' ? 'pointer' : 'default',
+              cursor: 'pointer',
               // MINI TOGGLE monochrome : piste en creux + pouce en verre (cuffie), texte actuel.
               background: isLightTheme ? '#b7b7be' : '#17171b',
               boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
@@ -4655,6 +5374,8 @@ export default function App() {
             thetaAddPoint={theta.addPointFromReference}
             thetaTaNow={theta.taNow}
             onOpenThetaTester={() => { setSidebarDrawer(null); setShowThetaCal(true); }}
+            provaCieca={provaCieca}
+            setProvaCieca={setProvaCieca}
           drawer={sidebarDrawer}
           onClose={sdOnClose}
           t={t}
@@ -4833,7 +5554,7 @@ export default function App() {
                         // Retire le popup interne pour éviter doublon
                         setActiveProcessus(prev => prev.filter(p => p.id !== proc.id));
                       } else {
-                        alert('Veuillez autoriser les fenêtres pop-up pour détacher le processus.');
+                        alert(LC('Autorizza le finestre pop-up per staccare il processo.', 'Veuillez autoriser les fenêtres pop-up pour détacher le processus.', 'Please allow pop-up windows to detach the process.', 'Permite las ventanas emergentes para desacoplar el proceso.', 'Tillåt popup-fönster för att koppla loss processen.'));
                       }
                     }}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded font-mono text-[10px] uppercase tracking-wider font-bold transition-all"
@@ -5133,10 +5854,22 @@ export default function App() {
                   couleur remplit l'arc avec l'avancement de la décharge. */}
               <QuantumSphere
                 needleOffsetProp={needleOffset}
-                thetaOffset={theta.status === 'connected' ? theta.offset : null}
-                targetOffset={theta.testing ? NEEDLE_REST_OFFSET + SQUEEZE_TARGET_OFFSET : null}
-                showEegNeedle={instruments.muse}
-                needleReactionKey={instruments.muse ? needleReactionKey : thetaReactionKey}
+                // Un ago SOLO: quello delle lattine si disegna solo se è lui il principale.
+                // Senza questo, scegliendo il MUSE restavano di nuovo due aghi sul quadrante.
+                thetaOffset={theta.status === 'connected' && agoPrincipale === 'theta'
+                  ? theta.offset : null}
+                // Il bersaglio si segna DA DOVE STA L'AGO quando la prova comincia, non dalla
+                // posizione di riposo teorica: se l'ago è posato altrove, il segno verde era già
+                // superato in partenza e il terzo di quadrante non voleva dire niente.
+                targetOffset={theta.testing ? theta.testBaseOffset + SQUEEZE_TARGET_OFFSET : null}
+                // UN AGO SOLO — vedi `agoPrincipale`. Col METER collegato il quadrante è suo, e
+                // la scritta viene dallo stesso ago: una lettura che l'auditor non vede muoversi
+                // non si scrive.
+                showEegNeedle={agoPrincipale === 'eeg' && instruments.muse}
+                needleReactionKey={agoPrincipale === 'theta' ? thetaReactionKey : needleReactionKey}
+                bothInstruments={instruments.muse && instruments.theta}
+                pickedNeedle={agoScelto}
+                onPickNeedle={setAgoScelto}
                 asIsnessState={asIsnessState}
                 onClick={resetNeedle}
                 showTrail={viewMode !== 'needle_pure'}
@@ -5358,9 +6091,18 @@ export default function App() {
                 ) : sessionState === 'running' && (() => {
                   // STUCK intentionally omitted (not useful — user request). LONG FALL spelled out.
                   const RLBL: Record<string, string> = { reaction_fn: 'F/N', reaction_blow_down: 'LF BD', reaction_long_fall: 'LONG FALL', reaction_fall: 'FALL', reaction_sf: 'SF', reaction_dirty: 'DN' };
-                  const lbl = RLBL[needleReactionKey] || '';
+                  // ── LE REAZIONI DELLE BOÎTES SI SCRIVONO QUI ANCH'ESSE ──────────────────────
+                  // Questa riga leggeva SOLO l'ago dell'EEG: col meter l'ago cadeva e non
+                  // compariva mai niente. Con l'EEG presente ha la precedenza (è lui che fa
+                  // avanzare i cicli); quando non dice nulla — o non c'è — parla l'ago vero, e
+                  // la scritta prende il suo AMBRA, così si sa da quale ago viene.
+                  const daEeg = instruments.muse && !!RLBL[needleReactionKey];
+                  const key = daEeg ? needleReactionKey : thetaReactionKey;
+                  const lbl = RLBL[key] || '';
                   if (!lbl) return null;
-                  return <span style={{ fontWeight: 400, fontSize: 20, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.92)', textShadow: '0 0 12px rgba(255,255,255,0.35)' }}>{lbl}</span>;
+                  const colore = daEeg ? 'rgba(255,255,255,0.92)' : '#f59e0b';
+                  const alone = daEeg ? 'rgba(255,255,255,0.35)' : 'rgba(245,158,11,0.45)';
+                  return <span style={{ fontWeight: 400, fontSize: 20, letterSpacing: '0.14em', color: colore, textShadow: `0 0 12px ${alone}` }}>{lbl}</span>;
                 })()}
               </div>
               <style>{`@keyframes reactFadeIn { from { opacity:0; transform: translateY(-4px);} to { opacity:1; transform: translateY(0);} }`}</style>
@@ -5556,13 +6298,34 @@ export default function App() {
             </div>
             )}
 
+            {/* PROVA CIECA — la domanda al preclear. Fissa in basso: vedi PcChargePrompt. */}
+            {pcDomanda && (
+              <PcChargePrompt
+                parola={pcDomanda.parola}
+                onCarico={() => rispondiPc(true)}
+                onNiente={() => rispondiPc(false)}
+                titolo={LC('aveva carica?', 'y avait-il de la charge ?', 'was there charge?',
+                           '¿había carga?', 'fanns det laddning?')}
+                siLbl={LC('SÌ, CARICA', 'OUI, CHARGE', 'YES, CHARGE', 'SÍ, CARGA', 'JA, LADDNING')}
+                noLbl={LC('NIENTE', 'RIEN', 'NOTHING', 'NADA', 'INGET')}
+                nota={LC('C = carica · N = niente — la lettura compare dopo',
+                         'C = charge · N = rien — la lecture apparaît après',
+                         'C = charge · N = nothing — the read appears after',
+                         'C = carga · N = nada — la lectura aparece después',
+                         'C = laddning · N = inget — avläsningen visas efter')}
+              />
+            )}
+
             {/* Module ASSESSMENT (ex R&I) — mots donnés à voix haute + leur READ, TOUTE la séance. */}
             {moduleVis.ri && (
               <AssessmentPanel
+                openSignal={assessOpenSignal}
                 items={assessSession}
                 onHide={() => setModuleVis(v => ({...v, ri: false}))}
                 t={t as (key: string) => string}
                 readMeta={ASSESS_READ_META}
+                onIndica={segnaIndicazione}
+                dueAghi={instruments.muse && instruments.theta}
               />
             )}
 
@@ -5600,7 +6363,14 @@ export default function App() {
         // sono quelle della procedura: stretta (un terzo di quadrante, fissa la sensibilità) e
         // respiro fino a ottenere almeno una FALL al rilascio — se non arriva, il metabolismo
         // del preclear non è a posto, ed è proprio ciò che questa schermata deve accertare.
-        if (!readinessMuseOk && theta.status === 'connected') {
+        // ── CON TUTTI E DUE, LE BOÎTES VENGONO PRIMA ────────────────────────────────────
+        // Prima questa schermata compariva solo SENZA Muse, e con i due strumenti insieme la
+        // prova della stretta si saltava del tutto: la sensibilità dell'ago restava quella di
+        // fabbrica, e le reazioni vere finivano dieci volte sotto la soglia (misurato in
+        // seduta). Le due prove non si sostituiscono — quella del Muse guarda il metabolismo,
+        // questa tara l'ago — quindi si fanno tutte e due, le boîtes per prime perché sono un
+        // gesto solo, e il respiro guidato viene dopo.
+        if (theta.status === 'connected' && !thetaReadyDone) {
           return (
             <ThetaReadyCheck
               scaleMeasured={theta.setup.scaleMeasured}
@@ -5614,7 +6384,28 @@ export default function App() {
               setSensTrim={theta.setSensTrim}
               config={theta.setup.config}
               setConfig={theta.setConfig}
-              onProceed={() => { setMetabolicOpen(false); void handleStart(); }}
+              unknownFormat={theta.unknownFormat}
+              rawSamples={theta.rawSamples}
+              // Col Muse collegato si passa alla SUA prova; da soli si parte e basta.
+              onProceed={() => {
+                setThetaReadyDone(true);
+                if (!readinessMuseOk) { setMetabolicOpen(false); void handleStart(); return; }
+                // Il Muse ha già misurato sullo stesso respiro? Allora non si rifà: si prende
+                // il suo giudizio e si parte. Se invece non ha raccolto abbastanza (casco tolto,
+                // contatto assente), si passa alla sua prova completa invece di inventarne uno.
+                if (metabolicBaseline.nBaseline() >= METAB_MIN_SAMPLES) {
+                  const a = metabolicBaseline.assess();
+                  setMetabAssessment(a);
+                  logBufferRef.current.push({ time: 0, speaker: 'SYS',
+                    text: LC('Prontezza MUSE presa sullo stesso respiro delle lattine',
+                             'État de préparation MUSE pris sur le même souffle que les boîtes',
+                             'MUSE readiness taken from the same breath as the cans',
+                             'Preparación MUSE tomada en el mismo soplo que las latas',
+                             'MUSE-beredskap tagen på samma andetag som burkarna'), type: 'normal' });
+                  closeMetabolic();
+                  void handleStart();
+                }
+              }}
               onCancel={() => setMetabolicOpen(false)}
             />
           );
@@ -5713,6 +6504,8 @@ export default function App() {
               totalTa: metricsStore.get().totalTa };
             saveSession(sessionToSave);
             clearSessionDraft(); // R3: session safely saved → drop the recovery draft
+            // « Salva ed esci »: il salvataggio è QUESTO. Si esce ora che è fatto, non prima.
+            if (quitAfterSaveRef.current) quitNow();
             console.log('[HISTORY] Session saved locally:', sessionToSave.id);
             // FIX SYNC #2: push to server is async-await with retry. The
             // previous fire-and-forget could lose the push if the app was
@@ -5825,6 +6618,59 @@ export default function App() {
 
       {/* PC SEX prompt — se il PC non è indicato all'avvio, chiediamo il sesso per la
           baseline TA (uomo 3.0 / donna 2.0), poi proseguiamo con le tappe di avvio. */}
+      {/* ── USCIRE CON UNA SEDUTA APERTA ────────────────────────────────────────────────
+          Chiudere il programma buttava via la seduta senza dire niente. Ora si chiede, e le
+          tre risposte sono TUTTE esplicite: nessun bottone « OK » che non dice cosa farà.
+          « Salva ed esci » chiude la seduta come farebbe il pulsante di fine — rapporto,
+          salvataggio, archivio — e solo DOPO esce. */}
+      {quitAsk && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(4px)' }}>
+          <div style={{ maxWidth: 460, background: '#0b1626', border: '1px solid rgba(251,191,36,0.35)',
+                        borderRadius: 16, padding: '24px 26px', boxShadow: '0 12px 44px rgba(0,0,0,0.6)' }}>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 700,
+                          color: 'rgba(240,246,255,0.95)', marginBottom: 8 }}>
+              {t('quit_title') as string}
+            </div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, lineHeight: 1.55,
+                          color: 'rgba(226,238,255,0.7)', marginBottom: 20 }}>
+              {t('quit_body') as string}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+              <button type="button"
+                onClick={() => {
+                  quitAfterSaveRef.current = true;
+                  setQuitAsk(false);
+                  handleEnd();
+                  // Rete di sicurezza: se il salvataggio non arrivasse, si esce lo stesso invece
+                  // di lasciare l'applicazione bloccata con una finestra che non si chiude. La
+                  // seduta non è comunque persa — il salvataggio automatico di emergenza la
+                  // ripropone al prossimo avvio.
+                  window.setTimeout(() => { if (quitAfterSaveRef.current) quitNow(); }, 8000);
+                }}
+                style={{ height: 40, borderRadius: 10, cursor: 'pointer', border: '1px solid rgba(52,211,153,0.5)',
+                         background: 'rgba(52,211,153,0.14)', color: '#6ee7b7',
+                         fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600 }}>
+                {t('quit_save') as string}
+              </button>
+              <button type="button"
+                onClick={() => { setQuitAsk(false); quitNow(); }}
+                style={{ height: 36, borderRadius: 10, cursor: 'pointer', border: '1px solid rgba(248,113,113,0.45)',
+                         background: 'rgba(248,113,113,0.10)', color: '#fca5a5',
+                         fontFamily: 'var(--font-sans)', fontSize: 12 }}>
+                {t('quit_discard') as string}
+              </button>
+              <button type="button"
+                onClick={() => setQuitAsk(false)}
+                style={{ height: 36, borderRadius: 10, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.18)',
+                         background: 'rgba(255,255,255,0.05)', color: 'rgba(240,246,255,0.85)',
+                         fontFamily: 'var(--font-sans)', fontSize: 12 }}>
+                {t('quit_stay') as string}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showSexPrompt && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
           <div style={{ maxWidth: 440, background: '#0b1626', border: '1px solid rgba(34,211,238,0.30)', borderRadius: 16, padding: '26px 28px', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,0.55)' }}>

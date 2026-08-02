@@ -55,6 +55,22 @@ export class ThetaMeterHid {
     return { ok: this.meter.count, rejected: this.meter.rejected };
   }
 
+  /**
+   * L'apparecchio parla, ma non la nostra lingua.
+   *
+   * È il caso del modello DIVERSO: si collega, i report arrivano, e nessuno è riconosciuto.
+   * Distinguerlo dal « non arriva niente » (cavo, alimentazione) è tutto, perché i due si
+   * rimediano in modi opposti. Una decina di report scartati e nemmeno uno buono: a 60/s è un
+   * sesto di secondo, quindi non è sfortuna.
+   */
+  get unknownFormat(): boolean {
+    return this.meter.count === 0 && this.meter.rejected >= 10;
+  }
+
+  /** I report non riconosciuti, in esadecimale — da copiare e mandare per far scrivere il
+   *  decodificatore di QUEL modello. */
+  get rawSamples(): string[] { return this.meter.samples; }
+
   private setStatus(s: ThetaStatus): void {
     this.status = s;
     this.opts.onStatus?.(s);

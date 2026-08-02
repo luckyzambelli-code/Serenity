@@ -22,7 +22,11 @@ export class NativeSpeechRecognition {
   private unsub: (() => void) | null = null;
   private listening = false;
 
-  onresult:      ((e: { results: { transcript: string; isFinal: boolean }[] }) => void) | null = null;
+  /** `speechEndMs` (su `isFinal`) è l'istante — in `performance.now()` — in cui la parola è
+   *  FINITA, che non è quello in cui la frase viene dichiarata: fra i due c'è il silenzio di
+   *  900 ms che il riconoscitore aspetta prima di chiudere. */
+  onresult:      ((e: { results: { transcript: string; isFinal: boolean }[];
+                        speechEndMs?: number }) => void) | null = null;
   onerror:       ((e: { error: string }) => void) | null = null;
   onmodelstatus: ((status: 'loading' | 'ready' | 'error', message?: string) => void) | null = null;
 
@@ -72,8 +76,16 @@ export class NativeSpeechRecognition {
     this.detach();
     this.unsub = api.onData((p) => {
       if (p.type === 'final' && p.text) {
-        this.onresult?.({ results: [{ transcript: p.text, isFinal: true }] });
+        // `speechEndMs` = quando la PAROLA è finita davvero, non quando la frase è stata
+        // dichiarata. Il riconoscitore aspetta 900 ms di silenzio prima di dire « final »:
+        // datare l'item a quel momento lo sposta di quasi un secondo, e l'instant read
+        // dell'ago — che avviene alla fine della parola — finisce fuori dalla sua finestra.
+        // L'ultimo `partial` è l'ultima volta che si sono riconosciute parole: è quella la fine.
+        this.onresult?.({ results: [{ transcript: p.text, isFinal: true }],
+                          speechEndMs: this.lastPartialMs || performance.now() });
+        this.lastPartialMs = 0;
       } else if (p.type === 'partial' && p.text) {
+        this.lastPartialMs = performance.now();
         // Interim hypothesis — App ignores non-final results, but forward it so a
         // future live-caption feature can use it.
         this.onresult?.({ results: [{ transcript: p.text, isFinal: false }] });
@@ -83,6 +95,9 @@ export class NativeSpeechRecognition {
       }
     });
   }
+
+  /** Quando è arrivata l'ultima ipotesi parziale = quando si è smesso di parlare. */
+  private lastPartialMs = 0;
 
   private detach(): void {
     if (this.unsub) { try { this.unsub(); } catch (_) {} this.unsub = null; }

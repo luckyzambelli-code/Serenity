@@ -177,11 +177,25 @@ export class ThetaNeedle {
     // lo tradisce è l'AGITAZIONE — l'ago spazza avanti e indietro invece di scendere e restare.
     // Finché dura, il conteggio si sospende, come fa il Theta-Meter (che in quel caso non conta
     // nulla, mentre noi arrivavamo a 4,5 divisioni).
+    //
+    // ── PERCHÉ NON BASTA L'ESCURSIONE ──────────────────────────────────────────────────────
+    // Misurare la sola escursione (massimo − minimo) sembrava giusto e invece scartava le
+    // LETTURE: una fall è per definizione un movimento ampio e RAPIDO, e mezzo quadrante in due
+    // secondi è precisamente quello che fa. Risultato: ogni caduta un po' seria veniva presa per
+    // agitazione, l'episodio abbandonato, e col solo meter non compariva MAI una reazione.
+    //
+    // Ciò che distingue davvero è il senso di marcia: una caduta va in UNA direzione e ci
+    // resta; un corpo che si agita va e TORNA. Si misura quindi l'ANDIRIVIENI — la parte
+    // dell'escursione che il movimento netto non spiega. Su una caduta pulita è quasi zero,
+    // su una stretta-e-rilascio vale tutta l'ampiezza.
     this.devWindow.push(scarto);
     if (this.devWindow.length > THETA_MOTION_WINDOW) this.devWindow.shift();
     const escursione = this.devWindow.length > 1
       ? Math.max(...this.devWindow) - Math.min(...this.devWindow) : 0;
-    if (escursione > THETA_MOTION_RANGE) this.motionCooldown = THETA_MOTION_COOLDOWN;
+    const netto = this.devWindow.length > 1
+      ? Math.abs(this.devWindow[this.devWindow.length - 1] - this.devWindow[0]) : 0;
+    const andirivieni = Math.max(0, escursione - netto);
+    if (andirivieni > THETA_MOTION_RANGE) this.motionCooldown = THETA_MOTION_COOLDOWN;
     else if (this.motionCooldown > 0) this.motionCooldown--;
     this.bodyMotion = this.motionCooldown > 0;
 

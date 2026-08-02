@@ -64,8 +64,52 @@ export const ITEM_INTERRUPT_MS = 2500;
  *  simpatico. NB: la ricerca non risale MAI oltre l'item precedente (limite dinamico).
  *  PIÙ ALTO = si recuperano letture anticipate; PIÙ BASSO = meno rischio di prendere altro. */
 export const READ_WINDOW_BEFORE_S = 1.0;
-/** Quanto si guarda AVANTI (s). Tenuto CORTISSIMO di proposito: niente letture latenti. */
-export const READ_WINDOW_AFTER_S = 0.15;
+/**
+ * FINESTRA PER L'AGO VERO — l'INSTANT READ, e nient'altro.
+ *
+ * ⚠️ Correzione dell'utente (30/07/2026), su un errore che avevo fatto: la reazione dell'ago vero
+ * è ALLA FINE ESATTA DELLA PAROLA. Non c'è ritardo da compensare. Una lettura che arriva dopo è
+ * una lettura LATENTE, e una lettura latente **non vale** — è la definizione stessa dell'instant
+ * read. Avevo aperto 3,5 s in avanti « per la latenza elettrodermica »: quella finestra
+ * trasformava le letture latenti in letture valide, che è peggio del difetto che curava.
+ *
+ * La finestra resta quindi STRETTA, come per l'EEG. Il margine che c'è serve solo al fatto che
+ * l'istante di fine parola arriva dalla trascrizione vocale, che non è precisa al centesimo.
+ *
+ * NB: da non confondere con `THETA_READ_DECIDE_S` — quella non è una finestra, è il tempo che
+ * serve a NOI per classificare un movimento già avvenuto.
+ */
+export const READ_WINDOW_THETA_BEFORE_S = 0.4;
+export const READ_WINDOW_THETA_AFTER_S = 0.35;
+/**
+ * Quanto si aspetta prima di CONCLUDERE (s) — non è una finestra di lettura.
+ *
+ * Una reazione si riconosce solo quando l'episodio si chiude: l'ago parte, culmina e comincia a
+ * rientrare, e questo prende un secondo o due. La reazione è DATATA a quando è partita (fine
+ * parola), ma noi lo sappiamo solo dopo. Decidere a 0,15 s vorrebbe dire scrivere NULL prima di
+ * aver classificato un movimento che era già cominciato al momento giusto.
+ *
+ * Non allarga la finestra: una reazione partita troppo tardi resta latente e viene scartata lo
+ * stesso. Sposta solo il momento in cui GUARDIAMO. E la scritta compare appena la lettura c'è,
+ * senza aspettare la scadenza.
+ */
+export const THETA_READ_DECIDE_S = 2.0;
+/**
+ * Quanto si guarda AVANTI per l'EEG (s).
+ *
+ * ⚠️ Era 0,15, e quel numero era stato tarato quando l'item veniva datato all'ARRIVO DELLA
+ * TRASCRIZIONE — cioè quasi un secondo dopo la fine vera della parola. Con quell'errore, ogni
+ * lettura EEG cadeva « prima » dell'item e bastava una finestra avanti minima.
+ *
+ * Ora la fine della parola è misurata dal microfono, e le letture EEG si distribuiscono attorno
+ * ad essa. Misurato in una seduta a due strumenti (01/08/2026): letture accettate a −868, −769,
+ * −519, −268, +34, +131 ms e due SCARTATE a **+281 e +332 ms** — mentre una lettura del meter a
+ * +181 ms veniva accettata. Si buttava via la reazione dell'EEG e si teneva quella dell'ago per
+ * un'asimmetria che non aveva più ragione d'essere.
+ *
+ * Le due finestre avanti sono ora uguali: la fine della parola è la stessa per entrambi.
+ */
+export const READ_WINDOW_AFTER_S = READ_WINDOW_THETA_AFTER_S;
 /** Una F/N che ricompare entro questo tempo è considerata lo STESSO episodio, quindi NON è una
  *  nuova reazione: per l'item è AGO NULLO (« nessun cambiamento provocato dalla domanda »).
  *  PIÙ ALTO = più severo (più NULL, immune allo sfarfallio); PIÙ BASSO = più permissivo. */
@@ -243,13 +287,22 @@ export const SQUEEZE_TEST_MS = 4000;
 /** Durata della finestra del TEST DEL RESPIRO (ms). Più lunga della stretta: inspirare a fondo,
  *  trattenere e rilasciare non si fa in due secondi. */
 export const BREATH_TEST_MS = 9000;
-/** MOVIMENTO CORPOREO — su quanti campioni si guarda l'escursione dell'ago (60 = 1 s). */
+/** MOVIMENTO CORPOREO — su quanti campioni si guarda il movimento dell'ago (60 = 1 s). */
 export const THETA_MOTION_WINDOW = 120;   // 2 s
-/** Se in quella finestra l'ago spazza PIÙ di tanto quadrante, non è carica: è la persona che si
- *  muove o stringe. Il conteggio del Total TA si SOSPENDE, come fa il Theta-Meter, che in quel
- *  caso non conta nulla (noi contavamo fino a 4,5 divisioni).
- *  PIÙ ALTO = più permissivo (si conta di più, ma rientrano gli artefatti);
- *  PIÙ BASSO = più severo (nessun artefatto, ma una reazione ampia potrebbe non contare). */
+/**
+ * Quanto ANDIRIVIENI, in quadrante, tradisce la persona che si muove o stringe le lattine.
+ *
+ * Non è l'escursione totale: una fall è per definizione ampia e rapida, e misurando l'escursione
+ * ogni caduta seria passava per agitazione — l'episodio veniva abbandonato e col solo meter non
+ * compariva MAI una reazione. Si misura invece la parte dell'escursione che il movimento NETTO
+ * non spiega: una caduta va in una direzione e ci resta (andirivieni ≈ 0), un corpo che si agita
+ * va e torna (andirivieni = tutta l'ampiezza).
+ *
+ * Il conteggio del Total TA si SOSPENDE finché dura, come fa il Theta-Meter, che in quel caso
+ * non conta nulla (noi contavamo fino a 4,5 divisioni).
+ * PIÙ ALTO = più permissivo (si conta di più, ma rientrano gli artefatti);
+ * PIÙ BASSO = più severo (nessun artefatto, ma un ago che oscilla legittimamente non conta).
+ */
 export const THETA_MOTION_RANGE = 0.5;
 /** Per quanti campioni il conteggio resta sospeso DOPO che l'agitazione è cessata: il braccio
  *  ha ancora da riassestarsi, e quella coda non è carica. */
@@ -274,17 +327,181 @@ export const THETA_TOTAL_TA_DEADBAND_DIV = 0.02;
 export const THETA_TOTAL_TA_DEADBAND = 24_000;
 
 // ── REAZIONI SULL'AGO DELLE BOÎTES (engine/thetaReactions.ts) ──────────────────────────────
-// Le soglie sono le AMPIEZZE con cui il quadrante disegna ciascuna reazione (le stesse di
-// QuantumSphere): così la lettura scritta corrisponde a quello che si è visto muoversi.
-export const THETA_REACT_TICK = 0.07;
-export const THETA_REACT_SF = 0.20;
-export const THETA_REACT_FALL = 0.42;
-export const THETA_REACT_LONG_FALL = 0.68;
-export const THETA_REACT_BLOW_DOWN = 0.90;
+//
+// ⚠️ LE SOGLIE SONO I SEGNI STAMPATI SUL QUADRANTE, non altri numeri.
+//
+// Errore mio, segnalato in seduta (« indichi delle reazioni che non vedo e altre che vedo e non
+// indichi »): avevo preso come soglie le POSIZIONI a cui il quadrante porta l'ago dell'EEG
+// (0,42 · 0,68 · 0,90) e le avevo confrontate con la CORSA dell'ago vero a partire da SET. Sono
+// due grandezze diverse, e l'ago riposa a SET = −0,35, non a zero. Risultato:
+//
+//     scrivevo « SF »        con l'ago a −0,15   ← il segno SF è a −0,06: l'auditor non vede niente
+//     scrivevo « FALL »      con l'ago a +0,07   ← il segno FALL è a +0,10
+//     scrivevo « BLOW DOWN » con l'ago a +0,55   ← LFBD è a +0,85: si vede un long fall
+//
+// Ora la soglia di ciascuna reazione è la CORSA che porta l'ago ESATTAMENTE sul suo segno:
+// quello che c'è scritto e quello che si vede coincidono per costruzione. Se si spostano le
+// scritte sull'arco (QuantumSphere), vanno spostate anche queste — a mano, e insieme.
+//
+//     segno sull'arco   posizione   corsa da SET (−0,35)
+//     SF                  −0,06            0,29
+//     FALL                +0,10            0,45
+//     LONG FALL           +0,40            0,75
+//     LFBD                +0,85            1,20
+//
+/**
+ * Per quanto tempo un grado deve REGGERE prima di essere annunciato (s).
+ *
+ * La lettura è istantanea, ma « istantanea » non vuol dire « al primo campione »: un campione
+ * solo che tocca la soglia è rumore, e annunciarlo scriveva reazioni che l'auditor NON vedeva
+ * (segnalato in seduta). Un movimento vero dell'ago dura decimi di secondo; il rumore, qualche
+ * millisecondo. Si perde un ventesimo di secondo e si guadagna che tutto ciò che è scritto si è
+ * anche visto.
+ *
+ * In TEMPO e non in campioni: il conteggio dei campioni cambierebbe significato se un giorno
+ * l'apparecchio trasmettesse più o meno in fretta.
+ */
+export const THETA_REACT_CONFIRM_S = 0.05;
+/**
+ * Entro quanto l'ago è considerato ANCORA FERMO durante una prova (unità di quadrante).
+ *
+ * Il segno del terzo di quadrante insegue l'ago finché sta fermo, così è sempre alla distanza
+ * giusta da dove l'ago si trova davvero — e non da una posizione di riposo teorica che il
+ * braccio, lento com'è, non ha ancora raggiunto.
+ *
+ * Ma appena l'ago PARTE il segno si ferma, altrimenti scapperebbe davanti a lui e il bersaglio
+ * non si potrebbe raggiungere mai. 0,03 sta appena sopra il rumore misurato (0,01).
+ */
+export const THETA_TEST_FOLLOW = 0.03;
+/**
+ * In quanto tempo la BASE raggiunge un ago parcheggiato (s).
+ *
+ * Un meter vero lo tiene l'auditor: se l'ago scivola via da SET, si gira la manopola e si
+ * ricomincia da lì. Qui il braccio insegue da solo, ma con VENTI SECONDI di costante di tempo:
+ * dopo una caduta l'ago resta a lungo lontano da SET.
+ *
+ * Finché la base restava inchiodata al punto dell'ultima lettura, un ago fermo a 0,30 avrebbe
+ * avuto bisogno di 0,45 per farsi leggere — e tutte le oscillazioni fra 0,29 e 0,34 sparivano.
+ * Misurato in seduta: l'ago si muoveva di 0,33 e non usciva NIENTE per quaranta secondi.
+ *
+ * Perciò la base SALE verso dove l'ago si è posato, piano. Il movimento che conta è quello che
+ * si stacca da dove l'ago STAVA, non da dove riposerebbe se il braccio avesse fatto in tempo.
+ * Scendere invece è immediato: un rientro è un'informazione, non un assestamento.
+ */
+export const THETA_BASELINE_CREEP_S = 2.5;
+/**
+ * Velocità MINIMA perché un movimento sia una lettura (unità di quadrante al secondo).
+ *
+ * Una lettura è un movimento SUBITO: l'ago parte e arriva. Una deriva percorre la stessa
+ * distanza impiegandoci dieci volte tanto. L'ampiezza sola non li distingue — ed è per questo
+ * che, abbassata la soglia al livello del rumore, la deriva ha cominciato a produrre « Tick »
+ * che l'auditor non vedeva (segnalato in seduta, 01/08/2026).
+ *
+ * Misurato sui dati veri:
+ *     deriva lenta (tutta la seduta)   0,01 al secondo
+ *     deriva dentro una finestra       0,06 al secondo
+ *     long fall lenta                  0,28 al secondo
+ *     fall                             1,0  al secondo
+ *
+ * 0,15 sta comodamente in mezzo: due volte e mezzo la deriva più veloce misurata, e metà della
+ * long fall più lenta. È la manopola da muovere se una caduta lenta non venisse letta.
+ */
+export const THETA_MIN_RATE = 0.15;
+/**
+ * Quanto resta scritta la reazione DOPO che l'ago è rientrato (ms).
+ *
+ * Prima si usava KICK_MS — la durata dell'oscillazione dell'ago dell'EEG, che con l'ago vero
+ * non c'entra niente: fino a 1,5 s, durante i quali la scritta diceva « LONG FALL » mentre
+ * l'ago era già a riposo. Finché il movimento DURA la scritta resta, senza scadenza; quando
+ * l'ago rientra si lascia solo il tempo di leggerla.
+ */
+export const THETA_LABEL_AFTER_MS = 700;
+/**
+ * Entro quanto una lettura viene RITIRATA se si scopre che era una stretta (ms).
+ *
+ * Una stretta delle lattine e una caduta sono IDENTICHE mentre avvengono: la mano preme, la
+ * resistenza scende, l'ago va giù. Ciò che le distingue è il RITORNO — la stretta torna
+ * indietro, la carica no — e quindi si sa solo dopo. Segnalato in seduta: « la FALL sono io che
+ * ho schiacciato le lattine ».
+ *
+ * Delle due strade — aspettare il ritorno prima di annunciare (lento, e la lettura istantanea
+ * era una richiesta esplicita) oppure annunciare e RITIRARE — si è scelta la seconda: l'auditor
+ * vede la lettura comparire e poi ritirarsi, che è esattamente quello che è successo davvero.
+ */
+export const THETA_RETRACT_MS = 1600;
+/**
+ * Il TICK non ha un segno stampato sul quadrante: è il più piccolo scatto che si VEDE.
+ *
+ * ⚠️ Era 0,15, scelto da me senza avere il numero che serviva. Misurato poi in seduta
+ * (31/07/2026) con l'ago a riposo e le lattine in mano ferme, il rumore vero dell'apparecchio
+ * è di **un centesimo**: span 0,008 · 0,009 · 0,011. La soglia stava quindi a QUINDICI volte il
+ * rumore, e tagliava via tutto quello che il preclear faceva senza strizzare le lattine —
+ * movimenti fra 0,03 e 0,14, cioè tutte le letture pulite della seduta.
+ *
+ * 0,06 sta a SEI volte il fondo di rumore (largo abbastanza da non leggerlo) e a un QUINTO di
+ * SF (0,29), che è la proporzione giusta fra un tick e una small fall. Da rivedere se in seduta
+ * comparissero letture che l'auditor non vede: il numero che conta è il rapporto col rumore, e
+ * quello si rimisura con la riga di diagnosi.
+ */
+export const THETA_REACT_TICK = 0.06;
+export const THETA_REACT_SF = 0.29;
+export const THETA_REACT_FALL = 0.45;
+export const THETA_REACT_LONG_FALL = 0.75;
+export const THETA_REACT_BLOW_DOWN = 1.20;
 /** Sotto questa deviazione l'ago è « rientrato » e l'episodio si chiude. Volutamente PIÙ BASSA
  *  del tick: chiudere alla stessa soglia con cui si apre farebbe sfarfallare l'episodio a ogni
  *  oscillazione sul confine, con una raffica di letture per una sola caduta. */
 export const THETA_EPISODE_RELEASE = 0.04;
+/**
+ * Quanta parte del picco basta riguadagnare perché la reazione sia LETTA (frazione del picco).
+ *
+ * Aspettare il rientro completo nella banda di riposo funziona per l'ago dell'EEG, che è una
+ * molla e torna a SET in un attimo. L'ago VERO no: il suo riposo è il BRACCIO, che inseguendo la
+ * resistenza ha una costante di tempo di una ventina di secondi. L'episodio restava quindi aperto
+ * per decine di secondi e la lettura arrivava quando l'item era passato da tempo — ASSESSMENT
+ * diceva NULL con l'ago che era appena caduto.
+ *
+ * Un auditor legge la caduta appena l'ago ha cominciato a rientrare, non quando è tornato a SET:
+ * è quello che si fa qui.
+ */
+export const THETA_EPISODE_RETURN_FRAC = 0.35;
+/**
+ * Dopo quanti secondi senza un picco NUOVO l'oscillazione si considera finita, e si legge (s).
+ *
+ * Il rientro — completo o parziale — non basta a coprire tutti i casi: un ago che cade e RESTA
+ * giù (il braccio lo insegue in decine di secondi) non rientra affatto, e l'episodio non si
+ * chiudeva mai. L'auditor vedeva una caduta netta e l'app non scriveva niente — segnalato in
+ * seduta. Quando l'ago ha smesso di scendere, la sua escursione è finita: si legge lì.
+ */
+export const THETA_EPISODE_SETTLE_S = 0.8;
+
+// ── FLOATING NEEDLE SULL'AGO DELLE BOÎTES (engine/thetaFloat.ts) ───────────────────────────
+// L'F/N non è un'AMPIEZZA: è una FORMA NEL TEMPO. L'ago spazza avanti e indietro, libero,
+// ritmicamente, attorno a uno stesso centro. Le manopole qui sotto descrivono quella forma, e
+// vanno TARATE SUI VIDEO come i profili del generatore F/N — non sono derivate da una teoria.
+/** Ampiezza minima di una spazzata (unità di quadrante). Ron parla di « almeno un terzo di
+ *  quadrante » per un F/N franco, ma ne ammette di più piccoli: si sta sotto quel terzo (0,45)
+ *  per non perdere i piccoli, e la REGOLARITÀ fa il lavoro di discriminare. */
+export const THETA_FN_MIN_SWEEP = 0.22;
+/** Quante mezze spazzate servono per dichiarare. Tre = l'ago è andato a destra, tornato e
+ *  ripartito: due sole potrebbero essere una caduta con rientro, che non è un F/N. */
+export const THETA_FN_MIN_SWEEPS = 3;
+/** Durata plausibile di una mezza spazzata (s). Sotto è tremolio, sopra è deriva lenta. */
+export const THETA_FN_HALF_MIN_S = 0.25;
+export const THETA_FN_HALF_MAX_S = 3.0;
+/** Quanto possono differire fra loro le ampiezze delle spazzate (rapporto max/min). È QUESTO
+ *  il criterio che separa un F/N da un corpo che si agita: l'agitazione è irregolare. */
+export const THETA_FN_AMP_SPREAD = 2.6;
+/** Quanto può differire la durata delle mezze spazzate (rapporto max/min): un F/N è RITMICO. */
+export const THETA_FN_PERIOD_SPREAD = 2.6;
+/** Quanto può spostarsi il CENTRO dello spazzare durante la finestra. Un F/N galleggia attorno
+ *  a uno stesso punto; se il centro scivola è una caduta lenta o una salita, non un F/N. */
+export const THETA_FN_CENTRE_DRIFT = 0.30;
+/** Dopo quanto senza spazzate l'F/N è finito (s). */
+export const THETA_FN_EXPIRE_S = 4.0;
+/** Un punto di svolta conta solo se l'ago ha invertito di almeno tanto: senza questo il rumore
+ *  produrrebbe centinaia di micro-inversioni e ogni finestra sembrerebbe ritmica. */
+export const THETA_FN_TURN_HYST = 0.05;
 
 // ── SCALA DEL TONO DI RON (−40 .. +40) ─────────────────────────────────────────────────────────
 /** Fondo scala della scala del tono: da −40 (resistenza TOTALE) a +40 (resistenza ZERO),

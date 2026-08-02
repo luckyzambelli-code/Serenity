@@ -12,6 +12,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   /** CONN-76: read the OS clipboard (navigator.clipboard is blocked in Electron). */
   readClipboard: () => ipcRenderer.invoke('clipboard-read'),
+  // CORPUS — una riga in aggiunta all'archivio delle esperienze.
+  corpusAppend: (args) => ipcRenderer.invoke('corpus-append', args),
+  corpusFolder: () => ipcRenderer.invoke('corpus-folder'),
+  // CHIUSURA — il processo principale ferma l'uscita e chiede; il renderer risponde.
+  setSessionActive: (attiva) => ipcRenderer.invoke('session-active', attiva),
+  confirmClose: () => ipcRenderer.invoke('close-confirmed'),
+  onCloseRequest: (cb) => {
+    const h = () => cb();
+    ipcRenderer.on('app-close-request', h);
+    return () => ipcRenderer.removeListener('app-close-request', h);
+  },
 
   /** FIX MUSE-RECONNECT: annulla una ricerca Bluetooth pendente nel main (callback appesa). */
   bleCancel: () => ipcRenderer.invoke('ble-cancel'),

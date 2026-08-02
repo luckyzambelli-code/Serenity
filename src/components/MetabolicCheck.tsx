@@ -14,12 +14,20 @@ import { metabolicBaseline, type Rating, type MetabAssessment } from '../engine/
 type Phase = 'baseline' | 'breath' | 'result';
 const BASELINE_MS = 4000;   // préparation (« pose-toi ») avant la respiration guidée : 4 s
 const BREATH_HALF = 4000;          // 4 s inhale / 4 s exhale
-const BREATH_MS   = BREATH_HALF * 4; // two full cycles
+/**
+ * UNA SOLA inspirazione, non due cicli.
+ *
+ * Erano quattro mezzi respiri (16 s) più i 4 s di preparazione. In seduta è troppo — si fa
+ * prima di OGNI seduta, e con le boîtes collegate si somma alla loro prova. Un'inspirazione
+ * profonda e il rilascio bastano: è il rilascio che si misura, e il resto è attesa.
+ */
+const BREATH_MS   = BREATH_HALF * 2; // una inspirazione + il rilascio
 
 const STR = {
   en: { title: 'Ready for session', sub: 'Physiological check before you begin.',
     muse_on: 'MUSE 2 connected', muse_off: 'MUSE 2 disconnected', muse_not_worn: 'MUSE 2 not worn', wear_muse: 'Put the MUSE on to begin', muse_on_mac: 'MUSE 2 on the Mac', muse_tap: 'connect', muse_busy: 'connecting…', sec_left: 's left', wait_muse: 'Connect the MUSE to begin',
-    baseline: 'Settle — soft eyes, breathe normally', breath: 'Deep slow breathing — follow the circle', inhale: 'Inhale', exhale: 'Let it go',
+    baseline: 'Settle — soft eyes, breathe normally', breath: 'One deep breath in, then let it go', inhale: 'Inhale', exhale: 'Let it go',
+    why: 'One breath is enough: the release is what is measured. It tells us the electrodes are making contact, how calm the body is, whether the pulse is readable, and how fast it responds — the four numbers below. They are read again every session because they change with the day.',
     result: 'Readiness', contact: 'Contact', calm: 'Calm', heart: 'Heart', reactivity: 'Reactivity', reactivity_hint: 'response to the breath',
     go: 'Ready', nogo: 'Not ready', start: 'Start session', redo: 'Redo', skip: 'Skip',
     na: 'n/a', good: 'good', ok: 'ok', poor: 'poor',
@@ -27,7 +35,8 @@ const STR = {
     r_nobpm: 'No clear pulse (forehead PPG is weak) — heart not assessed' },
   fr: { title: 'Prêt pour la séance', sub: 'Contrôle physiologique avant de commencer.',
     muse_on: 'MUSE 2 connecté', muse_off: 'MUSE 2 déconnecté', muse_not_worn: 'MUSE 2 non porté', wear_muse: 'Portez le MUSE pour commencer', muse_on_mac: 'MUSE 2 sur le Mac', muse_tap: 'connecter', muse_busy: 'connexion…', sec_left: 's restantes', wait_muse: 'Connectez le MUSE pour commencer',
-    baseline: 'Posez-vous — regard doux, respiration normale', breath: 'Respiration lente et profonde — suivez le cercle', inhale: 'Inspirez', exhale: 'Laissez aller',
+    baseline: 'Posez-vous — regard doux, respiration normale', breath: 'Une inspiration profonde, puis laissez aller', inhale: 'Inspirez', exhale: 'Laissez aller',
+    why: 'Une seule inspiration suffit : c\'est le relâchement qu\'on mesure. Il nous dit si les électrodes font contact, si le corps est calme, si le pouls est lisible et à quelle vitesse il répond — les quatre valeurs ci-dessous. On les relit à chaque séance parce qu\'elles changent avec le jour.',
     result: 'État de préparation', contact: 'Contact', calm: 'Calme', heart: 'Cœur', reactivity: 'Réactivité', reactivity_hint: 'réponse à la respiration',
     go: 'Prêt', nogo: 'Pas prêt', start: 'Démarrer la séance', redo: 'Refaire', skip: 'Passer',
     na: 'n/d', good: 'bon', ok: 'ok', poor: 'faible',
@@ -35,7 +44,8 @@ const STR = {
     r_nobpm: 'Pas de pouls net (PPG frontal faible) — cœur non évalué' },
   it: { title: 'Pronto per la session', sub: 'Controllo fisiologico prima di iniziare.',
     muse_on: 'MUSE 2 connesso', muse_off: 'MUSE 2 disconnesso', muse_not_worn: 'MUSE 2 non indossato', wear_muse: 'Indossa il MUSE per iniziare', muse_on_mac: 'MUSE 2 sul Mac', muse_tap: 'connetti', muse_busy: 'connessione…', sec_left: 's rimanenti', wait_muse: 'Connetti il MUSE per iniziare',
-    baseline: 'Rilassati — occhi morbidi, respira normalmente', breath: 'Respiro lento e profondo — segui il cerchio', inhale: 'Inspira', exhale: 'Lascia andare',
+    baseline: 'Rilassati — occhi morbidi, respira normalmente', breath: 'Una inspirazione profonda, poi lascia andare', inhale: 'Inspira', exhale: 'Lascia andare',
+    why: 'Basta un respiro: è il rilascio che si misura. Dice se gli elettrodi fanno contatto, quanto è calmo il corpo, se il battito è leggibile e con che prontezza risponde — i quattro valori qui sotto. Si rileggono a ogni seduta perché cambiano col giorno.',
     result: 'Prontezza', contact: 'Contatto', calm: 'Calma', heart: 'Cuore', reactivity: 'Reattività', reactivity_hint: 'risposta al respiro',
     go: 'Pronto', nogo: 'Non pronto', start: 'Inizia sessione', redo: 'Rifai', skip: 'Salta',
     na: 'n/d', good: 'buono', ok: 'ok', poor: 'scarso',
@@ -43,7 +53,8 @@ const STR = {
     r_nobpm: 'Nessun battito chiaro (PPG frontale debole) — cuore non valutato' },
   es: { title: 'Listo para la sesión', sub: 'Comprobación fisiológica antes de empezar.',
     muse_on: 'MUSE 2 conectado', muse_off: 'MUSE 2 desconectado', muse_not_worn: 'MUSE 2 no puesto', wear_muse: 'Ponte el MUSE para empezar', muse_on_mac: 'MUSE 2 en el Mac', muse_tap: 'conectar', muse_busy: 'conectando…', sec_left: 's restantes', wait_muse: 'Conecta el MUSE para empezar',
-    baseline: 'Relájate — mirada suave, respira normal', breath: 'Respiración lenta y profunda — sigue el círculo', inhale: 'Inspira', exhale: 'Suéltalo',
+    baseline: 'Relájate — mirada suave, respira normal', breath: 'Una inspiración profunda, luego suéltalo', inhale: 'Inspira', exhale: 'Suéltalo',
+    why: 'Basta una inspiración: se mide la soltura. Dice si los electrodos hacen contacto, qué tan calmado está el cuerpo, si el pulso es legible y con qué rapidez responde — los cuatro valores de abajo. Se releen cada sesión porque cambian con el día.',
     result: 'Preparación', contact: 'Contacto', calm: 'Calma', heart: 'Corazón', reactivity: 'Reactividad', reactivity_hint: 'respuesta a la respiración',
     go: 'Listo', nogo: 'No listo', start: 'Iniciar sesión', redo: 'Repetir', skip: 'Omitir',
     na: 'n/d', good: 'bueno', ok: 'ok', poor: 'bajo',
@@ -51,7 +62,8 @@ const STR = {
     r_nobpm: 'Sin pulso claro (PPG frontal débil) — corazón no evaluado' },
   sv: { title: 'Redo för session', sub: 'Fysiologisk kontroll innan du börjar.',
     muse_on: 'MUSE 2 ansluten', muse_off: 'MUSE 2 frånkopplad', muse_not_worn: 'MUSE 2 bärs inte', wear_muse: 'Ta på MUSE för att börja', muse_on_mac: 'MUSE 2 på datorn', muse_tap: 'anslut', muse_busy: 'ansluter…', sec_left: 's kvar', wait_muse: 'Anslut MUSE för att börja',
-    baseline: 'Landa — mjuk blick, andas normalt', breath: 'Djup långsam andning — följ cirkeln', inhale: 'Andas in', exhale: 'Släpp taget',
+    baseline: 'Landa — mjuk blick, andas normalt', breath: 'Ett djupt andetag in, släpp sedan taget', inhale: 'Andas in', exhale: 'Släpp taget',
+    why: 'Ett andetag räcker: det är utsläppet som mäts. Det säger om elektroderna har kontakt, hur lugn kroppen är, om pulsen går att läsa och hur snabbt den svarar — de fyra värdena nedan. De läses om varje session eftersom de ändras med dagen.',
     result: 'Beredskap', contact: 'Kontakt', calm: 'Lugn', heart: 'Hjärta', reactivity: 'Reaktivitet', reactivity_hint: 'respons på andningen',
     go: 'Redo', nogo: 'Ej redo', start: 'Starta session', redo: 'Gör om', skip: 'Hoppa över',
     na: 'ej', good: 'bra', ok: 'ok', poor: 'svag',
@@ -266,6 +278,12 @@ export function MetabolicCheck({ lang, museConnected = true, museWorn = false, m
                 </div>
               </div>
               <div style={{ marginTop: 14, fontSize: 13, color: 'rgba(230,236,245,0.85)' }}>{L.breath}</div>
+              {/* PERCHÉ lo si chiede. Una consegna senza ragione si esegue male, e questa si
+                  ripete a ogni seduta: dirlo una volta per seduta costa poco e la rende utile. */}
+              <div style={{ marginTop: 10, maxWidth: 460, marginLeft: 'auto', marginRight: 'auto',
+                            fontSize: 11, lineHeight: 1.55, color: 'rgba(226,238,255,0.55)' }}>
+                {L.why}
+              </div>
               <div style={{ marginTop: 4, fontSize: 11, fontFamily: 'monospace', color: 'rgba(200,214,234,0.55)' }}>{remaining}{L.sec_left}</div>
             </div>
           );

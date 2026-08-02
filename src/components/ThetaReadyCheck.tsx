@@ -50,6 +50,10 @@ export interface ThetaReadyCheckProps {
    *  boîte sola — si tarerebbe su una configurazione e si auditerebbe su un'altra. */
   config: 'two-cans' | 'solo-can';
   setConfig: (c: 'two-cans' | 'solo-can') => void;
+  /** L'apparecchio trasmette ma non è del modello che sappiamo leggere. */
+  unknownFormat?: boolean;
+  /** I suoi report grezzi, da copiare e mandare per farne scrivere la decodifica. */
+  rawSamples?: string[];
   onProceed: () => void;
   onCancel: () => void;
 }
@@ -57,6 +61,7 @@ export interface ThetaReadyCheckProps {
 export function ThetaReadyCheck({
   scaleMeasured, breathOk, squeezeOk, testing, peakOffset,
   startSqueezeTest, startBreathTest, sensTrim, setSensTrim, config, setConfig, onProceed, onCancel,
+  unknownFormat = false, rawSamples = [],
 }: ThetaReadyCheckProps) {
   const { t } = useI18n();
 
@@ -114,6 +119,37 @@ export function ThetaReadyCheck({
             {t('theta_watch_needle') as string}
           </div>
         </div>
+
+        {/* ── MODELLO SCONOSCIUTO ────────────────────────────────────────────────────────
+            Esistono più modelli di Theta-Meter, e il formato dei dati non è lo stesso su tutti.
+            Se l'apparecchio trasmette e non capiamo niente, lo si DICE — insieme ai byte veri,
+            pronti da copiare: è con quelli che si scrive la decodifica di QUEL modello. Senza
+            questo riquadro, chi ha un altro modello vede solo un ago immobile e non sa perché. */}
+        {unknownFormat && (
+          <div style={{ border: '1px solid rgba(248,113,113,0.5)', borderRadius: 10,
+                        background: 'rgba(127,29,29,0.22)', padding: '12px 14px' }}>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 700,
+                          color: '#fca5a5', marginBottom: 6 }}>
+              {t('theta_unknown_model') as string}
+            </div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, lineHeight: 1.5,
+                          color: 'rgba(240,246,255,0.8)', marginBottom: 8 }}>
+              {t('theta_unknown_model_hint') as string}
+            </div>
+            <pre style={{ margin: 0, maxHeight: 96, overflow: 'auto', fontSize: 10,
+                          fontFamily: 'ui-monospace, monospace', color: 'rgba(240,246,255,0.7)',
+                          background: 'rgba(0,0,0,0.35)', borderRadius: 6, padding: '6px 8px' }}>
+              {rawSamples.join('\n') || '—'}
+            </pre>
+            <button type="button"
+              onClick={() => { try { navigator.clipboard.writeText(rawSamples.join('\n')); } catch (_) { /* niente appunti: restano leggibili sopra */ } }}
+              style={{ marginTop: 8, width: '100%', height: 30, borderRadius: 8, cursor: 'pointer',
+                       border: '1px solid rgba(248,113,113,0.5)', background: 'rgba(248,113,113,0.12)',
+                       color: '#fca5a5', fontFamily: 'var(--font-sans)', fontSize: 11 }}>
+              {t('theta_copy_raw') as string}
+            </button>
+          </div>
+        )}
 
         {/* PRIMA di tutto: come sono tenute. La sensibilità misurata con due boîtes non vale
             per una boîte sola, quindi sceglierlo dopo le prove significherebbe tararsi su una

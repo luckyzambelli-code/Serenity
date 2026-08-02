@@ -12,3 +12,7 @@ release/
 .vite/
 *.dmg
 *.blockmap
+
+# video di riferimento per la taratura (F/N reali filmati sul Theta-Meter).
+# Servono a TARARE, non a far girare l'app: 115 MB che in git non tornerebbero mai indietro.
+public/theta-meter-real.mov/

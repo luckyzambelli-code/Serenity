@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ThetaMeterHid, isHidAvailable, type ThetaStatus } from '../lib/thetaMeterHid';
 import { ThetaNeedle } from '../engine/thetaNeedle';
 import { ThetaReactionTracker, type ThetaReaction } from '../engine/thetaReactions';
+import { ThetaFloatDetector, type ThetaFloatState } from '../engine/thetaFloat';
 import {
   buildTaScale, taFromRaw, loadTaScale, saveTaScale, clearTaScale, factoryTaScale,
   type ThetaTaPoint, type ThetaTaScale,
@@ -12,7 +13,7 @@ import {
   effectiveScale,
   type ElectrodeConfig, type ThetaSetup,
 } from '../engine/thetaSetup';
-import { THETA_NEEDLE_SCALE, SQUEEZE_TEST_MS, BREATH_TEST_MS, NEEDLE_REST_OFFSET } from '../engine/tuning';
+import { THETA_NEEDLE_SCALE, SQUEEZE_TEST_MS, BREATH_TEST_MS, NEEDLE_REST_OFFSET, THETA_TEST_FOLLOW, THETA_MIN_RATE } from '../engine/tuning';
 
 /**
  * useThetaMeter — l'e-meter USB dell'utente dentro EQUILIBRIUM.
@@ -57,6 +58,9 @@ export interface ThetaMeterState {
   testing: null | 'squeeze' | 'breath';
   /** Deviazione di picco osservata durante la prova (unità grezze). */
   testPeak: number;
+  /** Dove stava l'ago quando la prova è cominciata: il bersaglio del terzo di quadrante si
+   *  segna a PARTIRE DA LÌ, non dalla posizione di riposo teorica. */
+  testBaseOffset: number;
   /** Lo stesso picco in unità di QUADRANTE: è così che si confronta con le soglie delle prove
    *  (un terzo di quadrante, una fall). In grezzi il confronto non si potrebbe fare. */
   testPeakOffset: number;
@@ -70,8 +74,16 @@ export interface ThetaMeterState {
   offScale: boolean;
   /** L'ago spazza troppo per essere carica: MOVIMENTO CORPOREO, Total TA sospeso. */
   bodyMotion: boolean;
+  /** FLOATING NEEDLE sull'ago VERO. È l'indicatore di AS-IS: qui si dice solo se c'è, con che
+   *  ampiezza e con che ritmo — il confronto con l'F/N dell'EEG si fa altrove. */
+  fn: ThetaFloatState;
   /** Letture valide e report scartati — se i secondi salgono, il formato non è quello che credo. */
   counters: { ok: number; rejected: number };
+  /** L'apparecchio trasmette ma non lo capiamo: è un MODELLO DIVERSO. Da distinguere dal
+   *  « non arriva niente », che si rimedia in tutt'altro modo. */
+  unknownFormat: boolean;
+  /** I report non riconosciuti, in esadecimale, da mandare per far scrivere il decodificatore. */
+  rawSamples: string[];
   /** Il dispositivo non è utilizzabile in questo contesto (niente WebHID). */
   unavailable: boolean;
   /** Che dispositivo si è agganciato (nome · VID:PID). Senza, su una macchina altrui un
@@ -99,11 +111,34 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
   const optsRef = useRef(opts);
   optsRef.current = opts;
   const reactRef = useRef(new ThetaReactionTracker());
+  /** L'F/N sull'ago vero: forma nel tempo, non ampiezza — vive in un rilevatore a parte. */
+  const floatRef = useRef(new ThetaFloatDetector());
+  /** TRACCIA GREZZA DELL'AGO (diagnosi): gli ultimi ~12 s di deviazione, presi PRIMA di
+   *  qualunque classificazione. Serve a rispondere alla sola domanda che conta quando non esce
+   *  nessuna lettura: l'ago si è mosso, e di quanto? Senza questo si può solo tirare a indovinare
+   *  fra « non si è mosso », « si è mosso poco » e « il classificatore lo scarta ».
+   *  In un ref e non nello stato: 60 valori al secondo non devono ridisegnare niente. */
+  const tracciaRef = useRef<{ t: number; dev: number; motion: boolean }[]>([]);
+
+  /** Ultimo stato dell'F/N, in attesa della pubblicazione. */
+  const fnRef = useRef<ThetaFloatState>({ fn: false, sinceSec: null, widthAvg: 0, periodSec: 0, motion: false });
   const hidRef = useRef<ThetaMeterHid | null>(null);
   const needleRef = useRef(new ThetaNeedle());
   /** Ultima lettura, in attesa della prossima pubblicazione. */
   /** Prova in corso + picco osservato. */
-  const testRef = useRef({ on: false, peak: 0 });
+  /** `base` = il grezzo al momento in cui la prova comincia, cioè DOVE STA L'AGO.
+   *
+   *  Prima si misurava dal BRACCIO. Ma il braccio insegue la resistenza con venti secondi di
+   *  ritardo: se l'ago è posato lontano da SET, quella distanza entrava nel conto e la stretta
+   *  risultava più grande di quanto fosse. Il terzo di quadrante si misura da dove l'ago È,
+   *  non da dove riposerebbe (richiesta in seduta, 01/08/2026). */
+  const testRef = useRef({ on: false, peak: 0, base: 0, baseOffset: 0,
+                          /** Il bersaglio è stato CONGELATO: la stretta (o il soffio) è
+                           *  partita, e da lì in poi il segno non si muove più — è quello che
+                           *  misura l'ampiezza. */
+                          congelato: false,
+                          /** Campione precedente, per calcolare la VELOCITÀ dell'ago. */
+                          preOffset: 0, preSec: 0 });
   const pendingRef = useRef<{ offset: number; arm: number; raw: number; totalTa: number;
                               offScale: boolean; bodyMotion: boolean } | null>(null);
 
@@ -111,6 +146,8 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
     status: 'disconnected', offset: 0, arm: 0, raw: 0, rawSmooth: 0, totalTa: 0,
     offScale: false, bodyMotion: false,
     ta: null, taNow: null, taScale: loadTaScale(),
+    unknownFormat: false, rawSamples: [], testBaseOffset: NEEDLE_REST_OFFSET,
+    fn: { fn: false, sinceSec: null, widthAvg: 0, periodSec: 0, motion: false },
     setup: loadSetup(THETA_NEEDLE_SCALE), testing: null, testPeak: 0, breathOk: null, squeezeOk: null,
     testPeakOffset: 0,
     counters: { ok: 0, rejected: 0 }, unavailable: !isHidAvailable(), info: null, lastError: null,
@@ -126,7 +163,26 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
         // Il picco si insegue a OGNI lettura (60/s), non alla pubblicazione (50 Hz): il culmine
         // di una caduta dura pochi campioni e alla pubblicazione si perderebbe.
         if (testRef.current.on) {
-          const dev = Math.abs(needleRef.current.arm - r.smooth);
+          const t = optsRef.current.nowSec?.() ?? 0;
+          const dt = t - testRef.current.preSec;
+          // ── IL SEGNO SEGUE L'AGO FINCHÉ È FERMO, POI SI CONGELA ────────────────────────
+          // Si guarda la VELOCITÀ, non lo scarto fra due campioni: a 60 al secondo anche una
+          // stretta decisa muove l'ago di pochissimo da un campione all'altro, e confrontando
+          // quello il segno la inseguiva per tutta la discesa senza fermarsi mai.
+          // Sotto la velocità di una lettura l'ago è « fermo » (deriva del braccio) e il segno
+          // lo accompagna; appena parte, il segno resta lì e MISURA l'ampiezza.
+          if (!testRef.current.congelato && dt > 0) {
+            const velocita = Math.abs(st.offset - testRef.current.preOffset) / dt;
+            if (velocita >= THETA_MIN_RATE) {
+              testRef.current.congelato = true;      // la stretta è partita
+            } else {
+              testRef.current.base = r.smooth;
+              testRef.current.baseOffset = st.offset;
+            }
+          }
+          testRef.current.preOffset = st.offset;
+          testRef.current.preSec = t;
+          const dev = Math.abs(testRef.current.base - r.smooth);
           if (dev > testRef.current.peak) testRef.current.peak = dev;
         }
         // REAZIONI sull'ago vero. Si passa la deviazione RISPETTO A SET, che è la grandezza in
@@ -134,6 +190,16 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
         const reaction = reactRef.current.push(
           st.offset - NEEDLE_REST_OFFSET, optsRef.current.nowSec?.() ?? 0, st.bodyMotion);
         if (reaction) optsRef.current.onReaction?.(reaction);
+        // FLOATING NEEDLE. Va valutato a OGNI lettura, non alla pubblicazione: il ritmo dello
+        // spazzare è il dato, e campionarlo più lento ne falserebbe i periodi.
+        fnRef.current = floatRef.current.push(
+          st.offset - NEEDLE_REST_OFFSET, optsRef.current.nowSec?.() ?? 0, st.bodyMotion);
+        {
+          const t = optsRef.current.nowSec?.() ?? 0;
+          const tr = tracciaRef.current;
+          tr.push({ t, dev: st.offset - NEEDLE_REST_OFFSET, motion: st.bodyMotion });
+          while (tr.length && tr[0].t < t - 12) tr.shift();
+        }
         pendingRef.current = { ...st, raw: r.raw };
       },
       onStatus: s => setState(p => ({ ...p, status: s, info: hidRef.current?.info ?? null })),
@@ -157,8 +223,12 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
         rawSmooth: needleRef.current.lastRaw,
         taNow: prev.taScale ? taWithSetup(taFromRaw(needleRef.current.lastRaw, prev.taScale), prev.setup) : null,
         testPeak: testRef.current.peak,
+        testBaseOffset: testRef.current.baseOffset,
         testPeakOffset: testRef.current.peak * effectiveScale(prev.setup),
+        fn: fnRef.current,
         counters: hidRef.current!.counters,
+        unknownFormat: hidRef.current!.unknownFormat,
+        rawSamples: hidRef.current!.rawSamples,
       }));
     }, UI_PERIOD_MS);
     return () => clearInterval(id);
@@ -189,8 +259,10 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
     await hidRef.current?.disconnect();
     needleRef.current.reset();
     reactRef.current.reset();
+    floatRef.current.reset();
+    fnRef.current = { fn: false, sinceSec: null, widthAvg: 0, periodSec: 0, motion: false };
     setState(p => ({ ...p, offset: 0, arm: 0, raw: 0, rawSmooth: 0, totalTa: 0,
-                     offScale: false, bodyMotion: false }));
+                     offScale: false, bodyMotion: false, fn: fnRef.current }));
   }, []);
 
   /** Riporta l'ago su SET — stesso gesto che ricentra quello dell'EEG (clic sul quadrante).
@@ -277,7 +349,12 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
    * scelta a tavolino (il primo valore scelto così era cinque volte troppo alto: tutto sbatteva).
    */
   const startSqueezeTest = useCallback(() => {
-    testRef.current = { on: true, peak: 0 };
+    testRef.current = { on: true, peak: 0,
+                        base: needleRef.current.lastRaw,
+                        baseOffset: needleRef.current.offset,
+                        congelato: false,
+                        preOffset: needleRef.current.offset,
+                        preSec: optsRef.current.nowSec?.() ?? 0 };
     setState(p => ({ ...p, testing: 'squeeze', testPeak: 0, squeezeOk: null }));
     setTimeout(() => {
       testRef.current.on = false;
@@ -305,7 +382,12 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
    * ritoccasse, la taratura fatta con la stretta verrebbe disfatta da ogni verifica.
    */
   const startBreathTest = useCallback(() => {
-    testRef.current = { on: true, peak: 0 };
+    testRef.current = { on: true, peak: 0,
+                        base: needleRef.current.lastRaw,
+                        baseOffset: needleRef.current.offset,
+                        congelato: false,
+                        preOffset: needleRef.current.offset,
+                        preSec: optsRef.current.nowSec?.() ?? 0 };
     setState(p => ({ ...p, testing: 'breath', testPeak: 0, breathOk: null }));
     setTimeout(() => {
       testRef.current.on = false;
@@ -323,5 +405,28 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
   return {
     ...state, connect, disconnect, resetTotal, captureRaw, applyTaPoints, clearTaCalibration,
     setConfig, addPointFromReference, startSqueezeTest, startBreathTest, setSensTrim, resetToSet,
+    /** Diagnosi: quanto si è mosso l'ago fra due istanti, e se c'era agitazione. */
+    escursione: (daSec: number, aSec: number) => {
+      // SPAN = massimo − minimo: è QUANTO l'ago si è mosso. La sola distanza da SET non lo dice
+      // — un ago parcheggiato a 0,35 e immobile dà « 0,35 » e sembra essersi mosso tanto.
+      // Errore mio nella prima diagnosi, che mi ha fatto leggere male una seduta intera.
+      let max = -Infinity, min = Infinity, motion = false, n = 0, tMax = 0, tMin = 0;
+      for (const p of tracciaRef.current) {
+        if (p.t < daSec || p.t > aSec) continue;
+        n++;
+        if (p.dev > max) { max = p.dev; tMax = p.t; }
+        if (p.dev < min) { min = p.dev; tMin = p.t; }
+        if (p.motion) motion = true;
+      }
+      if (!n) return { span: 0, da: 0, a: 0, motion: false, campioni: 0, tMax: 0, tMin: 0, deriva: false };
+      // DERIVA o REAZIONE? Una reazione parte, culmina e RIENTRA: il culmine sta DENTRO la
+      // finestra. Una deriva va in una direzione sola, e allora massimo e minimo cadono ai due
+      // BORDI — è così che si riconosce senza doverla guardare. (Misurato in seduta: sette item
+      // col picco tutti a −920/−966 ms, cioè tutti sul bordo sinistro: era il braccio che
+      // rientrava, non l'ago che reagiva.)
+      const bordo = 0.15;   // s di tolleranza sui bordi
+      const suiBordi = (Math.min(tMax, tMin) <= daSec + bordo) && (Math.max(tMax, tMin) >= aSec - bordo);
+      return { span: max - min, da: min, a: max, motion, campioni: n, tMax, tMin, deriva: suiBordi };
+    },
   };
 }

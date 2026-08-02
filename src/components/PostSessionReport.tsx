@@ -446,7 +446,7 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
       setTimeout(() => setNextCsSaved(false), 1800);
     } catch (e) {
       console.error('Failed to save Next C/S', e);
-      alert('Failed to save Next C/S.');
+      alert(L('Impossibile salvare il Next C/S.', 'Impossible d\'enregistrer le Next C/S.', 'Failed to save Next C/S.', 'No se pudo guardar el Next C/S.', 'Kunde inte spara Next C/S.'));
     }
   };
 
@@ -1431,7 +1431,7 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
           <textarea
             value={nextCs}
             onChange={(e) => setNextCs(e.target.value)}
-            placeholder="Champ rempli par l'auditeur..."
+            placeholder={L('Campo compilato dall\'auditor…', "Champ rempli par l'auditeur…", 'Filled in by the auditor…', 'Campo rellenado por el auditor…', 'Fylls i av auditören…')}
             className="w-full min-h-20 bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100 font-mono outline-none focus:border-cyan-500"
           />
         </div>

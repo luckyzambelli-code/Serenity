@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { pick5 } from '../i18n5';
 import { Calendar, Clock, Activity, Trash2, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { SessionSummary, getSessionsByProfile, saveSession, UserProfile, getSessionPdfAsync, deleteSessionPdfAsync, deleteSession } from '../lib/storage';
 import { isServerAvailable, serverGetSessions, serverSaveSessions, serverSessionPdfUrl, serverDeleteSession } from '../lib/serverStorage';
@@ -24,6 +25,9 @@ async function pdfToBlob(pdf: string): Promise<Blob> {
 
 export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps) {
   const { t } = useI18n();
+  /** Cinque lingue, come il resto del programma. */
+  const L = (it: string, fr: string, en: string, es: string, sv: string) =>
+    pick5(lang as string, it, fr, en, es, sv);
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [pdfMap, setPdfMap] = useState<Record<string, boolean>>({});
   const [dateFilter, setDateFilter]       = useState('');
@@ -158,7 +162,7 @@ export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps
         return;
       }
     }
-    alert('PDF non disponible.');
+    alert(L('PDF non disponibile.', 'PDF non disponible.', 'PDF unavailable.', 'PDF no disponible.', 'PDF ej tillgänglig.'));
   };
 
   const downloadPdf = async (s: SessionSummary) => {
@@ -170,7 +174,7 @@ export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps
       const resp = await fetch(serverSessionPdfUrl(s.id));
       if (resp.ok) blob = await resp.blob();
     }
-    if (!blob) { alert('PDF non disponible.'); return; }
+    if (!blob) { alert(L('PDF non disponibile.', 'PDF non disponible.', 'PDF unavailable.', 'PDF no disponible.', 'PDF ej tillgänglig.')); return; }
     const d = new Date(s.date);
     const fn = `${(s.pcName||'PC').replace(/\s+/g,'_')}_${d.toISOString().split('T')[0]}_${d.toTimeString().slice(0,8).replace(/:/g,'-')}.pdf`
       .replace(/[^a-zA-Z0-9._-]/g,'_');
@@ -274,7 +278,7 @@ export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps
               {/* Recherche / filtres — clairement visibles */}
               <div className="mb-2 flex items-center gap-2 text-white/70">
                 <Search size={14} strokeWidth={2} />
-                <span className="text-[11px] font-mono uppercase tracking-widest">{lang === 'it' ? 'Ricerca' : lang === 'es' ? 'Búsqueda' : lang === 'sv' ? 'Sök' : lang === 'en' ? 'Search' : 'Recherche'}</span>
+                <span className="text-[11px] font-mono uppercase tracking-widest">{L('Ricerca', 'Recherche', 'Search', 'Búsqueda', 'Sök')}</span>
                 <span className="text-[10px] font-mono text-white/35">· {filteredSessions.length}/{sessions.length}</span>
               </div>
               <div className="mb-4 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
@@ -371,7 +375,7 @@ export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps
                               </button>
                             </>
                           )}
-                          <button onClick={async e => { e.stopPropagation(); if (confirm('Supprimer cette session ?')) await deleteSessionById(session.id); }}
+                          <button onClick={async e => { e.stopPropagation(); if (confirm(L('Eliminare questa seduta?', 'Supprimer cette séance ?', 'Delete this session?', '¿Eliminar esta sesión?', 'Ta bort denna session?'))) await deleteSessionById(session.id); }}
                             title={t('tip_delete') as string}
                             className="flex items-center gap-1 text-xs font-semibold px-2 py-1 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 border border-red-200 shadow-sm transition-colors">
                             <Trash2 size={13}/>

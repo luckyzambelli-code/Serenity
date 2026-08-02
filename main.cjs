@@ -69,6 +69,26 @@ ipcMain.handle('ble-set-emeter-mode', (_e, isEmeter) => {
   return { ok: true };
 });
 
+// ── CORPUS ────────────────────────────────────────────────────────────────────
+// L'archivio delle esperienze, in JSON Lines, in una cartella SUA — non fra i dati di sessione:
+// così si copia, si spedisce e si dà in pasto a un'AI senza portarsi dietro il resto.
+// Si scrive in AGGIUNTA e mai si riscrive: due processi che scrivessero insieme non si
+// corrompono a vicenda, e un file di 200 MB non va riletto per aggiungere una riga.
+const CORPUS_DIR = path.join(os.homedir(), 'EQUILIBRIUM', 'corpus');
+ipcMain.handle('corpus-append', (_e, { file, line }) => {
+  try {
+    if (typeof file !== 'string' || typeof line !== 'string') return { ok: false, error: 'bad args' };
+    // Nome di file imposto dal chiamante: si accetta SOLO la forma attesa, o un percorso
+    // costruito ad arte potrebbe far scrivere altrove.
+    if (!/^[0-9]{4}-[0-9]{2}\.jsonl$/.test(file)) return { ok: false, error: 'bad file name' };
+    if (line.includes('\n')) return { ok: false, error: 'newline in record' };
+    fs.mkdirSync(CORPUS_DIR, { recursive: true });
+    fs.appendFileSync(path.join(CORPUS_DIR, file), line + '\n', 'utf8');
+    return { ok: true };
+  } catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
+});
+ipcMain.handle('corpus-folder', () => CORPUS_DIR);
+
 // CONN-76: native clipboard read — navigator.clipboard.readText() is blocked in
 // the Electron renderer, so "paste from clipboard" never pasted. Read via the
 // main process instead.
@@ -260,12 +280,39 @@ function createWindow() {
     details => details.deviceType === 'hid' && estLeMeter(details.device));
 
   // Notify the renderer when SM moves or resizes so TM can follow
+  // Chiusura con una seduta in corso: si FERMA e si chiede. Vale per la crocetta, per Cmd+Q e
+  // per « Esci » dal menu — tutti passano di qui.
+  win.on('close', (e) => {
+    if (_closeConfirmed || !_sessionActive || win.isDestroyed()) return;
+    e.preventDefault();
+    win.webContents.send('app-close-request');
+  });
+
   win.on('move',   () => { if (!win.isDestroyed()) win.webContents.send('window-moved'); });
   win.on('resize', () => { if (!win.isDestroyed()) win.webContents.send('window-resized'); });
 
   win.loadURL(`http://127.0.0.1:${PORT}/index.html`).catch(console.error);
 }
 
+
+// ── CHIUSURA CON UNA SEDUTA APERTA ───────────────────────────────────────────
+// Uscire mentre si audita perdeva tutto senza una parola. Ma la seduta VIVE nel renderer: qui
+// non c'è niente da salvare, si può solo FERMARE la chiusura e chiedere. Il renderer mostra la
+// domanda e, quando ha finito (salvato o no), dice di procedere.
+//
+// Il flag lo tiene il renderer perché è lui a sapere se una seduta è in corso; qui si conserva
+// solo l'ultimo valore ricevuto — e si azzera se la finestra sparisce, o una chiusura fallita
+// lascerebbe l'applicazione impossibile da chiudere.
+let _sessionActive = false;
+let _closeConfirmed = false;
+ipcMain.handle('session-active', (_e, attiva) => { _sessionActive = !!attiva; return { ok: true }; });
+ipcMain.handle('close-confirmed', () => {
+  _closeConfirmed = true;
+  _sessionActive = false;
+  const w = BrowserWindow.getAllWindows()[0];
+  if (w && !w.isDestroyed()) w.close();
+  return { ok: true };
+});
 
 // ── IPC: save session PDF ────────────────────────────────────────────────────
 ipcMain.handle('save-pdf-to-disk', async (_e, { filename, base64 }) => {
@@ -317,7 +364,15 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-app.on('before-quit', () => {
+// Cmd+Q non passa da `close` finché la finestra non accetta di chiudersi: si intercetta anche
+// qui, o l'uscita da tastiera aggirerebbe la domanda.
+app.on('before-quit', (e) => {
+  const w = BrowserWindow.getAllWindows()[0];
+  if (!_closeConfirmed && _sessionActive && w && !w.isDestroyed()) {
+    e.preventDefault();
+    w.webContents.send('app-close-request');
+    return;
+  }
   stopTunnel();
   if (_httpServer) { _httpServer.closeAllConnections?.(); _httpServer.close(); _httpServer = null; }
 });

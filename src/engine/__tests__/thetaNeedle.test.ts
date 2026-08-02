@@ -355,3 +355,38 @@ describe('resetToSet — il clic sul quadrante', () => {
     expect(dopo.totalTa).toBe(0);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+// UNA CADUTA NON È AGITAZIONE
+// Misurando la sola escursione, ogni fall un po' seria (mezzo quadrante in due secondi — cioè
+// quello che una fall È) veniva presa per movimento corporeo: l'episodio veniva abbandonato e
+// col solo meter non compariva MAI una reazione. Ciò che distingue è il senso di marcia.
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+describe('ThetaNeedle — agitazione contro caduta', () => {
+  it('una FALL ampia e rapida NON è movimento corporeo', () => {
+    const n = new ThetaNeedle();
+    n.push(RIPOSO);
+    // Mezzo quadrante in un secondo e mezzo, in una sola direzione: è una fall.
+    const giu = RIPOSO - perOffset(0.6);
+    for (let i = 1; i <= 90; i++) n.push(RIPOSO + (giu - RIPOSO) * (i / 90));
+    expect(n.bodyMotion).toBe(false);
+    expect(Math.abs(dev(n.offset))).toBeGreaterThan(0.4);   // l'ago è DAVVERO caduto
+  });
+
+  it('un BLOW DOWN, ancora più ampio, resta una lettura', () => {
+    const n = new ThetaNeedle();
+    n.push(RIPOSO);
+    const giu = RIPOSO - perOffset(0.95);
+    for (let i = 1; i <= 120; i++) n.push(RIPOSO + (giu - RIPOSO) * (i / 120));
+    expect(n.bodyMotion).toBe(false);
+  });
+
+  it('ma andare e TORNARE resta agitazione', () => {
+    const n = new ThetaNeedle();
+    n.push(RIPOSO);
+    const giu = RIPOSO - perOffset(0.6);
+    for (let i = 1; i <= 45; i++) n.push(RIPOSO + (giu - RIPOSO) * (i / 45));   // giù
+    for (let i = 1; i <= 45; i++) n.push(giu + (RIPOSO - giu) * (i / 45));      // e su
+    expect(n.bodyMotion).toBe(true);
+  });
+});

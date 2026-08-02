@@ -39,9 +39,23 @@ export class VoiceToneAnalyzer {
     let sum = 0;
     for (let i = 0; i < this.buffer.length; i++) sum += this.buffer[i] ** 2;
     const rms = Math.sqrt(sum / this.buffer.length);
+    // QUANDO SI È SMESSO DI PARLARE. Il riconoscitore vocale non lo dice: consegna la frase a
+    // pausa finita, cioè quasi un secondo dopo. Ma l'instant read dell'ago avviene alla FINE
+    // DELLA PAROLA, e datare l'item all'arrivo della trascrizione lo sposta fuori finestra —
+    // misurato in seduta: letture a −600, −1000, −1200 ms dall'item, tutte scartate.
+    // Il microfono invece lo sa: l'ultimo istante con voce è la fine della parola.
+    if (rms > SILENCE_THRESHOLD) this.lastVoiceMs = performance.now();
     this.samples.push(rms);
     if (this.samples.length > 80) this.samples.shift(); // garder 4s
   }
+
+  /** Ultimo istante (performance.now()) in cui si è sentita voce: la FINE della parola.
+   *  0 se non si è ancora sentito niente. */
+  lastVoiceMs = 0;
+
+  /** La fine della parola, per chi deve datare un item. Vale per QUALUNQUE motore di
+   *  trascrizione, perché non viene dal motore ma dal microfono. */
+  speechEndMs(): number { return this.lastVoiceMs; }
 
   analyze(): ToneResult | null {
     if (!this.analyser || !this.buffer) return null;

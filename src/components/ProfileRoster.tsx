@@ -74,7 +74,11 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
   }, [tick]);
 
   const fmtDate = (ts: number) => ts ? new Date(ts).toLocaleDateString(lang || 'fr', { day: '2-digit', month: 'short' }) : '—';
-  const L = (it: string, fr: string, en?: string) => lang === 'it' ? it : lang === 'en' ? (en || fr) : fr;
+  // CINQUE lingue, come tutto il resto del programma. L'helper di prima ne conosceva TRE e
+  // ripiegava sul FRANCESE: in inglese, spagnolo e svedese metà dei bottoni di questo pannello
+  // restavano in francese (« ENREGISTRER » segnalato dall'utente). L'ordine è quello di pick5.
+  const L = (it: string, fr: string, en: string, es: string, sv: string) =>
+    pick5(lang as string, it, fr, en, es, sv);
 
   // ── camera / photo ─────────────────────────────────────────────────────────
   const stopCam = () => {
@@ -85,7 +89,7 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
       const st = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
       streamRef.current = st; setCamOn(true);
       requestAnimationFrame(() => { if (videoRef.current) { videoRef.current.srcObject = st; videoRef.current.play().catch(() => {}); } });
-    } catch { alert(L('Camera non disponibile', 'Caméra indisponible')); }
+    } catch { alert(L('Camera non disponibile', 'Caméra indisponible', 'Camera unavailable', 'Cámara no disponible', 'Kameran är inte tillgänglig')); }
   };
   const capture = () => {
     const v = videoRef.current; if (!v) return;
@@ -149,8 +153,8 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
     }
     closeEdit(); refresh();
   };
-  const removeAuditor = (id: string) => { if (confirm(L('Eliminare questo auditor?', 'Supprimer cet auditeur ?'))) { deleteProfile(id); serverDeleteProfile(id).catch(() => {}); refresh(); } };
-  const removePc = (id: string) => { if (confirm(L('Eliminare questo preclear?', 'Supprimer ce préclair ?'))) { deletePcProfile(id); serverDeletePcProfile(id).catch(() => {}); refresh(); } };
+  const removeAuditor = (id: string) => { if (confirm(L('Eliminare questo auditor?', 'Supprimer cet auditeur ?', 'Delete this auditor?', '¿Eliminar este auditor?', 'Ta bort denna auditör?'))) { deleteProfile(id); serverDeleteProfile(id).catch(() => {}); refresh(); } };
+  const removePc = (id: string) => { if (confirm(L('Eliminare questo preclear?', 'Supprimer ce préclair ?', 'Delete this preclear?', '¿Eliminar este preclear?', 'Ta bort denna preclear?'))) { deletePcProfile(id); serverDeletePcProfile(id).catch(() => {}); refresh(); } };
 
   // ── styles ────────────────────────────────────────────────────────────────
   // MONOCHROME : plus de bleu (auditeur) ni d'ambre (PC) → tout en verre charcoal + encre
@@ -190,10 +194,10 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
 
       <div style={{ textAlign: 'center', position: 'relative', flexShrink: 0 }}>
         <h1 style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: 22, letterSpacing: '0.28em', color: '#eef4ff', textShadow: 'none' }}>
-          {L('AUDITOR & PC', 'AUDITEURS & PC', 'AUDITORS & PCs')}
+          {L('AUDITOR & PC', 'AUDITEURS & PC', 'AUDITORS & PCs', 'AUDITORES & PC', 'AUDITÖRER & PC')}
         </h1>
         <p style={{ fontSize: 11, letterSpacing: '0.34em', color: 'rgba(200,214,234,0.6)', marginTop: 6 }}>
-          {L('GESTIONE · SCEGLI O CREA', 'GESTION · CHOISIR OU CRÉER', 'MANAGE · SELECT OR CREATE')}
+          {L('GESTIONE · SCEGLI O CREA', 'GESTION · CHOISIR OU CRÉER', 'MANAGE · SELECT OR CREATE', 'GESTIÓN · ELEGIR O CREAR', 'HANTERA · VÄLJ ELLER SKAPA')}
         </p>
         <button onClick={() => setShowRoster(false)} title={pick5(lang, 'Chiudi', 'Fermer', 'Close', 'Cerrar', 'Stäng')} style={{ position: 'absolute', right: 0, top: -4, width: 38, height: 38, borderRadius: 10, border: '1px solid rgba(255,255,255,0.22)', background: 'rgba(255,255,255,0.06)', color: 'rgba(240,246,255,0.85)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={20} /></button>
       </div>
@@ -201,7 +205,7 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
       <div style={{ flex: 1, marginTop: 20, borderRadius: 20, padding: 24, overflowY: 'auto', border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 10px 34px rgba(0,0,0,0.45)' }}>
 
         {/* AUDITORS */}
-        <div style={{ fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.26em', color: 'rgba(226,238,255,0.72)', marginBottom: 12 }}>◈ {L('AUDITOR', 'AUDITEURS')} · {auditors.length}</div>
+        <div style={{ fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.26em', color: 'rgba(226,238,255,0.72)', marginBottom: 12 }}>◈ {L('AUDITOR', 'AUDITEURS', 'AUDITORS', 'AUDITORES', 'AUDITÖRER')} · {auditors.length}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 20 }}>
           {auditors.map(p => {
             const active = activeProfile?.id === p.id;
@@ -212,12 +216,12 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.14em', color: 'rgba(226,238,255,0.72)' }}>{p.preferences?.soloMode ? 'AUDITEUR · SOLO' : 'AUDITEUR'}</span>
                     {active
-                      ? <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', color: '#1a1a1f', background: 'rgba(240,246,255,0.92)', padding: '4px 12px', borderRadius: 20, boxShadow: '0 2px 10px rgba(0,0,0,0.35)' }}>✓ {L('ATTIVO', 'ACTIF', 'ACTIVE')}</span>
+                      ? <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', color: '#1a1a1f', background: 'rgba(240,246,255,0.92)', padding: '4px 12px', borderRadius: 20, boxShadow: '0 2px 10px rgba(0,0,0,0.35)' }}>✓ {L('ATTIVO', 'ACTIF', 'ACTIVE', 'ACTIVO', 'AKTIV')}</span>
                       : <span style={{ fontSize: 14, color: 'rgba(200,214,234,0.5)' }}>○</span>}
                   </div>
                   <div style={{ fontSize: 22, fontWeight: 700, color: 'rgba(240,246,255,0.95)', marginTop: 5 }}>{p.name || '—'}</div>
                   <div style={{ marginTop: 7 }}>
-                    <Row l={L('Sessioni', 'Séances')} v={String(countFor.get(p.id) ?? 0)} />
+                    <Row l={L('Sessioni', 'Séances', 'Sessions', 'Sesiones', 'Sessioner')} v={String(countFor.get(p.id) ?? 0)} />
                     <Row l="Langue" v={(p.preferences?.lang || '—').toUpperCase()} />
                   </div>
                   <div style={{ position: 'absolute', right: 10, bottom: 8, display: 'flex', gap: 6 }}>
@@ -230,12 +234,12 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
             );
           })}
           <div onClick={() => setEdit({ kind: 'auditor', name: '' })} style={addCard('auditor')}>
-            <Plus size={36} strokeWidth={1.4} /><div style={{ fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.16em', marginTop: 6 }}>{L('NUOVO AUDITOR', 'NOUVEL AUDITEUR')}</div>
+            <Plus size={36} strokeWidth={1.4} /><div style={{ fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.16em', marginTop: 6 }}>{L('NUOVO AUDITOR', 'NOUVEL AUDITEUR', 'NEW AUDITOR', 'NUEVO AUDITOR', 'NY AUDITÖR')}</div>
           </div>
         </div>
 
         {/* PRECLEARS */}
-        <div style={{ fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.26em', color: AMBER, margin: '26px 0 12px' }}>◈ {L('PRECLEAR', 'PRÉCLAIRS')} · {regPcs.length + derivedPcs.length}</div>
+        <div style={{ fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.26em', color: AMBER, margin: '26px 0 12px' }}>◈ {L('PRECLEAR', 'PRÉCLAIRS', 'PRECLEARS', 'PRECLEARS', 'PRECLEARS')} · {regPcs.length + derivedPcs.length}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 20 }}>
           {regPcs.map(pc => {
             const sel = (pcName || '').trim().toLowerCase() === pc.name.trim().toLowerCase();
@@ -244,13 +248,13 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
                 <div style={phCol(true)}>{pc.photo ? <img src={pc.photo} alt="" style={avatar(true)} /> : <div style={avatar(true)}><UserRound size={28} style={{ color: 'rgba(240,246,255,0.85)' }} /></div>}</div>
                 <div style={{ flex: 1, padding: '13px 15px', position: 'relative' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.14em', color: AMBER }}>{L('PRECLEAR', 'PRÉCLAIR')}</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.14em', color: AMBER }}>{L('PRECLEAR', 'PRÉCLAIR', 'PRECLEAR', 'PRECLEAR', 'PRECLEAR')}</span>
                     {sel
-                      ? <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', color: '#1a1a1f', background: AMBER, padding: '4px 12px', borderRadius: 20, boxShadow: '0 2px 10px rgba(0,0,0,0.35)' }}>✓ {L('SCELTO', 'CHOISI', 'CHOSEN')}</span>
+                      ? <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', color: '#1a1a1f', background: AMBER, padding: '4px 12px', borderRadius: 20, boxShadow: '0 2px 10px rgba(0,0,0,0.35)' }}>✓ {L('SCELTO', 'CHOISI', 'CHOSEN', 'ELEGIDO', 'VALD')}</span>
                       : <span style={{ fontSize: 14, color: 'rgba(200,214,234,0.5)' }}>○</span>}
                   </div>
                   <div style={{ fontSize: 22, fontWeight: 700, color: 'rgba(240,246,255,0.95)', marginTop: 5 }}>{pc.name}</div>
-                  <div style={{ marginTop: 7 }}><Row l={L('Creato', 'Créé')} v={fmtDate(pc.createdAt)} /></div>
+                  <div style={{ marginTop: 7 }}><Row l={L('Creato', 'Créé', 'Created', 'Creado', 'Skapad')} v={fmtDate(pc.createdAt)} /></div>
                   <div style={{ position: 'absolute', right: 10, bottom: 8, display: 'flex', gap: 6 }}>
                     <button onClick={(e) => { e.stopPropagation(); setEdit({ kind: 'pc', id: pc.id, name: pc.name, photo: pc.photo, sex: pc.sex }); }} title={pick5(lang, 'Modifica', 'Modifier', 'Edit', 'Editar', 'Redigera')} style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid rgba(255,255,255,0.22)', background: 'rgba(255,255,255,0.06)', color: 'rgba(240,246,255,0.8)', cursor: 'pointer' }}><Pencil size={12} /></button>
                     <button onClick={(e) => { e.stopPropagation(); removePc(pc.id); }} title={pick5(lang, 'Elimina', 'Supprimer', 'Delete', 'Eliminar', 'Ta bort')} style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.04)', color: 'rgba(240,246,255,0.6)', cursor: 'pointer' }}><Trash2 size={12} /></button>
@@ -266,19 +270,19 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
                 <div style={phCol(true)}>{pc.photo ? <img src={pc.photo} alt="" style={avatar(true)} /> : <div style={avatar(true)}><UserRound size={28} style={{ color: 'rgba(240,246,255,0.85)' }} /></div>}</div>
                 <div style={{ flex: 1, padding: '13px 15px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.14em', color: AMBER }}>{L('PRECLEAR · STORICO', 'PRÉCLAIR · HISTO')}</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.14em', color: AMBER }}>{L('PRECLEAR · STORICO', 'PRÉCLAIR · HISTO', 'PRECLEAR · HISTORY', 'PRECLEAR · HISTORIAL', 'PRECLEAR · HISTORIK')}</span>
                     {sel
-                      ? <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', color: '#1a1a1f', background: AMBER, padding: '4px 12px', borderRadius: 20, boxShadow: '0 2px 10px rgba(0,0,0,0.35)' }}>✓ {L('SCELTO', 'CHOISI', 'CHOSEN')}</span>
+                      ? <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', color: '#1a1a1f', background: AMBER, padding: '4px 12px', borderRadius: 20, boxShadow: '0 2px 10px rgba(0,0,0,0.35)' }}>✓ {L('SCELTO', 'CHOISI', 'CHOSEN', 'ELEGIDO', 'VALD')}</span>
                       : <span style={{ fontSize: 14, color: 'rgba(200,214,234,0.5)' }}>○</span>}
                   </div>
                   <div style={{ fontSize: 22, fontWeight: 700, color: 'rgba(240,246,255,0.95)', marginTop: 5 }}>{pc.name}</div>
-                  <div style={{ marginTop: 7 }}><Row l={L('Sessioni', 'Séances')} v={String(pc.count)} /><Row l={L('Ultima', 'Dernière')} v={fmtDate(pc.last)} /></div>
+                  <div style={{ marginTop: 7 }}><Row l={L('Sessioni', 'Séances', 'Sessions', 'Sesiones', 'Sessioner')} v={String(pc.count)} /><Row l={L('Ultima', 'Dernière', 'Last', 'Última', 'Senaste')} v={fmtDate(pc.last)} /></div>
                 </div>
               </div>
             );
           })}
           <div onClick={() => setEdit({ kind: 'pc', name: '' })} style={addCard('pc')}>
-            <Plus size={36} strokeWidth={1.4} /><div style={{ fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.16em', marginTop: 6 }}>{L('NUOVO PRECLEAR', 'NOUVEAU PRÉCLAIR')}</div>
+            <Plus size={36} strokeWidth={1.4} /><div style={{ fontFamily: 'monospace', fontSize: 11, letterSpacing: '0.16em', marginTop: 6 }}>{L('NUOVO PRECLEAR', 'NOUVEAU PRÉCLAIR', 'NEW PRECLEAR', 'NUEVO PRECLEAR', 'NY PRECLEAR')}</div>
           </div>
         </div>
       </div>
@@ -288,7 +292,7 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
         <div style={{ position: 'fixed', inset: 0, zIndex: 9100, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ width: 420, borderRadius: 18, padding: 26, background: 'linear-gradient(160deg, rgba(40,40,46,0.96), rgba(26,26,30,0.94))', border: '1.5px solid rgba(255,255,255,0.18)', boxShadow: '0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12)' }}>
             <div style={{ fontFamily: 'monospace', fontSize: 13, letterSpacing: '0.16em', color: 'rgba(240,246,255,0.92)', marginBottom: 18 }}>
-              {edit.id ? L('MODIFICA', 'MODIFIER') : L('NUOVO', 'NOUVEAU')} · {edit.kind === 'pc' ? L('PRECLEAR', 'PRÉCLAIR') : 'AUDITEUR'}
+              {edit.id ? L('MODIFICA', 'MODIFIER', 'EDIT', 'MODIFICAR', 'ÄNDRA') : L('NUOVO', 'NOUVEAU', 'NEW', 'NUEVO', 'NY')} · {edit.kind === 'pc' ? L('PRECLEAR', 'PRÉCLAIR', 'PRECLEAR', 'PRECLEAR', 'PRECLEAR') : 'AUDITEUR'}
             </div>
             {/* photo */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
@@ -301,17 +305,17 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
                 {/* CONN-101: Import is the primary, prominent way to add a photo. */}
                 <button onClick={() => fileRef.current?.click()} style={{ ...btn('#e6ecf5'), padding: '10px 18px', fontSize: 13 }}>
-                  <Upload size={16} /> {L('Importa foto', 'Importer une photo', 'Import photo')}
+                  <Upload size={16} /> {L('Importa foto', 'Importer une photo', 'Import photo', 'Importar foto', 'Importera foto')}
                 </button>
                 {camOn
-                  ? <button onClick={capture} style={btn('#e6ecf5')}><Check size={15} /> {L('Cattura', 'Capturer')}</button>
-                  : <button onClick={startCam} style={btn('#94a3b8')}><Camera size={15} /> {L('Camera', 'Caméra')}</button>}
+                  ? <button onClick={capture} style={btn('#e6ecf5')}><Check size={15} /> {L('Cattura', 'Capturer', 'Capture', 'Capturar', 'Ta bild')}</button>
+                  : <button onClick={startCam} style={btn('#94a3b8')}><Camera size={15} /> {L('Camera', 'Caméra', 'Camera', 'Cámara', 'Kamera')}</button>}
                 <input ref={fileRef} type="file" accept="image/*" onChange={onFile} style={{ display: 'none' }} />
               </div>
             </div>
             {/* name */}
             <input autoFocus value={edit.name} onChange={e => setEdit(p => p ? { ...p, name: e.target.value } : p)}
-              placeholder={L('Nome', 'Nom')} onKeyDown={e => { if (e.key === 'Enter') saveEdit(); }}
+              placeholder={L('Nome', 'Nom', 'Name', 'Nombre', 'Namn')} onKeyDown={e => { if (e.key === 'Enter') saveEdit(); }}
               style={{ width: '100%', marginTop: 18, padding: '11px 13px', borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)', color: 'rgba(240,246,255,0.95)', fontSize: 15, outline: 'none' }} />
             {/* SEX — drives the Tone-Arm clear baseline (man = 3, woman = 2). For the PC
                 always; for the AUDITOR it is used in SOLO sessions (auditor = preclear). */}
@@ -319,11 +323,11 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
               <div style={{ marginTop: 14 }}>
                 <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(200,214,234,0.6)', marginBottom: 7 }}>
                   {edit.kind === 'auditor'
-                    ? L('Sesso · base TA (solo)', 'Sexe · base TA (solo)', 'Sex · TA baseline (solo)')
-                    : L('Sesso · base TA del clear', 'Sexe · base TA du clear', 'Sex · TA clear baseline')}
+                    ? L('Sesso · base TA (solo)', 'Sexe · base TA (solo)', 'Sex · TA baseline (solo)', 'Sexo · base TA (solo)', 'Kön · TA-bas (solo)')
+                    : L('Sesso · base TA del clear', 'Sexe · base TA du clear', 'Sex · TA clear baseline', 'Sexo · base TA del clear', 'Kön · TA-bas för clear')}
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  {([['m', L('Uomo', 'Homme', 'Man'), '3'], ['f', L('Donna', 'Femme', 'Woman'), '2']] as const).map(([val, lbl, ta]) => {
+                  {([['m', L('Uomo', 'Homme', 'Man', 'Hombre', 'Man'), '3'], ['f', L('Donna', 'Femme', 'Woman', 'Mujer', 'Kvinna'), '2']] as const).map(([val, lbl, ta]) => {
                     const on = edit.sex === val;
                     return (
                       <button key={val} onClick={() => setEdit(p => p ? { ...p, sex: val } : p)}
@@ -340,8 +344,8 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
             )}
             {/* actions */}
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-              <button onClick={closeEdit} style={{ ...btn('#94a3b8'), flex: 1, justifyContent: 'center' }}>{L('Annulla', 'Annuler')}</button>
-              <button onClick={saveEdit} disabled={!edit.name.trim()} style={{ ...btn('#e6ecf5'), flex: 1, justifyContent: 'center', opacity: edit.name.trim() ? 1 : 0.4 }}>{L('Salva', 'Enregistrer')}</button>
+              <button onClick={closeEdit} style={{ ...btn('#94a3b8'), flex: 1, justifyContent: 'center' }}>{L('Annulla', 'Annuler', 'Cancel', 'Cancelar', 'Avbryt')}</button>
+              <button onClick={saveEdit} disabled={!edit.name.trim()} style={{ ...btn('#e6ecf5'), flex: 1, justifyContent: 'center', opacity: edit.name.trim() ? 1 : 0.4 }}>{L('Salva', 'Enregistrer', 'Save', 'Guardar', 'Spara')}</button>
             </div>
           </div>
         </div>

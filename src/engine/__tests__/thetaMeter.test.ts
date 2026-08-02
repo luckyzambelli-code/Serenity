@@ -129,3 +129,39 @@ describe('taratura grezzo → ohm', () => {
     expect(linearityError(cal, 9_500_000, 200_000)).toBeGreaterThan(0.5);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+// UN MODELLO CHE NON CONOSCIAMO
+// Esistono più Theta-Meter e il formato non è lo stesso su tutti. Se l'apparecchio trasmette e
+// non capiamo niente, va DETTO — e vanno conservati i byte veri: è con quelli che si scrive la
+// decodifica di quel modello.
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+describe('ThetaMeter — report non riconosciuti', () => {
+  it('conserva i primi report sconosciuti, in esadecimale', () => {
+    const m = new ThetaMeter();
+    m.push([0x07, 0x11, 0x22, 0x33, 0x44, 0, 0, 0]);
+    expect(m.count).toBe(0);
+    expect(m.rejected).toBe(1);
+    expect(m.samples[0]).toBe('07 11 22 33 44 00 00 00');
+  });
+
+  it('non conserva mille volte la stessa riga', () => {
+    const m = new ThetaMeter();
+    for (let i = 0; i < 500; i++) m.push([0x07, 0x11, 0x22, 0x33, 0x44, 0, 0, 0]);
+    expect(m.rejected).toBe(500);
+    expect(m.samples).toHaveLength(1);
+  });
+
+  it('ne tiene un pugno, non un flusso', () => {
+    const m = new ThetaMeter();
+    for (let i = 0; i < 50; i++) m.push([0x07, i, 0x22, 0x33, 0x44, 0, 0, 0]);
+    expect(m.samples.length).toBeLessThanOrEqual(8);
+  });
+
+  it('un report VALIDO non lascia campioni: non c è niente da diagnosticare', () => {
+    const m = new ThetaMeter();
+    m.push([0x01, 0x02, 0x00, 0x10, 0x00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(m.count).toBe(1);
+    expect(m.samples).toHaveLength(0);
+  });
+});
