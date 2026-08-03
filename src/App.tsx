@@ -4180,7 +4180,14 @@ export default function App() {
   // La stretta e il soffio tarano la SENSIBILITÀ del meter guardando dove arriva il SUO ago
   // rispetto al segno di un terzo. Farli col MUSE davanti vorrebbe dire tarare uno strumento
   // guardandone un altro — un errore che non si vede, perché l'ago si muove lo stesso.
-  const provaBoiteInCorso = !!theta.testing && instruments.theta;
+  //
+  // ⚠️ VALE PER TUTTO IL TEMPO IN CUI LA SCHERMATA È APERTA, non solo mentre una prova gira.
+  // Prima si guardava il solo `theta.testing`, che è vero unicamente DOPO aver premuto il
+  // bottone: con i due strumenti e il MUSE scelto, si arrivava davanti a « PRONTO PER LA
+  // SEDUTA · BOÎTES », si stringeva, e l'ago non si muoveva — perché era quello del MUSE, che
+  // alla stretta non risponde. Segnalato in seduta.
+  const provaBoiteInCorso = instruments.theta
+    && (!!theta.testing || (metabolicOpen && !thetaReadyDone));
   const agoPrincipale: ReadSrc =
     provaBoiteInCorso ? 'theta'
     : cicloInCorso ? 'eeg'
