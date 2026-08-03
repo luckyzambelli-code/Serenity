@@ -325,6 +325,17 @@ function LinkDrawer({
               </div>
             )}
           </div>
+          {/* PERCHÉ NON C'È IL METER — a distanza il badge delle boîtes sparisce, e finora
+              spariva SENZA dirlo: chi non sa perché lo cerca, o peggio lo collega dal pannello
+              di taratura e crede di leggere il preclear. Le lattine non viaggiano. */}
+          <div style={{
+            padding: '8px 10px', borderRadius: 6,
+            background: 'rgba(245,158,11,0.07)',
+            border: '1px solid rgba(245,158,11,0.22)' }}>
+            <div style={{ fontSize: 9, lineHeight: 1.55, color: 'rgba(245,158,11,0.85)' }}>
+              {t('remote_no_meter')}
+            </div>
+          </div>
         </div>
       )}
 

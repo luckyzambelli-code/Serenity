@@ -4145,9 +4145,20 @@ export default function App() {
   const instruments = useMemo(
     // In seduta a distanza il MUSE è quello del PRECLEAR: qui conta se ARRIVA l'EEG, non se
     // il Mac dell'auditor ha un casco (non ce l'ha) — vedi remoteMuseConnected.
+    //
+    // ── IL METER NON VIAGGIA ─────────────────────────────────────────────────────────────
+    // Il MUSE arriva a distanza perché l'EEG passa nel canale P2P (RAW_EEG). Le boîtes no:
+    // sono un dispositivo USB su QUESTO Mac, e misurano soltanto chi ne tiene le lattine in
+    // mano. In una seduta davvero a distanza il preclear è a casa sua: il meter collegato
+    // qui non misura NESSUNO — l'ago si muove lo stesso (rumore, la mano dell'auditor) e chi
+    // guarda crede di leggere il preclear.
+    //
+    // Vale invece nel SATELLITE (`satelliteMode`): lì il preclear è nella stessa stanza e il
+    // telefono fa solo da camera/microfono — le lattine sono nelle sue mani, il meter serve.
     () => ({ muse: museConnection === 'connected' || remoteMuseConnected,
-             theta: theta.status === 'connected' }),
-    [museConnection, remoteMuseConnected, theta.status]);
+             theta: theta.status === 'connected'
+                    && (appMode === 'local' || satelliteMode) }),
+    [museConnection, remoteMuseConnected, theta.status, appMode, satelliteMode]);
   // Il gestore del worker si aggancia UNA volta sola (deps vuote): senza specchio in ref
   // leggerebbe per sempre gli strumenti collegati all'avvio.
   const instrumentsRef = useRef(instruments); instrumentsRef.current = instruments;
@@ -4426,7 +4437,9 @@ export default function App() {
     // Prima stava in handleStart, cioe' DOPO la schermata di prontezza: e quella, senza Muse,
     // mostrava la propria richiesta di connessione: bisognava saltarla per arrivare alla
     // scelta. Qui invece si decide con che cosa si audita, e solo dopo si prepara la seduta.
-    if (appModeRef.current !== 'auditor'
+    // Il satellite gira sul ruolo di rete 'auditor' ma è una seduta nella stessa stanza:
+    // anche lì si sceglie con che cosa si audita (MUSE, boîtes, o tutti e due).
+    if ((appModeRef.current !== 'auditor' || satelliteModeRef.current)
         && museConnection !== 'connected' && !thetaConnectedRef.current) {
       setMuseHint(true);
       return;
@@ -5015,7 +5028,12 @@ export default function App() {
               Gli strumenti da collegare stanno TUTTI qui, in un unico posto: prima il meter
               si collegava da sotto il TONE ARM, cioè da tutt'altra parte. Ciò che riguarda le
               boîtes compare solo quando il meter è collegato — e altrettanto per il MUSE. */}
-          {!theta.unavailable && appMode === 'local' && (
+          {/* SATELLITE: il preclear è nella STESSA stanza, il telefono fa solo camera/micro —
+              le lattine sono nelle sue mani e il meter va collegato qui come in locale. Prima
+              la condizione era il solo `appMode === 'local'`, e siccome il satellite gira sul
+              ruolo 'auditor' il badge spariva: non c'era ALCUN modo di collegare il meter in
+              una seduta satellite. A distanza vera resta nascosto (vedi `instruments`). */}
+          {!theta.unavailable && (appMode === 'local' || satelliteMode) && (
             <div
               // Il badge COMMUTA: collega se staccato, SCOLLEGA se collegato. Prima collegava
               // soltanto, quindi un clic per sbaglio era senza ritorno.
