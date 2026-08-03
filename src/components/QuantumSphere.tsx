@@ -38,23 +38,6 @@ interface QuantumSphereProps {
   releaseActive?: boolean;
   /** Style du Floating Needle (engine/FloatGenerator). Défaut 'normal'. */
   fnMode?: FnMode;
-  /** ── QUALE AGO, quando ci sono ENTRAMBI gli strumenti ────────────────────────────────────
-   *  Si mostra un ago solo (due confondono), ma quale lo sceglie l'AUDITOR: i due misurano cose
-   *  diverse — su 89 item ne hanno letto uno solo insieme, κ = −0,09 — e finché non si sa quale
-   *  segua la carica del preclear, sceglierlo al suo posto sarebbe chiudere di nascosto una
-   *  questione aperta. Il selettore sta sotto il perno, dove si guarda già.
-   *  `bothInstruments` false → niente selettore: con uno strumento solo non c'è scelta. */
-  bothInstruments?: boolean;
-  pickedNeedle?: 'eeg' | 'theta';
-  onPickNeedle?: (k: 'eeg' | 'theta') => void;
-  /** Un ciclo CONTACT/NULL è in corso: gira sull'EEG, quindi l'ago è per forza quello del MUSE
-   *  e il METER non si può scegliere. La scelta dell'auditor NON si perde — torna a fine ciclo. */
-  cycleLocked?: boolean;
-  /** QUALE ago è imposto mentre è bloccato: il MUSE durante un ciclo (gira sull'EEG), le
-   *  boîtes durante la prova della stretta e del soffio (tara la LORO sensibilità). */
-  cycleLockedPick?: 'eeg' | 'theta';
-  /** Perché è bloccato, per il tooltip. */
-  cycleLockedWhy?: string;
   /** APERÇU F/N : force le float (pour régler le style sans MUSE). Défaut false. */
 }
 
@@ -127,8 +110,6 @@ export function QuantumSphere({
   showColorBands = true,
   showTrail = true,
   releaseActive = false,
-  bothInstruments = false, pickedNeedle = 'theta', onPickNeedle,
-  cycleLocked = false, cycleLockedPick = 'eeg', cycleLockedWhy,
   fnMode = 'normal' }: QuantumSphereProps) {
   const { t } = useI18n();
   const isLightTheme = useUiStore(s => s.isLightTheme);
@@ -642,53 +623,6 @@ export function QuantumSphere({
         {/* ── Pivot hub ── */}
         <circle cx={PX} cy={PY} r={14} fill={hubFill} stroke={hubStroke} strokeWidth="1.5"/>
         <circle cx={PX} cy={PY} r={5}  fill={isLightTheme ? '#475569' : 'rgba(255,255,255,0.95)'}/>
-
-        {/* ── QUALE AGO ────────────────────────────────────────────────────────────────────
-            Un ago solo, ma QUALE si sceglie a mano. I due strumenti misurano cose diverse —
-            su 89 item hanno letto lo stesso item una volta (κ = −0,09) — e non c'è ancora
-            niente che dica quale abbia ragione: sceglierlo al posto dell'auditor sarebbe
-            decidere di nascosto una questione aperta.
-            Compare SOLO con entrambi collegati: con uno solo non c'è nulla da scegliere. */}
-        {onPickNeedle && showEegNeedle !== undefined && bothInstruments && (() => {
-          const W = 96, H = 30, GAP = 8, Y = PY + 18;
-          const opts: { k: 'eeg' | 'theta'; lbl: string; col: string }[] = [
-            { k: 'eeg',   lbl: 'MUSE',  col: '#8ab4ff' },
-            { k: 'theta', lbl: 'METER', col: '#fbbf24' },
-          ];
-          return (
-            <g>
-              {opts.map((o, i) => {
-                const x = PX + (i === 0 ? -W - GAP / 2 : GAP / 2);
-                // Durante un ciclo l'ago È quello del MUSE: il METER non si può scegliere, e
-                // si vede che non si può — spento, non semplicemente inefficace al clic.
-                const bloccato = cycleLocked && o.k !== cycleLockedPick;
-                const on = !bloccato && (cycleLocked ? o.k === cycleLockedPick : pickedNeedle === o.k);
-                return (
-                  <g key={o.k} style={{ cursor: bloccato ? 'not-allowed' : 'pointer' }}
-                     opacity={bloccato ? 0.35 : 1}
-                     onClick={e => { e.stopPropagation(); if (!bloccato) onPickNeedle(o.k); }}>
-                    {bloccato && cycleLockedWhy && <title>{cycleLockedWhy}</title>}
-                    <rect x={x} y={Y} width={W} height={H} rx={9}
-                          fill={on ? o.col : 'rgba(0,0,0,0.35)'}
-                          fillOpacity={on ? 0.18 : 1}
-                          stroke={on ? o.col : 'rgba(255,255,255,0.22)'} strokeWidth={on ? 2 : 1}/>
-                    <text x={x + W / 2} y={Y + H / 2 + 6} textAnchor="middle"
-                          fill={on ? o.col : 'rgba(226,238,255,0.55)'}
-                          fontSize="16" fontFamily="var(--font-sans)" fontWeight={on ? 700 : 500}
-                          letterSpacing="1.5" style={{ pointerEvents: 'none' }}>
-                      {o.lbl}
-                    </text>
-                    {/* Barra sul bottone spento: dice « non si può », non « non è selezionato ». */}
-                    {bloccato && (
-                      <line x1={x + 8} y1={Y + H / 2} x2={x + W - 8} y2={Y + H / 2}
-                            stroke="rgba(226,238,255,0.55)" strokeWidth={1.5}/>
-                    )}
-                  </g>
-                );
-              })}
-            </g>
-          );
-        })()}
 
         {/* Reaction label REMOVED (see note above) — reactions are shown in the top data-stack. */}
 

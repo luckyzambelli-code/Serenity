@@ -5864,17 +5864,6 @@ export default function App() {
                 // non si scrive.
                 showEegNeedle={agoPrincipale === 'eeg' && instruments.muse}
                 needleReactionKey={agoPrincipale === 'theta' ? thetaReactionKey : needleReactionKey}
-                bothInstruments={instruments.muse && instruments.theta}
-                pickedNeedle={agoScelto}
-                onPickNeedle={setAgoScelto}
-                cycleLocked={cicloInCorso || provaBoiteInCorso}
-                cycleLockedPick={provaBoiteInCorso ? 'theta' : 'eeg'}
-                cycleLockedWhy={LC(
-                  'Ciclo in corso: gira sull\'EEG, quindi l\'ago è quello del MUSE',
-                  'Cycle en cours : il tourne sur l\'EEG, donc l\'aiguille est celle du MUSE',
-                  'Cycle running: it runs on the EEG, so the needle is the MUSE one',
-                  'Ciclo en curso: gira sobre el EEG, así que la aguja es la del MUSE',
-                  'Cykel pågår: den går på EEG, så nålen är MUSE:s')}
                 asIsnessState={asIsnessState}
                 onClick={resetNeedle}
                 showTrail={viewMode !== 'needle_pure'}
@@ -6183,6 +6172,57 @@ export default function App() {
                   );
                 })}
               </div>
+              {/* ── QUALE AGO ────────────────────────────────────────────────────────────────
+                  Stava SOTTO IL PERNO, dentro il quadrante. Ma il pannello MNA occupa la fascia
+                  bassa e, aperto, ci finiva sopra: il selettore compariva DENTRO il riquadro del
+                  MNA (segnalato in seduta). Nasconderlo non si poteva — il MNA è acceso per
+                  difetto, e la scelta dell'ago sarebbe diventata irraggiungibile.
+                  Sta quindi qui, con l'altro selettore: sono la stessa famiglia — cosa mostra il
+                  quadrante — e questa colonna non la copre niente. */}
+              {instruments.muse && instruments.theta && (() => {
+                const bloccato = cicloInCorso || provaBoiteInCorso;
+                const imposto: ReadSrc = provaBoiteInCorso ? 'theta' : 'eeg';
+                const perche = provaBoiteInCorso
+                  ? LC('Prova delle boîtes: tara la sensibilità del METER, quindi si guarda il SUO ago',
+                       'Test des boîtes : il tare la sensibilité du METER, on regarde donc SON aiguille',
+                       'Cans test: it sets the METER sensitivity, so you watch ITS needle',
+                       'Prueba de las latas: calibra la sensibilidad del METER, así que se mira SU aguja',
+                       'Burktest: det ställer in METER:s känslighet, så man tittar på DESS nål')
+                  : LC('Ciclo in corso: gira sull\'EEG, quindi l\'ago è quello del MUSE',
+                       'Cycle en cours : il tourne sur l\'EEG, donc l\'aiguille est celle du MUSE',
+                       'Cycle running: it runs on the EEG, so the needle is the MUSE one',
+                       'Ciclo en curso: gira sobre el EEG, así que la aguja es la del MUSE',
+                       'Cykel pågår: den går på EEG, så nålen är MUSE:s');
+                return (
+                  <div style={{ display: 'flex', width: 190, padding: 3, gap: 2, borderRadius: 999,
+                    background: isLightTheme ? '#b7b7be' : '#17171b',
+                    boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
+                    {([{ k: 'eeg' as const, lbl: 'MUSE', col: '#8ab4ff' },
+                       { k: 'theta' as const, lbl: 'METER', col: '#fbbf24' }]).map(o => {
+                      const spento = bloccato && o.k !== imposto;
+                      const on = !spento && (bloccato ? o.k === imposto : agoPrincipale === o.k);
+                      return (
+                        <button key={o.k} type="button" disabled={spento}
+                          onClick={() => setAgoScelto(o.k)}
+                          title={bloccato ? perche : LC(
+                            'Quale ago mostrare sul quadrante', 'Quelle aiguille afficher sur le cadran',
+                            'Which needle to show on the dial', 'Qué aguja mostrar en el cuadrante',
+                            'Vilken nål som visas på urtavlan')}
+                          style={{ flex: 1, height: 26, borderRadius: 999, border: 'none',
+                            cursor: spento ? 'not-allowed' : 'pointer', opacity: spento ? 0.35 : 1,
+                            fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
+                            textDecoration: spento ? 'line-through' : 'none',
+                            color: on ? '#0b0f14' : (isLightTheme ? '#3a3a40' : '#cbd5e1'),
+                            background: on ? o.col : 'transparent',
+                            boxShadow: on ? '0 2px 6px rgba(0,0,0,0.35)' : 'none',
+                            transition: 'color 0.2s, background 0.2s' }}>
+                          {o.lbl}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
               {/* ── ASSESSMENT — bouton SOUS le sélecteur de vue. Les mots s'inscrivent SOUS L'ARC
                   (éphémères) et dans le module ASSESSMENT (toute la séance). ── */}
               {sessionState === 'running' && (
