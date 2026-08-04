@@ -574,3 +574,21 @@ export const TONE_STEP = 10;
  *  Resta vero che il valore dipende dagli ELETTRODI (lattine più grandi = meno ohm): è una
  *  costante DI QUESTO assetto, non dell'universo, e va rimisurata se si cambiano le lattine. */
 export const TONE_R_TOTAL = 2_000_000;
+/**
+ * Di quanti secondi si guarda INDIETRO quando l'auditor preme LOCALIZZA.
+ *
+ * L'istante del clic è sporco: premendo il pulsante si vede spesso partire una reazione, sia col
+ * METER che col MUSE (segnalato in seduta). E comunque il preclear ha PENSATO la cosa prima che
+ * la mano dell'auditor arrivasse sul bottone. Il valore da prendere non è quello del clic: è
+ * quello del momento in cui l'ago ha reagito, che è appena prima.
+ *
+ * Stesso principio del read istantaneo (−ms), della CAPTURE del MNA e di MIRROR_LOOKBACK_S — che
+ * vale 4 s. Qui è più corto: là si cerca il picco di carica di un item appena dato, qui si cerca
+ * il momento di UN pensiero preciso, e più si risale più si rischia di prendere quello di prima.
+ * TARABILE: più lungo = si risale di più; più corto = si rischia di mancare la reazione.
+ */
+export const TONE_LOOKBACK_S = 2.5;
+/** Quanto una reazione deve superare l'AMBIENTE per contare come « il preclair ha pensato ».
+ *  Regola relativa come nel MIRROR: conta la SALITA sopra il livello abituale della persona,
+ *  non il superamento di un numero assoluto. */
+export const TONE_LOCATE_RISE_RATIO = 1.35;

@@ -26,7 +26,7 @@
  * Puro TS, nessun React, nessuna DSP: si testa da solo.
  */
 
-import { TONE_SCALE_MAX, TONE_STEP } from './tuning';
+import { TONE_SCALE_MAX, TONE_STEP, TONE_LOOKBACK_S, TONE_LOCATE_RISE_RATIO } from './tuning';
 import { toneFromResistance } from './impedanceMeter';
 
 /** Le quattro ampiezze che Ron assessa. Non sono un continuo: sono quattro. */
@@ -156,3 +156,95 @@ export const reachedZero = (toneNow: number, eps = TONE_STEP / 2): boolean =>
 /** Tono −40..+40 → offset −1..+1 del quadrante (stessa geometria di ClearDial/MirrorDial).
  *  −40 a sinistra, +40 a destra: la resistenza totale sta dove l'ago non torna più. */
 export const toneOffset = (tone: number): number => clampTone(tone) / TONE_SCALE_MAX;
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+// LA LOCALIZZAZIONE — quale istante, e chi lo certifica
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+
+/** Come si è scelto l'istante. Va scritto: un numero ancorato a una reazione del MUSE e uno
+ *  preso perché non reagiva nulla non valgono la stessa cosa. */
+export type ToneLocateAnchor = 'muse' | 'meter' | 'settled';
+
+export interface ToneLocateResult {
+  /** Il tono al momento scelto. */
+  tone: number;
+  anchor: ToneLocateAnchor;
+  /** Da quanti secondi prima del clic viene il valore. Zero = nessuna reazione trovata. */
+  ageS: number;
+}
+
+interface Sample { t: number; tone: number; q: number }
+
+/**
+ * ToneLocator — tiene gli ultimi secondi e, al clic, sceglie l'ISTANTE GIUSTO.
+ *
+ * ── PERCHÉ NON IL VALORE DEL CLIC ──────────────────────────────────────────────────────────
+ * Premendo LOCALIZZA si vede spesso partire una reazione, col METER come col MUSE. E comunque
+ * il preclear ha pensato la cosa PRIMA che la mano dell'auditor arrivasse sul bottone. Il valore
+ * del clic è quindi il meno buono dei tre: è dopo il pensiero e dentro l'artefatto.
+ *
+ * ── CHI CERTIFICA IL PENSIERO ──────────────────────────────────────────────────────────────
+ * Se il MUSE c'è, è LUI a dire che il preclear ha pensato qualcosa: l'EEG coglie la reazione
+ * prima che il corpo la manifesti. Si cerca dunque il suo picco nella finestra e si legge il TA
+ * del METER A QUELL'ISTANTE — il MUSE dice QUANDO, il METER dice QUANTO. È la divisione del
+ * lavoro chiesta dall'utente, e ciascuno fa quel che sa fare.
+ *
+ * Senza MUSE si ripiega sul movimento del METER stesso. Se non ha reagito nulla, non si inventa
+ * un istante: si prende la MEDIANA della finestra, che l'artefatto del clic non sposta (una
+ * media sì), e si dice che l'ancora è « settled ».
+ */
+export class ToneLocator {
+  private hist: Sample[] = [];
+  private ambientQ = 0;
+
+  /** Da chiamare a ogni tick in vista TONE. `q` = carica EEG (0 se il MUSE non c'è). */
+  track(tone: number, q: number, nowS: number): void {
+    const qq = Math.max(0, q);
+    this.ambientQ = this.ambientQ === 0 ? qq : this.ambientQ * 0.99 + qq * 0.01;
+    this.hist.push({ t: nowS, tone: clampTone(tone), q: qq });
+    const cut = nowS - TONE_LOOKBACK_S;
+    while (this.hist.length && this.hist[0].t < cut) this.hist.shift();
+  }
+
+  /** Quanti campioni ci sono in finestra — serve a sapere se la scelta poggia su qualcosa. */
+  get samples(): number { return this.hist.length; }
+
+  reset(): void { this.hist = []; this.ambientQ = 0; }
+
+  /**
+   * L'istante da usare. `hasMuse` decide chi certifica; senza campioni si torna al valore
+   * corrente, che è tutto quello che c'è.
+   */
+  locate(nowS: number, hasMuse: boolean, currentTone: number): ToneLocateResult {
+    if (!this.hist.length) return { tone: clampTone(currentTone), anchor: 'settled', ageS: 0 };
+
+    // 1. IL MUSE dice QUANDO: il picco di carica sopra l'ambiente è il pensiero del preclear.
+    if (hasMuse && this.ambientQ > 0) {
+      let best: Sample | null = null;
+      for (const s of this.hist) if (!best || s.q > best.q) best = s;
+      if (best && best.q > this.ambientQ * TONE_LOCATE_RISE_RATIO) {
+        return { tone: best.tone, anchor: 'muse', ageS: Math.max(0, nowS - best.t) };
+      }
+    }
+
+    // 2. Senza MUSE (o senza suo picco): il movimento più ampio del METER nella finestra. Si
+    //    prende il tono all'INIZIO del movimento, non alla fine: la partenza è il pensiero, il
+    //    resto è l'ago che ci arriva.
+    let widest = 0; let startIdx = -1;
+    for (let i = 1; i < this.hist.length; i++) {
+      const d = Math.abs(this.hist[i].tone - this.hist[i - 1].tone);
+      if (d > widest) { widest = d; startIdx = i - 1; }
+    }
+    if (startIdx >= 0 && widest >= TONE_STEP / 4) {
+      const s = this.hist[startIdx];
+      return { tone: s.tone, anchor: 'meter', ageS: Math.max(0, nowS - s.t) };
+    }
+
+    // 3. Nulla ha reagito: la MEDIANA della finestra. Non la media — l'artefatto del clic
+    //    sposta una media e non sposta una mediana.
+    const sorted = this.hist.map(s => s.tone).sort((a, b) => a - b);
+    const mid = sorted.length >> 1;
+    const med = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    return { tone: med, anchor: 'settled', ageS: 0 };
+  }
+}

@@ -180,65 +180,115 @@ export function ToneDial({
           strokeLinecap="round" opacity={0.92} filter={done ? 'url(#td-glow)' : undefined} />
       )}
 
-      {/* ── RIGA DI STATO, sopra il perno ── */}
-      {phase === 'locate' && (
-        <text x={PX} y={PY - 258} textAnchor="middle" dominantBaseline="middle"
-          fontSize={22} fontWeight={700} fill={dim} className="animate-pulse">
-          {hasMeter
-            ? L('localizza la resistenza…', 'localise la résistance…', 'locating resistance…', 'localiza la resistencia…', 'lokalisera motståndet…')
-            : L('senza meter: si assessa', 'sans mètre : on assesse', 'off-meter: assess it', 'sin medidor: se assessa', 'utan mätare: assessa')}
-        </text>
-      )}
+      {/* ══ IL CICLO, TUTTO IN ALTO ══════════════════════════════════════════════════════════
+          Prima il titolo della fase stava nella barra SOTTO il quadrante e lo stato dentro
+          l'arco: l'auditor doveva guardare in due posti per sapere a che punto era. Adesso c'è
+          un blocco solo, sopra l'arco, che dice il passo, cosa fare e cosa propone l'ago.
+          Grande abbastanza da leggersi senza chinarsi sullo schermo. */}
+      {(() => {
+        const p = proposed ? chargeValue(proposed) : null;
+        const num = (v: number) => `${v > 0 ? '+' : ''}${v}`;
+        // titolo (grande) · istruzione (media) · dettaglio (piccolo)
+        let title: string, how: string, detail: string | null = null;
 
-      {(phase === 'sign' || phase === 'magnitude') && proposed && (
-        <text x={PX} y={PY - 258} textAnchor="middle" dominantBaseline="middle"
-          fontSize={22} fontWeight={700} fill={dim}>
-          {L('l\'ago propone', 'l\'aiguille propose', 'the needle proposes', 'la aguja propone', 'nålen föreslår')}
-          <tspan dx="14" fill={CHARGE}>{chargeValue(proposed) > 0 ? '+' : ''}{chargeValue(proposed)}</tspan>
-          <tspan dx="14" fontSize={15} fontWeight={400}>
-            {L('· verifica', '· vérifie', '· verify', '· verifica', '· verifiera')}
-          </tspan>
-        </text>
-      )}
+        if (phase === 'locate') {
+          title = hasMeter
+            ? L('1 · LOCALIZZA LA RESISTENZA', '1 · LOCALISE LA RÉSISTANCE', '1 · LOCATE THE RESISTANCE', '1 · LOCALIZA LA RESISTENCIA', '1 · LOKALISERA MOTSTÅNDET')
+            : L('1 · LOCALIZZA — SENZA METER', '1 · LOCALISE — SANS MÈTRE', '1 · LOCATE — OFF-METER', '1 · LOCALIZA — SIN MEDIDOR', '1 · LOKALISERA — UTAN MÄTARE');
+          how = hasMeter
+            ? L('L\'ago si posa su un numero. Premi quando il preclear ha trovato.',
+                'L\'aiguille se pose sur un nombre. Appuie quand le préclair a trouvé.',
+                'The needle settles on a number. Press when the preclear has found it.',
+                'La aguja se posa en un número. Pulsa cuando el preclear lo haya encontrado.',
+                'Nålen lägger sig på ett tal. Tryck när preclearen hittat det.')
+            : L('Nessuna misura: segno e ampiezza si assessano.',
+                'Aucune mesure : le signe et l\'ampleur s\'assessent.',
+                'No measurement: sign and magnitude are assessed.',
+                'Sin medida: signo y amplitud se assessan.',
+                'Ingen mätning: tecken och storlek assessas.');
+          detail = hasMeter
+            ? L('Il valore preso non è quello del clic: è quello del momento in cui l\'ago ha reagito.',
+                'La valeur prise n\'est pas celle du clic : c\'est celle du moment où l\'aiguille a réagi.',
+                'The value taken is not the one at the click: it is the one from when the needle reacted.',
+                'El valor tomado no es el del clic: es el del momento en que la aguja reaccionó.',
+                'Värdet som tas är inte klickets: det är från när nålen reagerade.')
+            : null;
+        } else if (phase === 'sign') {
+          title = L('2 · POSITIVO O NEGATIVO?', '2 · POSITIF OU NÉGATIF ?', '2 · POSITIVE OR NEGATIVE?', '2 · ¿POSITIVO O NEGATIVO?', '2 · POSITIVT ELLER NEGATIVT?');
+          how = L('Assessa « negativo? » poi « positivo? ». Quello che legge è il segno.',
+                  'Assesse « négatif ? » puis « positif ? ». Celui qui lit est le signe.',
+                  'Assess "negative?" then "positive?". The one that reads is the sign.',
+                  'Assessa « ¿negativo? » luego « ¿positivo? ». El que lee es el signo.',
+                  'Assessa ”negativt?” sedan ”positivt?”. Det som läser är tecknet.');
+          detail = p !== null
+            ? L(`L'ago propone ${num(p)} — verifica, non è una risposta già data.`,
+                `L'aiguille propose ${num(p)} — vérifie, ce n'est pas une réponse déjà donnée.`,
+                `The needle proposes ${num(p)} — verify it; it is not an answer already given.`,
+                `La aguja propone ${num(p)} — verifica, no es una respuesta ya dada.`,
+                `Nålen föreslår ${num(p)} — verifiera, det är inte ett givet svar.`)
+            : null;
+        } else if (phase === 'magnitude') {
+          title = L('3 · QUANTE DIVISIONI?', '3 · COMBIEN DE DIVISIONS ?', '3 · HOW MANY DIVISIONS?', '3 · ¿CUÁNTAS DIVISIONES?', '3 · HUR MÅNGA DELSTRECK?');
+          how = L('Assessa 10, 20, 30, 40. Quello che legge è l\'ampiezza.',
+                  'Assesse 10, 20, 30, 40. Celui qui lit est l\'ampleur.',
+                  'Assess 10, 20, 30, 40. The one that reads is the magnitude.',
+                  'Assessa 10, 20, 30, 40. El que lee es la amplitud.',
+                  'Assessa 10, 20, 30, 40. Det som läser är storleken.');
+          detail = proposed
+            ? L(`L'ago propone ${proposed.magnitude}.`, `L'aiguille propose ${proposed.magnitude}.`,
+                `The needle proposes ${proposed.magnitude}.`, `La aguja propone ${proposed.magnitude}.`,
+                `Nålen föreslår ${proposed.magnitude}.`)
+            : null;
+        } else if (phase === 'mockup') {
+          title = L(`4 · FAI MOCK-UPPARE ${num(targetTone!)}`, `4 · FAIS MOCK-UPPER ${num(targetTone!)}`,
+                    `4 · HAVE HIM MOCK UP ${num(targetTone!)}`, `4 · HAZLE MOCK-UPEAR ${num(targetTone!)}`,
+                    `4 · LÅT HONOM MOCKA UPP ${num(targetTone!)}`);
+          how = L(`Contro ${num(chargeTone!)} di carica. Aspetta l'as-isness — non fare altro.`,
+                  `Contre ${num(chargeTone!)} de charge. Attends l'as-isness — ne fais rien d'autre.`,
+                  `Against ${num(chargeTone!)} of charge. Wait for the as-isness — do nothing else.`,
+                  `Contra ${num(chargeTone!)} de carga. Espera el as-isness — no hagas nada más.`,
+                  `Mot ${num(chargeTone!)} laddning. Vänta på as-isness — gör inget annat.`);
+          detail = hasMeter
+            ? `${L('verso lo zero', 'vers le zéro', 'toward zero', 'hacia el cero', 'mot noll')} ${Math.round(progress * 100)}%`
+            : null;
+        } else {
+          title = 'AS-IS';
+          how = L('La resistenza assessata è a zero. Validato da te.',
+                  'La résistance assessée est à zéro. Validé par toi.',
+                  'The assessed resistance is at zero. Validated by you.',
+                  'La resistencia assessada está a cero. Validado por ti.',
+                  'Det assessade motståndet är på noll. Validerat av dig.');
+        }
 
-      {(phase === 'sign' || phase === 'magnitude') && !proposed && (
-        <text x={PX} y={PY - 258} textAnchor="middle" dominantBaseline="middle"
-          fontSize={22} fontWeight={700} fill={dim}>
-          {L('assessa: segno, poi ampiezza', 'assesse : signe, puis ampleur', 'assess: sign, then magnitude', 'assessa: signo, luego amplitud', 'assessa: tecken, sedan storlek')}
-        </text>
-      )}
-
-      {inMockup && chargeTone !== null && (
-        <text x={PX} y={PY - 258} textAnchor="middle" dominantBaseline="middle"
-          fontSize={26} fontWeight={700} fill={done ? TEAL : ink}>
-          <tspan fill={CHARGE}>{chargeTone > 0 ? '+' : ''}{chargeTone}</tspan>
-          <tspan dx="18">→</tspan>
-          <tspan dx="18" fill={done ? TEAL : AMBER}>{targetTone! > 0 ? '+' : ''}{targetTone}</tspan>
-        </text>
-      )}
-
-      {inMockup && !done && hasMeter && (
-        <text x={PX} y={PY - 228} textAnchor="middle" dominantBaseline="middle"
-          fontSize={15} fontWeight={400} fill={dim}>
-          {L('verso lo zero', 'vers le zéro', 'toward zero', 'hacia el cero', 'mot noll')} {Math.round(progress * 100)}%
-        </text>
-      )}
-
-      {/* la MISURA ha smentito la validazione: si scrive, non si nasconde. È il dato più
-          interessante che questa vista possa dare. */}
-      {inMockup && agreement && agreement !== 'confirmed' && (
-        <text x={PX} y={PY - 200} textAnchor="middle" dominantBaseline="middle"
-          fontSize={14} fontWeight={700} fill={AMBER}>
-          {L('l\'ago diceva altro', 'l\'aiguille disait autre chose', 'the needle said otherwise', 'la aguja decía otra cosa', 'nålen sa något annat')}
-        </text>
-      )}
-
-      {done && (
-        <text x={PX} y={PY - 150} textAnchor="middle" fontSize={40} fontWeight={800} letterSpacing="8"
-          fill={TEAL} filter="url(#td-glow)" className="animate-pulse">
-          AS-IS
-        </text>
-      )}
+        return (
+          <g>
+            <text x={PX} y={96} textAnchor="middle" dominantBaseline="middle"
+              fontSize={done ? 46 : 34} fontWeight={800} letterSpacing={done ? '8' : '1.5'}
+              fill={done ? TEAL : ink} filter={done ? 'url(#td-glow)' : undefined}
+              className={done ? 'animate-pulse' : undefined}>
+              {title}
+            </text>
+            <text x={PX} y={140} textAnchor="middle" dominantBaseline="middle"
+              fontSize={22} fontWeight={400} fill={isLightTheme ? 'rgba(15,23,42,0.72)' : 'rgba(226,238,255,0.82)'}>
+              {how}
+            </text>
+            {detail && (
+              <text x={PX} y={176} textAnchor="middle" dominantBaseline="middle"
+                fontSize={18} fontWeight={400} fill={dim}>
+                {detail}
+              </text>
+            )}
+            {/* la MISURA ha smentito la validazione: si scrive, non si nasconde. È il dato più
+                interessante che questa vista possa dare. */}
+            {inMockup && agreement && agreement !== 'confirmed' && (
+              <text x={PX} y={detail ? 208 : 176} textAnchor="middle" dominantBaseline="middle"
+                fontSize={18} fontWeight={700} fill={AMBER}>
+                {L('l\'ago diceva altro', 'l\'aiguille disait autre chose', 'the needle said otherwise', 'la aguja decía otra cosa', 'nålen sa något annat')}
+              </text>
+            )}
+          </g>
+        );
+      })()}
     </svg>
   );
 }

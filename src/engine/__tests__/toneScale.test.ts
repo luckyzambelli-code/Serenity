@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   TONE_STEPS, chargeValue, oppositeOf, clampTone, toneFromTa, proposeFromTone,
-  agreementOf, mockupProgress, reachedZero, toneOffset, type ToneCharge,
+  agreementOf, mockupProgress, reachedZero, toneOffset, ToneLocator, type ToneCharge,
 } from '../toneScale';
-import { TONE_SCALE_MAX, TONE_STEP } from '../tuning';
+import { TONE_SCALE_MAX, TONE_STEP, TONE_LOOKBACK_S } from '../tuning';
 
 const C = (sign: -1 | 1, magnitude: 10 | 20 | 30 | 40): ToneCharge =>
   ({ sign, magnitude, origin: 'measured' });
@@ -121,5 +121,89 @@ describe('lo zero raggiunto', () => {
     expect(reachedZero(TONE_STEP / 2 - 0.01)).toBe(true);
     expect(reachedZero(TONE_STEP / 2 + 0.01)).toBe(false);
     expect(reachedZero(-40)).toBe(false);
+  });
+});
+
+describe('LOCALIZZARE — quale istante conta davvero', () => {
+  /** Riempie la finestra di un fondo quieto, poi restituisce il locatore e il tempo corrente. */
+  const conFondo = (toneQuieto = -30, q = 1, secondi = 2) => {
+    const loc = new ToneLocator();
+    let t = 0;
+    for (; t < secondi; t += 0.05) loc.track(toneQuieto, q, t);
+    return { loc, t };
+  };
+
+  it('col MUSE, l istante è il PICCO DI CARICA — non il clic', () => {
+    const { loc } = conFondo(-30, 1, 1.5);
+    loc.track(-12, 9, 1.6);        // ← il pensiero: l EEG sale, il tono è −12
+    for (let t = 1.65; t < 2.2; t += 0.05) loc.track(-30, 1, t);  // l ago torna dov era
+    loc.track(-30, 1, 2.2);        // il clic arriva qui, su −30
+
+    const r = loc.locate(2.2, true, -30);
+    expect(r.anchor).toBe('muse');
+    expect(r.tone).toBe(-12);      // il valore del PENSIERO, non quello del clic
+    expect(r.ageS).toBeCloseTo(0.6, 1);
+  });
+
+  it('il picco del MUSE non conta se non SALE sopra l ambiente', () => {
+    const { loc, t } = conFondo(-30, 5, 2);
+    loc.track(-12, 5.2, t);        // un soffio sopra l ambiente: non è un pensiero
+    const r = loc.locate(t, true, -30);
+    expect(r.anchor).not.toBe('muse');
+  });
+
+  it('senza MUSE, si ancora al MOVIMENTO del METER e prende la PARTENZA', () => {
+    const loc = new ToneLocator();
+    let t = 0;
+    for (; t < 1.5; t += 0.05) loc.track(-8, 0, t);   // fermo a −8
+    loc.track(-34, 0, t); t += 0.05;                   // l ago parte: −8 → −34
+    for (; t < 2.2; t += 0.05) loc.track(-34, 0, t);
+
+    const r = loc.locate(t, false, -34);
+    expect(r.anchor).toBe('meter');
+    expect(r.tone).toBe(-8);       // la PARTENZA del movimento, non l arrivo
+  });
+
+  it('se non reagisce nulla, prende la MEDIANA — che l artefatto del clic non sposta', () => {
+    const loc = new ToneLocator();
+    let t = 0;
+    for (; t < 2; t += 0.05) loc.track(-20, 0, t);    // piatto a −20
+    loc.track(-20, 0, t);
+    const r = loc.locate(t, false, -20);
+    expect(r.anchor).toBe('settled');
+    expect(r.tone).toBe(-20);
+    expect(r.ageS).toBe(0);
+  });
+
+  it('la mediana regge lo sbalzo del clic; una media no', () => {
+    const loc = new ToneLocator();
+    let t = 0;
+    for (; t < 2; t += 0.05) loc.track(-20, 0, t);
+    // lo sbalzo del clic: pochi campioni lontanissimi, ma sotto la soglia di movimento
+    loc.track(-20 - TONE_STEP / 8, 0, t); t += 0.05;
+    loc.track(-20 - TONE_STEP / 8, 0, t);
+    const r = loc.locate(t, false, -20);
+    expect(r.anchor).toBe('settled');
+    expect(r.tone).toBe(-20);      // la mediana non si è mossa
+  });
+
+  it('butta via i campioni più vecchi della finestra', () => {
+    const loc = new ToneLocator();
+    for (let t = 0; t < TONE_LOOKBACK_S * 3; t += 0.05) loc.track(-10, 0, t);
+    expect(loc.samples).toBeLessThanOrEqual(Math.ceil(TONE_LOOKBACK_S / 0.05) + 1);
+  });
+
+  it('senza storico non inventa nulla: restituisce il valore corrente', () => {
+    const loc = new ToneLocator();
+    const r = loc.locate(5, true, -17);
+    expect(r).toEqual({ tone: -17, anchor: 'settled', ageS: 0 });
+  });
+
+  it('azzerandolo dimentica tutto', () => {
+    const { loc, t } = conFondo();
+    expect(loc.samples).toBeGreaterThan(0);
+    loc.reset();
+    expect(loc.samples).toBe(0);
+    expect(loc.locate(t, true, 5).tone).toBe(5);
   });
 });

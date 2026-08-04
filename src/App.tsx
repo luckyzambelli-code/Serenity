@@ -94,10 +94,13 @@ import { mirrorCycle, mirrorReading } from './engine/MirrorCycle';
 import { MirrorDial } from './components/MirrorDial';
 import { ToneDial } from './components/ToneDial';
 import {
-  TONE_STEPS, proposeFromTone, agreementOf, toneFromTa, chargeValue, oppositeOf,
-  type ToneCharge, type TonePhase, type ToneSign, type ToneStep,
+  TONE_STEPS, proposeFromTone, agreementOf, toneFromTa, chargeValue, oppositeOf, ToneLocator,
+  type ToneCharge, type TonePhase, type ToneSign, type ToneStep, type ToneLocateAnchor,
 } from './engine/toneScale';
 import { TA_MIN, TA_MAX } from './engine/thetaTaScale';
+/** Un solo locatore per l'app, come `mirrorCycle`: tiene gli ultimi secondi fuori da React,
+ *  perché il gestore del worker gira a 60 Hz e non deve far ridisegnare nulla per accumulare. */
+const toneLocator = new ToneLocator();
 import { nullCycleStateMachine, type NullStateId } from './engine/NullCycleStateMachine';
 import { clearReadDetector } from './engine/ClearReadDetector';
 import { falseAsIsDetector } from './engine/FalseAsIsDetector';
@@ -1989,6 +1992,12 @@ export default function App() {
         if (viewModeRef.current === 'mirror' && mirrorArmedRef.current) {
           mirrorCycle.update(_validSignal ? qL : 0, timeRef.current);
           if (pushUi) setMirrorDisp({ contactQ: mirrorCycle.contactQ, dischargeQ: mirrorCycle.dischargeQ, locked: mirrorCycle.locked, reached: mirrorCycle.reached, valueR: mirrorCycle.valueR });
+        }
+        // ── TONE SCALE : on tient les dernières secondes du TON et de la CHARGE ────────────
+        // L'instant du clic sur LOCALISER est le pire des trois (voir ToneLocator) : il faut
+        // pouvoir remonter. On accumule donc en continu, en vue TONE seulement.
+        if (viewModeRef.current === 'tone') {
+          toneLocator.track(toneMeasuredRef.current ?? 0, _validSignal ? qL : 0, timeRef.current);
         }
         // Instrumentation calibration TA (Option B) : snapshot LIVE des 5 bandes BRUTES + BPM,
         // lu par le panneau au moment d'une capture (mS, TA_meter). Offline on formera les RATIOS
@@ -4222,18 +4231,39 @@ export default function App() {
   const [toneProposedAtLock, setToneProposedAtLock] = useState<ToneCharge | null>(null);
   const [toneSignPick, setToneSignPick] = useState<ToneSign | null>(null);
   const [toneAtStart, setToneAtStart] = useState<number | null>(null);
+  /** Come si è scelto l'istante della localizzazione, e da quanti secondi prima viene. */
+  const [toneAnchor, setToneAnchor] = useState<{ how: ToneLocateAnchor; ageS: number } | null>(null);
   // Il tono MISURATO. Oggi passa dal TA e non da ohm veri: `toneFromTa` è dichiaratamente una
   // strada provvisoria, ed è per questo che il quadrante scrive « ≈ ». Diventa esatta il giorno
   // che si tara il meter con due resistenze note.
   const toneMeasured = instruments.theta && theta.ta !== null
     ? toneFromTa(theta.ta, TA_MIN, TA_MAX) : null;
   const toneHasMeter = toneMeasured !== null;
+  // Specchio in ref: il gestore del worker si aggancia UNA volta sola e il tono cambia a ogni
+  // tick — senza questo il locatore accumulerebbe per sempre il valore d'avvio.
+  const toneMeasuredRef = useRef(toneMeasured); toneMeasuredRef.current = toneMeasured;
   const toneProposed = toneMeasured !== null ? proposeFromTone(toneMeasured) : null;
   const toneAgreement = toneValidated ? agreementOf(toneProposedAtLock, toneValidated) : null;
   const resetTone = useCallback(() => {
     setTonePhase('locate'); setToneValidated(null); setToneProposedAtLock(null);
-    setToneSignPick(null); setToneAtStart(null);
+    setToneSignPick(null); setToneAtStart(null); setToneAnchor(null);
+    toneLocator.reset();
   }, []);
+  /**
+   * LOCALIZZA — e NON col valore del clic.
+   *
+   * Il MUSE dice QUANDO (il suo picco è il pensiero del preclear, e l'EEG lo coglie prima che il
+   * corpo lo manifesti), il METER dice QUANTO (il TA a quell'istante). Divisione del lavoro
+   * chiesta dall'utente. Senza MUSE si ripiega sul movimento del METER; se non ha reagito nulla,
+   * sulla mediana della finestra — che l'artefatto del clic non sposta.
+   */
+  const localizzaTone = useCallback(() => {
+    const r = toneLocator.locate(timeRef.current, instruments.muse, toneMeasured ?? 0);
+    setToneAnchor({ how: r.anchor, ageS: r.ageS });
+    setToneProposedAtLock(toneHasMeter ? proposeFromTone(r.tone) : null);
+    setToneAtStart(toneHasMeter ? r.tone : null);
+    setTonePhase('sign');
+  }, [instruments.muse, toneMeasured, toneHasMeter]);
 
   // Specchio in ref: il gestore del worker si aggancia una volta sola, e l'ago si può cambiare
   // in seduta — senza questo continuerebbe a usare quello scelto all'avvio.
@@ -6122,20 +6152,28 @@ export default function App() {
                 const lbl: React.CSSProperties = { fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(226,238,255,0.6)' };
                 return (
                   <div style={bar}>
-                    <span style={lbl}>
-                      {tonePhase === 'locate' ? LC('1 · localizza', '1 · localise', '1 · locate', '1 · localiza', '1 · lokalisera')
-                        : tonePhase === 'sign' ? LC('2 · segno', '2 · signe', '2 · sign', '2 · signo', '2 · tecken')
-                        : tonePhase === 'magnitude' ? LC('3 · ampiezza', '3 · ampleur', '3 · magnitude', '3 · amplitud', '3 · storlek')
-                        : LC('4 · mock-up', '4 · mock-up', '4 · mock-up', '4 · mock-up', '4 · mock-up')}
-                    </span>
-
+                    {/* Il TITOLO della fase non è più qui: sta IN ALTO, sopra l'arco, col resto
+                        del ciclo. Guardare in due posti per sapere a che punto si era costringeva
+                        l'auditor a staccare gli occhi dall'ago (segnalato). Qui restano i GESTI. */}
                     {tonePhase === 'locate' && (
-                      <button style={btn(false, toneHasMeter)}
-                        onClick={() => { setToneProposedAtLock(toneProposed); setTonePhase('sign'); }}>
+                      <button style={btn(false, toneHasMeter)} onClick={localizzaTone}>
                         {toneHasMeter
                           ? LC('LOCALIZZA QUI', 'LOCALISE ICI', 'LOCATE HERE', 'LOCALIZA AQUÍ', 'LOKALISERA HÄR')
                           : LC('ASSESSA', 'ASSESSE', 'ASSESS', 'ASSESSA', 'ASSESSA')}
                       </button>
+                    )}
+
+                    {/* DA DOVE VIENE IL NUMERO. Un tono ancorato a una reazione del MUSE e uno
+                        preso perché non reagiva nulla non valgono la stessa cosa: si scrive. */}
+                    {toneAnchor && tonePhase !== 'locate' && (
+                      <span style={{ ...lbl, color: toneAnchor.how === 'settled' ? 'rgba(226,238,255,0.45)' : 'rgba(52,211,153,0.85)' }}>
+                        {toneAnchor.how === 'muse'
+                          ? LC('MUSE ha visto il pensiero', 'le MUSE a vu la pensée', 'the MUSE saw the thought', 'el MUSE vio el pensamiento', 'MUSE såg tanken')
+                          : toneAnchor.how === 'meter'
+                          ? LC('l\'ago del METER si è mosso', 'l\'aiguille du METER a bougé', 'the METER needle moved', 'la aguja del METER se movió', 'METER-nålen rörde sig')
+                          : LC('nessuna reazione — valore stabile', 'aucune réaction — valeur stable', 'no reaction — settled value', 'sin reacción — valor estable', 'ingen reaktion — stabilt värde')}
+                        {toneAnchor.ageS > 0.05 ? ` · −${toneAnchor.ageS.toFixed(1)}s` : ''}
+                      </span>
                     )}
 
                     {tonePhase === 'sign' && ([-1, 1] as ToneSign[]).map(s => (
@@ -6152,7 +6190,8 @@ export default function App() {
                           const v: ToneCharge = { sign: toneSignPick ?? 1, magnitude: m as ToneStep,
                             origin: toneHasMeter ? 'measured' : 'assessed' };
                           setToneValidated(v);
-                          setToneAtStart(toneMeasured);
+                          // il tono di partenza è quello della LOCALIZZAZIONE, già fissato: qui
+                          // sarebbe di nuovo il valore del clic, cioè l'errore appena corretto.
                           setTonePhase('mockup');
                         }}>
                         {m}{toneProposedAtLock?.magnitude === m ? ' ·' : ''}
