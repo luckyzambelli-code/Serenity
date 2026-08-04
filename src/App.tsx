@@ -6711,6 +6711,57 @@ export default function App() {
                   );
                 })}
               </div>
+              {/* ── IL SELETTORE DELL'AGO NON C'È PIÙ ────────────────────────────────────
+                  Stava QUI SOPRA quello delle reazioni, e diceva quasi la stessa cosa: due file
+                  « MUSE / METER » una sull'altra, e nessuna che spiegasse la differenza. Le ho
+                  fuse in una sola, qui sotto: sceglie le REAZIONI da scrivere e — dove l'ago non
+                  è già imposto dal metodo, cioè in LIBERO — anche QUALE AGO guardare.
+                  Segnalato: « togli MUSE/METER sopra MUSE/METER/ENTRAMBI e rialzalo ». */}
+              {/* ── QUALE AGO, E QUALI REAZIONI — un comando solo ──────────────────────────
+                  Sceglie le REAZIONI da scrivere sopra il quadrante, e insieme QUALE AGO
+                  guardare là dove l'ago non è già imposto dal metodo (cioè in LIBERO: negli
+                  altri modi lo impone MODE_SPEC e questa scelta cambia solo le scritte).
+
+                  ENTRAMBI non tocca l'ago — uno solo se ne può mostrare, i dati dicono che i due
+                  non si fondono (κ = −0,09 su 89 item) — e lascia quello di prima, aggiungendo la
+                  seconda riga di reazioni.
+
+                  Compare col solo fatto che i due strumenti ci sono: si sceglie PRIMA di
+                  cominciare, non a seduta avviata. */}
+              {instruments.muse && instruments.theta && (
+                <div style={{ display: 'flex', width: 300, padding: 2, gap: 2, borderRadius: 999,
+                  background: isLightTheme ? '#b7b7be' : '#17171b',
+                  boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
+                  {([{ k: 'eeg' as const, lbl: 'MUSE', col: '#8ab4ff' },
+                     { k: 'theta' as const, lbl: 'METER', col: '#f59e0b' },
+                     { k: 'both' as const, lbl: LC('ENTRAMBI', 'LES DEUX', 'BOTH', 'AMBAS', 'BÅDA'), col: '#34d399' }]).map(o => {
+                    const on = reazioniViste === o.k;
+                    const imposto = MODE_SPEC[mode].needle !== null || provaBoiteInCorso || cicloInCorso;
+                    return (
+                      <button key={o.k} type="button"
+                        onClick={() => { setReazioniViste(o.k); if (o.k !== 'both') setAgoScelto(o.k); }}
+                        title={imposto
+                          ? LC('Quali reazioni scrivere — l\'ago lo impone il metodo',
+                               'Quelles réactions écrire — l\'aiguille est imposée par la méthode',
+                               'Which reactions to write — the needle is set by the method',
+                               'Qué reacciones escribir — la aguja la impone el método',
+                               'Vilka reaktioner som skrivs — nålen bestäms av metoden')
+                          : LC('Quale ago guardare e quali reazioni scrivere',
+                               'Quelle aiguille regarder et quelles réactions écrire',
+                               'Which needle to watch and which reactions to write',
+                               'Qué aguja mirar y qué reacciones escribir',
+                               'Vilken nål att se och vilka reaktioner som skrivs')}
+                        style={{ flex: 1, height: 22, borderRadius: 999, border: 'none', cursor: 'pointer',
+                          fontSize: 9, fontWeight: 700, letterSpacing: '0.04em',
+                          color: on ? '#0b0f14' : (isLightTheme ? '#3a3a40' : '#8b98ad'),
+                          background: on ? o.col : 'transparent',
+                          transition: 'color 0.2s, background 0.2s' }}>
+                        {o.lbl}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               {/* LA SCIA — quel che « AGO + » voleva dire, e che non era un metodo. Nascosta in
                   MIRROR e TONE, che hanno il loro quadrante e non la scia dell'ago.
                   ⚠️ PICCOLA. Larga quanto il selettore di modo sembrava un comando capitale,
@@ -6726,95 +6777,6 @@ export default function App() {
                     color: showTrailPref ? (isLightTheme ? '#3a3a40' : '#a8b6cc') : (isLightTheme ? '#8a8a90' : '#5d6878') }}>
                   {showTrailPref ? '● ' : '○ '}{LC('SCIA', 'TRAÎNÉE', 'TRAIL', 'ESTELA', 'SVANS')}
                 </button>
-              )}
-              {/* ── QUALE AGO ────────────────────────────────────────────────────────────────
-                  Stava SOTTO IL PERNO, dentro il quadrante. Ma il pannello MNA occupa la fascia
-                  bassa e, aperto, ci finiva sopra: il selettore compariva DENTRO il riquadro del
-                  MNA (segnalato in seduta). Nasconderlo non si poteva — il MNA è acceso per
-                  difetto, e la scelta dell'ago sarebbe diventata irraggiungibile.
-                  Sta quindi qui, con l'altro selettore: sono la stessa famiglia — cosa mostra il
-                  quadrante — e questa colonna non la copre niente.
-
-                  ⚠️ PIÙ BASSO di quello delle viste, DI PROPOSITO. Con la stessa altezza i due
-                  sembravano un solo comando a sei voci: si leggeva « AGO · AGO + · MIRROR · TONE ·
-                  MUSE · METER » come se scegliessero la stessa cosa. Non è così — sopra si sceglie
-                  COME si guarda, qui QUALE ago. La differenza di statura si vede prima di leggere. */}
-              {/* ⚠️ SOLO IN MODO LIBERO. Negli altri quattro l'ago lo impone il METODO
-                  (MODE_SPEC) e questo selettore mostrava solo un bottone barrato: una scelta che
-                  non è una scelta. Dove serve davvero, resta. */}
-              {mode === 'free' && instruments.muse && instruments.theta && (() => {
-                const bloccato = cicloInCorso || provaBoiteInCorso;
-                const imposto: ReadSrc = provaBoiteInCorso ? 'theta' : 'eeg';
-                const perche = provaBoiteInCorso
-                  ? LC('Prova delle boîtes: tara la sensibilità del METER, quindi si guarda il SUO ago',
-                       'Test des boîtes : il tare la sensibilité du METER, on regarde donc SON aiguille',
-                       'Cans test: it sets the METER sensitivity, so you watch ITS needle',
-                       'Prueba de las latas: calibra la sensibilidad del METER, así que se mira SU aguja',
-                       'Burktest: det ställer in METER:s känslighet, så man tittar på DESS nål')
-                  : LC('Ciclo in corso: gira sull\'EEG, quindi l\'ago è quello del MUSE',
-                       'Cycle en cours : il tourne sur l\'EEG, donc l\'aiguille est celle du MUSE',
-                       'Cycle running: it runs on the EEG, so the needle is the MUSE one',
-                       'Ciclo en curso: gira sobre el EEG, así que la aguja es la del MUSE',
-                       'Cykel pågår: den går på EEG, så nålen är MUSE:s');
-                return (
-                  <div style={{ display: 'flex', width: 190, padding: 2, gap: 2, borderRadius: 999,
-                    background: isLightTheme ? '#b7b7be' : '#17171b',
-                    boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
-                    {([{ k: 'eeg' as const, lbl: 'MUSE', col: '#8ab4ff' },
-                       { k: 'theta' as const, lbl: 'METER', col: '#fbbf24' }]).map(o => {
-                      const spento = bloccato && o.k !== imposto;
-                      const on = !spento && (bloccato ? o.k === imposto : agoPrincipale === o.k);
-                      return (
-                        <button key={o.k} type="button" disabled={spento}
-                          onClick={() => setAgoScelto(o.k)}
-                          title={bloccato ? perche : LC(
-                            'Quale ago mostrare sul quadrante', 'Quelle aiguille afficher sur le cadran',
-                            'Which needle to show on the dial', 'Qué aguja mostrar en el cuadrante',
-                            'Vilken nål som visas på urtavlan')}
-                          style={{ flex: 1, height: 20, borderRadius: 999, border: 'none',
-                            cursor: spento ? 'not-allowed' : 'pointer', opacity: spento ? 0.35 : 1,
-                            fontSize: 9, fontWeight: 700, letterSpacing: '0.04em',
-                            textDecoration: spento ? 'line-through' : 'none',
-                            color: on ? '#0b0f14' : (isLightTheme ? '#3a3a40' : '#cbd5e1'),
-                            background: on ? o.col : 'transparent',
-                            boxShadow: on ? '0 2px 6px rgba(0,0,0,0.35)' : 'none',
-                            transition: 'color 0.2s, background 0.2s' }}>
-                          {o.lbl}
-                        </button>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-              {/* ── QUALI REAZIONI VEDERE SCRITTE ───────────────────────────────────────────
-                  Solo con TUTTI E DUE gli strumenti: con uno solo non c'è niente da scegliere.
-                  Sta sotto il selettore dell'ago perché è la stessa famiglia — che cosa mostra
-                  il quadrante — ed è ancora più piccolo: è una preferenza di lettura. */}
-              {instruments.muse && instruments.theta && sessionState === 'running' && (
-                <div style={{ display: 'flex', width: 300, padding: 2, gap: 2, borderRadius: 999,
-                  background: isLightTheme ? '#b7b7be' : '#17171b',
-                  boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
-                  {([{ k: 'eeg' as const, lbl: 'MUSE', col: '#8ab4ff' },
-                     { k: 'theta' as const, lbl: 'METER', col: '#f59e0b' },
-                     { k: 'both' as const, lbl: LC('ENTRAMBI', 'LES DEUX', 'BOTH', 'AMBAS', 'BÅDA'), col: '#34d399' }]).map(o => {
-                    const on = reazioniViste === o.k;
-                    return (
-                      <button key={o.k} type="button" onClick={() => setReazioniViste(o.k)}
-                        title={LC('Quali reazioni scrivere sopra il quadrante',
-                                  'Quelles réactions écrire au-dessus du cadran',
-                                  'Which reactions to write above the dial',
-                                  'Qué reacciones escribir sobre el cuadrante',
-                                  'Vilka reaktioner som skrivs ovanför urtavlan')}
-                        style={{ flex: 1, height: 18, borderRadius: 999, border: 'none', cursor: 'pointer',
-                          fontSize: 8, fontWeight: 700, letterSpacing: '0.04em',
-                          color: on ? '#0b0f14' : (isLightTheme ? '#3a3a40' : '#8b98ad'),
-                          background: on ? o.col : 'transparent',
-                          transition: 'color 0.2s, background 0.2s' }}>
-                        {o.lbl}
-                      </button>
-                    );
-                  })}
-                </div>
               )}
               {/* ASSESSMENT non sta più qui: è salito nella COLONNA DI DESTRA, sopra EP. È lì
                   che ha senso — ASSESSMENT apre la lista degli item, EP la chiude: sono i due
