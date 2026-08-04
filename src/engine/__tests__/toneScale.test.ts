@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   TONE_STEPS, chargeValue, oppositeOf, clampTone, toneFromTa, proposeFromTone,
-  agreementOf, mockupProgress, reachedZero, toneOffset, ToneLocator, toneWitnesses, toneAsIs,
+  agreementOf, mockupProgress, reachedZero, toneOffset, ToneLocator, toneWitnesses, toneAsIs, matchToneAnswer,
   type ToneCharge, type ToneWitness,
 } from '../toneScale';
 import { TONE_SCALE_MAX, TONE_STEP, TONE_LOOKBACK_S } from '../tuning';
@@ -281,5 +281,56 @@ describe('AS-IS del TONE — la proposta', () => {
   it('senza testimoni non si propone mai — non si inventa un as-is', () => {
     expect(toneAsIs([], []).proposed).toBe(false);
     expect(toneAsIs([], ['zero', 'fn']).proposed).toBe(false);
+  });
+});
+
+describe('dall item assessato alla risposta del ciclo', () => {
+  it('riconosce il SEGNO nelle cinque lingue, accenti compresi', () => {
+    for (const s of ['negativo', 'négatif', 'negative', 'NEGATIV', 'Négatif ?'])
+      expect(matchToneAnswer(s, 'sign')).toEqual({ kind: 'sign', sign: -1 });
+    for (const s of ['positivo', 'positif', 'positive', 'POSITIV', 'Positif ?'])
+      expect(matchToneAnswer(s, 'sign')).toEqual({ kind: 'sign', sign: 1 });
+  });
+
+  it('se ci sono tutte e due le parole non indovina', () => {
+    expect(matchToneAnswer('positivo o negativo?', 'sign')).toBeNull();
+  });
+
+  it('riconosce le CIFRE dell ampiezza', () => {
+    expect(matchToneAnswer('30', 'magnitude')).toEqual({ kind: 'magnitude', magnitude: 30 });
+    expect(matchToneAnswer('sono 40 divisioni', 'magnitude')).toEqual({ kind: 'magnitude', magnitude: 40 });
+  });
+
+  it('riconosce le decine DETTE A PAROLE, nelle cinque lingue', () => {
+    expect(matchToneAnswer('trenta', 'magnitude')).toEqual({ kind: 'magnitude', magnitude: 30 });
+    expect(matchToneAnswer('quarante', 'magnitude')).toEqual({ kind: 'magnitude', magnitude: 40 });
+    expect(matchToneAnswer('twenty', 'magnitude')).toEqual({ kind: 'magnitude', magnitude: 20 });
+    expect(matchToneAnswer('diez', 'magnitude')).toEqual({ kind: 'magnitude', magnitude: 10 });
+    expect(matchToneAnswer('trettio', 'magnitude')).toEqual({ kind: 'magnitude', magnitude: 30 });
+  });
+
+  it('PAROLA INTERA: « tio » dentro un altra parola non fa un 10', () => {
+    // il caso per cui la sottostringa non si può usare sui numeri
+    expect(matchToneAnswer('la lezione', 'magnitude')).toBeNull();
+    expect(matchToneAnswer('attention', 'magnitude')).toBeNull();
+    expect(matchToneAnswer('tio', 'magnitude')).toEqual({ kind: 'magnitude', magnitude: 10 });
+  });
+
+  it('una cifra dentro un numero più lungo non conta', () => {
+    expect(matchToneAnswer('300', 'magnitude')).toBeNull();
+    expect(matchToneAnswer('102', 'magnitude')).toBeNull();
+  });
+
+  it('ogni fase ascolta solo la SUA risposta', () => {
+    expect(matchToneAnswer('negativo', 'magnitude')).toBeNull();
+    expect(matchToneAnswer('30', 'sign')).toBeNull();
+    expect(matchToneAnswer('negativo', 'locate')).toBeNull();
+    expect(matchToneAnswer('30', 'mockup')).toBeNull();
+  });
+
+  it('quel che non è una risposta resta null — ed è il caso normale', () => {
+    expect(matchToneAnswer('mia madre', 'sign')).toBeNull();
+    expect(matchToneAnswer('', 'sign')).toBeNull();
+    expect(matchToneAnswer('   ', 'magnitude')).toBeNull();
   });
 });

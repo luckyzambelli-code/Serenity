@@ -95,7 +95,7 @@ import { MirrorDial } from './components/MirrorDial';
 import { ToneDial } from './components/ToneDial';
 import {
   TONE_STEPS, proposeFromTone, agreementOf, toneFromTa, chargeValue, oppositeOf, ToneLocator,
-  reachedZero, toneWitnesses, toneAsIs,
+  reachedZero, toneWitnesses, toneAsIs, matchToneAnswer,
   type ToneCharge, type TonePhase, type ToneSign, type ToneStep, type ToneLocateAnchor,
   type ToneWitness,
 } from './engine/toneScale';
@@ -1272,6 +1272,25 @@ export default function App() {
         : LC('la reazione NON indica', 'la réaction n\'indique PAS', 'the read does NOT indicate',
              'la reacción NO indica', 'avläsningen indikerar INTE'),
       type: indica ? 'success' : 'normal' });
+
+    // ── NEL CICLO TONE, « INDICA » FA AVANZARE ─────────────────────────────────────────────
+    // Nelle fasi 2 e 3 l'auditor enuncia le risposte e il modulo ASSESSMENT le raccoglie con la
+    // loro lettura. Quando poi indica al preclear e questi conferma, il ciclo deve avanzare da
+    // solo: cliccare « indica » e poi ricliccare il bottone in cima vorrebbe dire dire due volte
+    // la stessa cosa, e con gli occhi in due punti diversi dello schermo (richiesta utente).
+    //
+    // Solo su SÌ. Un « non indica » è un'informazione, non una risposta al ciclo.
+    if (!indica || modeRef.current !== 'tone' || !riga) return;
+    const risposta = matchToneAnswer(riga.item, tonePhaseRef.current);
+    if (!risposta) return;
+    if (risposta.kind === 'sign' && tonePhaseRef.current === 'sign') {
+      setToneSignPick(risposta.sign);
+      setTonePhase('magnitude');
+    } else if (risposta.kind === 'magnitude' && tonePhaseRef.current === 'magnitude') {
+      setToneValidated({ sign: toneSignPickRef.current ?? 1, magnitude: risposta.magnitude,
+        origin: toneHasMeterRef.current ? 'measured' : 'assessed' });
+      setTonePhase('mockup');
+    }
   }, []);
 
   // ── ASSESSMENT — ajoute un item assessé + calcule son READ instantané. Le read est un
@@ -4316,6 +4335,11 @@ export default function App() {
   const [toneAtStart, setToneAtStart] = useState<number | null>(null);
   /** Come si è scelto l'istante della localizzazione, e da quanti secondi prima viene. */
   const [toneAnchor, setToneAnchor] = useState<{ how: ToneLocateAnchor; ageS: number } | null>(null);
+  // Specchi in ref: `segnaIndicazione` si aggancia UNA volta sola (deps vuote, come tutte le
+  // callback del pannello) e senza questi leggerebbe per sempre la fase d'avvio.
+  const tonePhaseRef = useRef(tonePhase); tonePhaseRef.current = tonePhase;
+  const toneSignPickRef = useRef(toneSignPick); toneSignPickRef.current = toneSignPick;
+  const modeRef = useRef(mode); modeRef.current = mode;
   // Il tono MISURATO. Oggi passa dal TA e non da ohm veri: `toneFromTa` è dichiaratamente una
   // strada provvisoria, ed è per questo che il quadrante scrive « ≈ ». Diventa esatta il giorno
   // che si tara il meter con due resistenze note.
@@ -4325,6 +4349,7 @@ export default function App() {
   // Specchio in ref: il gestore del worker si aggancia UNA volta sola e il tono cambia a ogni
   // tick — senza questo il locatore accumulerebbe per sempre il valore d'avvio.
   const toneMeasuredRef = useRef(toneMeasured); toneMeasuredRef.current = toneMeasured;
+  const toneHasMeterRef = useRef(toneHasMeter); toneHasMeterRef.current = toneHasMeter;
   const toneProposed = toneMeasured !== null ? proposeFromTone(toneMeasured) : null;
   // ⚠️ Si confronta con la MISURA LOCALIZZATA, non con la proposta arrotondata, e CON
   // TOLLERANZA: l'ago cade fra due divisioni, e a −23 vanno bene sia −20 sia −30. Vedi

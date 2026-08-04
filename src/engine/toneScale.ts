@@ -158,6 +158,71 @@ export const reachedZero = (toneNow: number, eps = TONE_STEP / 2): boolean =>
   Math.abs(clampTone(toneNow)) < eps;
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════
+// DALL'ITEM ASSESSATO ALLA RISPOSTA DEL CICLO
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Nelle fasi 2 e 3 l'auditor ENUNCIA le risposte — « negativo? », « positivo? », « 10, 20,
+ * 30, 40 » — e il modulo ASSESSMENT le raccoglie con la loro lettura. Quando poi indica al
+ * preclear e questi conferma, il ciclo deve avanzare DA SOLO: cliccare « indica » e poi
+ * ricliccare il bottone in cima vorrebbe dire dire due volte la stessa cosa.
+ *
+ * Qui si riconosce QUALE risposta era quell'item. Puro testo → risposta, niente altro.
+ *
+ * ── PERCHÉ PAROLA INTERA E NON SOTTOSTRINGA ────────────────────────────────────────────────
+ * Per i NUMERI si confronta parola per parola: lo svedese « tio » (dieci) è dentro decine di
+ * parole comuni, e un item come « la lezione » diventerebbe un 10. Per il SEGNO invece la
+ * sottostringa va bene: « negativ » e « positiv » non capitano per caso, e coprono in un colpo
+ * negativo/négatif/negative/negativ e le loro coniugazioni.
+ */
+export type ToneAnswer =
+  | { kind: 'sign'; sign: ToneSign }
+  | { kind: 'magnitude'; magnitude: ToneStep };
+
+/** Accenti via, minuscole, e i segni fuori: « Négatif ? » e « negativo » devono pareggiare. */
+const norm = (s: string): string =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+/** Le decine dette a parole, nelle cinque lingue. Le cifre si riconoscono a parte. */
+const PAROLE_AMPIEZZA: Record<ToneStep, string[]> = {
+  10: ['dieci', 'dix', 'ten', 'diez', 'tio'],
+  20: ['venti', 'vingt', 'twenty', 'veinte', 'tjugo'],
+  30: ['trenta', 'trente', 'thirty', 'treinta', 'trettio'],
+  40: ['quaranta', 'quarante', 'forty', 'cuarenta', 'fyrtio'],
+};
+
+/**
+ * Che risposta è questo item, per la fase in corso? `null` se non è una risposta — ed è il caso
+ * normale: nell'assessment ci finisce anche quel che si dice intorno.
+ */
+export const matchToneAnswer = (text: string, phase: TonePhase): ToneAnswer | null => {
+  const t = norm(text);
+  if (!t) return null;
+
+  if (phase === 'sign') {
+    // l'ordine conta: « non negativo » non lo trattiamo — è l'auditor che indica, non l'app che
+    // interpreta. Si guarda solo quale delle due parole c'è.
+    const neg = t.includes('negativ') || t.includes('negatif');
+    const pos = t.includes('positiv') || t.includes('positif');
+    if (neg === pos) return null;            // tutte e due, o nessuna → non si indovina
+    return { kind: 'sign', sign: neg ? -1 : 1 };
+  }
+
+  if (phase === 'magnitude') {
+    // le CIFRE per prime: « 30 » è la forma che arriva più spesso da chi scrive
+    const cifre = t.match(/\b(10|20|30|40)\b/);
+    if (cifre) return { kind: 'magnitude', magnitude: Number(cifre[1]) as ToneStep };
+    const parole = t.split(/[^a-z]+/).filter(Boolean);
+    for (const s of TONE_STEPS) {
+      if (PAROLE_AMPIEZZA[s].some(p => parole.includes(p))) return { kind: 'magnitude', magnitude: s };
+    }
+    return null;
+  }
+
+  return null;
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════
 // COME SI SA CHE L'AS-IS È ARRIVATO — I TESTIMONI
 // ═══════════════════════════════════════════════════════════════════════════════════════════
 
