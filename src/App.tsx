@@ -93,6 +93,7 @@ import { calibFeatures } from './engine/CalibFeatures';
 import { mirrorCycle, mirrorReading } from './engine/MirrorCycle';
 import { MirrorDial } from './components/MirrorDial';
 import { ToneDial } from './components/ToneDial';
+import { CycleHint } from './components/CycleHint';
 import {
   TONE_STEPS, proposeFromTone, agreementOf, toneFromTa, chargeValue, oppositeOf, ToneLocator,
   reachedZero, toneWitnesses, toneAsIs, matchToneAnswer,
@@ -4369,6 +4370,8 @@ export default function App() {
     [toneHasMeter, instruments.muse]);
   const [toneFired, setToneFired] = useState<ToneWitness[]>([]);
   const asIsSignature = useMetric(m => m.asIsSignature);
+  /** Fase del ciclo di carica (neutral|contact|discharge|asis) — la stessa che colora l'ago. */
+  const chargePhaseNow = useMetric(m => m.chargePhase);
   const toneFnNow = agoPrincipale === 'theta' ? !!theta.fn.fn
     : (needleReactionKey || '').includes('reaction_fn');
   useEffect(() => {
@@ -4435,6 +4438,102 @@ export default function App() {
         + (asIs ? ' · AS-IS' : ''),
       type: asIs ? 'success' : 'normal' });
   }, [toneValidated, auditingQuestion, toneAtStart, toneAgreement, toneAnchor, toneFired, LC]);
+
+  // ── « A CHE PUNTO SONO, E COSA DEVO FARE » — per tutti e quattro i cicli ─────────────────
+  // Un componente solo (CycleHint), sempre nello stesso posto, con la SUA specificità per ogni
+  // ciclo. Ce l'aveva il solo TONE, dove la procedura ha quattro tempi che nessuno ricorda a
+  // memoria; l'utente l'ha chiesto anche per gli altri tre — « cela rends le tout plus simple ».
+  //
+  // Il testo si calcola dallo STATO VERO del ciclo, non da un contatore di passi: se il motore
+  // avanza da solo (ed è quel che fa CONTACT), la scritta lo segue senza che nessuno gliela
+  // debba dire.
+  const spiegazioneCiclo = useMemo((): { titolo: string; come: string; avviso?: string | null; fatto?: boolean } => {
+    const n = (v: number) => `${v > 0 ? '+' : ''}${Math.round(v)}`;
+
+    // ── TONE : localizza → segno → ampiezza → mock-up ─────────────────────────────────────
+    if (mode === 'tone') {
+      const p = toneProposedAtLock ? chargeValue(toneProposedAtLock) : null;
+      const smentita = toneAgreement === 'differs' && toneAtStart !== null
+        ? `${LC('l\'ago diceva altro', 'l\'aiguille disait autre chose', 'the needle said otherwise', 'la aguja decía otra cosa', 'nålen sa något annat')} — ${n(toneAtStart)}`
+        : null;
+      if (tonePhase === 'locate') return {
+        titolo: toneHasMeter
+          ? LC('1 · LOCALIZZA LA RESISTENZA', '1 · LOCALISE LA RÉSISTANCE', '1 · LOCATE THE RESISTANCE', '1 · LOCALIZA LA RESISTENCIA', '1 · LOKALISERA MOTSTÅNDET')
+          : LC('1 · LOCALIZZA — SENZA METER', '1 · LOCALISE — SANS MÈTRE', '1 · LOCATE — OFF-METER', '1 · LOCALIZA — SIN MEDIDOR', '1 · LOKALISERA — UTAN MÄTARE'),
+        come: toneHasMeter
+          ? LC('L\'ago si posa su un numero. Premi quando il preclear ha trovato.', 'L\'aiguille se pose sur un nombre. Appuie quand le préclair a trouvé.', 'The needle settles on a number. Press when the preclear has found it.', 'La aguja se posa en un número. Pulsa cuando el preclear lo haya encontrado.', 'Nålen lägger sig på ett tal. Tryck när preclearen hittat det.')
+          : LC('Nessuna misura: segno e ampiezza si assessano.', 'Aucune mesure : le signe et l\'ampleur s\'assessent.', 'No measurement: sign and magnitude are assessed.', 'Sin medida: signo y amplitud se assessan.', 'Ingen mätning: tecken och storlek assessas.') };
+      if (tonePhase === 'sign') return {
+        titolo: LC('2 · POSITIVO O NEGATIVO?', '2 · POSITIF OU NÉGATIF ?', '2 · POSITIVE OR NEGATIVE?', '2 · ¿POSITIVO O NEGATIVO?', '2 · POSITIVT ELLER NEGATIVT?'),
+        come: LC('Assessa « negativo? » poi « positivo? ». Quello che legge è il segno.', 'Assesse « négatif ? » puis « positif ? ». Celui qui lit est le signe.', 'Assess "negative?" then "positive?". The one that reads is the sign.', 'Assessa « ¿negativo? » luego « ¿positivo? ». El que lee es el signo.', 'Assessa ”negativt?” sedan ”positivt?”. Det som läser är tecknet.')
+          + (p !== null ? ` ${LC('L\'ago propone', 'L\'aiguille propose', 'The needle proposes', 'La aguja propone', 'Nålen föreslår')} ${n(p)}.` : '') };
+      if (tonePhase === 'magnitude') return {
+        titolo: LC('3 · QUANTE DIVISIONI?', '3 · COMBIEN DE DIVISIONS ?', '3 · HOW MANY DIVISIONS?', '3 · ¿CUÁNTAS DIVISIONES?', '3 · HUR MÅNGA DELSTRECK?'),
+        come: LC('Assessa 10, 20, 30, 40. Non dev\'essere preciso: l\'ago cade fra due divisioni.', 'Assesse 10, 20, 30, 40. Pas besoin d\'être précis : l\'aiguille tombe entre deux divisions.', 'Assess 10, 20, 30, 40. It need not be exact: the needle falls between two divisions.', 'Assessa 10, 20, 30, 40. No hace falta ser exacto: la aguja cae entre dos divisiones.', 'Assessa 10, 20, 30, 40. Det behöver inte vara exakt: nålen faller mellan två delstreck.') };
+      if (tonePhase === 'mockup' && toneValidated) return {
+        titolo: `4 · ${LC('FAI MOCK-UPPARE', 'FAIS MOCK-UPPER', 'HAVE HIM MOCK UP', 'HAZLE MOCK-UPEAR', 'LÅT HONOM MOCKA UPP')} ${n(oppositeOf(toneValidated))}`,
+        come: `${LC('Contro', 'Contre', 'Against', 'Contra', 'Mot')} ${n(chargeValue(toneValidated))} ${LC('di carica. Aspetta l\'as-isness — non fare altro.', 'de charge. Attends l\'as-isness — ne fais rien d\'autre.', 'of charge. Wait for the as-isness — do nothing else.', 'de carga. Espera el as-isness — no hagas nada más.', 'laddning. Vänta på as-isness — gör inget annat.')}`,
+        avviso: smentita };
+      return { titolo: 'AS-IS', fatto: true,
+        come: LC('La resistenza assessata è a zero. Validato da te.', 'La résistance assessée est à zéro. Validé par toi.', 'The assessed resistance is at zero. Validated by you.', 'La resistencia assessada está a cero. Validado por ti.', 'Det assessade motståndet är på noll. Validerat av dig.'),
+        avviso: smentita };
+    }
+
+    // ── MIRROR : item → valore → il DOPPIO da smaltire ────────────────────────────────────
+    if (mode === 'mirror') {
+      if (!mirrorArmed) return {
+        titolo: LC('1 · DAI L\'ITEM', '1 · DONNE L\'ITEM', '1 · GIVE THE ITEM', '1 · DA EL ÍTEM', '1 · GE ITEM'),
+        come: LC('Scrivilo o dillo a voce, poi premi. Il valore si fissa sulla carica di QUESTO item.', 'Écris-le ou dis-le, puis appuie. La valeur se fige sur la charge de CET item.', 'Type it or say it, then press. The value is fixed on THIS item\'s charge.', 'Escríbelo o dilo, luego pulsa. El valor se fija en la carga de ESTE ítem.', 'Skriv eller säg det, tryck sedan. Värdet fästs på DETTA items laddning.') };
+      if (!auditingQuestion.trim()) return {
+        titolo: LC('2 · DÌ L\'ITEM', '2 · DIS L\'ITEM', '2 · SAY THE ITEM', '2 · DI EL ÍTEM', '2 · SÄG ITEM'),
+        come: LC('La prima parola che dici diventa l\'item, e la misura riparte da lì.', 'Le premier mot que tu dis devient l\'item, et la mesure repart de là.', 'The first word you say becomes the item, and the measure restarts there.', 'La primera palabra que digas se vuelve el ítem, y la medida reinicia allí.', 'Det första ordet du säger blir item, och mätningen börjar om där.') };
+      if (!mirrorDisp.locked) return {
+        titolo: LC('3 · CONTATTO DELLA CARICA', '3 · CONTACT DE LA CHARGE', '3 · CONTACTING THE CHARGE', '3 · CONTACTO DE LA CARGA', '3 · KONTAKT MED LADDNINGEN'),
+        come: LC('Aspetta: il valore 1–10 si fissa da sé quando la lettura si è girata.', 'Attends : la valeur 1–10 se fige d\'elle-même quand la lecture s\'est retournée.', 'Wait: the 1–10 value fixes itself once the read has turned over.', 'Espera: el valor 1–10 se fija solo cuando la lectura se ha girado.', 'Vänta: värdet 1–10 fäster av sig självt när avläsningen vänt.') };
+      if (mirrorDisp.reached) return {
+        titolo: LC('OTTENUTO', 'OBTENU', 'OBTAINED', 'OBTENIDO', 'UPPNÅTT'), fatto: true,
+        come: LC('Lo smaltito ha raggiunto il doppio. Valida e riparti con un altro item.', 'Le déchargé a atteint le double. Valide et repars avec un autre item.', 'The discharged reached the double. Validate and go on with another item.', 'Lo descargado alcanzó el doble. Valida y sigue con otro ítem.', 'Det urladdade nådde dubbeln. Validera och fortsätt med ett annat item.') };
+      return {
+        titolo: `4 · ${LC('PORTA AL DOPPIO', 'MÈNE AU DOUBLE', 'TAKE IT TO THE DOUBLE', 'LLEVA AL DOBLE', 'FÖR TILL DUBBELN')} ${(2 * mirrorDisp.valueR).toFixed(1)}`,
+        come: LC(`Valore ${mirrorDisp.valueR.toFixed(1)} — il metodo del doppio di Ron. Non fare altro: si smaltisce da sé.`, `Valeur ${mirrorDisp.valueR.toFixed(1)} — la méthode du double de Ron. Ne fais rien d'autre : ça se décharge tout seul.`, `Value ${mirrorDisp.valueR.toFixed(1)} — Ron's doubling method. Do nothing else: it discharges by itself.`, `Valor ${mirrorDisp.valueR.toFixed(1)} — el método del doble de Ron. No hagas nada más: se descarga solo.`, `Värde ${mirrorDisp.valueR.toFixed(1)} — Rons dubbelmetod. Gör inget annat: det laddas ur av sig självt.`) };
+    }
+
+    // ── NULL : item → mock-up → RISE → EQUILIBRIUM ────────────────────────────────────────
+    if (mode === 'null') {
+      if (!cycleArmed) return {
+        titolo: LC('1 · DAI L\'ITEM', '1 · DONNE L\'ITEM', '1 · GIVE THE ITEM', '1 · DA EL ÍTEM', '1 · GE ITEM'),
+        come: LC('Se l\'ago NON legge, premi: è il ciclo speculare, si lavora su ciò che non reagisce.', 'Si l\'aiguille NE lit PAS, appuie : c\'est le cycle miroir, on travaille sur ce qui ne réagit pas.', 'If the needle does NOT read, press: this is the mirror cycle, working on what does not react.', 'Si la aguja NO lee, pulsa: es el ciclo espejo, se trabaja sobre lo que no reacciona.', 'Om nålen INTE läser, tryck: det är spegelcykeln, man arbetar på det som inte reagerar.') };
+      if (nullPhase === 'rise') return {
+        titolo: LC('3 · LA CARICA SALE', '3 · LA CHARGE MONTE', '3 · THE CHARGE RISES', '3 · LA CARGA SUBE', '3 · LADDNINGEN STIGER'),
+        come: LC('Il mock-up sta creando massa. Aspetta il ritorno alla base: quello è l\'EQUILIBRIUM.', 'Le mock-up crée de la masse. Attends le retour à la base : c\'est ça l\'EQUILIBRIUM.', 'The mock-up is creating mass. Wait for the return to base: that is the EQUILIBRIUM.', 'El mock-up está creando masa. Espera el retorno a la base: eso es el EQUILIBRIUM.', 'Mock-upen skapar massa. Vänta på återgången till basen: det är EQUILIBRIUM.') };
+      if (nullPhase === 'clear_read') return {
+        titolo: 'EQUILIBRIUM', fatto: true,
+        come: LC('Tornato alla base. Valida inscrivendo i VGI\'s — sì o no, sei tu a dirlo.', 'Revenu à la base. Valide en inscrivant les VGI\'s — oui ou non, c\'est toi qui le dis.', 'Back to base. Validate by recording the VGI\'s — yes or no, you say it.', 'Vuelto a la base. Valida inscribiendo los VGI\'s — sí o no, lo dices tú.', 'Tillbaka till basen. Validera genom att skriva in VGI\'s — ja eller nej, du säger det.') };
+      return {
+        titolo: LC('2 · CHIEDI UN MOCK-UP', '2 · DEMANDE UN MOCK-UP', '2 · ASK FOR A MOCK-UP', '2 · PIDE UN MOCK-UP', '2 · BE OM EN MOCK-UP'),
+        come: LC('Il tempo non è imposto: ogni preclear ha il suo. Il cronometro è solo indicativo.', 'Le temps n\'est pas imposé : chaque préclair a le sien. Le chrono est indicatif.', 'The time is not imposed: each preclear has their own. The clock is only indicative.', 'El tiempo no se impone: cada preclear tiene el suyo. El cronómetro es indicativo.', 'Tiden är inte given: varje preclear har sin. Klockan är bara vägledande.') };
+    }
+
+    // ── CONTACT : item → il ciclo avanza da sé → AS-IS ────────────────────────────────────
+    if (!cycleArmed) return {
+      titolo: LC('1 · DAI L\'ITEM', '1 · DONNE L\'ITEM', '1 · GIVE THE ITEM', '1 · DA EL ÍTEM', '1 · GE ITEM'),
+      come: LC('L\'ago legge → premi. Puoi scrivere l\'item o dirlo a voce dopo aver premuto.', 'L\'aiguille lit → appuie. Tu peux écrire l\'item ou le dire après avoir appuyé.', 'The needle reads → press. You can type the item or say it after pressing.', 'La aguja lee → pulsa. Puedes escribir el ítem o decirlo tras pulsar.', 'Nålen läser → tryck. Du kan skriva item eller säga det efter tryckningen.') };
+    if (asIsPending) return {
+      titolo: 'AS-IS', fatto: true,
+      come: LC('La firma della carica è collassata e l\'F/N è arrivato. Proposto: validi tu, mai l\'app.', 'La signature de la charge s\'est effondrée et la F/N est là. Proposé : c\'est toi qui valides, jamais l\'app.', 'The charge signature has collapsed and the F/N is here. Proposed: you validate, never the app.', 'La firma de la carga colapsó y llegó la F/N. Propuesto: validas tú, nunca la app.', 'Laddningens signatur har kollapsat och F/N är här. Föreslaget: du validerar, aldrig appen.') };
+    if (chargePhaseNow === 'discharge') return {
+      titolo: LC('3 · SI DISSOLVE', '3 · ÇA SE DISSOUT', '3 · IT IS DISSOLVING', '3 · SE DISUELVE', '3 · DET LÖSES UPP'),
+      come: LC('La carica se ne sta andando. Non fare niente: aspetta l\'F/N.', 'La charge s\'en va. Ne fais rien : attends la F/N.', 'The charge is leaving. Do nothing: wait for the F/N.', 'La carga se está yendo. No hagas nada: espera la F/N.', 'Laddningen försvinner. Gör inget: vänta på F/N.') };
+    return {
+      titolo: LC('2 · LASCIA GUARDARE', '2 · LAISSE REGARDER', '2 · LET HIM LOOK', '2 · DEJA MIRAR', '2 · LÅT HONOM SE'),
+      come: LC('Non fare niente: il preclear guarda la cosa. Il ciclo avanza da sé.', 'Ne fais rien : le préclair regarde la chose. Le cycle avance tout seul.', 'Do nothing: the preclear looks at the thing. The cycle advances by itself.', 'No hagas nada: el preclear mira la cosa. El ciclo avanza solo.', 'Gör inget: preclearen tittar på saken. Cykeln går framåt av sig själv.'),
+      avviso: noReadSignal
+        ? LC('sembra NULL — nessuna lettura nella finestra', 'semble NULL — aucune lecture dans la fenêtre', 'looks NULL — no read in the window', 'parece NULL — ninguna lectura en la ventana', 'ser NULL ut — ingen avläsning i fönstret')
+        : null };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, tonePhase, toneHasMeter, toneProposedAtLock, toneValidated, toneAgreement, toneAtStart,
+      mirrorArmed, auditingQuestion, mirrorDisp, cycleArmed, nullPhase, asIsPending, chargePhaseNow,
+      noReadSignal, lang]);
 
   const resetTone = useCallback(() => {
     setTonePhase('locate'); setToneValidated(null); setToneProposedAtLock(null);
@@ -6074,6 +6173,51 @@ export default function App() {
                   ASSESSMENT sopra, EP sotto, nell'ordine in cui si usano. */}
               {sessionState === 'running' && (
                 <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                  {/* ── QUALE AGO, E QUALI REAZIONI — un comando solo ────────────────────────
+                      Sceglie le REAZIONI da scrivere sopra il quadrante, e insieme QUALE AGO
+                      guardare là dove l'ago non è già imposto dal metodo (cioè in LIBERO: negli
+                      altri modi lo impone MODE_SPEC e questa scelta cambia solo le scritte).
+
+                      ENTRAMBI non tocca l'ago — uno solo se ne può mostrare, i dati dicono che i
+                      due non si fondono (κ = −0,09 su 89 item) — e lascia quello di prima,
+                      aggiungendo la seconda riga di reazioni.
+
+                      Sta QUI e non a sinistra: è una scelta sugli STRUMENTI, come ASSESS ed EP
+                      che le stanno sotto, non una scelta sul metodo. */}
+                  {instruments.muse && instruments.theta && (
+                    <div style={{ display: 'flex', width: 168, padding: 2, gap: 2, borderRadius: 999,
+                      background: isLightTheme ? '#b7b7be' : '#17171b',
+                      boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
+                      {([{ k: 'eeg' as const, lbl: 'MUSE', col: '#8ab4ff' },
+                         { k: 'theta' as const, lbl: 'METER', col: '#f59e0b' },
+                         { k: 'both' as const, lbl: LC('DUE', 'DEUX', 'BOTH', 'DOS', 'TVÅ'), col: '#34d399' }]).map(o => {
+                        const on = reazioniViste === o.k;
+                        const imposto = MODE_SPEC[mode].needle !== null || provaBoiteInCorso || cicloInCorso;
+                        return (
+                          <button key={o.k} type="button"
+                            onClick={() => { setReazioniViste(o.k); if (o.k !== 'both') setAgoScelto(o.k); }}
+                            title={imposto
+                              ? LC('Quali reazioni scrivere — l\'ago lo impone il metodo',
+                                   'Quelles réactions écrire — l\'aiguille est imposée par la méthode',
+                                   'Which reactions to write — the needle is set by the method',
+                                   'Qué reacciones escribir — la aguja la impone el método',
+                                   'Vilka reaktioner som skrivs — nålen bestäms av metoden')
+                              : LC('Quale ago guardare e quali reazioni scrivere',
+                                   'Quelle aiguille regarder et quelles réactions écrire',
+                                   'Which needle to watch and which reactions to write',
+                                   'Qué aguja mirar y qué reacciones escribir',
+                                   'Vilken nål att se och vilka reaktioner som skrivs')}
+                            style={{ flex: 1, height: 20, borderRadius: 999, border: 'none', cursor: 'pointer',
+                              fontSize: 8, fontWeight: 700, letterSpacing: '0.02em',
+                              color: on ? '#0b0f14' : (isLightTheme ? '#3a3a40' : '#8b98ad'),
+                              background: on ? o.col : 'transparent',
+                              transition: 'color 0.2s, background 0.2s' }}>
+                            {o.lbl}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                   <button onClick={toggleAssessment} title="ASSESSMENT"
                     style={{ width: 96, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, height: 26,
                       borderRadius: 9, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700,
@@ -6290,6 +6434,11 @@ export default function App() {
                 })}
                 </div>
                 )}
+                {/* « A che punto sono, e cosa devo fare » — stesso componente e stesso posto del
+                    TONE e del MIRROR, col testo di QUESTO ciclo (vedi spiegazioneCiclo). */}
+                {sessionState === 'running' && !eegModulesHidden(instruments) && (
+                  <CycleHint {...spiegazioneCiclo} />
+                )}
               </div>
 
               {/* ── BARRE MIRROR (vue à part) : item + un SEUL geste (aggancio) + readouts. Ni CONTACT
@@ -6360,6 +6509,7 @@ export default function App() {
                       </div>
                     );
                   })()}
+                  <CycleHint {...spiegazioneCiclo} />
                 </div>
               )}
               {/* ── BARRE TONE SCALE — les QUATRE temps de Ron, un par un ───────────────────────
@@ -6502,78 +6652,10 @@ export default function App() {
 
                     </div>
 
-                    {/* ── IL CICLO, SCRITTO QUI SOTTO ────────────────────────────────────────
-                        Stava DENTRO l'arco, sopra il quadrante: si sovrapponeva alle scritte
-                        del quadrante sottostante (SET, SF, FALL, LONG FALL) e non si leggeva
-                        più niente. Qui il testo è testo e l'arco resta un arco.
-
-                        ⚠️ ALTEZZA LIMITATA. Col METER le righe diventano di più e il blocco
-                        cresceva fin sopra il selettore di modo, che gli sta sotto e lo copre
-                        (z-50 contro z-30): il testo finiva dietro le pastiglie e non si leggeva
-                        — segnalato due volte. 84 px sono il titolo più tre righe, e il selettore
-                        comincia 152 px sotto la cima della colonna: non ci arriva più. */}
-                    <div style={{ width: '100%', marginTop: 2, maxHeight: 84, overflow: 'hidden' }}>
-                      {(() => {
-                        const n = (v: number) => `${v > 0 ? '+' : ''}${Math.round(v)}`;
-                        const p = toneProposedAtLock ? chargeValue(toneProposedAtLock) : null;
-                        let titolo: string, come: string;
-                        if (tonePhase === 'locate') {
-                          titolo = toneHasMeter
-                            ? LC('1 · LOCALIZZA LA RESISTENZA', '1 · LOCALISE LA RÉSISTANCE', '1 · LOCATE THE RESISTANCE', '1 · LOCALIZA LA RESISTENCIA', '1 · LOKALISERA MOTSTÅNDET')
-                            : LC('1 · LOCALIZZA — SENZA METER', '1 · LOCALISE — SANS MÈTRE', '1 · LOCATE — OFF-METER', '1 · LOCALIZA — SIN MEDIDOR', '1 · LOKALISERA — UTAN MÄTARE');
-                          // ⚠️ UNA RIGA SOLA. Il « si prende il valore di quando l'ago ha
-                          // reagito, non quello del clic » stava qui e mandava il blocco a tre
-                          // righe: cresceva fin sopra il selettore di modo e ci finiva dietro
-                          // (segnalato due volte). È una spiegazione da GUIDE, non da leggere a
-                          // ogni localizzazione — e in seduta lo si vede scritto sotto, nella
-                          // riga che dice « MUSE ha visto il pensiero · −0,6s ».
-                          come = toneHasMeter
-                            ? LC('L\'ago si posa su un numero. Premi quando il preclear ha trovato.',
-                                 'L\'aiguille se pose sur un nombre. Appuie quand le préclair a trouvé.',
-                                 'The needle settles on a number. Press when the preclear has found it.',
-                                 'La aguja se posa en un número. Pulsa cuando el preclear lo haya encontrado.',
-                                 'Nålen lägger sig på ett tal. Tryck när preclearen hittat det.')
-                            : LC('Nessuna misura: segno e ampiezza si assessano.', 'Aucune mesure : le signe et l\'ampleur s\'assessent.', 'No measurement: sign and magnitude are assessed.', 'Sin medida: signo y amplitud se assessan.', 'Ingen mätning: tecken och storlek assessas.');
-                        } else if (tonePhase === 'sign') {
-                          titolo = LC('2 · POSITIVO O NEGATIVO?', '2 · POSITIF OU NÉGATIF ?', '2 · POSITIVE OR NEGATIVE?', '2 · ¿POSITIVO O NEGATIVO?', '2 · POSITIVT ELLER NEGATIVT?');
-                          come = LC('Assessa « negativo? » poi « positivo? ». Quello che legge è il segno.', 'Assesse « négatif ? » puis « positif ? ». Celui qui lit est le signe.', 'Assess "negative?" then "positive?". The one that reads is the sign.', 'Assessa « ¿negativo? » luego « ¿positivo? ». El que lee es el signo.', 'Assessa ”negativt?” sedan ”positivt?”. Det som läser är tecknet.')
-                            + (p !== null ? ` ${LC('L\'ago propone', 'L\'aiguille propose', 'The needle proposes', 'La aguja propone', 'Nålen föreslår')} ${n(p)}.` : '');
-                        } else if (tonePhase === 'magnitude') {
-                          titolo = LC('3 · QUANTE DIVISIONI?', '3 · COMBIEN DE DIVISIONS ?', '3 · HOW MANY DIVISIONS?', '3 · ¿CUÁNTAS DIVISIONES?', '3 · HUR MÅNGA DELSTRECK?');
-                          come = LC('Assessa 10, 20, 30, 40. Non dev\'essere preciso: l\'ago cade fra due divisioni.',
-                                    'Assesse 10, 20, 30, 40. Pas besoin d\'être précis : l\'aiguille tombe entre deux divisions.',
-                                    'Assess 10, 20, 30, 40. It need not be exact: the needle falls between two divisions.',
-                                    'Assessa 10, 20, 30, 40. No hace falta ser exacto: la aguja cae entre dos divisiones.',
-                                    'Assessa 10, 20, 30, 40. Det behöver inte vara exakt: nålen faller mellan två delstreck.');
-                        } else if (tonePhase === 'mockup') {
-                          titolo = `4 · ${LC('FAI MOCK-UPPARE', 'FAIS MOCK-UPPER', 'HAVE HIM MOCK UP', 'HAZLE MOCK-UPEAR', 'LÅT HONOM MOCKA UPP')} ${n(oppositeOf(toneValidated!))}`;
-                          come = `${LC('Contro', 'Contre', 'Against', 'Contra', 'Mot')} ${n(chargeValue(toneValidated!))} ${LC('di carica. Aspetta l\'as-isness — non fare altro.', 'de charge. Attends l\'as-isness — ne fais rien d\'autre.', 'of charge. Wait for the as-isness — do nothing else.', 'de carga. Espera el as-isness — no hagas nada más.', 'laddning. Vänta på as-isness — gör inget annat.')}`;
-                        } else {
-                          titolo = 'AS-IS';
-                          come = LC('La resistenza assessata è a zero. Validato da te.', 'La résistance assessée est à zéro. Validé par toi.', 'The assessed resistance is at zero. Validated by you.', 'La resistencia assessada está a cero. Validado por ti.', 'Det assessade motståndet är på noll. Validerat av dig.');
-                        }
-                        return (
-                          <>
-                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 800, letterSpacing: '0.04em',
-                                          color: tonePhase === 'done' ? '#34d399' : 'rgba(240,246,255,0.95)' }}>
-                              {titolo}
-                            </div>
-                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, lineHeight: 1.45, marginTop: 2,
-                                          color: 'rgba(226,238,255,0.72)' }}>
-                              {come}
-                            </div>
-                            {/* La smentita si scrive SOLO se è vera una smentita: dentro la
-                                tolleranza di una divisione, misura e assessment concordano. */}
-                            {toneAgreement === 'differs' && (
-                              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 700, marginTop: 3, color: '#fbbf24' }}>
-                                {LC('l\'ago diceva altro', 'l\'aiguille disait autre chose', 'the needle said otherwise', 'la aguja decía otra cosa', 'nålen sa något annat')}
-                                {toneAtStart !== null ? ` — ${n(toneAtStart)}` : ''}
-                              </div>
-                            )}
-                          </>
-                        );
-                      })()}
-                    </div>
+                    {/* Il testo del ciclo sta in `spiegazioneCiclo`, insieme a quello di
+                        CONTACT, NULL e MIRROR: stesso posto, stesso aspetto, un componente solo
+                        (vedi CycleHint). Prima era qui dentro, e solo il TONE ce l'aveva. */}
+                    <CycleHint {...spiegazioneCiclo} />
                   </div>
                 );
               })()}
@@ -6736,57 +6818,10 @@ export default function App() {
                   );
                 })}
               </div>
-              {/* ── IL SELETTORE DELL'AGO NON C'È PIÙ ────────────────────────────────────
-                  Stava QUI SOPRA quello delle reazioni, e diceva quasi la stessa cosa: due file
-                  « MUSE / METER » una sull'altra, e nessuna che spiegasse la differenza. Le ho
-                  fuse in una sola, qui sotto: sceglie le REAZIONI da scrivere e — dove l'ago non
-                  è già imposto dal metodo, cioè in LIBERO — anche QUALE AGO guardare.
-                  Segnalato: « togli MUSE/METER sopra MUSE/METER/ENTRAMBI e rialzalo ». */}
-              {/* ── QUALE AGO, E QUALI REAZIONI — un comando solo ──────────────────────────
-                  Sceglie le REAZIONI da scrivere sopra il quadrante, e insieme QUALE AGO
-                  guardare là dove l'ago non è già imposto dal metodo (cioè in LIBERO: negli
-                  altri modi lo impone MODE_SPEC e questa scelta cambia solo le scritte).
-
-                  ENTRAMBI non tocca l'ago — uno solo se ne può mostrare, i dati dicono che i due
-                  non si fondono (κ = −0,09 su 89 item) — e lascia quello di prima, aggiungendo la
-                  seconda riga di reazioni.
-
-                  Compare col solo fatto che i due strumenti ci sono: si sceglie PRIMA di
-                  cominciare, non a seduta avviata. */}
-              {instruments.muse && instruments.theta && (
-                <div style={{ display: 'flex', width: 300, padding: 2, gap: 2, borderRadius: 999,
-                  background: isLightTheme ? '#b7b7be' : '#17171b',
-                  boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
-                  {([{ k: 'eeg' as const, lbl: 'MUSE', col: '#8ab4ff' },
-                     { k: 'theta' as const, lbl: 'METER', col: '#f59e0b' },
-                     { k: 'both' as const, lbl: LC('ENTRAMBI', 'LES DEUX', 'BOTH', 'AMBAS', 'BÅDA'), col: '#34d399' }]).map(o => {
-                    const on = reazioniViste === o.k;
-                    const imposto = MODE_SPEC[mode].needle !== null || provaBoiteInCorso || cicloInCorso;
-                    return (
-                      <button key={o.k} type="button"
-                        onClick={() => { setReazioniViste(o.k); if (o.k !== 'both') setAgoScelto(o.k); }}
-                        title={imposto
-                          ? LC('Quali reazioni scrivere — l\'ago lo impone il metodo',
-                               'Quelles réactions écrire — l\'aiguille est imposée par la méthode',
-                               'Which reactions to write — the needle is set by the method',
-                               'Qué reacciones escribir — la aguja la impone el método',
-                               'Vilka reaktioner som skrivs — nålen bestäms av metoden')
-                          : LC('Quale ago guardare e quali reazioni scrivere',
-                               'Quelle aiguille regarder et quelles réactions écrire',
-                               'Which needle to watch and which reactions to write',
-                               'Qué aguja mirar y qué reacciones escribir',
-                               'Vilken nål att se och vilka reaktioner som skrivs')}
-                        style={{ flex: 1, height: 22, borderRadius: 999, border: 'none', cursor: 'pointer',
-                          fontSize: 9, fontWeight: 700, letterSpacing: '0.04em',
-                          color: on ? '#0b0f14' : (isLightTheme ? '#3a3a40' : '#8b98ad'),
-                          background: on ? o.col : 'transparent',
-                          transition: 'color 0.2s, background 0.2s' }}>
-                        {o.lbl}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              {/* Il selettore MUSE / METER / ENTRAMBI non sta più qui: è passato nella COLONNA
+                  DI DESTRA, sopra ASSESS. Là si legge meglio — a sinistra faceva una terza fila
+                  di pastiglie sotto il modo e la scia, e tre file di comandi impilati non si
+                  distinguono più l'una dall'altra (segnalato). */}
               {/* LA SCIA — quel che « AGO + » voleva dire, e che non era un metodo. Nascosta in
                   MIRROR e TONE, che hanno il loro quadrante e non la scia dell'ago.
                   ⚠️ PICCOLA. Larga quanto il selettore di modo sembrava un comando capitale,
@@ -6794,13 +6829,20 @@ export default function App() {
                   sinistra, sotto il modo, e non pretende attenzione. */}
               {(mode === 'contact' || mode === 'null' || mode === 'free') && (
                 <button type="button" onClick={() => setShowTrailPref(v => !v)}
-                  title={LC('Scia e etichette di reazione', 'Traînée et libellés de réaction', 'Trail and reaction labels', 'Estela y etiquetas de reacción', 'Svans och reaktionsetiketter')}
-                  style={{ width: 72, height: 16, borderRadius: 999, cursor: 'pointer', alignSelf: 'flex-start',
+                  title={LC('NEEDLE LIGHT — la scia luminosa dell\'ago e le etichette di reazione',
+                            'NEEDLE LIGHT — la traînée lumineuse de l\'aiguille et les libellés de réaction',
+                            'NEEDLE LIGHT — the needle\'s glowing trail and the reaction labels',
+                            'NEEDLE LIGHT — la estela luminosa de la aguja y las etiquetas de reacción',
+                            'NEEDLE LIGHT — nålens lysande svans och reaktionsetiketterna')}
+                  style={{ width: 104, height: 16, borderRadius: 999, cursor: 'pointer', alignSelf: 'flex-start',
                     fontSize: 8, fontWeight: 700, letterSpacing: '0.06em',
                     background: 'transparent',
                     border: `1px solid ${isLightTheme ? 'rgba(0,0,0,0.14)' : 'rgba(255,255,255,0.14)'}`,
                     color: showTrailPref ? (isLightTheme ? '#3a3a40' : '#a8b6cc') : (isLightTheme ? '#8a8a90' : '#5d6878') }}>
-                  {showTrailPref ? '● ' : '○ '}{LC('SCIA', 'TRAÎNÉE', 'TRAIL', 'ESTELA', 'SVANS')}
+                  {/* NEEDLE LIGHT resta in inglese in tutte e cinque le lingue, come CONTACT,
+                      NULL, AS-IS, F/N: è il vocabolario del mestiere, non una parola da tradurre
+                      (scelta dell'utente: « o meglio needle light »). */}
+                  {showTrailPref ? '● ' : '○ '}NEEDLE LIGHT
                 </button>
               )}
               {/* ASSESSMENT non sta più qui: è salito nella COLONNA DI DESTRA, sopra EP. È lì
