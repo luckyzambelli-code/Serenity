@@ -6614,27 +6614,38 @@ export default function App() {
                         Mancava: in CONTACT, NULL e MIRROR c'è il campo col bottone a destra, e
                         in TONE si localizzava una resistenza senza poter dire DI CHE COSA
                         (segnalato). Si può scrivere o dire a voce, come altrove. */}
-                    {tonePhase === 'locate' && (
+                    {/* ⚠️ IL CAMPO RESTA A SCHERMO PER TUTTO IL CICLO, come in CONTACT e NULL.
+                        Prima spariva appena si localizzava, e dalla fase 2 in poi non si vedeva
+                        più SU CHE COSA si stava lavorando — segnalato. Si blocca invece di
+                        sparire: l'item di un ciclo in corso non si riscrive. */}
+                    {(() => {
+                      const locabile = tonePhase === 'locate';
+                      return (
                       <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
                         <textarea
                           value={auditingQuestion}
                           onChange={(e) => setAuditingQuestion(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) e.preventDefault(); }}
+                          disabled={!locabile}
                           rows={1}
                           placeholder={LC('Item… (o dillo a voce)', 'Item… (ou dis-le à voix)', 'Item… (or say it aloud)', 'Ítem… (o dilo en voz)', 'Item… (eller säg det högt)')}
                           style={{ flex: 1, minWidth: 0, minHeight: 32, maxHeight: 80, padding: '6px 10px', borderRadius: 8,
                             fontSize: 12, lineHeight: 1.4, fontFamily: 'monospace', resize: 'none', overflowY: 'auto',
-                            fieldSizing: 'content', background: 'rgba(0,0,0,0.45)',
-                            border: '1px solid rgba(255,255,255,0.22)',
+                            fieldSizing: 'content',
+                            background: locabile ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.12)',
+                            border: `1px solid ${locabile ? 'rgba(255,255,255,0.22)' : 'rgba(255,90,90,0.55)'}`,
                             color: 'rgba(235,244,255,0.92)', outline: 'none' } as React.CSSProperties}
                         />
+                        {locabile && (
                         <button style={btn(false, toneHasMeter)} onClick={localizzaTone}>
                           {toneHasMeter
                             ? LC('LOCALIZZA QUI', 'LOCALISE ICI', 'LOCATE HERE', 'LOCALIZA AQUÍ', 'LOKALISERA HÄR')
                             : LC('ASSESSA', 'ASSESSE', 'ASSESS', 'ASSESSA', 'ASSESSA')}
                         </button>
+                        )}
                       </div>
-                    )}
+                      );
+                    })()}
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
 
                     {/* DA DOVE VIENE IL NUMERO. Un tono ancorato a una reazione del MUSE e uno
