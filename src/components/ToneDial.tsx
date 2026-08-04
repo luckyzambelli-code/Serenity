@@ -1,7 +1,6 @@
 import React from 'react';
-import { pick5 } from '../i18n5';
 import { TONE_SCALE_MAX, TONE_STEP } from '../engine/tuning';
-import { toneOffset, chargeValue, clampTone, type ToneCharge, type TonePhase, type ToneAgreement } from '../engine/toneScale';
+import { toneOffset, chargeValue, clampTone, type ToneCharge, type TonePhase } from '../engine/toneScale';
 
 /**
  * ToneDial — la vista TONE SCALE (−40 … +40), la scala del tono di Ron.
@@ -18,10 +17,12 @@ import { toneOffset, chargeValue, clampTone, type ToneCharge, type TonePhase, ty
  * un gradiente è rettilineo e non segue l'arco, quindi al centro sarebbe sfalsato.
  *
  * ── I COLORI, E PERCHÉ QUESTI ───────────────────────────────────────────────────────────────
- * Stessi significati del MIRROR, per non dover reimparare niente:
- *   AMBRA  = il BERSAGLIO da raggiungere (là era il ×2, qui è l'opposto da mock-uppare);
- *   TEAL   = OTTENUTO;
- *   ROSSO  = la CARICA, cioè la fascia e il segno di dove sta la resistenza. È il colore che
+ *   AMBRA  = il VALORE IN GIOCO: la stanghetta lunga del MIRROR, che qui si posa sul valore
+ *            localizzato e poi SCIVOLA su quello assessato (richiesta esplicita dell'utente);
+ *   TEAL   = il BERSAGLIO, cioè l'opposto da mock-uppare — tratteggiato finché non ci si arriva,
+ *            pieno all'as-isness. Non ambra: due stanghette dello stesso colore ai due lati
+ *            dello zero non si sarebbero distinte;
+ *   ROSSO  = la CARICA, cioè la fascia e il tratto dallo zero al valore. È il colore che
  *            `chargeState` usa già per il contatto della massa (#ff5a5a).
  *
  * Rendering puro: nessuno stato, nessuna DSP, nessuna decisione. Chi valida è l'auditor.
@@ -53,8 +54,8 @@ const bandAlpha = (tone: number): number =>
   BAND_FLOOR + (1 - BAND_FLOOR) * (Math.abs(clampTone(tone)) / TONE_SCALE_MAX);
 
 export function ToneDial({
-  tone, hasMeter, approx, proposed, validated, phase, agreement, toneAtStart,
-  isLightTheme = false, lang = 'it',
+  tone, hasMeter, approx, located, validated, phase, toneAtStart,
+  isLightTheme = false,
 }: {
   /** Tono MISURATO adesso, −40..+40. Ignorato quando `hasMeter` è falso. */
   tone: number;
@@ -63,27 +64,27 @@ export function ToneDial({
   hasMeter: boolean;
   /** Il tono viene dal TA e non da ohm veri → si scrive « ≈ ». Vedi `toneFromTa`. */
   approx?: boolean;
-  /** Quel che la misura PROPONE (null senza meter, o troppo vicino allo zero). */
-  proposed: ToneCharge | null;
-  /** Quel che l'auditor ha VALIDATO. È questo che comanda il bersaglio. */
+  /** Il tono LOCALIZZATO, fissato premendo il bottone: la PRIMA posa della riga gialla. */
+  located: number | null;
+  /** Quel che l'auditor ha VALIDATO. È questo che comanda il bersaglio — e dove la riga
+   *  gialla si sposta. */
   validated: ToneCharge | null;
   phase: TonePhase;
-  /** Misura e validazione vanno d'accordo? null = non c'era misura da verificare. */
-  agreement: ToneAgreement | null;
   /** Tono all'inizio del mock-up — serve alla barra di avanzamento. */
   toneAtStart: number | null;
-  isLightTheme?: boolean; lang?: string;
+  isLightTheme?: boolean;
 }) {
-  const L = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang as string, it, fr, en, es, sv);
-
   const ink = isLightTheme ? '#0f172a' : 'rgba(240,246,255,0.95)';
-  const dim = isLightTheme ? 'rgba(15,23,42,0.5)' : 'rgba(200,214,234,0.55)';
   const hair = isLightTheme ? 'rgba(15,23,42,0.35)' : 'rgba(255,255,255,0.35)';
 
   const chargeTone = validated ? chargeValue(validated) : null;
   const targetTone = chargeTone !== null ? -chargeTone : null;
   const inMockup = phase === 'mockup' || phase === 'done';
   const done = phase === 'done';
+
+  // LA RIGA GIALLA: prima dove l'ago l'ha trovata, poi dove il preclear l'ha confermata.
+  // Un valore solo, che si sposta — non due segni che si accavallano.
+  const rigaGialla = chargeTone !== null ? chargeTone : located;
 
   // Avanzamento verso lo zero: solo se c'è davvero qualcosa da misurare. Senza meter la barra
   // NON compare — non si disegna un progresso che nessuno sta misurando.
@@ -157,16 +158,42 @@ export function ToneDial({
           fill="none" stroke={CHARGE} strokeWidth={7} strokeLinecap="round" />
       )}
 
-      {/* BERSAGLIO — l'OPPOSTO da mock-uppare. Ambra e con la stanghetta lunga, come il ×2 del
-          MIRROR: è la stessa idea (« porta la cosa fin lì »), quindi lo stesso segno. */}
+      {/* ══ LA RIGA GIALLA — IL VALORE IN GIOCO ═════════════════════════════════════════════
+          Stanghetta lunga e ambra, la stessa del ×2 del MIRROR (richiesta esplicita): è il
+          segno che dice « il numero è QUI ».
+
+          E SI SPOSTA. Si posa sul valore LOCALIZZATO appena si preme il bottone, poi scivola
+          sul valore ASSESSATO quando il preclear lo conferma — così l'auditor VEDE di quanto
+          l'assessment ha corretto la misura, invece di doverlo dedurre da due cifre.
+          Lo scorrimento è una transizione CSS sulle coordinate della linea: senza, il salto
+          era istantaneo e non si capiva che fosse la stessa riga. */}
+      {rigaGialla !== null && (() => {
+        const a = tpt(rigaGialla, R + 30), b = tpt(rigaGialla, R - 136);
+        const lp = tpt(rigaGialla, R - 164);
+        const slide = { transition: 'x1 .45s ease, y1 .45s ease, x2 .45s ease, y2 .45s ease, x .45s ease, y .45s ease' } as React.CSSProperties;
+        return (
+          <g filter="url(#td-glow)">
+            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={AMBER} strokeWidth={4} style={slide} />
+            <text x={lp.x.toFixed(1)} y={lp.y.toFixed(1)} textAnchor="middle" dominantBaseline="middle"
+              fontSize={20} fontWeight={700} fill={AMBER} style={slide}>
+              {rigaGialla > 0 ? `+${Math.round(rigaGialla)}` : Math.round(rigaGialla)}
+            </text>
+          </g>
+        );
+      })()}
+
+      {/* BERSAGLIO — l'OPPOSTO da mock-uppare. TEAL, non ambra: l'ambra adesso è il valore in
+          gioco, e due stanghette dello stesso colore ai due lati dello zero sarebbero state
+          indistinguibili. Il teal è già « ottenuto » nel MIRROR, e qui è dove si vuole arrivare. */}
       {inMockup && targetTone !== null && (() => {
         const a = tpt(targetTone, R + 30), b = tpt(targetTone, R - 136);
         const lp = tpt(targetTone, R - 164);
         return (
           <g filter="url(#td-glow)">
-            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={done ? TEAL : AMBER} strokeWidth={4} />
+            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={TEAL} strokeWidth={4}
+              strokeDasharray={done ? undefined : '14 8'} />
             <text x={lp.x.toFixed(1)} y={lp.y.toFixed(1)} textAnchor="middle" dominantBaseline="middle"
-              fontSize={20} fontWeight={700} fill={done ? TEAL : AMBER}>
+              fontSize={20} fontWeight={700} fill={TEAL}>
               {targetTone > 0 ? `+${targetTone}` : targetTone}
             </text>
           </g>
@@ -180,115 +207,20 @@ export function ToneDial({
           strokeLinecap="round" opacity={0.92} filter={done ? 'url(#td-glow)' : undefined} />
       )}
 
-      {/* ══ IL CICLO, TUTTO IN ALTO ══════════════════════════════════════════════════════════
-          Prima il titolo della fase stava nella barra SOTTO il quadrante e lo stato dentro
-          l'arco: l'auditor doveva guardare in due posti per sapere a che punto era. Adesso c'è
-          un blocco solo, sopra l'arco, che dice il passo, cosa fare e cosa propone l'ago.
-          Grande abbastanza da leggersi senza chinarsi sullo schermo. */}
-      {(() => {
-        const p = proposed ? chargeValue(proposed) : null;
-        const num = (v: number) => `${v > 0 ? '+' : ''}${v}`;
-        // titolo (grande) · istruzione (media) · dettaglio (piccolo)
-        let title: string, how: string, detail: string | null = null;
+      {/* ── IL TESTO DEL CICLO NON STA PIÙ QUI ────────────────────────────────────────────
+          Titolo e istruzione erano disegnati DENTRO l'SVG, sopra l'arco: si sovrapponevano
+          alle scritte del quadrante sottostante (SET, SF, FALL, LONG FALL) e non si capiva
+          più niente — segnalato. Ora stanno nella barra, SOTTO il bottone LOCALIZZA, dove
+          il testo è testo e l'arco resta un arco. Qui restano solo i SEGNI sul quadrante,
+          come in CONTACT e NULL.
 
-        if (phase === 'locate') {
-          title = hasMeter
-            ? L('1 · LOCALIZZA LA RESISTENZA', '1 · LOCALISE LA RÉSISTANCE', '1 · LOCATE THE RESISTANCE', '1 · LOCALIZA LA RESISTENCIA', '1 · LOKALISERA MOTSTÅNDET')
-            : L('1 · LOCALIZZA — SENZA METER', '1 · LOCALISE — SANS MÈTRE', '1 · LOCATE — OFF-METER', '1 · LOCALIZA — SIN MEDIDOR', '1 · LOKALISERA — UTAN MÄTARE');
-          how = hasMeter
-            ? L('L\'ago si posa su un numero. Premi quando il preclear ha trovato.',
-                'L\'aiguille se pose sur un nombre. Appuie quand le préclair a trouvé.',
-                'The needle settles on a number. Press when the preclear has found it.',
-                'La aguja se posa en un número. Pulsa cuando el preclear lo haya encontrado.',
-                'Nålen lägger sig på ett tal. Tryck när preclearen hittat det.')
-            : L('Nessuna misura: segno e ampiezza si assessano.',
-                'Aucune mesure : le signe et l\'ampleur s\'assessent.',
-                'No measurement: sign and magnitude are assessed.',
-                'Sin medida: signo y amplitud se assessan.',
-                'Ingen mätning: tecken och storlek assessas.');
-          detail = hasMeter
-            ? L('Il valore preso non è quello del clic: è quello del momento in cui l\'ago ha reagito.',
-                'La valeur prise n\'est pas celle du clic : c\'est celle du moment où l\'aiguille a réagi.',
-                'The value taken is not the one at the click: it is the one from when the needle reacted.',
-                'El valor tomado no es el del clic: es el del momento en que la aguja reaccionó.',
-                'Värdet som tas är inte klickets: det är från när nålen reagerade.')
-            : null;
-        } else if (phase === 'sign') {
-          title = L('2 · POSITIVO O NEGATIVO?', '2 · POSITIF OU NÉGATIF ?', '2 · POSITIVE OR NEGATIVE?', '2 · ¿POSITIVO O NEGATIVO?', '2 · POSITIVT ELLER NEGATIVT?');
-          how = L('Assessa « negativo? » poi « positivo? ». Quello che legge è il segno.',
-                  'Assesse « négatif ? » puis « positif ? ». Celui qui lit est le signe.',
-                  'Assess "negative?" then "positive?". The one that reads is the sign.',
-                  'Assessa « ¿negativo? » luego « ¿positivo? ». El que lee es el signo.',
-                  'Assessa ”negativt?” sedan ”positivt?”. Det som läser är tecknet.');
-          detail = p !== null
-            ? L(`L'ago propone ${num(p)} — verifica, non è una risposta già data.`,
-                `L'aiguille propose ${num(p)} — vérifie, ce n'est pas une réponse déjà donnée.`,
-                `The needle proposes ${num(p)} — verify it; it is not an answer already given.`,
-                `La aguja propone ${num(p)} — verifica, no es una respuesta ya dada.`,
-                `Nålen föreslår ${num(p)} — verifiera, det är inte ett givet svar.`)
-            : null;
-        } else if (phase === 'magnitude') {
-          title = L('3 · QUANTE DIVISIONI?', '3 · COMBIEN DE DIVISIONS ?', '3 · HOW MANY DIVISIONS?', '3 · ¿CUÁNTAS DIVISIONES?', '3 · HUR MÅNGA DELSTRECK?');
-          how = L('Assessa 10, 20, 30, 40. Quello che legge è l\'ampiezza.',
-                  'Assesse 10, 20, 30, 40. Celui qui lit est l\'ampleur.',
-                  'Assess 10, 20, 30, 40. The one that reads is the magnitude.',
-                  'Assessa 10, 20, 30, 40. El que lee es la amplitud.',
-                  'Assessa 10, 20, 30, 40. Det som läser är storleken.');
-          detail = proposed
-            ? L(`L'ago propone ${proposed.magnitude}.`, `L'aiguille propose ${proposed.magnitude}.`,
-                `The needle proposes ${proposed.magnitude}.`, `La aguja propone ${proposed.magnitude}.`,
-                `Nålen föreslår ${proposed.magnitude}.`)
-            : null;
-        } else if (phase === 'mockup') {
-          title = L(`4 · FAI MOCK-UPPARE ${num(targetTone!)}`, `4 · FAIS MOCK-UPPER ${num(targetTone!)}`,
-                    `4 · HAVE HIM MOCK UP ${num(targetTone!)}`, `4 · HAZLE MOCK-UPEAR ${num(targetTone!)}`,
-                    `4 · LÅT HONOM MOCKA UPP ${num(targetTone!)}`);
-          how = L(`Contro ${num(chargeTone!)} di carica. Aspetta l'as-isness — non fare altro.`,
-                  `Contre ${num(chargeTone!)} de charge. Attends l'as-isness — ne fais rien d'autre.`,
-                  `Against ${num(chargeTone!)} of charge. Wait for the as-isness — do nothing else.`,
-                  `Contra ${num(chargeTone!)} de carga. Espera el as-isness — no hagas nada más.`,
-                  `Mot ${num(chargeTone!)} laddning. Vänta på as-isness — gör inget annat.`);
-          detail = hasMeter
-            ? `${L('verso lo zero', 'vers le zéro', 'toward zero', 'hacia el cero', 'mot noll')} ${Math.round(progress * 100)}%`
-            : null;
-        } else {
-          title = 'AS-IS';
-          how = L('La resistenza assessata è a zero. Validato da te.',
-                  'La résistance assessée est à zéro. Validé par toi.',
-                  'The assessed resistance is at zero. Validated by you.',
-                  'La resistencia assessada está a cero. Validado por ti.',
-                  'Det assessade motståndet är på noll. Validerat av dig.');
-        }
-
-        return (
-          <g>
-            <text x={PX} y={96} textAnchor="middle" dominantBaseline="middle"
-              fontSize={done ? 46 : 34} fontWeight={800} letterSpacing={done ? '8' : '1.5'}
-              fill={done ? TEAL : ink} filter={done ? 'url(#td-glow)' : undefined}
-              className={done ? 'animate-pulse' : undefined}>
-              {title}
-            </text>
-            <text x={PX} y={140} textAnchor="middle" dominantBaseline="middle"
-              fontSize={22} fontWeight={400} fill={isLightTheme ? 'rgba(15,23,42,0.72)' : 'rgba(226,238,255,0.82)'}>
-              {how}
-            </text>
-            {detail && (
-              <text x={PX} y={176} textAnchor="middle" dominantBaseline="middle"
-                fontSize={18} fontWeight={400} fill={dim}>
-                {detail}
-              </text>
-            )}
-            {/* la MISURA ha smentito la validazione: si scrive, non si nasconde. È il dato più
-                interessante che questa vista possa dare. */}
-            {inMockup && agreement && agreement !== 'confirmed' && (
-              <text x={PX} y={detail ? 208 : 176} textAnchor="middle" dominantBaseline="middle"
-                fontSize={18} fontWeight={700} fill={AMBER}>
-                {L('l\'ago diceva altro', 'l\'aiguille disait autre chose', 'the needle said otherwise', 'la aguja decía otra cosa', 'nålen sa något annat')}
-              </text>
-            )}
-          </g>
-        );
-      })()}
+          Resta solo l'AS-IS, che è un evento e non un'istruzione: quello si vede sull'arco. */}
+      {done && (
+        <text x={PX} y={PY - 150} textAnchor="middle" fontSize={40} fontWeight={800} letterSpacing="8"
+          fill={TEAL} filter="url(#td-glow)" className="animate-pulse">
+          AS-IS
+        </text>
+      )}
     </svg>
   );
 }

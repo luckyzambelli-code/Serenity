@@ -4279,7 +4279,11 @@ export default function App() {
   // tick — senza questo il locatore accumulerebbe per sempre il valore d'avvio.
   const toneMeasuredRef = useRef(toneMeasured); toneMeasuredRef.current = toneMeasured;
   const toneProposed = toneMeasured !== null ? proposeFromTone(toneMeasured) : null;
-  const toneAgreement = toneValidated ? agreementOf(toneProposedAtLock, toneValidated) : null;
+  // ⚠️ Si confronta con la MISURA LOCALIZZATA, non con la proposta arrotondata, e CON
+  // TOLLERANZA: l'ago cade fra due divisioni, e a −23 vanno bene sia −20 sia −30. Vedi
+  // `agreementOf` — prima si pretendeva il numero esatto e « l'ago diceva altro » compariva
+  // su metà delle localizzazioni, svuotando di senso proprio quel messaggio.
+  const toneAgreement = toneValidated ? agreementOf(toneAtStart, toneValidated) : null;
   const resetTone = useCallback(() => {
     setTonePhase('locate'); setToneValidated(null); setToneProposedAtLock(null);
     setToneSignPick(null); setToneAtStart(null); setToneAnchor(null);
@@ -5905,9 +5909,24 @@ export default function App() {
 
               {/* (Live mass/dissolution moved into the unified ClearDial — under the arc.) */}
 
-              {/* ✦ EP Button — toujours cliquable même après validation */}
+              {/* ── ASSESSMENT, POI EP — i due capi dello stesso lavoro ──────────────────────
+                  ASSESSMENT apre la lista degli item, EP la chiude. Stavano in due angoli
+                  opposti dello schermo (uno sotto il selettore di vista a sinistra, l'altro
+                  qui a destra) e la sequenza non si leggeva. Adesso sono incolonnati:
+                  ASSESSMENT sopra, EP sotto, nell'ordine in cui si usano. */}
               {sessionState === 'running' && (
-                <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                  <button onClick={toggleAssessment} title="ASSESSMENT"
+                    style={{ width: 96, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, height: 26,
+                      borderRadius: 9, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700,
+                      letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer',
+                      color: assessActive ? '#07120c' : 'rgba(240,246,255,0.95)',
+                      background: assessActive ? '#34d399' : 'rgba(10,14,20,0.55)',
+                      border: `1px solid ${assessActive ? 'rgba(52,211,153,0.9)' : 'rgba(255,255,255,0.28)'}`,
+                      boxShadow: assessActive ? '0 0 16px rgba(52,211,153,0.45)' : 'none', backdropFilter: 'blur(4px)' }}>
+                    {assessActive ? <Square size={11} strokeWidth={2.6} fill="currentColor" /> : <ClipboardList size={11} strokeWidth={2} />}
+                    ASSESS
+                  </button>
                   {/* EP en MINI TOGGLE (même forme que DARK/LIGHT), aligné à droite. */}
                   <GlassLabeledToggle
                     on={epValidated}
@@ -6274,6 +6293,67 @@ export default function App() {
                         {LC('senza meter — si assessa', 'sans mètre — on assesse', 'off-meter — assessed', 'sin medidor — se assessa', 'utan mätare — assessas')}
                       </span>
                     )}
+
+                    {/* ── IL CICLO, SCRITTO QUI SOTTO ────────────────────────────────────────
+                        Stava DENTRO l'arco, sopra il quadrante: si sovrapponeva alle scritte
+                        del quadrante sottostante (SET, SF, FALL, LONG FALL) e non si leggeva
+                        più niente. Qui il testo è testo e l'arco resta un arco. */}
+                    <div style={{ width: '100%', marginTop: 2 }}>
+                      {(() => {
+                        const n = (v: number) => `${v > 0 ? '+' : ''}${Math.round(v)}`;
+                        const p = toneProposedAtLock ? chargeValue(toneProposedAtLock) : null;
+                        let titolo: string, come: string;
+                        if (tonePhase === 'locate') {
+                          titolo = toneHasMeter
+                            ? LC('1 · LOCALIZZA LA RESISTENZA', '1 · LOCALISE LA RÉSISTANCE', '1 · LOCATE THE RESISTANCE', '1 · LOCALIZA LA RESISTENCIA', '1 · LOKALISERA MOTSTÅNDET')
+                            : LC('1 · LOCALIZZA — SENZA METER', '1 · LOCALISE — SANS MÈTRE', '1 · LOCATE — OFF-METER', '1 · LOCALIZA — SIN MEDIDOR', '1 · LOKALISERA — UTAN MÄTARE');
+                          come = toneHasMeter
+                            ? LC('L\'ago si posa su un numero. Premi quando il preclear ha trovato — si prende il valore di quando l\'ago ha reagito, non quello del clic.',
+                                 'L\'aiguille se pose sur un nombre. Appuie quand le préclair a trouvé — on prend la valeur du moment où l\'aiguille a réagi, pas celle du clic.',
+                                 'The needle settles on a number. Press when the preclear has found it — the value taken is from when the needle reacted, not from the click.',
+                                 'La aguja se posa en un número. Pulsa cuando el preclear lo haya encontrado — se toma el valor de cuando la aguja reaccionó, no el del clic.',
+                                 'Nålen lägger sig på ett tal. Tryck när preclearen hittat det — värdet tas från när nålen reagerade, inte från klicket.')
+                            : LC('Nessuna misura: segno e ampiezza si assessano.', 'Aucune mesure : le signe et l\'ampleur s\'assessent.', 'No measurement: sign and magnitude are assessed.', 'Sin medida: signo y amplitud se assessan.', 'Ingen mätning: tecken och storlek assessas.');
+                        } else if (tonePhase === 'sign') {
+                          titolo = LC('2 · POSITIVO O NEGATIVO?', '2 · POSITIF OU NÉGATIF ?', '2 · POSITIVE OR NEGATIVE?', '2 · ¿POSITIVO O NEGATIVO?', '2 · POSITIVT ELLER NEGATIVT?');
+                          come = LC('Assessa « negativo? » poi « positivo? ». Quello che legge è il segno.', 'Assesse « négatif ? » puis « positif ? ». Celui qui lit est le signe.', 'Assess "negative?" then "positive?". The one that reads is the sign.', 'Assessa « ¿negativo? » luego « ¿positivo? ». El que lee es el signo.', 'Assessa ”negativt?” sedan ”positivt?”. Det som läser är tecknet.')
+                            + (p !== null ? ` ${LC('L\'ago propone', 'L\'aiguille propose', 'The needle proposes', 'La aguja propone', 'Nålen föreslår')} ${n(p)}.` : '');
+                        } else if (tonePhase === 'magnitude') {
+                          titolo = LC('3 · QUANTE DIVISIONI?', '3 · COMBIEN DE DIVISIONS ?', '3 · HOW MANY DIVISIONS?', '3 · ¿CUÁNTAS DIVISIONES?', '3 · HUR MÅNGA DELSTRECK?');
+                          come = LC('Assessa 10, 20, 30, 40. Quello che legge è l\'ampiezza — non dev\'essere preciso: l\'ago cade fra due divisioni.',
+                                    'Assesse 10, 20, 30, 40. Celui qui lit est l\'ampleur — pas besoin d\'être précis : l\'aiguille tombe entre deux divisions.',
+                                    'Assess 10, 20, 30, 40. The one that reads is the magnitude — it need not be exact: the needle falls between two divisions.',
+                                    'Assessa 10, 20, 30, 40. El que lee es la amplitud — no hace falta que sea exacto: la aguja cae entre dos divisiones.',
+                                    'Assessa 10, 20, 30, 40. Det som läser är storleken — det behöver inte vara exakt: nålen faller mellan två delstreck.');
+                        } else if (tonePhase === 'mockup') {
+                          titolo = `4 · ${LC('FAI MOCK-UPPARE', 'FAIS MOCK-UPPER', 'HAVE HIM MOCK UP', 'HAZLE MOCK-UPEAR', 'LÅT HONOM MOCKA UPP')} ${n(oppositeOf(toneValidated!))}`;
+                          come = `${LC('Contro', 'Contre', 'Against', 'Contra', 'Mot')} ${n(chargeValue(toneValidated!))} ${LC('di carica. Aspetta l\'as-isness — non fare altro.', 'de charge. Attends l\'as-isness — ne fais rien d\'autre.', 'of charge. Wait for the as-isness — do nothing else.', 'de carga. Espera el as-isness — no hagas nada más.', 'laddning. Vänta på as-isness — gör inget annat.')}`;
+                        } else {
+                          titolo = 'AS-IS';
+                          come = LC('La resistenza assessata è a zero. Validato da te.', 'La résistance assessée est à zéro. Validé par toi.', 'The assessed resistance is at zero. Validated by you.', 'La resistencia assessada está a cero. Validado por ti.', 'Det assessade motståndet är på noll. Validerat av dig.');
+                        }
+                        return (
+                          <>
+                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 800, letterSpacing: '0.04em',
+                                          color: tonePhase === 'done' ? '#34d399' : 'rgba(240,246,255,0.95)' }}>
+                              {titolo}
+                            </div>
+                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, lineHeight: 1.45, marginTop: 2,
+                                          color: 'rgba(226,238,255,0.72)' }}>
+                              {come}
+                            </div>
+                            {/* La smentita si scrive SOLO se è vera una smentita: dentro la
+                                tolleranza di una divisione, misura e assessment concordano. */}
+                            {toneAgreement === 'differs' && (
+                              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 700, marginTop: 3, color: '#fbbf24' }}>
+                                {LC('l\'ago diceva altro', 'l\'aiguille disait autre chose', 'the needle said otherwise', 'la aguja decía otra cosa', 'nålen sa något annat')}
+                                {toneAtStart !== null ? ` — ${n(toneAtStart)}` : ''}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
                   </div>
                 );
               })()}
@@ -6328,9 +6408,9 @@ export default function App() {
             <div className="absolute inset-0 z-40 pointer-events-none">
               {viewMode === 'tone' ? (
                 <ToneDial tone={toneMeasured ?? 0} hasMeter={toneHasMeter} approx
-                  proposed={toneProposedAtLock ?? toneProposed} validated={toneValidated}
-                  phase={tonePhase} agreement={toneAgreement} toneAtStart={toneAtStart}
-                  isLightTheme={isLightTheme} lang={lang} />
+                  located={toneAtStart} validated={toneValidated}
+                  phase={tonePhase} toneAtStart={toneAtStart}
+                  isLightTheme={isLightTheme} />
               ) : viewMode === 'mirror' ? (
                 <MirrorDial armed={mirrorArmed} valueR={mirrorDisp.valueR} contactQ={mirrorDisp.contactQ} dischargeQ={mirrorDisp.dischargeQ}
                   locked={mirrorDisp.locked} reached={mirrorDisp.reached} isLightTheme={isLightTheme} lang={lang} />
@@ -6374,7 +6454,11 @@ export default function App() {
                 Da ciascuno discendono quadrante, ago e comandi (MODE_SPEC), invece di essere
                 tre scelte indipendenti che l'auditor doveva tenere coerenti a mente.
                 Un modo che il MUSE staccato rende impossibile non compare: vedi availableModes. */}
-            <div className="absolute z-50 pointer-events-auto" style={{ top: 124, left: 40, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {/* ⚠️ top 152 e non 124: a 124 il selettore finiva SOTTO la barra del comm lag, che
+                compare quando un ciclo si arma e arriva a 217 px — 14 px di sovrapposizione, e
+                il ritardo di comm è proprio il numero che si guarda mentre il ciclo gira
+                (segnalato in seduta). Misurato nel DOM, non a occhio. */}
+            <div className="absolute z-50 pointer-events-auto" style={{ top: 152, left: 40, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', width: 300, padding: 3, gap: 2, borderRadius: 999,
                 background: isLightTheme ? '#b7b7be' : '#17171b',
                 boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
@@ -6409,15 +6493,18 @@ export default function App() {
                 })}
               </div>
               {/* LA SCIA — quel che « AGO + » voleva dire, e che non era un metodo. Nascosta in
-                  MIRROR e TONE, che hanno il loro quadrante e non la scia dell'ago. */}
+                  MIRROR e TONE, che hanno il loro quadrante e non la scia dell'ago.
+                  ⚠️ PICCOLA. Larga quanto il selettore di modo sembrava un comando capitale,
+                  mentre è solo una preferenza di presentazione — segnalato. Sta a filo a
+                  sinistra, sotto il modo, e non pretende attenzione. */}
               {(mode === 'contact' || mode === 'null' || mode === 'free') && (
                 <button type="button" onClick={() => setShowTrailPref(v => !v)}
                   title={LC('Scia e etichette di reazione', 'Traînée et libellés de réaction', 'Trail and reaction labels', 'Estela y etiquetas de reacción', 'Svans och reaktionsetiketter')}
-                  style={{ width: 300, height: 20, borderRadius: 999, cursor: 'pointer',
-                    fontSize: 9, fontWeight: 700, letterSpacing: '0.08em',
-                    background: showTrailPref ? (isLightTheme ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.18)') : 'transparent',
-                    border: `1px solid ${isLightTheme ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.22)'}`,
-                    color: showTrailPref ? (isLightTheme ? '#1a1a1f' : '#f0f6ff') : (isLightTheme ? '#3a3a40' : '#8b98ad') }}>
+                  style={{ width: 72, height: 16, borderRadius: 999, cursor: 'pointer', alignSelf: 'flex-start',
+                    fontSize: 8, fontWeight: 700, letterSpacing: '0.06em',
+                    background: 'transparent',
+                    border: `1px solid ${isLightTheme ? 'rgba(0,0,0,0.14)' : 'rgba(255,255,255,0.14)'}`,
+                    color: showTrailPref ? (isLightTheme ? '#3a3a40' : '#a8b6cc') : (isLightTheme ? '#8a8a90' : '#5d6878') }}>
                   {showTrailPref ? '● ' : '○ '}{LC('SCIA', 'TRAÎNÉE', 'TRAIL', 'ESTELA', 'SVANS')}
                 </button>
               )}
@@ -6480,21 +6567,9 @@ export default function App() {
                   </div>
                 );
               })()}
-              {/* ── ASSESSMENT — bouton SOUS le sélecteur de vue. Les mots s'inscrivent SOUS L'ARC
-                  (éphémères) et dans le module ASSESSMENT (toute la séance). ── */}
-              {sessionState === 'running' && (
-                <button onClick={toggleAssessment} title="ASSESSMENT"
-                  style={{ marginTop: 4, width: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 30,
-                    borderRadius: 9, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700,
-                    letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer',
-                    color: assessActive ? '#07120c' : 'rgba(240,246,255,0.95)',
-                    background: assessActive ? '#34d399' : 'rgba(10,14,20,0.55)',
-                    border: `1px solid ${assessActive ? 'rgba(52,211,153,0.9)' : 'rgba(255,255,255,0.28)'}`,
-                    boxShadow: assessActive ? '0 0 16px rgba(52,211,153,0.45)' : 'none', backdropFilter: 'blur(4px)' }}>
-                  {assessActive ? <Square size={13} strokeWidth={2.6} fill="currentColor" /> : <ClipboardList size={13} strokeWidth={2} />}
-                  ASSESSMENT
-                </button>
-              )}
+              {/* ASSESSMENT non sta più qui: è salito nella COLONNA DI DESTRA, sopra EP. È lì
+                  che ha senso — ASSESSMENT apre la lista degli item, EP la chiude: sono i due
+                  capi dello stesso lavoro, e stavano in due angoli opposti dello schermo. */}
             </div>
 
             {/* MNA — absolute at sphere bottom */}

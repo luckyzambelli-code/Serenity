@@ -76,17 +76,36 @@ describe('l OPPOSTO da mock-uppare (punto 4 di Ron)', () => {
   });
 });
 
-describe('verifica: la misura proponeva, il PC ha confermato?', () => {
-  it('accordo pieno', () => {
-    expect(agreementOf(C(-1, 40), C(-1, 40))).toBe('confirmed');
+describe('verifica: la misura diceva una cosa, il PC ne ha confermata un altra?', () => {
+  it('il numero esatto va bene, ovviamente', () => {
+    expect(agreementOf(-40, C(-1, 40))).toBe('confirmed');
+    expect(agreementOf(20, C(1, 20))).toBe('confirmed');
   });
-  it('distingue quale delle due cose è cambiata', () => {
-    expect(agreementOf(C(-1, 40), C(-1, 20))).toBe('magnitude_differs');
-    expect(agreementOf(C(-1, 40), C(1, 40))).toBe('sign_differs');
-    expect(agreementOf(C(-1, 40), C(1, 10))).toBe('both_differ');
+
+  it('NON pretende il numero esatto: l ago cade fra due divisioni', () => {
+    // il caso dell utente: misura −23, il preclear trova −20 OPPURE −30. Vanno bene tutti e due.
+    expect(agreementOf(-23, C(-1, 20))).toBe('confirmed');
+    expect(agreementOf(-23, C(-1, 30))).toBe('confirmed');
   });
+
+  it('ma oltre UNA divisione è una smentita vera', () => {
+    expect(agreementOf(-23, C(-1, 40))).toBe('differs');   // scarto 17
+    expect(agreementOf(-23, C(-1, 10))).toBe('differs');   // scarto 13
+  });
+
+  it('il cambio di SEGNO non passa — è la cosa che più conta sapere', () => {
+    expect(agreementOf(-23, C(1, 20))).toBe('differs');
+    expect(agreementOf(-40, C(1, 40))).toBe('differs');
+  });
+
+  it('la tolleranza è esattamente UNA divisione, estremo compreso', () => {
+    expect(agreementOf(-30, C(-1, 20))).toBe('confirmed');       // scarto 10 esatto
+    expect(agreementOf(-30.1, C(-1, 20))).toBe('differs');       // 10,1
+  });
+
   it('senza misura non c è nulla da verificare, e lo dice', () => {
     expect(agreementOf(null, C(-1, 40))).toBeNull();
+    expect(agreementOf(NaN, C(-1, 40))).toBeNull();
   });
 });
 

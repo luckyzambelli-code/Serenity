@@ -108,19 +108,27 @@ export const proposeFromTone = (tone: number): ToneCharge | null => {
 // ═══════════════════════════════════════════════════════════════════════════════════════════
 
 /** L'esito del confronto fra quel che l'ago diceva e quel che il PC ha confermato. */
-export type ToneAgreement = 'confirmed' | 'sign_differs' | 'magnitude_differs' | 'both_differ';
+export type ToneAgreement = 'confirmed' | 'differs';
 
 /**
- * Confronta la proposta con la validazione. `null` quando non c'era proposta: senza meter non
- * si verifica nulla, si assessa e basta — e va detto, non finto.
+ * Confronta la MISURA con la validazione — CON TOLLERANZA.
+ *
+ * ⚠️ NON si confronta con la proposta arrotondata, e NON si pretende l'uguaglianza. L'ago cade
+ * fra due divisioni: a −23 la proposta è −20, ma se il preclear trova −30 non si è sbagliato
+ * nessuno dei due — l'ago era in mezzo. Pretendere il numero esatto faceva comparire « l'ago
+ * diceva altro » su metà delle localizzazioni, e quel messaggio deve voler dire qualcosa.
+ *
+ * La regola: va bene qualunque divisione entro UNA divisione dalla misura. Con −23 passano −20
+ * (scarto 3) e −30 (scarto 7); non passano −40 (17) né −10 (13). Un cambio di segno non passa
+ * mai, se non a ridosso dello zero — ed è giusto così: è la cosa che più conta sapere.
+ *
+ * `null` quando non c'era misura: senza meter non si verifica nulla, si assessa e basta.
  */
 export const agreementOf = (
-  proposed: ToneCharge | null, validated: ToneCharge,
+  measuredTone: number | null, validated: ToneCharge, tol = TONE_STEP,
 ): ToneAgreement | null => {
-  if (!proposed) return null;
-  const s = proposed.sign === validated.sign;
-  const m = proposed.magnitude === validated.magnitude;
-  return s && m ? 'confirmed' : s ? 'magnitude_differs' : m ? 'sign_differs' : 'both_differ';
+  if (measuredTone === null || !Number.isFinite(measuredTone)) return null;
+  return Math.abs(chargeValue(validated) - clampTone(measuredTone)) <= tol ? 'confirmed' : 'differs';
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════
