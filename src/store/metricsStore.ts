@@ -16,9 +16,13 @@ export interface Metrics {
   totalTa: number;     // accumulated Total TA (blowdown divisions)
   chargePhase: ChargeStateId; // cycle FSM phase (neutral|contact|discharge|asis) — drives label/colour
   reContact: boolean;  // DISCHARGE only: PC re-touched the charge (same cycle, faint hint)
+  /** La FIRMA ENERGETICA della massa contattata è collassata (chargeEpisode).
+   *  Si calcola SEMPRE, anche fuori da un ciclo armato — serve al TONE, che i cicli non li usa
+   *  ma di questo testimone ha bisogno per proporre l'as-is. */
+  asIsSignature: boolean;
 }
 
-let state: Metrics = { qL: 0, eta: 0, vProc: 0, smoothVProc: 0, velRatio: 1, toneArm: 2.0, totalTa: 0, chargePhase: 'neutral', reContact: false };
+let state: Metrics = { qL: 0, eta: 0, vProc: 0, smoothVProc: 0, velRatio: 1, toneArm: 2.0, totalTa: 0, chargePhase: 'neutral', reContact: false, asIsSignature: false };
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach(l => l());
 

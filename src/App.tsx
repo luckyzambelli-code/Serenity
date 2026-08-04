@@ -86,7 +86,7 @@ import { voiceToneAnalyzer } from './lib/voiceToneAnalyzer';
 import { satelliteRedundancy } from './lib/satelliteRedundancy';
 import { attachAudioBoost } from './lib/audioBoost';
 import { useEvent } from './hooks/useEvent';
-import { metricsStore } from './store/metricsStore';
+import { metricsStore, useMetric } from './store/metricsStore';
 import { velocityTracker } from './engine/VelocityTracker';
 import { taAccumulator } from './engine/TaAccumulator';
 import { calibFeatures } from './engine/CalibFeatures';
@@ -95,7 +95,9 @@ import { MirrorDial } from './components/MirrorDial';
 import { ToneDial } from './components/ToneDial';
 import {
   TONE_STEPS, proposeFromTone, agreementOf, toneFromTa, chargeValue, oppositeOf, ToneLocator,
+  reachedZero, toneWitnesses, toneAsIs,
   type ToneCharge, type TonePhase, type ToneSign, type ToneStep, type ToneLocateAnchor,
+  type ToneWitness,
 } from './engine/toneScale';
 import { TA_MIN, TA_MAX } from './engine/thetaTaScale';
 import { MODE_SPEC, availableModes, fallbackMode, type SessionMode } from './engine/sessionMode';
@@ -1990,7 +1992,7 @@ export default function App() {
           // metricsStore (NOT App state) → App no longer re-renders at 10 Hz.
           // qL pushed = PREDICTED (display) charge → readouts/sphere/needle color
           // anticipate; raw qL is recorded separately (sessionRecorder below).
-          metricsStore.push({ vProc, smoothVProc: velocityTracker.smoothVProc, qL: _qlDisp, eta, velRatio: velocityTracker.velRatio, chargePhase: _phase, reContact: _cyc.reContact });
+          metricsStore.push({ vProc, smoothVProc: velocityTracker.smoothVProc, qL: _qlDisp, eta, velRatio: velocityTracker.velRatio, chargePhase: _phase, reContact: _cyc.reContact, asIsSignature: _asIs });
         }
         // ── VIRTUAL needle drive — a HIDDEN spring tracks the charge every tick; the
         // classifier reads its SMOOTHED position (sampled by sessionClock into
@@ -4279,6 +4281,11 @@ export default function App() {
   //
   // L'ago imposto vale solo se lo strumento c'è: in TONE senza meter si guarda il MUSE, che è
   // l'unico che possa disegnare qualcosa.
+  // ── QUALI REAZIONI SI VEDONO SCRITTE ────────────────────────────────────────────────────
+  // Per difetto quelle dell'ago che si sta guardando: col METER a schermo comparivano anche
+  // quelle del MUSE, senza dire da dove venissero (segnalato). Con due strumenti l'auditor può
+  // chiedere di vederle tutte e due, e allora arrivano etichettate.
+  const [reazioniViste, setReazioniViste] = useState<'eeg' | 'theta' | 'both'>('eeg');
   const agoDelModo = MODE_SPEC[mode].needle;
   const agoPrincipale: ReadSrc =
     provaBoiteInCorso ? 'theta'
@@ -4324,9 +4331,89 @@ export default function App() {
   // `agreementOf` — prima si pretendeva il numero esatto e « l'ago diceva altro » compariva
   // su metà delle localizzazioni, svuotando di senso proprio quel messaggio.
   const toneAgreement = toneValidated ? agreementOf(toneAtStart, toneValidated) : null;
+
+  // ── L'AS-IS DEL TONE: TRE TESTIMONI, E L'AUDITOR CHE VALIDA ─────────────────────────────
+  // Il bersaglio è lo ZERO, non il valore opposto: il preclear MOCK-UPPA il +40, e il risultato
+  // è che i due si annullano al centro. Vedi `toneWitnesses` per il perché di ciascuno.
+  //
+  // I testimoni si AGGANCIANO: una volta che uno ha parlato resta acceso per tutto il mock-up.
+  // Un F/N dura pochi secondi e la posizione a zero si attraversa: pretendere che i due siano
+  // veri nello STESSO istante vorrebbe dire non proporre quasi mai.
+  const toneWitnessesAvail = useMemo(
+    () => toneWitnesses(toneHasMeter, instruments.muse),
+    [toneHasMeter, instruments.muse]);
+  const [toneFired, setToneFired] = useState<ToneWitness[]>([]);
+  const asIsSignature = useMetric(m => m.asIsSignature);
+  const toneFnNow = agoPrincipale === 'theta' ? !!theta.fn.fn
+    : (needleReactionKey || '').includes('reaction_fn');
+  useEffect(() => {
+    if (tonePhase !== 'mockup') return;
+    const nuovi: ToneWitness[] = [];
+    if (toneHasMeter && toneMeasured !== null && reachedZero(toneMeasured)) nuovi.push('zero');
+    if (toneFnNow) nuovi.push('fn');
+    if (instruments.muse && asIsSignature) nuovi.push('signature');
+    if (!nuovi.length) return;
+    setToneFired(p => {
+      const add = nuovi.filter(w => !p.includes(w));
+      return add.length ? [...p, ...add] : p;
+    });
+  }, [tonePhase, toneHasMeter, toneMeasured, toneFnNow, asIsSignature, instruments.muse]);
+  const toneAsIsState = useMemo(
+    () => toneAsIs(toneWitnessesAvail, toneFired),
+    [toneWitnessesAvail, toneFired]);
+
+  // ── L'ASSESSMENT SI ACCENDE E SI SPEGNE DA SÉ NEL CICLO TONE ────────────────────────────
+  // Le fasi 2 e 3 SONO un assessment: si enuncia « negativo? », « positivo? », « 10, 20, 30,
+  // 40 » e si guarda cosa reagisce. Accendere il modulo a mano ogni volta era un gesto in più
+  // proprio nel momento in cui l'auditor deve avere gli occhi sull'ago.
+  //
+  // Si stacca da solo entrando nel mock-up: lì non si assessa più, si aspetta. Il modulo resta
+  // VISIBILE — gli item assessati servono da consultare mentre si valida l'AS-IS, ed è per
+  // questo che si spegne il MOTORE e non il pannello.
+  const toneAssessAutoRef = useRef(false);
+  useEffect(() => {
+    if (mode !== 'tone') return;
+    const serve = tonePhase === 'sign' || tonePhase === 'magnitude';
+    if (serve && !assessActiveRef.current) {
+      toneAssessAutoRef.current = true;
+      toggleAssessment();
+    } else if (!serve && assessActiveRef.current && toneAssessAutoRef.current) {
+      // solo se l'avevamo acceso NOI: se l'ha acceso l'auditor, non glielo si spegne sotto le mani
+      toneAssessAutoRef.current = false;
+      toggleAssessment();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, tonePhase]);
+
+  // ── I CICLI TONE SI REGISTRANO ─────────────────────────────────────────────────────────
+  // Non ci finivano né nel rapporto né nel PDF (segnalato): MIRROR sì, TONE no. Si tiene quel
+  // che la MISURA diceva, quel che il preclear ha VALIDATO e se i due concordavano — è proprio
+  // quel disaccordo la cosa da poter rileggere a freddo.
+  const toneCyclesRef = useRef<Array<{ n: number; question: string; tStartSec: number; tEndSec: number;
+    located: number | null; sign: ToneSign; magnitude: number; agreement: string | null;
+    anchor: string; witnesses: string[]; asIs: boolean }>>([]);
+  const toneNRef = useRef(0);
+  const toneStartSecRef = useRef(0);
+  const chiudiTone = useCallback((asIs: boolean) => {
+    if (!toneValidated) return;
+    toneCyclesRef.current.push({
+      n: ++toneNRef.current, question: auditingQuestion.trim(),
+      tStartSec: toneStartSecRef.current, tEndSec: timeRef.current,
+      located: toneAtStart, sign: toneValidated.sign, magnitude: toneValidated.magnitude,
+      agreement: toneAgreement, anchor: toneAnchor?.how ?? 'settled',
+      witnesses: [...toneFired], asIs,
+    });
+    logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
+      text: `${asIs ? '✓' : '○'} #${toneNRef.current} ${auditingQuestion.trim() || LC('resistenza', 'résistance', 'resistance', 'resistencia', 'motstånd')} — TONE `
+        + `${chargeValue(toneValidated) > 0 ? '+' : ''}${chargeValue(toneValidated)} → `
+        + `${oppositeOf(toneValidated) > 0 ? '+' : ''}${oppositeOf(toneValidated)}`
+        + (asIs ? ' · AS-IS' : ''),
+      type: asIs ? 'success' : 'normal' });
+  }, [toneValidated, auditingQuestion, toneAtStart, toneAgreement, toneAnchor, toneFired, LC]);
+
   const resetTone = useCallback(() => {
     setTonePhase('locate'); setToneValidated(null); setToneProposedAtLock(null);
-    setToneSignPick(null); setToneAtStart(null); setToneAnchor(null);
+    setToneSignPick(null); setToneAtStart(null); setToneAnchor(null); setToneFired([]);
     toneLocator.reset();
   }, []);
   /**
@@ -4342,12 +4429,17 @@ export default function App() {
     setToneAnchor({ how: r.anchor, ageS: r.ageS });
     setToneProposedAtLock(toneHasMeter ? proposeFromTone(r.tone) : null);
     setToneAtStart(toneHasMeter ? r.tone : null);
+    toneStartSecRef.current = timeRef.current;   // il ciclo comincia QUI, non al mock-up
     setTonePhase('sign');
   }, [instruments.muse, toneMeasured, toneHasMeter]);
 
   // Specchio in ref: il gestore del worker si aggancia una volta sola, e l'ago si può cambiare
   // in seduta — senza questo continuerebbe a usare quello scelto all'avvio.
   const agoPrincipaleRef = useRef(agoPrincipale); agoPrincipaleRef.current = agoPrincipale;
+  // Cambiando ago, le reazioni scritte tornano a quelle dell'ago nuovo. « Per difetto » vuol
+  // dire questo: si guarda un ago, si leggono le sue. Se l'auditor vuole ENTRAMBI lo dice, e
+  // quella scelta resta finché non cambia ago di nuovo.
+  useEffect(() => { setReazioniViste(agoPrincipale); }, [agoPrincipale]);
   const [showThetaCal, setShowThetaCal] = useState(false);
 
   // ── CONN-53: graceful disconnect on tab/app close ──────────────────────────
@@ -4512,6 +4604,7 @@ export default function App() {
       mirrorCycle.reset(); setMirrorArmed(false); setMirrorDisp({ contactQ: 0, dischargeQ: 0, locked: false, reached: false, valueR: 0 });
       setMirrorSession({ count: 0, erased: 0, sumV: 0 });
       mirrorCyclesRef.current = []; mirrorCurRef.current = null; mStartedRef.current = 0; mDoneRef.current = 0;
+      toneCyclesRef.current = []; toneNRef.current = 0;
       mirrorVoiceModeRef.current = false; mirrorAwaitItemRef.current = false; mirrorLogCursorRef.current = 0;
       setAssessActive(false); setAssessItems([]); setAssessSession([]); setShowUnderArc(false); assessCyclesRef.current = []; assessNRef.current = 0; assessPrevAtRef.current = -Infinity;
       shownReadsRef.current = [];   // trace des réactions montrées : repart à zéro
@@ -6258,17 +6351,33 @@ export default function App() {
                   color: on ? '#ff5a5a' : 'rgba(235,244,255,0.85)' });
                 const lbl: React.CSSProperties = { fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(226,238,255,0.6)' };
                 return (
-                  <div style={bar}>
-                    {/* Il TITOLO della fase non è più qui: sta IN ALTO, sopra l'arco, col resto
-                        del ciclo. Guardare in due posti per sapere a che punto si era costringeva
-                        l'auditor a staccare gli occhi dall'ago (segnalato). Qui restano i GESTI. */}
+                  <div style={{ ...bar, flexDirection: 'column', alignItems: 'stretch' }}>
+                    {/* ── L'ITEM, come negli altri cicli ────────────────────────────────────
+                        Mancava: in CONTACT, NULL e MIRROR c'è il campo col bottone a destra, e
+                        in TONE si localizzava una resistenza senza poter dire DI CHE COSA
+                        (segnalato). Si può scrivere o dire a voce, come altrove. */}
                     {tonePhase === 'locate' && (
-                      <button style={btn(false, toneHasMeter)} onClick={localizzaTone}>
-                        {toneHasMeter
-                          ? LC('LOCALIZZA QUI', 'LOCALISE ICI', 'LOCATE HERE', 'LOCALIZA AQUÍ', 'LOKALISERA HÄR')
-                          : LC('ASSESSA', 'ASSESSE', 'ASSESS', 'ASSESSA', 'ASSESSA')}
-                      </button>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
+                        <textarea
+                          value={auditingQuestion}
+                          onChange={(e) => setAuditingQuestion(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) e.preventDefault(); }}
+                          rows={1}
+                          placeholder={LC('Item… (o dillo a voce)', 'Item… (ou dis-le à voix)', 'Item… (or say it aloud)', 'Ítem… (o dilo en voz)', 'Item… (eller säg det högt)')}
+                          style={{ flex: 1, minWidth: 0, minHeight: 32, maxHeight: 80, padding: '6px 10px', borderRadius: 8,
+                            fontSize: 12, lineHeight: 1.4, fontFamily: 'monospace', resize: 'none', overflowY: 'auto',
+                            fieldSizing: 'content', background: 'rgba(0,0,0,0.45)',
+                            border: '1px solid rgba(255,255,255,0.22)',
+                            color: 'rgba(235,244,255,0.92)', outline: 'none' } as React.CSSProperties}
+                        />
+                        <button style={btn(false, toneHasMeter)} onClick={localizzaTone}>
+                          {toneHasMeter
+                            ? LC('LOCALIZZA QUI', 'LOCALISE ICI', 'LOCATE HERE', 'LOCALIZA AQUÍ', 'LOKALISERA HÄR')
+                            : LC('ASSESSA', 'ASSESSE', 'ASSESS', 'ASSESSA', 'ASSESSA')}
+                        </button>
+                      </div>
                     )}
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
 
                     {/* DA DOVE VIENE IL NUMERO. Un tono ancorato a una reazione del MUSE e uno
                         preso perché non reagiva nulla non valgono la stessa cosa: si scrive. */}
@@ -6314,9 +6423,35 @@ export default function App() {
                             {LC('contro', 'contre', 'against', 'contra', 'mot')} {chargeValue(toneValidated) > 0 ? '+' : ''}{chargeValue(toneValidated)}
                           </span>
                         </span>
+                        {/* ── I TESTIMONI DELL'AS-IS ────────────────────────────────────────
+                            Tre spie che si accendono man mano. L'app PROPONE quando due
+                            concordano; validi tu, come nel ciclo CONTACT. Chi non poteva
+                            parlare (niente meter, niente MUSE) non compare affatto. */}
+                        {tonePhase === 'mockup' && toneWitnessesAvail.length > 0 && (
+                          <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                            {toneWitnessesAvail.map(w => {
+                              const on = toneAsIsState.fired.includes(w);
+                              const nome = w === 'zero' ? LC('a zero', 'à zéro', 'at zero', 'a cero', 'på noll')
+                                : w === 'fn' ? 'F/N'
+                                : LC('firma', 'signature', 'signature', 'firma', 'signatur');
+                              return (
+                                <span key={w} style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.08em',
+                                  textTransform: 'uppercase', padding: '3px 7px', borderRadius: 6,
+                                  background: on ? 'rgba(52,211,153,0.18)' : 'rgba(255,255,255,0.04)',
+                                  border: `1px solid ${on ? 'rgba(52,211,153,0.7)' : 'rgba(255,255,255,0.16)'}`,
+                                  color: on ? '#34d399' : 'rgba(226,238,255,0.4)' }}>
+                                  {on ? '● ' : '○ '}{nome}
+                                </span>
+                              );
+                            })}
+                          </span>
+                        )}
                         {tonePhase === 'mockup' && (
-                          <button style={btn(false, true)} onClick={() => setTonePhase('done')}>
+                          <button style={btn(false, toneAsIsState.proposed)}
+                            className={toneAsIsState.proposed ? 'animate-pulse' : undefined}
+                            onClick={() => { chiudiTone(true); setTonePhase('done'); }}>
                             {LC('VALIDA L\'AS-IS', 'VALIDE L\'AS-IS', 'VALIDATE AS-IS', 'VALIDA EL AS-IS', 'VALIDERA AS-IS')}
+                            {toneAsIsState.singleWitness ? ' ?' : ''}
                           </button>
                         )}
                         {tonePhase === 'done' && (
@@ -6329,7 +6464,7 @@ export default function App() {
 
                     {tonePhase !== 'locate' && (
                       <button style={{ ...btn(false, false), border: '1px solid rgba(255,255,255,0.18)', opacity: 0.7 }}
-                        onClick={resetTone}>
+                        onClick={() => { if (tonePhase === 'mockup') chiudiTone(false); resetTone(); }}>
                         {LC('ANNULLA', 'ANNULER', 'CANCEL', 'CANCELAR', 'AVBRYT')}
                       </button>
                     )}
@@ -6340,11 +6475,19 @@ export default function App() {
                       </span>
                     )}
 
+                    </div>
+
                     {/* ── IL CICLO, SCRITTO QUI SOTTO ────────────────────────────────────────
                         Stava DENTRO l'arco, sopra il quadrante: si sovrapponeva alle scritte
                         del quadrante sottostante (SET, SF, FALL, LONG FALL) e non si leggeva
-                        più niente. Qui il testo è testo e l'arco resta un arco. */}
-                    <div style={{ width: '100%', marginTop: 2 }}>
+                        più niente. Qui il testo è testo e l'arco resta un arco.
+
+                        ⚠️ ALTEZZA LIMITATA. Col METER le righe diventano di più e il blocco
+                        cresceva fin sopra il selettore di modo, che gli sta sotto e lo copre
+                        (z-50 contro z-30): il testo finiva dietro le pastiglie e non si leggeva
+                        — segnalato due volte. 84 px sono il titolo più tre righe, e il selettore
+                        comincia 152 px sotto la cima della colonna: non ci arriva più. */}
+                    <div style={{ width: '100%', marginTop: 2, maxHeight: 84, overflow: 'hidden' }}>
                       {(() => {
                         const n = (v: number) => `${v > 0 ? '+' : ''}${Math.round(v)}`;
                         const p = toneProposedAtLock ? chargeValue(toneProposedAtLock) : null;
@@ -6353,12 +6496,18 @@ export default function App() {
                           titolo = toneHasMeter
                             ? LC('1 · LOCALIZZA LA RESISTENZA', '1 · LOCALISE LA RÉSISTANCE', '1 · LOCATE THE RESISTANCE', '1 · LOCALIZA LA RESISTENCIA', '1 · LOKALISERA MOTSTÅNDET')
                             : LC('1 · LOCALIZZA — SENZA METER', '1 · LOCALISE — SANS MÈTRE', '1 · LOCATE — OFF-METER', '1 · LOCALIZA — SIN MEDIDOR', '1 · LOKALISERA — UTAN MÄTARE');
+                          // ⚠️ UNA RIGA SOLA. Il « si prende il valore di quando l'ago ha
+                          // reagito, non quello del clic » stava qui e mandava il blocco a tre
+                          // righe: cresceva fin sopra il selettore di modo e ci finiva dietro
+                          // (segnalato due volte). È una spiegazione da GUIDE, non da leggere a
+                          // ogni localizzazione — e in seduta lo si vede scritto sotto, nella
+                          // riga che dice « MUSE ha visto il pensiero · −0,6s ».
                           come = toneHasMeter
-                            ? LC('L\'ago si posa su un numero. Premi quando il preclear ha trovato — si prende il valore di quando l\'ago ha reagito, non quello del clic.',
-                                 'L\'aiguille se pose sur un nombre. Appuie quand le préclair a trouvé — on prend la valeur du moment où l\'aiguille a réagi, pas celle du clic.',
-                                 'The needle settles on a number. Press when the preclear has found it — the value taken is from when the needle reacted, not from the click.',
-                                 'La aguja se posa en un número. Pulsa cuando el preclear lo haya encontrado — se toma el valor de cuando la aguja reaccionó, no el del clic.',
-                                 'Nålen lägger sig på ett tal. Tryck när preclearen hittat det — värdet tas från när nålen reagerade, inte från klicket.')
+                            ? LC('L\'ago si posa su un numero. Premi quando il preclear ha trovato.',
+                                 'L\'aiguille se pose sur un nombre. Appuie quand le préclair a trouvé.',
+                                 'The needle settles on a number. Press when the preclear has found it.',
+                                 'La aguja se posa en un número. Pulsa cuando el preclear lo haya encontrado.',
+                                 'Nålen lägger sig på ett tal. Tryck när preclearen hittat det.')
                             : LC('Nessuna misura: segno e ampiezza si assessano.', 'Aucune mesure : le signe et l\'ampleur s\'assessent.', 'No measurement: sign and magnitude are assessed.', 'Sin medida: signo y amplitud se assessan.', 'Ingen mätning: tecken och storlek assessas.');
                         } else if (tonePhase === 'sign') {
                           titolo = LC('2 · POSITIVO O NEGATIVO?', '2 · POSITIF OU NÉGATIF ?', '2 · POSITIVE OR NEGATIVE?', '2 · ¿POSITIVO O NEGATIVO?', '2 · POSITIVT ELLER NEGATIVT?');
@@ -6366,11 +6515,11 @@ export default function App() {
                             + (p !== null ? ` ${LC('L\'ago propone', 'L\'aiguille propose', 'The needle proposes', 'La aguja propone', 'Nålen föreslår')} ${n(p)}.` : '');
                         } else if (tonePhase === 'magnitude') {
                           titolo = LC('3 · QUANTE DIVISIONI?', '3 · COMBIEN DE DIVISIONS ?', '3 · HOW MANY DIVISIONS?', '3 · ¿CUÁNTAS DIVISIONES?', '3 · HUR MÅNGA DELSTRECK?');
-                          come = LC('Assessa 10, 20, 30, 40. Quello che legge è l\'ampiezza — non dev\'essere preciso: l\'ago cade fra due divisioni.',
-                                    'Assesse 10, 20, 30, 40. Celui qui lit est l\'ampleur — pas besoin d\'être précis : l\'aiguille tombe entre deux divisions.',
-                                    'Assess 10, 20, 30, 40. The one that reads is the magnitude — it need not be exact: the needle falls between two divisions.',
-                                    'Assessa 10, 20, 30, 40. El que lee es la amplitud — no hace falta que sea exacto: la aguja cae entre dos divisiones.',
-                                    'Assessa 10, 20, 30, 40. Det som läser är storleken — det behöver inte vara exakt: nålen faller mellan två delstreck.');
+                          come = LC('Assessa 10, 20, 30, 40. Non dev\'essere preciso: l\'ago cade fra due divisioni.',
+                                    'Assesse 10, 20, 30, 40. Pas besoin d\'être précis : l\'aiguille tombe entre deux divisions.',
+                                    'Assess 10, 20, 30, 40. It need not be exact: the needle falls between two divisions.',
+                                    'Assessa 10, 20, 30, 40. No hace falta ser exacto: la aguja cae entre dos divisiones.',
+                                    'Assessa 10, 20, 30, 40. Det behöver inte vara exakt: nålen faller mellan två delstreck.');
                         } else if (tonePhase === 'mockup') {
                           titolo = `4 · ${LC('FAI MOCK-UPPARE', 'FAIS MOCK-UPPER', 'HAVE HIM MOCK UP', 'HAZLE MOCK-UPEAR', 'LÅT HONOM MOCKA UPP')} ${n(oppositeOf(toneValidated!))}`;
                           come = `${LC('Contro', 'Contre', 'Against', 'Contra', 'Mot')} ${n(chargeValue(toneValidated!))} ${LC('di carica. Aspetta l\'as-isness — non fare altro.', 'de charge. Attends l\'as-isness — ne fais rien d\'autre.', 'of charge. Wait for the as-isness — do nothing else.', 'de carga. Espera el as-isness — no hagas nada más.', 'laddning. Vänta på as-isness — gör inget annat.')}`;
@@ -6419,7 +6568,7 @@ export default function App() {
                   labels (y≈540/610) ended up hidden behind the opaque dial backdrop.
                   Fixed height → the row never jumps. Source = needleReactionKey (already
                   hold-gated), same short codes the needle used. */}
-              <div style={{ height: 28, marginTop: 14, display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', pointerEvents: 'none' }}>
+              <div style={{ height: reazioniViste === 'both' ? 52 : 28, marginTop: 14, display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', pointerEvents: 'none' }}>
                 {/* MUSE PERDU : s'il s'est déconnecté et ne revient PAS après un délai raisonnable,
                     on le dit ICI — devant l'arc des réactions — pour que l'auditeur le VOIE (demande
                     utilisateur). Prioritaire sur l'étiquette de réaction : sans casque il n'y a plus
@@ -6432,18 +6581,42 @@ export default function App() {
                 ) : sessionState === 'running' && (() => {
                   // STUCK intentionally omitted (not useful — user request). LONG FALL spelled out.
                   const RLBL: Record<string, string> = { reaction_fn: 'F/N', reaction_blow_down: 'LF BD', reaction_long_fall: 'LONG FALL', reaction_fall: 'FALL', reaction_sf: 'SF', reaction_dirty: 'DN' };
-                  // ── LE REAZIONI DELLE BOÎTES SI SCRIVONO QUI ANCH'ESSE ──────────────────────
-                  // Questa riga leggeva SOLO l'ago dell'EEG: col meter l'ago cadeva e non
-                  // compariva mai niente. Con l'EEG presente ha la precedenza (è lui che fa
-                  // avanzare i cicli); quando non dice nulla — o non c'è — parla l'ago vero, e
-                  // la scritta prende il suo AMBRA, così si sa da quale ago viene.
-                  const daEeg = instruments.muse && !!RLBL[needleReactionKey];
-                  const key = daEeg ? needleReactionKey : thetaReactionKey;
-                  const lbl = RLBL[key] || '';
-                  if (!lbl) return null;
-                  const colore = daEeg ? 'rgba(255,255,255,0.92)' : '#f59e0b';
-                  const alone = daEeg ? 'rgba(255,255,255,0.35)' : 'rgba(245,158,11,0.45)';
-                  return <span style={{ fontWeight: 400, fontSize: 20, letterSpacing: '0.14em', color: colore, textShadow: `0 0 12px ${alone}` }}>{lbl}</span>;
+                  // ── DI QUALE AGO SONO QUESTE REAZIONI ───────────────────────────────────────
+                  // Prima l'EEG aveva la PRECEDENZA e il meter parlava solo quando l'EEG taceva:
+                  // con l'ago del METER a schermo comparivano quindi le reazioni del MUSE, e non
+                  // c'era modo di sapere che venivano dall'altro strumento. In seduta confonde.
+                  //
+                  // Adesso per difetto si vedono SOLO quelle dell'ago che si sta guardando, e con
+                  // due strumenti c'è un selettore a tre voci. In ENTRAMBI le due righe stanno
+                  // una sopra l'altra con la sigla a sinistra: METER in ambra (il suo colore, lo
+                  // stesso del journal), MUSE in bianco.
+                  const lblMuse = instruments.muse ? (RLBL[needleReactionKey] || '') : '';
+                  const lblMeter = instruments.theta ? (RLBL[thetaReactionKey] || '') : '';
+                  const riga = (sigla: string, testo: string, col: string, alone: string) => (
+                    <span key={sigla} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8, lineHeight: 1.1 }}>
+                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.1em',
+                        color: col, opacity: 0.6, width: 40, textAlign: 'right' }}>{sigla}</span>
+                      <span style={{ fontWeight: 400, fontSize: 20, letterSpacing: '0.14em', color: col,
+                        textShadow: `0 0 12px ${alone}` }}>{testo}</span>
+                    </span>
+                  );
+                  const BIANCO = 'rgba(255,255,255,0.92)', BIANCO_A = 'rgba(255,255,255,0.35)';
+                  const AMBRA = '#f59e0b', AMBRA_A = 'rgba(245,158,11,0.45)';
+                  if (reazioniViste === 'both') {
+                    if (!lblMuse && !lblMeter) return null;
+                    return (
+                      <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 2, alignItems: 'flex-start' }}>
+                        {lblMuse ? riga('MUSE', lblMuse, BIANCO, BIANCO_A) : null}
+                        {lblMeter ? riga('METER', lblMeter, AMBRA, AMBRA_A) : null}
+                      </span>
+                    );
+                  }
+                  // una sola sorgente: nessuna sigla, la scritta da sola come è sempre stato
+                  const solo = reazioniViste === 'theta' ? lblMeter : lblMuse;
+                  if (!solo) return null;
+                  const col = reazioniViste === 'theta' ? AMBRA : BIANCO;
+                  const alone = reazioniViste === 'theta' ? AMBRA_A : BIANCO_A;
+                  return <span style={{ fontWeight: 400, fontSize: 20, letterSpacing: '0.14em', color: col, textShadow: `0 0 12px ${alone}` }}>{solo}</span>;
                 })()}
               </div>
               <style>{`@keyframes reactFadeIn { from { opacity:0; transform: translateY(-4px);} to { opacity:1; transform: translateY(0);} }`}</style>
@@ -6613,6 +6786,36 @@ export default function App() {
                   </div>
                 );
               })()}
+              {/* ── QUALI REAZIONI VEDERE SCRITTE ───────────────────────────────────────────
+                  Solo con TUTTI E DUE gli strumenti: con uno solo non c'è niente da scegliere.
+                  Sta sotto il selettore dell'ago perché è la stessa famiglia — che cosa mostra
+                  il quadrante — ed è ancora più piccolo: è una preferenza di lettura. */}
+              {instruments.muse && instruments.theta && sessionState === 'running' && (
+                <div style={{ display: 'flex', width: 300, padding: 2, gap: 2, borderRadius: 999,
+                  background: isLightTheme ? '#b7b7be' : '#17171b',
+                  boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
+                  {([{ k: 'eeg' as const, lbl: 'MUSE', col: '#8ab4ff' },
+                     { k: 'theta' as const, lbl: 'METER', col: '#f59e0b' },
+                     { k: 'both' as const, lbl: LC('ENTRAMBI', 'LES DEUX', 'BOTH', 'AMBAS', 'BÅDA'), col: '#34d399' }]).map(o => {
+                    const on = reazioniViste === o.k;
+                    return (
+                      <button key={o.k} type="button" onClick={() => setReazioniViste(o.k)}
+                        title={LC('Quali reazioni scrivere sopra il quadrante',
+                                  'Quelles réactions écrire au-dessus du cadran',
+                                  'Which reactions to write above the dial',
+                                  'Qué reacciones escribir sobre el cuadrante',
+                                  'Vilka reaktioner som skrivs ovanför urtavlan')}
+                        style={{ flex: 1, height: 18, borderRadius: 999, border: 'none', cursor: 'pointer',
+                          fontSize: 8, fontWeight: 700, letterSpacing: '0.04em',
+                          color: on ? '#0b0f14' : (isLightTheme ? '#3a3a40' : '#8b98ad'),
+                          background: on ? o.col : 'transparent',
+                          transition: 'color 0.2s, background 0.2s' }}>
+                        {o.lbl}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               {/* ASSESSMENT non sta più qui: è salito nella COLONNA DI DESTRA, sopra EP. È lì
                   che ha senso — ASSESSMENT apre la lista degli item, EP la chiude: sono i due
                   capi dello stesso lavoro, e stavano in due angoli opposti dello schermo. */}
@@ -6867,6 +7070,7 @@ export default function App() {
           dissChargeQ={tzoneStore.get().dissChargeQ}
           auditingCycles={auditingCyclesRef.current}
           mirrorCycles={mirrorCyclesRef.current}
+          toneCycles={toneCyclesRef.current}
           assessCycles={assessCyclesRef.current}
           deltaStar={deltaStar}
           deltaStarN={deltaStarN}

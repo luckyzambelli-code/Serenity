@@ -137,10 +137,15 @@ export function ToneDial({
       })}
 
       {/* AGO MISURATO — dove la resistenza si trova ADESSO. Solo col meter: senza, non c'è
-          niente da misurare e disegnarlo sarebbe una bugia. */}
+          niente da misurare e disegnarlo sarebbe una bugia.
+
+          ⚠️ IL NUMERO VA SOTTO, non fuori dall'arco. Scritto a R+88 finiva sopra i numeri della
+          scala e li copriva; e stava dalla parte opposta rispetto a quello della riga gialla,
+          che è INTERNO. Adesso i due si leggono sulla stessa fascia, uno accanto all'altro
+          (richiesta utente). */}
       {hasMeter && (() => {
         const a = tpt(tone, R + 26), b = tpt(tone, R - 26);
-        const lp = tpt(tone, R + 88);
+        const lp = tpt(tone, R - 100);
         return (
           <g>
             <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={ink} strokeWidth={4} />
@@ -215,8 +220,12 @@ export function ToneDial({
           come in CONTACT e NULL.
 
           Resta solo l'AS-IS, che è un evento e non un'istruzione: quello si vede sull'arco. */}
+      {/* AS-IS — ALZATO, e messo A METÀ FRA i due numeri: quello della carica (col segno) e
+          quello del bersaglio (segno opposto). Sta esattamente sull'asse dello zero, che è dove
+          la resistenza è arrivata — così si capisce a colpo d'occhio CHE COSA si è ottenuto,
+          invece di leggere una scritta appesa in mezzo al quadrante (richiesta utente). */}
       {done && (
-        <text x={PX} y={PY - 150} textAnchor="middle" fontSize={40} fontWeight={800} letterSpacing="8"
+        <text x={PX} y={PY - 300} textAnchor="middle" fontSize={44} fontWeight={800} letterSpacing="10"
           fill={TEAL} filter="url(#td-glow)" className="animate-pulse">
           AS-IS
         </text>

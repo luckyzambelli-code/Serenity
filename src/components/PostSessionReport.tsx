@@ -69,6 +69,14 @@ interface PostSessionReportProps {
    *  l'aiguille est revenue à FLOAT (F/N). Échelle proportionnelle (pas de mS). */
   mirrorCycles?: Array<{ n: number; question: string; tStartSec: number; tEndSec: number;
     readInst: number; readDouble: number; erased: boolean }>;
+  /** Cycles TONE SCALE (Ron, −40…+40) — famille À PART elle aussi. On garde ce que la MESURE
+   *  disait au moment de la localisation, ce que le préclair a VALIDÉ, et si les deux
+   *  concordaient : c'est précisément ce désaccord-là qu'on veut pouvoir relire après coup.
+   *  `anchor` dit qui a certifié l'instant (le MUSE, l'aiguille du METER, ou rien).
+   *  `witnesses` = les témoins de l'as-is qui se sont allumés. */
+  toneCycles?: Array<{ n: number; question: string; tStartSec: number; tEndSec: number;
+    located: number | null; sign: -1 | 1; magnitude: number; agreement: string | null;
+    anchor: string; witnesses: string[]; asIs: boolean }>;
   /** Cycles ASSESSMENT (l'auditeur donne des items à voix haute ; on inscrit le READ instantané
    *  comme le R&I). Chaque cycle = un lot d'items {texte, read}. Rapporté séparément. */
   assessCycles?: Array<{ n: number; tStartSec: number; tEndSec: number;
@@ -100,7 +108,7 @@ interface PostSessionReportProps {
 }
 
 
-export function PostSessionReport({ history, csvData, logs, mass, startTime, endTime, auditorName, pcName, pcPhoto, auditorPhoto, isSoloSession, onClose, onSaveSession, sessionObjective, sessionProcessObjective, sessionPhysicalCheck, sessionBriefing, onOpenHistory, reactions = [], epValidated = false, epCognitionText = '', epAuditorNote = '', epReactionType = '', epRealization = '', epDurationMin = '', epVgi = false, epVvgi = false, epTimestamp = null, totalTa = 0, massTime = 0, dissolutionTime = 0, avgReleaseVel = 0, relVelBaseline = 0, dissolvedPctMass, massChargeQ = 0, dissChargeQ = 0, auditingCycles = [], mirrorCycles = [], assessCycles = [], deltaStar = 0, deltaStarN = 0, deltaTrend = 0, deltaBaseline = 0, deltaAdaptive = 0,
+export function PostSessionReport({ history, csvData, logs, mass, startTime, endTime, auditorName, pcName, pcPhoto, auditorPhoto, isSoloSession, onClose, onSaveSession, sessionObjective, sessionProcessObjective, sessionPhysicalCheck, sessionBriefing, onOpenHistory, reactions = [], epValidated = false, epCognitionText = '', epAuditorNote = '', epReactionType = '', epRealization = '', epDurationMin = '', epVgi = false, epVvgi = false, epTimestamp = null, totalTa = 0, massTime = 0, dissolutionTime = 0, avgReleaseVel = 0, relVelBaseline = 0, dissolvedPctMass, massChargeQ = 0, dissChargeQ = 0, auditingCycles = [], mirrorCycles = [], toneCycles = [], assessCycles = [], deltaStar = 0, deltaStarN = 0, deltaTrend = 0, deltaBaseline = 0, deltaAdaptive = 0,
   breathReactivity, breathContactPct, breathBpm,
   profileId, mnaData }: PostSessionReportProps) {
   // ── ZONES AS-IS: charge lifecycle of the contacted masses ──
@@ -361,6 +369,7 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
       massChargeQ, dissChargeQ,        // ← mass QUANTITY (Σ qL·dt) for ZONES AS-IS
       auditingCycles,                  // ← armed cycles: question + phase + completed
       mirrorCycles,                    // ← cycles MIRROR (Ron « double to erase ») — famille à part
+      toneCycles,                      // ← cycles TONE SCALE (Ron, −40…+40) — famille à part
       assessCycles,                    // ← cycles ASSESSMENT (items + read instantané)
       deltaStar, deltaStarN, deltaTrend, // ← measured Ron's Lag Δt* (reaction time) + Kalman trend
       breathReactivity, breathContactPct, breathBpm, // ← pre-session breath test (RSA)
@@ -991,6 +1000,63 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
         pdf.text(`${Math.floor(dur / 60)}m ${String(dur % 60).padStart(2, '0')}s`, pageW - 20, y, { align: 'right' as any });
         y += 5;
       }
+      pdf.setTextColor(40, 40, 40);
+      y += 4;
+    }
+
+    // ── CYCLES TONE SCALE — famille A PART (l'echelle des tons de Ron, -40..+40). On imprime ce
+    // que la MESURE disait, ce que le preclair a VALIDE, et le desaccord entre les deux : c'est
+    // la seule ligne du rapport ou l'instrument et la personne se contredisent en clair.
+    // ASCII seulement (jsPDF helvetica) : pas de fleches ni de signes typographiques.
+    if (toneCycles.length > 0) {
+      ensureSpace(14 + toneCycles.length * 5);
+      const asIsN = toneCycles.filter(c => c.asIs).length;
+      const discN = toneCycles.filter(c => c.agreement === 'differs').length;
+      panelHeader(L('CICLI DI AUDITING - TONE SCALE', 'CYCLES D\'AUDITION - TONE SCALE', 'AUDITING CYCLES - TONE SCALE', 'CICLOS DE AUDITACION - TONE SCALE', 'AUDITINGCYKLER - TONE SCALE'));
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8);
+      pdf.setTextColor(120, 120, 120);
+      pdf.text(`${asIsN}/${toneCycles.length} AS-IS`, pageW - 15, y, { align: 'right' as any });
+      y += 6;
+      const sgn = (v: number) => `${v > 0 ? '+' : ''}${Math.round(v)}`;
+      for (const c of toneCycles) {
+        ensureSpace(6);
+        const dur = Math.max(0, Math.round(c.tEndSec - c.tStartSec));
+        const val = c.sign * c.magnitude;
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8.5);
+        pdf.setTextColor(40, 40, 40);
+        const q = pdf.splitTextToSize(c.question || '-', pageW - 135)[0] || '-';
+        pdf.text(`#${c.n} ${q}`, 20, y);
+        pdf.setTextColor(90, 90, 90);
+        const misura = c.located !== null ? `${L('ago', 'aig', 'ndl', 'agj', 'nal')} ${sgn(c.located)} / ` : '';
+        pdf.text(`${misura}${sgn(val)} -> ${sgn(-val)}`, pageW - 62, y, { align: 'right' as any });
+        pdf.setFont('helvetica', 'bold');
+        if (c.agreement === 'differs') { pdf.setTextColor(190, 130, 20); pdf.text('=/=', pageW - 46, y, { align: 'right' as any }); }
+        if (c.asIs) { pdf.setTextColor(16, 150, 110); pdf.text('* AS-IS', pageW - 34, y, { align: 'right' as any }); }
+        else { pdf.setTextColor(120, 120, 120); pdf.text('-', pageW - 34, y, { align: 'right' as any }); }
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(110, 110, 110);
+        pdf.text(`${Math.floor(dur / 60)}m ${String(dur % 60).padStart(2, '0')}s`, pageW - 20, y, { align: 'right' as any });
+        y += 5;
+      }
+      if (discN > 0) {
+        ensureSpace(6);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(8.5);
+        pdf.setTextColor(190, 130, 20);
+        pdf.text(`${L('L\'ago diceva altro', 'L\'aiguille disait autre chose', 'The needle said otherwise', 'La aguja decia otra cosa', 'Nalen sa nagot annat')} : ${discN}/${toneCycles.length}`, 20, y);
+        y += 5;
+      }
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7);
+      pdf.setTextColor(130, 130, 130);
+      pdf.text(L('TONE SCALE : localizza / assessa segno e ampiezza / mock-uppa l\'OPPOSTO fino allo ZERO',
+                 'TONE SCALE : localise / assesse signe et ampleur / mock-uppe l\'OPPOSE jusqu\'au ZERO',
+                 'TONE SCALE : locate / assess sign and magnitude / mock up the OPPOSITE until ZERO',
+                 'TONE SCALE : localiza / assessa signo y amplitud / mock-upea el OPUESTO hasta el CERO',
+                 'TONE SCALE : lokalisera / assessa tecken och storlek / mocka upp det MOTSATTA till NOLL'), 20, y);
+      y += 4;
       pdf.setTextColor(40, 40, 40);
       y += 4;
     }
@@ -1730,6 +1796,63 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
                   return nr > 0
                     ? `⚠ ${nr} no recharging — ${L('il mock-up non ha creato massa: quei NULL NON sono validati', 'le mock-up n\'a pas créé de masse : ces NULL ne sont PAS validés', 'the mock-up created no mass: those NULL are NOT validated', 'el mock-up no creó masa: esos NULL NO están validados', 'mock-up skapade ingen massa: de NULL är INTE validerade')}`
                     : `NULL → RISE (mock-up) → EQUILIBRIUM, ${L('validato coi VGI\'s', 'validé avec les VGI\'s', 'validated with VGI\'s', 'validado con los VGI\'s', 'validerad med VGI\'s')}`; })()}
+              </div>
+            </div>
+          )}
+
+          {/* CICLI TONE SCALE — famiglia A PARTE (la scala del tono di Ron, −40…+40).
+              Si riporta quel che la MISURA diceva alla localizzazione, quel che il preclear ha
+              VALIDATO, e se i due concordavano: è proprio il DISACCORDO che vale la pena
+              rileggere a freddo, perché è l'unico posto dove strumento e persona si smentiscono
+              a viso aperto. Più i testimoni dell'as-is che si sono accesi. */}
+          {toneCycles.length > 0 && (
+            <div className="glass-panel p-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-mono text-slate-400 uppercase tracking-widest">{L('Cicli di auditing', 'Cycles d\'audition', 'Auditing cycles', 'Ciclos de auditación', 'Auditingcykler')} · TONE SCALE</h3>
+                <span className="text-xs font-mono" style={{ color: 'rgba(240,246,255,0.95)' }}>
+                  {toneCycles.filter(c => c.asIs).length}/{toneCycles.length} <span className="opacity-60">AS-IS</span>
+                </span>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {toneCycles.map((c, i) => {
+                  const dur = Math.max(0, Math.round(c.tEndSec - c.tStartSec));
+                  const val = c.sign * c.magnitude;
+                  const n = (v: number) => `${v > 0 ? '+' : ''}${Math.round(v)}`;
+                  return (
+                    <div key={i} className="flex items-center justify-between gap-2 text-xs font-mono bg-white/5 rounded px-2 py-1.5 border border-slate-200/10">
+                      <span className="truncate flex-1" style={{ color: 'rgba(220,240,255,0.85)' }}><span style={{ color: 'rgba(235,244,255,0.92)', marginRight: 6 }}>#{c.n}</span>{c.question || '—'}</span>
+                      <span className="shrink-0 flex items-center gap-2">
+                        {c.located !== null && (
+                          <span className="text-[10px]" style={{ color: 'rgba(226,238,255,0.6)' }}>{L('ago', 'aiguille', 'needle', 'aguja', 'nål')} {n(c.located)}</span>
+                        )}
+                        <span className="text-[10px]" style={{ color: '#fbbf24' }}>{L('validato', 'validé', 'validated', 'validado', 'validerat')} {n(val)}</span>
+                        <span className="text-[10px]" style={{ color: '#34d399' }}>{L('mock-up', 'mock-up', 'mock-up', 'mock-up', 'mock-up')} {n(-val)}</span>
+                        {c.agreement === 'differs' && <span style={{ color: '#fbbf24', fontWeight: 700 }}>≠</span>}
+                        {c.witnesses.length > 0 && (
+                          <span className="text-[10px]" style={{ color: 'rgba(226,238,255,0.5)' }}>{c.witnesses.join('+')}</span>
+                        )}
+                        {c.asIs
+                          ? <span style={{ color: '#34d399', fontWeight: 700 }}>✓ AS-IS</span>
+                          : <span style={{ color: '#94a3b8', fontWeight: 700 }}>—</span>}
+                        <span className="text-[10px] text-slate-500">{Math.floor(dur / 60)}m {String(dur % 60).padStart(2, '0')}s</span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              {(() => { const disc = toneCycles.filter(c => c.agreement === 'differs').length;
+                return disc > 0 ? (
+                  <div className="flex items-center justify-between text-xs font-mono px-2 py-1.5 rounded" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.35)' }}>
+                    <span style={{ color: 'rgba(226,238,255,0.8)' }}>{L('L\'ago diceva altro', 'L\'aiguille disait autre chose', 'The needle said otherwise', 'La aguja decía otra cosa', 'Nålen sa något annat')}</span>
+                    <span style={{ color: '#fbbf24', fontWeight: 700 }}>{disc}/{toneCycles.length}</span>
+                  </div>
+                ) : null; })()}
+              <div className="text-[10px] text-slate-500 font-mono">
+                {L('TONE SCALE (Ron) → localizza la resistenza · assessa segno e ampiezza · mock-uppa l\'OPPOSTO fino allo ZERO. « ≠ » = misura e validazione distanti più di una divisione. I testimoni dell\'as-is: a zero, F/N, firma energetica.',
+                   'TONE SCALE (Ron) → localise la résistance · assesse signe et ampleur · mock-uppe l\'OPPOSÉ jusqu\'au ZÉRO. « ≠ » = mesure et validation distantes de plus d\'une division. Les témoins de l\'as-is : à zéro, F/N, signature énergétique.',
+                   'TONE SCALE (Ron) → locate the resistance · assess sign and magnitude · mock up the OPPOSITE until ZERO. "≠" = measure and validation more than one division apart. The as-is witnesses: at zero, F/N, energetic signature.',
+                   'TONE SCALE (Ron) → localiza la resistencia · assessa signo y amplitud · mock-upea el OPUESTO hasta el CERO. « ≠ » = medida y validación a más de una división. Los testigos del as-is: a cero, F/N, firma energética.',
+                   'TONE SCALE (Ron) → lokalisera motståndet · assessa tecken och storlek · mocka upp det MOTSATTA till NOLL. ”≠” = mätning och validering mer än ett delstreck isär. As-is-vittnena: på noll, F/N, energisignatur.')}
               </div>
             </div>
           )}

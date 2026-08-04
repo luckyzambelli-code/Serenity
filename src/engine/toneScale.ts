@@ -158,6 +158,81 @@ export const reachedZero = (toneNow: number, eps = TONE_STEP / 2): boolean =>
   Math.abs(clampTone(toneNow)) < eps;
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════
+// COME SI SA CHE L'AS-IS È ARRIVATO — I TESTIMONI
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ⚠️ IL BERSAGLIO È LO ZERO, NON IL VALORE OPPOSTO.
+ *
+ * Domanda posta dall'utente: « l'ago dovrebbe andare sul valore opposto? ». No — e la
+ * distinzione è tutto il punto del metodo. Il preclear MOCK-UPPA il +40; il RISULTATO è che i
+ * due si annullano e la resistenza va al CENTRO. Se l'ago si fermasse sul +40 non ci sarebbe
+ * stato nessun as-is: si sarebbe sostituita una carica con un'altra di segno opposto.
+ *
+ * È anche una previsione FALSIFICABILE, ed è il motivo per cui vale la pena misurarla: se in
+ * seduta l'ago finisse davvero sull'opposto invece che a zero, il modello di Ron vorrebbe dire
+ * un'altra cosa, e lo sapremmo.
+ */
+
+/** Chi può testimoniare che la carica se n'è andata. */
+export type ToneWitness =
+  /** La POSIZIONE: il tono è arrivato a zero. Serve il meter — è una misura. */
+  | 'zero'
+  /** L'F/N sull'ago in gioco. La firma classica. */
+  | 'fn'
+  /** La FIRMA ENERGETICA dissolta: quel che il ciclo CONTACT misura già. Serve il MUSE. */
+  | 'signature';
+
+export interface ToneAsIsState {
+  /** Chi PUÒ parlare, con gli strumenti collegati. */
+  available: ToneWitness[];
+  /** Chi HA parlato. */
+  fired: ToneWitness[];
+  /** L'app PROPONE l'as-is? Mai lo DICHIARA: valida l'auditor, come ovunque. */
+  proposed: boolean;
+  /** Proposto su un testimone SOLO, perché è l'unico che c'era. Va detto. */
+  singleWitness: boolean;
+}
+
+/**
+ * Quali testimoni esistono, secondo cosa è collegato.
+ *
+ *   solo METER      → posizione + F/N del meter          (due)
+ *   solo MUSE       → F/N + firma energetica             (due)
+ *   MUSE + METER    → tutti e tre                        (tre, e indipendenti)
+ *   niente          → nessuno: si è off-meter come Ron, e decide l'auditor da solo
+ *
+ * La POSIZIONE richiede il meter perché senza non c'è un tono misurato da portare a zero. La
+ * FIRMA richiede il MUSE perché è l'EEG a darla. L'F/N lo dà l'ago in gioco, quale che sia.
+ */
+export const toneWitnesses = (hasMeter: boolean, hasMuse: boolean): ToneWitness[] => {
+  const w: ToneWitness[] = [];
+  if (hasMeter) w.push('zero');
+  if (hasMeter || hasMuse) w.push('fn');
+  if (hasMuse) w.push('signature');
+  return w;
+};
+
+/**
+ * La proposta.
+ *
+ * DUE testimoni concordi, non uno. Un solo segnale si sbaglia: l'F/N del meter oggi è troppo
+ * permissivo (mediana del TA alle F/N = 5,32 su 765 casi, con picchi al fondo scala — misurato
+ * sull'archivio), e una posizione a zero può capitare per caso passando. Due che dicono la
+ * stessa cosa nello stesso momento è un'altra faccenda.
+ *
+ * Quando ce n'è UNO SOLO disponibile si propone lo stesso — meglio una proposta dichiarata
+ * fragile che nessuna — ma si SCRIVE che è uno solo.
+ */
+export const toneAsIs = (available: ToneWitness[], fired: ToneWitness[]): ToneAsIsState => {
+  const f = fired.filter(x => available.includes(x));
+  const proposed = available.length === 0 ? false
+    : available.length === 1 ? f.length === 1
+    : f.length >= 2;
+  return { available, fired: f, proposed, singleWitness: proposed && available.length === 1 };
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════
 // GEOMETRIA DEL QUADRANTE
 // ═══════════════════════════════════════════════════════════════════════════════════════════
 
