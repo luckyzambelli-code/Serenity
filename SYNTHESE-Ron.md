@@ -1,6 +1,6 @@
 # EQUILIBRIUM — comment il s'utilise
 
-*Note pour Ron · version 2.0.83*
+*Note pour Ron · version 2.0.84*
 
 ---
 
