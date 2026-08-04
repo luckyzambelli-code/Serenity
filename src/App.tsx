@@ -98,6 +98,7 @@ import {
   type ToneCharge, type TonePhase, type ToneSign, type ToneStep, type ToneLocateAnchor,
 } from './engine/toneScale';
 import { TA_MIN, TA_MAX } from './engine/thetaTaScale';
+import { MODE_SPEC, availableModes, fallbackMode, type SessionMode } from './engine/sessionMode';
 /** Un solo locatore per l'app, come `mirrorCycle`: tiene gli ultimi secondi fuori da React,
  *  perché il gestore del worker gira a 60 Hz e non deve far ridisegnare nulla per accumulare. */
 const toneLocator = new ToneLocator();
@@ -224,7 +225,24 @@ export default function App() {
   // Processus
   const [showProcessus, setShowProcessus] = useState(false);
   const [sidebarDrawer, setSidebarDrawer] = useState<null | 'link' | 'trim' | 'auditor' | 'pc' | 'lang' | 'session' | 'config'>(null);
-  const [viewMode, setViewMode] = useState<'needle' | 'needle_pure' | 'mirror' | 'tone'>('needle');
+  // ── IL MODO — un comando solo, al posto di sei ────────────────────────────────────────────
+  // Prima c'erano tre file di comandi in tre posti: AGO/AGO+/MIRROR/TONE (cosa GUARDI),
+  // MUSE/METER (quale AGO), CONTACT/NULL (cosa FAI). Due cambiavano la veste e una il metodo, e
+  // da nessuna parte era scritto quale fosse quale — l'auditor doveva chiedersi « quale vista?
+  // quale ago? quale bottone? » invece dell'unica domanda che conta: CHE COSA STO FACENDO.
+  //
+  // Adesso i CINQUE METODI stanno sullo stesso piano, che è quel che sono davvero, e ognuno si
+  // porta dietro il suo quadrante, il suo ago e i suoi comandi. AGO/AGO+ non era un metodo: era
+  // la scia, ed è diventata una levetta a parte.
+  const [mode, setMode] = useState<SessionMode>('contact');
+  /** La SCIA e le etichette di reazione — quel che « AGO + » voleva dire. */
+  const [showTrailPref, setShowTrailPref] = useState(true);
+  // La vista del quadrante non si sceglie più: DISCENDE dal modo. Tutto il codice a valle
+  // continua a leggere `viewMode` senza sapere che ora è derivato.
+  const viewMode: 'needle' | 'needle_pure' | 'mirror' | 'tone' =
+    mode === 'mirror' ? 'mirror'
+    : mode === 'tone' ? 'tone'
+    : showTrailPref ? 'needle' : 'needle_pure';
   const viewModeRef = useRef(viewMode); viewModeRef.current = viewMode;
   // MIRROR (méthode de Ron : « double the instant charge to erase it ») — 3e vue, chose À PART.
   const [mirrorArmed, setMirrorArmed] = useState(false);
@@ -4214,9 +4232,19 @@ export default function App() {
   // alla stretta non risponde. Segnalato in seduta.
   const provaBoiteInCorso = instruments.theta
     && (!!theta.testing || (metabolicOpen && !thetaReadyDone));
+  // ── E OGNI MODO HA IL SUO AGO ───────────────────────────────────────────────────────────
+  // L'imposizione non è nuova: era già sparsa in tre condizioni. Ora è UNA tabella
+  // (MODE_SPEC), e il modo la porta con sé. Resta valida la precedenza delle prove delle
+  // boîtes, che tarano il METER e vanno guardate sul SUO ago qualunque cosa si stia facendo.
+  //
+  // L'ago imposto vale solo se lo strumento c'è: in TONE senza meter si guarda il MUSE, che è
+  // l'unico che possa disegnare qualcosa.
+  const agoDelModo = MODE_SPEC[mode].needle;
   const agoPrincipale: ReadSrc =
     provaBoiteInCorso ? 'theta'
     : cicloInCorso ? 'eeg'
+    : agoDelModo === 'theta' && instruments.theta ? 'theta'
+    : agoDelModo === 'eeg' && instruments.muse ? 'eeg'
     : instruments.muse && instruments.theta ? agoScelto
     : instruments.theta ? 'theta' : 'eeg';
   // ── TONE SCALE (Ron, −40…+40) ───────────────────────────────────────────────────────────
@@ -4226,6 +4254,14 @@ export default function App() {
   // CHI DICE IL NUMERO. Ron assessa segno e ampiezza perché lavora senza meter. Con l'ago il
   // numero si LEGGE: la misura PROPONE e l'assessment VERIFICA. Senza meter la proposta non
   // c'è e l'assessment torna a essere l'unica fonte — che è il caso di Ron.
+  // Staccando il MUSE a metà seduta, i tre modi che vivono di carica EEG non hanno più
+  // sorgente: si ripiega invece di lasciare l'interfaccia su una scelta impossibile — e su un
+  // ciclo che l'auditor aspetterebbe di veder concludere.
+  const modiDisponibili = useMemo(() => availableModes(instruments.muse), [instruments.muse]);
+  useEffect(() => {
+    if (!modiDisponibili.includes(mode)) setMode(fallbackMode(instruments.muse, instruments.theta));
+  }, [modiDisponibili, mode, instruments.muse, instruments.theta]);
+
   const [tonePhase, setTonePhase] = useState<TonePhase>('locate');
   const [toneValidated, setToneValidated] = useState<ToneCharge | null>(null);
   const [toneProposedAtLock, setToneProposedAtLock] = useState<ToneCharge | null>(null);
@@ -5970,7 +6006,9 @@ export default function App() {
               <div style={{ width: '100%', marginBottom: 18, pointerEvents: 'auto',
                             // MIRROR et TONE ont leur PROPRE barre et n'ont ni CONTACT ni NULL :
                             // laisser celle-ci afficherait deux jeux de commandes contradictoires.
-                            display: (viewMode === 'mirror' || viewMode === 'tone' || eegModulesHidden(instruments)) ? 'none' : 'flex',
+                            // In LIBERO non c'è ciclo da armare: il campo item e il bottone non
+                            // avrebbero niente da fare. Gli item si danno da ASSESSMENT.
+                            display: (!MODE_SPEC[mode].arms || viewMode === 'mirror' || viewMode === 'tone' || eegModulesHidden(instruments)) ? 'none' : 'flex',
                             flexDirection: 'column', gap: 6 }}>
                 <textarea
                   value={auditingQuestion}
@@ -6023,7 +6061,11 @@ export default function App() {
                     t_Item est JUSTE), et le moteur vérifie ensuite s'il y a de la charge ou si
                     c'est nul, et le SIGNALE. Presser le bouton ACTIF = ferme le cycle ; presser
                     l'AUTRE = bascule le cycle courant (on garde n° + item). */}
-                {(['charge', 'null'] as const).map((k) => {
+                {/* ── UN BOTTONE SOLO: quello del MODO in corso ─────────────────────────────
+                    Prima erano due, e uno dei due era sempre quello sbagliato — con l'altro
+                    disabilitato appena un ciclo girava. Il metodo lo si è già scelto in alto:
+                    qui resta il GESTO, cioè dare l'item. Ripremendolo si chiude il ciclo. */}
+                {([mode === 'null' ? 'null' : 'charge'] as const).map((k) => {
                   const active = cycleArmed && cycleKind === k;
                   const label = k === 'charge' ? 'CONTACT' : 'NULL';
                   // Contour SOBRE mais DIFFÉRENT même au REPOS (demande utilisateur) : CONTACT = teal
@@ -6057,7 +6099,7 @@ export default function App() {
                       {/* Actif : nom + icône STOP pleine (le symbole universel « arrêter ») — dit
                           que CE bouton ferme le cycle, sans le mot (demande utilisateur). */}
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        {label}
+                        {active ? label : LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE ITEM', 'DA EL ÍTEM', 'GE ITEM')}
                         {active && <Square size={9} strokeWidth={0} fill="currentColor" />}
                       </span>
                     </button>
@@ -6327,36 +6369,58 @@ export default function App() {
               </div>
             )}
 
-            {/* HALO/NEEDLE TOGGLE — 3 modes : NEEDLE pure / NEEDLE+ / HALO.
-                Stacked VERTICALLY at TOP-LEFT, positioned BELOW the clock block
-                (which sits at top:40 left:40 and is ~70px tall) so it no longer
-                covers the time, and clear of the centred SOL/SEC data stack. */}
-            {/* SÉLECTEUR DE VUE UNIQUE — un seul segmenté à 3 voies : AGO / AGO + / MIRROR (demande
-                utilisateur : « fai un solo selettore »). */}
+            {/* ── SELETTORE DI MODO — UNO, al posto di sei comandi in tre posti ──────────────
+                CONTACT · NULL · MIRROR · TONE · LIBERO: i cinque METODI sullo stesso piano.
+                Da ciascuno discendono quadrante, ago e comandi (MODE_SPEC), invece di essere
+                tre scelte indipendenti che l'auditor doveva tenere coerenti a mente.
+                Un modo che il MUSE staccato rende impossibile non compare: vedi availableModes. */}
             <div className="absolute z-50 pointer-events-auto" style={{ top: 124, left: 40, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'flex', width: 248, padding: 3, gap: 2, borderRadius: 999,
+              <div style={{ display: 'flex', width: 300, padding: 3, gap: 2, borderRadius: 999,
                 background: isLightTheme ? '#b7b7be' : '#17171b',
                 boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
-                {([
-                  { m: 'needle_pure' as const, lbl: `${t('view_needle')}`, title: `${t('view_needle')}` },
-                  { m: 'needle' as const, lbl: `${t('view_needle')} +`, title: `${t('view_needle')} +` },
-                  { m: 'mirror' as const, lbl: 'MIRROR', title: LC('MIRROR — metodo del doppio (Ron)', 'MIRROR — méthode du double (Ron)', 'MIRROR — the doubling method (Ron)', 'MIRROR — método del doble (Ron)', 'MIRROR — dubbelmetoden (Ron)') },
-                  { m: 'tone' as const, lbl: 'TONE', title: LC('TONE SCALE — la scala del tono di Ron (−40…+40)', 'TONE SCALE — l\'échelle des tons de Ron (−40…+40)', 'TONE SCALE — Ron\'s tone scale (−40…+40)', 'TONE SCALE — la escala del tono de Ron (−40…+40)', 'TONE SCALE — Rons tonskala (−40…+40)') },
-                ]).map(seg => {
-                  const active = viewMode === seg.m;
-                  const isMirror = seg.m === 'mirror' || seg.m === 'tone';
+                {modiDisponibili.map(m => {
+                  const META: Record<SessionMode, { lbl: string; title: string; col: string }> = {
+                    contact: { lbl: 'CONTACT', col: '#6ee7b7',
+                      title: LC('CONTACT → DISSOLUZIONE → AS-IS', 'CONTACT → DISSOLUTION → AS-IS', 'CONTACT → DISSOLUTION → AS-IS', 'CONTACT → DISOLUCIÓN → AS-IS', 'CONTACT → UPPLÖSNING → AS-IS') },
+                    null: { lbl: 'NULL', col: '#cbd5e1',
+                      title: LC('NULL → RISE (mock-up) → EQUILIBRIUM', 'NULL → RISE (mock-up) → EQUILIBRIUM', 'NULL → RISE (mock-up) → EQUILIBRIUM', 'NULL → RISE (mock-up) → EQUILIBRIUM', 'NULL → RISE (mock-up) → EQUILIBRIUM') },
+                    mirror: { lbl: 'MIRROR', col: '#34d399',
+                      title: LC('MIRROR — metodo del doppio (Ron)', 'MIRROR — méthode du double (Ron)', 'MIRROR — the doubling method (Ron)', 'MIRROR — método del doble (Ron)', 'MIRROR — dubbelmetoden (Ron)') },
+                    tone: { lbl: 'TONE', col: '#ff5a5a',
+                      title: LC('TONE SCALE — la scala del tono di Ron (−40…+40)', 'TONE SCALE — l\'échelle des tons de Ron (−40…+40)', 'TONE SCALE — Ron\'s tone scale (−40…+40)', 'TONE SCALE — la escala del tono de Ron (−40…+40)', 'TONE SCALE — Rons tonskala (−40…+40)') },
+                    free: { lbl: LC('LIBERO', 'LIBRE', 'FREE', 'LIBRE', 'FRI'), col: '#8ab4ff',
+                      title: LC('Solo l\'ago — nessun ciclo. Assessment e R&I restano attivi.', 'L\'aiguille seule — aucun cycle. Assessment et R&I restent actifs.', 'The needle alone — no cycle. Assessment and R&I stay active.', 'Solo la aguja — ningún ciclo. Assessment y R&I siguen activos.', 'Bara nålen — ingen cykel. Assessment och R&I förblir aktiva.') },
+                  };
+                  const seg = META[m];
+                  const active = mode === m;
+                  // Cambiando metodo NON si porta dietro il ciclo di prima: si chiude, altrimenti
+                  // resterebbe armato dietro un quadrante che non lo mostra più.
+                  const vai = () => { if (cycleArmed) finalizeCycle(false); if (mirrorArmed) stopMirror(); resetTone(); setMode(m); };
                   return (
-                    <button key={seg.m} type="button" onClick={() => setViewMode(seg.m)} title={seg.title}
+                    <button key={m} type="button" onClick={vai} title={seg.title}
                       style={{ flex: 1, height: 26, borderRadius: 999, border: 'none', cursor: 'pointer',
                         fontSize: 10, fontWeight: 700, letterSpacing: '0.02em', whiteSpace: 'nowrap', padding: '0 4px',
-                        color: active ? (isMirror ? '#07120c' : (isLightTheme ? '#1a1a1f' : '#0b0f14')) : (isLightTheme ? '#3a3a40' : '#cbd5e1'),
-                        background: active ? (isMirror ? '#34d399' : (isLightTheme ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.18)')) : 'transparent',
+                        color: active ? '#07120c' : (isLightTheme ? '#3a3a40' : '#cbd5e1'),
+                        background: active ? seg.col : 'transparent',
                         boxShadow: active ? '0 2px 6px rgba(0,0,0,0.35)' : 'none', transition: 'color 0.2s, background 0.2s' }}>
                       {seg.lbl}
                     </button>
                   );
                 })}
               </div>
+              {/* LA SCIA — quel che « AGO + » voleva dire, e che non era un metodo. Nascosta in
+                  MIRROR e TONE, che hanno il loro quadrante e non la scia dell'ago. */}
+              {(mode === 'contact' || mode === 'null' || mode === 'free') && (
+                <button type="button" onClick={() => setShowTrailPref(v => !v)}
+                  title={LC('Scia e etichette di reazione', 'Traînée et libellés de réaction', 'Trail and reaction labels', 'Estela y etiquetas de reacción', 'Svans och reaktionsetiketter')}
+                  style={{ width: 300, height: 20, borderRadius: 999, cursor: 'pointer',
+                    fontSize: 9, fontWeight: 700, letterSpacing: '0.08em',
+                    background: showTrailPref ? (isLightTheme ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.18)') : 'transparent',
+                    border: `1px solid ${isLightTheme ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.22)'}`,
+                    color: showTrailPref ? (isLightTheme ? '#1a1a1f' : '#f0f6ff') : (isLightTheme ? '#3a3a40' : '#8b98ad') }}>
+                  {showTrailPref ? '● ' : '○ '}{LC('SCIA', 'TRAÎNÉE', 'TRAIL', 'ESTELA', 'SVANS')}
+                </button>
+              )}
               {/* ── QUALE AGO ────────────────────────────────────────────────────────────────
                   Stava SOTTO IL PERNO, dentro il quadrante. Ma il pannello MNA occupa la fascia
                   bassa e, aperto, ci finiva sopra: il selettore compariva DENTRO il riquadro del
@@ -6369,7 +6433,10 @@ export default function App() {
                   sembravano un solo comando a sei voci: si leggeva « AGO · AGO + · MIRROR · TONE ·
                   MUSE · METER » come se scegliessero la stessa cosa. Non è così — sopra si sceglie
                   COME si guarda, qui QUALE ago. La differenza di statura si vede prima di leggere. */}
-              {instruments.muse && instruments.theta && (() => {
+              {/* ⚠️ SOLO IN MODO LIBERO. Negli altri quattro l'ago lo impone il METODO
+                  (MODE_SPEC) e questo selettore mostrava solo un bottone barrato: una scelta che
+                  non è una scelta. Dove serve davvero, resta. */}
+              {mode === 'free' && instruments.muse && instruments.theta && (() => {
                 const bloccato = cicloInCorso || provaBoiteInCorso;
                 const imposto: ReadSrc = provaBoiteInCorso ? 'theta' : 'eeg';
                 const perche = provaBoiteInCorso
