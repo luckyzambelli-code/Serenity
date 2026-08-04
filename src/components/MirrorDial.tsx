@@ -31,7 +31,6 @@ export function MirrorDial({
 
   const valR = valueR;                              // (a) valore 1–10 (RELATIVO), fissato al contatto
   const doubleR = 2 * valR;                         // (b) le DOUBLE = la cible
-  const targOnScale = doubleR <= 10;
   const progress = locked && contactQ > 1e-6 ? Math.min(1, dischargeQ / (2 * contactQ)) : 0;
   const pct = Math.round(progress * 100);
 
@@ -73,23 +72,36 @@ export function MirrorDial({
         );
       })}
 
-      {/* (a) repère de la VALEUR de l'item (figée au contact) */}
+      {/* ══ UNA RIGA SOLA — LA VALEUR ET SON DOUBLE SONT AU MÊME ENDROIT ══════════════════
+          ⚠️ ERREUR CORRIGÉE (signalée en séance : « on a eu 6 et tu demandes 12, mais tu mets
+          la ligne jaune à 20 »).
+
+          Le cadran porte DEUX rangées au MÊME angle : dehors la valeur k (1…10), dedans son
+          double (2k) entre parenthèses. Le double de l'item se lit donc à la position de
+          l'item — PAS à la position « doubleR » sur la rangée du dessus.
+
+          L'ancien code plaçait la ligne à `mirrorOffset(min(10, doubleR))`, c'est-à-dire qu'il
+          lisait le double comme s'il était une valeur de la rangée du DESSUS. Avec un item à 6,
+          le double 12 dépassait 10, était rogné à 10 — et la ligne tombait sur la graduation
+          dont l'étiquette intérieure dit justement (20). D'où le 20 lu à l'écran.
+
+          Une seule ligne, donc, à la position de l'item, avec les deux chiffres : la valeur
+          au-dessus de l'arc, le double à atteindre en dessous. Il n'y a jamais eu deux endroits
+          à regarder — il y en avait un, et on en dessinait deux. */}
       {armed && locked && valR > 0.05 && (() => {
         const off = mirrorOffset(valR);
-        const a = apt(off2ang(off), R + 22), b = apt(off2ang(off), R - 22);
-        return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={ink} strokeWidth={4} />;
-      })()}
-
-      {/* (b) LIGNE JAUNE = le DOUBLE, la cible à atteindre. Libellé « ×2 » EN BAS de la ligne. */}
-      {armed && locked && valR > 0.05 && (() => {
-        const off = mirrorOffset(Math.min(10, doubleR));
         const a = apt(off2ang(off), R + 30), b = apt(off2ang(off), R - 136);
+        const vp = apt(off2ang(off), R + 88);
         const lp = apt(off2ang(off), R - 164);
         return (
           <g filter="url(#md-glow)">
             <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={amber} strokeWidth={4} />
+            {/* la VALEUR de l'item, dehors */}
+            <text x={vp.x.toFixed(1)} y={vp.y.toFixed(1)} textAnchor="middle" dominantBaseline="middle"
+              fontSize={22} fontWeight={700} fill={ink}>{valR.toFixed(1)}</text>
+            {/* le DOUBLE à atteindre, dedans — le vrai chiffre, jamais rogné */}
             <text x={lp.x.toFixed(1)} y={lp.y.toFixed(1)} textAnchor="middle" dominantBaseline="middle"
-              fontSize={20} fontWeight={700} fill={amber}>{targOnScale ? '×2' : '×2>'}</text>
+              fontSize={20} fontWeight={700} fill={amber}>×2 = {doubleR.toFixed(1)}</text>
           </g>
         );
       })()}
@@ -114,7 +126,8 @@ export function MirrorDial({
           {valR.toFixed(1)}
           <tspan dx="18">→</tspan>
           <tspan dx="18">×2</tspan>
-          <tspan dx="26">{Math.min(20, doubleR).toFixed(1)}</tspan>
+          {/* il DOPPIO vero, non rognato a 20: se l'item vale 6 il doppio è 12, e 12 va scritto. */}
+          <tspan dx="26">{doubleR.toFixed(1)}</tspan>
         </text>
       )}
       {armed && locked && !reached && (

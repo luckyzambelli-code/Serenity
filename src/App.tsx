@@ -4522,16 +4522,19 @@ export default function App() {
       titolo: LC('1 · DAI L\'ITEM', '1 · DONNE L\'ITEM', '1 · GIVE THE ITEM', '1 · DA EL ÍTEM', '1 · GE ITEM'),
       come: LC('L\'ago legge → premi. Puoi scrivere l\'item o dirlo a voce dopo aver premuto.', 'L\'aiguille lit → appuie. Tu peux écrire l\'item ou le dire après avoir appuyé.', 'The needle reads → press. You can type the item or say it after pressing.', 'La aguja lee → pulsa. Puedes escribir el ítem o decirlo tras pulsar.', 'Nålen läser → tryck. Du kan skriva item eller säga det efter tryckningen.') };
     if (asIsPending) return {
-      titolo: 'AS-IS', fatto: true,
+      titolo: '3 · AS-IS', fatto: true,
       come: LC('La firma della carica è collassata e l\'F/N è arrivato. Proposto: validi tu, mai l\'app.', 'La signature de la charge s\'est effondrée et la F/N est là. Proposé : c\'est toi qui valides, jamais l\'app.', 'The charge signature has collapsed and the F/N is here. Proposed: you validate, never the app.', 'La firma de la carga colapsó y llegó la F/N. Propuesto: validas tú, nunca la app.', 'Laddningens signatur har kollapsat och F/N är här. Föreslaget: du validerar, aldrig appen.') };
-    if (chargePhaseNow === 'discharge') return {
-      titolo: LC('3 · SI DISSOLVE', '3 · ÇA SE DISSOUT', '3 · IT IS DISSOLVING', '3 · SE DISUELVE', '3 · DET LÖSES UPP'),
-      come: LC('La carica se ne sta andando. Non fare niente: aspetta l\'F/N.', 'La charge s\'en va. Ne fais rien : attends la F/N.', 'The charge is leaving. Do nothing: wait for the F/N.', 'La carga se está yendo. No hagas nada: espera la F/N.', 'Laddningen försvinner. Gör inget: vänta på F/N.') };
+    // ⚠️ TRE TEMPI, non quattro. Avevo scritto « 2 · lascia guardare » e « 3 · si dissolve »:
+    // sbagliato — la correzione è dell'auditor, ed è il punto 2 che comanda il ciclo. Al CONTACT
+    // si CHIEDE UN MOCK-UP, e il tempo 3 è direttamente l'AS-IS. La dissoluzione non è un tempo
+    // della procedura: è quel che l'app MISURA mentre il tempo 2 dura, e sta nella riga d'avviso.
     return {
-      titolo: LC('2 · LASCIA GUARDARE', '2 · LAISSE REGARDER', '2 · LET HIM LOOK', '2 · DEJA MIRAR', '2 · LÅT HONOM SE'),
-      come: LC('Non fare niente: il preclear guarda la cosa. Il ciclo avanza da sé.', 'Ne fais rien : le préclair regarde la chose. Le cycle avance tout seul.', 'Do nothing: the preclear looks at the thing. The cycle advances by itself.', 'No hagas nada: el preclear mira la cosa. El ciclo avanza solo.', 'Gör inget: preclearen tittar på saken. Cykeln går framåt av sig själv.'),
+      titolo: LC('2 · CHIEDI UN MOCK-UP', '2 · DEMANDE UN MOCK-UP', '2 · ASK FOR A MOCK-UP', '2 · PIDE UN MOCK-UP', '2 · BE OM EN MOCK-UP'),
+      come: LC('Poi non fare altro: il ciclo avanza da sé fino all\'AS-IS.', 'Puis ne fais rien d\'autre : le cycle avance tout seul jusqu\'à l\'AS-IS.', 'Then do nothing else: the cycle advances by itself to the AS-IS.', 'Luego no hagas nada más: el ciclo avanza solo hasta el AS-IS.', 'Gör sedan inget mer: cykeln går själv fram till AS-IS.'),
       avviso: noReadSignal
         ? LC('sembra NULL — nessuna lettura nella finestra', 'semble NULL — aucune lecture dans la fenêtre', 'looks NULL — no read in the window', 'parece NULL — ninguna lectura en la ventana', 'ser NULL ut — ingen avläsning i fönstret')
+        : chargePhaseNow === 'discharge'
+        ? LC('la carica si sta dissolvendo', 'la charge se dissout', 'the charge is dissolving', 'la carga se está disolviendo', 'laddningen löses upp')
         : null };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, tonePhase, toneHasMeter, toneProposedAtLock, toneValidated, toneAgreement, toneAtStart,
@@ -6510,7 +6513,7 @@ export default function App() {
                         )}
                         {mirrorArmed && mirrorDisp.locked && <>
                           <div style={chip}><span style={lbl}>{LC('valore item', 'valeur item', 'item value', 'valor ítem', 'itemvärde')}</span><span style={{ fontSize: 13, color: 'rgba(240,246,255,0.92)' }}>{effR.toFixed(1)}</span></div>
-                          <div style={chip}><span style={lbl}>{LC('cible ×2', 'cible ×2', 'target ×2', 'objetivo ×2', 'mål ×2')}</span><span style={{ fontSize: 13, color: '#fbbf24' }}>{Math.min(20, doubleR).toFixed(1)}</span></div>
+                          <div style={chip}><span style={lbl}>{LC('cible ×2', 'cible ×2', 'target ×2', 'objetivo ×2', 'mål ×2')}</span><span style={{ fontSize: 13, color: '#fbbf24' }}>{doubleR.toFixed(1)}</span></div>
                           <div style={chip}><span style={lbl}>{LC('smaltito', 'déchargé', 'discharged', 'descargado', 'urladdat')}</span><span style={{ fontSize: 13, color: mirrorDisp.reached ? '#34d399' : 'rgba(240,246,255,0.92)' }}>{Math.round(progress * 100)}%</span></div>
                           {mirrorDisp.reached && <div style={{ ...chip, border: '1px solid rgba(52,211,153,0.6)' }}><span style={{ fontSize: 12, fontWeight: 700, color: '#34d399' }}>{LC('OTTENUTO', 'OBTENU', 'OBTAINED', 'OBTENIDO', 'UPPNÅTT')}</span></div>}
                         </>}
@@ -6620,12 +6623,36 @@ export default function App() {
                           <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
                             {toneWitnessesAvail.map(w => {
                               const on = toneAsIsState.fired.includes(w);
-                              const nome = w === 'zero' ? LC('a zero', 'à zéro', 'at zero', 'a cero', 'på noll')
+                              // ⚠️ « FIRMA » non voleva dire niente per chi guarda: era il nome
+                              // interno del segnale (chargeEpisode), non quel che l'auditor vede
+                              // succedere. Adesso ogni spia dice la COSA, e il tooltip dice da
+                              // dove viene — segnalato: « quand tu fais apparaître signature,
+                              // que veux-tu dire ? ».
+                              const nome = w === 'zero'
+                                ? LC('AGO A ZERO', 'AIGUILLE À ZÉRO', 'NEEDLE AT ZERO', 'AGUJA A CERO', 'NÅL PÅ NOLL')
                                 : w === 'fn' ? 'F/N'
-                                : LC('firma', 'signature', 'signature', 'firma', 'signatur');
+                                : LC('CARICA DISSOLTA', 'CHARGE DISSOUTE', 'CHARGE GONE', 'CARGA DISUELTA', 'LADDNING BORTA');
+                              const spiega = w === 'zero'
+                                ? LC('La resistenza misurata è tornata al centro della scala. Serve il METER.',
+                                     'La résistance mesurée est revenue au centre de l\'échelle. Demande le METER.',
+                                     'The measured resistance is back at the centre of the scale. Needs the METER.',
+                                     'La resistencia medida volvió al centro de la escala. Requiere el METER.',
+                                     'Det uppmätta motståndet är tillbaka i skalans mitt. Kräver METER.')
+                                : w === 'fn'
+                                ? LC('Un Floating Needle sull\'ago in gioco: la firma classica.',
+                                     'Un Floating Needle sur l\'aiguille en jeu : la signature classique.',
+                                     'A Floating Needle on the needle in play: the classic signature.',
+                                     'Un Floating Needle en la aguja en juego: la firma clásica.',
+                                     'En Floating Needle på nålen i spel: den klassiska signaturen.')
+                                : LC('L\'attività EEG della massa contattata è collassata — la stessa misura con cui il ciclo CONTACT dichiara la dissoluzione. Serve il MUSE.',
+                                     'L\'activité EEG de la masse contactée s\'est effondrée — la mesure même par laquelle le cycle CONTACT déclare la dissolution. Demande le MUSE.',
+                                     'The EEG activity of the contacted mass has collapsed — the same measure the CONTACT cycle uses to declare dissolution. Needs the MUSE.',
+                                     'La actividad EEG de la masa contactada colapsó — la misma medida con que el ciclo CONTACT declara la disolución. Requiere el MUSE.',
+                                     'EEG-aktiviteten hos den kontaktade massan har kollapsat — samma mått som CONTACT-cykeln använder. Kräver MUSE.');
                               return (
-                                <span key={w} style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.08em',
-                                  textTransform: 'uppercase', padding: '3px 7px', borderRadius: 6,
+                                <span key={w} title={spiega}
+                                  style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.08em',
+                                  textTransform: 'uppercase', padding: '3px 7px', borderRadius: 6, cursor: 'help',
                                   background: on ? 'rgba(52,211,153,0.18)' : 'rgba(255,255,255,0.04)',
                                   border: `1px solid ${on ? 'rgba(52,211,153,0.7)' : 'rgba(255,255,255,0.16)'}`,
                                   color: on ? '#34d399' : 'rgba(226,238,255,0.4)' }}>
