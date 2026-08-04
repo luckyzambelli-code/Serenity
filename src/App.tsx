@@ -273,6 +273,10 @@ export default function App() {
   // Idem per i cicli CONTACT/NULL: premuto col campo vuoto, la prima parola diventa l'item.
   const cycleAwaitItemRef = useRef(false);
   const cycleLogCursorRef = useRef(0);
+  // E per il TONE: anche la resistenza si dà a voce, come ogni altro item (richiesta utente:
+  // « il ciclo resistenza deve essere come gli altri »).
+  const toneAwaitItemRef = useRef(false);
+  const toneLogCursorRef = useRef(0);
   // ── ASSESSMENT (bouton « ASSESSMENT », même nom dans toutes les langues) — l'auditeur donne des
   //    items à voix haute ; comme le R&I on inscrit le READ instantané (même calcul, fenêtre de
   //    réaction). Les items s'affichent SOUS l'arc. Re-presser → arrête (les items restent) ; presser
@@ -3466,6 +3470,28 @@ export default function App() {
     cycleLogCursorRef.current = logs.length;
   }, [logs]);
 
+  // ── TONE : ITEM DETTATO ────────────────────────────────────────────────────────────────────
+  // Stessa cosa dei due effetti qui sopra, per la resistenza. Non si ri-ancora niente: la
+  // localizzazione ha già fissato l'istante e il valore (ToneLocator), qui si riempie soltanto
+  // l'etichetta di CHE COSA era quella resistenza.
+  useEffect(() => {
+    if (!toneAwaitItemRef.current) return;
+    const cursor = toneLogCursorRef.current;
+    if (logs.length <= cursor) return;
+    for (let i = cursor; i < logs.length; i++) {
+      const e = logs[i];
+      if (e.speaker === 'Aud' && isAssessableItem(e.text)) {
+        const txt = e.text.trim();
+        toneAwaitItemRef.current = false;
+        setAuditingQuestion(txt);
+        logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
+          text: `◈ TONE — ${LC('resistenza', 'résistance', 'resistance', 'resistencia', 'motstånd')} · ${txt}`, type: 'normal' });
+        break;
+      }
+    }
+    toneLogCursorRef.current = logs.length;
+  }, [logs]);
+
   // Fetch LAN IP and PeerJS key from local server (only works when running via server.cjs)
   useEffect(() => {
     fetch('/api/server-info')
@@ -4544,6 +4570,9 @@ export default function App() {
   const resetTone = useCallback(() => {
     setTonePhase('locate'); setToneValidated(null); setToneProposedAtLock(null);
     setToneSignPick(null); setToneAtStart(null); setToneAnchor(null); setToneFired([]);
+    // Il campo si svuota: una resistenza nuova non porta l'etichetta di quella di prima.
+    setAuditingQuestion('');
+    toneAwaitItemRef.current = false;
     toneLocator.reset();
   }, []);
   /**
@@ -4560,6 +4589,11 @@ export default function App() {
     setToneProposedAtLock(toneHasMeter ? proposeFromTone(r.tone) : null);
     setToneAtStart(toneHasMeter ? r.tone : null);
     toneStartSecRef.current = timeRef.current;   // il ciclo comincia QUI, non al mock-up
+    // Premuto col campo VUOTO, la prima parola dell'auditor diventa l'item — come in CONTACT,
+    // NULL e MIRROR. Senza, in TONE si poteva solo scrivere: e scrivere vuol dire staccare gli
+    // occhi dall'ago proprio mentre si localizza.
+    toneAwaitItemRef.current = !auditingQuestion.trim();
+    toneLogCursorRef.current = logsRef.current.length;
     setTonePhase('sign');
   }, [instruments.muse, toneMeasured, toneHasMeter]);
 
@@ -6191,6 +6225,20 @@ export default function App() {
                       Sta QUI e non a sinistra: è una scelta sugli STRUMENTI, come ASSESS ed EP
                       che le stanno sotto, non una scelta sul metodo. */}
                   {instruments.muse && instruments.theta && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {/* ── L'ICONA DICE CHE SI PARLA DELL'AGO ────────────────────────────────
+                        « MUSE / METER / DUE » da solo non diceva DI CHE COSA: poteva essere lo
+                        strumento, la connessione, la sorgente del suono. Un ago su un perno lo
+                        dice senza una parola, ed è lo stesso disegno del quadrante che si sta
+                        guardando (segnalato). */}
+                    <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"
+                      style={{ flexShrink: 0, opacity: 0.75 }}>
+                      <path d="M1.6 12.2 A 7.4 7.4 0 0 1 14.4 12.2" fill="none"
+                        stroke={isLightTheme ? '#3a3a40' : '#a8b6cc'} strokeWidth="1.2" strokeLinecap="round" />
+                      <line x1="8" y1="12.2" x2="4.9" y2="5.6"
+                        stroke={isLightTheme ? '#1a1a1f' : '#f0f6ff'} strokeWidth="1.4" strokeLinecap="round" />
+                      <circle cx="8" cy="12.2" r="1.35" fill={isLightTheme ? '#1a1a1f' : '#f0f6ff'} />
+                    </svg>
                     <div style={{ display: 'flex', width: 168, padding: 2, gap: 2, borderRadius: 999,
                       background: isLightTheme ? '#b7b7be' : '#17171b',
                       boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
@@ -6223,6 +6271,24 @@ export default function App() {
                         );
                       })}
                     </div>
+                    </div>
+                  )}
+                  {/* NEEDLE LIGHT — sotto il selettore degli aghi, perché parla dello STESSO ago:
+                      uno dice QUALE, l'altra COME lo si vede. Stavano in due posti diversi
+                      (segnalato). Nascosta in MIRROR e TONE, che hanno il loro quadrante. */}
+                  {(mode === 'contact' || mode === 'null' || mode === 'free') && (
+                    <button type="button" onClick={() => setShowTrailPref(v => !v)}
+                      title={LC('NEEDLE LIGHT — la scia luminosa dell\'ago e le etichette di reazione',
+                                'NEEDLE LIGHT — la traînée lumineuse de l\'aiguille et les libellés de réaction',
+                                'NEEDLE LIGHT — the needle\'s glowing trail and the reaction labels',
+                                'NEEDLE LIGHT — la estela luminosa de la aguja y las etiquetas de reacción',
+                                'NEEDLE LIGHT — nålens lysande svans och reaktionsetiketterna')}
+                      style={{ width: 168, height: 20, borderRadius: 999, cursor: 'pointer',
+                        fontSize: 8, fontWeight: 700, letterSpacing: '0.04em', background: 'transparent',
+                        border: `1px solid ${isLightTheme ? 'rgba(0,0,0,0.14)' : 'rgba(255,255,255,0.14)'}`,
+                        color: showTrailPref ? (isLightTheme ? '#3a3a40' : '#a8b6cc') : (isLightTheme ? '#8a8a90' : '#5d6878') }}>
+                      {showTrailPref ? '● ' : '○ '}NEEDLE LIGHT
+                    </button>
                   )}
                   <button onClick={toggleAssessment} title="ASSESSMENT"
                     style={{ width: 96, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, height: 26,
@@ -6868,22 +6934,6 @@ export default function App() {
                     );
                   })}
                 </div>
-
-                {/* NEEDLE LIGHT — preferenza di lettura, piccola e a parte. */}
-                {(mode === 'contact' || mode === 'null' || mode === 'free') && (
-                  <button type="button" onClick={() => setShowTrailPref(v => !v)}
-                    title={LC('NEEDLE LIGHT — la scia luminosa dell\'ago e le etichette di reazione',
-                              'NEEDLE LIGHT — la traînée lumineuse de l\'aiguille et les libellés de réaction',
-                              'NEEDLE LIGHT — the needle\'s glowing trail and the reaction labels',
-                              'NEEDLE LIGHT — la estela luminosa de la aguja y las etiquetas de reacción',
-                              'NEEDLE LIGHT — nålens lysande svans och reaktionsetiketterna')}
-                    style={{ height: 26, padding: '0 12px', borderRadius: 999, cursor: 'pointer', flexShrink: 0,
-                      fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', background: 'transparent',
-                      border: `1px solid ${isLightTheme ? 'rgba(0,0,0,0.14)' : 'rgba(255,255,255,0.14)'}`,
-                      color: showTrailPref ? (isLightTheme ? '#3a3a40' : '#a8b6cc') : (isLightTheme ? '#8a8a90' : '#5d6878') }}>
-                    {showTrailPref ? '● ' : '○ '}NEEDLE LIGHT
-                  </button>
-                )}
 
                 {/* IL DIVISORE: di qua i METODI, di là l'ATTREZZO. */}
                 {moduleVis.mna && instruments.muse && (

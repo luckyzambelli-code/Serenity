@@ -44,7 +44,12 @@ export function MnaPanel({
   const isLightTheme = useUiStore(s => s.isLightTheme);
   // REDESIGN Fase 3 — MNA collassabile: chiuso di default (solo barra titolo), si espande
   // al click. Non ingombra più il fondo del quadrante; il modulo resta a un click.
-  const [collapsed, setCollapsed] = React.useState(true);
+  // ⚠️ APERTO, non ripiegato. Prima il pannello nasceva chiuso perché stava SEMPRE a schermo e
+  // un modulo aperto per difetto avrebbe occupato la fascia bassa tutta la seduta. Adesso
+  // compare solo quando si preme MNA sulla barra: se l'hai chiesto, deve aprirsi — dover poi
+  // cliccare anche il chevron dentro era un secondo gesto per la stessa intenzione (segnalato).
+  // Il chevron resta, per ripiegarlo senza chiuderlo.
+  const [collapsed, setCollapsed] = React.useState(false);
   // MONOCHROME (choix utilisateur) : plus de couleurs de phase, tout en blanc/gris.
   // NB : phC est concaténé avec un alpha hex (`${phC}44`) → il DOIT rester un hex 6 chiffres.
   const phaseColors: Record<PrimePhase, string> = {
