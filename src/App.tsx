@@ -240,6 +240,9 @@ export default function App() {
   const [mode, setMode] = useState<SessionMode>('contact');
   /** La SCIA e le etichette di reazione — quel che « AGO + » voleva dire. */
   const [showTrailPref, setShowTrailPref] = useState(true);
+  /** Il MNA è APERTO adesso? Non è un modo: è un attrezzo che si apre DENTRO il ciclo in corso.
+   *  La levetta di CONFIG (`moduleVis.mna`) dice se il modulo esiste; questa se è a schermo. */
+  const [mnaAperto, setMnaAperto] = useState(false);
   // La vista del quadrante non si sceglie più: DISCENDE dal modo. Tutto il codice a valle
   // continua a leggere `viewMode` senza sapere che ora è derivato.
   const viewMode: 'needle' | 'needle_pure' | 'mirror' | 'tone' =
@@ -6314,7 +6317,18 @@ export default function App() {
                 or up/down. Row 2: a fixed-height REACTION zone (reserved) so the value
                 row above never moves when a reaction appears/disappears. */}
             <div className="sm-glass absolute z-30 pointer-events-none flex flex-col items-start"
-              style={{ top: '2.5%', left: '50%', transform: 'translateX(-50%)', width: 500, textAlign: 'left' }}>
+              // ⚠️ 720 e non più 500. La colonna dei selettori se n'è andata in basso e questa
+              // fascia è ora TUTTA per il ciclo: l'item, la spiegazione, il comm lag e l'AS-IS
+              // ci stanno in largo invece di impilarsi. `maxWidth` in percentuale perché a
+              // destra c'è ancora DIAGNOSTIC, e su una finestra stretta il blocco gli finiva
+              // sopra (segnalato: « le scritte a volte sono nel riquadro diagnostic »).
+              // ⚠️ ANCORATO, non centrato. Centrato con una larghezza fissa, il bordo destro
+              // dipende dalla finestra e a 1440 finiva 27 px DENTRO il riquadro DIAGNOSTIC
+              // (misurato; segnalato: « le scritte a volte sono nel riquadro diagnostic »).
+              // Con `left`/`right` il blocco si stringe da sé e non lo raggiunge mai — e il
+              // testo, che è allineato a sinistra, parte sempre dallo stesso punto invece di
+              // ballare col centro.
+              style={{ top: '2.5%', left: 120, right: 175, textAlign: 'left' }}>
               {/* AUDITING ITEM bar — the auditor types the question and ARMS the cycle
                   BEFORE asking it. The cycle indicators below only show while armed;
                   the engines keep computing (recorded for the report + Ron's Lag).
@@ -6775,83 +6789,99 @@ export default function App() {
               </div>
             )}
 
-            {/* ── SELETTORE DI MODO — UNO, al posto di sei comandi in tre posti ──────────────
-                CONTACT · NULL · MIRROR · TONE · LIBERO: i cinque METODI sullo stesso piano.
-                Da ciascuno discendono quadrante, ago e comandi (MODE_SPEC), invece di essere
-                tre scelte indipendenti che l'auditor doveva tenere coerenti a mente.
-                Un modo che il MUSE staccato rende impossibile non compare: vedi availableModes. */}
-            {/* ⚠️ top 152 e non 124: a 124 il selettore finiva SOTTO la barra del comm lag, che
-                compare quando un ciclo si arma e arriva a 217 px — 14 px di sovrapposizione, e
-                il ritardo di comm è proprio il numero che si guarda mentre il ciclo gira
-                (segnalato in seduta). Misurato nel DOM, non a occhio. */}
-            <div className="absolute z-50 pointer-events-auto" style={{ top: 152, left: 40, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'flex', width: 300, padding: 3, gap: 2, borderRadius: 999,
-                background: isLightTheme ? '#b7b7be' : '#17171b',
-                boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
-                {modiDisponibili.map(m => {
-                  const META: Record<SessionMode, { lbl: string; title: string; col: string }> = {
-                    contact: { lbl: 'CONTACT', col: '#6ee7b7',
-                      title: LC('CONTACT → DISSOLUZIONE → AS-IS', 'CONTACT → DISSOLUTION → AS-IS', 'CONTACT → DISSOLUTION → AS-IS', 'CONTACT → DISOLUCIÓN → AS-IS', 'CONTACT → UPPLÖSNING → AS-IS') },
-                    null: { lbl: 'NULL', col: '#cbd5e1',
-                      title: LC('NULL → RISE (mock-up) → EQUILIBRIUM', 'NULL → RISE (mock-up) → EQUILIBRIUM', 'NULL → RISE (mock-up) → EQUILIBRIUM', 'NULL → RISE (mock-up) → EQUILIBRIUM', 'NULL → RISE (mock-up) → EQUILIBRIUM') },
-                    mirror: { lbl: 'MIRROR', col: '#34d399',
-                      title: LC('MIRROR — metodo del doppio (Ron)', 'MIRROR — méthode du double (Ron)', 'MIRROR — the doubling method (Ron)', 'MIRROR — método del doble (Ron)', 'MIRROR — dubbelmetoden (Ron)') },
-                    tone: { lbl: 'TONE', col: '#ff5a5a',
-                      title: LC('TONE SCALE — la scala del tono di Ron (−40…+40)', 'TONE SCALE — l\'échelle des tons de Ron (−40…+40)', 'TONE SCALE — Ron\'s tone scale (−40…+40)', 'TONE SCALE — la escala del tono de Ron (−40…+40)', 'TONE SCALE — Rons tonskala (−40…+40)') },
-                    free: { lbl: LC('LIBERO', 'LIBRE', 'FREE', 'LIBRE', 'FRI'), col: '#8ab4ff',
-                      title: LC('Solo l\'ago — nessun ciclo. Assessment e R&I restano attivi.', 'L\'aiguille seule — aucun cycle. Assessment et R&I restent actifs.', 'The needle alone — no cycle. Assessment and R&I stay active.', 'Solo la aguja — ningún ciclo. Assessment y R&I siguen activos.', 'Bara nålen — ingen cykel. Assessment och R&I förblir aktiva.') },
-                  };
-                  const seg = META[m];
-                  const active = mode === m;
-                  // Cambiando metodo NON si porta dietro il ciclo di prima: si chiude, altrimenti
-                  // resterebbe armato dietro un quadrante che non lo mostra più.
-                  const vai = () => { if (cycleArmed) finalizeCycle(false); if (mirrorArmed) stopMirror(); resetTone(); setMode(m); };
-                  return (
-                    <button key={m} type="button" onClick={vai} title={seg.title}
-                      style={{ flex: 1, height: 26, borderRadius: 999, border: 'none', cursor: 'pointer',
-                        fontSize: 10, fontWeight: 700, letterSpacing: '0.02em', whiteSpace: 'nowrap', padding: '0 4px',
-                        color: active ? '#07120c' : (isLightTheme ? '#3a3a40' : '#cbd5e1'),
-                        background: active ? seg.col : 'transparent',
-                        boxShadow: active ? '0 2px 6px rgba(0,0,0,0.35)' : 'none', transition: 'color 0.2s, background 0.2s' }}>
-                      {seg.lbl}
+
+            {/* ══ LA BARRA DEI COMANDI — IN BASSO, A TUTTA LARGHEZZA ═══════════════════════
+                Stava in alto a sinistra, incolonnata sopra la barra del ciclo: fra il testo
+                della spiegazione, il comm lag e il bottone AS-IS si contendevano la stessa
+                fascia, e ogni riga aggiunta li faceva accavallare di nuovo. Terza volta che
+                spostavo qualcosa in quell'angolo.
+
+                Adesso c'è una divisione netta, e non è solo questione di posto: IN ALTO SI
+                LEGGE (ago, TA, comm lag, a che punto sei), IN BASSO SI AGISCE. A tutta larghezza
+                le etichette ci stanno per esteso — « ENTRAMBI » non va più abbreviato in « DUE ».
+
+                ── IL MNA STA QUI MA NON È UN MODO ──────────────────────────────────────────
+                È separato da un divisore, ed è voluto. Il MNA non ha fasi né una fine: è un
+                ATTREZZO, e lo si usa DENTRO gli altri cicli — si vuole poter fare un SONIFY
+                mentre un CONTACT gira. Farne un modo avrebbe chiuso il ciclo per suonare un
+                tono. Cliccandolo apre il suo pannello sopra la barra, e il ciclo continua. */}
+            {sessionState === 'running' && (
+              <div className="absolute pointer-events-auto"
+                style={{ left: 10, right: 10, bottom: 6, zIndex: 50, display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div style={{ flex: 1, display: 'flex', padding: 3, gap: 3, borderRadius: 999,
+                  background: isLightTheme ? '#b7b7be' : '#17171b',
+                  boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
+                  {modiDisponibili.map(m => {
+                    const META: Record<SessionMode, { lbl: string; title: string; col: string }> = {
+                      contact: { lbl: 'CONTACT', col: '#6ee7b7',
+                        title: LC('CONTACT → DISSOLUZIONE → AS-IS', 'CONTACT → DISSOLUTION → AS-IS', 'CONTACT → DISSOLUTION → AS-IS', 'CONTACT → DISOLUCIÓN → AS-IS', 'CONTACT → UPPLÖSNING → AS-IS') },
+                      null: { lbl: 'NULL', col: '#cbd5e1',
+                        title: 'NULL → RISE (mock-up) → EQUILIBRIUM' },
+                      mirror: { lbl: 'MIRROR', col: '#34d399',
+                        title: LC('MIRROR — metodo del doppio (Ron)', 'MIRROR — méthode du double (Ron)', 'MIRROR — the doubling method (Ron)', 'MIRROR — método del doble (Ron)', 'MIRROR — dubbelmetoden (Ron)') },
+                      tone: { lbl: 'TONE SCALE', col: '#ff5a5a',
+                        title: LC('TONE SCALE — la scala del tono di Ron (−40…+40)', 'TONE SCALE — l\'échelle des tons de Ron (−40…+40)', 'TONE SCALE — Ron\'s tone scale (−40…+40)', 'TONE SCALE — la escala del tono de Ron (−40…+40)', 'TONE SCALE — Rons tonskala (−40…+40)') },
+                      free: { lbl: LC('LIBERO', 'LIBRE', 'FREE', 'LIBRE', 'FRI'), col: '#8ab4ff',
+                        title: LC('Solo l\'ago — nessun ciclo. Assessment e R&I restano attivi.', 'L\'aiguille seule — aucun cycle. Assessment et R&I restent actifs.', 'The needle alone — no cycle. Assessment and R&I stay active.', 'Solo la aguja — ningún ciclo. Assessment y R&I siguen activos.', 'Bara nålen — ingen cykel. Assessment och R&I förblir aktiva.') },
+                    };
+                    const seg = META[m];
+                    const active = mode === m;
+                    // Cambiando metodo NON si porta dietro il ciclo di prima: si chiude, altrimenti
+                    // resterebbe armato dietro un quadrante che non lo mostra più.
+                    const vai = () => { if (cycleArmed) finalizeCycle(false); if (mirrorArmed) stopMirror(); resetTone(); setMode(m); };
+                    return (
+                      <button key={m} type="button" onClick={vai} title={seg.title}
+                        style={{ flex: 1, height: 30, borderRadius: 999, border: 'none', cursor: 'pointer',
+                          fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', whiteSpace: 'nowrap',
+                          color: active ? '#07120c' : (isLightTheme ? '#3a3a40' : '#cbd5e1'),
+                          background: active ? seg.col : 'transparent',
+                          boxShadow: active ? '0 2px 6px rgba(0,0,0,0.35)' : 'none', transition: 'color 0.2s, background 0.2s' }}>
+                        {seg.lbl}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* NEEDLE LIGHT — preferenza di lettura, piccola e a parte. */}
+                {(mode === 'contact' || mode === 'null' || mode === 'free') && (
+                  <button type="button" onClick={() => setShowTrailPref(v => !v)}
+                    title={LC('NEEDLE LIGHT — la scia luminosa dell\'ago e le etichette di reazione',
+                              'NEEDLE LIGHT — la traînée lumineuse de l\'aiguille et les libellés de réaction',
+                              'NEEDLE LIGHT — the needle\'s glowing trail and the reaction labels',
+                              'NEEDLE LIGHT — la estela luminosa de la aguja y las etiquetas de reacción',
+                              'NEEDLE LIGHT — nålens lysande svans och reaktionsetiketterna')}
+                    style={{ height: 26, padding: '0 12px', borderRadius: 999, cursor: 'pointer', flexShrink: 0,
+                      fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', background: 'transparent',
+                      border: `1px solid ${isLightTheme ? 'rgba(0,0,0,0.14)' : 'rgba(255,255,255,0.14)'}`,
+                      color: showTrailPref ? (isLightTheme ? '#3a3a40' : '#a8b6cc') : (isLightTheme ? '#8a8a90' : '#5d6878') }}>
+                    {showTrailPref ? '● ' : '○ '}NEEDLE LIGHT
+                  </button>
+                )}
+
+                {/* IL DIVISORE: di qua i METODI, di là l'ATTREZZO. */}
+                {moduleVis.mna && instruments.muse && (
+                  <>
+                    <span style={{ width: 1, height: 22, background: isLightTheme ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.18)', flexShrink: 0 }} />
+                    <button type="button" onClick={() => setMnaAperto(v => !v)}
+                      title={LC('MNA — modulazione neuro-acustica. Si apre SENZA lasciare il ciclo in corso.',
+                                'MNA — modulation neuro-acoustique. S\'ouvre SANS quitter le cycle en cours.',
+                                'MNA — neuro-acoustic modulation. Opens WITHOUT leaving the running cycle.',
+                                'MNA — modulación neuro-acústica. Se abre SIN dejar el ciclo en curso.',
+                                'MNA — neuroakustisk modulering. Öppnas UTAN att lämna pågående cykel.')}
+                      style={{ height: 30, padding: '0 18px', borderRadius: 999, cursor: 'pointer', flexShrink: 0,
+                        fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
+                        background: mnaAperto ? '#a78bfa' : 'transparent',
+                        border: `1px solid ${mnaAperto ? '#a78bfa' : (isLightTheme ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.22)')}`,
+                        color: mnaAperto ? '#0b0f14' : (isLightTheme ? '#3a3a40' : '#cbd5e1') }}>
+                      MNA
                     </button>
-                  );
-                })}
+                  </>
+                )}
               </div>
-              {/* Il selettore MUSE / METER / ENTRAMBI non sta più qui: è passato nella COLONNA
-                  DI DESTRA, sopra ASSESS. Là si legge meglio — a sinistra faceva una terza fila
-                  di pastiglie sotto il modo e la scia, e tre file di comandi impilati non si
-                  distinguono più l'una dall'altra (segnalato). */}
-              {/* LA SCIA — quel che « AGO + » voleva dire, e che non era un metodo. Nascosta in
-                  MIRROR e TONE, che hanno il loro quadrante e non la scia dell'ago.
-                  ⚠️ PICCOLA. Larga quanto il selettore di modo sembrava un comando capitale,
-                  mentre è solo una preferenza di presentazione — segnalato. Sta a filo a
-                  sinistra, sotto il modo, e non pretende attenzione. */}
-              {(mode === 'contact' || mode === 'null' || mode === 'free') && (
-                <button type="button" onClick={() => setShowTrailPref(v => !v)}
-                  title={LC('NEEDLE LIGHT — la scia luminosa dell\'ago e le etichette di reazione',
-                            'NEEDLE LIGHT — la traînée lumineuse de l\'aiguille et les libellés de réaction',
-                            'NEEDLE LIGHT — the needle\'s glowing trail and the reaction labels',
-                            'NEEDLE LIGHT — la estela luminosa de la aguja y las etiquetas de reacción',
-                            'NEEDLE LIGHT — nålens lysande svans och reaktionsetiketterna')}
-                  style={{ width: 104, height: 16, borderRadius: 999, cursor: 'pointer', alignSelf: 'flex-start',
-                    fontSize: 8, fontWeight: 700, letterSpacing: '0.06em',
-                    background: 'transparent',
-                    border: `1px solid ${isLightTheme ? 'rgba(0,0,0,0.14)' : 'rgba(255,255,255,0.14)'}`,
-                    color: showTrailPref ? (isLightTheme ? '#3a3a40' : '#a8b6cc') : (isLightTheme ? '#8a8a90' : '#5d6878') }}>
-                  {/* NEEDLE LIGHT resta in inglese in tutte e cinque le lingue, come CONTACT,
-                      NULL, AS-IS, F/N: è il vocabolario del mestiere, non una parola da tradurre
-                      (scelta dell'utente: « o meglio needle light »). */}
-                  {showTrailPref ? '● ' : '○ '}NEEDLE LIGHT
-                </button>
-              )}
-              {/* ASSESSMENT non sta più qui: è salito nella COLONNA DI DESTRA, sopra EP. È lì
-                  che ha senso — ASSESSMENT apre la lista degli item, EP la chiude: sono i due
-                  capi dello stesso lavoro, e stavano in due angoli opposti dello schermo. */}
-            </div>
+            )}
 
             {/* MNA — absolute at sphere bottom */}
-            {sessionState === 'running' && moduleVis.mna && (
+            {sessionState === 'running' && moduleVis.mna && mnaAperto && (
               <MnaPanel
                 primePhase={primePhase}
                 setPrimePhase={setPrimePhase}

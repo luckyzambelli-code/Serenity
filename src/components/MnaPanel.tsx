@@ -131,7 +131,10 @@ export function MnaPanel({
         // → depth 0 (pas de recul, sinon elle rétrécirait et laisserait des trous latéraux).
         ...glassSurface('center', isLightTheme, true, 0),
         border: `1px solid ${phC}44`,
-        left: 10, right: 10, bottom: '2%', minHeight: collapsed ? undefined : 72, zIndex: 42,
+        // ⚠️ 46 px dal fondo e non 2%: sotto c'è ora la BARRA DEI COMANDI (modo + MNA), che ha
+        // preso questo posto. Il MNA le sta SOPRA — è l'attrezzo che si apre dalla barra, non
+        // un pannello che ci finisce sotto.
+        left: 10, right: 10, bottom: 46, minHeight: collapsed ? undefined : 72, zIndex: 42,
         padding: collapsed ? '6px 16px' : '8px 16px 10px 16px',
       }}
     >
