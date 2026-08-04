@@ -47,9 +47,27 @@ const VH = 850;
 const PX = VW / 2;
 const PY = VH - 60;
 
-const R_OUT  = 680;
-const R_IN   = 600;
-const R_COLOR = 640;
+// ── QUANTO È GRANDE IL QUADRANTE ────────────────────────────────────────────────────────────
+// Erano 680 / 600 / 640. Su uno schermo da 1280×800 l'arco saliva fino a 18 px SOTTO la
+// colonna dei selettori in alto a sinistra, che glieli copriva (misurato nel DOM, segnalato in
+// seduta). Su uno schermo grande non si vedeva: l'SVG è a larghezza fissa e le bande vuote
+// sopra e sotto cambiano con la finestra, quindi più la finestra è bassa più l'arco sale.
+//
+// Accorciati del 18% (680→560): l'arco scende, e l'AGO con lui — l'utente ha chiesto tutte e due le cose.
+// Il perno resta dov'è (800, 790), quindi non si sposta nient'altro.
+//
+// ⚠️ Le AMPIEZZE delle reazioni NON si ricalcolano. Vivono nello spazio degli offset (−1…+1) e
+// passano per SWEEP, che non è cambiato: gli ANGOLI sono identici. A cambiare è solo quanta
+// strada l'ago percorre sullo schermo, che si accorcia in proporzione — come deve.
+//
+// ── PROVATO E SCARTATO: appoggiare l'SVG in basso (preserveAspectRatio xMidYMax) ────────────
+// Sembrava il modo di « usare il posto che c'è sotto » senza rimpicciolire niente. Ma le bande
+// vuote sono 173 px PER LATO su una finestra da 800: appoggiando, l'arco scendeva di tutti e
+// 173 e si apriva un buco di 200 px fra i selettori e la cima dell'arco. Peggio del male.
+// Il centraggio resta; a scendere è la CIMA dell'arco, che è quel che serviva.
+const R_OUT  = 560;
+const R_IN   = 494;
+const R_COLOR = 527;
 const R_MID  = (R_OUT + R_IN) / 2;
 
 // Arc réduit : 75% de 180° = 135° total → ±67.5° de la verticale

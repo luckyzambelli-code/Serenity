@@ -12,7 +12,7 @@ import { mirrorOffset } from '../engine/MirrorCycle';
  * Échelle PROPORTIONNELLE (pas de milliohms). Rendu only, aucune DSP.
  */
 const PX = 800, PY = 790, SWEEP = 67.5;   // identiques à ClearDial / QuantumSphere
-const R = 560;                             // rayon de l'arc (juste dans la bande de l'aiguille)
+const R = 461;                             // rayon de l'arc (juste dans la bande de l'aiguille, R_IN=494)
 const off2ang = (o: number) => 90 - o * SWEEP;
 const apt = (ang: number, r: number) => { const a = ang * Math.PI / 180; return { x: PX + r * Math.cos(a), y: PY - r * Math.sin(a) }; };
 const arc = (o0: number, o1: number, r: number) => {
@@ -40,7 +40,7 @@ export function MirrorDial({
   const teal = '#34d399';
   const amber = '#fbbf24';
 
-  const PROG_R = 452;                              // anneau de progression vers la cible
+  const PROG_R = 372;                              // anneau de progression vers la cible
   const progEndOff = -1 + progress * 2;
 
   return (

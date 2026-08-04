@@ -28,7 +28,7 @@ import { toneOffset, chargeValue, clampTone, type ToneCharge, type TonePhase } f
  * Rendering puro: nessuno stato, nessuna DSP, nessuna decisione. Chi valida è l'auditor.
  */
 const PX = 800, PY = 790, SWEEP = 67.5;   // identici a ClearDial / MirrorDial / QuantumSphere
-const R = 560;                             // raggio dell'arco (dentro la fascia dell'ago)
+const R = 461;                             // raggio dell'arco (dentro la fascia dell'ago, R_IN=494)
 const off2ang = (o: number) => 90 - o * SWEEP;
 const apt = (ang: number, r: number) => { const a = ang * Math.PI / 180; return { x: PX + r * Math.cos(a), y: PY - r * Math.sin(a) }; };
 const arcPath = (o0: number, o1: number, r: number) => {
@@ -92,8 +92,8 @@ export function ToneDial({
     ? Math.max(0, Math.min(1, (Math.abs(toneAtStart) - Math.abs(clampTone(tone))) / Math.abs(toneAtStart)))
     : 0;
 
-  const BAND_R = 512;                      // la fascia: SOTTO i numeri, sopra l'anello di avanzamento
-  const PROG_R = 452;                      // stesso raggio del MIRROR, così le due viste si somigliano
+  const BAND_R = 422;                      // la fascia: SOTTO i numeri, sopra l'anello di avanzamento
+  const PROG_R = 372;                      // stesso raggio del MIRROR, così le due viste si somigliano
 
   return (
     <svg viewBox="0 0 1600 850" width="100%" height="100%" style={{ display: 'block', fontFamily: 'var(--font-sans)' }}>

@@ -15,7 +15,7 @@ import { useI18n } from '../i18n';
  */
 const PX = 800, PY = 790;          // pivot — identical to QuantumSphere
 const SWEEP = 67.5;                // ±67.5° = 135° span — identical to the needle arc
-const CYCLE_R = 560;               // centreline, just inside the needle band (R_IN=600)
+const CYCLE_R = 461;               // centreline, just inside the needle band (R_IN=494)
 const CYCLE_CORE = 10;             // nucleo SOLIDE fin de la couleur (comme la scie de l'aiguille+)
 const GAP = 0.05;                  // small gap (offset units) at the INTERNAL segment junctions
 
