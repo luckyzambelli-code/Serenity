@@ -264,6 +264,9 @@ export default function App() {
   const mirrorVoiceModeRef = useRef(false);   // ce cycle attend/attendait un item dicté
   const mirrorAwaitItemRef = useRef(false);   // capture en cours
   const mirrorLogCursorRef = useRef(0);       // index de logs déjà consommés
+  // Idem per i cicli CONTACT/NULL: premuto col campo vuoto, la prima parola diventa l'item.
+  const cycleAwaitItemRef = useRef(false);
+  const cycleLogCursorRef = useRef(0);
   // ── ASSESSMENT (bouton « ASSESSMENT », même nom dans toutes les langues) — l'auditeur donne des
   //    items à voix haute ; comme le R&I on inscrit le READ instantané (même calcul, fenêtre de
   //    réaction). Les items s'affichent SOUS l'arc. Re-presser → arrête (les items restent) ; presser
@@ -1073,6 +1076,9 @@ export default function App() {
     }));
   };
   const finalizeCycle = (completed: boolean) => {
+    // L'attesa dell'item dettato finisce col ciclo: senza questo, una parola detta DOPO la
+    // chiusura si sarebbe presa l'etichetta del ciclo appena finito.
+    cycleAwaitItemRef.current = false;
     const c = curCycleRef.current;
     if (c) {
       // TA at the AS-IS moment (end of cycle) — the auditor wants it recorded per cycle
@@ -1494,6 +1500,12 @@ export default function App() {
         ? `○ #${n} ${q || LC('ciclo', 'cycle', 'cycle', 'ciclo', 'cykel')} — NULL · ${LC('chiedi un mock-up', 'demande un mock-up', 'ask for a mock-up', 'pide un mock-up', 'be om en mock-up')}`
         : `▶ #${n} ${q || LC('ciclo', 'cycle', 'cycle', 'ciclo', 'cykel')}`,
       type: 'normal' });
+    // ── ITEM DETTATO A VOCE, come in MIRROR ──────────────────────────────────────────────
+    // Premuto col campo VUOTO, la PRIMA parola dell'auditor diventa l'item. In MIRROR
+    // funzionava già e in CONTACT/NULL no: si era costretti a scrivere, cioè a staccare gli
+    // occhi dall'ago proprio nel momento in cui si dà l'item (richiesta utente).
+    cycleAwaitItemRef.current = !q;
+    cycleLogCursorRef.current = logsRef.current.length;   // solo ciò che si dice DOPO il tasto
   };
 
   const [sensitivity] = useState(1.0); // 1.0 = default; matches qL-scale thresholds (setter dropped — no UI binding)
@@ -3399,6 +3411,34 @@ export default function App() {
       }
     }
     mirrorLogCursorRef.current = logs.length;
+  }, [logs]);
+
+  // ── CONTACT / NULL : ITEM DETTATO ──────────────────────────────────────────────────────────
+  // Stessa cosa del MIRROR qui sopra, per i due cicli. Premuto DAI L'ITEM col campo vuoto, la
+  // prima parola dell'auditor diventa l'item del ciclo. Prima funzionava solo in MIRROR, e per
+  // CONTACT/NULL bisognava scrivere — cioè staccare gli occhi dall'ago proprio mentre si dà
+  // l'item, che è il momento in cui la lettura conta (richiesta utente).
+  //
+  // Il ciclo NON si ri-arma: `armCycle` ha già ancorato l'istante premendo il bottone, ed è
+  // quello il t_Item giusto. Qui si RIEMPIE soltanto l'etichetta — al contrario del MIRROR, che
+  // deve ri-agganciare perché il suo valore è la carica istantanea dell'item.
+  useEffect(() => {
+    if (!cycleAwaitItemRef.current || !curCycleRef.current) return;
+    const cursor = cycleLogCursorRef.current;
+    if (logs.length <= cursor) return;
+    for (let i = cursor; i < logs.length; i++) {
+      const e = logs[i];
+      if (e.speaker === 'Aud' && isAssessableItem(e.text)) {   // stesso filtro: un « ok » non è un item
+        const txt = e.text.trim();
+        cycleAwaitItemRef.current = false;
+        setAuditingQuestion(txt);
+        if (curCycleRef.current) curCycleRef.current.question = txt;
+        logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
+          text: `▶ #${curCycleRef.current.n} ${LC('item', 'item', 'item', 'ítem', 'item')} · ${txt}`, type: 'normal' });
+        break;
+      }
+    }
+    cycleLogCursorRef.current = logs.length;
   }, [logs]);
 
   // Fetch LAN IP and PeerJS key from local server (only works when running via server.cjs)
@@ -6121,6 +6161,12 @@ export default function App() {
                         {active ? label : LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE ITEM', 'DA EL ÍTEM', 'GE ITEM')}
                         {active && <Square size={9} strokeWidth={0} fill="currentColor" />}
                       </span>
+                      {/* Premuto col campo vuoto, si aspetta la voce: lo si dice, come in MIRROR. */}
+                      {active && !auditingQuestion.trim() && (
+                        <span className="animate-pulse" style={{ marginLeft: 8, fontSize: 10, color: '#fbbf24' }}>
+                          {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
