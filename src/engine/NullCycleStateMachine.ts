@@ -2,7 +2,7 @@
  * NullCycleStateMachine — le cycle d'audition MIROIR de CycleStateMachine.
  *
  *   Cycle CHARGE (existant) : CONTACT  → DISCHARGE → AS-IS
- *   Cycle NULL   (celui-ci) : NULL     → RISE      → CLEAR READ
+ *   Cycle NULL   (celui-ci) : NULL     → RISE      → EQUILIBRIUM
  *
  * À l'ASSESSMENT, si l'item ne donne AUCUNE lecture instantanée dans la fenêtre du comm lag
  * (Δt* + marge), l'item est NULL. Mais un null est AMBIGU : « null parce que propre » ou « null
@@ -10,7 +10,7 @@
  * PC un MOCK-UP : il CRÉE de la masse exprès. (Pas de bouton MOCK-UP : comme pour CONTACT, on
  * presse le cycle et on REGARDE si ça monte — le marqueur n'apporte rien.)
  *   • si l'aiguille MONTE (RISE) → l'instrument et le PC répondent → le null était genuine ;
- *     puis le PC lâche le mock-up, la charge revient à ~0 → CLEAR READ (validé par l'auditeur).
+ *     puis le PC lâche le mock-up, la charge revient à ~0 → EQUILIBRIUM (validé par l'auditeur).
  *   • si RIEN ne monte après le mock-up → flag « no recharging » : le null NE VAUT RIEN
  *     (c'est le résultat DIAGNOSTIQUE le plus précieux du cycle).
  *
@@ -99,7 +99,7 @@ export class NullCycleStateMachine {
         }
         break;
       case 'rise':
-        // La masse a été créée ; quand le PC la lâche, la charge revient à ~0 → CLEAR READ.
+        // La masse a été créée ; quand le PC la lâche, la charge revient à ~0 → EQUILIBRIUM.
         // (clearHeld n'est regardé QU'ICI : en NULL le TA est déjà à la base sans rien vouloir dire.)
         if (inPhase >= MIN_RISE_MS && clearHeld) this.enter('clear_read', nowMs);
         break;

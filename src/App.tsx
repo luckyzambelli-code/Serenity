@@ -92,6 +92,12 @@ import { taAccumulator } from './engine/TaAccumulator';
 import { calibFeatures } from './engine/CalibFeatures';
 import { mirrorCycle, mirrorReading } from './engine/MirrorCycle';
 import { MirrorDial } from './components/MirrorDial';
+import { ToneDial } from './components/ToneDial';
+import {
+  TONE_STEPS, proposeFromTone, agreementOf, toneFromTa, chargeValue, oppositeOf,
+  type ToneCharge, type TonePhase, type ToneSign, type ToneStep,
+} from './engine/toneScale';
+import { TA_MIN, TA_MAX } from './engine/thetaTaScale';
 import { nullCycleStateMachine, type NullStateId } from './engine/NullCycleStateMachine';
 import { clearReadDetector } from './engine/ClearReadDetector';
 import { falseAsIsDetector } from './engine/FalseAsIsDetector';
@@ -143,7 +149,7 @@ const isElectron = typeof window !== 'undefined' && !!(window as unknown as { el
 export default function App() {
   const { t, lang, setLang } = useI18n();
   /** Traduction INLINE 5 langues pour les libellés/infobulles locaux (même esprit que SidebarDrawer).
-   *  Les TERMES D'AUDITION (CONTACT, NULL, RISE, CLEAR READ, AS-IS, VGIs, MOCK-UP, recharging /
+   *  Les TERMES D'AUDITION (CONTACT, NULL, RISE, EQUILIBRIUM, AS-IS, VGIs, MOCK-UP, recharging /
    *  no recharging) ne se traduisent PAS : c'est le vocabulaire du métier, identique partout. */
   const LC = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang as string, it, fr, en, es, sv);
   // Miroir de la langue pour les callbacks P2P (onConnectionEstablished capture un `lang` figé) :
@@ -215,7 +221,7 @@ export default function App() {
   // Processus
   const [showProcessus, setShowProcessus] = useState(false);
   const [sidebarDrawer, setSidebarDrawer] = useState<null | 'link' | 'trim' | 'auditor' | 'pc' | 'lang' | 'session' | 'config'>(null);
-  const [viewMode, setViewMode] = useState<'needle' | 'needle_pure' | 'mirror'>('needle');
+  const [viewMode, setViewMode] = useState<'needle' | 'needle_pure' | 'mirror' | 'tone'>('needle');
   const viewModeRef = useRef(viewMode); viewModeRef.current = viewMode;
   // MIRROR (méthode de Ron : « double the instant charge to erase it ») — 3e vue, chose À PART.
   const [mirrorArmed, setMirrorArmed] = useState(false);
@@ -917,7 +923,7 @@ export default function App() {
   // ── CYCLE NULL (miroir du cycle charge) — engine/NullCycleStateMachine ────────
   // À l'assessment, si l'item ne lit PAS dans la fenêtre du comm lag → l'item est NULL. On lève
   // l'ambiguïté (« null car propre » vs « null car rien ne lit ») en demandant un MOCK-UP : si la
-  // charge MONTE (RISE) l'instrument+PC répondent, puis le retour à la base = CLEAR READ (validé
+  // charge MONTE (RISE) l'instrument+PC répondent, puis le retour à la base = EQUILIBRIUM (validé
   // par l'auditeur AVEC les VGI's). Si rien ne monte → flag « no recharging » (null non validé).
   const [cycleKind, setCycleKind] = useState<'charge' | 'null'>('charge');
   const cycleKindRef = useRef<'charge' | 'null'>('charge');
@@ -955,9 +961,9 @@ export default function App() {
   const cyclesStartedRef = useRef(0);
   const cyclesAsIsRef = useRef(0);
   // Compteurs SÉPARÉS par type de cycle (demande utilisateur : « l'indicazione dei numeri di cicli
-  // deve aver separato Contact et Null ») : armés / menés à leur fin (AS-IS vs CLEAR READ).
+  // deve aver separato Contact et Null ») : armés / menés à leur fin (AS-IS vs EQUILIBRIUM).
   const cStartedRef = useRef(0), cDoneRef = useRef(0);   // cycle CONTACT → AS-IS
-  const nStartedRef = useRef(0), nDoneRef = useRef(0);   // cycle NULL    → CLEAR READ
+  const nStartedRef = useRef(0), nDoneRef = useRef(0);   // cycle NULL    → EQUILIBRIUM
   const [cycleStats, setCycleStats] = useState({ cStarted: 0, cDone: 0, nStarted: 0, nDone: 0 });
   const pushCycleStats = () => setCycleStats({
     cStarted: cStartedRef.current, cDone: cDoneRef.current,
@@ -1070,10 +1076,10 @@ export default function App() {
       }
       if (completed) {
         // Validé par l'auditeur → ligne de journal (avec le n° de cycle) + compteur. Le cycle NULL
-        // se termine sur un CLEAR READ (avec les VGI's inscrits), pas sur un AS-IS.
+        // se termine sur un EQUILIBRIUM (avec les VGI's inscrits), pas sur un AS-IS.
         logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
           text: cycleKindRef.current === 'null'
-            ? `✓ #${c.n} ${c.question || LC('ciclo', 'cycle', 'cycle', 'ciclo', 'cykel')} — CLEAR READ · ${clearReadVgiRef.current ? 'VGIs' : 'no VGIs'}`
+            ? `✓ #${c.n} ${c.question || LC('ciclo', 'cycle', 'cycle', 'ciclo', 'cykel')} — EQUILIBRIUM · ${clearReadVgiRef.current ? 'VGIs' : 'no VGIs'}`
             : `✓ #${c.n} ${c.question || LC('ciclo', 'cycle', 'cycle', 'ciclo', 'cykel')} — AS-IS`,
           type: 'success' });
         cyclesAsIsRef.current += 1;
@@ -1099,9 +1105,9 @@ export default function App() {
     setAsIsFalse(false); falseAsIsDetector.reset();
   };
   // Plus de « no recharging » déclaré : si ça ne recharge pas, l'auditeur met simplement FIN au
-  // cycle (STOP) — pas de bouton (demande utilisateur). Un null non mené au CLEAR READ reste
+  // cycle (STOP) — pas de bouton (demande utilisateur). Un null non mené au EQUILIBRIUM reste
   // « non validé » dans le rapport, ce qui suffit.
-  /** CYCLE NULL — l'auditeur VALIDE le CLEAR READ en INSCRIVANT les VGI's (demande utilisateur :
+  /** CYCLE NULL — l'auditeur VALIDE le EQUILIBRIUM en INSCRIVANT les VGI's (demande utilisateur :
    *  « abbiamo bisogno di VGI's alla fine del ciclo, conviene validare iscrivendo se ci sono »). */
   const validateClearRead = (vgi: boolean) => {
     clearReadValidRef.current = true;
@@ -1113,7 +1119,7 @@ export default function App() {
   /** Arme un cycle pour l'item courant. Les DEUX cycles s'arment MANUELLEMENT et SÉPARÉMENT
    *  (demande utilisateur — aucune bascule automatique) :
    *    • 'charge' (bouton START) → CONTACT → DISCHARGE → AS-IS
-   *    • 'null'   (bouton NULL)  → NULL → RISE → CLEAR READ (mock-up, VGI's) */
+   *    • 'null'   (bouton NULL)  → NULL → RISE → EQUILIBRIUM (mock-up, VGI's) */
   /** MIRROR (méthode de Ron) — AGGANCIO : on donne l'item, le cycle du double démarre. Chose à
    *  part : ni CONTACT ni NULL. Le pic du read = charge instantanée, la cible = son double. */
   const armMirror = () => {
@@ -4204,6 +4210,31 @@ export default function App() {
     : cicloInCorso ? 'eeg'
     : instruments.muse && instruments.theta ? agoScelto
     : instruments.theta ? 'theta' : 'eeg';
+  // ── TONE SCALE (Ron, −40…+40) ───────────────────────────────────────────────────────────
+  // La procedura in quattro tempi: localizzare la resistenza, il SEGNO, l'AMPIEZZA, poi
+  // mock-uppare l'OPPOSTO fino all'as-isness.
+  //
+  // CHI DICE IL NUMERO. Ron assessa segno e ampiezza perché lavora senza meter. Con l'ago il
+  // numero si LEGGE: la misura PROPONE e l'assessment VERIFICA. Senza meter la proposta non
+  // c'è e l'assessment torna a essere l'unica fonte — che è il caso di Ron.
+  const [tonePhase, setTonePhase] = useState<TonePhase>('locate');
+  const [toneValidated, setToneValidated] = useState<ToneCharge | null>(null);
+  const [toneProposedAtLock, setToneProposedAtLock] = useState<ToneCharge | null>(null);
+  const [toneSignPick, setToneSignPick] = useState<ToneSign | null>(null);
+  const [toneAtStart, setToneAtStart] = useState<number | null>(null);
+  // Il tono MISURATO. Oggi passa dal TA e non da ohm veri: `toneFromTa` è dichiaratamente una
+  // strada provvisoria, ed è per questo che il quadrante scrive « ≈ ». Diventa esatta il giorno
+  // che si tara il meter con due resistenze note.
+  const toneMeasured = instruments.theta && theta.ta !== null
+    ? toneFromTa(theta.ta, TA_MIN, TA_MAX) : null;
+  const toneHasMeter = toneMeasured !== null;
+  const toneProposed = toneMeasured !== null ? proposeFromTone(toneMeasured) : null;
+  const toneAgreement = toneValidated ? agreementOf(toneProposedAtLock, toneValidated) : null;
+  const resetTone = useCallback(() => {
+    setTonePhase('locate'); setToneValidated(null); setToneProposedAtLock(null);
+    setToneSignPick(null); setToneAtStart(null);
+  }, []);
+
   // Specchio in ref: il gestore del worker si aggancia una volta sola, e l'ago si può cambiare
   // in seduta — senza questo continuerebbe a usare quello scelto all'avvio.
   const agoPrincipaleRef = useRef(agoPrincipale); agoPrincipaleRef.current = agoPrincipale;
@@ -5907,7 +5938,9 @@ export default function App() {
                   i bottoni ») : la QUESTION occupe TOUTE la largeur en haut — avec les compteurs et
                   les boutons sur la même ligne elle était écrasée à néant. Commandes en dessous. */}
               <div style={{ width: '100%', marginBottom: 18, pointerEvents: 'auto',
-                            display: (viewMode === 'mirror' || eegModulesHidden(instruments)) ? 'none' : 'flex',
+                            // MIRROR et TONE ont leur PROPRE barre et n'ont ni CONTACT ni NULL :
+                            // laisser celle-ci afficherait deux jeux de commandes contradictoires.
+                            display: (viewMode === 'mirror' || viewMode === 'tone' || eegModulesHidden(instruments)) ? 'none' : 'flex',
                             flexDirection: 'column', gap: 6 }}>
                 <textarea
                   value={auditingQuestion}
@@ -5937,14 +5970,14 @@ export default function App() {
                 {!eegModulesHidden(instruments) && (
                 <div className="flex items-center gap-2" style={{ width: '100%' }}>
                 {/* CYCLE COUNTERS — SÉPARÉS par type (demande utilisateur) : armés · menés à leur fin.
-                    CONTACT → AS-IS (teal) · NULL → CLEAR READ (ardoise) — mêmes teintes que les boutons. */}
+                    CONTACT → AS-IS (teal) · NULL → EQUILIBRIUM (ardoise) — mêmes teintes que les boutons. */}
                 {([
                   { k: 'c', n: cycleStats.cStarted, d: cycleStats.cDone, name: 'CONTACT', end: 'AS-IS',
                     col: isLightTheme ? '#0891b2' : '#6ee7b7', bd: 'rgba(110,231,183,0.45)',
                     tip: LC('Cicli CONTACT avviati · portati ad AS-IS', 'Cycles CONTACT armés · menés à AS-IS', 'CONTACT cycles armed · taken to AS-IS', 'Ciclos CONTACT armados · llevados a AS-IS', 'CONTACT-cykler armerade · förda till AS-IS') },
                   { k: 'n', n: cycleStats.nStarted, d: cycleStats.nDone, name: 'NULL', end: 'CLEAR',
                     col: isLightTheme ? '#475569' : '#cbd5e1', bd: 'rgba(148,163,184,0.55)',
-                    tip: LC('Cicli NULL avviati · portati a CLEAR READ', 'Cycles NULL armés · menés au CLEAR READ', 'NULL cycles armed · taken to CLEAR READ', 'Ciclos NULL armados · llevados a CLEAR READ', 'NULL-cykler armerade · förda till CLEAR READ') },
+                    tip: LC('Cicli NULL avviati · portati a EQUILIBRIUM', 'Cycles NULL armés · menés au EQUILIBRIUM', 'NULL cycles armed · taken to EQUILIBRIUM', 'Ciclos NULL armados · llevados a EQUILIBRIUM', 'NULL-cykler armerade · förda till EQUILIBRIUM') },
                 ] as const).map(c => (
                   <div key={c.k} title={c.tip}
                     style={{ display: 'flex', alignItems: 'center', gap: 5, height: 28, padding: '0 9px', borderRadius: 8,
@@ -5982,7 +6015,7 @@ export default function App() {
                           ? LC('Chiudi prima il ciclo in corso', 'Ferme d\'abord le cycle en cours', 'Close the running cycle first', 'Cierra primero el ciclo en curso', 'Stäng först den pågående cykeln')
                           : k === 'charge'
                             ? LC('Dai l\'item e premi: ciclo CONTACT → DISSOLUZIONE → AS-IS', 'Donne l\'item et appuie : cycle CONTACT → DISSOLUTION → AS-IS', 'Give the item and press: CONTACT → DISSOLUTION → AS-IS cycle', 'Da el ítem y pulsa: ciclo CONTACT → DISOLUCIÓN → AS-IS', 'Ge item och tryck: CONTACT → UPPLÖSNING → AS-IS')
-                            : LC('Dai l\'item e premi: ciclo NULL → RISE (mock-up) → CLEAR READ', 'Donne l\'item et appuie : cycle NULL → RISE (mock-up) → CLEAR READ', 'Give the item and press: NULL → RISE (mock-up) → CLEAR READ cycle', 'Da el ítem y pulsa: ciclo NULL → RISE (mock-up) → CLEAR READ', 'Ge item och tryck: NULL → RISE (mock-up) → CLEAR READ')}
+                            : LC('Dai l\'item e premi: ciclo NULL → RISE (mock-up) → EQUILIBRIUM', 'Donne l\'item et appuie : cycle NULL → RISE (mock-up) → EQUILIBRIUM', 'Give the item and press: NULL → RISE (mock-up) → EQUILIBRIUM cycle', 'Da el ítem y pulsa: ciclo NULL → RISE (mock-up) → EQUILIBRIUM', 'Ge item och tryck: NULL → RISE (mock-up) → EQUILIBRIUM')}
                       style={{ height: 28, padding: '0 12px', borderRadius: 8, flexShrink: 0,
                         cursor: blocked ? 'not-allowed' : 'pointer',
                         fontFamily: 'monospace', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
@@ -6074,9 +6107,98 @@ export default function App() {
                   })()}
                 </div>
               )}
-              {/* CYCLE STATUS BAR — comm lag / % diss / AS-IS? validate. Masquée en MIRROR (vue à
-                  part, sans CONTACT/NULL — demande utilisateur). */}
-              {viewMode !== 'mirror' && sessionState === 'running' && (
+              {/* ── BARRE TONE SCALE — les QUATRE temps de Ron, un par un ───────────────────────
+                  Chaque temps n'offre QUE son geste : on ne peut pas valider une ampleur avant
+                  d'avoir dit le signe. Avec le mètre, le bouton que la MESURE propose porte un
+                  point — c'est une proposition à vérifier, pas une réponse déjà donnée. */}
+              {viewMode === 'tone' && sessionState === 'running' && (() => {
+                const bar: React.CSSProperties = { width: '100%', pointerEvents: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' };
+                const btn = (on: boolean, hint: boolean): React.CSSProperties => ({
+                  height: 32, padding: '0 14px', borderRadius: 8, flexShrink: 0, cursor: 'pointer',
+                  fontFamily: 'monospace', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
+                  background: on ? 'rgba(255,90,90,0.18)' : 'rgba(0,0,0,0.45)',
+                  border: `1px solid ${on ? 'rgba(255,90,90,0.75)' : hint ? 'rgba(251,191,36,0.6)' : 'rgba(255,255,255,0.3)'}`,
+                  color: on ? '#ff5a5a' : 'rgba(235,244,255,0.85)' });
+                const lbl: React.CSSProperties = { fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(226,238,255,0.6)' };
+                return (
+                  <div style={bar}>
+                    <span style={lbl}>
+                      {tonePhase === 'locate' ? LC('1 · localizza', '1 · localise', '1 · locate', '1 · localiza', '1 · lokalisera')
+                        : tonePhase === 'sign' ? LC('2 · segno', '2 · signe', '2 · sign', '2 · signo', '2 · tecken')
+                        : tonePhase === 'magnitude' ? LC('3 · ampiezza', '3 · ampleur', '3 · magnitude', '3 · amplitud', '3 · storlek')
+                        : LC('4 · mock-up', '4 · mock-up', '4 · mock-up', '4 · mock-up', '4 · mock-up')}
+                    </span>
+
+                    {tonePhase === 'locate' && (
+                      <button style={btn(false, toneHasMeter)}
+                        onClick={() => { setToneProposedAtLock(toneProposed); setTonePhase('sign'); }}>
+                        {toneHasMeter
+                          ? LC('LOCALIZZA QUI', 'LOCALISE ICI', 'LOCATE HERE', 'LOCALIZA AQUÍ', 'LOKALISERA HÄR')
+                          : LC('ASSESSA', 'ASSESSE', 'ASSESS', 'ASSESSA', 'ASSESSA')}
+                      </button>
+                    )}
+
+                    {tonePhase === 'sign' && ([-1, 1] as ToneSign[]).map(s => (
+                      <button key={s} style={btn(toneSignPick === s, toneProposedAtLock?.sign === s)}
+                        onClick={() => { setToneSignPick(s); setTonePhase('magnitude'); }}>
+                        {s < 0 ? LC('NEGATIVO', 'NÉGATIF', 'NEGATIVE', 'NEGATIVO', 'NEGATIV') : LC('POSITIVO', 'POSITIF', 'POSITIVE', 'POSITIVO', 'POSITIV')}
+                        {toneProposedAtLock?.sign === s ? ' ·' : ''}
+                      </button>
+                    ))}
+
+                    {tonePhase === 'magnitude' && TONE_STEPS.map(m => (
+                      <button key={m} style={btn(false, toneProposedAtLock?.magnitude === m)}
+                        onClick={() => {
+                          const v: ToneCharge = { sign: toneSignPick ?? 1, magnitude: m as ToneStep,
+                            origin: toneHasMeter ? 'measured' : 'assessed' };
+                          setToneValidated(v);
+                          setToneAtStart(toneMeasured);
+                          setTonePhase('mockup');
+                        }}>
+                        {m}{toneProposedAtLock?.magnitude === m ? ' ·' : ''}
+                      </button>
+                    ))}
+
+                    {(tonePhase === 'mockup' || tonePhase === 'done') && toneValidated && (
+                      <>
+                        <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'rgba(235,244,255,0.85)' }}>
+                          {LC('mock-uppa', 'mock-uppe', 'mock up', 'mock-upea', 'mocka upp')}
+                          <b style={{ color: '#fbbf24', marginLeft: 6 }}>{oppositeOf(toneValidated) > 0 ? '+' : ''}{oppositeOf(toneValidated)}</b>
+                          <span style={{ opacity: 0.55, marginLeft: 8 }}>
+                            {LC('contro', 'contre', 'against', 'contra', 'mot')} {chargeValue(toneValidated) > 0 ? '+' : ''}{chargeValue(toneValidated)}
+                          </span>
+                        </span>
+                        {tonePhase === 'mockup' && (
+                          <button style={btn(false, true)} onClick={() => setTonePhase('done')}>
+                            {LC('VALIDA L\'AS-IS', 'VALIDE L\'AS-IS', 'VALIDATE AS-IS', 'VALIDA EL AS-IS', 'VALIDERA AS-IS')}
+                          </button>
+                        )}
+                        {tonePhase === 'done' && (
+                          <button style={btn(false, false)} onClick={resetTone}>
+                            {LC('ALTRA RESISTENZA', 'AUTRE RÉSISTANCE', 'ANOTHER RESISTANCE', 'OTRA RESISTENCIA', 'ANNAT MOTSTÅND')}
+                          </button>
+                        )}
+                      </>
+                    )}
+
+                    {tonePhase !== 'locate' && (
+                      <button style={{ ...btn(false, false), border: '1px solid rgba(255,255,255,0.18)', opacity: 0.7 }}
+                        onClick={resetTone}>
+                        {LC('ANNULLA', 'ANNULER', 'CANCEL', 'CANCELAR', 'AVBRYT')}
+                      </button>
+                    )}
+
+                    {!toneHasMeter && (
+                      <span style={{ ...lbl, color: 'rgba(251,191,36,0.8)' }}>
+                        {LC('senza meter — si assessa', 'sans mètre — on assesse', 'off-meter — assessed', 'sin medidor — se assessa', 'utan mätare — assessas')}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
+              {/* CYCLE STATUS BAR — comm lag / % diss / AS-IS? validate. Masquée en MIRROR et en
+                  TONE (vues à part, sans CONTACT/NULL — demande utilisateur). */}
+              {viewMode !== 'mirror' && viewMode !== 'tone' && sessionState === 'running' && (
                 <CycleStatusBar armed={cycleArmed} asIsPending={asIsPending} manualReady={manualReady}
                   asIsFalse={asIsFalse} deltaStar={deltaStar} deltaStarN={deltaStarN} onValidate={validateAsIs}
                   isLightTheme={isLightTheme} signalOk={museContact}
@@ -6123,7 +6245,12 @@ export default function App() {
             {/* ── ARC CONCENTRIQUE — en MIRROR : l'échelle 1–10 (MirrorDial) À LA PLACE du ClearDial
                 (cycle CONTACT/DISSOLUTION/AS-IS), aligné avec l'aiguille. Sinon : le ClearDial. */}
             <div className="absolute inset-0 z-40 pointer-events-none">
-              {viewMode === 'mirror' ? (
+              {viewMode === 'tone' ? (
+                <ToneDial tone={toneMeasured ?? 0} hasMeter={toneHasMeter} approx
+                  proposed={toneProposedAtLock ?? toneProposed} validated={toneValidated}
+                  phase={tonePhase} agreement={toneAgreement} toneAtStart={toneAtStart}
+                  isLightTheme={isLightTheme} lang={lang} />
+              ) : viewMode === 'mirror' ? (
                 <MirrorDial armed={mirrorArmed} valueR={mirrorDisp.valueR} contactQ={mirrorDisp.contactQ} dischargeQ={mirrorDisp.dischargeQ}
                   locked={mirrorDisp.locked} reached={mirrorDisp.reached} isLightTheme={isLightTheme} lang={lang} />
               ) : (
@@ -6168,16 +6295,17 @@ export default function App() {
             {/* SÉLECTEUR DE VUE UNIQUE — un seul segmenté à 3 voies : AGO / AGO + / MIRROR (demande
                 utilisateur : « fai un solo selettore »). */}
             <div className="absolute z-50 pointer-events-auto" style={{ top: 124, left: 40, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'flex', width: 190, padding: 3, gap: 2, borderRadius: 999,
+              <div style={{ display: 'flex', width: 248, padding: 3, gap: 2, borderRadius: 999,
                 background: isLightTheme ? '#b7b7be' : '#17171b',
                 boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
                 {([
                   { m: 'needle_pure' as const, lbl: `${t('view_needle')}`, title: `${t('view_needle')}` },
                   { m: 'needle' as const, lbl: `${t('view_needle')} +`, title: `${t('view_needle')} +` },
                   { m: 'mirror' as const, lbl: 'MIRROR', title: LC('MIRROR — metodo del doppio (Ron)', 'MIRROR — méthode du double (Ron)', 'MIRROR — the doubling method (Ron)', 'MIRROR — método del doble (Ron)', 'MIRROR — dubbelmetoden (Ron)') },
+                  { m: 'tone' as const, lbl: 'TONE', title: LC('TONE SCALE — la scala del tono di Ron (−40…+40)', 'TONE SCALE — l\'échelle des tons de Ron (−40…+40)', 'TONE SCALE — Ron\'s tone scale (−40…+40)', 'TONE SCALE — la escala del tono de Ron (−40…+40)', 'TONE SCALE — Rons tonskala (−40…+40)') },
                 ]).map(seg => {
                   const active = viewMode === seg.m;
-                  const isMirror = seg.m === 'mirror';
+                  const isMirror = seg.m === 'mirror' || seg.m === 'tone';
                   return (
                     <button key={seg.m} type="button" onClick={() => setViewMode(seg.m)} title={seg.title}
                       style={{ flex: 1, height: 26, borderRadius: 999, border: 'none', cursor: 'pointer',

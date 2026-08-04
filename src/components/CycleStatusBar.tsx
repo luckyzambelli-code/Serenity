@@ -22,7 +22,12 @@ export const CycleStatusBar = React.memo(function CycleStatusBar({
   /** MUSE éteint OU pas de contact → false : on n'affiche NI le comm lag NI la % dissolution
    *  (aucun signal EEG réel → ces valeurs n'ont pas de sens). Demande utilisateur. */
   signalOk?: boolean;
-  // ── CYCLE NULL (miroir) : NULL → RISE → CLEAR READ ──
+  // ── CYCLE NULL (miroir) : NULL → RISE → EQUILIBRIUM ──
+  //
+  // ⚠️ LE NOM À L'ÉCRAN EST « EQUILIBRIUM » — les IDENTIFIANTS restent `clear_read` /
+  // `clearRead` / `onValidateClearRead` À DESSEIN : ce champ est ÉCRIT dans les séances
+  // enregistrées et dans l'archive CORPUS. Le renommer rendrait illisibles toutes les
+  // séances déjà sauvegardées. Le libellé se change, la donnée ne se renomme pas.
   cycleKind?: 'charge' | 'null';
   nullPhase?: 'neutral' | 'null' | 'rise' | 'clear_read';
   /** Secondes depuis l'armement du NULL — INFO seulement (pas un compte à rebours). */
@@ -34,11 +39,11 @@ export const CycleStatusBar = React.memo(function CycleStatusBar({
   /** Cycle CONTACT : le moteur n'a vu AUCUNE lecture dans la fenêtre du comm lag → « sembra NULL ».
    *  Simple INDICATION (l'auditeur presse NULL s'il le décide) — aucune bascule automatique. */
   noReadSignal?: boolean;
-  /** Valide le CLEAR READ en INSCRIVANT les VGI's (oui/non). */
+  /** Valide le EQUILIBRIUM en INSCRIVANT les VGI's (oui/non). */
   onValidateClearRead?: (vgi: boolean) => void;
 }) {
   const { t, lang } = useI18n();
-  // Les TERMES D'AUDITION (CONTACT, NULL, RISE, CLEAR READ, AS-IS, VGIs, MOCK-UP, recharging /
+  // Les TERMES D'AUDITION (CONTACT, NULL, RISE, EQUILIBRIUM, AS-IS, VGIs, MOCK-UP, recharging /
   // no recharging) restent EN L'ÉTAT dans toutes les langues : c'est le vocabulaire du métier.
   // On ne traduit que le reste (libellés courants, infobulles).
   const L = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang as string, it, fr, en, es, sv);
@@ -63,7 +68,7 @@ export const CycleStatusBar = React.memo(function CycleStatusBar({
   // validation QUE sur l'AS-IS CONFIRMÉ (F/N). `manualReady` n'affiche plus de chip.
   void manualReady;
   const manualOk = false;
-  // Le cycle NULL a sa PROPRE fin (CLEAR READ validé avec les VGI's) → pas de bouton AS-IS ici.
+  // Le cycle NULL a sa PROPRE fin (EQUILIBRIUM validé avec les VGI's) → pas de bouton AS-IS ici.
   const isNull = cycleKind === 'null' && armed;
   const validatable = pending && !isNull;
 
@@ -117,7 +122,7 @@ export const CycleStatusBar = React.memo(function CycleStatusBar({
           Pas d'étiquette de PHASE ici (le dial la montre déjà) ni de bouton « no recharging »
           (demande utilisateur : s'il voit que ça ne recharge pas, l'auditeur met simplement FIN au
           cycle — pas besoin d'un bouton, qui en plus sautait à chaque reflow). On montre juste
-          l'écart de TA depuis le départ du null + la validation du CLEAR READ avec les VGI's. */}
+          l'écart de TA depuis le départ du null + la validation du EQUILIBRIUM avec les VGI's. */}
       {isNull && (
         <div style={{ ...chip, background: isLightTheme ? 'rgba(34,211,238,0.08)' : 'rgba(255,255,255,0.06)', border: `1px solid ${isLightTheme ? 'rgba(34,211,238,0.30)' : 'rgba(255,255,255,0.22)'}` }}>
           <span style={{ ...lbl, color: isLightTheme ? 'rgba(159,246,255,0.65)' : 'rgba(226,238,255,0.60)' }}>recharging</span>
@@ -131,21 +136,21 @@ export const CycleStatusBar = React.memo(function CycleStatusBar({
 
       {isNull && nullPhase === 'clear_read' && (
         <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={() => onValidateClearRead?.(true)} title={L("Valida il CLEAR READ — VGI's presenti",
-                   "Valide le CLEAR READ — VGI's présents",
-                   "Validate the CLEAR READ — VGI's present",
-                   "Valida el CLEAR READ — VGI's presentes",
-                   "Validera CLEAR READ — VGI's närvarande")}
+          <button onClick={() => onValidateClearRead?.(true)} title={L("Valida il EQUILIBRIUM — VGI's presenti",
+                   "Valide le EQUILIBRIUM — VGI's présents",
+                   "Validate the EQUILIBRIUM — VGI's present",
+                   "Valida el EQUILIBRIUM — VGI's presentes",
+                   "Validera EQUILIBRIUM — VGI's närvarande")}
             style={{ ...chip, cursor: 'pointer', fontWeight: 700,
               background: isLightTheme ? 'rgba(34,211,238,0.08)' : 'rgba(255,255,255,0.06)',
               border: '1px solid rgba(110,231,183,0.7)', color: isLightTheme ? '#0e7490' : '#6ee7b7' }}>
-            <span style={{ fontSize: 12, letterSpacing: '0.06em' }}>▸ CLEAR READ · VGIs</span>
+            <span style={{ fontSize: 12, letterSpacing: '0.06em' }}>▸ EQUILIBRIUM · VGIs</span>
           </button>
-          <button onClick={() => onValidateClearRead?.(false)} title={L('Valida il CLEAR READ — nessun VGI',
-                   'Valide le CLEAR READ — aucun VGI',
-                   'Validate the CLEAR READ — no VGI',
-                   'Valida el CLEAR READ — ningún VGI',
-                   'Validera CLEAR READ — inga VGI')}
+          <button onClick={() => onValidateClearRead?.(false)} title={L('Valida il EQUILIBRIUM — nessun VGI',
+                   'Valide le EQUILIBRIUM — aucun VGI',
+                   'Validate the EQUILIBRIUM — no VGI',
+                   'Valida el EQUILIBRIUM — ningún VGI',
+                   'Validera EQUILIBRIUM — inga VGI')}
             style={{ ...chip, cursor: 'pointer',
               background: isLightTheme ? 'rgba(34,211,238,0.08)' : 'rgba(255,255,255,0.06)',
               border: `1px solid ${isLightTheme ? 'rgba(34,211,238,0.30)' : 'rgba(255,255,255,0.22)'}`,

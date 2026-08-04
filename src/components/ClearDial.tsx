@@ -41,15 +41,15 @@ const band = (o0: number, o1: number, rIn: number, rOut: number) => {
 // theme keeps the bright chargeState colours.
 const LIGHT_PHASE: Record<string, string> = { contact: '#b3402a', discharge: '#157a4a', asis: '#0e7490' };
 
-// ── CYCLE NULL (miroir) : NULL → RISE → CLEAR READ ───────────────────────────
+// ── CYCLE NULL (miroir) : NULL → RISE → EQUILIBRIUM ───────────────────────────
 // Le dial doit suivre le CYCLE CHOISI (demande utilisateur). Mêmes 3 segments, autres étiquettes
 // et couleurs : NULL = gris (rien ne lit), RISE = ambre (le mock-up crée de la masse),
-// CLEAR READ = blanc-cyan brillant (#d6ffff — même couleur d'aboutissement que l'AS-IS).
+// EQUILIBRIUM = blanc-cyan brillant (#d6ffff — même couleur d'aboutissement que l'AS-IS).
 export type NullDialId = 'neutral' | 'null' | 'rise' | 'clear_read';
 const NULL_PHASES: NullDialId[] = ['null', 'rise', 'clear_read'];
 const NULL_ORDER: Record<string, number> = { neutral: -1, null: 0, rise: 1, clear_read: 2 };
 const NULL_SEG: Record<string, [number, number]> = { null: [-1, -1 / 3], rise: [-1 / 3, 1 / 3], clear_read: [1 / 3, 1] };
-const NULL_LABEL: Record<string, string> = { null: 'NULL', rise: 'RISE', clear_read: 'CLEAR READ' };
+const NULL_LABEL: Record<string, string> = { null: 'NULL', rise: 'RISE', clear_read: 'EQUILIBRIUM' };
 const NULL_DARK: Record<string, string> = { null: '#94a3b8', rise: '#fbbf24', clear_read: '#d6ffff' };
 const NULL_LIGHT: Record<string, string> = { null: '#64748b', rise: '#b45309', clear_read: '#0e7490' };
 
@@ -57,7 +57,7 @@ export const ClearDial = React.memo(function ClearDial({ armed = true, asIsPendi
   armed?: boolean; asIsPending?: boolean; asIsFalse?: boolean; asIsIO?: number; onValidate?: () => void; deltaStar?: number; deltaStarN?: number;
   manualReady?: boolean;
   isLightTheme?: boolean;
-  /** Le dial suit le CYCLE CHOISI : 'charge' (CONTACT→DISCHARGE→AS-IS) ou 'null' (NULL→RISE→CLEAR READ). */
+  /** Le dial suit le CYCLE CHOISI : 'charge' (CONTACT→DISCHARGE→AS-IS) ou 'null' (NULL→RISE→EQUILIBRIUM). */
   cycleKind?: 'charge' | 'null';
   nullPhase?: NullDialId;
 }) {
@@ -75,7 +75,7 @@ export const ClearDial = React.memo(function ClearDial({ armed = true, asIsPendi
   const manualOk = false;
   // ── Le dial suit le CYCLE CHOISI (charge ou null) ──
   const isNullCycle = cycleKind === 'null';
-  const validatable = pending && !isNullCycle; // le cycle null a sa propre fin (CLEAR READ + VGI's)
+  const validatable = pending && !isNullCycle; // le cycle null a sa propre fin (EQUILIBRIUM + VGI's)
   const effPhase: ChargeStateId = validatable ? 'asis' : (armed ? phase : 'neutral');
   // Phase colour — bright chargeState in DARK, dark variant in LIGHT (readable on light bg).
   const phaseColorOf = (id: ChargeStateId): string => isLightTheme ? (LIGHT_PHASE[id] ?? '#475569') : chargeStateById(id).color;
@@ -97,7 +97,7 @@ export const ClearDial = React.memo(function ClearDial({ armed = true, asIsPendi
   //  • AS-IS confirmed (clean auto) → jumps to the ARC END (finish line) and PULSES;
   //  • AS-IS? (manual) / "to verify" → sits IN the AS-IS arc at the estimated blow-down, NO pulse;
   //  • CONTACT → segment centre.
-  //  • Cycle NULL → centre du segment ; CLEAR READ pulse (il attend TA validation avec les VGI's).
+  //  • Cycle NULL → centre du segment ; EQUILIBRIUM pulse (il attend TA validation avec les VGI's).
   const frac = Math.min(1, Math.max(0, pct / 100));
   let dotOff = SEG_OF[effId] ? (SEG_OF[effId][0] + SEG_OF[effId][1]) / 2 : 0;
   let dotPulse = false;

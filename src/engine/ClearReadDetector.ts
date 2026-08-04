@@ -1,5 +1,5 @@
 /**
- * ClearReadDetector — « CLEAR READ » : le TA est revenu à SA BASE constitutionnelle et s'y TIENT.
+ * ClearReadDetector — « EQUILIBRIUM » : le TA est revenu à SA BASE constitutionnelle et s'y TIENT.
  *
  * Base = lecture au repos imposée par SEXE (homme 3.0 / femme 2.0, cf. TaAccumulator.setBaseline
  * piloté par pcSex). C'est une CONVENTION (celle des auditeurs depuis les années 60), pas une
@@ -9,9 +9,9 @@
  *
  * Pourquoi un HOLD : le TA est une EMA LENTE (~6 s) — bien plus lente que le comm lag (~0.5 s).
  * On ne projette donc pas le TA en avant (ce serait imperceptible et bruité) : c'est le
- * « tenu N secondes » qui absorbe le retard et évite de crier CLEAR READ sur un passage fugace.
+ * « tenu N secondes » qui absorbe le retard et évite de crier EQUILIBRIUM sur un passage fugace.
  *
- * Utilisé par le cycle NULL (RISE → CLEAR READ). Pur TS, pas de React.
+ * Utilisé par le cycle NULL (RISE → EQUILIBRIUM). Pur TS, pas de React.
  */
 const HOLD_MS = 1500;   // le TA doit RESTER à la base au moins ce temps
 const TOL     = 0.05;   // tolérance (divisions de TA) autour de la base

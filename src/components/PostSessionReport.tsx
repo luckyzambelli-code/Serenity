@@ -62,7 +62,7 @@ interface PostSessionReportProps {
    *  reached + whether it completed (reached AS-IS) + the measured leading-edge lag. */
   auditingCycles?: Array<{ n?: number; question: string; tStartSec: number; tEndSec: number; phaseReached: string; completed: boolean; leadMs?: number; falseAsIs?: boolean; io?: number; taAtAsIs?: number;
     /** Cycle NULL (miroir) : type + issue. Les deux familles sont RAPPORTÉES SÉPARÉMENT
-     *  (demande utilisateur) : CONTACT → AS-IS, NULL → CLEAR READ (avec les VGI's) / no recharging. */
+     *  (demande utilisateur) : CONTACT → AS-IS, NULL → EQUILIBRIUM (avec les VGI's) / no recharging. */
     kind?: 'charge' | 'null'; noRecharging?: boolean; clearRead?: boolean; vgi?: boolean }>;
   /** Cycles MIRROR (méthode de Ron, LECTURE DIRECTE) — famille À PART, rapportée séparément sous
    *  CONTACT et NULL. READ = pic rencontré (1–10), DOUBLE = total présent (2× = 2–20), erased =
@@ -125,7 +125,7 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
                      : (avgReleaseVel > 0 ? avgReleaseVel.toFixed(3) : '—');
   const { t, lang } = useI18n();
   /** Traduction locale 5 langues pour les libellés du rapport qui n'ont pas de clé i18n.
-   *  Les TERMES D'AUDITION (CONTACT, NULL, RISE, CLEAR READ, AS-IS, F/N, VGI's, MOCK-UP,
+   *  Les TERMES D'AUDITION (CONTACT, NULL, RISE, EQUILIBRIUM, AS-IS, F/N, VGI's, MOCK-UP,
    *  recharging, ASSESSMENT, MIRROR) restent en ANGLAIS dans toutes les langues. */
   const L = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang as string, it, fr, en, es, sv);
   // Compteur d'historique pour afficher dans le bouton — incrémenté quand la session est sauvegardée
@@ -895,7 +895,7 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
     // ── AUDITING CYCLES — SÉPARÉS par famille (demande utilisateur) : les deux cycles n'ont ni
     // la même fin ni le même sens, les mélanger rendait le tableau illisible.
     //   • CONTACT → CONTACT / DISSOLUTION / AS-IS
-    //   • NULL    → NULL / RISE / CLEAR READ (avec VGI's) ou « no recharging » (null non validé)
+    //   • NULL    → NULL / RISE / EQUILIBRIUM (avec VGI's) ou « no recharging » (null non validé)
     const _chargeCycles = auditingCycles.filter(c => c.kind !== 'null');
     const _nullCycles   = auditingCycles.filter(c => c.kind === 'null');
     if (_chargeCycles.length > 0) {
@@ -953,7 +953,7 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
       y += 4;
     }
 
-    // ── CYCLES NULL — famille SÉPARÉE : NULL -> RISE -> CLEAR READ (valide avec les VGI's).
+    // ── CYCLES NULL — famille SÉPARÉE : NULL -> RISE -> EQUILIBRIUM (valide avec les VGI's).
     // « no recharging » = le mock-up n'a rien fait monter -> le null N'EST PAS valide (c'est le
     // resultat diagnostique le plus precieux : il dit que le null ne vaut rien). ASCII seulement.
     if (_nullCycles.length > 0) {
@@ -965,11 +965,11 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
       pdf.setFontSize(8);
       pdf.setTextColor(120, 120, 120);
       const _nr = noRechN > 0 ? ` - ${noRechN} no recharging` : '';
-      pdf.text(`${clearN}/${_nullCycles.length} CLEAR READ${_nr}`, pageW - 15, y, { align: 'right' as any });
+      pdf.text(`${clearN}/${_nullCycles.length} EQUILIBRIUM${_nr}`, pageW - 15, y, { align: 'right' as any });
       y += 6;
       for (const c of _nullCycles) {
         ensureSpace(6);
-        const lbl = c.clearRead ? 'CLEAR READ' : c.noRecharging ? 'NO RECHARGING' : 'NULL';
+        const lbl = c.clearRead ? 'EQUILIBRIUM' : c.noRecharging ? 'NO RECHARGING' : 'NULL';
         const col: [number, number, number] = c.clearRead ? [34, 150, 200] : c.noRecharging ? [186, 117, 23] : [120, 120, 120];
         const dur = Math.max(0, Math.round(c.tEndSec - c.tStartSec));
         pdf.setFont('helvetica', 'normal');
@@ -980,7 +980,7 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(col[0], col[1], col[2]);
         pdf.text(`${c.clearRead ? '* ' : ''}${lbl}`, pageW - 48, y, { align: 'right' as any });
-        // VGI's inscrits a la validation du CLEAR READ (demande utilisateur).
+        // VGI's inscrits a la validation du EQUILIBRIUM (demande utilisateur).
         if (c.clearRead) {
           pdf.setFont('helvetica', 'normal');
           pdf.setTextColor(90, 90, 90);
@@ -1640,7 +1640,7 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
           </div>
 
           {/* AUDITING CYCLES — SÉPARÉS par famille (demande utilisateur) : CONTACT (→ AS-IS) et
-              NULL (→ CLEAR READ) n'ont ni la même fin ni le même sens ; les mélanger était illisible. */}
+              NULL (→ EQUILIBRIUM) n'ont ni la même fin ni le même sens ; les mélanger était illisible. */}
           {auditingCycles.filter(c => c.kind !== 'null').length > 0 && (
             <div className="glass-panel p-4 flex flex-col gap-2">
               <div className="flex items-center justify-between">
@@ -1695,7 +1695,7 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
             </div>
           )}
 
-          {/* CICLI NULL — famiglia separata : NULL → RISE → CLEAR READ (validato coi VGI's).
+          {/* CICLI NULL — famiglia separata : NULL → RISE → EQUILIBRIUM (validato coi VGI's).
               « no recharging » = il mock-up non ha fatto salire nulla → il null NON è validato
               (è il risultato diagnostico più prezioso: dice che quel null non vale niente). */}
           {auditingCycles.filter(c => c.kind === 'null').length > 0 && (
@@ -1703,13 +1703,13 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-mono text-slate-400 uppercase tracking-widest">{L('Cicli di auditing', 'Cycles d\'audition', 'Auditing cycles', 'Ciclos de auditación', 'Auditingcykler')} · NULL</h3>
                 <span className="text-xs font-mono" style={{ color: 'rgba(240,246,255,0.95)' }}>
-                  {auditingCycles.filter(c => c.kind === 'null' && c.clearRead).length}/{auditingCycles.filter(c => c.kind === 'null').length} <span className="opacity-60">CLEAR READ</span>
+                  {auditingCycles.filter(c => c.kind === 'null' && c.clearRead).length}/{auditingCycles.filter(c => c.kind === 'null').length} <span className="opacity-60">EQUILIBRIUM</span>
                 </span>
               </div>
               <div className="flex flex-col gap-1.5">
                 {auditingCycles.filter(c => c.kind === 'null').map((c, i) => {
                   const dur = Math.max(0, Math.round(c.tEndSec - c.tStartSec));
-                  const lbl = c.clearRead ? 'CLEAR READ' : c.noRecharging ? 'NO RECHARGING' : 'NULL';
+                  const lbl = c.clearRead ? 'EQUILIBRIUM' : c.noRecharging ? 'NO RECHARGING' : 'NULL';
                   const col = c.clearRead ? '#d6ffff' : c.noRecharging ? '#fbbf24' : '#94a3b8';
                   return (
                     <div key={i} className="flex items-center justify-between gap-2 text-xs font-mono bg-white/5 rounded px-2 py-1.5 border border-slate-200/10">
@@ -1729,7 +1729,7 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
                 {(() => { const nr = auditingCycles.filter(c => c.kind === 'null' && c.noRecharging).length;
                   return nr > 0
                     ? `⚠ ${nr} no recharging — ${L('il mock-up non ha creato massa: quei NULL NON sono validati', 'le mock-up n\'a pas créé de masse : ces NULL ne sont PAS validés', 'the mock-up created no mass: those NULL are NOT validated', 'el mock-up no creó masa: esos NULL NO están validados', 'mock-up skapade ingen massa: de NULL är INTE validerade')}`
-                    : `NULL → RISE (mock-up) → CLEAR READ, ${L('validato coi VGI\'s', 'validé avec les VGI\'s', 'validated with VGI\'s', 'validado con los VGI\'s', 'validerad med VGI\'s')}`; })()}
+                    : `NULL → RISE (mock-up) → EQUILIBRIUM, ${L('validato coi VGI\'s', 'validé avec les VGI\'s', 'validated with VGI\'s', 'validado con los VGI\'s', 'validerad med VGI\'s')}`; })()}
               </div>
             </div>
           )}

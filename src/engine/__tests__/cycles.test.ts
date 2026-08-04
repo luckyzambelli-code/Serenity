@@ -3,7 +3,7 @@ import { ClearReadDetector } from '../ClearReadDetector';
 import { LagMeter } from '../LagMeter';
 
 /**
- * CLEAR READ — il TA deve RESTARE alla base (3.0 uomo / 2.0 donna) per un tempo minimo.
+ * EQUILIBRIUM — il TA deve RESTARE alla base (3.0 uomo / 2.0 donna) per un tempo minimo.
  * Un semplice passaggio non basta: è la TENUTA che conta.
  */
 describe('ClearReadDetector', () => {

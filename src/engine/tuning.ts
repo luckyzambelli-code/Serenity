@@ -561,9 +561,16 @@ export const THETA_FN_TURN_HYST = THETA_FN_MIN_SWEEP;
 /** Fondo scala della scala del tono: da −40 (resistenza TOTALE) a +40 (resistenza ZERO),
  *  ottanta unità in otto divisioni da dieci. È la Scala del Tono intera, con la Morte allo zero. */
 export const TONE_SCALE_MAX = 40;
+/** Una divisione: le quattro ampiezze che Ron assessa sono 10, 20, 30, 40. */
+export const TONE_STEP = 10;
 /** « Resistenza totale » (Ω) = il valore che corrisponde a −40.
- *  ⚠️ IN ATTESA DELLA RISPOSTA DI RON: non è ancora deciso se sia una costante del meter o un
- *  valore della singola persona. Finché non si sa, il tono assoluto NON va mostrato come tale.
- *  Nota fisica: dipende comunque dagli ELETTRODI (lattine più grandi = meno ohm), quindi una
- *  costante universale è dubbia. */
+ *
+ *  RISPOSTA DI RON (04/08/2026), su due domande poste insieme:
+ *    • lo ZERO sta al CENTRO DELLO STRUMENTO, non al punto di clear della persona → questa è
+ *      quindi una costante del METER, e la metà di essa cade sullo zero;
+ *    • le divisioni sono LINEARI NEGLI OHM.
+ *  `toneFromResistance` fa già esattamente questo.
+ *
+ *  Resta vero che il valore dipende dagli ELETTRODI (lattine più grandi = meno ohm): è una
+ *  costante DI QUESTO assetto, non dell'universo, e va rimisurata se si cambiano le lattine. */
 export const TONE_R_TOTAL = 2_000_000;

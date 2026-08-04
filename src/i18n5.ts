@@ -10,7 +10,7 @@
  * ORDINE FISSO DEGLI ARGOMENTI: (it, fr, en, es, sv). L'inglese è il fallback.
  *
  * NOTA: i TERMINI D'AUDITING restano in INGLESE in tutte le lingue — CONTACT, NULL, RISE,
- * CLEAR READ, AS-IS, F/N, VGI's, MOCK-UP, recharging, ASSESSMENT, MIRROR. Non tradurli.
+ * EQUILIBRIUM, AS-IS, F/N, VGI's, MOCK-UP, recharging, ASSESSMENT, MIRROR. Non tradurli.
  */
 export type Lang5 = string;
 
