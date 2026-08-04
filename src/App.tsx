@@ -6324,7 +6324,12 @@ export default function App() {
                   MNA (segnalato in seduta). Nasconderlo non si poteva — il MNA è acceso per
                   difetto, e la scelta dell'ago sarebbe diventata irraggiungibile.
                   Sta quindi qui, con l'altro selettore: sono la stessa famiglia — cosa mostra il
-                  quadrante — e questa colonna non la copre niente. */}
+                  quadrante — e questa colonna non la copre niente.
+
+                  ⚠️ PIÙ BASSO di quello delle viste, DI PROPOSITO. Con la stessa altezza i due
+                  sembravano un solo comando a sei voci: si leggeva « AGO · AGO + · MIRROR · TONE ·
+                  MUSE · METER » come se scegliessero la stessa cosa. Non è così — sopra si sceglie
+                  COME si guarda, qui QUALE ago. La differenza di statura si vede prima di leggere. */}
               {instruments.muse && instruments.theta && (() => {
                 const bloccato = cicloInCorso || provaBoiteInCorso;
                 const imposto: ReadSrc = provaBoiteInCorso ? 'theta' : 'eeg';
@@ -6340,7 +6345,7 @@ export default function App() {
                        'Ciclo en curso: gira sobre el EEG, así que la aguja es la del MUSE',
                        'Cykel pågår: den går på EEG, så nålen är MUSE:s');
                 return (
-                  <div style={{ display: 'flex', width: 190, padding: 3, gap: 2, borderRadius: 999,
+                  <div style={{ display: 'flex', width: 190, padding: 2, gap: 2, borderRadius: 999,
                     background: isLightTheme ? '#b7b7be' : '#17171b',
                     boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
                     {([{ k: 'eeg' as const, lbl: 'MUSE', col: '#8ab4ff' },
@@ -6354,9 +6359,9 @@ export default function App() {
                             'Quale ago mostrare sul quadrante', 'Quelle aiguille afficher sur le cadran',
                             'Which needle to show on the dial', 'Qué aguja mostrar en el cuadrante',
                             'Vilken nål som visas på urtavlan')}
-                          style={{ flex: 1, height: 26, borderRadius: 999, border: 'none',
+                          style={{ flex: 1, height: 20, borderRadius: 999, border: 'none',
                             cursor: spento ? 'not-allowed' : 'pointer', opacity: spento ? 0.35 : 1,
-                            fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
+                            fontSize: 9, fontWeight: 700, letterSpacing: '0.04em',
                             textDecoration: spento ? 'line-through' : 'none',
                             color: on ? '#0b0f14' : (isLightTheme ? '#3a3a40' : '#cbd5e1'),
                             background: on ? o.col : 'transparent',
