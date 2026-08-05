@@ -13,6 +13,13 @@ Il file si valida solo indossando il casco: `tsc`, ESLint e i 109 test coprono l
 comportamento. Ogni estrazione è in un commit separato, quindi una singola voce si può annullare
 da sola senza toccare le altre.
 
+- [ ] **Il badge del MUSE con le due percentuali** (`App.tsx`) — batteria e integrità stanno
+      ora affiancate nel badge in alto, ognuna con la sua icona (pila · onda). Si vedono SOLO a
+      casco collegato, quindi non si sono potute guardare:
+  - [ ] le due icone si distinguono a colpo d'occhio e il badge non va a capo;
+  - [ ] l'integrità passa all'**ambra** sotto il 60% (`INTEGRITA_SOGLIA`) e resta smorzata sopra;
+  - [ ] i due numeri restano allineati mentre cambiano (`tabular-nums`).
+
 - [ ] **Le fasi del ciclo** (`engine/sessionPhase.ts`, tappa 1 della refonte) — la derivazione
       che alimenta `CycleHint` è uscita da `App.tsx` senza cambiare una condizione. 34 test
       coprono la scala, ma il testo a schermo si vede solo in seduta: **senza strumento la

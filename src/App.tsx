@@ -52,7 +52,8 @@ import { TranscriptLog, type LogEntry } from './components/TranscriptLog';
 import { CameraFeed } from './components/CameraFeed';
 import { ConnectionModal } from './components/ConnectionModal';
 import { ConnectionProgress } from './components/ConnectionProgress';
-import { AlertTriangle, BookOpen, Headphones, Power, Play, Mic, Square, ClipboardList, Gauge } from 'lucide-react';
+import { AlertTriangle, BookOpen, Headphones, Power, Play, Mic, Square, ClipboardList, Gauge,
+         Battery, Activity } from 'lucide-react';
 import { cn } from './lib/utils';
 import { useI18n } from './i18n.tsx';
 import { Language } from './i18n';
@@ -5454,11 +5455,18 @@ export default function App() {
                   : museConnection === 'searching' ? `${t('searching') || 'Recherche'}…`
                   : museEverConnected ? `⚠ ${t('muse_reconnect')}` : t('muse_connect')}
               </span>
+              {/* ── DUE PERCENTUALI AFFIANCATE VOGLIONO DUE ICONE ──────────────────────────
+                  « 87% 62% » di fila non dice quale sia quale: due numeri della stessa forma,
+                  nello stesso corpo, a due centimetri l'uno dall'altro. La pila è la CARICA
+                  del casco, l'onda è la QUALITÀ di quel che manda — cose senza rapporto fra
+                  loro, e senza icona l'auditor deve ricordarsi l'ordine. */}
               {museConnection === 'connected' && batteryLevel !== null && (
-                <span style={{
-                  display: 'flex', alignItems: 'center', gap: 4,
-                  fontSize: 13, fontWeight: 'bold',
-                  color: TOKEN.ink }}>
+                <span title={t('muse_battery_tip') as string}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 3,
+                    fontSize: 13, fontWeight: 'bold', fontVariantNumeric: 'tabular-nums',
+                    color: TOKEN.ink, opacity: 0.62 }}>
+                  <Battery size={15} strokeWidth={1.9} />
                   {batteryLevel.toFixed(0)}%
                 </span>
               )}
@@ -5478,9 +5486,11 @@ export default function App() {
               {museConnection === 'connected' && (
                 <span title={t('biometric_integrity') as string}
                   style={{
+                    display: 'flex', alignItems: 'center', gap: 3,
                     fontSize: 13, fontWeight: 'bold', fontVariantNumeric: 'tabular-nums',
                     color: smoothPct < INTEGRITA_SOGLIA ? TOKEN.warn : TOKEN.ink,
                     opacity: smoothPct < INTEGRITA_SOGLIA ? 1 : 0.62 }}>
+                  <Activity size={15} strokeWidth={1.9} />
                   {Math.round(smoothPct)}%
                 </span>
               )}
