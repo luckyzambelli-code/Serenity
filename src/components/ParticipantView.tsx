@@ -4,6 +4,7 @@ import { MetabolicCheck } from './MetabolicCheck';
 import { useI18n } from '../i18n';
 import { useNetworkStore } from '../store/networkStore';
 import type { MetabAssessment } from '../engine/MetabolicBaseline';
+import { LAYER } from "../ui/layers";
 
 /**
  * ParticipantView — ce que voit le PRÉCLAIR quand il est connecté à l'auditeur : caméra de
@@ -77,7 +78,7 @@ export function ParticipantView({
           Session" banner so they know recording has stopped. */}
       {sessionState === 'ended' && (
         <div style={{
-          position: 'fixed', inset: 0, zIndex: 9000,
+          position: 'fixed', inset: 0, zIndex: LAYER.session,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
           background: 'rgba(2,6,23,0.82)', backdropFilter: 'blur(8px)' }}>
           <div style={{

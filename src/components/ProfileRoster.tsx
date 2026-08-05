@@ -9,6 +9,7 @@ import { useUiStore } from '../store/uiStore';
 import {
   isServerAvailable, serverSaveProfiles, serverSavePcProfiles,
   serverDeleteProfile, serverDeletePcProfile } from '../lib/serverStorage';
+import { LAYER } from '../ui/layers';
 
 /**
  * CONN-99 — PROFILE MANAGEMENT (single, self-contained).
@@ -188,7 +189,7 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
     color: 'rgba(226,238,255,0.7)' });
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9000, padding: '30px 52px',
+    <div style={{ position: 'fixed', inset: 0, zIndex: LAYER.session, padding: '30px 52px',
       background: 'radial-gradient(1200px 800px at 50% 28%, #34343a 0%, #202024 58%, #161619 100%)',
       display: 'flex', flexDirection: 'column' }}>
 
@@ -289,7 +290,7 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
 
       {/* ── inline create/edit overlay ── */}
       {edit && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9100, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: LAYER.sessionTop, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ width: 420, borderRadius: 18, padding: 26, background: 'linear-gradient(160deg, rgba(40,40,46,0.96), rgba(26,26,30,0.94))', border: '1.5px solid rgba(255,255,255,0.18)', boxShadow: '0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12)' }}>
             <div style={{ fontFamily: 'monospace', fontSize: 13, letterSpacing: '0.16em', color: 'rgba(240,246,255,0.92)', marginBottom: 18 }}>
               {edit.id ? L('MODIFICA', 'MODIFIER', 'EDIT', 'MODIFICAR', 'ÄNDRA') : L('NUOVO', 'NOUVEAU', 'NEW', 'NUEVO', 'NY')} · {edit.kind === 'pc' ? L('PRECLEAR', 'PRÉCLAIR', 'PRECLEAR', 'PRECLEAR', 'PRECLEAR') : 'AUDITEUR'}

@@ -10,6 +10,7 @@ import { useNetworkStore } from '../store/networkStore';
 import { useUiStore } from '../store/uiStore';
 import { useLayoutStore } from '../store/layoutStore';
 import { BUNDLED_WALLPAPERS } from '../lib/wallpapers';
+import { LAYER } from "../ui/layers";
 
 export type DrawerKey = 'link' | 'auditor' | 'pc' | 'trim' | 'session' | 'lang' | 'config';
 
@@ -97,7 +98,7 @@ export function SidebarDrawer(props: SidebarDrawerProps) {
         width: 280, minWidth: 0, flexShrink: 1, background: drawerBg, borderRight: drawerBorder,
         backdropFilter: 'blur(24px) saturate(1.2)', WebkitBackdropFilter: 'blur(24px) saturate(1.2)',
         boxShadow: isLightTheme ? '6px 0 26px rgba(38,40,48,0.22), inset 0 1px 0 rgba(255,255,255,0.5)' : '6px 0 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.10)',
-        zIndex: 25, padding: 16, gap: 14, overflowY: 'auto' }}
+        zIndex: LAYER.drawer, padding: 16, gap: 14, overflowY: 'auto' }}
     >
       {/* Header */}
       <div

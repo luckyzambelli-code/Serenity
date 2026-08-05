@@ -1,4 +1,5 @@
 import React from 'react';
+import { LAYER } from "../ui/layers";
 
 /**
  * R1 (robustness): a top-level Error Boundary. Before this, any uncaught error in
@@ -37,7 +38,7 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
     if (!this.state.error) return this.props.children;
     return (
       <div style={{
-        position: 'fixed', inset: 0, zIndex: 99999,
+        position: 'fixed', inset: 0, zIndex: LAYER.crash,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18,
         background: 'radial-gradient(ellipse at center, #07142a 0%, #020617 70%, #01030a 100%)',
         color: '#e2e8f0', fontFamily: 'monospace', padding: 24, textAlign: 'center',

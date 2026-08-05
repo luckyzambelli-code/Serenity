@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader2, CheckCircle2, AlertTriangle, Wifi } from 'lucide-react';
 import { useI18n } from '../i18n.tsx';
+import { LAYER } from "../ui/layers";
 
 type Phase = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -67,7 +68,7 @@ export function ConnectionProgress({ phase, detail, role, isConnected, onClose }
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 9000,
+      position: 'fixed', inset: 0, zIndex: LAYER.session,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'rgba(2,6,23,0.72)', backdropFilter: 'blur(6px)',
       // FIX CONN-51: never trap the user — once connected the overlay is purely

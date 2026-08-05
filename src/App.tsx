@@ -103,6 +103,7 @@ import {
 import { TA_MIN, TA_MAX } from './engine/thetaTaScale';
 import { MODE_SPEC, availableModes, fallbackMode, type SessionMode } from './engine/sessionMode';
 import { deriveCyclePhase, phaseFamily } from './engine/sessionPhase';
+import { LAYER } from './ui/layers';
 /** Un solo locatore per l'app, come `mirrorCycle`: tiene gli ultimi secondi fuori da React,
  *  perché il gestore del worker gira a 60 Hz e non deve far ridisegnare nulla per accumulare. */
 const toneLocator = new ToneLocator();
@@ -135,6 +136,7 @@ import { AppBackground } from './components/AppBackground';
 import { HealthPanel } from './components/HealthPanel';
 import { SidebarDrawer as SidebarDrawerBase } from './components/SidebarDrawer';
 import { Sidebar as SidebarBase } from './components/Sidebar';
+import { TOKEN } from './ui/tokens';
 
 // CONN-121 (perf, stage 1): memoize the two largest sub-components that do NOT
 // receive the ~10 Hz session metrics. With React.memo they are SKIPPED when App
@@ -5287,7 +5289,7 @@ export default function App() {
     {museHint && (
       <div style={{
         position: 'fixed', top: 70, left: '50%', transform: 'translateX(-50%)',
-        zIndex: 9000, display: 'flex', flexDirection: 'column', gap: 12,
+        zIndex: LAYER.session, display: 'flex', flexDirection: 'column', gap: 12,
         padding: '18px 22px', borderRadius: 12, minWidth: 340,
         background: 'rgba(2,6,23,0.96)', border: '1px solid rgba(251,191,36,0.45)',
         backdropFilter: 'blur(8px)', boxShadow: '0 10px 34px rgba(0,0,0,0.5)',
@@ -5369,7 +5371,7 @@ export default function App() {
           borderBottom: isLightTheme ? '1px solid rgba(60,64,72,0.14)' : '1px solid rgba(255,255,255,0.08)',
           // 60 > 50 (bande méta OBJECTIF/ÉTAT PHYSIQUE) : la barre du haut — et donc le popup
           // IA (fixed, dans SON contexte d'empilement) — passe AU-DESSUS de la bande méta.
-          zIndex: 60 }}>
+          zIndex: LAYER.topbar }}>
         {/* LEFT: LOGO + STATIC METER + P2P STATUS BADGE */}
         <div className="flex items-center gap-2">
           {/* Le logo OUVRE les crédits (demande utilisateur) — mêmes textes que l'animation
@@ -5415,8 +5417,8 @@ export default function App() {
               padding: '3px 14px 3px 3px', borderRadius: 999,
               cursor: 'pointer',
               // MINI TOGGLE monochrome : piste en creux + pouce en verre (cuffie), texte actuel.
-              background: isLightTheme ? '#b7b7be' : '#17171b',
-              boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
+              background: TOKEN.wellBg,
+              boxShadow: TOKEN.wellShadow }}>
               {/* ── VERDE = COLLEGATO **E INDOSSATO** ────────────────────────────────────
                   Non è una sfumatura: un casco appaiato ma posato sul tavolo non fa contatto,
                   quindi non produce carica e l'ago non reagisce. Il badge diceva « MUSE ✓ » in
@@ -5434,7 +5436,7 @@ export default function App() {
               </span>
               <span style={{
                 fontSize: 13, fontWeight: 'bold', letterSpacing: '0.08em',
-                color: isLightTheme ? '#3a3a40' : '#e8ecf2', whiteSpace: 'nowrap' }}>
+                color: TOKEN.ink, whiteSpace: 'nowrap' }}>
                 {museConnection === 'connected' ? (museContact ? 'MUSE ✓' : `MUSE · ${t('muse_not_worn')}`)
                   : museConnection === 'searching' ? `${t('searching') || 'Recherche'}…`
                   : museEverConnected ? `⚠ ${t('muse_reconnect')}` : t('muse_connect')}
@@ -5443,7 +5445,7 @@ export default function App() {
                 <span style={{
                   display: 'flex', alignItems: 'center', gap: 4,
                   fontSize: 13, fontWeight: 'bold',
-                  color: isLightTheme ? '#3a3a40' : '#e8ecf2' }}>
+                  color: TOKEN.ink }}>
                   {batteryLevel.toFixed(0)}%
                 </span>
               )}
@@ -5473,8 +5475,8 @@ export default function App() {
                 display: 'flex', alignItems: 'center', gap: 9,
                 padding: '3px 14px 3px 3px', borderRadius: 999,
                 cursor: theta.status === 'connecting' ? 'default' : 'pointer',
-                background: isLightTheme ? '#b7b7be' : '#17171b',
-                boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
+                background: TOKEN.wellBg,
+                boxShadow: TOKEN.wellShadow }}>
               <span style={{
                 width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center',
                 justifyContent: 'center', flexShrink: 0,
@@ -5486,7 +5488,7 @@ export default function App() {
               </span>
               <span style={{
                 fontSize: 13, fontWeight: 'bold', letterSpacing: '0.08em',
-                color: isLightTheme ? '#3a3a40' : '#e8ecf2', whiteSpace: 'nowrap' }}>
+                color: TOKEN.ink, whiteSpace: 'nowrap' }}>
                 {theta.status === 'connected' ? `${t('theta_cans')} ✓`
                   : theta.status === 'connecting' ? `${t('searching')}…`
                   : (t('theta_connect') as string)}
@@ -5624,7 +5626,7 @@ export default function App() {
           onClick={() => setShowConnectionModal(true)}
           style={{
             position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)',
-            zIndex: 200, display: 'flex', alignItems: 'center', gap: 12,
+            zIndex: LAYER.gate, display: 'flex', alignItems: 'center', gap: 12,
             padding: '10px 20px', borderRadius: 8, cursor: 'pointer',
             background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.4)',
             backdropFilter: 'blur(8px)', boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}>
@@ -5863,7 +5865,7 @@ export default function App() {
       {/* Session metadata inputs - compacté pour éviter l'agrandissement */}
       {sessionState === 'running' && (
         <div className="w-full rounded-lg border border-white/10 p-1 flex gap-1 items-start h-20 shrink-0 relative"
-          style={{ background: isLightTheme ? 'rgba(255,255,255,0.30)' : 'rgba(255,255,255,0.05)', backdropFilter: 'blur(18px) saturate(1.15)', WebkitBackdropFilter: 'blur(18px) saturate(1.15)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 10px 26px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.12)', zIndex: 50 }}>
+          style={{ background: isLightTheme ? 'rgba(255,255,255,0.30)' : 'rgba(255,255,255,0.05)', backdropFilter: 'blur(18px) saturate(1.15)', WebkitBackdropFilter: 'blur(18px) saturate(1.15)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 10px 26px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.12)', zIndex: LAYER.dock }}>
           {[['Objectif', sessionObjective, setSessionObjective], ['Processus', sessionProcessObjective, setSessionProcessObjective],
             ['État physique', sessionPhysicalCheck, setSessionPhysicalCheck], ['R-Factor', sessionBriefing, setSessionBriefing]
           ].map(([label, val, setter]: any) => (
@@ -5878,7 +5880,7 @@ export default function App() {
       )}
 
       {/* Main Dashboard Area */}
-      <div className="flex flex-col gap-2 flex-1 min-h-0 relative" style={{ zIndex: 10 }}>
+      <div className="flex flex-col gap-2 flex-1 min-h-0 relative" style={{ zIndex: LAYER.stage }}>
 
         {/* Middle row: transcript | meter | cams */}
         <div className="flex gap-2 flex-1 min-h-0">
@@ -5889,7 +5891,7 @@ export default function App() {
             <div className={cn('sm-glass transition-all duration-300 h-full flex-shrink-0 flex flex-col gap-2 w-44 xl:w-52')}>
               {moduleVis.journal && (
                 <div className={cn('rounded-xl overflow-hidden', transcriptVisible ? 'flex-1 min-h-0' : 'flex-shrink-0')}
-                  style={panelStyle(transcriptVisible ? { boxShadow: isLightTheme ? '0 16px 34px rgba(38,40,48,0.20), inset 0 1px 0 rgba(255,255,255,0.5)' : '0 16px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.12)' } : undefined)}>
+                  style={panelStyle(transcriptVisible ? { boxShadow: TOKEN.panelShadow } : undefined)}>
                   <TranscriptLog logs={logs} isVisible={transcriptVisible} hideSpeech={false} onToggle={() => setTranscriptVisible(!transcriptVisible)} onDisable={() => setModuleVis(v => ({...v, journal: false}))} />
                 </div>
               )}
@@ -5920,8 +5922,9 @@ export default function App() {
                  painting OVER the header and swallowing the drag + Détacher/✕ clicks
                  ("ne se ferme/déplace/détache plus"). Raise above them, below the
                  z-100 EP modal. */
-              className="fixed z-[90] flex flex-col rounded-xl border border-cyan-500/40 shadow-2xl"
+              className="fixed flex flex-col rounded-xl border border-cyan-500/40 shadow-2xl"
               style={{
+                zIndex: LAYER.floating,
                 background: 'rgba(8,18,35,0.75)',
                 // FIX (Roger): the panel spawned 800px wide at left:160, so on a
                 // window narrower than ~960px the Détacher/✕ buttons (right of the
@@ -6039,15 +6042,15 @@ export default function App() {
 
             {/* Wallpaper sous la sphère/aiguille */}
             {wallpaperUrl && (
-              <img src={wallpaperUrl} alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity: 0.25, borderRadius: 'inherit', pointerEvents:'none', zIndex:0 }} />
+              <img src={wallpaperUrl} alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity: 0.25, borderRadius: 'inherit', pointerEvents:'none', zIndex: LAYER.background }} />
             )}
             {/* (Zones de lumière internes supprimées — panneau PLAT sans lumière, choix utilisateur.) */}
             {/* NO-CONTACT INDICATOR — Muse connesso ma la fascia NON fa contatto EEG reale
                 (non indossata / mal messa). Senza questo, il ciclo fermo sarebbe incomprensibile:
                 lo diciamo esplicitamente. Stesso `museContact` che gatea il ciclo. */}
             {museConnection === 'connected' && !museContact && (
-              <div className="absolute z-[60] pointer-events-none flex items-center gap-2 animate-pulse"
-                style={{ top: '13%', left: '50%', transform: 'translateX(-50%)',
+              <div className="absolute pointer-events-none flex items-center gap-2 animate-pulse"
+                style={{ zIndex: LAYER.topbar, top: '13%', left: '50%', transform: 'translateX(-50%)',
                   padding: '7px 16px', borderRadius: 999, whiteSpace: 'nowrap',
                   background: 'rgba(251,94,59,0.16)', border: '1px solid rgba(251,94,59,0.65)',
                   color: '#fca5a5', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, letterSpacing: '0.06em' }}>
@@ -6267,8 +6270,8 @@ export default function App() {
                       <circle cx="8" cy="12.2" r="1.35" fill={isLightTheme ? '#1a1a1f' : '#f0f6ff'} />
                     </svg>
                     <div style={{ display: 'flex', width: 168, padding: 2, gap: 2, borderRadius: 999,
-                      background: isLightTheme ? '#b7b7be' : '#17171b',
-                      boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
+                      background: TOKEN.wellBg,
+                      boxShadow: TOKEN.wellShadow }}>
                       {([{ k: 'eeg' as const, lbl: 'MUSE', col: '#8ab4ff' },
                          { k: 'theta' as const, lbl: 'METER', col: '#f59e0b' },
                          { k: 'both' as const, lbl: LC('DUE', 'DEUX', 'BOTH', 'DOS', 'TVÅ'), col: '#34d399' }]).map(o => {
@@ -6359,7 +6362,7 @@ export default function App() {
                   onClick={() => requestStart()}
                   style={{
                     position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)',
-                    zIndex: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
+                    zIndex: LAYER.sphereChrome, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
                     background: 'transparent', border: 'none', cursor: 'pointer',
                     animation: 'smStartFade 0.5s ease-out' }}
                   title={t('hint_press_start') as string}
@@ -6938,10 +6941,10 @@ export default function App() {
                 tono. Cliccandolo apre il suo pannello sopra la barra, e il ciclo continua. */}
             {sessionState === 'running' && (
               <div className="absolute pointer-events-auto"
-                style={{ left: 10, right: 10, bottom: 6, zIndex: 50, display: 'flex', gap: 8, alignItems: 'center' }}>
+                style={{ left: 10, right: 10, bottom: 6, zIndex: LAYER.dock, display: 'flex', gap: 8, alignItems: 'center' }}>
                 <div style={{ flex: 1, display: 'flex', padding: 3, gap: 3, borderRadius: 999,
-                  background: isLightTheme ? '#b7b7be' : '#17171b',
-                  boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
+                  background: TOKEN.wellBg,
+                  boxShadow: TOKEN.wellShadow }}>
                   {modiDisponibili.map(m => {
                     const META: Record<SessionMode, { lbl: string; title: string; col: string }> = {
                       contact: { lbl: 'CONTACT', col: '#6ee7b7',
@@ -7410,7 +7413,7 @@ export default function App() {
           « Salva ed esci » chiude la seduta come farebbe il pulsante di fine — rapporto,
           salvataggio, archivio — e solo DOPO esce. */}
       {quitAsk && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(4px)' }}>
+        <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: LAYER.dialog, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(4px)' }}>
           <div style={{ maxWidth: 460, background: '#0b1626', border: '1px solid rgba(251,191,36,0.35)',
                         borderRadius: 16, padding: '24px 26px', boxShadow: '0 12px 44px rgba(0,0,0,0.6)' }}>
             <div style={{ fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 700,
@@ -7458,7 +7461,7 @@ export default function App() {
       )}
 
       {showSexPrompt && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
+        <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: LAYER.gate, background: 'rgba(0,0,0,0.6)' }}>
           <div style={{ maxWidth: 440, background: '#0b1626', border: '1px solid rgba(34,211,238,0.30)', borderRadius: 16, padding: '26px 28px', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,0.55)' }}>
             <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(148,163,184,0.85)', marginBottom: 18 }}>
               {t('ta_sex_title') as string}
@@ -7488,7 +7491,7 @@ export default function App() {
           sv: { title: '⚠ Avbruten session', body: 'En oavslutad session hittades (journal, R&I, Total TA).', lines: 'rader', resume: '↻ Återuppta', discard: 'Ignorera' } };
         const r = RL[lang] || RL.en;
         return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9500, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(2,6,23,0.82)', backdropFilter: 'blur(8px)' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: LAYER.confirm, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(2,6,23,0.82)', backdropFilter: 'blur(8px)' }}>
           <div style={{ maxWidth: 480, background: '#0b1626', border: '1px solid rgba(34,211,238,0.3)', borderRadius: 16, padding: '26px 28px', color: '#e2e8f0', textAlign: 'center', boxShadow: '0 0 40px rgba(0,0,0,0.6)' }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: '#eaf3ff', letterSpacing: '0.04em', marginBottom: 10 }}>{r.title}</div>
             <div style={{ fontSize: 13, opacity: 0.85, lineHeight: 1.5 }}>{r.body}</div>

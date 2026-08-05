@@ -1,6 +1,7 @@
 import React from 'react';
 import { useI18n } from '../i18n';
 import { SQUEEZE_TARGET_OFFSET, BREATH_MIN_OFFSET } from '../engine/thetaSetup';
+import { LAYER } from "../ui/layers";
 
 /**
  * ThetaReadyCheck — « PRONTO PER LA SEDUTA » quando si audita con le sole BOÎTES.
@@ -93,7 +94,7 @@ export function ThetaReadyCheck({
   const tuttoFatto = scaleMeasured && breathOk === true;
 
   return (
-    <div style={{ position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: 9000,
+    <div style={{ position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: LAYER.session,
                   width: 'min(420px, 34vw)', overflowY: 'auto',
                   // NIENTE velo sul resto: il quadrante deve restare visibile e leggibile.
                   background: 'linear-gradient(100deg, rgba(2,6,23,0.97) 0%, rgba(2,6,23,0.93) 100%)',

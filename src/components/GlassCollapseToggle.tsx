@@ -1,6 +1,7 @@
 import React from 'react';
 import { useUiStore } from '../store/uiStore';
 import { useI18n } from '../i18n';
+import { TOKEN } from '../ui/tokens';
 
 /**
  * GlassCollapseToggle — mini interrupteur en VERRE (même matière que le "Glass Toggle" de thème)
@@ -30,7 +31,7 @@ export function GlassCollapseToggle({
       {/* piste creuse */}
       <div style={{
         position: 'absolute', inset: 0, borderRadius: 999,
-        background: isLightTheme ? '#b7b7be' : '#17171b',
+        background: TOKEN.wellBg,
         boxShadow: isLightTheme ? 'inset 0 2px 4px rgba(0,0,0,0.18)' : 'inset 0 2px 5px rgba(0,0,0,0.7)',
       }} />
       {/* pouce en verre smerigliato */}

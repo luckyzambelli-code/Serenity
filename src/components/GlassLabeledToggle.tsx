@@ -1,5 +1,6 @@
 import React from 'react';
 import { useUiStore } from '../store/uiStore';
+import { TOKEN } from '../ui/tokens';
 
 /**
  * GlassLabeledToggle — interrupteur en VERRE avec libellé (même matière que le "Glass Toggle"
@@ -29,12 +30,12 @@ export function GlassLabeledToggle({
       <div style={{
         position: 'absolute', inset: 0, borderRadius: 999, display: 'flex', alignItems: 'center',
         justifyContent: on ? 'flex-start' : 'flex-end',
-        background: isLightTheme ? '#b7b7be' : '#17171b',
-        boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)',
+        background: TOKEN.wellBg,
+        boxShadow: TOKEN.wellShadow,
       }}>
         <span style={{
           margin: on ? '0 0 0 15px' : '0 15px 0 0', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em',
-          color: isLightTheme ? '#3a3a40' : '#e8ecf2', whiteSpace: 'nowrap',
+          color: TOKEN.ink, whiteSpace: 'nowrap',
         }}>
           {label}
         </span>

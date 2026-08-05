@@ -1,5 +1,6 @@
 import React from 'react';
 import { useUiStore } from '../store/uiStore';
+import { LAYER } from "../ui/layers";
 
 /**
  * Full-screen decorative background.
@@ -17,7 +18,7 @@ export function AppBackground() {
   return (
     <>
       {!isLightTheme ? (
-        <div data-bg className="absolute inset-0" style={{ zIndex: 0, overflow: 'hidden' }}>
+        <div data-bg className="absolute inset-0" style={{ zIndex: LAYER.background, overflow: 'hidden' }}>
           {/* GLASS DARK — charcoal QUASI UNIFORME (réf. "Glass Toggle"). Dégradé TRÈS doux :
               les bords (barre d'icônes / haut) ne s'assombrissent presque plus → plus de
               « bloc » bleu-noir distinct autour du centre. Fond commun homogène. */}
@@ -28,7 +29,7 @@ export function AppBackground() {
           )}
         </div>
       ) : (
-        <div className="absolute inset-0" style={{ zIndex: 0, overflow: 'hidden' }}>
+        <div className="absolute inset-0" style={{ zIndex: LAYER.background, overflow: 'hidden' }}>
           {/* GLASS LIGHT — gris doux avec source de lumière en haut (réf. "Glass Toggle" · Light). */}
           <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(120% 120% at 50% 18%, #d2d2d7 0%, #bcbcc2 48%, #a6a6ac 78%, #9a9aa0 100%)' }} />
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(140% 130% at 50% 30%, transparent 68%, rgba(60,60,68,0.14) 100%)' }} />

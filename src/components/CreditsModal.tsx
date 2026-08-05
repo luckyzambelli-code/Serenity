@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { creditLines, creditCopyright, initialsOf } from '../credits';
 import { useI18n } from '../i18n';
+import { LAYER } from "../ui/layers";
 
 /**
  * Portrait ROND. Si le fichier n'est pas là, on retombe sur les INITIALES : jamais l'icône
@@ -88,7 +89,7 @@ export function CreditsModal({ onClose }: { onClose: () => void }) {
     <div
       onClick={onClose}
       style={{
-        position: 'fixed', inset: 0, zIndex: 9998, cursor: 'pointer',
+        position: 'fixed', inset: 0, zIndex: LAYER.modalTop, cursor: 'pointer',
         background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { LAYER } from "../ui/layers";
 
 /**
  * CONN-106/107: Aurora background — slow-drifting blurred colour blobs over a
@@ -20,7 +21,7 @@ export function AuroraBackground({ variant = 'dark' }: { variant?: 'dark' | 'lig
     : 'radial-gradient(ellipse at center, #0a1430 0%, #040a1c 55%, #000510 100%)';
 
   return (
-    <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+    <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: LAYER.background, overflow: 'hidden', pointerEvents: 'none' }}>
       <div style={{ position: 'absolute', inset: 0, background: base }} />
 
       <div className={`sm-aur sm-aur1 ${light ? 'lt' : ''}`} />

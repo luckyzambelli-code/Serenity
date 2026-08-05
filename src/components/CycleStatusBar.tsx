@@ -3,6 +3,7 @@ import { pick5 } from '../i18n5';
 import { useI18n } from '../i18n';
 import { useMetric } from '../store/metricsStore';
 import { useTZone } from '../store/tzoneStore';
+import { TOKEN } from '../ui/tokens';
 
 /**
  * CycleStatusBar — the cycle read-outs (COMM LAG Δt*, % dissolution, AS-IS? validate)
@@ -91,20 +92,20 @@ export const CycleStatusBar = React.memo(function CycleStatusBar({
       {/* STYLE B monochrome (thème sombre) : chip comm-lag en blanc/gris, plus de cyan.
           Masquée si MUSE éteint / pas de contact (pas de signal → valeur sans objet). */}
       {signalOk && (
-      <div style={{ ...chip, background: isLightTheme ? 'rgba(34,211,238,0.08)' : 'rgba(255,255,255,0.06)', border: `1px solid ${isLightTheme ? 'rgba(34,211,238,0.30)' : 'rgba(255,255,255,0.22)'}` }}>
+      <div style={{ ...chip, background: TOKEN.chipBg, border: `1px solid ${TOKEN.chipEdge}` }}>
         <span style={{ ...lbl, color: isLightTheme ? 'rgba(159,246,255,0.65)' : 'rgba(226,238,255,0.60)' }}>{t('comm_lag_label') as string}</span>
         {/* Toujours VISIBLE : baseline (~450 = Pre-Read) tant qu'aucun cycle ne l'a personnalisé
             (N=0 → préfixe « ~ » + légère atténuation), puis la valeur mesurée nette. */}
-        <span style={{ fontSize: 13, color: isLightTheme ? '#0e7490' : 'rgba(240,246,255,0.92)', opacity: hasLag ? 1 : 0.7 }}>{deltaStar > 0 ? `${hasLag ? '' : '~'}${deltaStar}` : '—'}<span style={{ fontSize: 10 }}> ms</span></span>
+        <span style={{ fontSize: 13, color: TOKEN.accentInk, opacity: hasLag ? 1 : 0.7 }}>{deltaStar > 0 ? `${hasLag ? '' : '~'}${deltaStar}` : '—'}<span style={{ fontSize: 10 }}> ms</span></span>
       </div>
       )}
 
       {/* « diss » n'appartient QU'AU cycle CONTACT (on dissout de la masse). Le cycle NULL a son
           propre indicateur : « recharging » (on en CRÉE) — voir plus bas. */}
       {armed && signalOk && !isNull && (
-        <div style={{ ...chip, background: isLightTheme ? 'rgba(34,211,238,0.08)' : 'rgba(255,255,255,0.06)', border: `1px solid ${isLightTheme ? 'rgba(34,211,238,0.30)' : 'rgba(255,255,255,0.22)'}` }}>
+        <div style={{ ...chip, background: TOKEN.chipBg, border: `1px solid ${TOKEN.chipEdge}` }}>
           <span style={{ ...lbl, color: isLightTheme ? 'rgba(159,246,255,0.65)' : 'rgba(226,238,255,0.60)' }}>diss</span>
-          <span style={{ fontSize: 13, color: isLightTheme ? '#0e7490' : 'rgba(240,246,255,0.92)' }}>{pct}%</span>
+          <span style={{ fontSize: 13, color: TOKEN.accentInk }}>{pct}%</span>
         </div>
       )}
 
@@ -124,13 +125,13 @@ export const CycleStatusBar = React.memo(function CycleStatusBar({
           cycle — pas besoin d'un bouton, qui en plus sautait à chaque reflow). On montre juste
           l'écart de TA depuis le départ du null + la validation du EQUILIBRIUM avec les VGI's. */}
       {isNull && (
-        <div style={{ ...chip, background: isLightTheme ? 'rgba(34,211,238,0.08)' : 'rgba(255,255,255,0.06)', border: `1px solid ${isLightTheme ? 'rgba(34,211,238,0.30)' : 'rgba(255,255,255,0.22)'}` }}>
+        <div style={{ ...chip, background: TOKEN.chipBg, border: `1px solid ${TOKEN.chipEdge}` }}>
           <span style={{ ...lbl, color: isLightTheme ? 'rgba(159,246,255,0.65)' : 'rgba(226,238,255,0.60)' }}>recharging</span>
           {/* Écart depuis le DÉPART du null (négatif = ça monte = ça recharge ; positif = redescendu). */}
-          <span style={{ fontSize: 13, color: isLightTheme ? '#0e7490' : 'rgba(240,246,255,0.92)' }}>
+          <span style={{ fontSize: 13, color: TOKEN.accentInk }}>
             <span style={{ fontSize: 10, opacity: 0.7, letterSpacing: '0.08em' }}>TA </span>{taDelta >= 0 ? '+' : ''}{taDelta.toFixed(2)}
           </span>
-          <span style={{ fontSize: 10, opacity: 0.55, color: isLightTheme ? '#0e7490' : 'rgba(240,246,255,0.92)' }}>· {nullSinceMock}s</span>
+          <span style={{ fontSize: 10, opacity: 0.55, color: TOKEN.accentInk }}>· {nullSinceMock}s</span>
         </div>
       )}
 
@@ -142,7 +143,7 @@ export const CycleStatusBar = React.memo(function CycleStatusBar({
                    "Valida el EQUILIBRIUM — VGI's presentes",
                    "Validera EQUILIBRIUM — VGI's närvarande")}
             style={{ ...chip, cursor: 'pointer', fontWeight: 700,
-              background: isLightTheme ? 'rgba(34,211,238,0.08)' : 'rgba(255,255,255,0.06)',
+              background: TOKEN.chipBg,
               border: '1px solid rgba(110,231,183,0.7)', color: isLightTheme ? '#0e7490' : '#6ee7b7' }}>
             <span style={{ fontSize: 12, letterSpacing: '0.06em' }}>▸ EQUILIBRIUM · VGIs</span>
           </button>
@@ -152,8 +153,8 @@ export const CycleStatusBar = React.memo(function CycleStatusBar({
                    'Valida el EQUILIBRIUM — ningún VGI',
                    'Validera EQUILIBRIUM — inga VGI')}
             style={{ ...chip, cursor: 'pointer',
-              background: isLightTheme ? 'rgba(34,211,238,0.08)' : 'rgba(255,255,255,0.06)',
-              border: `1px solid ${isLightTheme ? 'rgba(34,211,238,0.30)' : 'rgba(255,255,255,0.22)'}`,
+              background: TOKEN.chipBg,
+              border: `1px solid ${TOKEN.chipEdge}`,
               color: isLightTheme ? '#0e7490' : 'rgba(240,246,255,0.75)' }}>
             <span style={{ fontSize: 12, letterSpacing: '0.06em' }}>no VGIs</span>
           </button>
@@ -165,9 +166,9 @@ export const CycleStatusBar = React.memo(function CycleStatusBar({
           style={{
             ...chip, cursor: 'pointer', fontWeight: 700,
             // MÊME couleur STANDARD que le chip comm-lag (blanc/gris · teal en clair).
-            background: isLightTheme ? 'rgba(34,211,238,0.08)' : 'rgba(255,255,255,0.06)',
-            border: `1px solid ${isLightTheme ? 'rgba(34,211,238,0.30)' : 'rgba(255,255,255,0.22)'}`,
-            color: isLightTheme ? '#0e7490' : 'rgba(240,246,255,0.92)',
+            background: TOKEN.chipBg,
+            border: `1px solid ${TOKEN.chipEdge}`,
+            color: TOKEN.accentInk,
           }}>
           <span style={{ fontSize: 13, letterSpacing: '0.06em' }}>
             AS-IS {t('asis_confirmed') as string}

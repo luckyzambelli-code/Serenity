@@ -10,6 +10,7 @@ import {
 import type { MnaSession } from '../hooks/useMnaModule';
 import { useUiStore } from '../store/uiStore';
 import { fmtIm } from '../lib/utils';
+import { LAYER } from "../ui/layers";
 
 interface MnaPanelProps {
   primePhase:     PrimePhase;
@@ -139,7 +140,7 @@ export function MnaPanel({
         // ⚠️ 46 px dal fondo e non 2%: sotto c'è ora la BARRA DEI COMANDI (modo + MNA), che ha
         // preso questo posto. Il MNA le sta SOPRA — è l'attrezzo che si apre dalla barra, non
         // un pannello che ci finisce sotto.
-        left: 10, right: 10, bottom: 46, minHeight: collapsed ? undefined : 72, zIndex: 42,
+        left: 10, right: 10, bottom: 46, minHeight: collapsed ? undefined : 72, zIndex: LAYER.mna,
         padding: collapsed ? '6px 16px' : '8px 16px 10px 16px',
       }}
     >

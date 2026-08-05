@@ -1,4 +1,5 @@
 import React from 'react';
+import { LAYER } from "../ui/layers";
 
 /**
  * BreathPacer — overlay de RESPIRATION côté PRÉCLAIR (participant) en séance À DISTANCE.
@@ -21,7 +22,7 @@ export function BreathPacer({ lang, phase, inhale }: { lang: string; phase: stri
   const breathing = phase === 'breath';
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 8000,
+      position: 'fixed', inset: 0, zIndex: LAYER.pacer,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24,
       background: 'rgba(0,0,0,0.86)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
       fontFamily: 'system-ui, sans-serif',

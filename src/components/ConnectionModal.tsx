@@ -11,6 +11,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Copy, Check, Globe, Link2, Users } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useI18n } from '../i18n';
+import { LAYER } from "../ui/layers";
 
 type Mode = 'local' | 'auditor' | 'participant';
 
@@ -106,7 +107,7 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 1000,
+        position: 'fixed', inset: 0, zIndex: LAYER.connection,
         background: 'rgba(0,0,0,0.6)',
         backdropFilter: 'blur(12px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',

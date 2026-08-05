@@ -4,6 +4,7 @@ import {
   linearitaResidua, buildTaScale, taFromRaw, isFactoryScale,
   type ThetaTaPoint, type ThetaTaScale,
 } from '../engine/thetaTaScale';
+import { LAYER } from '../ui/layers';
 
 /**
  * E-METER TESTER — taratura della scala del TA con l'ARTEFATTO FISICO.
@@ -90,7 +91,7 @@ export function ThetaTaCalibration({
 
   return (
     <div onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 9998, cursor: 'pointer',
+      style={{ position: 'fixed', inset: 0, zIndex: LAYER.modalTop, cursor: 'pointer',
                background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)',
                display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div onClick={e => e.stopPropagation()}

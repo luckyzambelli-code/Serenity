@@ -3,6 +3,8 @@ import { pick5 } from '../i18n5';
 import { Brain, ChevronRight, Send, Loader2, X, Settings } from 'lucide-react';
 import { useUiStore } from '../store/uiStore';
 import { GlassCollapseToggle } from './GlassCollapseToggle';
+import { LAYER } from '../ui/layers';
+import { TOKEN } from '../ui/tokens';
 
 interface SessionContext {
   pcName: string;
@@ -206,13 +208,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ lang, sessionContext }
               : labels.configKey}
             className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono font-bold uppercase tracking-wider transition-all"
             style={{
-              color: apiKey ? (isLightTheme ? '#059669' : '#4ade80') : (isLightTheme ? '#dc2626' : '#fbbf24'),
+              color: apiKey ? (isLightTheme ? '#059669' : '#4ade80') : (TOKEN.warn),
               background: apiKey
                 ? (isLightTheme ? 'rgba(5,150,105,0.10)' : 'rgba(74,222,128,0.12)')
-                : (isLightTheme ? 'rgba(220,38,38,0.10)' : 'rgba(251,191,36,0.18)'),
+                : (TOKEN.warnBg),
               border: `1px solid ${apiKey
                 ? (isLightTheme ? 'rgba(5,150,105,0.40)' : 'rgba(74,222,128,0.40)')
-                : (isLightTheme ? 'rgba(220,38,38,0.40)' : 'rgba(251,191,36,0.55)')}`,
+                : (TOKEN.warnEdge)}`,
               cursor: 'pointer',
               whiteSpace: 'nowrap',
               flexShrink: 0,
@@ -237,8 +239,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ lang, sessionContext }
       {/* Panneau de configuration de la clé API — fixed pour ne pas être clipé */}
       {showKeyConfig && (
         <div
-          className="fixed z-[100] rounded-lg p-4 flex flex-col gap-3 shadow-2xl"
+          className="fixed rounded-lg p-4 flex flex-col gap-3 shadow-2xl"
           style={{
+            zIndex: LAYER.modal,
             background: isLightTheme ? 'rgba(255,255,255,0.98)' : 'rgba(26,26,30,0.98)',
             backdropFilter: 'blur(20px)',
             border: `2px solid ${accentColor}`,
@@ -301,8 +304,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ lang, sessionContext }
       {/* Expanded Chat Panel — fixed pour ne pas être clipé */}
       {isOpen && !showKeyConfig && (
         <div
-          className="fixed z-[90] rounded-lg border shadow-2xl"
+          className="fixed rounded-lg border shadow-2xl"
           style={{
+            zIndex: LAYER.floating,
             background: isLightTheme ? 'rgba(255,255,255,0.97)' : 'rgba(26,26,30,0.97)',
             borderColor: isLightTheme ? 'rgba(100,180,255,0.30)' : 'rgba(255,255,255,0.25)',
             backdropFilter: 'blur(20px)',
@@ -316,7 +320,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ lang, sessionContext }
           }}>
           {/* Header */}
           <div className="flex items-center justify-between p-3 border-b"
-            style={{ borderColor: isLightTheme ? 'rgba(100,180,255,0.20)' : 'rgba(255,255,255,0.14)' }}>
+            style={{ borderColor: TOKEN.sep }}>
             <div className="flex items-center gap-2">
               <Brain size={16} style={{ color: accentColor }} />
               <span className="font-semibold text-sm"
@@ -326,8 +330,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ lang, sessionContext }
               {!apiKey && (
                 <span className="text-[9px] font-mono px-1.5 py-0.5 rounded"
                   style={{
-                    background: isLightTheme ? 'rgba(220,38,38,0.10)' : 'rgba(251,191,36,0.18)',
-                    color: isLightTheme ? '#dc2626' : '#fbbf24',
+                    background: TOKEN.warnBg,
+                    color: TOKEN.warn,
                   }}>
                   ⚠ NO KEY
                 </span>
@@ -359,9 +363,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ lang, sessionContext }
                     onClick={() => setShowKeyConfig(true)}
                     className="mt-3 px-3 py-1.5 rounded text-[11px] font-mono font-bold uppercase tracking-wider"
                     style={{
-                      background: isLightTheme ? 'rgba(220,38,38,0.10)' : 'rgba(251,191,36,0.18)',
-                      color: isLightTheme ? '#dc2626' : '#fbbf24',
-                      border: `1px solid ${isLightTheme ? 'rgba(220,38,38,0.40)' : 'rgba(251,191,36,0.55)'}`,
+                      background: TOKEN.warnBg,
+                      color: TOKEN.warn,
+                      border: `1px solid ${TOKEN.warnEdge}`,
                       cursor: 'pointer',
                     }}>
                     ⚙ {labels.configKey}
@@ -406,7 +410,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ lang, sessionContext }
 
           {/* Footer Input */}
           <div className="p-3 border-t"
-            style={{ borderColor: isLightTheme ? 'rgba(100,180,255,0.20)' : 'rgba(255,255,255,0.14)' }}>
+            style={{ borderColor: TOKEN.sep }}>
             <div className="flex gap-2">
               <input
                 type="text"

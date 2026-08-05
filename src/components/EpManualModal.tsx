@@ -1,6 +1,7 @@
 import React, { type Dispatch, type SetStateAction } from 'react';
 import { useI18n } from '../i18n';
 import { GlassCollapseToggle } from './GlassCollapseToggle';
+import { LAYER } from '../ui/layers';
 
 /**
  * EpManualModal — saisie MANUELLE de l'EP par l'auditeur : type de réaction, réalisation du
@@ -32,8 +33,8 @@ export function EpManualModal({
 }: EpManualModalProps) {
   const { t } = useI18n();
   return (
-    <div className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-auto"
-      style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)' }}>
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-auto"
+      style={{ zIndex: LAYER.modal, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)' }}>
       <div className="rounded-2xl p-6 flex flex-col gap-4"
         style={{ background: 'rgba(26,26,30,0.96)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12)', minWidth: 420, maxWidth: 520 }}>
         {/* Header */}

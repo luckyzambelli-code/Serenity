@@ -328,8 +328,8 @@ Ogni tappa lascia l'app funzionante e produce un DMG. Nessun « big bang ».
 
 | # | Tappa | Tocca | Rischio |
 |---|---|---|---|
-| 1 | `sessionPhase.ts` + test, **non collegato** — si osserva soltanto la fase in un readout di debug | +2 file | nullo |
-| 2 | `layers.ts` + `tokens.ts`, sostituzione meccanica degli z-index e dei ternari di tema | molti file, poca logica | basso |
+| 1 | ✔ **fatta** (2.0.94) — `sessionPhase.ts` + 34 test; la derivazione esce da `spiegazioneCiclo` senza cambiare una condizione | +2 file | nullo |
+| 2 | ✔ **fatta** (2.0.95) — `layers.ts` (30 siti) + `tokens.ts` (46 siti). Vedi §6.1 | 20 file, poca logica | basso |
 | 3 | `moduleRegistry.ts` + `uiModeStore` + `useVisibleSet` — **`layoutStore` continua a governare**, la nuova visibilità è solo calcolata e confrontata | +3 file | nullo |
 | 4 | `<Stage>` e gli `<SlotHost>` — si estraggono dal JSX di `App.tsx` i moduli, **uno alla volta**, a parità di aspetto | `App.tsx` cala di ~1 200 righe | medio |
 | 5 | Si dà la mano a `useVisibleSet`: l'automatismo si accende. Si toglie `moduleVis` | store | medio |
@@ -337,6 +337,45 @@ Ogni tappa lascia l'app funzionante e produce un DMG. Nessun « big bang ».
 
 La tappa 4 è la sola delicata: è lì che si smonta il `return` da 2 260 righe. Va
 fatta modulo per modulo, con l'app aperta a fianco, e non in una volta.
+
+### 6.1 Tappa 2 — quel che è stato fatto, e quel che resta
+
+**`ui/layers.ts`** — tutti i 30 valori arbitrari di z-index, inline e in classi
+Tailwind `z-[…]`, passano per un nome. **Nessun ordine è stato cambiato**: i
+valori sono identici, e cambiare l'ordine sarebbe cambiare il comportamento in un
+lavoro che si dichiara meccanico. Il guadagno è che le tre collisioni sono ora
+scritte nel file invece di dover essere scoperte in seduta — `session` (9000) ha
+cinque inquilini, `dock` (50) e `sphereChrome` (40) ne hanno due ciascuno. Le
+classi Tailwind della scala standard (`z-10`…`z-50`) restano: sono già coerenti.
+
+**`ui/tokens.ts` + `index.css`** — 11 token, 46 siti convertiti. Sono le coppie
+che tornavano tre volte o più E che hanno un nome sensato: l'incasso dei
+mini-interruttori e la sua ombra, l'inchiostro, l'ombra dei pannelli, l'avviso
+(fondo/bordo/testo), il separatore, la pastiglia (fondo/bordo), l'accento.
+
+Il tema scuro sta su `:root` e non su `[data-theme="dark"]`, e non è un dettaglio:
+splash, crediti, calibrazione TA, scelta dello strumento e avanzamento connessione
+sono dichiarati **fuori** dal div che porta `data-theme`. Con i valori scuri come
+predefiniti continuano a ricevere quel che ricevono oggi, e il tema chiaro resta
+un'eccezione localizzata.
+
+**Verifica.** Le 22 variabili (11 × 2 temi) sono state lette con
+`getComputedStyle` a schermo e corrispondono al carattere ai letterali di prima;
+la pista del badge MUSE calcola `rgb(23,23,27)` al buio e `rgb(183,183,190)` al
+chiaro. Confronto a schermo nei due temi: identico. `tsc` e ESLint puliti (294
+avvisi, gli stessi di prima), 438 test.
+
+**Resta la coda lunga: 165 ternari** su 23 file, ognuno usato una o due volte in
+un punto solo. Non vanno convertiti per simmetria: dare un nome inventato a un
+colore usato una volta lo rende più difficile da leggere, non meno. Spariranno da
+soli quando la **regola del colore** (`refonte-fasi.md` §2) ridurrà la tavolozza —
+ed è lì che il lavoro ha senso, non qui.
+
+**Quel che questa tappa NON risolve.** Nel tema chiaro lo sfondo resta il
+wallpaper (`AppBackground` non guarda il tema) e il testo diventa poco leggibile,
+malgrado il commento in `App.tsx` dica che il chiaro debba avere un fondo piatto.
+È preesistente e non è stato toccato: è un cambiamento visibile, e questa tappa
+non ne fa. Va deciso a parte.
 
 ---
 

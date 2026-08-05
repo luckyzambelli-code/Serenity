@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { creditLines, creditCopyright } from '../credits';
 import { useI18n } from '../i18n';
+import { LAYER } from "../ui/layers";
 
 interface SplashScreenProps { onDismiss: () => void; }
 
@@ -410,7 +411,7 @@ export function SplashScreen({ onDismiss }: SplashScreenProps) {
     <div
       onClick={() => onDismissRef.current()}
       style={{
-        position: 'fixed', inset: 0, zIndex: 9999, cursor: 'pointer',
+        position: 'fixed', inset: 0, zIndex: LAYER.splash, cursor: 'pointer',
         background: '#161619',
         transition: closing
           ? 'opacity 0.80s ease-in, transform 0.80s cubic-bezier(0.55,0,1,0.8), filter 0.80s ease-in'

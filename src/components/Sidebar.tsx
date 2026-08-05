@@ -9,6 +9,8 @@ import type { DrawerKey } from './SidebarDrawer';
 import { useUiStore } from '../store/uiStore';
 import { useProfileStore } from '../store/profileStore';
 import { useNetworkStore } from '../store/networkStore';
+import { LAYER } from "../ui/layers";
+import { TOKEN } from '../ui/tokens';
 
 interface SidebarProps {
   // PHASE-B: isLightTheme + activeProfile + sessionCount removed — read from stores.
@@ -61,7 +63,7 @@ export function Sidebar({
   const lineColor   = isLightTheme ? 'rgba(15,23,42,0.75)' : 'rgba(224,238,255,0.82)';
   // MONOCHROME glass : accent = BLANC vif (dark) / SLATE foncé (light) — pas de teal.
   const accentColor = isLightTheme ? '#334155' : '#f0f6ff';
-  const sepColor    = isLightTheme ? 'rgba(100,180,255,0.20)' : 'rgba(255,255,255,0.14)';
+  const sepColor    = TOKEN.sep;
 
   const toggleDrawer = (key: DrawerKey) =>
     setSidebarDrawer(d => (d === key ? null : key));
@@ -77,7 +79,7 @@ export function Sidebar({
         background: 'transparent',
         borderRight: `1px solid ${sepColor}`,
         boxShadow: 'none',
-        zIndex: 30,
+        zIndex: LAYER.rail,
         // Icônes agrandies → défilement de sécurité si la hauteur d'écran est courte.
         overflowY: 'auto', overflowX: 'hidden' }}
     >

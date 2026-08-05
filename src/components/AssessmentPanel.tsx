@@ -2,6 +2,7 @@ import React from 'react';
 import { GlassCollapseToggle } from './GlassCollapseToggle';
 import { useUiStore } from '../store/uiStore';
 import { glassSurface } from '../ui/panel3d';
+import { TOKEN } from '../ui/tokens';
 
 /**
  * READ & INDICATION — un modulo, due viste.
@@ -130,7 +131,7 @@ export function AssessmentPanel({ items, onHide, t, readMeta, openSignal,
       className={`p-2 flex flex-col gap-1.5 ${collapsed ? '' : 'flex-[2] min-h-[220px]'}`}
       style={{
         ...glassSurface('right', isLightTheme, true),
-        boxShadow: !collapsed ? (isLightTheme ? '0 16px 34px rgba(38,40,48,0.20), inset 0 1px 0 rgba(255,255,255,0.5)' : '0 16px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.12)') : undefined,
+        boxShadow: !collapsed ? (TOKEN.panelShadow) : undefined,
       }}
     >
       {/* Header */}

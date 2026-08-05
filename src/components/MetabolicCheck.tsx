@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Headphones } from 'lucide-react';
 import { metabolicBaseline, type Rating, type MetabAssessment } from '../engine/MetabolicBaseline';
+import { LAYER } from "../ui/layers";
 
 /**
  * MetabolicCheck — pre-session readiness overlay (advisory). Runs a short passive
@@ -178,7 +179,7 @@ export function MetabolicCheck({ lang, meterAlreadyCalibrated = false, museConne
   useEffect(() => { if (!mirror) onCueRef.current?.(phase, inhale, aRef.current); }, [phase, inhale, mirror]);
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+    <div style={{ position: 'fixed', inset: 0, zIndex: LAYER.gate, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ width: 460, maxWidth: '92vw', borderRadius: 18, padding: '28px 30px',
         background: 'linear-gradient(160deg, rgba(40,40,46,0.96), rgba(26,26,30,0.94))', backdropFilter: 'blur(24px) saturate(1.2)', WebkitBackdropFilter: 'blur(24px) saturate(1.2)',

@@ -22,6 +22,56 @@
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   I TOKEN DEL TEMA — un valore, un nome, due temi.
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   Il ternario `isLightTheme ? … : …` era scritto 199 volte su 21 file: ogni ritocco al tema
+   chiaro voleva 199 letture, e bastava dimenticarne una perché una zona restasse scura.
+
+   I valori qui sotto sono ESATTAMENTE quelli che erano nel codice — nessun colore è stato
+   scelto, solo spostato. Il gemello TypeScript sta in `ui/tokens.ts`.
+
+   ── PERCHÉ IL BUIO STA SU :root ────────────────────────────────────────────────────────────
+   `data-theme` è sul div principale dell'app, ma le sovrapposizioni a schermo intero (splash,
+   crediti, calibrazione TA, scelta dello strumento, avanzamento connessione) sono DICHIARATE
+   FUORI da quel div. Mettendo il tema scuro come predefinito su :root, quelle continuano a
+   ricevere i valori scuri che hanno oggi, e il tema chiaro resta un'eccezione localizzata.
+   ═══════════════════════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* L'INCASSO — la pista dei mini-interruttori e dei badge (MUSE, THETA, metodi). */
+  --sm-well-bg:      #17171b;
+  --sm-well-shadow:  inset 0 2px 6px rgba(0,0,0,0.7);
+  /* L'INCHIOSTRO sull'incasso. */
+  --sm-ink:          #e8ecf2;
+  /* L'ombra dei pannelli di vetro. */
+  --sm-panel-shadow: 0 16px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.12);
+  /* L'AVVISO — quel che l'auditor deve sapere e non fare. */
+  --sm-warn:         #fbbf24;
+  --sm-warn-bg:      rgba(251,191,36,0.18);
+  --sm-warn-edge:    rgba(251,191,36,0.55);
+  /* Il separatore fra le zone. */
+  --sm-sep:          rgba(255,255,255,0.14);
+  /* La pastiglia: fondo e bordo dei piccoli contenitori. */
+  --sm-chip-bg:      rgba(255,255,255,0.06);
+  --sm-chip-edge:    rgba(255,255,255,0.22);
+  /* L'inchiostro d'accento (titoli, valori in evidenza). */
+  --sm-accent-ink:   rgba(240,246,255,0.92);
+}
+
+[data-theme="light"] {
+  --sm-well-bg:      #b7b7be;
+  --sm-well-shadow:  inset 0 2px 5px rgba(0,0,0,0.16);
+  --sm-ink:          #3a3a40;
+  --sm-panel-shadow: 0 16px 34px rgba(38,40,48,0.20), inset 0 1px 0 rgba(255,255,255,0.5);
+  --sm-warn:         #dc2626;
+  --sm-warn-bg:      rgba(220,38,38,0.10);
+  --sm-warn-edge:    rgba(220,38,38,0.40);
+  --sm-sep:          rgba(100,180,255,0.20);
+  --sm-chip-bg:      rgba(34,211,238,0.08);
+  --sm-chip-edge:    rgba(34,211,238,0.30);
+  --sm-accent-ink:   #0e7490;
+}
+
 @layer utilities {
   /* "Glass" UI transparency — the CONFIG slider sets --ui-alpha on :root.
      Applied to overlay/panel groups (everything except the needle/sphere) so
