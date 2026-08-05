@@ -9,7 +9,8 @@ import { useProfileStore } from '../store/profileStore';
 import { useNetworkStore } from '../store/networkStore';
 import { useUiStore } from '../store/uiStore';
 import { useLayoutStore } from '../store/layoutStore';
-import { BUNDLED_WALLPAPERS } from '../lib/wallpapers';
+import { importWallpaper } from '../lib/wallpaperImport';
+import { TOKEN } from '../ui/tokens';
 import { LAYER } from "../ui/layers";
 
 export type DrawerKey = 'link' | 'auditor' | 'pc' | 'trim' | 'session' | 'lang' | 'config';
@@ -804,6 +805,9 @@ function ConfigDrawer({ t, theme, lang }: SubProps) {
 
   const { titleColor, labelColor, inputBg, inputBorder, textColor } = theme;
   const wallpaperInputId = 'config-wallpaper-input';
+  // L'importazione passa per una riduzione (canvas): non è istantanea e può fallire.
+  const [wpInCorso, setWpInCorso] = React.useState(false);
+  const [wpErrore,  setWpErrore]  = React.useState<'lettura' | 'troppo-grande' | null>(null);
 
   const moduleList: Array<{ key: keyof ModuleVisibility; tKey: string; icon: string }> = [
     { key: 'journal',   tKey: 'config_mod_journal',   icon: '📋' },
@@ -852,62 +856,63 @@ function ConfigDrawer({ t, theme, lang }: SubProps) {
       <input
         id={wallpaperInputId} type="file" accept="image/*"
         style={{ display: 'none' }}
-        onChange={e => {
+        onChange={async e => {
           const file = e.target.files?.[0];
           if (!file) return;
-          // FIX M-04: revoke previous blob URL to prevent memory leaks
-          if (wallpaperUrl && wallpaperUrl.startsWith('blob:')) {
-            try { URL.revokeObjectURL(wallpaperUrl); } catch {}
-          }
-          const url = URL.createObjectURL(file);
-          setWallpaperUrl(url);
+          e.target.value = '';   // così si può riscegliere LO STESSO file dopo un errore
+          setWpErrore(null);
+          setWpInCorso(true);
+          const { dataUrl, errore } = await importWallpaper(file);
+          setWpInCorso(false);
+          if (!dataUrl) { setWpErrore(errore ?? 'lettura'); return; }
+          setWallpaperUrl(dataUrl);
         }}
       />
 
-      {/* CONN-108: built-in wallpaper gallery — pick a bundled image (or none → Aurora).
-          Selecting revokes any previous imported blob URL first to avoid leaks. */}
+      {/* ── DUE SOLI FONDI: quello dell'app, e IL TUO ──────────────────────────────────────
+          I quattordici in dotazione sono spariti. Erano una galleria da attraversare, e
+          nessuno di essi diceva niente all'auditor: il fondo non è un'informazione, è la
+          superficie su cui se ne leggono altre. Chi vuole il proprio lo importa — e adesso
+          l'immagine RESTA anche dopo il riavvio (prima era un blob:, moriva con la pagina). */}
       {(() => {
-        const selectWp = (url: string) => {
-          if (wallpaperUrl && wallpaperUrl.startsWith('blob:')) {
-            try { URL.revokeObjectURL(wallpaperUrl); } catch {}
-          }
-          setWallpaperUrl(url);
-        };
-        const isActiveNone = !wallpaperUrl;
         const tile = (active: boolean): React.CSSProperties => ({
           position: 'relative', height: 46, borderRadius: 8, cursor: 'pointer', overflow: 'hidden',
           border: `2px solid ${active ? labelColor : (isLightTheme ? 'rgba(70,130,200,0.30)' : 'rgba(255,255,255,0.18)')}`,
           boxShadow: active ? `0 0 10px ${labelColor}66` : 'none',
           display: 'flex', alignItems: 'center', justifyContent: 'center' });
+        const etichettaDefault = lang === 'fr' ? 'DÉFAUT' : lang === 'it' ? 'DEFAULT'
+                               : lang === 'es' ? 'DEFECTO' : lang === 'sv' ? 'STANDARD' : 'DEFAULT';
         return (
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginTop: 8 }}>
-            {/* Aucun fond → l'INTERFACE charcoal unie (l'ancienne aurora bleue a été retirée) */}
-            <div onClick={() => selectWp('')} style={{
-              ...tile(isActiveNone),
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 8 }}>
+            <div onClick={() => setWallpaperUrl('')} style={{
+              ...tile(!wallpaperUrl),
               background: isLightTheme
                 ? 'linear-gradient(135deg,#dde1e8,#c9ced8)'
                 : 'linear-gradient(135deg,#2e2e33,#1e1e22)' }} title={t('tip_interface')}>
-              <span style={{ fontSize: 9, fontFamily: 'monospace', color: isLightTheme ? '#1e293b' : 'rgba(240,246,255,0.85)', letterSpacing: '0.05em' }}>{
-                lang === 'fr' ? 'DÉFAUT' : lang === 'it' ? 'DEFAULT' : lang === 'es' ? 'DEFECTO' : lang === 'sv' ? 'STANDARD' : 'DEFAULT'
-              }</span>
+              <span style={{ fontSize: 9, fontFamily: 'monospace', color: isLightTheme ? '#1e293b' : 'rgba(240,246,255,0.85)', letterSpacing: '0.05em' }}>
+                {etichettaDefault}
+              </span>
             </div>
-            {BUNDLED_WALLPAPERS.map(w => {
-              const active = wallpaperUrl === w.url;
-              return (
-                <div key={w.id} onClick={() => selectWp(w.url)} style={tile(active)} title={w.name}>
-                  <img src={w.thumb} alt={w.name} loading="lazy"
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                  {/* GIF badge removed: the animated backgrounds now resolve to
-                      static thumbnails (durability fix), so the label was stale. */}
-                </div>
-              );
-            })}
+            {/* L'immagine importata, se c'è: si vede quale è in uso senza aprire nulla. */}
+            <label htmlFor={wallpaperInputId} style={{ ...tile(!!wallpaperUrl) }} title={t('wallpaper_import')}>
+              {wallpaperUrl
+                ? <img src={wallpaperUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <ImagePlus size={18} strokeWidth={1.8} color={labelColor} />}
+            </label>
           </div>
         );
       })()}
 
-      {/* CONN-108: large, labelled import button (stylized like the rest) */}
+      {/* L'esito dell'importazione: un fondo che non si carica non deve sparire in silenzio. */}
+      {(wpInCorso || wpErrore) && (
+        <div style={{
+          marginTop: 6, fontSize: 10, fontFamily: 'monospace', lineHeight: 1.4,
+          color: wpErrore ? TOKEN.warn : labelColor }}>
+          {wpInCorso ? '…' : wpErrore === 'troppo-grande' ? t('wallpaper_too_big') : t('wallpaper_unreadable')}
+        </div>
+      )}
+
+      {/* Il bottone d'importazione, per esteso — la mattonella sopra fa lo stesso. */}
       <label
         htmlFor={wallpaperInputId}
         style={{

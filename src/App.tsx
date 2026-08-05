@@ -37,7 +37,8 @@ import { isMotionArtifact } from './engine/motionArtifact';
 import type { NestWorkerMessage } from './workers/nestMessages';
 import { KICK_FLYBACK_MS, NEEDLE_REST_OFFSET, ITEM_INTERRUPT_MS,
          SHOWN_READS_CAP, READ_WINDOW_AFTER_S, THETA_FN_EXPIRE_S,
-         THETA_LABEL_AFTER_MS, THETA_REACT_TICK, THETA_RETRACT_MS } from './engine/tuning';
+         THETA_LABEL_AFTER_MS, THETA_REACT_TICK, THETA_RETRACT_MS,
+         INTEGRITA_SOGLIA } from './engine/tuning';
 import { QuantumSphere } from './components/QuantumSphere';
 import { chargeStateById, type ChargeStateId } from './lib/chargeState';
 import { cycleStateMachine } from './engine/CycleStateMachine';
@@ -5351,8 +5352,10 @@ export default function App() {
         // everything stays legible — user request. Wallpaper/aurora only in the DARK theme.
         // FOND COMMUN identique à AppBackground (charcoal / gris) → les zones transparentes
         // (barre d'icônes, haut) reposent exactement sur le même fond, aucun liseré de couleur.
+        // Schiarito insieme ad AppBackground: i due fondi DEVONO restare gemelli, se no le
+        // zone trasparenti (barra icone, alto) mostrano un gradino di grigio.
         background: isLightTheme
-          ? 'radial-gradient(130% 120% at 50% 22%, #cececf 0%, #c4c4c8 55%, #bcbcc0 100%)'
+          ? 'radial-gradient(130% 120% at 50% 22%, #eaeaec 0%, #e0e0e4 55%, #d4d4da 100%)'
           : wallpaperUrl
             ? `url(${wallpaperUrl}) center/cover no-repeat, #262629`
             : 'radial-gradient(130% 120% at 50% 22%, #2e2e33 0%, #2a2a2f 55%, #262629 100%)',
@@ -5376,10 +5379,20 @@ export default function App() {
         <div className="flex items-center gap-2">
           {/* Le logo OUVRE les crédits (demande utilisateur) — mêmes textes que l'animation
               d'ouverture, source unique dans credits.ts. */}
+          {/* ── IL LOGO HA IL TESTO BIANCO ────────────────────────────────────────────────
+              È un'immagine disegnata per fondo scuro: sul chiaro « ALTERNATIVE SCIENTOLOGY »
+              spariva del tutto, restava il solo simbolo blu. Filtrarla (invert, brightness)
+              avrebbe salvato il testo sporcando il blu del marchio. Le si dà invece il fondo
+              per cui è fatta — una pastiglia scura, solo nel tema chiaro: l'immagine resta
+              intatta e si legge. */}
           <button type="button" onClick={() => setShowCredits(true)} title={t('tip_credits') as string}
-            style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', lineHeight: 0, flexShrink: 0 }}>
+            style={{ border: 'none', padding: isLightTheme ? '4px 10px' : 0, borderRadius: 10,
+                     background: isLightTheme ? '#2a2a2f' : 'transparent',
+                     boxShadow: isLightTheme ? '0 2px 8px rgba(38,40,48,0.22)' : 'none',
+                     cursor: 'pointer', lineHeight: 0, flexShrink: 0 }}>
             <img src="/logo-alt-scientology.png" alt="Alt. Scientology"
-              style={{ height: 44, width: 'auto', filter: isLightTheme ? 'none' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.45)) brightness(1.05)' }} />
+              style={{ height: isLightTheme ? 36 : 44, width: 'auto',
+                       filter: isLightTheme ? 'none' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.45)) brightness(1.05)' }} />
           </button>
           {/* Il NOME e SOTTO la versione, allineati in alto col logo. Prima la versione stava
               di fianco al titolo, in coda, minuscola: sembrava una parte del nome. */}
@@ -5447,6 +5460,28 @@ export default function App() {
                   fontSize: 13, fontWeight: 'bold',
                   color: TOKEN.ink }}>
                   {batteryLevel.toFixed(0)}%
+                </span>
+              )}
+              {/* ── L'INTEGRITÀ STA SUL CASCO, NON IN UN PANNELLO A PARTE ──────────────────
+                  « Il MUSE mi sta dando dati buoni? » è UNA domanda, e si leggeva in due
+                  posti opposti dello schermo: il badge qui in alto per lo stato, il pannello
+                  in basso a destra per la qualità. Ma la qualità è LA QUALITÀ DI QUESTO
+                  CASCO: appartiene allo stesso oggetto, e va detta qui.
+
+                  NON è verde. Il verde qui accanto vuol già dire « indossato », e nel resto
+                  dell'app « traguardo raggiunto »: un terzo verde non aggiungerebbe un
+                  significato, ne toglierebbe uno. Inchiostro normale finché il dato è
+                  utilizzabile, AMBRA sotto la soglia — tace quando va bene, parla quando no.
+
+                  La barra (l'andamento) non sparisce: resta nel pannello, che diventa roba
+                  da modo ESPERTO. Chi conduce guarda il numero; chi tara guarda la curva. */}
+              {museConnection === 'connected' && (
+                <span title={t('biometric_integrity') as string}
+                  style={{
+                    fontSize: 13, fontWeight: 'bold', fontVariantNumeric: 'tabular-nums',
+                    color: smoothPct < INTEGRITA_SOGLIA ? TOKEN.warn : TOKEN.ink,
+                    opacity: smoothPct < INTEGRITA_SOGLIA ? 1 : 0.62 }}>
+                  {Math.round(smoothPct)}%
                 </span>
               )}
             </div>
@@ -6040,8 +6075,9 @@ export default function App() {
             {/* ── Sphere/needle content ── */}
             {<>
 
-            {/* Wallpaper sous la sphère/aiguille */}
-            {wallpaperUrl && (
+            {/* Lo sfondo sotto la sfera — SOLO nel tema scuro, come in AppBackground: sotto
+                l'ago è il posto in cui la leggibilità conta più che altrove. */}
+            {wallpaperUrl && !isLightTheme && (
               <img src={wallpaperUrl} alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity: 0.25, borderRadius: 'inherit', pointerEvents:'none', zIndex: LAYER.background }} />
             )}
             {/* (Zones de lumière internes supprimées — panneau PLAT sans lumière, choix utilisateur.) */}

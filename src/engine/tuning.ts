@@ -592,3 +592,19 @@ export const TONE_LOOKBACK_S = 2.5;
  *  Regola relativa come nel MIRROR: conta la SALITA sopra il livello abituale della persona,
  *  non il superamento di un numero assoluto. */
 export const TONE_LOCATE_RISE_RATIO = 1.35;
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+// INTEGRITÀ DEL SEGNALE
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+/**
+ * Sotto quale percentuale l'integrità biometrica smette di essere un dettaglio e diventa un
+ * AVVISO — cioè passa all'ambra nel badge del MUSE, in alto.
+ *
+ * 60 non è scelto qui: è la soglia che `BiometricPanel` usa da sempre per separare « buono » da
+ * « basso ». Spostarla vorrebbe dire che il numero in alto e la barra nel pannello raccontano
+ * due storie diverse dello stesso segnale.
+ *
+ * TARABILE: più alto = l'auditor è avvertito prima, ma l'ambra compare più spesso e finisce per
+ * non essere più guardata; più basso = si audita più a lungo sopra un segnale mediocre.
+ */
+export const INTEGRITA_SOGLIA = 60;

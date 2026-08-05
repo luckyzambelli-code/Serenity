@@ -30,12 +30,17 @@ export function AppBackground() {
         </div>
       ) : (
         <div className="absolute inset-0" style={{ zIndex: LAYER.background, overflow: 'hidden' }}>
-          {/* GLASS LIGHT — gris doux avec source de lumière en haut (réf. "Glass Toggle" · Light). */}
-          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(120% 120% at 50% 18%, #d2d2d7 0%, #bcbcc2 48%, #a6a6ac 78%, #9a9aa0 100%)' }} />
-          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(140% 130% at 50% 30%, transparent 68%, rgba(60,60,68,0.14) 100%)' }} />
-          {wallpaperUrl && (
-            <img src={wallpaperUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.35 }} />
-          )}
+          {/* ── IL CHIARO È PIATTO, E NON PER GUSTO ────────────────────────────────────────
+              Il commento in App.tsx lo diceva già — « LIGHT theme = a CLEAN FLAT background
+              (no wallpaper image) so everything stays legible » — ma qui l'immagine si
+              dipingeva lo stesso, e il tema chiaro era di fatto illeggibile: i pannelli sono
+              trasparenti, l'inchiostro è scuro, e sotto ci finiva una foto scura.
+              L'immagine importata resta, e si vede nel tema scuro. Nel chiaro no: uno sfondo
+              non vale la leggibilità di quel che ci sta sopra.
+              Schiarito anche il grigio (era #d2d2d7→#9a9aa0): il bordo scendeva troppo, e
+              l'inchiostro dei pannelli ci si perdeva agli angoli. */}
+          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(120% 120% at 50% 18%, #ececed 0%, #e0e0e4 48%, #d2d2d8 78%, #c8c8ce 100%)' }} />
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(140% 130% at 50% 30%, transparent 72%, rgba(60,60,68,0.08) 100%)' }} />
         </div>
       )}
     </>

@@ -39,9 +39,15 @@ export interface SavedLayout {
   createdAt: number;
 }
 
+/**
+ * `biometric` parte SPENTO: la percentuale d'integrità è passata nel badge del MUSE, in alto,
+ * dove sta il casco di cui è la qualità. Il pannello non è sparito — conserva la BARRA, cioè
+ * l'andamento, che il numero non dice — ma è roba da taratura, non da conduzione: si riaccende
+ * da Config, e con il modo ESPERTO tornerà da sé a chi lo usa.
+ */
 export const DEFAULT_MODULES: ModuleVisibility = {
   journal: true, health: true, cam1: true, cam2: true,
-  ri: true, biometric: true, mna: true,
+  ri: true, biometric: false, mna: true,
 };
 
 // ── Setter helpers ─────────────────────────────────────────────────────────
@@ -111,14 +117,19 @@ export const useLayoutStore = create<LayoutState>()(
         moduleVis:    state.moduleVis,
         savedLayouts: state.savedLayouts,
       }),
-      version: 1,
+      // v2: `biometric` passa spento — la percentuale vive nel badge del MUSE. Chi lo aveva
+      // acceso lo trova spento una volta sola; riaccenderlo da Config resta e non si ripete.
+      version: 2,
       // One-shot migration from the legacy hook's separate localStorage keys
       // (`nest_module_vis` and `nest_layouts`). Runs only when the
       // `nest_layout_preferences` key doesn't yet exist for this user.
-      migrate: (persisted, _from) => {
+      migrate: (persisted, from) => {
         const safe = persisted as Partial<LayoutState> | undefined;
         let moduleVis    = safe?.moduleVis    ?? DEFAULT_MODULES;
         let savedLayouts = safe?.savedLayouts ?? [];
+        if (typeof from === 'number' && from < 2 && safe?.moduleVis) {
+          moduleVis = { ...moduleVis, biometric: false };
+        }
         try {
           // Pick up legacy data only if we have no persisted state of our own.
           if (!safe?.moduleVis) {

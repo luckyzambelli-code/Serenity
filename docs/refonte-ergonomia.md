@@ -330,7 +330,7 @@ Ogni tappa lascia l'app funzionante e produce un DMG. Nessun « big bang ».
 |---|---|---|---|
 | 1 | ✔ **fatta** (2.0.94) — `sessionPhase.ts` + 34 test; la derivazione esce da `spiegazioneCiclo` senza cambiare una condizione | +2 file | nullo |
 | 2 | ✔ **fatta** (2.0.95) — `layers.ts` (30 siti) + `tokens.ts` (46 siti). Vedi §6.1 | 20 file, poca logica | basso |
-| 3 | `moduleRegistry.ts` + `uiModeStore` + `useVisibleSet` — **`layoutStore` continua a governare**, la nuova visibilità è solo calcolata e confrontata | +3 file | nullo |
+| 3 | ✔ **fatta** (2.0.96) — `moduleRegistry.ts` + `uiModeStore` + `visibleSet.ts`, 26 test. `layoutStore` continua a governare. Vedi §6.2 | +3 file | nullo |
 | 4 | `<Stage>` e gli `<SlotHost>` — si estraggono dal JSX di `App.tsx` i moduli, **uno alla volta**, a parità di aspetto | `App.tsx` cala di ~1 200 righe | medio |
 | 5 | Si dà la mano a `useVisibleSet`: l'automatismo si accende. Si toglie `moduleVis` | store | medio |
 | 6 | Modo esperto, transizioni, i vuoti del centro | UI | basso |
@@ -371,11 +371,59 @@ colore usato una volta lo rende più difficile da leggere, non meno. Spariranno 
 soli quando la **regola del colore** (`refonte-fasi.md` §2) ridurrà la tavolozza —
 ed è lì che il lavoro ha senso, non qui.
 
-**Quel che questa tappa NON risolve.** Nel tema chiaro lo sfondo resta il
-wallpaper (`AppBackground` non guarda il tema) e il testo diventa poco leggibile,
-malgrado il commento in `App.tsx` dica che il chiaro debba avere un fondo piatto.
-È preesistente e non è stato toccato: è un cambiamento visibile, e questa tappa
-non ne fa. Va deciso a parte.
+**Quel che questa tappa NON risolveva** — il tema chiaro illeggibile — è stato
+corretto subito dopo, su richiesta. Vedi §6.3.
+
+### 6.2 Tappa 3 — il registro dei moduli
+
+Tre file, 26 test, **nessun effetto a schermo**: `layoutStore.moduleVis` continua
+a governare. La tabella si calcola in parallelo e si prova.
+
+- **`ui/moduleRegistry.ts`** — 13 moduli, ognuno una riga: slot, livello, le fasi
+  in cui si apre da sé, gli strumenti che pretende, i metodi che lo riguardano.
+- **`ui/visibleSet.ts`** — la regola in una funzione pura.
+- **`store/uiModeStore.ts`** — livello + deroghe (`pinned`/`muted`), svuotate al
+  cambio di fase.
+
+**Una correzione alla specifica, trovata scrivendola.** Era previsto che ogni
+modulo avesse due liste: `autoIn` (dove si apre) e `hideIn` (dove sparisce).
+Scritte entrambe, `hideIn` si è rivelato aria — se una fase non è in `autoIn` il
+modulo è già chiuso — e le due liste potevano contraddirsi sulla stessa fase.
+Cosa puntualmente successa alla prima stesura, colta dal test di coerenza:
+`assessment` si apriva e si chiudeva in `null.rise`. Resta `autoIn`: **dove non è
+scritto, è chiuso.** Una tabella che si legge in dieci secondi è tutto il punto;
+due liste che si smentiscono no.
+
+### 6.3 Fuori piano — richieste dirette (2.0.96)
+
+Tre cose chieste in corsa, che cambiano lo schermo e quindi non appartenevano a
+una tappa « meccanica ».
+
+**I fondi in dotazione, tolti.** Quattordici immagini da attraversare, e nessuna
+diceva niente all'auditor: il fondo non è un'informazione, è la superficie su cui
+se ne leggono altre. Restano il fondo dell'app e **il tuo**. L'immagine importata
+ora si conserva davvero: era un `blob:`, moriva con la pagina e andava reimportata
+a ogni avvio — adesso è ridotta a 1920 px e salvata come `data:`
+(`lib/wallpaperImport.ts`, 10 test).
+
+**Il tema chiaro, leggibile.** `AppBackground` dipingeva l'immagine anche in
+chiaro, sotto pannelli trasparenti con inchiostro scuro. Il commento in `App.tsx`
+diceva già il contrario da tempo — « *LIGHT theme = a CLEAN FLAT background so
+everything stays legible* » — ma il codice faceva altro. Ora il chiaro è piatto,
+il grigio è stato schiarito (`#d2d2d7→#9a9aa0` diventa `#ececed→#c8c8ce`), e il
+logo — che ha il testo **bianco**, cioè è disegnato per fondo scuro e spariva —
+riceve la sua pastiglia scura invece di essere filtrato, che ne avrebbe sporcato
+il blu.
+
+**L'integrità biometrica nel badge del MUSE.** Non è solo spazio guadagnato:
+« il MUSE mi sta dando dati buoni? » è **una** domanda, e si leggeva in due punti
+opposti dello schermo — il badge in alto per lo stato, un pannello in basso a
+destra per la qualità. La qualità è la qualità di **quel casco**: appartiene allo
+stesso oggetto. Il numero **non è verde** (il verde lì accanto vuol già dire
+« indossato », e nell'app « traguardo raggiunto »): inchiostro normale, **ambra**
+sotto la soglia — `INTEGRITA_SOGLIA` in `engine/tuning.ts`, che è 60 perché è la
+soglia che `BiometricPanel` usa da sempre. Il pannello non sparisce: conserva la
+barra, cioè l'andamento, e passa a spento per difetto in attesa del modo ESPERTO.
 
 ---
 

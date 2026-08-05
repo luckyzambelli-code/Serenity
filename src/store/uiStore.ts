@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { FnMode } from '../engine/FloatGenerator';
+import { isPersistableWallpaper } from '../lib/wallpaperImport';
 
 /**
  * uiStore — cross-cutting UI preferences (theme, wallpaper).
@@ -67,11 +68,11 @@ export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
       isLightTheme: false,
-      // Default to a REAL bundled wallpaper. The old default '/wallpaper.jpg'
-      // did not exist → 404 → no background; and the pick was never persisted,
-      // so every restart reverted to that broken default ("di nuovo i fondi non
-      // sono più attivi"). Now persisted (see partialize/merge) → choice sticks.
-      wallpaperUrl: '/wallpapers/thumb-galaxy.jpg',
+      // IL FONDO O È QUELLO DELL'APP O È IL TUO. I quattordici fondi in dotazione sono stati
+      // tolti: erano una galleria da scegliere ogni volta, e nessuno di essi diceva niente
+      // all'auditor. Resta il fondo predefinito ('') — e l'immagine che ciascuno importa, che
+      // ora si conserva davvero (vedi lib/wallpaperImport).
+      wallpaperUrl: '',
       showRoster: false,
       uiAlpha: 1,
       fnMode: 'normal',
@@ -86,23 +87,21 @@ export const useUiStore = create<UiState>()(
     {
       name: 'nest_ui_preferences',
       storage: createJSONStorage(() => localStorage),
-      // Persist theme + uiAlpha + wallpaper. A blob: wallpaper can't survive a
-      // reload (the object URL is gone), so persist the bundled-default instead
-      // of a dead reference. Bundled (/wallpapers/*) and '' (Aurora) persist fine.
+      // Si conserva SOLO ciò che sopravvive al riavvio: un `data:` (l'immagine importata,
+      // già ridotta) o il vuoto. Un `blob:` muore con la pagina e i `/wallpapers/*` non
+      // esistono più — scriverli vorrebbe dire promettere uno sfondo che al riavvio non c'è.
       partialize: (state) => ({
         isLightTheme: state.isLightTheme,
         uiAlpha: state.uiAlpha,
-        wallpaperUrl: state.wallpaperUrl.startsWith('blob:') ? '/wallpapers/thumb-galaxy.jpg' : state.wallpaperUrl,
+        wallpaperUrl: isPersistableWallpaper(state.wallpaperUrl) ? state.wallpaperUrl : '',
       }),
-      // v3: persist the wallpaper (was dropped before → choice lost every restart).
-      version: 3,
+      // v4: tolti i fondi in dotazione. Chi ne aveva scelto uno ricade sul predefinito.
+      version: 4,
       migrate: (persisted, _fromVersion) => {
         const safe = persisted as Partial<UiState> | undefined;
-        const wp = typeof safe?.wallpaperUrl === 'string' && !safe!.wallpaperUrl.startsWith('blob:')
-          ? safe!.wallpaperUrl : '/wallpapers/thumb-galaxy.jpg';
         return {
           isLightTheme: typeof safe?.isLightTheme === 'boolean' ? safe!.isLightTheme : false,
-          wallpaperUrl: wp,
+          wallpaperUrl: isPersistableWallpaper(safe?.wallpaperUrl) ? safe!.wallpaperUrl : '',
           uiAlpha: typeof safe?.uiAlpha === 'number' ? safe!.uiAlpha : 1,
         } as UiState;
       },
@@ -114,7 +113,7 @@ export const useUiStore = create<UiState>()(
           ...current,
           isLightTheme: typeof safe.isLightTheme === 'boolean' ? safe.isLightTheme : current.isLightTheme,
           uiAlpha: typeof safe.uiAlpha === 'number' ? safe.uiAlpha : current.uiAlpha,
-          wallpaperUrl: typeof safe.wallpaperUrl === 'string' ? safe.wallpaperUrl : current.wallpaperUrl,
+          wallpaperUrl: isPersistableWallpaper(safe.wallpaperUrl) ? safe.wallpaperUrl : current.wallpaperUrl,
         };
       },
       // Final safety net — after rehydration, if the in-memory state ended up
