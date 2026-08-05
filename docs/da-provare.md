@@ -13,6 +13,22 @@ Il file si valida solo indossando il casco: `tsc`, ESLint e i 109 test coprono l
 comportamento. Ogni estrazione è in un commit separato, quindi una singola voce si può annullare
 da sola senza toccare le altre.
 
+- [ ] **Le fasi del ciclo** (`engine/sessionPhase.ts`, tappa 1 della refonte) — la derivazione
+      che alimenta `CycleHint` è uscita da `App.tsx` senza cambiare una condizione. 34 test
+      coprono la scala, ma il testo a schermo si vede solo in seduta: **senza strumento la
+      seduta non parte**, quindi il compilatore e i test sono tutto ciò che si è potuto fare.
+      Da guardare, per ciascun ciclo, che la scritta sia quella di prima e cambi quando deve:
+  - [ ] CONTACT — `1 · DAI L'ITEM` → `2 · CHIEDI UN MOCK-UP` → `3 · AS-IS`, e la riga d'avviso
+        (« la carica si sta dissolvendo » / « sembra NULL ») compare come prima;
+  - [ ] NULL — item → mock-up → `3 · LA CARICA SALE` → `EQUILIBRIUM`;
+  - [ ] MIRROR — item → `2 · DÌ L'ITEM` premendo col campo vuoto → contatto → doppio →
+        `OTTENUTO`;
+  - [ ] TONE — i quattro tempi, e la smentita dell'ago nella riga in ambra;
+  - [ ] LIBERO — resta la prima riga, come prima;
+  - [ ] con la **finestra EP aperta** il testo NON cambia (è il solo punto in cui la nuova
+        precedenza avrebbe potuto cambiare qualcosa: per questo il testo usa
+        `deriveCyclePhase` e non `derivePhase`).
+
 - [ ] **Vista partecipante** (`components/ParticipantView.tsx`, commit `f5b4ada`) — è la parte
       cambiata di più. Da provare in **sessione remota vera** (Mac auditor + telefono preclear):
   - [ ] la camera dell'auditore si vede sul telefono;

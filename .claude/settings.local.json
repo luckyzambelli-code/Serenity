@@ -227,7 +227,10 @@
       "Bash(perl -0pi -e \"s/\\\\s*console\\\\.log\\\\\\('\\\\[STT-DIAG\\\\][^\\\\n]*\\\\n//g\" src/lib/offlineSpeechRecognition.ts)",
       "Bash(echo \"=== thumbs presenti ===\")",
       "Bash(ls /tmp/wp_build/thumb-*.jpg)",
-      "Bash(awk '{print $5}')"
+      "Bash(awk '{print $5}')",
+      "Bash(awk 'NR>=5227 && NR<=7489' src/App.tsx)",
+      "Bash(awk 'NR>=5830 && NR<=7489 {printf \"%d:%s\\\\n\", NR, $0}' src/App.tsx)",
+      "Bash(awk 'NR>=7050 && NR<=7180 {printf \"%d:%s\\\\n\", NR, $0}' src/App.tsx)"
     ]
   }
 }

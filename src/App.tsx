@@ -102,6 +102,7 @@ import {
 } from './engine/toneScale';
 import { TA_MIN, TA_MAX } from './engine/thetaTaScale';
 import { MODE_SPEC, availableModes, fallbackMode, type SessionMode } from './engine/sessionMode';
+import { deriveCyclePhase, phaseFamily } from './engine/sessionPhase';
 /** Un solo locatore per l'app, come `mirrorCycle`: tiene gli ultimi secondi fuori da React,
  *  perché il gestore del worker gira a 60 Hz e non deve far ridisegnare nulla per accumulare. */
 const toneLocator = new ToneLocator();
@@ -4476,30 +4477,53 @@ export default function App() {
   // Il testo si calcola dallo STATO VERO del ciclo, non da un contatore di passi: se il motore
   // avanza da solo (ed è quel che fa CONTACT), la scritta lo segue senza che nessuno gliela
   // debba dire.
+  //
+  // ── DA DOVE VIENE LA FASE ───────────────────────────────────────────────────────────────
+  // La derivazione non è più qui: sta in `engine/sessionPhase.ts`, dove si prova da sola. Le
+  // condizioni sono LE STESSE, riga per riga — è il valore che cambia mestiere. Prima diceva
+  // soltanto quale testo scrivere; adesso è un `SessionPhase`, e da lì in poi ogni modulo può
+  // chiedere « in che fase siamo » invece di ricomporsi la risposta da quattro booleani.
+  //
+  // Qui si usa `deriveCyclePhase` (la scala di ciclo SENZA le trasversali): CycleHint è a
+  // schermo con la sola condizione `sessionState === 'running'`, dunque anche mentre la
+  // finestra EP è aperta, e la precedenza di `ep_window` gli cambierebbe il testo sotto gli
+  // occhi. Lo schermo prenderà `derivePhase`, il testo prende la scala. (Vedi il file.)
+  const faseCiclo = useMemo(() => deriveCyclePhase({
+    splashOpen: showSplash, sessionState, hasInstrument: instruments.muse || instruments.theta,
+    preflightOpen: metabolicOpen, epWindowOpen, reportOpen: showReport,
+    mode, cycleArmed, asIsPending, nullPhase,
+    mirrorArmed, mirrorItemNamed: !!auditingQuestion.trim(),
+    mirrorLocked: mirrorDisp.locked, mirrorReached: mirrorDisp.reached,
+    tonePhase, toneValidated: !!toneValidated,
+  }), [showSplash, sessionState, instruments.muse, instruments.theta, metabolicOpen,
+       epWindowOpen, showReport, mode, cycleArmed, asIsPending, nullPhase, mirrorArmed,
+       auditingQuestion, mirrorDisp.locked, mirrorDisp.reached, tonePhase, toneValidated]);
+
   const spiegazioneCiclo = useMemo((): { titolo: string; come: string; avviso?: string | null; fatto?: boolean } => {
     const n = (v: number) => `${v > 0 ? '+' : ''}${Math.round(v)}`;
 
     // ── TONE : localizza → segno → ampiezza → mock-up ─────────────────────────────────────
-    if (mode === 'tone') {
+    if (phaseFamily(faseCiclo) === 'tone') {
       const p = toneProposedAtLock ? chargeValue(toneProposedAtLock) : null;
       const smentita = toneAgreement === 'differs' && toneAtStart !== null
         ? `${LC('l\'ago diceva altro', 'l\'aiguille disait autre chose', 'the needle said otherwise', 'la aguja decía otra cosa', 'nålen sa något annat')} — ${n(toneAtStart)}`
         : null;
-      if (tonePhase === 'locate') return {
+      if (faseCiclo === 'tone.locate') return {
         titolo: toneHasMeter
           ? LC('1 · LOCALIZZA LA RESISTENZA', '1 · LOCALISE LA RÉSISTANCE', '1 · LOCATE THE RESISTANCE', '1 · LOCALIZA LA RESISTENCIA', '1 · LOKALISERA MOTSTÅNDET')
           : LC('1 · LOCALIZZA — SENZA METER', '1 · LOCALISE — SANS MÈTRE', '1 · LOCATE — OFF-METER', '1 · LOCALIZA — SIN MEDIDOR', '1 · LOKALISERA — UTAN MÄTARE'),
         come: toneHasMeter
           ? LC('L\'ago si posa su un numero. Premi quando il preclear ha trovato.', 'L\'aiguille se pose sur un nombre. Appuie quand le préclair a trouvé.', 'The needle settles on a number. Press when the preclear has found it.', 'La aguja se posa en un número. Pulsa cuando el preclear lo haya encontrado.', 'Nålen lägger sig på ett tal. Tryck när preclearen hittat det.')
           : LC('Nessuna misura: segno e ampiezza si assessano.', 'Aucune mesure : le signe et l\'ampleur s\'assessent.', 'No measurement: sign and magnitude are assessed.', 'Sin medida: signo y amplitud se assessan.', 'Ingen mätning: tecken och storlek assessas.') };
-      if (tonePhase === 'sign') return {
+      if (faseCiclo === 'tone.sign') return {
         titolo: LC('2 · POSITIVO O NEGATIVO?', '2 · POSITIF OU NÉGATIF ?', '2 · POSITIVE OR NEGATIVE?', '2 · ¿POSITIVO O NEGATIVO?', '2 · POSITIVT ELLER NEGATIVT?'),
         come: LC('Assessa « negativo? » poi « positivo? ». Quello che legge è il segno.', 'Assesse « négatif ? » puis « positif ? ». Celui qui lit est le signe.', 'Assess "negative?" then "positive?". The one that reads is the sign.', 'Assessa « ¿negativo? » luego « ¿positivo? ». El que lee es el signo.', 'Assessa ”negativt?” sedan ”positivt?”. Det som läser är tecknet.')
           + (p !== null ? ` ${LC('L\'ago propone', 'L\'aiguille propose', 'The needle proposes', 'La aguja propone', 'Nålen föreslår')} ${n(p)}.` : '') };
-      if (tonePhase === 'magnitude') return {
+      if (faseCiclo === 'tone.magnitude') return {
         titolo: LC('3 · QUANTE DIVISIONI?', '3 · COMBIEN DE DIVISIONS ?', '3 · HOW MANY DIVISIONS?', '3 · ¿CUÁNTAS DIVISIONES?', '3 · HUR MÅNGA DELSTRECK?'),
         come: LC('Assessa 10, 20, 30, 40. Non dev\'essere preciso: l\'ago cade fra due divisioni.', 'Assesse 10, 20, 30, 40. Pas besoin d\'être précis : l\'aiguille tombe entre deux divisions.', 'Assess 10, 20, 30, 40. It need not be exact: the needle falls between two divisions.', 'Assessa 10, 20, 30, 40. No hace falta ser exacto: la aguja cae entre dos divisiones.', 'Assessa 10, 20, 30, 40. Det behöver inte vara exakt: nålen faller mellan två delstreck.') };
-      if (tonePhase === 'mockup' && toneValidated) return {
+      // `toneValidated` è già garantito dalla fase; il test resta per il restringimento di TS.
+      if (faseCiclo === 'tone.mockup' && toneValidated) return {
         titolo: `4 · ${LC('FAI MOCK-UPPARE', 'FAIS MOCK-UPPER', 'HAVE HIM MOCK UP', 'HAZLE MOCK-UPEAR', 'LÅT HONOM MOCKA UPP')} ${n(oppositeOf(toneValidated))}`,
         come: `${LC('Contro', 'Contre', 'Against', 'Contra', 'Mot')} ${n(chargeValue(toneValidated))} ${LC('di carica. Aspetta l\'as-isness — non fare altro.', 'de charge. Attends l\'as-isness — ne fais rien d\'autre.', 'of charge. Wait for the as-isness — do nothing else.', 'de carga. Espera el as-isness — no hagas nada más.', 'laddning. Vänta på as-isness — gör inget annat.')}`,
         avviso: smentita };
@@ -4509,17 +4533,17 @@ export default function App() {
     }
 
     // ── MIRROR : item → valore → il DOPPIO da smaltire ────────────────────────────────────
-    if (mode === 'mirror') {
-      if (!mirrorArmed) return {
+    if (phaseFamily(faseCiclo) === 'mirror') {
+      if (faseCiclo === 'mirror.item') return {
         titolo: LC('1 · DAI L\'ITEM', '1 · DONNE L\'ITEM', '1 · GIVE THE ITEM', '1 · DA EL ÍTEM', '1 · GE ITEM'),
         come: LC('Scrivilo o dillo a voce, poi premi. Il valore si fissa sulla carica di QUESTO item.', 'Écris-le ou dis-le, puis appuie. La valeur se fige sur la charge de CET item.', 'Type it or say it, then press. The value is fixed on THIS item\'s charge.', 'Escríbelo o dilo, luego pulsa. El valor se fija en la carga de ESTE ítem.', 'Skriv eller säg det, tryck sedan. Värdet fästs på DETTA items laddning.') };
-      if (!auditingQuestion.trim()) return {
+      if (faseCiclo === 'mirror.say_item') return {
         titolo: LC('2 · DÌ L\'ITEM', '2 · DIS L\'ITEM', '2 · SAY THE ITEM', '2 · DI EL ÍTEM', '2 · SÄG ITEM'),
         come: LC('La prima parola che dici diventa l\'item, e la misura riparte da lì.', 'Le premier mot que tu dis devient l\'item, et la mesure repart de là.', 'The first word you say becomes the item, and the measure restarts there.', 'La primera palabra que digas se vuelve el ítem, y la medida reinicia allí.', 'Det första ordet du säger blir item, och mätningen börjar om där.') };
-      if (!mirrorDisp.locked) return {
+      if (faseCiclo === 'mirror.contact') return {
         titolo: LC('3 · CONTATTO DELLA CARICA', '3 · CONTACT DE LA CHARGE', '3 · CONTACTING THE CHARGE', '3 · CONTACTO DE LA CARGA', '3 · KONTAKT MED LADDNINGEN'),
         come: LC('Aspetta: il valore 1–10 si fissa da sé quando la lettura si è girata.', 'Attends : la valeur 1–10 se fige d\'elle-même quand la lecture s\'est retournée.', 'Wait: the 1–10 value fixes itself once the read has turned over.', 'Espera: el valor 1–10 se fija solo cuando la lectura se ha girado.', 'Vänta: värdet 1–10 fäster av sig självt när avläsningen vänt.') };
-      if (mirrorDisp.reached) return {
+      if (faseCiclo === 'mirror.reached') return {
         titolo: LC('OTTENUTO', 'OBTENU', 'OBTAINED', 'OBTENIDO', 'UPPNÅTT'), fatto: true,
         come: LC('Lo smaltito ha raggiunto il doppio. Valida e riparti con un altro item.', 'Le déchargé a atteint le double. Valide et repars avec un autre item.', 'The discharged reached the double. Validate and go on with another item.', 'Lo descargado alcanzó el doble. Valida y sigue con otro ítem.', 'Det urladdade nådde dubbeln. Validera och fortsätt med ett annat item.') };
       return {
@@ -4528,14 +4552,14 @@ export default function App() {
     }
 
     // ── NULL : item → mock-up → RISE → EQUILIBRIUM ────────────────────────────────────────
-    if (mode === 'null') {
-      if (!cycleArmed) return {
+    if (phaseFamily(faseCiclo) === 'null') {
+      if (faseCiclo === 'null.item') return {
         titolo: LC('1 · DAI L\'ITEM', '1 · DONNE L\'ITEM', '1 · GIVE THE ITEM', '1 · DA EL ÍTEM', '1 · GE ITEM'),
         come: LC('Se l\'ago NON legge, premi: è il ciclo speculare, si lavora su ciò che non reagisce.', 'Si l\'aiguille NE lit PAS, appuie : c\'est le cycle miroir, on travaille sur ce qui ne réagit pas.', 'If the needle does NOT read, press: this is the mirror cycle, working on what does not react.', 'Si la aguja NO lee, pulsa: es el ciclo espejo, se trabaja sobre lo que no reacciona.', 'Om nålen INTE läser, tryck: det är spegelcykeln, man arbetar på det som inte reagerar.') };
-      if (nullPhase === 'rise') return {
+      if (faseCiclo === 'null.rise') return {
         titolo: LC('3 · LA CARICA SALE', '3 · LA CHARGE MONTE', '3 · THE CHARGE RISES', '3 · LA CARGA SUBE', '3 · LADDNINGEN STIGER'),
         come: LC('Il mock-up sta creando massa. Aspetta il ritorno alla base: quello è l\'EQUILIBRIUM.', 'Le mock-up crée de la masse. Attends le retour à la base : c\'est ça l\'EQUILIBRIUM.', 'The mock-up is creating mass. Wait for the return to base: that is the EQUILIBRIUM.', 'El mock-up está creando masa. Espera el retorno a la base: eso es el EQUILIBRIUM.', 'Mock-upen skapar massa. Vänta på återgången till basen: det är EQUILIBRIUM.') };
-      if (nullPhase === 'clear_read') return {
+      if (faseCiclo === 'null.equilibrium') return {
         titolo: 'EQUILIBRIUM', fatto: true,
         come: LC('Tornato alla base. Valida inscrivendo i VGI\'s — sì o no, sei tu a dirlo.', 'Revenu à la base. Valide en inscrivant les VGI\'s — oui ou non, c\'est toi qui le dis.', 'Back to base. Validate by recording the VGI\'s — yes or no, you say it.', 'Vuelto a la base. Valida inscribiendo los VGI\'s — sí o no, lo dices tú.', 'Tillbaka till basen. Validera genom att skriva in VGI\'s — ja eller nej, du säger det.') };
       return {
@@ -4544,10 +4568,12 @@ export default function App() {
     }
 
     // ── CONTACT : item → il ciclo avanza da sé → AS-IS ────────────────────────────────────
-    if (!cycleArmed) return {
+    // `free` cade qui, com'è sempre stato: il modo LIBERO non arma cicli, e l'unica riga che
+    // può mostrare è la prima. Sarà lo SCHERMO, non il testo, a trattarlo come una fase a sé.
+    if (faseCiclo === 'contact.item' || faseCiclo === 'free') return {
       titolo: LC('1 · DAI L\'ITEM', '1 · DONNE L\'ITEM', '1 · GIVE THE ITEM', '1 · DA EL ÍTEM', '1 · GE ITEM'),
       come: LC('L\'ago legge → premi. Puoi scrivere l\'item o dirlo a voce dopo aver premuto.', 'L\'aiguille lit → appuie. Tu peux écrire l\'item ou le dire après avoir appuyé.', 'The needle reads → press. You can type the item or say it after pressing.', 'La aguja lee → pulsa. Puedes escribir el ítem o decirlo tras pulsar.', 'Nålen läser → tryck. Du kan skriva item eller säga det efter tryckningen.') };
-    if (asIsPending) return {
+    if (faseCiclo === 'contact.asis') return {
       titolo: '3 · AS-IS', fatto: true,
       come: LC('La firma della carica è collassata e l\'F/N è arrivato. Proposto: validi tu, mai l\'app.', 'La signature de la charge s\'est effondrée et la F/N est là. Proposé : c\'est toi qui valides, jamais l\'app.', 'The charge signature has collapsed and the F/N is here. Proposed: you validate, never the app.', 'La firma de la carga colapsó y llegó la F/N. Propuesto: validas tú, nunca la app.', 'Laddningens signatur har kollapsat och F/N är här. Föreslaget: du validerar, aldrig appen.') };
     // ⚠️ TRE TEMPI, non quattro. Avevo scritto « 2 · lascia guardare » e « 3 · si dissolve »:
@@ -4562,10 +4588,11 @@ export default function App() {
         : chargePhaseNow === 'discharge'
         ? LC('la carica si sta dissolvendo', 'la charge se dissout', 'the charge is dissolving', 'la carga se está disolviendo', 'laddningen löses upp')
         : null };
+    // La fase copre da sola mode/tonePhase/mirror*/cycleArmed/asIsPending/nullPhase: restano
+    // qui solo i valori che entrano nel TESTO (numeri, smentita, riga d'avviso).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, tonePhase, toneHasMeter, toneProposedAtLock, toneValidated, toneAgreement, toneAtStart,
-      mirrorArmed, auditingQuestion, mirrorDisp, cycleArmed, nullPhase, asIsPending, chargePhaseNow,
-      noReadSignal, lang]);
+  }, [faseCiclo, toneHasMeter, toneProposedAtLock, toneValidated, toneAgreement, toneAtStart,
+      mirrorDisp, chargePhaseNow, noReadSignal, lang]);
 
   const resetTone = useCallback(() => {
     setTonePhase('locate'); setToneValidated(null); setToneProposedAtLock(null);
