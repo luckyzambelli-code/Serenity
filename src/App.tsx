@@ -424,6 +424,16 @@ export default function App() {
   const [connDetail, setConnDetail] = useState<string>('');
   // CONN-60: transient hint shown when START is pressed (local) without a MUSE.
   const [museHint, setMuseHint] = useState(false);
+  /**
+   * SEDUTA SENZA STRUMENTI — scelta esplicita dal selettore iniziale, non un ripiego.
+   *
+   * Si registra la verbalizzazione e le indicazioni del preclear senza aghi: è il gruppo di
+   * controllo che manca a tutto il resto del corpus. Va etichettata, non nascosta — vedi il
+   * commento nel selettore. Si azzera all'apertura di ogni seduta.
+   */
+  const [senzaStrumenti, setSenzaStrumenti] = useState(false);
+  const senzaStrumentiRef = useRef(false);
+  senzaStrumentiRef.current = senzaStrumenti;
   /** Quali strumenti si è scelto di collegare, PRIMA di far partire le connessioni. */
   const [connSel, setConnSel] = useState({ muse: false, theta: false });
 
@@ -4722,7 +4732,10 @@ export default function App() {
     // PRIMA. Con uno dei due già collegato non si chiede nulla e non si va a cercare l'altro:
     // è una configurazione scelta, non una mancanza da rimediare.
     const thetaLive = thetaConnectedRef.current;
-    if (!isAuditorMode && museConnection !== 'connected' && !thetaLive) {
+    // `senzaStrumenti` è la terza voce del selettore: chi l'ha scelta ha già risposto alla
+    // domanda, e richiederglielo la trasformerebbe di nuovo in un ostacolo.
+    if (!isAuditorMode && !senzaStrumentiRef.current
+        && museConnection !== 'connected' && !thetaLive) {
       setMuseHint(true);
       return;
     }
@@ -4877,6 +4890,7 @@ export default function App() {
     // Il satellite gira sul ruolo di rete 'auditor' ma è una seduta nella stessa stanza:
     // anche lì si sceglie con che cosa si audita (MUSE, boîtes, o tutti e due).
     if ((appModeRef.current !== 'auditor' || satelliteModeRef.current)
+        && !senzaStrumentiRef.current
         && museConnection !== 'connected' && !thetaConnectedRef.current) {
       setMuseHint(true);
       return;
@@ -5236,6 +5250,7 @@ export default function App() {
     try { networkManager.disconnect(); } catch (_) {}
     setPcMicArmed(false); pcMicArmedRef.current = false;
     setSessionState('idle');
+    setSenzaStrumenti(false);   // la scelta vale per UNA seduta, non per il programma
     setShowReport(false);
     setSessionEndTime(null);
     setIsConnected(false); setPeerId(''); setParticipantLink(''); setRemoteStream(null); setAppMode('local'); setPcCoLocated(false);
@@ -5332,6 +5347,9 @@ export default function App() {
           disabled={!connSel.muse && !connSel.theta}
           onClick={async () => {
             setMuseHint(false);
+            // Scegliere uno strumento REVOCA la scelta « senza strumenti »: se no, chi ci
+            // ripensa partirebbe con un casco collegato e la seduta etichettata senza aghi.
+            setSenzaStrumenti(false);
             // In sequenza: due selettori di dispositivo aperti insieme si ostacolerebbero.
             if (connSel.muse)  await handleConnectMuse();
             if (connSel.theta) await theta.connect();
@@ -5345,6 +5363,46 @@ export default function App() {
                    color: '#34d399' }}>
           {t('connect') as string}
         </button>
+
+        {/* ── LA TERZA VIA: SENZA STRUMENTI, E DICHIARATA ────────────────────────────────────
+            Sta QUI, nel selettore iniziale, e non come ripiego dopo un errore: così è una
+            SCELTA. È la richiesta dell'utente, ed è giusta — una seduta senza aghi non è una
+            seduta a cui manca qualcosa, è un altro tipo di seduta.
+
+            A COSA SERVE. Si registra la verbalizzazione e le indicazioni del preclear senza
+            che nessuno possa essere influenzato dall'ago. È il GRUPPO DI CONTROLLO che ci
+            manca: tutto quel che sappiamo sull'AS-IS viene da sedute con gli strumenti, e non
+            c'è modo di sapere quanto l'ago abbia guidato l'auditor. Confrontando i due insiemi
+            si può.
+
+            Per questo va ETICHETTATA: mescolata alle altre nel corpus rovinerebbe proprio il
+            confronto per cui esiste. Nel corpus si riconosce già da `inst: {muse:false,
+            theta:false}`; nel rapporto e nello storico c'è `noInstruments`. */}
+        <div style={{ height: 1, background: 'rgba(255,255,255,0.12)', margin: '2px 0' }} />
+
+        <button type="button"
+          onClick={() => {
+            setMuseHint(false);
+            setSenzaStrumenti(true);
+            // Il ref si scrive A MANO, qui. `setSenzaStrumenti` non ha effetto prima del
+            // render successivo, e `handleStart` parte in questo stesso giro: leggerebbe il ref
+            // ancora a false, ricadrebbe nel controllo « nessuno strumento » e riaprirebbe il
+            // selettore. È il bug che ho visto a schermo la prima volta.
+            senzaStrumentiRef.current = true;
+            void handleStart();
+          }}
+          style={{ height: 34, borderRadius: 9, cursor: 'pointer',
+                   fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700,
+                   letterSpacing: '0.08em', textTransform: 'uppercase',
+                   background: 'transparent', border: '1px solid rgba(226,238,255,0.30)',
+                   color: 'rgba(226,238,255,0.75)' }}>
+          {t('no_instruments_mode') as string}
+        </button>
+
+        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, lineHeight: 1.5,
+                       color: 'rgba(226,238,255,0.5)' }}>
+          {t('no_instruments_hint') as string}
+        </span>
 
         <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, lineHeight: 1.5,
                        color: 'rgba(226,238,255,0.5)' }}>
@@ -7297,6 +7355,7 @@ export default function App() {
           pcPhoto={pcPhoto}
           auditorPhoto={activeProfile?.photo}
           isSoloSession={isSoloSession}
+          noInstruments={senzaStrumenti}
           sessionObjective={sessionObjective}
           sessionProcessObjective={sessionProcessObjective}
           sessionPhysicalCheck={sessionPhysicalCheck}

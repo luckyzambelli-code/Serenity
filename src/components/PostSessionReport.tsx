@@ -21,6 +21,8 @@ interface PostSessionReportProps {
   pcPhoto?: string;
   auditorPhoto?: string;
   isSoloSession: boolean;
+  /** Seduta SENZA strumenti: scelta esplicita, non assenza di reazioni. Va etichettata. */
+  noInstruments?: boolean;
   onClose: () => void;
   onSaveSession?: (summary: any) => void;
   lang?: any;
@@ -108,7 +110,7 @@ interface PostSessionReportProps {
 }
 
 
-export function PostSessionReport({ history, csvData, logs, mass, startTime, endTime, auditorName, pcName, pcPhoto, auditorPhoto, isSoloSession, onClose, onSaveSession, sessionObjective, sessionProcessObjective, sessionPhysicalCheck, sessionBriefing, onOpenHistory, reactions = [], epValidated = false, epCognitionText = '', epAuditorNote = '', epReactionType = '', epRealization = '', epDurationMin = '', epVgi = false, epVvgi = false, epTimestamp = null, totalTa = 0, massTime = 0, dissolutionTime = 0, avgReleaseVel = 0, relVelBaseline = 0, dissolvedPctMass, massChargeQ = 0, dissChargeQ = 0, auditingCycles = [], mirrorCycles = [], toneCycles = [], assessCycles = [], deltaStar = 0, deltaStarN = 0, deltaTrend = 0, deltaBaseline = 0, deltaAdaptive = 0,
+export function PostSessionReport({ history, csvData, logs, mass, startTime, endTime, auditorName, pcName, pcPhoto, auditorPhoto, isSoloSession, noInstruments = false, onClose, onSaveSession, sessionObjective, sessionProcessObjective, sessionPhysicalCheck, sessionBriefing, onOpenHistory, reactions = [], epValidated = false, epCognitionText = '', epAuditorNote = '', epReactionType = '', epRealization = '', epDurationMin = '', epVgi = false, epVvgi = false, epTimestamp = null, totalTa = 0, massTime = 0, dissolutionTime = 0, avgReleaseVel = 0, relVelBaseline = 0, dissolvedPctMass, massChargeQ = 0, dissChargeQ = 0, auditingCycles = [], mirrorCycles = [], toneCycles = [], assessCycles = [], deltaStar = 0, deltaStarN = 0, deltaTrend = 0, deltaBaseline = 0, deltaAdaptive = 0,
   breathReactivity, breathContactPct, breathBpm,
   profileId, mnaData }: PostSessionReportProps) {
   // ── ZONES AS-IS: charge lifecycle of the contacted masses ──
@@ -351,6 +353,7 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
       auditorName,
       auditorPhoto,
       isSolo: isSoloSession,
+      noInstruments,
       objective: sessionObjective,
       processObjective: sessionProcessObjective,
       physicalCheck: sessionPhysicalCheck,
@@ -416,7 +419,7 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
         console.error('Failed to generate lightweight text PDF', e);
       }
     })();
-  }, [onSaveSession, startTime, endTime, pcName, pcPhoto, auditorName, auditorPhoto, isSoloSession, sessionObjective, sessionProcessObjective, sessionPhysicalCheck, sessionBriefing, nextCs, mass, fnCount, isEpValidated, history, profileId]);
+  }, [onSaveSession, startTime, endTime, pcName, pcPhoto, auditorName, auditorPhoto, isSoloSession, noInstruments, sessionObjective, sessionProcessObjective, sessionPhysicalCheck, sessionBriefing, nextCs, mass, fnCount, isEpValidated, history, profileId]);
 
   // BUGFIX (Next C/S in PDF): the initial save above runs ONCE (hasSaved guard) —
   // before Next C/S is typed — so the History PDF would omit it unless the auditor
@@ -1428,6 +1431,18 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
         <div>
           <h2 className="text-2xl font-mono text-white tracking-widest">{t('report_title')}</h2>
           <p className="text-sm text-slate-400 font-mono mt-1">{t('report_subtitle')}</p>
+          {/* ── L'ETICHETTA, IN CIMA ────────────────────────────────────────────────────────
+              Chi rilegge il rapporto sei mesi dopo deve sapere SUBITO che qui non c'era ago:
+              altrimenti « nessuna reazione » si legge come « il preclear era pulito » invece
+              di « non c'era nulla che misurasse ». È la sola cosa che rende utile una seduta
+              senza strumenti, quindi non sta in fondo fra i dettagli. */}
+          {noInstruments && (
+            <p className="text-xs font-mono mt-2 inline-block px-2 py-1 rounded"
+               style={{ color: '#fbbf24', background: 'rgba(251,191,36,0.14)',
+                        border: '1px solid rgba(251,191,36,0.45)', letterSpacing: '0.06em' }}>
+              {t('report_no_instruments')}
+            </p>
+          )}
         </div>
         <div className="flex gap-4">
           <button 

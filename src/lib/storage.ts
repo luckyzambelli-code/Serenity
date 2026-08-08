@@ -37,6 +37,15 @@ export interface SessionSummary {
   // release). Replaces the legacy 4-zone T-zone distribution in the report.
   massTime?: number;
   dissolutionTime?: number;
+  /**
+   * SEDUTA SENZA STRUMENTI — scelta esplicita dal selettore iniziale: né MUSE né boîtes.
+   *
+   * Va scritto, non dedotto dall'assenza di reazioni: una seduta con gli aghi in cui non ha
+   * letto nulla e una seduta SENZA aghi sono due cose opposte, e confonderle rovinerebbe
+   * proprio il confronto per cui le sedute senza strumenti si fanno (sono il gruppo di
+   * controllo: nessuno può essere stato guidato dall'ago).
+   */
+  noInstruments?: boolean;
 }
 
 const PROFILES_KEY = 'nest_profiles';
