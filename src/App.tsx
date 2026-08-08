@@ -4388,7 +4388,9 @@ export default function App() {
   // Staccando il MUSE a metà seduta, i tre modi che vivono di carica EEG non hanno più
   // sorgente: si ripiega invece di lasciare l'interfaccia su una scelta impossibile — e su un
   // ciclo che l'auditor aspetterebbe di veder concludere.
-  const modiDisponibili = useMemo(() => availableModes(instruments.muse), [instruments.muse]);
+  const modiDisponibili = useMemo(
+    () => availableModes(instruments.muse, instruments.theta),
+    [instruments.muse, instruments.theta]);
   useEffect(() => {
     if (!modiDisponibili.includes(mode)) setMode(fallbackMode(instruments.muse, instruments.theta));
   }, [modiDisponibili, mode, instruments.muse, instruments.theta]);
@@ -4532,6 +4534,57 @@ export default function App() {
   }), [showSplash, sessionState, instruments.muse, instruments.theta, metabolicOpen,
        epWindowOpen, showReport, mode, cycleArmed, asIsPending, nullPhase, mirrorArmed,
        auditingQuestion, mirrorDisp.locked, mirrorDisp.reached, tonePhase, toneValidated]);
+
+  /**
+   * COSA FARE, quando non c'è ago.
+   *
+   * Le istruzioni normali nominano l'ago — « l'ago legge → premi », « aspetta che il valore si
+   * fissi », « il ciclo avanza da sé ». Senza strumenti sono false, e una falsa peggio che
+   * nessuna: dice all'auditor di aspettare una cosa che non arriverà.
+   *
+   * Qui la stessa procedura è detta con gli indicatori che restano: quel che il PRECLEAR
+   * PERCEPISCE e quel che l'AUDITOR OSSERVA. È il ciclo di sempre — Ron lo conduce così.
+   * Restituisce null dove il testo normale va già bene (i tempi di TONE, che sono assessment
+   * puro, e le fasi che non nominano l'ago).
+   */
+  // Funzione semplice e non `useCallback`: `LC` cambia identità a ogni render, quindi
+  // memoizzarla su di essa non risparmierebbe nulla — darebbe solo l'impressione di farlo.
+  const comeSenzaAgo = (fase: string): string | null => {
+    switch (fase) {
+      case 'contact.item': case 'free':
+        return LC('Dai l\'item e premi. Quel che l\'ago direbbe lo dicono il preclear e la tua osservazione.',
+                  'Donne l\'item et appuie. Ce que l\'aiguille dirait, le préclair et ton observation le disent.',
+                  'Give the item and press. What the needle would say, the preclear and your obnosis say.',
+                  'Da el ítem y pulsa. Lo que diría la aguja lo dicen el preclear y tu observación.',
+                  'Ge item och tryck. Vad nålen skulle säga, säger preclearen och din observation.');
+      case 'contact.mockup':
+        return LC('Chiedi il mock-up e GUARDA il preclear. L\'AS-IS lo dichiari tu: qui il ciclo non avanza da solo.',
+                  'Demande le mock-up et REGARDE le préclair. L\'AS-IS, c\'est toi qui le déclares : ici le cycle n\'avance pas tout seul.',
+                  'Ask for the mock-up and WATCH the preclear. You declare the AS-IS: here the cycle does not advance by itself.',
+                  'Pide el mock-up y MIRA al preclear. El AS-IS lo declaras tú: aquí el ciclo no avanza solo.',
+                  'Be om mock-upen och SE på preclearen. AS-IS deklarerar du: här går cykeln inte av sig själv.');
+      case 'null.item':
+        return LC('Se l\'item non dà niente, premi: si lavora su ciò che non reagisce.',
+                  'Si l\'item ne donne rien, appuie : on travaille sur ce qui ne réagit pas.',
+                  'If the item gives nothing, press: we work on what does not react.',
+                  'Si el ítem no da nada, pulsa: se trabaja sobre lo que no reacciona.',
+                  'Om item inte ger något, tryck: man arbetar på det som inte reagerar.');
+      case 'null.mockup': case 'null.rise':
+        return LC('Chiedi un mock-up. Se il preclear RIESCE a crearlo, il null era genuino — lo giudichi tu, non un ago.',
+                  'Demande un mock-up. Si le préclair ARRIVE à le créer, le null était genuine — c\'est toi qui juges, pas une aiguille.',
+                  'Ask for a mock-up. If the preclear CAN create it, the null was genuine — you judge, not a needle.',
+                  'Pide un mock-up. Si el preclear LOGRA crearlo, el null era genuino — juzgas tú, no una aguja.',
+                  'Be om en mock-up. Om preclearen KAN skapa den var nullen äkta — du dömer, inte en nål.');
+      case 'mirror.contact': case 'mirror.doubling':
+        return LC('Dai tu il valore da 1 a 10, e portalo al doppio. Senza ago il metro sei tu e il preclear.',
+                  'Donne toi-même la valeur de 1 à 10, et mène-la au double. Sans aiguille, la mesure c\'est toi et le préclair.',
+                  'You give the 1–10 value yourself, and take it to the double. With no needle, you and the preclear are the measure.',
+                  'Da tú mismo el valor de 1 a 10, y llévalo al doble. Sin aguja, la medida sois tú y el preclear.',
+                  'Ge själv värdet 1–10 och för det till dubbeln. Utan nål är du och preclearen måttet.');
+      default:
+        return null;   // TONE è assessment puro: il suo testo va già bene così com'è.
+    }
+  };
 
   const spiegazioneCiclo = useMemo((): { titolo: string; come: string; avviso?: string | null; fatto?: boolean } => {
     const n = (v: number) => `${v > 0 ? '+' : ''}${Math.round(v)}`;
@@ -6544,6 +6597,42 @@ export default function App() {
               {/* MIRROR = MÊME cadran que AGO + : l'aiguille garde ses RÉACTIONS habituelles (Fall/
                   F-N). Seul l'ARC change : l'échelle 1–10 (MirrorDial) à la place du ClearDial. La
                   couleur remplit l'arc avec l'avancement de la décharge. */}
+              {/* ── SENZA AGO NON SI DISEGNA UN QUADRANTE ──────────────────────────────────
+                  Un arco con le sue tacche e la sua scala, e niente che lo muova, non è neutro:
+                  è uno strumento rotto. E ruba il centro dello schermo — che senza ago tocca
+                  all'unica cosa che conta, cioè A CHE PUNTO SEI E COSA DEVI FARE.
+
+                  I CICLI RESTANO TUTTI (vedi availableModes): la sorgente non è l'ago, sono la
+                  percezione del preclear e l'obnosi dell'auditor. Cambia solo chi spinge il
+                  ciclo — vedi `cycleIsAutomatic`. */}
+              {senzaMisura ? (
+                <div style={{ maxWidth: 560, padding: '0 24px', textAlign: 'center',
+                              display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700,
+                                 letterSpacing: '0.18em', textTransform: 'uppercase',
+                                 color: TOKEN.warn }}>
+                    {t('report_no_instruments') as string}
+                  </span>
+                  {/* Lo stesso testo del CycleHint, ma in grande: qui è il soggetto dello
+                      schermo, non una didascalia sotto un quadrante. */}
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 26, fontWeight: 800,
+                                 letterSpacing: '0.02em', lineHeight: 1.15,
+                                 color: spiegazioneCiclo.fatto ? '#34d399'
+                                       : (isLightTheme ? '#1a1a1f' : 'rgba(240,246,255,0.96)') }}>
+                    {spiegazioneCiclo.titolo}
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, lineHeight: 1.5,
+                                 color: isLightTheme ? '#3a3a40' : 'rgba(226,238,255,0.78)' }}>
+                    {comeSenzaAgo(faseCiclo) ?? spiegazioneCiclo.come}
+                  </span>
+                  {spiegazioneCiclo.avviso && (
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700,
+                                   color: TOKEN.warn }}>
+                      {spiegazioneCiclo.avviso}
+                    </span>
+                  )}
+                </div>
+              ) : (
               <QuantumSphere
                 needleOffsetProp={needleOffset}
                 // Un ago SOLO: quello delle lattine si disegna solo se è lui il principale.
@@ -6565,6 +6654,7 @@ export default function App() {
                 releaseActive={stableReleaseState === 'active'}
                 fnMode={fnMode}
               />
+              )}
             </div>
 
             {/* DATA STACK — fixed TOP-CENTRE for ALL views (needle + halo), per the
@@ -6622,11 +6712,13 @@ export default function App() {
                     color: 'rgba(235,244,255,0.92)', outline: 'none' } as React.CSSProperties}
                 />
                 {/* Rangée des COMMANDES : compteurs + les deux cycles + mock-up.
-                    ⚠️ SOLO COL MUSE. I cicli CONTACT e NULL vivono della CARICA (qL) e dell'F/N,
-                    che vengono dall'EEG: con le sole boîtes non hanno sorgente. Mostrarli
-                    lascerebbe armare un ciclo che non può né avanzare né concludersi, e
-                    l'auditor aspetterebbe un AS-IS che non può arrivare. */}
-                {!eegModulesHidden(instruments) && (
+                    Prima era « SOLO COL MUSE », col ragionamento che senza EEG il ciclo non ha
+                    sorgente e resterebbe armato senza potersi concludere. Il ragionamento era
+                    mio e sbagliato: la sorgente di un ciclo non è l'ago — senza EEG restano la
+                    percezione del preclear e l'obnosi dell'auditor, che sono gli indicatori
+                    originali. Quel che manca è l'AUTOMATISMO (`cycleIsAutomatic`): il ciclo lo
+                    conclude l'auditor a mano, che è come si è sempre fatto. */}
+                {(
                 <div className="flex items-center gap-2" style={{ width: '100%' }}>
                 {/* CYCLE COUNTERS — SÉPARÉS par type (demande utilisateur) : armés · menés à leur fin.
                     CONTACT → AS-IS (teal) · NULL → EQUILIBRIUM (ardoise) — mêmes teintes que les boutons. */}
@@ -6706,7 +6798,7 @@ export default function App() {
                 )}
                 {/* « A che punto sono, e cosa devo fare » — stesso componente e stesso posto del
                     TONE e del MIRROR, col testo di QUESTO ciclo (vedi spiegazioneCiclo). */}
-                {sessionState === 'running' && !eegModulesHidden(instruments) && (
+                {sessionState === 'running' && !eegModulesHidden(instruments) && !senzaMisura && (
                   <CycleHint {...spiegazioneCiclo} />
                 )}
               </div>
@@ -6779,7 +6871,7 @@ export default function App() {
                       </div>
                     );
                   })()}
-                  <CycleHint {...spiegazioneCiclo} />
+                  {!senzaMisura && <CycleHint {...spiegazioneCiclo} />}
                 </div>
               )}
               {/* ── BARRE TONE SCALE — les QUATRE temps de Ron, un par un ───────────────────────
@@ -6960,7 +7052,7 @@ export default function App() {
                     {/* Il testo del ciclo sta in `spiegazioneCiclo`, insieme a quello di
                         CONTACT, NULL e MIRROR: stesso posto, stesso aspetto, un componente solo
                         (vedi CycleHint). Prima era qui dentro, e solo il TONE ce l'aveva. */}
-                    <CycleHint {...spiegazioneCiclo} />
+                    {!senzaMisura && <CycleHint {...spiegazioneCiclo} />}
                   </div>
                 );
               })()}
@@ -7036,6 +7128,9 @@ export default function App() {
 
             {/* ── ARC CONCENTRIQUE — en MIRROR : l'échelle 1–10 (MirrorDial) À LA PLACE du ClearDial
                 (cycle CONTACT/DISSOLUTION/AS-IS), aligné avec l'aiguille. Sinon : le ClearDial. */}
+            {/* Anche questi sono ARCHI, e senza ago non hanno nulla da mostrare: sparivano
+                insieme al quadrante principale, non da soli. */}
+            {!senzaMisura && (
             <div className="absolute inset-0 z-40 pointer-events-none">
               {viewMode === 'tone' ? (
                 <ToneDial tone={toneMeasured ?? 0} hasMeter={toneHasMeter} approx
@@ -7050,6 +7145,7 @@ export default function App() {
                   cycleKind={cycleKind} nullPhase={nullPhase} />
               )}
             </div>
+            )}
 
             {/* ── ASSESSMENT — mots assessés écrits SOUS le libellé DISSOLUTION/RISE, foreignObject au
                 MÊME viewBox 1600×850 que l'arc → aligné + scale identiques. ÉTROIT (pour ne pas
