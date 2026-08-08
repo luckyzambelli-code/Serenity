@@ -4,7 +4,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Download } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { useI18n } from '../i18n.tsx';
-import { saveSessionPdf, saveSessionPdfAsync, updateSessionNextCs, getSessionsByProfile } from '../lib/storage';
+import { saveSessionPdf, saveSessionPdfAsync, updateSessionNextCs, getSessionsByProfile, getSessions } from '../lib/storage';
 import { serverSaveSessionPdf, isServerAvailable } from '../lib/serverStorage';
 import { LogEntry } from './TranscriptLog';
 import { cn, fmtIm } from '../lib/utils';
@@ -1424,6 +1424,61 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
       if (curLine) ncsLines.push(curLine);
       ncsLines.forEach((line: string) => { pdf.text(line, 20, y); y += 5; });
     }
+
+    // ── STORICO SEDUTE — le sedute di QUESTO auditor, e quante ne esistono d'altri ──────────
+    // L'auditor vuole ritrovare in fondo al PDF tutte le sue sedute, e sapere che l'archivio
+    // ne contiene altre (di altri auditor/PC) senza confonderle con le proprie.
+    try {
+      const mie = profileId ? getSessionsByProfile(profileId) : [];
+      const totale = getSessions().length;
+      const altre = Math.max(0, totale - mie.length);
+      if (y > pageH - 40) { pdf.addPage(); y = 12; }
+      y += 6;
+      panelHeader(L('STORICO SEDUTE', 'HISTORIQUE DES SÉANCES', 'SESSION HISTORY', 'HISTORIAL DE SESIONES', 'SESSIONSHISTORIK'));
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      pdf.setTextColor(60, 60, 60);
+      const intestazione = L(
+        `${mie.length} sedute per questo auditor (${auditorName || '—'})`,
+        `${mie.length} séances pour cet auditeur (${auditorName || '—'})`,
+        `${mie.length} sessions for this auditor (${auditorName || '—'})`,
+        `${mie.length} sesiones para este auditor (${auditorName || '—'})`,
+        `${mie.length} sessioner för denna auditör (${auditorName || '—'})`);
+      pdf.text(intestazione, 20, y); y += 5;
+      // Ordinate dalla più recente: la corrente è in cima, e si scende nel tempo.
+      [...mie].sort((a, b) => b.date - a.date).slice(0, 30).forEach(s => {
+        if (y > pageH - 16) { pdf.addPage(); y = 12; }
+        const d = new Date(s.date);
+        const data = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        const dur = `${Math.floor(s.duration / 60)}m${String(s.duration % 60).padStart(2, '0')}`;
+        const esito = s.noInstruments
+          ? L('senza strumenti', 'sans instruments', 'no instruments', 'sin instrumentos', 'utan instrument')
+          : s.epValidated ? 'EP ✓' : '—';
+        pdf.setTextColor(90, 90, 90);
+        pdf.text(`· ${data}   ${dur}   ${esito}${s.pcName ? '   PC ' + s.pcName : ''}`, 22, y);
+        y += 4.5;
+      });
+      if (mie.length > 30) {
+        pdf.setTextColor(140, 140, 140);
+        pdf.text(L(`…e altre ${mie.length - 30}`, `…et ${mie.length - 30} autres`, `…and ${mie.length - 30} more`, `…y ${mie.length - 30} más`, `…och ${mie.length - 30} till`), 22, y);
+        y += 4.5;
+      }
+      // Gli ALTRI report — quanti, senza dettaglio: non sono di questo auditor.
+      y += 2;
+      pdf.setFont('helvetica', 'italic');
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(120, 120, 120);
+      pdf.text(
+        altre > 0
+          ? L(`Nell'archivio esistono altri ${altre} report (altri auditor o PC).`,
+              `${altre} autres rapports existent dans l'archive (autres auditeurs ou PC).`,
+              `${altre} other reports exist in the archive (other auditors or PCs).`,
+              `Existen otros ${altre} informes en el archivo (otros auditores o PC).`,
+              `${altre} andra rapporter finns i arkivet (andra auditörer eller PC).`)
+          : L('Nessun altro report nell\'archivio.', 'Aucun autre rapport dans l\'archive.', 'No other reports in the archive.', 'Ningún otro informe en el archivo.', 'Inga andra rapporter i arkivet.'),
+        20, y);
+      pdf.setFont('helvetica', 'normal');
+    } catch { /* lo storico non deve poter far fallire il PDF */ }
 
     return pdf.output('datauristring');
   };

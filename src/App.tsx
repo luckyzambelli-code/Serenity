@@ -4283,7 +4283,16 @@ export default function App() {
   // La scelta dello strumento sparisce da sé appena UNO dei due si aggancia: lasciarla lì
   // dopo il collegamento la farebbe sembrare un errore ancora in corso.
   useEffect(() => {
-    if (museConnection === 'connected' || theta.status === 'connected') setMuseHint(false);
+    if (museConnection === 'connected' || theta.status === 'connected') {
+      setMuseHint(false);
+      // ── COLLEGARE UN AGO IN CORSO REVOCA « SENZA STRUMENTI » ──────────────────────────────
+      // La seduta era partita senza aghi, ma ora ce n'è uno: da questo istante c'è una MISURA.
+      // Se `senzaStrumenti` restasse true, il rapporto continuerebbe a nascondere ZONE AS-IS e
+      // Lock Quality — e sarebbero vuote — anche con i dati dell'ago che entrano (segnalato).
+      // Non è più una seduta senza strumenti; l'etichetta e i tagli devono cadere con l'ago
+      // che arriva.
+      setSenzaStrumenti(false);
+    }
   }, [museConnection, theta.status]);
 
   // ── QUALI MODULI, secondo cosa è collegato ───────────────────────────────────
@@ -4552,35 +4561,27 @@ export default function App() {
   const comeSenzaAgo = (fase: string): string | null => {
     switch (fase) {
       case 'contact.item': case 'free':
-        return LC('Dai l\'item e premi. Quel che l\'ago direbbe lo dicono il preclear e la tua osservazione.',
-                  'Donne l\'item et appuie. Ce que l\'aiguille dirait, le préclair et ton observation le disent.',
-                  'Give the item and press. What the needle would say, the preclear and your obnosis say.',
-                  'Da el ítem y pulsa. Lo que diría la aguja lo dicen el preclear y tu observación.',
-                  'Ge item och tryck. Vad nålen skulle säga, säger preclearen och din observation.');
+        return LC('Dai l\'item e premi.', 'Donne l\'item et appuie.', 'Give the item and press.', 'Da el ítem y pulsa.', 'Ge item och tryck.');
       case 'contact.mockup':
-        return LC('Chiedi il mock-up e GUARDA il preclear. L\'AS-IS lo dichiari tu: qui il ciclo non avanza da solo.',
-                  'Demande le mock-up et REGARDE le préclair. L\'AS-IS, c\'est toi qui le déclares : ici le cycle n\'avance pas tout seul.',
-                  'Ask for the mock-up and WATCH the preclear. You declare the AS-IS: here the cycle does not advance by itself.',
-                  'Pide el mock-up y MIRA al preclear. El AS-IS lo declaras tú: aquí el ciclo no avanza solo.',
-                  'Be om mock-upen och SE på preclearen. AS-IS deklarerar du: här går cykeln inte av sig själv.');
+        return LC('Chiedi un mock-up. Dichiara l\'AS-IS quando arriva.',
+                  'Demande un mock-up. Déclare l\'AS-IS quand il arrive.',
+                  'Ask for a mock-up. Declare the AS-IS when it comes.',
+                  'Pide un mock-up. Declara el AS-IS cuando llegue.',
+                  'Be om en mock-up. Deklarera AS-IS när den kommer.');
       case 'null.item':
-        return LC('Se l\'item non dà niente, premi: si lavora su ciò che non reagisce.',
-                  'Si l\'item ne donne rien, appuie : on travaille sur ce qui ne réagit pas.',
-                  'If the item gives nothing, press: we work on what does not react.',
-                  'Si el ítem no da nada, pulsa: se trabaja sobre lo que no reacciona.',
-                  'Om item inte ger något, tryck: man arbetar på det som inte reagerar.');
+        return LC('Dai l\'item che non legge e premi.', 'Donne l\'item qui ne lit pas et appuie.', 'Give the item that does not read and press.', 'Da el ítem que no lee y pulsa.', 'Ge item som inte läser och tryck.');
       case 'null.mockup': case 'null.rise':
-        return LC('Chiedi un mock-up. Se il preclear RIESCE a crearlo, il null era genuino — lo giudichi tu, non un ago.',
-                  'Demande un mock-up. Si le préclair ARRIVE à le créer, le null était genuine — c\'est toi qui juges, pas une aiguille.',
-                  'Ask for a mock-up. If the preclear CAN create it, the null was genuine — you judge, not a needle.',
-                  'Pide un mock-up. Si el preclear LOGRA crearlo, el null era genuino — juzgas tú, no una aguja.',
-                  'Be om en mock-up. Om preclearen KAN skapa den var nullen äkta — du dömer, inte en nål.');
+        return LC('Chiedi un mock-up. Ci riesce → EQUILIBRIUM. Non ci riesce → NON RICARICA.',
+                  'Demande un mock-up. Il y arrive → EQUILIBRIUM. Il n\'y arrive pas → NE RECHARGE PAS.',
+                  'Ask for a mock-up. He can → EQUILIBRIUM. He can\'t → NO RECHARGING.',
+                  'Pide un mock-up. Lo logra → EQUILIBRIUM. No lo logra → NO RECARGA.',
+                  'Be om en mock-up. Klarar → EQUILIBRIUM. Klarar inte → LADDAR INTE.');
       case 'mirror.contact': case 'mirror.doubling':
-        return LC('Dai tu il valore da 1 a 10, e portalo al doppio. Senza ago il metro sei tu e il preclear.',
-                  'Donne toi-même la valeur de 1 à 10, et mène-la au double. Sans aiguille, la mesure c\'est toi et le préclair.',
-                  'You give the 1–10 value yourself, and take it to the double. With no needle, you and the preclear are the measure.',
-                  'Da tú mismo el valor de 1 a 10, y llévalo al doble. Sin aguja, la medida sois tú y el preclear.',
-                  'Ge själv värdet 1–10 och för det till dubbeln. Utan nål är du och preclearen måttet.');
+        return LC('Dai un valore da 1 a 10 e portalo al doppio.',
+                  'Donne une valeur de 1 à 10 et mène-la au double.',
+                  'Give a value from 1 to 10 and take it to the double.',
+                  'Da un valor de 1 a 10 y llévalo al doble.',
+                  'Ge ett värde 1–10 och för det till dubbeln.');
       default:
         return null;   // TONE è assessment puro: il suo testo va già bene così com'è.
     }
@@ -5686,26 +5687,36 @@ export default function App() {
             </div>
           )}
 
-          {/* ── « SENZA STRUMENTI », QUI, UNA VOLTA SOLA ────────────────────────────────────
-              Stava scritto in giallo al centro dello schermo, ripetuto per tutta la seduta:
-              stanca la vista e ruba l'attenzione a quel che l'auditor deve leggere. Il posto
-              giusto è QUI, accanto a MUSE e alle boîtes, perché è la stessa informazione —
-              CON CHE COSA si sta auditando. Stessa forma dei due badge, monocromo, e non
-              cliccabile: la scelta si fa allo START, non a seduta aperta. */}
-          {senzaStrumenti && sessionState !== 'idle' && (
+          {/* ── « SENZA STRUMENTI », TERZO BADGE ACCANTO AI DUE STRUMENTI ───────────────────
+              Stava scritto in giallo al centro, ripetuto per tutta la seduta — stancava la
+              vista. Il posto giusto è QUI, accanto a MUSE e alle boîtes: è la stessa scelta,
+              CON CHE COSA si audita. Visibile SEMPRE quando la seduta è locale, come gli altri
+              due — anche prima di cominciare (richiesta utente):
+                • prima dello START → clic = avvia la seduta senza strumenti;
+                • a seduta avviata senza strumenti → resta acceso, non cliccabile;
+                • se un ago è collegato, non ha senso → sparisce (lo dice `senzaMisura`). */}
+          {(appMode === 'local' || satelliteMode) && senzaMisura && (() => {
+            const attivo = senzaStrumenti && sessionState !== 'idle';
+            const avviabile = sessionState === 'idle';
+            return (
             <div
+              onClick={avviabile ? () => {
+                setSenzaStrumenti(true); senzaStrumentiRef.current = true; void handleStart();
+              } : undefined}
               title={t('no_instruments_hint') as string}
               style={{
                 display: 'flex', alignItems: 'center', gap: 9,
                 padding: '3px 14px 3px 3px', borderRadius: 999,
+                cursor: avviabile ? 'pointer' : 'default',
+                opacity: attivo || avviabile ? 1 : 0.5,
                 background: TOKEN.wellBg, boxShadow: TOKEN.wellShadow }}>
               <span style={{
                 width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center',
                 justifyContent: 'center', flexShrink: 0,
-                background: 'rgba(255,255,255,0.10)',
+                background: attivo ? '#34d399' : 'rgba(255,255,255,0.10)',
                 border: '1px solid rgba(255,255,255,0.3)',
                 boxShadow: '0 4px 10px rgba(0,0,0,0.45), inset 0 2px 4px rgba(255,255,255,0.55)' }}>
-                <MessageSquare size={16} strokeWidth={1.8} style={{ color: '#ffffff' }} />
+                <MessageSquare size={16} strokeWidth={1.8} style={{ color: attivo ? '#0b0f14' : '#ffffff' }} />
               </span>
               <span style={{
                 fontSize: 13, fontWeight: 'bold', letterSpacing: '0.08em',
@@ -5713,7 +5724,8 @@ export default function App() {
                 {t('no_instruments_mode') as string}
               </span>
             </div>
-          )}
+            );
+          })()}
 
           {/* Phone-satellite entry now lives in the SESSION/mode drawer
               (SidebarDrawer › LinkDrawer), per user request — not the top bar. */}
@@ -6800,8 +6812,12 @@ export default function App() {
                     conclude l'auditor a mano, che è come si è sempre fatto. */}
                 {(
                 <div className="flex items-center gap-2" style={{ width: '100%' }}>
-                {/* CYCLE COUNTERS — SÉPARÉS par type (demande utilisateur) : armés · menés à leur fin.
-                    CONTACT → AS-IS (teal) · NULL → EQUILIBRIUM (ardoise) — mêmes teintes que les boutons. */}
+                {/* CYCLE COUNTERS — SOLO quello del MODO in corso ───────────────────────────
+                    Avere CONTACT e NULL affiancati anche dopo aver scelto CONTACT confonde:
+                    davanti c'è UN metodo, e due contatori danno a intendere che siano tutti e
+                    due in gioco. Si mostra il contatore del ciclo scelto e basta — CONTACT con
+                    CONTACT, NULL con NULL (richiesta utente). L'altro totale resta nel rapporto,
+                    dove il confronto ha senso. */}
                 {([
                   { k: 'c', n: cycleStats.cStarted, d: cycleStats.cDone, name: 'CONTACT', end: 'AS-IS',
                     col: isLightTheme ? '#0891b2' : '#6ee7b7', bd: 'rgba(110,231,183,0.45)',
@@ -6809,7 +6825,7 @@ export default function App() {
                   { k: 'n', n: cycleStats.nStarted, d: cycleStats.nDone, name: 'NULL', end: 'CLEAR',
                     col: isLightTheme ? '#475569' : '#cbd5e1', bd: 'rgba(148,163,184,0.55)',
                     tip: LC('Cicli NULL avviati · portati a EQUILIBRIUM', 'Cycles NULL armés · menés au EQUILIBRIUM', 'NULL cycles armed · taken to EQUILIBRIUM', 'Ciclos NULL armados · llevados a EQUILIBRIUM', 'NULL-cykler armerade · förda till EQUILIBRIUM') },
-                ] as const).map(c => (
+                ] as const).filter(c => c.k === (mode === 'null' ? 'n' : 'c')).map(c => (
                   <div key={c.k} title={c.tip}
                     style={{ display: 'flex', alignItems: 'center', gap: 5, height: 28, padding: '0 9px', borderRadius: 8,
                       background: isLightTheme ? 'rgba(34,211,238,0.10)' : 'rgba(255,255,255,0.06)',
@@ -7232,7 +7248,10 @@ export default function App() {
                 chevaucher l'arc), justifié à GAUCHE (la réaction juste après le mot), ASCENSEUR si
                 long, dernière parole EN HAUT. ÉPHÉMÈRE : disparaît 5 s après la fin (showUnderArc) ;
                 les mots restent ensuite dans le module ASSESSMENT. NULL si aucune réaction. ── */}
-            {sessionState === 'running' && showUnderArc && assessItems.length > 0 && (
+            {/* ⚠️ NON senza strumenti: questo overlay è posizionato SOTTO l'arco (x/y nel viewBox
+                della sfera). Senza arco non ha un sotto, e finisce SOPRA il testo del ciclo al
+                centro (segnalato). Le parole restano comunque nel modulo ASSESSMENT a destra. */}
+            {sessionState === 'running' && !senzaMisura && showUnderArc && assessItems.length > 0 && (
               <div className="absolute inset-0 z-40 pointer-events-none">
                 <svg viewBox="0 0 1600 850" width="100%" height="100%" style={{ display: 'block' }}>
                   <foreignObject x={568} y={400} width={464} height={188}>
