@@ -16,7 +16,7 @@ import { useEpValidation } from './hooks/useEpValidation';
 import { useMnaModule } from './hooks/useMnaModule';
 import { useMediaRelayFallback } from './hooks/useMediaRelayFallback';
 import { useThetaMeter } from './hooks/useThetaMeter';
-import { effectiveModules, eegModulesHidden } from './engine/instrumentModules';
+import { effectiveModules, eegModulesHidden, noInstruments } from './engine/instrumentModules';
 import { sessionRecord, reactionRecord, cycleRecord, fnRecord, itemRecord,
          chiaveItem } from './engine/corpus';
 import { corpusWrite, corpusFlushNow, corpusStato, corpusAvailable } from './lib/corpusWriter';
@@ -53,7 +53,7 @@ import { CameraFeed } from './components/CameraFeed';
 import { ConnectionModal } from './components/ConnectionModal';
 import { ConnectionProgress } from './components/ConnectionProgress';
 import { AlertTriangle, BookOpen, Headphones, Power, Play, Mic, Square, ClipboardList, Gauge,
-         Battery, Activity } from 'lucide-react';
+         Battery, Activity, MessageSquare } from 'lucide-react';
 import { cn } from './lib/utils';
 import { useI18n } from './i18n.tsx';
 import { Language } from './i18n';
@@ -435,7 +435,16 @@ export default function App() {
   const senzaStrumentiRef = useRef(false);
   senzaStrumentiRef.current = senzaStrumenti;
   /** Quali strumenti si è scelto di collegare, PRIMA di far partire le connessioni. */
-  const [connSel, setConnSel] = useState({ muse: false, theta: false });
+  /**
+   * Il selettore d'apertura: TRE voci sullo stesso piano, non due più una nota a piè di pagina.
+   * `none` (« senza strumenti ») è ESCLUSIVA con le altre due — vedi `scegliConn`.
+   */
+  const [connSel, setConnSel] = useState({ muse: false, theta: false, none: false });
+  /** Spuntare una voce: « senza strumenti » e gli strumenti si escludono a vicenda. */
+  const scegliConn = (k: 'muse' | 'theta' | 'none') => setConnSel(p =>
+    k === 'none'
+      ? { muse: false, theta: false, none: !p.none }
+      : { ...p, none: false, [k]: !p[k] });
 
   // ── Auto-reconnect refs (participant side) ────────────────────────────────
   // Keep track of what to reconnect to after a drop
@@ -4301,6 +4310,17 @@ export default function App() {
   // Il gestore del worker si aggancia UNA volta sola (deps vuote): senza specchio in ref
   // leggerebbe per sempre gli strumenti collegati all'avvio.
   const instrumentsRef = useRef(instruments); instrumentsRef.current = instruments;
+  /**
+   * NIENTE MISURA A SCHERMO SENZA QUALCOSA CHE MISURI.
+   *
+   * Un « TONE ARM 2.00 » senza né casco né boîtes è la cosa peggiore che l'app possa fare:
+   * sembra una lettura, e non lo è. Vale per il TA, per la diagnostica (Total TA, velocità) e
+   * per la scia dell'ago — tutte cose che hanno senso solo se un ago le produce.
+   *
+   * Si usa il FATTO, non la scelta: se il MUSE cade a metà seduta il TA deve sparire allo
+   * stesso modo, anche se la seduta era partita con gli strumenti.
+   */
+  const senzaMisura = noInstruments(instruments);
   const moduleVis = useMemo(
     () => effectiveModules(moduleVisChosen, instruments),
     [moduleVisChosen, instruments]);
@@ -4654,6 +4674,15 @@ export default function App() {
     setReazioniViste(prev => (prev === 'both' ? 'both' : agoPrincipale));
   }, [agoPrincipale]);
   const [showThetaCal, setShowThetaCal] = useState(false);
+
+  // ESC chiude il selettore d'apertura. Chi ha aperto per sbaglio cerca ESC prima di cercare
+  // una croce, e senza questo il pannello era senza uscita (segnalato).
+  useEffect(() => {
+    if (!museHint) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setMuseHint(false); };
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, [museHint]);
 
   // ── CONN-53: graceful disconnect on tab/app close ──────────────────────────
   // Without this, quitting Chrome / killing the app left the peer waiting on the
@@ -5319,19 +5348,43 @@ export default function App() {
         background: 'rgba(2,6,23,0.96)', border: '1px solid rgba(251,191,36,0.45)',
         backdropFilter: 'blur(8px)', boxShadow: '0 10px 34px rgba(0,0,0,0.5)',
         animation: 'smFadeIn 0.3s ease-out' }}>
-        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700,
-                       letterSpacing: '0.03em', color: '#fbbf24' }}>
-          {t('connect_an_instrument') as string}
-        </span>
+        {/* ── LA VIA D'USCITA ────────────────────────────────────────────────────────────────
+            Il pannello non ne aveva alcuna: aperto per sbaglio, si restava dentro senza modo di
+            tornare indietro (segnalato). Una croce, e ESC — perché chi vuole annullare cerca
+            ESC prima di cercare una croce. */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <span style={{ flex: 1, fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700,
+                         letterSpacing: '0.03em', color: '#fbbf24' }}>
+            {t('connect_an_instrument') as string}
+          </span>
+          <button type="button" onClick={() => setMuseHint(false)}
+            title={`${t('cancel') as string} · ESC`}
+            style={{ flexShrink: 0, width: 24, height: 24, borderRadius: 6, cursor: 'pointer',
+                     background: 'transparent', border: '1px solid rgba(255,255,255,0.18)',
+                     color: 'rgba(226,238,255,0.65)', fontSize: 14, lineHeight: 1, padding: 0 }}>
+            ✕
+          </button>
+        </div>
 
+        {/* ── TRE VOCI SULLO STESSO PIANO ────────────────────────────────────────────────────
+            « Senza strumenti » era un bottone sotto CONNETTI, con una riga di spiegazione: e
+            così sembrava una didascalia, non una possibilità. Ora è la TERZA VOCE, con la sua
+            icona e la sua spunta come le altre due — perché è quel che è: un modo di condurre
+            la seduta, non l'assenza degli altri due.
+
+            È ESCLUSIVA (vedi `scegliConn`): spuntandola si spengono MUSE e boîtes, e viceversa.
+            Un « senza strumenti » spuntato insieme al MUSE non vorrebbe dire niente. */}
         {([
           { k: 'muse' as const, on: connSel.muse, label: 'MUSE', icon: <Headphones size={17} strokeWidth={2} />,
             col: 'rgba(240,246,255,0.95)', bg: 'rgba(255,255,255,0.10)', bd: 'rgba(255,255,255,0.45)', show: true },
           { k: 'theta' as const, on: connSel.theta, label: t('theta_cans') as string, icon: <Gauge size={17} strokeWidth={2} />,
             col: '#f59e0b', bg: 'rgba(245,158,11,0.16)', bd: 'rgba(245,158,11,0.6)', show: !theta.unavailable },
+          { k: 'none' as const, on: connSel.none, label: t('no_instruments_mode') as string,
+            icon: <MessageSquare size={17} strokeWidth={2} />,
+            col: 'rgba(240,246,255,0.95)', bg: 'rgba(255,255,255,0.10)', bd: 'rgba(255,255,255,0.45)', show: true },
         ]).filter(o => o.show).map(o => (
           <button key={o.k} type="button"
-            onClick={() => setConnSel(p => ({ ...p, [o.k]: !p[o.k] }))}
+            onClick={() => scegliConn(o.k)}
             style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
                      borderRadius: 9, cursor: 'pointer', fontFamily: 'var(--font-sans)',
                      fontSize: 13, fontWeight: 700, letterSpacing: '0.05em', textAlign: 'left',
@@ -5343,70 +5396,43 @@ export default function App() {
           </button>
         ))}
 
+        {/* ── UN SOLO BOTTONE, E DICE START ──────────────────────────────────────────────────
+            Diceva CONNETTI, e collegava soltanto: bisognava poi premere START a parte. Due
+            gesti per una intenzione. Ora è uno, e dice quel che fa.
+
+            Collegare può ancora fallire (il selettore di dispositivo annullato), e in quel caso
+            `handleStart` ritrova il suo controllo « nessuno strumento » e riapre questo
+            pannello: non serve gestirlo qui, si corregge da sé. */}
         <button type="button"
-          disabled={!connSel.muse && !connSel.theta}
+          disabled={!connSel.muse && !connSel.theta && !connSel.none}
           onClick={async () => {
+            const nessuno = connSel.none;
             setMuseHint(false);
-            // Scegliere uno strumento REVOCA la scelta « senza strumenti »: se no, chi ci
-            // ripensa partirebbe con un casco collegato e la seduta etichettata senza aghi.
-            setSenzaStrumenti(false);
-            // In sequenza: due selettori di dispositivo aperti insieme si ostacolerebbero.
-            if (connSel.muse)  await handleConnectMuse();
-            if (connSel.theta) await theta.connect();
+            setSenzaStrumenti(nessuno);
+            // Il ref si scrive A MANO: `setSenzaStrumenti` non ha effetto prima del render
+            // successivo, e `handleStart` parte in questo stesso giro — leggerebbe il valore
+            // vecchio e ricadrebbe nel controllo, riaprendo il pannello. (Visto a schermo.)
+            senzaStrumentiRef.current = nessuno;
+            if (!nessuno) {
+              // In sequenza: due selettori di dispositivo aperti insieme si ostacolerebbero.
+              if (connSel.muse)  await handleConnectMuse();
+              if (connSel.theta) await theta.connect();
+            }
+            void handleStart();
           }}
           style={{ height: 38, borderRadius: 9,
-                   cursor: (connSel.muse || connSel.theta) ? 'pointer' : 'default',
-                   opacity: (connSel.muse || connSel.theta) ? 1 : 0.4,
+                   cursor: (connSel.muse || connSel.theta || connSel.none) ? 'pointer' : 'default',
+                   opacity: (connSel.muse || connSel.theta || connSel.none) ? 1 : 0.4,
                    fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700,
                    letterSpacing: '0.1em', textTransform: 'uppercase',
                    background: 'rgba(52,211,153,0.18)', border: '1px solid rgba(52,211,153,0.6)',
                    color: '#34d399' }}>
-          {t('connect') as string}
-        </button>
-
-        {/* ── LA TERZA VIA: SENZA STRUMENTI, E DICHIARATA ────────────────────────────────────
-            Sta QUI, nel selettore iniziale, e non come ripiego dopo un errore: così è una
-            SCELTA. È la richiesta dell'utente, ed è giusta — una seduta senza aghi non è una
-            seduta a cui manca qualcosa, è un altro tipo di seduta.
-
-            A COSA SERVE. Si registra la verbalizzazione e le indicazioni del preclear senza
-            che nessuno possa essere influenzato dall'ago. È il GRUPPO DI CONTROLLO che ci
-            manca: tutto quel che sappiamo sull'AS-IS viene da sedute con gli strumenti, e non
-            c'è modo di sapere quanto l'ago abbia guidato l'auditor. Confrontando i due insiemi
-            si può.
-
-            Per questo va ETICHETTATA: mescolata alle altre nel corpus rovinerebbe proprio il
-            confronto per cui esiste. Nel corpus si riconosce già da `inst: {muse:false,
-            theta:false}`; nel rapporto e nello storico c'è `noInstruments`. */}
-        <div style={{ height: 1, background: 'rgba(255,255,255,0.12)', margin: '2px 0' }} />
-
-        <button type="button"
-          onClick={() => {
-            setMuseHint(false);
-            setSenzaStrumenti(true);
-            // Il ref si scrive A MANO, qui. `setSenzaStrumenti` non ha effetto prima del
-            // render successivo, e `handleStart` parte in questo stesso giro: leggerebbe il ref
-            // ancora a false, ricadrebbe nel controllo « nessuno strumento » e riaprirebbe il
-            // selettore. È il bug che ho visto a schermo la prima volta.
-            senzaStrumentiRef.current = true;
-            void handleStart();
-          }}
-          style={{ height: 34, borderRadius: 9, cursor: 'pointer',
-                   fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700,
-                   letterSpacing: '0.08em', textTransform: 'uppercase',
-                   background: 'transparent', border: '1px solid rgba(226,238,255,0.30)',
-                   color: 'rgba(226,238,255,0.75)' }}>
-          {t('no_instruments_mode') as string}
+          START
         </button>
 
         <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, lineHeight: 1.5,
                        color: 'rgba(226,238,255,0.5)' }}>
-          {t('no_instruments_hint') as string}
-        </span>
-
-        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, lineHeight: 1.5,
-                       color: 'rgba(226,238,255,0.5)' }}>
-          {t('connect_either_hint') as string}
+          {connSel.none ? t('no_instruments_hint') as string : t('connect_either_hint') as string}
         </span>
       </div>
     )}
@@ -6269,10 +6295,16 @@ export default function App() {
             {/* (SOL/SEC + STATE + REACTION are now shown together TOP-CENTRE for ALL
                 views — needle AND halo — by the unified data stack further below.) */}
 
+            {/* ── SENZA STRUMENTI IL TONE ARM NON ESISTE ─────────────────────────────────────
+                Un « 2.00 » a schermo senza nulla che lo misuri è la cosa peggiore che l'app
+                possa fare: sembra una lettura, e non lo è. Sparisce insieme alla diagnostica e
+                alla scia dell'ago — vedi `senzaMisura`. */}
             {/* Display TONE ARM + EP button */}
             <div className="sm-glass absolute top-10 right-10 flex flex-col items-end z-10 pointer-events-auto" style={{ ...scenePerspective('50%', '28%'), ...frontTilt(12) }}>
+              {!senzaMisura && (
               <span className="text-[10px] font-light uppercase tracking-[0.2em]"
                 style={{ fontFamily: 'var(--font-sans)', color: isLightTheme ? '#64748b' : 'rgba(148,163,184,0.7)' }}>TONE ARM</span>
+              )}
               {/* Le TONE ARM vient des LATTINE dès qu'il est disponible : c'est une vraie
                   résistance mesurée, pas une reconstruction. On retombe sur celui déduit de
                   l'EEG quand le meter n'est pas là ou n'est pas encore étalonné — et dans ce
@@ -6283,7 +6315,8 @@ export default function App() {
                   misurato in seduta: noi 6,8 · loro 5,98, con la resistenza in discesa.
                   Il braccio resta quello che regge l'AGO (la deviazione si misura da lui) e il
                   Total TA: quelli devono restare lenti, o ogni reazione conterebbe come TA. */}
-              {theta.status === 'connected' && theta.taNow !== null ? (
+              {senzaMisura ? null
+                : theta.status === 'connected' && theta.taNow !== null ? (
                 <span style={{ fontFamily: 'monospace', fontSize: 34, fontWeight: 700, lineHeight: 1,
                                color: isLightTheme ? '#1e293b' : 'rgba(240,246,255,0.95)' }}>
                   {theta.taNow.toFixed(2)}
@@ -6320,7 +6353,7 @@ export default function App() {
         {/* PROGRESSIVE DISCLOSURE — Total TA + velocità dietro un solo toggle
                   "diagnostica", chiuso di default → l'angolo resta un solo meter pulito.
                   Reso chiaramente APRIBILE: pill con bordo + chevron (non un'etichetta). */}
-              {!showDiag && (
+              {!showDiag && !senzaMisura && (
                 <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
                   <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: isLightTheme ? '#334155' : 'rgba(240,246,255,0.8)' }}>{t('diagnostics') as string}</span>
                   <GlassCollapseToggle on={false} onToggle={() => setShowDiag(true)} />
@@ -6329,7 +6362,7 @@ export default function App() {
               {/* Ph.1 PILOTE — panneau Diagnostic en VERRE + perspective via <Panel3D>. Le
                   contenu (readouts) est INCHANGÉ ; seul l'emballage visuel + le chrome
                   (replier/masquer) sont nouveaux. Le × masque → le chip réapparaît. */}
-              {showDiag && (
+              {showDiag && !senzaMisura && (
                 <Panel3D title={t('diagnostics') as string} side="right" isLightTheme={isLightTheme}
                   onHide={() => setShowDiag(false)}
                   style={{ marginTop: 8, minWidth: 160 }}
@@ -6429,7 +6462,8 @@ export default function App() {
                   {/* NEEDLE LIGHT — sotto il selettore degli aghi, perché parla dello STESSO ago:
                       uno dice QUALE, l'altra COME lo si vede. Stavano in due posti diversi
                       (segnalato). Nascosta in MIRROR e TONE, che hanno il loro quadrante. */}
-                  {(mode === 'contact' || mode === 'null' || mode === 'free') && (
+                  {/* Senza strumenti non c'è ago, quindi non c'è scia da accendere. */}
+                  {!senzaMisura && (mode === 'contact' || mode === 'null' || mode === 'free') && (
                     <button type="button" onClick={() => setShowTrailPref(v => !v)}
                       title={LC('NEEDLE LIGHT — la scia luminosa dell\'ago e le etichette di reazione',
                                 'NEEDLE LIGHT — la traînée lumineuse de l\'aiguille et les libellés de réaction',

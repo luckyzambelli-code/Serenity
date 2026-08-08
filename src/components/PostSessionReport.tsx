@@ -845,6 +845,8 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
     // appears when isEpValidated is true.
 
     // ── ZONES AS-IS — charge lifecycle of the contacted masses ──
+    // Senza strumenti si salta: nel PDF una sezione a zeri è indistinguibile da un fallimento.
+    if (!noInstruments) {
     ensureSpace(38);
     panelHeader(L('ZONE AS-IS', 'ZONES AS-IS', 'AS-IS ZONES', 'ZONAS AS-IS', 'AS-IS ZONER'));
     pdf.setFont('helvetica', 'normal');
@@ -903,6 +905,7 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(40, 40, 40);
     y += 7;
+    }   // fin ZONES AS-IS (salta senza strumenti)
 
     // ── AUDITING CYCLES — SÉPARÉS par famille (demande utilisateur) : les deux cycles n'ont ni
     // la même fin ni le même sens, les mélanger rendait le tableau illisible.
@@ -1155,7 +1158,8 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
       }
     }
 
-    // Graphique QL
+    // Graphique QL — salta senza strumenti (vedi ZONES AS-IS).
+    if (!noInstruments) {
     ensureSpace(70);
     y += 2;
     panelHeader(t('report_ql_chart') as string);
@@ -1203,6 +1207,7 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
       }
     }
     y += graphH + 9;
+    }   // fin graphique QL (salta senza strumenti)
 
     // (The old "As-is / T-Zones timeline" strip + 4-zone legend were removed from
     //  the PDF — superseded by the ZONES AS-IS section above, per user request.)
@@ -1677,6 +1682,12 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
           {/* Mass contacted vs dissolved — coherent (presence vs release),
               cumulative time. Replaces the old 4-zone T-zone distribution which
               showed dissolution > mass (impossible). */}
+          {/* ── SENZA STRUMENTI QUESTE DUE SEZIONI NON HANNO SORGENTE ────────────────────
+              ZONE AS-IS misura il ciclo di vita della carica contattata (Σ qL·dt), e Lock
+              Quality è il grafico del qL: senza ago non esiste né l'una né l'altro. Mostrarle
+              vuote fa credere che la seduta sia andata male, invece che non misurata — che è
+              l'errore opposto a quello per cui le sedute senza strumenti si fanno. */}
+          {!noInstruments && (
           <div className="glass-panel p-4 flex flex-col gap-4">
             <h3 className="text-sm font-mono text-slate-400 uppercase tracking-widest">ZONES AS-IS</h3>
             {massTime <= 0 ? (
@@ -1719,6 +1730,7 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
               </div>
             )}
           </div>
+          )}
 
           {/* AUDITING CYCLES — SÉPARÉS par famille (demande utilisateur) : CONTACT (→ AS-IS) et
               NULL (→ EQUILIBRIUM) n'ont ni la même fin ni le même sens ; les mélanger était illisible. */}
@@ -1960,7 +1972,8 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
         {/* Right Column: Graphs & Transcript */}
         <div className="col-span-2 flex flex-col gap-6">
           
-          {/* F/N Graph */}
+          {/* F/N Graph — solo con un ago che lo alimenti (vedi la nota su ZONE AS-IS). */}
+          {!noInstruments && (
           <div className="glass-panel p-4 h-64 flex flex-col">
             <h3 className="text-sm font-mono text-slate-400 uppercase tracking-widest mb-4">{t('lock_quality')}</h3>
             <div className="flex-1 w-full min-h-[200px] relative">
@@ -1993,6 +2006,7 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
               </div>
             </div>
           </div>
+          )}
 
           {/* (The on-screen "As-is / T-Zones" timeline was removed — superseded by
               the ZONES AS-IS section, per user request.) */}

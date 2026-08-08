@@ -41,6 +41,11 @@ export interface VisibilityInput {
   mode: SessionMode;
   level: UiLevel;
   instruments: { muse: boolean; theta: boolean; camera: boolean };
+  /**
+   * Seduta a DISTANZA (auditor con preclear altrove). Cambia `autoIn` per le camere: il volto
+   * del preclear non è periferia, è il preclear. Vedi `remoteAutoIn` nel registro.
+   */
+  remote?: boolean;
   /** Aperti a mano: vincono su tutto il resto (tranne livello e strumenti). */
   pinned: ReadonlySet<ModuleId>;
   /** Chiusi a mano: restano chiusi finché la fase non cambia. */
@@ -84,8 +89,12 @@ export function isVisible(m: ModuleSpec, input: VisibilityInput): boolean {
   // se l'auditor l'ha zittito, sa quel che fa.
   if (input.alarms?.has(m.id)) return true;
 
-  return m.autoIn.includes(input.phase);
+  return fasiDiApertura(m, input).includes(input.phase);
 }
+
+/** Le fasi in cui il modulo si apre da sé, tenendo conto della distanza. */
+const fasiDiApertura = (m: ModuleSpec, input: VisibilityInput): SessionPhase[] =>
+  input.remote && m.remoteAutoIn ? m.remoteAutoIn : m.autoIn;
 
 /** L'insieme visibile, in una passata. */
 export function visibleSet(input: VisibilityInput): Set<ModuleId> {

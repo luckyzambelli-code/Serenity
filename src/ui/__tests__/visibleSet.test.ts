@@ -5,7 +5,7 @@ import { MODULE_REGISTRY, levelAllows, moduleById, type ModuleId } from '../modu
 const base: VisibilityInput = {
   phase: 'contact.item',
   mode: 'contact',
-  level: 'standard',
+  level: 'normal',
   instruments: { muse: true, theta: false, camera: true },
   pinned: new Set<ModuleId>(),
   muted:  new Set<ModuleId>(),
@@ -29,12 +29,11 @@ describe('la tabella dei moduli', () => {
       .toEqual({ id: m.id, ep: false });
   });
 
-  it('i livelli si annidano', () => {
-    expect(levelAllows('essential', 'essential')).toBe(true);
-    expect(levelAllows('standard',  'essential')).toBe(false);
-    expect(levelAllows('standard',  'standard')).toBe(true);
-    expect(levelAllows('expert',    'standard')).toBe(false);
-    expect(levelAllows('expert',    'expert')).toBe(true);
+  it('sono DUE livelli, e si annidano', () => {
+    expect(levelAllows('normal', 'normal')).toBe(true);
+    expect(levelAllows('expert', 'normal')).toBe(false);
+    expect(levelAllows('normal', 'expert')).toBe(true);
+    expect(levelAllows('expert', 'expert')).toBe(true);
   });
 });
 
@@ -152,12 +151,18 @@ describe('ESPERTO è un altro regime, non « più roba »', () => {
     expect(s.has('trim')).toBe(true);
   });
 
-  it('in ESSENZIALE resta solo l indispensabile', () => {
-    const s = v({ phase: 'contact.item', level: 'essential' });
-    expect(s.has('journal')).toBe(false);
-    expect(s.has('cam1')).toBe(false);
+  it('in NORMAL c e quel che serve a CONDURRE, non le manopole', () => {
+    const s = v({ phase: 'contact.item' });
+    expect(s.has('journal')).toBe(true);
     expect(s.has('assessment')).toBe(true);
     expect(s.has('commandBar')).toBe(true);
+    // L'MNA è di conduzione (un SONIFY dentro un ciclo), quindi NORMAL lo ammette —
+    // si apre comunque a mano, perché è un attrezzo.
+    expect(levelAllows(moduleById('mna')!.level, 'normal')).toBe(true);
+    // Le manopole no.
+    expect(s.has('trim')).toBe(false);
+    expect(s.has('thetaCal')).toBe(false);
+    expect(s.has('biometric')).toBe(false);
   });
 });
 
@@ -174,5 +179,30 @@ describe('gli slot', () => {
 describe('la ricerca per id', () => {
   it('trova quel che c è', () => {
     expect(moduleById('journal')?.slot).toBe('left');
+  });
+});
+
+describe('la camera, a distanza, non e periferia: e il preclear', () => {
+  it('in LOCALE sparisce nei momenti di lettura fine', () => {
+    expect(v({ phase: 'contact.mockup' }).has('cam1')).toBe(false);
+    expect(v({ phase: 'null.rise'      }).has('cam1')).toBe(false);
+  });
+
+  it('in REMOTO resta, in TUTTE le fasi di ciclo', () => {
+    for (const p of ['contact.mockup', 'contact.asis', 'null.rise',
+                     'mirror.doubling', 'tone.magnitude'] as const) {
+      expect({ p, cam: v({ phase: p, remote: true }).has('cam1') })
+        .toEqual({ p, cam: true });
+    }
+  });
+
+  it('ma nemmeno a distanza durante la finestra EP: la realizzazione e sola', () => {
+    expect(v({ phase: 'ep_window', remote: true }).has('cam1')).toBe(false);
+  });
+
+  it('e senza camera collegata non compare comunque', () => {
+    const s = v({ phase: 'contact.mockup', remote: true,
+                  instruments: { muse: true, theta: false, camera: false } });
+    expect(s.has('cam1')).toBe(false);
   });
 });

@@ -43,7 +43,7 @@ interface UiModeState {
 export const useUiModeStore = create<UiModeState>()(
   persist(
     (set) => ({
-      level: 'standard',
+      level: 'normal',
       pinned: new Set<ModuleId>(),
       muted:  new Set<ModuleId>(),
       lastPhase: null,
@@ -82,7 +82,9 @@ export const useUiModeStore = create<UiModeState>()(
       version: 1,
       merge: (persisted, current) => {
         const safe = (persisted ?? {}) as Partial<UiModeState>;
-        const ok = safe.level === 'essential' || safe.level === 'standard' || safe.level === 'expert';
+        // 'essential'/'standard' erano i livelli della prima stesura a tre: ricadono su
+        // 'normal', che è ciò che entrambi volevano dire.
+        const ok = safe.level === 'normal' || safe.level === 'expert';
         return { ...current, level: ok ? safe.level! : current.level };
       },
     },
