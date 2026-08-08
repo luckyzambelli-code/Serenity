@@ -5686,6 +5686,35 @@ export default function App() {
             </div>
           )}
 
+          {/* ── « SENZA STRUMENTI », QUI, UNA VOLTA SOLA ────────────────────────────────────
+              Stava scritto in giallo al centro dello schermo, ripetuto per tutta la seduta:
+              stanca la vista e ruba l'attenzione a quel che l'auditor deve leggere. Il posto
+              giusto è QUI, accanto a MUSE e alle boîtes, perché è la stessa informazione —
+              CON CHE COSA si sta auditando. Stessa forma dei due badge, monocromo, e non
+              cliccabile: la scelta si fa allo START, non a seduta aperta. */}
+          {senzaStrumenti && sessionState !== 'idle' && (
+            <div
+              title={t('no_instruments_hint') as string}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 9,
+                padding: '3px 14px 3px 3px', borderRadius: 999,
+                background: TOKEN.wellBg, boxShadow: TOKEN.wellShadow }}>
+              <span style={{
+                width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', flexShrink: 0,
+                background: 'rgba(255,255,255,0.10)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.45), inset 0 2px 4px rgba(255,255,255,0.55)' }}>
+                <MessageSquare size={16} strokeWidth={1.8} style={{ color: '#ffffff' }} />
+              </span>
+              <span style={{
+                fontSize: 13, fontWeight: 'bold', letterSpacing: '0.08em',
+                color: TOKEN.ink, whiteSpace: 'nowrap' }}>
+                {t('no_instruments_mode') as string}
+              </span>
+            </div>
+          )}
+
           {/* Phone-satellite entry now lives in the SESSION/mode drawer
               (SidebarDrawer › LinkDrawer), per user request — not the top bar. */}
           {/* P2P connection badge — visible only in auditor/participant mode */}
@@ -6605,14 +6634,14 @@ export default function App() {
                   I CICLI RESTANO TUTTI (vedi availableModes): la sorgente non è l'ago, sono la
                   percezione del preclear e l'obnosi dell'auditor. Cambia solo chi spinge il
                   ciclo — vedi `cycleIsAutomatic`. */}
-              {senzaMisura ? (
+              {/* PRIMA DELLO START non c'è niente da dire: nessun ciclo è in corso, e « DAI
+                  L'ITEM » su una seduta non avviata è un'istruzione per un lavoro che non è
+                  cominciato. Al suo posto resta l'invito a premere START, che è già qui sopra.
+                  E l'etichetta gialla « senza strumenti » è passata in alto accanto ai badge,
+                  una volta sola: ripetuta al centro per tutta la seduta stancava la vista. */}
+              {senzaMisura && sessionState === 'running' ? (
                 <div style={{ maxWidth: 560, padding: '0 24px', textAlign: 'center',
                               display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700,
-                                 letterSpacing: '0.18em', textTransform: 'uppercase',
-                                 color: TOKEN.warn }}>
-                    {t('report_no_instruments') as string}
-                  </span>
                   {/* Lo stesso testo del CycleHint, ma in grande: qui è il soggetto dello
                       schermo, non una didascalia sotto un quadrante. */}
                   <span style={{ fontFamily: 'var(--font-sans)', fontSize: 26, fontWeight: 800,
@@ -6631,8 +6660,56 @@ export default function App() {
                       {spiegazioneCiclo.avviso}
                     </span>
                   )}
+
+                  {/* ── I COMANDI MANUALI ──────────────────────────────────────────────────────
+                      Senza ago la macchina a stati non riceve i tick che la fanno avanzare: il
+                      ciclo lo porta avanti l'auditor. I gesti sono le STESSE funzioni che l'ago
+                      scatena da solo (validateAsIs, validateClearRead, stopMirror) — qui hanno
+                      il loro bottone. « Dai l'item » sta già nella barra in alto; qui c'è il
+                      passo che chiude il ciclo, e per NULL i due esiti.
+                      Non è un motore nuovo: è la mano dove prima c'era l'automatismo. */}
+                  {(() => {
+                    const btn = (etichetta: string, onClick: () => void, tinta: string): React.ReactNode => (
+                      <button key={etichetta} type="button" onClick={onClick}
+                        style={{ height: 40, padding: '0 22px', borderRadius: 10, cursor: 'pointer',
+                          fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 800,
+                          letterSpacing: '0.06em', textTransform: 'uppercase',
+                          background: `${tinta}22`, border: `1px solid ${tinta}`, color: tinta }}>
+                        {etichetta}
+                      </button>
+                    );
+                    const riga = (figli: React.ReactNode) => (
+                      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 6, flexWrap: 'wrap' }}>{figli}</div>
+                    );
+                    const DAI = LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE THE ITEM', 'DA EL ÍTEM', 'GE ITEM');
+
+                    // ── MIRROR ──
+                    if (mode === 'mirror')
+                      return mirrorArmed
+                        ? riga(btn(LC('OTTENUTO — VALIDA', 'OBTENU — VALIDER', 'OBTAINED — VALIDATE', 'OBTENIDO — VALIDAR', 'UPPNÅTT — VALIDERA'), () => stopMirror(), '#34d399'))
+                        : riga(btn(DAI, () => armMirror(), '#34d399'));
+
+                    // ── CONTACT ──
+                    if (mode === 'contact')
+                      return cycleArmed
+                        ? riga(btn(LC('DICHIARA AS-IS', 'DÉCLARE L\'AS-IS', 'DECLARE AS-IS', 'DECLARA AS-IS', 'DEKLARERA AS-IS'), () => validateAsIs(), '#34d399'))
+                        : riga(btn(DAI, () => armCycle('charge'), '#6ee7b7'));
+
+                    // ── NULL — due esiti opposti: EQUILIBRIUM (il PC crea la massa e la lascia)
+                    //    oppure NON RICARICA (non ci riesce — il null non vale nulla). ──
+                    if (mode === 'null')
+                      return cycleArmed
+                        ? riga(<>
+                            {btn(LC('EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓'), () => validateClearRead(true), '#34d399')}
+                            {btn(LC('EQUILIBRIUM · senza VGI', 'EQUILIBRIUM · sans VGI', 'EQUILIBRIUM · no VGI', 'EQUILIBRIUM · sin VGI', 'EQUILIBRIUM · utan VGI'), () => validateClearRead(false), '#94a3b8')}
+                            {btn(LC('NON RICARICA', 'NE RECHARGE PAS', 'NO RECHARGING', 'NO RECARGA', 'LADDAR INTE'), () => finalizeCycle(false), '#dc2626')}
+                          </>)
+                        : riga(btn(DAI, () => armCycle('null'), '#cbd5e1'));
+
+                    return null;   // TONE ha la sua barra dei quattro tempi, e regge senza ago.
+                  })()}
                 </div>
-              ) : (
+              ) : !senzaMisura ? (
               <QuantumSphere
                 needleOffsetProp={needleOffset}
                 // Un ago SOLO: quello delle lattine si disegna solo se è lui il principale.
@@ -6654,7 +6731,7 @@ export default function App() {
                 releaseActive={stableReleaseState === 'active'}
                 fnMode={fnMode}
               />
-              )}
+              ) : null}
             </div>
 
             {/* DATA STACK — fixed TOP-CENTRE for ALL views (needle + halo), per the
@@ -6689,7 +6766,10 @@ export default function App() {
                             // laisser celle-ci afficherait deux jeux de commandes contradictoires.
                             // In LIBERO non c'è ciclo da armare: il campo item e il bottone non
                             // avrebbero niente da fare. Gli item si danno da ASSESSMENT.
-                            display: (!MODE_SPEC[mode].arms || viewMode === 'mirror' || viewMode === 'tone' || eegModulesHidden(instruments)) ? 'none' : 'flex',
+                            // E MAI PRIMA DELLO START: un campo « dai l'item » e un bottone che
+                            // arma un ciclo, su una seduta non ancora cominciata, invitano a un
+                            // gesto che non ha effetto. Compaiono quando la seduta parte.
+                            display: (sessionState !== 'running' || !MODE_SPEC[mode].arms || viewMode === 'mirror' || viewMode === 'tone' || eegModulesHidden(instruments)) ? 'none' : 'flex',
                             flexDirection: 'column', gap: 6 }}>
                 <textarea
                   value={auditingQuestion}

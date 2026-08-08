@@ -43,20 +43,19 @@ function CreditAvatar({ src, name }: { src?: string; name: string }) {
 }
 
 /**
- * BOBTAIL — le chien de Claudio, en médaillon rond sous le nom du logiciel.
+ * ONDES — le médaillon rond sous le nom du logiciel.
  *
- * ROND comme les portraits : un détourage du poil blanc sur fond blanc laissait des accrocs
- * dans la fourrure (le poil et le papier ont la même clarté) — le cercle règle la question sans
- * rien découper. Volontairement en sourdine, et un peu plus petit que les portraits : c'est un
- * clin d'œil, pas un crédit. Il s'éclaire au survol, pour qui le remarque.
+ * ROND comme les portraits, et volontairement en sourdine : c'est un clin d'œil, pas un crédit.
+ * Il s'éclaire au survol, pour qui le remarque. (Le bobtail de Claudio occupait cette place ;
+ * l'image d'ondes la reprend, même cercle, même discrétion.)
  */
-function Bobtail({ title }: { title: string }) {
+function Medaillon({ title }: { title: string }) {
   const [survol, setSurvol] = useState(false);
   const [rate, setRate] = useState(false);
   if (rate) return null;      // pas de vignette d'image cassée : il disparaît, simplement
   return (
     <img
-      src="/credits/bobtail.jpg"
+      src="/credits/ondes.png"
       alt={title}
       title={title}
       onError={() => setRate(true)}
@@ -108,7 +107,7 @@ export function CreditsModal({ onClose }: { onClose: () => void }) {
                    objectFit: 'contain', marginBottom: 10,
                    filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5)) brightness(1.05)' }} />
 
-        {/* Le NOM du logiciel, sous le logo de la maison. Le bobtail se tient à côté — discret,
+        {/* Le NOM du logiciel, sous le logo de la maison. Le médaillon se tient à côté — discret,
             décalé vers le bas pour ne pas concurrencer le mot. */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                       marginBottom: 20 }}>
@@ -125,7 +124,7 @@ export function CreditsModal({ onClose }: { onClose: () => void }) {
               v{__APP_VERSION__}
             </span>
           </div>
-          <Bobtail title="Bobtail" />
+          <Medaillon title="Ondes" />
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

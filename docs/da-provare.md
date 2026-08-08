@@ -20,6 +20,15 @@ da sola senza toccare le altre.
   - [ ] l'integrità passa all'**ambra** sotto il 60% (`INTEGRITA_SOGLIA`) e resta smorzata sopra;
   - [ ] i due numeri restano allineati mentre cambiano (`tabular-nums`).
 
+- [ ] **I comandi manuali senza strumenti** (`App.tsx`) — provati a schermo nel dev server, ma
+      col MUSE addosso vanno riguardati in seduta vera:
+  - [ ] CONTACT: DAI L'ITEM → DICHIARA AS-IS chiude il ciclo (contatore +1, journal);
+  - [ ] NULL: DAI L'ITEM → i tre esiti (EQUILIBRIUM con/senza VGI, NON RICARICA) scrivono la
+        riga giusta nel rapporto e nel corpus;
+  - [ ] MIRROR: DAI L'ITEM → OTTENUTO valida;
+  - [ ] con MUSE collegato i comandi manuali NON compaiono (il centro torna a essere l'ago), e
+        i cicli avanzano da sé come prima — cioè che non ho rotto il caso con strumenti.
+
 - [ ] **Le fasi del ciclo** (`engine/sessionPhase.ts`, tappa 1 della refonte) — la derivazione
       che alimenta `CycleHint` è uscita da `App.tsx` senza cambiare una condizione. 34 test
       coprono la scala, ma il testo a schermo si vede solo in seduta: **senza strumento la
