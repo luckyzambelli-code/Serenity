@@ -278,6 +278,38 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
                   </div>
                   <div style={{ fontSize: 22, fontWeight: 700, color: 'rgba(240,246,255,0.95)', marginTop: 5 }}>{pc.name}</div>
                   <div style={{ marginTop: 7 }}><Row l={L('Sessioni', 'Séances', 'Sessions', 'Sesiones', 'Sessioner')} v={String(pc.count)} /><Row l={L('Ultima', 'Dernière', 'Last', 'Última', 'Senaste')} v={fmtDate(pc.last)} /></div>
+                  {/* ── PERCHÉ QUESTA SCHEDA NON SI MODIFICAVA ─────────────────────────────────
+                      Non è un profilo: è l'OMBRA delle sedute — nome, foto e conteggio dedotti
+                      da `getSessions()`. Non c'era un record da modificare, quindi mancavano
+                      matita e cestino, e sembrava un profilo bloccato (segnalato).
+
+                      La matita ora lo REGISTRA: apre la scheda già compilata col nome e la foto,
+                      e salvando nasce un profilo vero. Da quel momento la scheda « HISTO »
+                      sparisce da sé — i dedotti sono deduplicati contro i registrati — e al suo
+                      posto c'è il profilo, con matita E cestino come tutti gli altri. Un gesto,
+                      e si sbloccano entrambe le cose.
+
+                      Nessun cestino qui: cancellare l'ombra vorrebbe dire cancellare le sedute
+                      che la proiettano, e quelle si eliminano una per una dallo STORICO, dove si
+                      vede che cosa si sta perdendo. */}
+                  {/* NEL FLUSSO, non in assoluto: questa scheda ha DUE righe (Sessioni, Ultima)
+                      invece di una, e un bottone ancorato in basso a destra ci finiva sopra —
+                      visto a schermo. Così scende sotto il testo qualunque sia il numero di righe. */}
+                  <div style={{ marginTop: 8, display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEdit({ kind: 'pc', name: pc.name, photo: pc.photo }); }}
+                      title={pick5(lang,
+                        'Registra questo preclear — poi si modifica e si elimina come gli altri',
+                        'Enregistrer ce préclair — ensuite il se modifie et se supprime comme les autres',
+                        'Register this preclear — then it edits and deletes like the others',
+                        'Registrar este preclear — luego se modifica y elimina como los demás',
+                        'Registrera denna preclear — sedan ändras och tas den bort som de andra')}
+                      style={{ height: 26, padding: '0 9px', borderRadius: 7, display: 'flex', alignItems: 'center', gap: 5,
+                               border: `1px solid ${AMBER}66`, background: `${AMBER}1f`, color: AMBER, cursor: 'pointer',
+                               fontFamily: 'monospace', fontSize: 9, letterSpacing: '0.1em' }}>
+                      <Pencil size={12} /> {L('REGISTRA', 'ENREGISTRER', 'REGISTER', 'REGISTRAR', 'REGISTRERA')}
+                    </button>
+                  </div>
                 </div>
               </div>
             );
