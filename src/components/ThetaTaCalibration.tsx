@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useI18n } from '../i18n';
 import {
-  linearitaResidua, buildTaScale, taFromRaw, isFactoryScale,
+  linearitaResidua, buildTaScale, taFromRaw, isFactoryScale, findNonMonotonic,
   type ThetaTaPoint, type ThetaTaScale,
 } from '../engine/thetaTaScale';
 import { LAYER } from '../ui/layers';
@@ -76,7 +76,16 @@ export function ThetaTaCalibration({
   const scarto = anteprima ? linearitaResidua(anteprima) : 0;
   const vivo = anteprima ? taFromRaw(rawNow, anteprima) : taNow;
 
+  // IL PUNTO FUORI ORDINE, se c'è: si nomina, invece di un « punti non validi » che non dice
+  // quale rifare. Più TA = più resistenza, quindi il grezzo DEVE crescere; un punto che scende
+  // vuol dire che durante la misura è cambiata la portata o che la lettura non era stabile.
+  const fuoriOrdine = findNonMonotonic(elenco);
+
   const salva = () => {
+    if (fuoriOrdine) {
+      setErrore(`${t('theta_cal_non_monotonic')} — TA ${fuoriOrdine.ta} (${fuoriOrdine.raw})`);
+      return;
+    }
     if (!applyTaPoints(elenco, Date.now())) {
       setErrore(t('theta_cal_bad_points') as string);
       return;

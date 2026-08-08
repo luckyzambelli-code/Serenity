@@ -407,8 +407,21 @@ export function QuantumSphere({
         {/* ── Arc background ── */}
         <path d={bandPath(-1.0, 1.0, R_IN, R_OUT)} fill={arcBg}/>
 
-        {/* ── Zone color bands (togglable via showColorBands) ── */}
-        {showColorBands && (!isLightTheme ? (
+        {/* ── LE FASCE DELLE ZONE — SOLO al buio, e appena accennate ─────────────────────────
+            Nel tema chiaro erano verde/giallo/arancio/rosso al 95% di opacità: quattro colori
+            pieni sotto l'ago. Due guai, non uno.
+
+            Il primo è la leggibilità: l'ago e la sua scia passano sopra un fondo che cambia
+            colore quattro volte, e la reazione — che è la sola cosa da guardare — si perde.
+
+            Il secondo è la regola del colore (docs/refonte-fasi.md §2): il rosso dell'app vuol
+            dire CARICA PRESENTE. Un rosso fisso stampato all'estremo destro dell'arco lo dice
+            SEMPRE, quindi non lo dice più. E il verde a sinistra collideva col verde di
+            « traguardo raggiunto ».
+
+            Al buio restano i veli di bianco: non sono colore, sono un rilievo. In chiaro non
+            servono affatto — le zone si leggono già dalle etichette (SET · FALL · LONG FALL). */}
+        {showColorBands && !isLightTheme && (
           <>
             <path d={bandPath(-1.0, SET_OFFSET, R_IN, R_COLOR)} fill="rgba(255,255,255,0.035)"/>
             <path d={bandPath(SET_OFFSET, 0.13, R_IN, R_COLOR)} fill="rgba(255,255,255,0.075)"/>
@@ -416,14 +429,7 @@ export function QuantumSphere({
             <path d={bandPath(0.45, 0.72, R_IN, R_COLOR)}       fill="rgba(255,255,255,0.045)"/>
             <path d={bandPath(0.72, 1.0,  R_IN, R_COLOR)}       fill="rgba(255,255,255,0.05)"/>
           </>
-        ) : (
-          <>
-            <path d={bandPath(SET_OFFSET, 0.13, R_IN, R_COLOR)} fill="#22c55e" opacity="0.95"/>
-            <path d={bandPath(0.13, 0.45, R_IN, R_COLOR)}       fill="#eab308" opacity="0.95"/>
-            <path d={bandPath(0.45, 0.72, R_IN, R_COLOR)}       fill="#f97316" opacity="0.95"/>
-            <path d={bandPath(0.72, 1.0,  R_IN, R_COLOR)}       fill="#ef4444" opacity="0.95"/>
-          </>
-        ))}
+        )}
 
         {/* ── Arc borders / RÉACTION ── */}
         {/* Redesign verre : quand une réaction est active, le rebord devient un CANAL INCAVÉ
@@ -455,13 +461,16 @@ export function QuantumSphere({
         {([-1, 1] as const).map(side => {
           const a = off2ang(side);
           const p1 = pt(a, R_IN - 24), p2 = pt(a, R_OUT + 40);
-          // ROGER-FIX (#5 v2): the needle exiting RIGHT = release/blow-down
-          // (LF Blow Down) = LIBERATION → green; exiting LEFT = the TA rising =
-          // ADDING MASS → red.
-          // STYLE B (thème sombre) : extrémités en BLANC (monochrome). Thème clair : vert/rouge.
-          const limitColor = side === 1
-            ? (isLightTheme ? '#16a34a' : 'rgba(255,255,255,0.90)')   // right = liberation
-            : (isLightTheme ? '#dc2626' : 'rgba(255,255,255,0.90)');  // left  = adding mass
+          // ── MONOCROMO NEI DUE TEMI ────────────────────────────────────────────────────
+          // Erano verde (destra = liberazione) e rosso (sinistra = massa che sale) nel solo
+          // tema chiaro, mentre al buio erano già bianchi. Ma queste due linee ci sono
+          // SEMPRE, anche a quadrante fermo: un rosso permanente non informa, e occupa il
+          // colore che nell'app vuol dire « carica presente » (docs/refonte-fasi.md §2).
+          // Il verso lo dicono la posizione e le etichette (RISE a sinistra, LFBD a destra) —
+          // non serve il colore per sapere qual è la destra. Le linee RESTANO: segnano dove
+          // l'ago esce dal quadrante (fix Roger #5), ed è quello il loro mestiere.
+          const limitColor = isLightTheme ? 'rgba(30,41,59,0.75)' : 'rgba(255,255,255,0.90)';
+          void side;
           return (
             <line key={side} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
               stroke={limitColor} strokeWidth="3.5" strokeLinecap="round"

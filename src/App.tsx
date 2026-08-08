@@ -4634,7 +4634,15 @@ export default function App() {
   // Cambiando ago, le reazioni scritte tornano a quelle dell'ago nuovo. « Per difetto » vuol
   // dire questo: si guarda un ago, si leggono le sue. Se l'auditor vuole ENTRAMBI lo dice, e
   // quella scelta resta finché non cambia ago di nuovo.
-  useEffect(() => { setReazioniViste(agoPrincipale); }, [agoPrincipale]);
+  //
+  // ⚠️ MA DUE non va disfatto. Scegliendo DUE l'ago passa al METER (vedi il selettore), quindi
+  // `agoPrincipale` CAMBIA — e questo effetto, senza la guardia, rimetteva subito le reazioni
+  // del solo METER, cancellando la scelta un istante dopo il clic. La scelta esplicita
+  // dell'auditor vince sul ripristino automatico: è la stessa regola di `pinned` in
+  // `visibleSet.ts` — la mano batte l'automatismo.
+  useEffect(() => {
+    setReazioniViste(prev => (prev === 'both' ? 'both' : agoPrincipale));
+  }, [agoPrincipale]);
   const [showThetaCal, setShowThetaCal] = useState(false);
 
   // ── CONN-53: graceful disconnect on tab/app close ──────────────────────────
@@ -6294,9 +6302,18 @@ export default function App() {
                       guardare là dove l'ago non è già imposto dal metodo (cioè in LIBERO: negli
                       altri modi lo impone MODE_SPEC e questa scelta cambia solo le scritte).
 
-                      ENTRAMBI non tocca l'ago — uno solo se ne può mostrare, i dati dicono che i
-                      due non si fondono (κ = −0,09 su 89 item) — e lascia quello di prima,
-                      aggiungendo la seconda riga di reazioni.
+                      ── DUE MOSTRA L'AGO DEL METER ────────────────────────────────────────
+                      Prima DUE non toccava l'ago e lasciava quello di prima. Ma i due aghi non
+                      sono pari: quello del MUSE è RICOSTRUITO (il TA è ricavato dall'EEG),
+                      quello del METER è una MISURA di resistenza. Chiedendo di vedere tutto e
+                      due, l'ago da guardare è quello vero, e le reazioni del MUSE si aggiungono
+                      sopra come seconda riga — che è il loro posto, perché i due non si fondono
+                      (κ = −0,09 su 89 item).
+
+                      Vale dove il metodo LASCIA la scelta, cioè in LIBERO. In CONTACT, NULL e
+                      MIRROR l'ago resta quello dell'EEG perché è la SORGENTE del ciclo, non una
+                      preferenza di visualizzazione: cambiarlo cambierebbe da quale strumento il
+                      ciclo registra le letture. (Vedi MODE_SPEC in engine/sessionMode.ts.)
 
                       Sta QUI e non a sinistra: è una scelta sugli STRUMENTI, come ASSESS ed EP
                       che le stanno sotto, non una scelta sul metodo. */}
@@ -6325,7 +6342,9 @@ export default function App() {
                         const imposto = MODE_SPEC[mode].needle !== null || provaBoiteInCorso || cicloInCorso;
                         return (
                           <button key={o.k} type="button"
-                            onClick={() => { setReazioniViste(o.k); if (o.k !== 'both') setAgoScelto(o.k); }}
+                            // DUE → l'ago del METER (è misurato, non ricostruito) + le reazioni
+                            // del MUSE in più.
+                            onClick={() => { setReazioniViste(o.k); setAgoScelto(o.k === 'both' ? 'theta' : o.k); }}
                             title={imposto
                               ? LC('Quali reazioni scrivere — l\'ago lo impone il metodo',
                                    'Quelles réactions écrire — l\'aiguille est imposée par la méthode',

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildTaScale, taFromRaw, linearitaResidua, MIN_TA_POINTS, TA_MAX, TA_MIN,
-  factoryTaScale, isFactoryScale, FACTORY_TA_POINTS,
+  factoryTaScale, isFactoryScale, FACTORY_TA_POINTS, findNonMonotonic,
   type ThetaTaPoint,
 } from '../thetaTaScale';
 
@@ -175,5 +175,74 @@ describe('taratura di fabbrica', () => {
   it('si riconosce da una taratura propria', () => {
     expect(isFactoryScale(factoryTaScale())).toBe(true);
     expect(isFactoryScale(buildTaScale(PUNTI, Date.now()))).toBe(false);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+// LA MISURA DELL'08/08/2026 — e il difetto che rivelava
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+describe('un punto fuori ordine non deve passare in silenzio', () => {
+  // Misurato con la regolazione automatica: i primi tre crescono, il quarto crolla.
+  const misura: ThetaTaPoint[] = [
+    { ta: 2, raw: 494 }, { ta: 3, raw: 1244 }, { ta: 4, raw: 2555 }, { ta: 5, raw: 559 },
+  ];
+
+  it('lo individua, e indica QUALE rifare', () => {
+    const fuori = findNonMonotonic(misura);
+    expect(fuori).toEqual({ ta: 5, raw: 559 });
+  });
+
+  it('e la scala si RIFIUTA di costruirsi', () => {
+    expect(buildTaScale(misura, 0)).toBeNull();
+  });
+
+  it('prima veniva accettata, e ordinando per grezzo dava un TA che sale, scende e risale', () => {
+    // La prova del perché il rifiuto conta: ordinati per grezzo i TA sono 2, 5, 3, 4.
+    const perGrezzo = [...misura].sort((a, b) => a.raw - b.raw).map(p => p.ta);
+    expect(perGrezzo).toEqual([2, 5, 3, 4]);
+  });
+
+  it('i primi tre punti, da soli, sono una scala buona', () => {
+    const scala = buildTaScale(misura.slice(0, 3), 0);
+    expect(scala).not.toBeNull();
+    expect(taFromRaw(1244, scala!)).toBeCloseTo(3, 5);
+  });
+
+  it('la taratura di fabbrica resta monotona — non si è rotto nulla', () => {
+    expect(findNonMonotonic(FACTORY_TA_POINTS)).toBeNull();
+  });
+
+  it('con DUE punti non esiste fuori ordine: due punti definiscono un verso, non lo violano', () => {
+    // Serve almeno un terzo punto perché « scendere dopo essere salito » abbia senso.
+    expect(findNonMonotonic([{ ta: 2, raw: 100 }, { ta: 3, raw: 200 }])).toBeNull();
+    expect(findNonMonotonic([{ ta: 2, raw: 200 }, { ta: 3, raw: 100 }])).toBeNull();
+  });
+
+  it('col terzo punto il verso c è, e chi lo viola si vede', () => {
+    expect(findNonMonotonic([
+      { ta: 2, raw: 100 }, { ta: 3, raw: 200 }, { ta: 4, raw: 150 },
+    ])).toEqual({ ta: 4, raw: 150 });
+  });
+
+  it('un punto solo non può essere fuori ordine', () => {
+    expect(findNonMonotonic([{ ta: 3, raw: 999 }])).toBeNull();
+  });
+});
+
+describe('il verso lo detta la maggioranza, non il primo passo', () => {
+  it('un apparecchio INVERSO (grezzo che cala) resta valido', () => {
+    const inverso: ThetaTaPoint[] = [
+      { ta: 2, raw: 11_000_000 }, { ta: 3, raw: 10_000_000 },
+      { ta: 4, raw: 9_000_000 },  { ta: 5, raw: 8_000_000 },
+    ];
+    expect(findNonMonotonic(inverso)).toBeNull();
+    expect(buildTaScale(inverso, 1)).not.toBeNull();
+  });
+
+  it('e se il punto guasto è il PRIMO, indica quello — non tutti gli altri', () => {
+    const guasto: ThetaTaPoint[] = [
+      { ta: 2, raw: 494 }, { ta: 3, raw: 200 }, { ta: 4, raw: 1244 }, { ta: 5, raw: 2555 },
+    ];
+    expect(findNonMonotonic(guasto)).toEqual({ ta: 3, raw: 200 });
   });
 });

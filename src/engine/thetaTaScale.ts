@@ -65,12 +65,73 @@ export const FACTORY_TA_POINTS: ThetaTaPoint[] = [
 export const MIN_TA_POINTS = 2;
 
 /**
- * Costruisce la scala dai punti raccolti. Restituisce null se sono troppo pochi o se due punti
- * hanno lo stesso grezzo (indeterminato: due TA diversi non possono dare la stessa lettura).
+ * IL PUNTO FUORI ORDINE, se c'è.
+ *
+ * ── PERCHÉ SERVE, E COME L'HO SCOPERTO ─────────────────────────────────────────────────────
+ * Misura del 08/08/2026 con la regolazione automatica: TA 2 → 494, TA 3 → 1244, TA 4 → 2555,
+ * TA 5 → **559**. I primi tre crescono (×2,52 poi ×2,05, forma coerente con quella di fabbrica);
+ * il quarto è NOVE VOLTE più basso di dove dovrebbe stare, e più basso perfino del punto TA 3.
+ *
+ * Su un e-meter è impossibile: più TA vuol dire più resistenza, quindi il grezzo deve crescere.
+ * Un punto che scende dice che è cambiato qualcosa DURANTE la misura (la regolazione automatica
+ * ha cambiato portata, o la lettura è stata presa prima che si stabilizzasse), non che
+ * l'apparecchio si comporta così.
+ *
+ * ── IL DIFETTO CHE QUESTO NASCONDEVA ───────────────────────────────────────────────────────
+ * `buildTaScale` ORDINA per grezzo, e con quei quattro punti l'ordinamento dava:
+ *
+ *     raw  494 → TA 2      raw  559 → TA 5      raw 1244 → TA 3      raw 2555 → TA 4
+ *
+ * cioè una scala in cui il TA sale, scende e risale. Un ago fermo a 520 avrebbe letto TA ≈ 4,5
+ * invece di ≈ 2,1. E veniva accettata IN SILENZIO, perché il solo controllo era che i grezzi
+ * fossero distinti — e lo erano. Una taratura sbagliata in silenzio è peggio di nessuna
+ * taratura: il numero c'è, sembra buono, e mente per tutta la seduta.
+ *
+ * ── MONOTONO, NON « CRESCENTE » ────────────────────────────────────────────────────────────
+ * Il verso dell'apparecchio non si dà per scontato: `taFromRaw` regge anche un meter in cui il
+ * grezzo CALA al crescere della resistenza (c'è un test che lo pretende). Quel che è impossibile
+ * non è « scendere »: è scendere DOPO essere salito. Si prende quindi il verso dalla MAGGIORANZA
+ * dei passi e si segnala il punto che va controcorrente — così un solo punto sbagliato viene
+ * indicato per quel che è, invece di far sembrare rotto tutto il resto.
+ *
+ * Restituisce il punto fuori ordine, o null se la serie è coerente.
+ */
+export const findNonMonotonic = (points: ThetaTaPoint[]): ThetaTaPoint | null => {
+  const validi = points.filter(p => Number.isFinite(p.raw) && Number.isFinite(p.ta));
+  if (validi.length < 2) return null;
+
+  // Si ordina per TA — che è il dato CERTO (è inciso sull'artefatto). Ordinare per grezzo, come
+  // fa `buildTaScale`, è proprio ciò che maschera il problema: qualunque serie diventa
+  // « ordinata » se la si riordina.
+  const perTa = [...validi].sort((a, b) => a.ta - b.ta);
+
+  let su = 0, giu = 0;
+  for (let i = 1; i < perTa.length; i++) {
+    const d = perTa[i].raw - perTa[i - 1].raw;
+    if (d > 0) su++; else if (d < 0) giu++;
+  }
+  // Nessun dislivello, o tanti su quanti giù con due soli punti: non c'è una maggioranza da cui
+  // dedurre il verso. I casi degeneri (grezzi uguali) li prende già `buildTaScale`.
+  if (su === 0 && giu === 0) return null;
+  const versoSu = su >= giu;
+
+  for (let i = 1; i < perTa.length; i++) {
+    const d = perTa[i].raw - perTa[i - 1].raw;
+    if (versoSu ? d <= 0 : d >= 0) return perTa[i];
+  }
+  return null;
+};
+
+/**
+ * Costruisce la scala dai punti raccolti. Restituisce null se:
+ *   • sono troppo pochi;
+ *   • due punti hanno lo stesso grezzo (indeterminato: due TA diversi, una lettura sola);
+ *   • la serie non è monotona (vedi `findNonMonotonic` — misura da rifare, non da salvare).
  */
 export const buildTaScale = (points: ThetaTaPoint[], madeAt: number): ThetaTaScale | null => {
   const validi = points.filter(p => Number.isFinite(p.raw) && Number.isFinite(p.ta));
   if (validi.length < MIN_TA_POINTS) return null;
+  if (findNonMonotonic(validi)) return null;
 
   const ordinati = [...validi].sort((a, b) => a.raw - b.raw);
   for (let i = 1; i < ordinati.length; i++) {
