@@ -1468,14 +1468,13 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
       pdf.setFont('helvetica', 'italic');
       pdf.setFontSize(8.5);
       pdf.setTextColor(120, 120, 120);
+      // Il TOTALE dell'archivio, e poi la ripartizione: quante di questo auditor, quante d'altri.
       pdf.text(
-        altre > 0
-          ? L(`Nell'archivio esistono altri ${altre} report (altri auditor o PC).`,
-              `${altre} autres rapports existent dans l'archive (autres auditeurs ou PC).`,
-              `${altre} other reports exist in the archive (other auditors or PCs).`,
-              `Existen otros ${altre} informes en el archivo (otros auditores o PC).`,
-              `${altre} andra rapporter finns i arkivet (andra auditörer eller PC).`)
-          : L('Nessun altro report nell\'archivio.', 'Aucun autre rapport dans l\'archive.', 'No other reports in the archive.', 'Ningún otro informe en el archivo.', 'Inga andra rapporter i arkivet.'),
+        L(`Archivio: ${totale} report in tutto — ${mie.length} di questo auditor, ${altre} di altri auditor o PC.`,
+          `Archive : ${totale} rapports en tout — ${mie.length} de cet auditeur, ${altre} d'autres auditeurs ou PC.`,
+          `Archive: ${totale} reports in all — ${mie.length} for this auditor, ${altre} for other auditors or PCs.`,
+          `Archivo: ${totale} informes en total — ${mie.length} de este auditor, ${altre} de otros auditores o PC.`,
+          `Arkiv: ${totale} rapporter totalt — ${mie.length} för denna auditör, ${altre} för andra.`),
         20, y);
       pdf.setFont('helvetica', 'normal');
     } catch { /* lo storico non deve poter far fallire il PDF */ }
@@ -2162,8 +2161,26 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
               "pr-2 flex flex-col gap-0",
               isExporting ? "h-auto overflow-visible" : "flex-1 overflow-y-auto custom-scrollbar"
             )}>
+              {/* ── SENZA REAZIONI, IL JOURNAL COMPLETO ────────────────────────────────────────
+                  Il Semantic Supervisor mostra le parole dell'auditor CON la loro reazione:
+                  senza strumenti non c'è reazione, e la sezione restava vuota (« nessun parlato »)
+                  anche quando il journal era pieno di item e indicazioni (segnalato). In quel
+                  caso si mostra il JOURNAL intero — item, indicazioni, note di sistema — così il
+                  rapporto ha sempre la traccia della seduta, con o senza strumenti. */}
               {transcriptReactions.length === 0 ? (
-                <div className="text-slate-500 text-sm font-mono italic text-center mt-10">{t('no_speech_detected')}</div>
+                logs.length === 0 ? (
+                  <div className="text-slate-500 text-sm font-mono italic text-center mt-10">{t('no_speech_detected')}</div>
+                ) : (
+                  logs.map((log, i) => (
+                    <div key={i} className="flex items-start gap-2 p-1.5 bg-slate-900/30 border-b border-slate-800/50 last:border-0">
+                      <span className="text-[9px] font-mono text-slate-500 mt-0.5 w-12 shrink-0">[{log.time.toFixed(1)}s]</span>
+                      <p className="text-[10px] text-slate-300 font-mono flex-1 leading-tight">
+                        {log.speaker && log.speaker !== 'SYS' ? <span className="text-slate-500">{log.speaker}: </span> : null}
+                        {log.text}
+                      </p>
+                    </div>
+                  ))
+                )
               ) : (
                 transcriptReactions.map((log, i) => (
                   <div key={i} className="flex items-start gap-2 p-1.5 bg-slate-900/30 border-b border-slate-800/50 last:border-0">

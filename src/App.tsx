@@ -1164,6 +1164,11 @@ export default function App() {
     setAsIsPending(false); asIsPendingRef.current = false;
     setManualReadyBoth(false); manualReadySinceRef.current = null;
     setAsIsFalse(false); falseAsIsDetector.reset();
+    // IL CAMPO ITEM SI SVUOTA A CICLO CHIUSO. Se no, il prossimo DAI L'ITEM ritrova il vecchio
+    // item in `auditingQuestion`, lo prende per buono (`cycleAwaitItemRef = !q` → false) e NON
+    // aspetta la voce: si riparte con l'item di prima (segnalato). Svuotandolo, il nuovo item
+    // detto a voce prende il posto del vecchio, che è quel che ci si aspetta.
+    setAuditingQuestion('');
   };
   // Plus de « no recharging » déclaré : si ça ne recharge pas, l'auditeur met simplement FIN au
   // cycle (STOP) — pas de bouton (demande utilisateur). Un null non mené au EQUILIBRIUM reste
@@ -1559,6 +1564,10 @@ export default function App() {
     // occhi dall'ago proprio nel momento in cui si dà l'item (richiesta utente).
     cycleAwaitItemRef.current = !q;
     cycleLogCursorRef.current = logsRef.current.length;   // solo ciò che si dice DOPO il tasto
+    // DANDO L'ITEM A VOCE, l'assessment si accende da sé: così gli item detti si vedono nella
+    // lista senza dover premere ASSESS a parte (richiesta utente). Solo se l'item è a voce
+    // (`!q`) e l'assessment non gira già — se scrivi l'item non serve aprire la cattura vocale.
+    if (!q && !assessActiveRef.current) toggleAssessment();
   };
 
   const [sensitivity] = useState(1.0); // 1.0 = default; matches qL-scale thresholds (setter dropped — no UI binding)
@@ -4561,7 +4570,7 @@ export default function App() {
   const comeSenzaAgo = (fase: string): string | null => {
     switch (fase) {
       case 'contact.item': case 'free':
-        return LC('Dai l\'item e premi.', 'Donne l\'item et appuie.', 'Give the item and press.', 'Da el ítem y pulsa.', 'Ge item och tryck.');
+        return LC('Scrivilo o dillo, poi premi.', 'Écris-le ou dis-le, puis appuie.', 'Type it or say it, then press.', 'Escríbelo o dilo, luego pulsa.', 'Skriv eller säg det, tryck sedan.');
       case 'contact.mockup':
         return LC('Chiedi un mock-up. Dichiara l\'AS-IS quando arriva.',
                   'Demande un mock-up. Déclare l\'AS-IS quand il arrive.',
@@ -4569,7 +4578,11 @@ export default function App() {
                   'Pide un mock-up. Declara el AS-IS cuando llegue.',
                   'Be om en mock-up. Deklarera AS-IS när den kommer.');
       case 'null.item':
-        return LC('Dai l\'item che non legge e premi.', 'Donne l\'item qui ne lit pas et appuie.', 'Give the item that does not read and press.', 'Da el ítem que no lee y pulsa.', 'Ge item som inte läser och tryck.');
+        return LC('Scrivilo o dillo, poi premi: si lavora su ciò che non reagisce.',
+                  'Écris-le ou dis-le, puis appuie : on travaille sur ce qui ne réagit pas.',
+                  'Type it or say it, then press: we work on what does not react.',
+                  'Escríbelo o dilo, luego pulsa: se trabaja sobre lo que no reacciona.',
+                  'Skriv eller säg det, tryck sedan: man arbetar på det som inte reagerar.');
       case 'null.mockup': case 'null.rise':
         return LC('Chiedi un mock-up. Ci riesce → EQUILIBRIUM. Non ci riesce → NON RICARICA.',
                   'Demande un mock-up. Il y arrive → EQUILIBRIUM. Il n\'y arrive pas → NE RECHARGE PAS.',
@@ -5696,19 +5709,23 @@ export default function App() {
                 • a seduta avviata senza strumenti → resta acceso, non cliccabile;
                 • se un ago è collegato, non ha senso → sparisce (lo dice `senzaMisura`). */}
           {(appMode === 'local' || satelliteMode) && senzaMisura && (() => {
-            const attivo = senzaStrumenti && sessionState !== 'idle';
-            const avviabile = sessionState === 'idle';
+            // Si COMMUTA come i badge degli strumenti: cliccato = si sceglie « senza strumenti »
+            // (verde), ri-cliccato = si deseleziona. NON avvia da sé — la seduta parte da START,
+            // come quando si collega un ago. A seduta avviata resta acceso e non commuta.
+            const attivo = senzaStrumenti;
+            const commutabile = sessionState === 'idle';
             return (
             <div
-              onClick={avviabile ? () => {
-                setSenzaStrumenti(true); senzaStrumentiRef.current = true; void handleStart();
+              onClick={commutabile ? () => {
+                const nuovo = !senzaStrumentiRef.current;
+                setSenzaStrumenti(nuovo); senzaStrumentiRef.current = nuovo;
               } : undefined}
               title={t('no_instruments_hint') as string}
               style={{
                 display: 'flex', alignItems: 'center', gap: 9,
                 padding: '3px 14px 3px 3px', borderRadius: 999,
-                cursor: avviabile ? 'pointer' : 'default',
-                opacity: attivo || avviabile ? 1 : 0.5,
+                cursor: commutabile ? 'pointer' : 'default',
+                opacity: attivo || commutabile ? 1 : 0.5,
                 background: TOKEN.wellBg, boxShadow: TOKEN.wellShadow }}>
               <span style={{
                 width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center',
@@ -6571,6 +6588,11 @@ export default function App() {
                       {showTrailPref ? '● ' : '○ '}NEEDLE LIGHT
                     </button>
                   )}
+                  {/* ⚠️ NON in TONE: là l'assessment si accende e si spegne DA SÉ a ogni tempo
+                      (vedi il commento « L'ASSESSMENT SI ACCENDE E SI SPEGNE DA SÉ NEL CICLO
+                      TONE »). Un bottone manuale accanto è ridondante e dà l'idea di dover fare
+                      un gesto che il ciclo fa già (segnalato). */}
+                  {mode !== 'tone' && (
                   <button onClick={toggleAssessment} title="ASSESSMENT"
                     style={{ width: 96, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, height: 26,
                       borderRadius: 9, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700,
@@ -6582,6 +6604,7 @@ export default function App() {
                     {assessActive ? <Square size={11} strokeWidth={2.6} fill="currentColor" /> : <ClipboardList size={11} strokeWidth={2} />}
                     ASSESS
                   </button>
+                  )}
                   {/* EP en MINI TOGGLE (même forme que DARK/LIGHT), aligné à droite. */}
                   <GlassLabeledToggle
                     on={epValidated}
@@ -6681,17 +6704,27 @@ export default function App() {
                       passo che chiude il ciclo, e per NULL i due esiti.
                       Non è un motore nuovo: è la mano dove prima c'era l'automatismo. */}
                   {(() => {
-                    const btn = (etichetta: string, onClick: () => void, tinta: string): React.ReactNode => (
+                    // `pieno` = UN gesto solo, verde pieno (DAI L'ITEM, DICHIARA AS-IS): è
+                    // l'azione ovvia, e nulla la contende. `scelta` = uno FRA più esiti pari:
+                    // stesso fondo neutro per tutti e tre, il colore solo sul bordo/testo — così
+                    // nessuno sembra GIÀ scelto (il verde pieno del primo faceva credere di sì).
+                    const btn = (etichetta: string, onClick: () => void, tinta: string, pieno = true): React.ReactNode => (
                       <button key={etichetta} type="button" onClick={onClick}
                         style={{ height: 40, padding: '0 22px', borderRadius: 10, cursor: 'pointer',
                           fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 800,
                           letterSpacing: '0.06em', textTransform: 'uppercase',
-                          background: `${tinta}22`, border: `1px solid ${tinta}`, color: tinta }}>
+                          background: pieno ? `${tinta}22` : (isLightTheme ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'),
+                          border: `1px solid ${pieno ? tinta : (isLightTheme ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.22)')}`,
+                          color: tinta }}>
                         {etichetta}
                       </button>
                     );
                     const riga = (figli: React.ReactNode) => (
                       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 6, flexWrap: 'wrap' }}>{figli}</div>
+                    );
+                    const domanda = (testo: string) => (
+                      <div style={{ marginTop: 4, fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700,
+                                    color: isLightTheme ? '#3a3a40' : 'rgba(226,238,255,0.85)' }}>{testo}</div>
                     );
                     const DAI = LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE THE ITEM', 'DA EL ÍTEM', 'GE ITEM');
 
@@ -6707,15 +6740,19 @@ export default function App() {
                         ? riga(btn(LC('DICHIARA AS-IS', 'DÉCLARE L\'AS-IS', 'DECLARE AS-IS', 'DECLARA AS-IS', 'DEKLARERA AS-IS'), () => validateAsIs(), '#34d399'))
                         : riga(btn(DAI, () => armCycle('charge'), '#6ee7b7'));
 
-                    // ── NULL — due esiti opposti: EQUILIBRIUM (il PC crea la massa e la lascia)
-                    //    oppure NON RICARICA (non ci riesce — il null non vale nulla). ──
+                    // ── NULL — tre esiti PARI, non uno pre-scelto. La domanda sopra li lega:
+                    //    il preclear è riuscito a creare la massa? Sì coi VGI's, sì senza, o non
+                    //    ci è riuscito (NON RICARICA — il null non vale nulla). ──
                     if (mode === 'null')
                       return cycleArmed
-                        ? riga(<>
-                            {btn(LC('EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓'), () => validateClearRead(true), '#34d399')}
-                            {btn(LC('EQUILIBRIUM · senza VGI', 'EQUILIBRIUM · sans VGI', 'EQUILIBRIUM · no VGI', 'EQUILIBRIUM · sin VGI', 'EQUILIBRIUM · utan VGI'), () => validateClearRead(false), '#94a3b8')}
-                            {btn(LC('NON RICARICA', 'NE RECHARGE PAS', 'NO RECHARGING', 'NO RECARGA', 'LADDAR INTE'), () => finalizeCycle(false), '#dc2626')}
-                          </>)
+                        ? <>
+                            {domanda(LC('Il preclear ha creato la massa?', 'Le préclair a-t-il créé la masse ?', 'Did the preclear create the mass?', '¿El preclear creó la masa?', 'Skapade preclearen massan?'))}
+                            {riga(<>
+                              {btn(LC('EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓'), () => validateClearRead(true), '#34d399', false)}
+                              {btn(LC('EQUILIBRIUM · senza VGI', 'EQUILIBRIUM · sans VGI', 'EQUILIBRIUM · no VGI', 'EQUILIBRIUM · sin VGI', 'EQUILIBRIUM · utan VGI'), () => validateClearRead(false), isLightTheme ? '#475569' : '#94a3b8', false)}
+                              {btn(LC('NON RICARICA', 'NE RECHARGE PAS', 'NO RECHARGING', 'NO RECARGA', 'LADDAR INTE'), () => finalizeCycle(false), '#dc2626', false)}
+                            </>)}
+                          </>
                         : riga(btn(DAI, () => armCycle('null'), '#cbd5e1'));
 
                     return null;   // TONE ha la sua barra dei quattro tempi, e regge senza ago.
@@ -6783,6 +6820,23 @@ export default function App() {
                             // gesto che non ha effetto. Compaiono quando la seduta parte.
                             display: (sessionState !== 'running' || !MODE_SPEC[mode].arms || viewMode === 'mirror' || viewMode === 'tone' || eegModulesHidden(instruments)) ? 'none' : 'flex',
                             flexDirection: 'column', gap: 6 }}>
+                {/* ── A CICLO ARMATO L'ITEM È UN'ETICHETTA CHIARA, NON UN CAMPO GRIGIO ─────────
+                    Quando il ciclo avanza, ciò che conta è LEGGERE su che cosa si sta lavorando.
+                    Un textarea disabilitato lo mostrava piccolo, in monospace, sbiadito — poco
+                    leggibile allo step successivo (segnalato). Armato → etichetta grande e netta,
+                    come il titolo dei cicli senza strumenti. Non armato → il campo per scrivere. */}
+                {cycleArmed ? (
+                  <div style={{ width: '100%', padding: '6px 10px', borderRadius: 8,
+                                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+                                display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 700, letterSpacing: '0.14em',
+                                   textTransform: 'uppercase', color: 'rgba(226,238,255,0.5)', flexShrink: 0 }}>ITEM</span>
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 800, lineHeight: 1.2,
+                                   color: 'rgba(240,246,255,0.96)' }}>
+                      {auditingQuestion.trim() || LC('(dillo a voce…)', '(dis-le à voix…)', '(say it aloud…)', '(dilo en voz…)', '(säg det högt…)')}
+                    </span>
+                  </div>
+                ) : (
                 <textarea
                   value={auditingQuestion}
                   onChange={(e) => setAuditingQuestion(e.target.value)}
@@ -6790,7 +6844,6 @@ export default function App() {
                   // pressant CONTACT ou NULL — au moment où l'auditeur donne l'item. On avale juste
                   // la touche pour ne pas insérer un saut de ligne dans l'item.
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) e.preventDefault(); }}
-                  disabled={cycleArmed}
                   rows={1}
                   placeholder={lang === 'fr' ? "Question d'audition…" : lang === 'it' ? 'Domanda di auditing…' : lang === 'es' ? 'Pregunta de auditación…' : lang === 'sv' ? 'Auditfråga…' : 'Auditing question…'}
                   style={{
@@ -6799,10 +6852,11 @@ export default function App() {
                     width: '100%', minHeight: 28, maxHeight: 160, padding: '6px 10px', borderRadius: 8,
                     fontSize: 12, lineHeight: 1.45, fontFamily: 'monospace', resize: 'none', overflowY: 'auto',
                     fieldSizing: 'content',
-                    background: cycleArmed ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.45)',
-                    border: `1px solid ${cycleArmed ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.22)'}`,
+                    background: 'rgba(0,0,0,0.45)',
+                    border: '1px solid rgba(255,255,255,0.22)',
                     color: 'rgba(235,244,255,0.92)', outline: 'none' } as React.CSSProperties}
                 />
+                )}
                 {/* Rangée des COMMANDES : compteurs + les deux cycles + mock-up.
                     Prima era « SOLO COL MUSE », col ragionamento che senza EEG il ciclo non ha
                     sorgente e resterebbe armato senza potersi concludere. Il ragionamento era

@@ -197,7 +197,9 @@ export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps
   };
 
   // ── Input style helper ───────────────────────────────────────────────────
-  const inputCls = "bg-white/10 border border-white/25 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs font-mono outline-none focus:border-white/55 focus:bg-white/15 placeholder-white/45";
+  // Segnaposti a `white/45` erano illeggibili: un filtro che non si legge non esiste. Bordo e
+  // segnaposto alzati, così ogni casella DICE che cosa filtra.
+  const inputCls = "bg-white/10 border border-white/35 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs font-mono outline-none focus:border-white/70 focus:bg-white/15 placeholder-white/70";
 
   return (
     <div className="absolute inset-0 z-50 backdrop-blur-md flex items-center justify-center p-6"
@@ -212,7 +214,10 @@ export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps
         .nest-dark-modal .border-slate-200, .nest-dark-modal .border-slate-300, .nest-dark-modal .border-slate-200\\/60, .nest-dark-modal .border-slate-200\\/40 { border-color: rgba(255,255,255,0.25) !important; }
         .nest-dark-modal .border-white\\/60 { border-color: rgba(255,255,255,0.3) !important; }
         .nest-dark-modal input, .nest-dark-modal textarea { color: rgba(220,240,255,0.92) !important; }
-        .nest-dark-modal input::placeholder { color: rgba(180,210,235,0.45) !important; }
+        /* 0.45 rendeva i segnaposti dei filtri quasi invisibili sul fondo scuro: le sei caselle
+           della ricerca sembravano rettangoli vuoti, e la ricerca pareva sparita (segnalato).
+           Un segnaposto è l'unica etichetta che quei campi hanno: deve leggersi. */
+        .nest-dark-modal input::placeholder { color: rgba(198,222,242,0.78) !important; }
         .nest-dark-modal .bg-cyan-50 { background: rgba(255,255,255,0.12) !important; }
         .nest-dark-modal .border-cyan-300 { border-color: rgba(255,255,255,0.55) !important; }
         .nest-dark-modal .bg-cyan-100\\/50 { background: rgba(255,255,255,0.18) !important; }
@@ -275,11 +280,16 @@ export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps
             </div>
           ) : (
             <>
-              {/* Recherche / filtres — clairement visibles */}
-              <div className="mb-2 flex items-center gap-2 text-white/70">
-                <Search size={14} strokeWidth={2} />
-                <span className="text-[11px] font-mono uppercase tracking-widest">{L('Ricerca', 'Recherche', 'Search', 'Búsqueda', 'Sök')}</span>
-                <span className="text-[10px] font-mono text-white/35">· {filteredSessions.length}/{sessions.length}</span>
+              {/* ── LA RICERCA DEVE VEDERSI ────────────────────────────────────────────────────
+                  C'era già — sei filtri — ma etichetta a `white/70` e segnaposti a `white/45`
+                  su fondo scuro la rendevano una fila di rettangoli vuoti: l'utente l'ha
+                  cercata e non l'ha trovata (« non ci sono più la ricerca »). Non mancava:
+                  non si leggeva. Titolo pieno, conteggio leggibile, e una riga di sfondo che
+                  delimita la zona come una barra di ricerca invece di sei caselle sparse. */}
+              <div className="mb-2 flex items-center gap-2" style={{ color: 'rgba(235,244,255,0.95)' }}>
+                <Search size={15} strokeWidth={2.4} />
+                <span className="text-[12px] font-mono uppercase tracking-widest font-bold">{L('Ricerca', 'Recherche', 'Search', 'Búsqueda', 'Sök')}</span>
+                <span className="text-[11px] font-mono" style={{ color: 'rgba(200,220,240,0.75)' }}>· {filteredSessions.length}/{sessions.length}</span>
               </div>
               <div className="mb-4 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
                 <input type="date" value={dateFilter} onChange={e=>setDateFilter(e.target.value)} className={inputCls}/>
