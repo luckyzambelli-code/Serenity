@@ -99,6 +99,7 @@ import { mirrorCycle, mirrorReading } from './engine/MirrorCycle';
 import { MirrorDial } from './components/MirrorDial';
 import { ToneDial } from './components/ToneDial';
 import { CycleHint } from './components/CycleHint';
+import { CycleSteps } from './components/CycleSteps';
 import {
   TONE_STEPS, proposeFromTone, agreementOf, toneFromTa, chargeValue, oppositeOf, ToneLocator,
   reachedZero, toneWitnesses, toneAsIs, matchToneAnswer,
@@ -4635,6 +4636,17 @@ export default function App() {
     }
   };
 
+  /**
+   * Toglie il « 1 · » davanti al titolo del tempo.
+   *
+   * La numerazione ora la porta la PISTA (CycleSteps): ① ITEM — ② MOCK-UP — ③ AS-IS. Lasciarla
+   * anche nel titolo la scriveva due volte, e per giunta a metà — un « 1 · » senza il 2 e il 3
+   * accanto era proprio ciò che rendeva la sequenza incomprensibile. Si toglie qui invece che
+   * riscrivere quindici stringhe in cinque lingue: il numero resta nei testi, e chi legge il
+   * sorgente vede ancora a quale tempo corrisponde ogni frase.
+   */
+  const senzaNumero = (t: string) => t.replace(/^\s*\d+\s*·\s*/, '');
+
   const spiegazioneCiclo = useMemo((): { titolo: string; come: string; avviso?: string | null; fatto?: boolean } => {
     const n = (v: number) => `${v > 0 ? '+' : ''}${Math.round(v)}`;
 
@@ -6768,7 +6780,7 @@ export default function App() {
                                  letterSpacing: '0.02em', lineHeight: 1.15,
                                  color: spiegazioneCiclo.fatto ? '#34d399'
                                        : (isLightTheme ? '#1a1a1f' : 'rgba(240,246,255,0.96)') }}>
-                    {spiegazioneCiclo.titolo}
+                    {senzaNumero(spiegazioneCiclo.titolo)}
                   </span>
                   <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, lineHeight: 1.5,
                                  color: isLightTheme ? '#3a3a40' : 'rgba(226,238,255,0.78)' }}>
@@ -6955,6 +6967,11 @@ export default function App() {
                     Un textarea disabilitato lo mostrava piccolo, in monospace, sbiadito — poco
                     leggibile allo step successivo (segnalato). Armato → etichetta grande e netta,
                     come il titolo dei cicli senza strumenti. Non armato → il campo per scrivere. */}
+                {/* ── LA PISTA DEI TEMPI ─────────────────────────────────────────────────
+                    Quanti sono, a quale sei, cosa viene dopo — al posto del « 1 · » che
+                    prometteva una sequenza e non la mostrava mai. Sta SOPRA il campo, cioè
+                    dove comincia il lavoro. */}
+                <CycleSteps mode={mode} phase={faseCiclo} lang={lang} />
                 {cycleArmed ? (
                   <div style={{ width: '100%', padding: '6px 10px', borderRadius: 8,
                                 background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
@@ -7079,7 +7096,7 @@ export default function App() {
                 {/* « A che punto sono, e cosa devo fare » — stesso componente e stesso posto del
                     TONE e del MIRROR, col testo di QUESTO ciclo (vedi spiegazioneCiclo). */}
                 {sessionState === 'running' && !eegModulesHidden(instruments) && !senzaMisura && (
-                  <CycleHint {...spiegazioneCiclo} />
+                  <CycleHint {...spiegazioneCiclo} titolo={senzaNumero(spiegazioneCiclo.titolo)} />
                 )}
               </div>
 
@@ -7151,7 +7168,7 @@ export default function App() {
                       </div>
                     );
                   })()}
-                  {!senzaMisura && <CycleHint {...spiegazioneCiclo} />}
+                  {!senzaMisura && <CycleHint {...spiegazioneCiclo} titolo={senzaNumero(spiegazioneCiclo.titolo)} />}
                 </div>
               )}
               {/* ── BARRE TONE SCALE — les QUATRE temps de Ron, un par un ───────────────────────
@@ -7343,7 +7360,7 @@ export default function App() {
                     {/* Il testo del ciclo sta in `spiegazioneCiclo`, insieme a quello di
                         CONTACT, NULL e MIRROR: stesso posto, stesso aspetto, un componente solo
                         (vedi CycleHint). Prima era qui dentro, e solo il TONE ce l'aveva. */}
-                    {!senzaMisura && <CycleHint {...spiegazioneCiclo} />}
+                    {!senzaMisura && <CycleHint {...spiegazioneCiclo} titolo={senzaNumero(spiegazioneCiclo.titolo)} />}
                   </div>
                 );
               })()}
