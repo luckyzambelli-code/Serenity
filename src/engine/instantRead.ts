@@ -11,6 +11,18 @@ import {
  * resta SOLO la logica delle letture, che è pura e testabile.)
  */
 
+/**
+ * NON MISURATO — l'item è stato dato ma NESSUNO STRUMENTO poteva leggerlo.
+ *
+ * Non è « NULL ». NULL è un VERDETTO: l'ago c'era, ha guardato, e non ha visto nulla — ed è un
+ * dato prezioso (è tutto il ciclo NULL). Senza strumenti nessuno ha guardato, e scrivere NULL
+ * vorrebbe dire mettere a verbale una lettura mai fatta — nel journal, nell'assessment e nel
+ * CORPUS, dove poi falserebbe proprio il confronto per cui le sedute senza strumenti si fanno.
+ *
+ * Un trattino dice quel che è: non pervenuto.
+ */
+export const READ_NON_MISURATO = '—';
+
 /** Da quale ago viene una lettura. Senza questa distinzione la finestra temporale sarebbe una
  *  sola, e i due aghi hanno tempi OPPOSTI (vedi sotto). */
 export type ReadSrc = 'eeg' | 'theta';

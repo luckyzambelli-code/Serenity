@@ -30,7 +30,7 @@ const THETA_AMBER = '#f59e0b';
 import { ParticipantView } from './components/ParticipantView';
 import { LIGHT_THEME_CSS } from './ui/lightThemeCss';
 import { EpManualModal } from './components/EpManualModal';
-import { computeInstantRead, readWaitSeconds, readWindow, type ReadSrc } from './engine/instantRead';
+import { computeInstantRead, readWaitSeconds, readWindow, READ_NON_MISURATO, type ReadSrc } from './engine/instantRead';
 import { isAssessableItem } from './engine/assessItemFilter';
 import { decideNeedle } from './engine/needleDecision';
 import { isMotionArtifact } from './engine/motionArtifact';
@@ -76,6 +76,9 @@ const ASSESS_READ_META = (reaction: string): { short: string; color: string; bor
     case 'Tick':           return { short: 'tick',      color: 'rgba(226,238,255,0.7)', border: 'rgba(255,255,255,0.22)' };
     case '⏳':             return { short: '⏳',         color: 'rgba(226,238,255,0.5)', border: 'rgba(255,255,255,0.18)' };
     case 'NULL':           return { short: 'NULL',      color: 'rgba(226,238,255,0.42)', border: 'rgba(255,255,255,0.12)' };
+    // NON MISURATO: niente ago, quindi nessun verdetto. Smorzato al massimo — non è un esito,
+    // è l'assenza di una misura, e non deve somigliare a un NULL (che invece è un risultato).
+    case READ_NON_MISURATO: return { short: READ_NON_MISURATO, color: 'rgba(226,238,255,0.30)', border: 'rgba(255,255,255,0.08)' };
     default:               return { short: reaction || 'NULL', color: 'rgba(226,238,255,0.6)', border: 'rgba(255,255,255,0.2)' };
   }
 };
@@ -292,7 +295,6 @@ export default function App() {
   interface AssessCycle { n: number; tStartSec: number; tEndSec: number; items: Array<{ item: string; reaction: string; time: number; beforeMs?: number }>; }
   const [assessActive, setAssessActive] = useState(false);
   const assessActiveRef = useRef(false); assessActiveRef.current = assessActive;
-  const [assessItems, setAssessItems] = useState<AssessItem[]>([]);  // items du cycle COURANT (SOUS l'arc, éphémère)
   // Liste de TOUTE la séance (module ASSESSMENT) : les mots restent inscrits avec leur read pendant
   // toute la session (demande utilisateur). Le module ASSESSMENT (ex R&I) affiche CECI.
   const [assessSession, setAssessSession] = useState<AssessItem[]>([]);
@@ -301,7 +303,6 @@ export default function App() {
   const assessSessionRef = useRef<AssessItem[]>([]); assessSessionRef.current = assessSession;
   // Visibilité SOUS l'arc : ON pendant l'assessment, puis OFF 5 s après la fin (demande utilisateur ;
   // ensuite les mots restent seulement dans le module ASSESSMENT).
-  const [showUnderArc, setShowUnderArc] = useState(false);
   const underArcHideTimerRef = useRef<number | null>(null);
   /** Timers en attente (un par item assessé). Suivis pour pouvoir TOUS les annuler au démontage :
    *  sinon un read se résolvait après la fin de la séance / la fermeture. */
@@ -1341,7 +1342,6 @@ export default function App() {
     const pending = '⏳';
     freeNeedleForNewItem();   // l'aiguille se libère pour pouvoir réagir à CET item
     const item: AssessItem = { id, time: tSpeak, item: w, reaction: pending, beforeMs: 0, kind: 'item' };
-    setAssessItems(prev => [...prev, item]);       // SOUS l'arc (cycle courant)
     setAssessSession(prev => [...prev, { ...item }]); // module ASSESSMENT (toute la séance)
     const cyc = assessCyclesRef.current[assessCyclesRef.current.length - 1];
     const rec = { item: w, reaction: pending, time: tSpeak, beforeMs: 0 };
@@ -1385,12 +1385,16 @@ export default function App() {
       // SOURCE = réactions RÉELLEMENT MONTRÉES (jamais le flux brut du classifieur)
       // …e SOLO dall'ago mostrato: una lettura presa dall'altro racconterebbe un movimento che
       // l'auditor non ha davanti agli occhi.
-      const r = computeInstantRead(shownReadsRef.current, tSpeak, notBefore, notAfter,
-                                   agoPrincipale);   // 'NULL' si rien de vu
+      // SENZA STRUMENTI non si calcola nulla: non c'è ago che possa aver letto. Scrivere
+      // « NULL » qui vorrebbe dire mettere a verbale un verdetto mai emesso (vedi
+      // READ_NON_MISURATO). Il trattino dice che la lettura non è pervenuta.
+      const r = noInstruments(instrumentsRef.current)
+        ? { read: READ_NON_MISURATO, beforeMs: 0, afterMs: 0 }
+        : computeInstantRead(shownReadsRef.current, tSpeak, notBefore, notAfter,
+                             agoPrincipale);   // 'NULL' si rien de vu
       if (r.read !== 'NULL' && r.read !== ultimaMostrata) {
         ultimaMostrata = r.read;
         rec.reaction = r.read; rec.beforeMs = r.beforeMs;   // le record du rapport partage l'objet
-        setAssessItems(prev => prev.map(a => a.id === id ? { ...a, reaction: r.read, beforeMs: r.beforeMs } : a));
         setAssessSession(prev => prev.map(a => a.id === id ? { ...a, reaction: r.read, beforeMs: r.beforeMs } : a));
       }
       return r;
@@ -1412,7 +1416,6 @@ export default function App() {
         const patch = { reaction: read, beforeMs, readSrc: agoPrincipale,
                         readMuse: instruments.muse ? rMuse : undefined,
                         readMeter: instruments.theta ? rMeter : undefined };
-        setAssessItems(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
         setAssessSession(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
       }
       // ── DIAGNOSI ASSESSMENT (temporanea, da togliere quando avremo capito) ─────────────
@@ -1474,8 +1477,11 @@ export default function App() {
       // Journal : read + l'écart (− avant l'item, + après). Aucun changement → « NULL ».
       const nulla = LC('nessuna reazione (NULL)', 'aucune réaction (NULL)', 'no read (NULL)',
                        'sin reacción (NULL)', 'ingen reaktion (NULL)');
+      const nonMisurato = LC('non misurato (nessuno strumento)', 'non mesuré (aucun instrument)',
+                             'not measured (no instrument)', 'no medido (ningún instrumento)',
+                             'inte mätt (inget instrument)');
       logBufferRef.current.push({ time: tSpeak, speaker: 'NEEDLE',
-        text: `ASSESSMENT · ${w} → ${read === 'NULL' ? nulla : `${read}${beforeMs > 0 ? ` −${beforeMs}ms` : afterMs > 0 ? ` +${afterMs}ms` : ''}`}`
+        text: `ASSESSMENT · ${w} → ${read === READ_NON_MISURATO ? nonMisurato : read === 'NULL' ? nulla : `${read}${beforeMs > 0 ? ` −${beforeMs}ms` : afterMs > 0 ? ` +${afterMs}ms` : ''}`}`
             // I DUE AGHI SEPARATAMENTE, quando ci sono entrambi. Leggono item diversi (κ = −0,09):
             // un verdetto solo nasconderebbe proprio il dato che stiamo cercando.
             + (instruments.muse && instruments.theta
@@ -1501,17 +1507,11 @@ export default function App() {
       const cyc = assessCyclesRef.current[assessCyclesRef.current.length - 1];
       if (cyc) cyc.tEndSec = timeRef.current;
       setAssessActive(false);
-      // SOUS l'arc : les mots disparaissent 5 s après la fin de l'assessment (ils restent dans le
-      // module ASSESSMENT). Le module, lui, garde tout toute la séance.
-      if (underArcHideTimerRef.current) window.clearTimeout(underArcHideTimerRef.current);
-      underArcHideTimerRef.current = window.setTimeout(() => { setShowUnderArc(false); }, 5000);
       logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
         text: `◎ ASSESSMENT — ${LC('fine', 'fin', 'end', 'fin', 'slut')}`, type: 'normal' });
     } else {
-      // START — nouveau cycle : on efface les items du cycle précédent SOUS l'arc (le module garde tout).
-      if (underArcHideTimerRef.current) { window.clearTimeout(underArcHideTimerRef.current); underArcHideTimerRef.current = null; }
-      setAssessItems([]);
-      setShowUnderArc(true);
+      // START — nuovo ciclo. (La lista effimera sotto l'arco non c'è più: gli item stanno nel
+      // modulo ASSESSMENT a destra, dove restano per tutta la seduta.)
       assessPrevAtRef.current = timeRef.current;   // borne : rien d'avant le début du cycle
       const n = ++assessNRef.current;
       assessCyclesRef.current.push({ n, tStartSec: timeRef.current, tEndSec: timeRef.current, items: [] });
@@ -4650,9 +4650,13 @@ export default function App() {
         titolo: toneHasMeter
           ? LC('1 · LOCALIZZA LA RESISTENZA', '1 · LOCALISE LA RÉSISTANCE', '1 · LOCATE THE RESISTANCE', '1 · LOCALIZA LA RESISTENCIA', '1 · LOKALISERA MOTSTÅNDET')
           : LC('1 · LOCALIZZA — SENZA METER', '1 · LOCALISE — SANS MÈTRE', '1 · LOCATE — OFF-METER', '1 · LOCALIZA — SIN MEDIDOR', '1 · LOKALISERA — UTAN MÄTARE'),
+        // L'ORDINE DEI GESTI, DETTO. Prima non c'era: « premi quando il preclear ha trovato »
+        // non diceva se l'item andasse dato prima o dopo, e il tempo 2 (segno) arrivava subito
+        // dopo il clic — ci si ritrovava a scegliere positivo/negativo senza aver nominato la
+        // resistenza (segnalato: « on est perdus »). Stessa formula degli altri tre cicli.
         come: toneHasMeter
-          ? LC('L\'ago si posa su un numero. Premi quando il preclear ha trovato.', 'L\'aiguille se pose sur un nombre. Appuie quand le préclair a trouvé.', 'The needle settles on a number. Press when the preclear has found it.', 'La aguja se posa en un número. Pulsa cuando el preclear lo haya encontrado.', 'Nålen lägger sig på ett tal. Tryck när preclearen hittat det.')
-          : LC('Nessuna misura: segno e ampiezza si assessano.', 'Aucune mesure : le signe et l\'ampleur s\'assessent.', 'No measurement: sign and magnitude are assessed.', 'Sin medida: signo y amplitud se assessan.', 'Ingen mätning: tecken och storlek assessas.') };
+          ? LC('Scrivi o dì la resistenza, poi premi quando il preclear l\'ha trovata.', 'Écris ou dis la résistance, puis appuie quand le préclair l\'a trouvée.', 'Type or say the resistance, then press when the preclear has found it.', 'Escribe o di la resistencia, luego pulsa cuando el preclear la haya encontrado.', 'Skriv eller säg motståndet, tryck sedan när preclearen hittat det.')
+          : LC('Scrivi o dì la resistenza, poi premi. Segno e ampiezza si assessano.', 'Écris ou dis la résistance, puis appuie. Le signe et l\'ampleur s\'assessent.', 'Type or say the resistance, then press. Sign and magnitude are assessed.', 'Escribe o di la resistencia, luego pulsa. Signo y amplitud se assessan.', 'Skriv eller säg motståndet, tryck sedan. Tecken och storlek assessas.') };
       if (faseCiclo === 'tone.sign') return {
         titolo: LC('2 · POSITIVO O NEGATIVO?', '2 · POSITIF OU NÉGATIF ?', '2 · POSITIVE OR NEGATIVE?', '2 · ¿POSITIVO O NEGATIVO?', '2 · POSITIVT ELLER NEGATIVT?'),
         come: LC('Assessa « negativo? » poi « positivo? ». Quello che legge è il segno.', 'Assesse « négatif ? » puis « positif ? ». Celui qui lit est le signe.', 'Assess "negative?" then "positive?". The one that reads is the sign.', 'Assessa « ¿negativo? » luego « ¿positivo? ». El que lee es el signo.', 'Assessa ”negativt?” sedan ”positivt?”. Det som läser är tecknet.')
@@ -4777,6 +4781,27 @@ export default function App() {
   useEffect(() => {
     setReazioniViste(prev => (prev === 'both' ? 'both' : agoPrincipale));
   }, [agoPrincipale]);
+  /**
+   * CON DUE STRUMENTI SI PARTE DA « DUE ».
+   *
+   * Averli collegati tutti e due e vederne UNO SOLO nasconde metà di quel che si è preparato:
+   * il difetto giusto è mostrare tutto e lasciare che l'auditor restringa, non il contrario.
+   * DUE porta l'ago del METER (misurato, non ricostruito) e le reazioni del MUSE in più.
+   *
+   * Una volta sola per collegamento, e MAI contro una scelta già fatta: se l'auditor ha già
+   * toccato il selettore in questa seduta, la sua scelta resta. E non tocca i cicli in cui è il
+   * METODO a imporre l'ago (MODE_SPEC): là `agoScelto` non viene nemmeno consultato.
+   */
+  const dueGiaImpostatoRef = useRef(false);
+  useEffect(() => {
+    const dueStrumenti = instruments.muse && instruments.theta;
+    if (!dueStrumenti) { dueGiaImpostatoRef.current = false; return; }
+    if (dueGiaImpostatoRef.current) return;
+    dueGiaImpostatoRef.current = true;
+    setReazioniViste('both');
+    setAgoScelto('theta');
+  }, [instruments.muse, instruments.theta]);
+
   const [showThetaCal, setShowThetaCal] = useState(false);
 
   // ESC chiude il selettore d'apertura. Chi ha aperto per sbaglio cerca ESC prima di cercare
@@ -4955,7 +4980,7 @@ export default function App() {
       mirrorCyclesRef.current = []; mirrorCurRef.current = null; mStartedRef.current = 0; mDoneRef.current = 0;
       toneCyclesRef.current = []; toneNRef.current = 0;
       mirrorVoiceModeRef.current = false; mirrorAwaitItemRef.current = false; mirrorLogCursorRef.current = 0;
-      setAssessActive(false); setAssessItems([]); setAssessSession([]); setShowUnderArc(false); assessCyclesRef.current = []; assessNRef.current = 0; assessPrevAtRef.current = -Infinity;
+      setAssessActive(false); setAssessSession([]); assessCyclesRef.current = []; assessNRef.current = 0; assessPrevAtRef.current = -Infinity;
       shownReadsRef.current = [];   // trace des réactions montrées : repart à zéro
       assessTimesRef.current = [];
       ultimoItemSecRef.current = null;
@@ -7125,20 +7150,27 @@ export default function App() {
                         sparire: l'item di un ciclo in corso non si riscrive. */}
                     {(() => {
                       const locabile = tonePhase === 'locate';
+                      // ⚠️ IL CAMPO NON SI BLOCCA FINCHÉ L'ITEM È VUOTO.
+                      // Bloccarlo appena premuto LOCALIZZA lasciava UNA SOLA via per dare
+                      // l'item: la voce. Con la trascrizione non disponibile — capita, e lo
+                      // dice il journal — l'item non si poteva più scrivere affatto, e la
+                      // resistenza restava senza nome per tutto il ciclo (segnalato).
+                      // Un item già dato invece si blocca: non si riscrive un ciclo in corso.
+                      const itemModificabile = locabile || !auditingQuestion.trim();
                       return (
                       <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
                         <textarea
                           value={auditingQuestion}
                           onChange={(e) => setAuditingQuestion(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) e.preventDefault(); }}
-                          disabled={!locabile}
+                          disabled={!itemModificabile}
                           rows={1}
                           placeholder={LC('Item… (o dillo a voce)', 'Item… (ou dis-le à voix)', 'Item… (or say it aloud)', 'Ítem… (o dilo en voz)', 'Item… (eller säg det högt)')}
                           style={{ flex: 1, minWidth: 0, minHeight: 32, maxHeight: 80, padding: '6px 10px', borderRadius: 8,
                             fontSize: 12, lineHeight: 1.4, fontFamily: 'monospace', resize: 'none', overflowY: 'auto',
                             fieldSizing: 'content',
-                            background: locabile ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.12)',
-                            border: `1px solid ${locabile ? 'rgba(255,255,255,0.22)' : 'rgba(255,90,90,0.55)'}`,
+                            background: itemModificabile ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.12)',
+                            border: `1px solid ${itemModificabile ? 'rgba(255,255,255,0.22)' : 'rgba(255,90,90,0.55)'}`,
                             color: 'rgba(235,244,255,0.92)', outline: 'none' } as React.CSSProperties}
                         />
                         {locabile && (
@@ -7373,38 +7405,18 @@ export default function App() {
             </div>
             )}
 
-            {/* ── ASSESSMENT — mots assessés écrits SOUS le libellé DISSOLUTION/RISE, foreignObject au
-                MÊME viewBox 1600×850 que l'arc → aligné + scale identiques. ÉTROIT (pour ne pas
-                chevaucher l'arc), justifié à GAUCHE (la réaction juste après le mot), ASCENSEUR si
-                long, dernière parole EN HAUT. ÉPHÉMÈRE : disparaît 5 s après la fin (showUnderArc) ;
-                les mots restent ensuite dans le module ASSESSMENT. NULL si aucune réaction. ── */}
-            {/* ⚠️ NON senza strumenti: questo overlay è posizionato SOTTO l'arco (x/y nel viewBox
-                della sfera). Senza arco non ha un sotto, e finisce SOPRA il testo del ciclo al
-                centro (segnalato). Le parole restano comunque nel modulo ASSESSMENT a destra. */}
-            {sessionState === 'running' && !senzaMisura && showUnderArc && assessItems.length > 0 && (
-              <div className="absolute inset-0 z-40 pointer-events-none">
-                <svg viewBox="0 0 1600 850" width="100%" height="100%" style={{ display: 'block' }}>
-                  <foreignObject x={568} y={400} width={464} height={188}>
-                    <div style={{ width: '100%', height: '100%', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', gap: 3, paddingRight: 8, boxSizing: 'border-box', pointerEvents: 'auto' }}>
-                      {[...assessItems].reverse().map(a => {   // dernière parole = en HAUT
-                        const m = ASSESS_READ_META(a.reaction);
-                        return (
-                          <div key={a.id} style={{ textAlign: 'left', fontFamily: 'monospace', fontSize: 19, lineHeight: 1.2,
-                            textShadow: '0 1px 3px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.9)', wordBreak: 'break-word' }}>
-                            <span style={{ color: 'rgba(245,249,255,0.97)' }}>{a.item}</span>{' '}
-                            <span style={{ color: m.color, fontWeight: 700 }}>{m.short}</span>
-                            {a.reaction !== 'NULL' && a.reaction !== '⏳' && a.beforeMs ? (
-                              <span style={{ color: 'rgba(226,238,255,0.6)', fontSize: 15 }}>{' '}−{a.beforeMs}ms</span>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </foreignObject>
-                </svg>
-              </div>
-            )}
+            {/* ── L'ASSESSMENT SOTTO L'ARCO È STATO TOLTO ────────────────────────────────
+                Scriveva le parole assessate dentro il quadrante, sotto la scritta DISSOLUTION.
+                Due difetti, e il secondo è quello che conta:
 
+                  • si SOVRAPPONEVA alle indicazioni del ciclo, e non si leggeva più né l'una
+                    né l'altra cosa (segnalato);
+                  • era RIDONDANTE — le stesse parole, con le stesse letture, stanno nel modulo
+                    ASSESSMENT a destra, dove restano per tutta la seduta invece di sparire
+                    dopo cinque secondi.
+
+                Il centro del quadrante appartiene all'ago e a quel che l'auditor deve fare.
+                Gli item si leggono a destra. ── */}
 
             {/* ══ LA BARRA DEI COMANDI — IN BASSO, A TUTTA LARGHEZZA ═══════════════════════
                 Stava in alto a sinistra, incolonnata sopra la barra del ciclo: fra il testo
@@ -7437,8 +7449,11 @@ export default function App() {
                         title: LC('MIRROR — metodo del doppio (Ron)', 'MIRROR — méthode du double (Ron)', 'MIRROR — the doubling method (Ron)', 'MIRROR — método del doble (Ron)', 'MIRROR — dubbelmetoden (Ron)') },
                       tone: { lbl: 'TONE SCALE', col: '#ff5a5a',
                         title: LC('TONE SCALE — la scala del tono di Ron (−40…+40)', 'TONE SCALE — l\'échelle des tons de Ron (−40…+40)', 'TONE SCALE — Ron\'s tone scale (−40…+40)', 'TONE SCALE — la escala del tono de Ron (−40…+40)', 'TONE SCALE — Rons tonskala (−40…+40)') },
-                      free: { lbl: LC('LIBERO', 'LIBRE', 'FREE', 'LIBRE', 'FRI'), col: '#8ab4ff',
-                        title: LC('Solo l\'ago — nessun ciclo. Assessment e R&I restano attivi.', 'L\'aiguille seule — aucun cycle. Assessment et R&I restent actifs.', 'The needle alone — no cycle. Assessment and R&I stay active.', 'Solo la aguja — ningún ciclo. Assessment y R&I siguen activos.', 'Bara nålen — ingen cykel. Assessment och R&I förblir aktiva.') },
+                      // APERTO, non « libero ». « Libero » suonava come « senza regole »; il modo
+                      // è invece EQUILIBRIUM che gira SENZA SEQUENZA CICLICA PREDEFINITA — l'ago,
+                      // l'assessment e l'R&I ci sono tutti, manca solo il ciclo che li incatena.
+                      free: { lbl: LC('APERTO', 'OUVERT', 'OPEN', 'ABIERTO', 'ÖPPEN'), col: '#8ab4ff',
+                        title: LC('Senza sequenza ciclica predefinita. L\'ago, l\'assessment e l\'R&I restano attivi.', 'Sans séquence cyclique prédéfinie. L\'aiguille, l\'assessment et le R&I restent actifs.', 'No predefined cyclic sequence. The needle, assessment and R&I stay active.', 'Sin secuencia cíclica predefinida. La aguja, el assessment y el R&I siguen activos.', 'Utan fördefinierad cyklisk sekvens. Nålen, assessment och R&I förblir aktiva.') },
                     };
                     const seg = META[m];
                     const active = mode === m;

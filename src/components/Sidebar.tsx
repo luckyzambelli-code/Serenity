@@ -10,6 +10,7 @@ import { useUiStore } from '../store/uiStore';
 import { useProfileStore } from '../store/profileStore';
 import { useNetworkStore } from '../store/networkStore';
 import { useUiModeStore } from '../store/uiModeStore';
+import { Wrench, CircleUser } from 'lucide-react';
 import { LAYER } from "../ui/layers";
 import { TOKEN } from '../ui/tokens';
 
@@ -51,6 +52,7 @@ export function Sidebar({
   const isConnected   = useNetworkStore(s => s.isConnected);
   // NORMAL / EXPERT: il TRIM è una manopola, non un comando di seduta.
   const uiLevel       = useUiModeStore(s => s.level);
+  const setUiLevel    = useUiModeStore(s => s.setLevel);
   // CONN-74: PC identity + solo/auditor mode for the sidebar icons.
   const isSoloSession = useProfileStore(s => s.isSoloSession);
   const pcName        = useProfileStore(s => s.pcName);
@@ -170,6 +172,37 @@ export function Sidebar({
           </button>
         );
       })()}
+
+      {/* ── NORMAL / EXPERT — QUI, SOPRA START ─────────────────────────────────────────────
+          Era in fondo al pannello Config, cioè dietro due clic e in mezzo alle preferenze
+          d'aspetto. Ma non è una preferenza: è COME si lavora, e cambia che cosa si ha davanti.
+          Sopra START perché è la scelta che precede la seduta — si decide con che cosa si sta
+          per lavorare, poi si comincia (richiesta utente).
+
+          Icona: chiave inglese = si tara · persona = si conduce. Un clic commuta. */}
+      <button
+        onClick={() => setUiLevel(uiLevel === 'expert' ? 'normal' : 'expert')}
+        title={uiLevel === 'expert'
+          ? t('sidebar_level_expert_tip')
+          : t('sidebar_level_normal_tip')}
+        style={{
+          width: 84, height: 84, borderRadius: 14, border: 'none', background: 'transparent',
+          cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center',
+          justifyContent: 'center', gap: 6, marginBottom: 2 }}
+      >
+        <GlassIconOrb active={uiLevel === 'expert'}>
+          {uiLevel === 'expert'
+            ? <Wrench size={32} strokeWidth={1.4} style={{ color: accentColor }} />
+            : <CircleUser size={32} strokeWidth={1.4} style={{ color: lineColor }} />}
+        </GlassIconOrb>
+        <span style={{
+          fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase',
+          color: uiLevel === 'expert' ? accentColor : lineColor }}>
+          {uiLevel === 'expert' ? 'EXPERT' : 'NORMAL'}
+        </span>
+      </button>
+
+      <div style={{ height: 1, width: '70%', background: sepColor, margin: '4px 0' }} />
 
       {/* SESSION (Start / Pause / Resume / Stop) — CONN-97: placed right under the
           SESSIONE hub (and before PROCESSUS) for a more logical flow. */}

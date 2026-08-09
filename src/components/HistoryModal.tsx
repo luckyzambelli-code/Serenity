@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { pick5 } from '../i18n5';
 import { Calendar, Clock, Activity, Trash2, ChevronDown, ChevronUp, Search } from 'lucide-react';
-import { SessionSummary, getSessionsByProfile, saveSession, UserProfile, getSessionPdfAsync, deleteSessionPdfAsync, deleteSession } from '../lib/storage';
+import { SessionSummary, getSessionsByProfile, getSessions, saveSession, UserProfile, getSessionPdfAsync, deleteSessionPdfAsync, deleteSession } from '../lib/storage';
 import { isServerAvailable, serverGetSessions, serverSaveSessions, serverSessionPdfUrl, serverDeleteSession } from '../lib/serverStorage';
 import { useI18n } from '../i18n.tsx';
 import { Language } from '../i18n';
@@ -250,6 +250,32 @@ export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps
             <span className="text-sm font-mono font-bold text-cyan-700 border-2 border-cyan-300 px-3 py-1 rounded-md bg-cyan-50">
               {sessions.length} {sessions.length === 1 ? t('history_unit_session') : t('history_unit_sessions')} · {pdfCount} PDF
             </span>
+            {/* ── IL TOTALE D'ARCHIVIO, QUI E NON NEL PDF ────────────────────────────────────
+                Stava in coda al rapporto di seduta, ed era il posto sbagliato: un rapporto
+                descrive UNA seduta, e un numero stampato invecchia il giorno dopo. Il conto di
+                tutte le sedute appartiene allo storico, che è il riepilogo (richiesta utente).
+                Compare solo se ce ne sono di ALTRI: se l'archivio è tutto tuo, non dice nulla. */}
+            {(() => {
+              const totale = (() => { try { return getSessions().length; } catch { return sessions.length; } })();
+              const altre = Math.max(0, totale - sessions.length);
+              if (!altre) return null;
+              return (
+                <span className="text-xs font-mono px-2.5 py-1 rounded-md"
+                      style={{ color: 'rgba(210,228,245,0.75)', background: 'rgba(255,255,255,0.07)',
+                               border: '1px solid rgba(255,255,255,0.16)' }}
+                      title={L('Tutte le sedute in archivio, di ogni auditor e PC',
+                               'Toutes les séances en archive, de tous les auditeurs et PC',
+                               'All sessions in the archive, every auditor and PC',
+                               'Todas las sesiones en archivo, de cada auditor y PC',
+                               'Alla sessioner i arkivet, alla auditörer och PC')}>
+                  {L(`archivio ${totale} · altri ${altre}`,
+                     `archive ${totale} · autres ${altre}`,
+                     `archive ${totale} · others ${altre}`,
+                     `archivo ${totale} · otros ${altre}`,
+                     `arkiv ${totale} · andra ${altre}`)}
+                </span>
+              );
+            })()}
           </div>
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2 text-sm font-mono font-semibold text-slate-700 cursor-pointer select-none px-3 py-1.5 rounded-md hover:bg-slate-100 transition-colors">
