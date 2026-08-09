@@ -106,6 +106,7 @@ import { TA_MIN, TA_MAX } from './engine/thetaTaScale';
 import { MODE_SPEC, availableModes, fallbackMode, type SessionMode } from './engine/sessionMode';
 import { deriveCyclePhase, phaseFamily } from './engine/sessionPhase';
 import { LAYER } from './ui/layers';
+import { useUiModeStore } from './store/uiModeStore';
 /** Un solo locatore per l'app, come `mirrorCycle`: tiene gli ultimi secondi fuori da React,
  *  perché il gestore del worker gira a 60 Hz e non deve far ridisegnare nulla per accumulare. */
 const toneLocator = new ToneLocator();
@@ -4339,6 +4340,26 @@ export default function App() {
    * stesso modo, anche se la seduta era partita con gli strumenti.
    */
   const senzaMisura = noInstruments(instruments);
+  /**
+   * NORMAL o EXPERT — vedi store/uiModeStore e ui/moduleRegistry.
+   *
+   * EXPERT non è « più funzioni »: è il regime di chi TARA lo strumento. Quel che aggiunge —
+   * trim dell'ago, calibrazione TA, diagnostica, barra dell'integrità — in seduta non serve, e
+   * fra i piedi di chi conduce è un rischio: una manopola mossa per sbaglio sregola l'ago
+   * mentre si legge.
+   */
+  const uiLevel = useUiModeStore(s => s.level);
+  const espertoAttivo = uiLevel === 'expert';
+  /**
+   * Passando a EXPERT la barra dell'integrità torna; tornando a NORMAL se ne va.
+   *
+   * Si scrive nella preferenza invece di forzare il render, così DENTRO un livello l'auditor
+   * può ancora chiuderla o riaprirla da Config e la sua scelta regge — è la stessa regola di
+   * `pinned`/`muted` in `ui/visibleSet.ts`: l'automatismo apparecchia, la mano decide.
+   */
+  useEffect(() => {
+    setModuleVis(v => (v.biometric === espertoAttivo ? v : { ...v, biometric: espertoAttivo }));
+  }, [espertoAttivo, setModuleVis]);
   const moduleVis = useMemo(
     () => effectiveModules(moduleVisChosen, instruments),
     [moduleVisChosen, instruments]);
@@ -6485,7 +6506,7 @@ export default function App() {
         {/* PROGRESSIVE DISCLOSURE — Total TA + velocità dietro un solo toggle
                   "diagnostica", chiuso di default → l'angolo resta un solo meter pulito.
                   Reso chiaramente APRIBILE: pill con bordo + chevron (non un'etichetta). */}
-              {!showDiag && !senzaMisura && (
+              {!showDiag && !senzaMisura && espertoAttivo && (
                 <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
                   <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: isLightTheme ? '#334155' : 'rgba(240,246,255,0.8)' }}>{t('diagnostics') as string}</span>
                   <GlassCollapseToggle on={false} onToggle={() => setShowDiag(true)} />
@@ -6494,7 +6515,7 @@ export default function App() {
               {/* Ph.1 PILOTE — panneau Diagnostic en VERRE + perspective via <Panel3D>. Le
                   contenu (readouts) est INCHANGÉ ; seul l'emballage visuel + le chrome
                   (replier/masquer) sont nouveaux. Le × masque → le chip réapparaît. */}
-              {showDiag && !senzaMisura && (
+              {showDiag && !senzaMisura && espertoAttivo && (
                 <Panel3D title={t('diagnostics') as string} side="right" isLightTheme={isLightTheme}
                   onHide={() => setShowDiag(false)}
                   style={{ marginTop: 8, minWidth: 160 }}

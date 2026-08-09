@@ -9,6 +9,7 @@ import type { DrawerKey } from './SidebarDrawer';
 import { useUiStore } from '../store/uiStore';
 import { useProfileStore } from '../store/profileStore';
 import { useNetworkStore } from '../store/networkStore';
+import { useUiModeStore } from '../store/uiModeStore';
 import { LAYER } from "../ui/layers";
 import { TOKEN } from '../ui/tokens';
 
@@ -48,6 +49,8 @@ export function Sidebar({
   const activeProfile = useProfileStore(s => s.activeProfile);
   const sessionCount  = useProfileStore(s => s.sessionCount);
   const isConnected   = useNetworkStore(s => s.isConnected);
+  // NORMAL / EXPERT: il TRIM è una manopola, non un comando di seduta.
+  const uiLevel       = useUiModeStore(s => s.level);
   // CONN-74: PC identity + solo/auditor mode for the sidebar icons.
   const isSoloSession = useProfileStore(s => s.isSoloSession);
   const pcName        = useProfileStore(s => s.pcName);
@@ -210,13 +213,18 @@ export function Sidebar({
         />
       )}
 
-      {/* TRIM */}
-      <SideBtn
-        label={t('sidebar_trim')}
-        active={sidebarDrawer === 'trim'}
-        icon={<Sliders size={34} strokeWidth={1.4} />}
-        onClick={() => toggleDrawer('trim')}
-      />
+      {/* ── TRIM — SOLO IN EXPERT ─────────────────────────────────────────────────────────
+          Regolare l'inerzia e il trim dell'ago è taratura, non conduzione: chi audita non
+          deve trovarsi la manopola nella barra, dove un clic per sbaglio sregola l'ago in
+          piena seduta. Si riaccende passando a EXPERT, in Config. */}
+      {uiLevel === 'expert' && (
+        <SideBtn
+          label={t('sidebar_trim')}
+          active={sidebarDrawer === 'trim'}
+          icon={<Sliders size={34} strokeWidth={1.4} />}
+          onClick={() => toggleDrawer('trim')}
+        />
+      )}
 
       {/* FIX CONN-20: MUSE button only visible in PARTICIPANT mode.
           In local/auditor mode the button only added noise (the auditor

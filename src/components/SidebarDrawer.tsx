@@ -9,6 +9,8 @@ import { useProfileStore } from '../store/profileStore';
 import { useNetworkStore } from '../store/networkStore';
 import { useUiStore } from '../store/uiStore';
 import { useLayoutStore } from '../store/layoutStore';
+import { useUiModeStore } from '../store/uiModeStore';
+import { pick5 } from '../i18n5';
 import { importWallpaper } from '../lib/wallpaperImport';
 import { TOKEN } from '../ui/tokens';
 import { LAYER } from "../ui/layers";
@@ -787,6 +789,10 @@ function LangDrawer({ lang, setLang, theme }: SubProps) {
 // CONFIG
 // ============================================================================
 function ConfigDrawer({ t, theme, lang }: SubProps) {
+  const L = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang as string, it, fr, en, es, sv);
+  // NORMAL / EXPERT — il modo di lavorare, persistito (vedi store/uiModeStore).
+  const uiLevel    = useUiModeStore(s => s.level);
+  const setUiLevel = useUiModeStore(s => s.setLevel);
   // PHASE-B step 4: theme + wallpaper from uiStore; layout state from layoutStore.
   const isLightTheme    = useUiStore(s => s.isLightTheme);
   const wallpaperUrl    = useUiStore(s => s.wallpaperUrl);
@@ -821,6 +827,52 @@ function ConfigDrawer({ t, theme, lang }: SubProps) {
 
   return (
     <>
+      {/* ── NORMAL / EXPERT — DUE MODI DI LAVORARE, NON DUE LIVELLI DI PERMESSO ─────────────
+          NORMAL è quel che serve a CONDURRE una seduta. EXPERT aggiunge quel che serve a
+          TARARE lo strumento: il trim dell'ago, la calibrazione TA, la diagnostica, la barra
+          dell'integrità. Non è « più funzioni » — è un altro mestiere, e chi conduce non deve
+          trovarsi le manopole fra i piedi.
+
+          Ron l'aveva chiesto con parole sue: « a basic one and a professional option to
+          separate the two ». Sta in cima al pannello perché è la scelta che governa tutto il
+          resto di quel che si vede. */}
+      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.2em', color: labelColor, textTransform: 'uppercase', marginBottom: 6 }}>
+        {L('MODO', 'MODE', 'MODE', 'MODO', 'LÄGE')}
+      </div>
+      <div style={{ display: 'flex', padding: 3, gap: 3, borderRadius: 999, marginBottom: 4,
+                    background: isLightTheme ? '#b7b7be' : '#17171b',
+                    boxShadow: isLightTheme ? 'inset 0 2px 5px rgba(0,0,0,0.16)' : 'inset 0 2px 6px rgba(0,0,0,0.7)' }}>
+        {([
+          { k: 'normal' as const, lbl: 'NORMAL' },
+          { k: 'expert' as const, lbl: 'EXPERT' },
+        ]).map(o => {
+          const on = uiLevel === o.k;
+          return (
+            <button key={o.k} type="button" onClick={() => setUiLevel(o.k)}
+              style={{ flex: 1, height: 30, borderRadius: 999, border: 'none', cursor: 'pointer',
+                fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+                color: on ? '#07120c' : (isLightTheme ? '#3a3a40' : '#cbd5e1'),
+                background: on ? '#34d399' : 'transparent',
+                transition: 'color 0.2s, background 0.2s' }}>
+              {o.lbl}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: 10, lineHeight: 1.45, color: labelColor, marginBottom: 12 }}>
+        {uiLevel === 'expert'
+          ? L('Tutto a schermo: trim dell\'ago, calibrazione TA, diagnostica, integrità.',
+              'Tout à l\'écran : trim de l\'aiguille, étalonnage TA, diagnostic, intégrité.',
+              'Everything on screen: needle trim, TA calibration, diagnostics, integrity.',
+              'Todo en pantalla: trim de la aguja, calibración TA, diagnóstico, integridad.',
+              'Allt på skärmen: nåltrim, TA-kalibrering, diagnostik, integritet.')
+          : L('Solo quel che serve a condurre. Le manopole stanno in EXPERT.',
+              'Seulement ce qu\'il faut pour conduire. Les réglages sont en EXPERT.',
+              'Only what you need to run a session. The knobs live in EXPERT.',
+              'Solo lo necesario para conducir. Los ajustes están en EXPERT.',
+              'Bara det som behövs för att leda. Rattarna finns i EXPERT.')}
+      </div>
+
       {/* Appearance */}
       <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.2em', color: labelColor, textTransform: 'uppercase', marginBottom: 6 }}>
         {t('config_appearance')}

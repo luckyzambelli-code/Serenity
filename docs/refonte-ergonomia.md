@@ -333,7 +333,7 @@ Ogni tappa lascia l'app funzionante e produce un DMG. Nessun « big bang ».
 | 3 | ✔ **fatta** (2.0.96) — `moduleRegistry.ts` + `uiModeStore` + `visibleSet.ts`, 26 test. `layoutStore` continua a governare. Vedi §6.2 | +3 file | nullo |
 | 4 | `<Stage>` e gli `<SlotHost>` — si estraggono dal JSX di `App.tsx` i moduli, **uno alla volta**, a parità di aspetto | `App.tsx` cala di ~1 200 righe | medio |
 | 5 | Si dà la mano a `useVisibleSet`: l'automatismo si accende. Si toglie `moduleVis` | store | medio |
-| 6 | Modo esperto, transizioni, i vuoti del centro | UI | basso |
+| 6 | ✔ **in parte** (2.0.108) — NORMAL/EXPERT c'è e governa trim · calibrazione TA · diagnostica · integrità. Restano le transizioni e i vuoti del centro | UI | basso |
 
 La tappa 4 è la sola delicata: è lì che si smonta il `return` da 2 260 righe. Va
 fatta modulo per modulo, con l'app aperta a fianco, e non in una volta.
