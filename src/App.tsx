@@ -98,6 +98,7 @@ import { calibFeatures } from './engine/CalibFeatures';
 import { mirrorCycle, mirrorReading } from './engine/MirrorCycle';
 import { MirrorDial } from './components/MirrorDial';
 import { ToneDial } from './components/ToneDial';
+import { ToneColumn } from './components/ToneColumn';
 import { CycleHint } from './components/CycleHint';
 import { CycleSteps } from './components/CycleSteps';
 import {
@@ -7438,6 +7439,30 @@ export default function App() {
                 (cycle CONTACT/DISSOLUTION/AS-IS), aligné avec l'aiguille. Sinon : le ClearDial. */}
             {/* Anche questi sono ARCHI, e senza ago non hanno nulla da mostrare: sparivano
                 insieme al quadrante principale, non da soli. */}
+            {/* ── LA SCALA DEL TONO, IN VERTICALE, ACCANTO ALL'ARCO ─────────────────────
+                Due mestieri, non due quadranti in concorrenza: l'ARCO è la reazione (che cosa
+                succede adesso — lo legge l'auditor), la COLONNA è la posizione sulla scala di
+                Ron (dove sta il caso — la legge il preclear).
+
+                E si muovono INSIEME: tono = 40 − 80·(R/R_totale), quindi resistenza che scende
+                = tono che sale, e una caduta dell'ago È resistenza che scende. L'ago verso
+                destra e la colonna verso l'alto sono lo stesso evento. La colonna sta a destra
+                apposta: comincia dove l'arco finisce, all'estremo della liberazione. */}
+            {!senzaMisura && viewMode === 'tone' && (
+              <div className="absolute pointer-events-none"
+                   style={{ right: 12, top: '6%', bottom: '10%', width: 190, zIndex: LAYER.sphereChrome }}>
+                <ToneColumn
+                  tone={toneMeasured ?? 0}
+                  hasMeter={toneHasMeter}
+                  // LA CARICA DEL MUSE, se c'è: quanta ce n'è adesso, come barretta a parte.
+                  // Non è un tono — è l'altra sorgente, e sta separata per non confonderle.
+                  charge={instruments.muse ? Math.max(0, Math.min(1, metricsStore.get().qL)) : null}
+                  // Il tono di PARTENZA del ciclo: il segmento fra i due dice se si sale o si scende.
+                  chargeFrom={toneAtStart}
+                />
+              </div>
+            )}
+
             {!senzaMisura && (
             <div className="absolute inset-0 z-40 pointer-events-none">
               {viewMode === 'tone' ? (

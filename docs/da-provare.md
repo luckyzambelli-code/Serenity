@@ -13,6 +13,16 @@ Il file si valida solo indossando il casco: `tsc`, ESLint e i 109 test coprono l
 comportamento. Ogni estrazione è in un commit separato, quindi una singola voce si può annullare
 da sola senza toccare le altre.
 
+- [ ] **La colonna della SCALA DEL TONO** (`components/ToneColumn.tsx`) — verticale, a destra
+      dell'arco, in vista TONE. Compare solo con uno strumento collegato, quindi NON si è
+      potuta guardare:
+  - [ ] le diciotto etichette non si accavallano, e le nove tacche dei decimi si vedono;
+  - [ ] il cursore porta « ≈ valore » e il NOME del livello (Anger, Apathy…);
+  - [ ] **ago a destra = colonna che sale**: è la corrispondenza su cui poggia tutto il disegno
+        (provata in `tonePosition`, ma da vedere in movimento);
+  - [ ] la barretta della carica MUSE, a sinistra dell'asta, non si confonde col tono;
+  - [ ] il segmento ambra fra tono di partenza e tono attuale dice il verso.
+
 - [ ] **Il badge del MUSE con le due percentuali** (`App.tsx`) — batteria e integrità stanno
       ora affiancate nel badge in alto, ognuna con la sua icona (pila · onda). Si vedono SOLO a
       casco collegato, quindi non si sono potute guardare:
