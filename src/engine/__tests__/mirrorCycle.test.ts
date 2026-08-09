@@ -208,3 +208,67 @@ describe('MirrorCycle', () => {
     expect(clock - armedAt).toBeLessThan(MIRROR_CONTACT_WINDOW_S);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+// SENZA AGO — il metodo del doppio condotto a mano
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+describe('il ciclo condotto a mano', () => {
+  it('il valore dato dall auditor fissa la cifra e apre il doppio', () => {
+    const c = new MirrorCycle();
+    c.arm(0);
+    c.setManualValue(4);
+    expect(c.valueR).toBe(4);
+    expect(c.locked).toBe(true);
+    expect(c.reached).toBe(false);
+    expect(c.progress()).toBe(0);
+  });
+
+  it('si limita a 0..10 anche se gli si passa altro', () => {
+    const c = new MirrorCycle();
+    c.arm(0); c.setManualValue(99);  expect(c.valueR).toBe(10);
+    c.arm(0); c.setManualValue(-3);  expect(c.valueR).toBe(0);
+  });
+
+  it('la misura NON tocca più nulla: un tick a zero non cancella il valore', () => {
+    const c = new MirrorCycle();
+    c.arm(0);
+    c.setManualValue(6);
+    for (let t = 1; t < 20; t++) c.update(0, t);
+    expect(c.valueR).toBe(6);
+    expect(c.locked).toBe(true);
+  });
+
+  it('dichiarando il doppio, il ciclo è raggiunto — e i tick non lo disfano', () => {
+    const c = new MirrorCycle();
+    c.arm(0); c.setManualValue(5);
+    c.declareReached();
+    expect(c.reached).toBe(true);
+    expect(c.progress()).toBe(1);
+    for (let t = 1; t < 20; t++) c.update(0, t);
+    expect(c.reached).toBe(true);   // senza il flag `manual`, update() lo rimetterebbe a false
+  });
+
+  it('non si può dichiarare il doppio senza aver dato il valore', () => {
+    const c = new MirrorCycle();
+    c.arm(0);
+    c.declareReached();
+    expect(c.reached).toBe(false);
+  });
+
+  it('RIARMANDO si torna in automatico — se no un ciclo a mano zittiva l ago per sempre', () => {
+    const c = new MirrorCycle();
+    c.arm(0); c.setManualValue(4);
+    expect(c.manual).toBe(true);
+    c.arm(10);
+    expect(c.manual).toBe(false);
+    expect(c.valueR).toBe(0);
+    expect(c.locked).toBe(false);
+  });
+
+  it('e reset() lo azzera comunque', () => {
+    const c = new MirrorCycle();
+    c.arm(0); c.setManualValue(7);
+    c.reset();
+    expect(c.manual).toBe(false);
+  });
+});

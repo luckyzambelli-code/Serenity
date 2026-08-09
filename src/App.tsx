@@ -109,6 +109,7 @@ import { TA_MIN, TA_MAX } from './engine/thetaTaScale';
 import { MODE_SPEC, availableModes, fallbackMode, type SessionMode } from './engine/sessionMode';
 import { deriveCyclePhase, phaseFamily } from './engine/sessionPhase';
 import { LAYER } from './ui/layers';
+import { motion } from 'framer-motion';
 import { useUiModeStore } from './store/uiModeStore';
 /** Un solo locatore per l'app, come `mirrorCycle`: tiene gli ultimi secondi fuori da React,
  *  perché il gestore del worker gira a 60 Hz e non deve far ridisegnare nulla per accumulare. */
@@ -301,9 +302,6 @@ export default function App() {
   // Specchio in ref: le righe si validano da callback stabili (l'auditor clicca quando vuole,
   // anche molto dopo), e senza questo leggerebbero una lista vecchia.
   const assessSessionRef = useRef<AssessItem[]>([]); assessSessionRef.current = assessSession;
-  // Visibilité SOUS l'arc : ON pendant l'assessment, puis OFF 5 s après la fin (demande utilisateur ;
-  // ensuite les mots restent seulement dans le module ASSESSMENT).
-  const underArcHideTimerRef = useRef<number | null>(null);
   /** Timers en attente (un par item assessé). Suivis pour pouvoir TOUS les annuler au démontage :
    *  sinon un read se résolvait après la fin de la séance / la fermeture. */
   const pendingTimersRef = useRef<Set<number>>(new Set());
@@ -4986,7 +4984,6 @@ export default function App() {
       ultimoItemSecRef.current = null;
       gruppiItemRef.current = new Map();
       lastFnShownAtRef.current = -Infinity;
-      if (underArcHideTimerRef.current) { window.clearTimeout(underArcHideTimerRef.current); underArcHideTimerRef.current = null; }
       assessStartRef.current = 0; assessLogCursorRef.current = 0; assessIdRef.current = 0;
       lastLoggedChargeRef.current = 'neutral';
       chargeLogPendingRef.current = { candidate: null, sinceMs: 0 };
@@ -5136,6 +5133,10 @@ export default function App() {
     stopRecognition();
     isUsingLocalRecognition.current = false;
     setSessionState('ended');
+    // ⚠️ NON si azzera qui `senzaStrumenti`: il rapporto lo legge al render (`noInstruments`)
+    // per l'etichetta e per togliere ZONE AS-IS / Lock Quality. Azzerarlo a fine seduta
+    // cancellerebbe proprio quel che il rapporto deve dire. Si azzera alla CHIUSURA del
+    // rapporto — vedi `onClose` di PostSessionReport.
     setSessionEndTime(new Date());
     addLog({ time: timeRef.current, speaker: 'SYS', text: t('sys_end') as string });
     if (appModeRef.current === 'auditor') {
@@ -5188,7 +5189,6 @@ export default function App() {
     const pending = pendingTimersRef.current;
     return () => {
       if (kickFlybackRef.current) clearTimeout(kickFlybackRef.current);
-      if (underArcHideTimerRef.current) window.clearTimeout(underArcHideTimerRef.current);
       if (museReconnectTimerRef.current) clearTimeout(museReconnectTimerRef.current);
       if (epWindowTimerRef.current) clearTimeout(epWindowTimerRef.current);
       pending.forEach(id => window.clearTimeout(id));
@@ -5659,15 +5659,19 @@ export default function App() {
               // MINI TOGGLE monochrome : piste en creux + pouce en verre (cuffie), texte actuel.
               background: TOKEN.wellBg,
               boxShadow: TOKEN.wellShadow }}>
-              {/* ── VERDE = COLLEGATO **E INDOSSATO** ────────────────────────────────────
-                  Non è una sfumatura: un casco appaiato ma posato sul tavolo non fa contatto,
-                  quindi non produce carica e l'ago non reagisce. Il badge diceva « MUSE ✓ » in
-                  bianco nei due casi, e non c'era modo di distinguerli a colpo d'occhio.
-                  Bianco = collegato, in attesa di contatto. Verde = pronto davvero. */}
+              {/* ── PARLA L'ANOMALIA, NON LA NORMALITÀ ───────────────────────────────────
+                  La distinzione resta necessaria: un casco appaiato ma posato sul tavolo non
+                  fa contatto, non produce carica, e l'ago non reagisce — sapere se è INDOSSATO
+                  è tutt'altra cosa che sapere se è collegato.
+
+                  Ma era il caso BUONO a essere colorato (verde = indossato), e il caso da
+                  correggere restava bianco: al contrario di R4, e con un terzo verde in più
+                  a schermo. Adesso indossato = chiaro monocromo, NON indossato = ambra, come
+                  ogni altro avviso dell'app. Il verde torna libero. */}
               <span style={{
                 width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 background: museConnection !== 'connected' ? 'rgba(255,255,255,0.10)'
-                  : museContact ? '#34d399' : 'rgba(255,255,255,0.92)',
+                  : museContact ? 'rgba(240,246,255,0.94)' : TOKEN.warn,
                 border: '1px solid rgba(255,255,255,0.3)',
                 boxShadow: '0 4px 10px rgba(0,0,0,0.45), inset 0 2px 4px rgba(255,255,255,0.55)',
                 animation: museConnection !== 'connected' ? 'pulse 1.5s infinite' : 'none' }}>
@@ -5780,7 +5784,10 @@ export default function App() {
             // (verde), ri-cliccato = si deseleziona. NON avvia da sé — la seduta parte da START,
             // come quando si collega un ago. A seduta avviata resta acceso e non commuta.
             const attivo = senzaStrumenti;
-            const commutabile = sessionState === 'idle';
+            // Commuta ogni volta che la seduta NON è in corso: da fermi e a seduta finita.
+            // Con `=== 'idle'` restava bloccato dopo FIN, che è proprio quando si vuole
+            // cambiare per la seduta dopo (segnalato).
+            const commutabile = sessionState !== 'running';
             return (
             <div
               onClick={commutabile ? () => {
@@ -6742,8 +6749,19 @@ export default function App() {
                   E l'etichetta gialla « senza strumenti » è passata in alto accanto ai badge,
                   una volta sola: ripetuta al centro per tutta la seduta stancava la vista. */}
               {senzaMisura && sessionState === 'running' ? (
-                <div style={{ maxWidth: 560, padding: '0 24px', textAlign: 'center',
-                              display: 'flex', flexDirection: 'column', gap: 10 }}>
+                /* ── LA TRANSIZIONE È UNA CONSEGUENZA PERCEPITA, NON UN RIASSETTO ──────────
+                   Il testo al centro cambia a OGNI tempo del ciclo, e cambiava di scatto: due
+                   frasi diverse nello stesso punto, senza nulla che dicesse « sei passato al
+                   passo dopo ». 180 ms di dissolvenza con 8 px di scorrimento bastano a farlo
+                   leggere come un AVANZAMENTO. La `key` è la FASE: è il cambio di fase che
+                   rimonta il blocco, ed è esattamente quello che si vuole vedere. */
+                <motion.div
+                  key={faseCiclo}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                  style={{ maxWidth: 560, padding: '0 24px', textAlign: 'center',
+                           display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {/* Lo stesso testo del CycleHint, ma in grande: qui è il soggetto dello
                       schermo, non una didascalia sotto un quadrante. */}
                   <span style={{ fontFamily: 'var(--font-sans)', fontSize: 26, fontWeight: 800,
@@ -6851,14 +6869,25 @@ export default function App() {
                             {riga(<>
                               {btn(LC('EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓'), () => validateClearRead(true), '#34d399', false)}
                               {btn(LC('EQUILIBRIUM · senza VGI', 'EQUILIBRIUM · sans VGI', 'EQUILIBRIUM · no VGI', 'EQUILIBRIUM · sin VGI', 'EQUILIBRIUM · utan VGI'), () => validateClearRead(false), isLightTheme ? '#475569' : '#94a3b8', false)}
-                              {btn(LC('NON RICARICA', 'NE RECHARGE PAS', 'NO RECHARGING', 'NO RECARGA', 'LADDAR INTE'), () => finalizeCycle(false), '#dc2626', false)}
+                              {/* ⚠️ IL VERDETTO VA DICHIARATO, non solo il ciclo chiuso.
+                                  Prima chiamava il solo `finalizeCycle(false)`: il ciclo
+                                  finiva con `noRecharging: false`, cioè indistinguibile da uno
+                                  ABBANDONATO — e il ramo « NO RECHARGING » del rapporto e del
+                                  PDF restava irraggiungibile. « Non ricarica » è il risultato
+                                  diagnostico più prezioso del ciclo NULL: se non si scrive,
+                                  averlo premuto non è servito a niente. */}
+                              {btn(LC('NON RICARICA', 'NE RECHARGE PAS', 'NO RECHARGING', 'NO RECARGA', 'LADDAR INTE'), () => {
+                                nullCycleStateMachine.declareNoRecharging();
+                                setNullNoRecharge(true); nullNoRechargeRef.current = true;
+                                finalizeCycle(false);
+                              }, '#dc2626', false)}
                             </>)}
                           </>
                         : riga(btn(DAI, () => armCycle('null'), '#cbd5e1'));
 
                     return null;   // TONE ha la sua barra dei quattro tempi, e regge senza ago.
                   })()}
-                </div>
+                </motion.div>
               ) : !senzaMisura ? (
               <QuantumSphere
                 needleOffsetProp={needleOffset}
@@ -7131,12 +7160,16 @@ export default function App() {
                   point — c'est une proposition à vérifier, pas une réponse déjà donnée. */}
               {viewMode === 'tone' && sessionState === 'running' && (() => {
                 const bar: React.CSSProperties = { width: '100%', pointerEvents: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' };
+                // SELEZIONATO = PASTIGLIA CHIARA, non rossa. Il rosso qui era lo stesso
+                // #ff5a5a della CARICA PRESENTE: un segno o un'ampiezza scelti accendevano il
+                // colore che nell'app vuol dire tutt'altro. Resta l'AMBRA sul bordo per il
+                // valore che la MISURA propone — quello è un avviso, ed è il suo colore.
                 const btn = (on: boolean, hint: boolean): React.CSSProperties => ({
                   height: 32, padding: '0 14px', borderRadius: 8, flexShrink: 0, cursor: 'pointer',
-                  fontFamily: 'monospace', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
-                  background: on ? 'rgba(255,90,90,0.18)' : 'rgba(0,0,0,0.45)',
-                  border: `1px solid ${on ? 'rgba(255,90,90,0.75)' : hint ? 'rgba(251,191,36,0.6)' : 'rgba(255,255,255,0.3)'}`,
-                  color: on ? '#ff5a5a' : 'rgba(235,244,255,0.85)' });
+                  fontFamily: 'monospace', fontSize: 12, fontWeight: on ? 800 : 700, letterSpacing: '0.06em',
+                  background: on ? 'rgba(240,246,255,0.92)' : 'rgba(0,0,0,0.45)',
+                  border: `1px solid ${on ? 'rgba(240,246,255,0.95)' : hint ? 'rgba(251,191,36,0.6)' : 'rgba(255,255,255,0.3)'}`,
+                  color: on ? '#12141a' : 'rgba(235,244,255,0.85)' });
                 const lbl: React.CSSProperties = { fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(226,238,255,0.6)' };
                 return (
                   <div style={{ ...bar, flexDirection: 'column', alignItems: 'stretch' }}>
@@ -7440,19 +7473,19 @@ export default function App() {
                   background: TOKEN.wellBg,
                   boxShadow: TOKEN.wellShadow }}>
                   {modiDisponibili.map(m => {
-                    const META: Record<SessionMode, { lbl: string; title: string; col: string }> = {
-                      contact: { lbl: 'CONTACT', col: '#6ee7b7',
+                    const META: Record<SessionMode, { lbl: string; title: string }> = {
+                      contact: { lbl: 'CONTACT',
                         title: LC('CONTACT → DISSOLUZIONE → AS-IS', 'CONTACT → DISSOLUTION → AS-IS', 'CONTACT → DISSOLUTION → AS-IS', 'CONTACT → DISOLUCIÓN → AS-IS', 'CONTACT → UPPLÖSNING → AS-IS') },
-                      null: { lbl: 'NULL', col: '#cbd5e1',
+                      null: { lbl: 'NULL',
                         title: 'NULL → RISE (mock-up) → EQUILIBRIUM' },
-                      mirror: { lbl: 'MIRROR', col: '#34d399',
+                      mirror: { lbl: 'MIRROR',
                         title: LC('MIRROR — metodo del doppio (Ron)', 'MIRROR — méthode du double (Ron)', 'MIRROR — the doubling method (Ron)', 'MIRROR — método del doble (Ron)', 'MIRROR — dubbelmetoden (Ron)') },
-                      tone: { lbl: 'TONE SCALE', col: '#ff5a5a',
+                      tone: { lbl: 'TONE SCALE',
                         title: LC('TONE SCALE — la scala del tono di Ron (−40…+40)', 'TONE SCALE — l\'échelle des tons de Ron (−40…+40)', 'TONE SCALE — Ron\'s tone scale (−40…+40)', 'TONE SCALE — la escala del tono de Ron (−40…+40)', 'TONE SCALE — Rons tonskala (−40…+40)') },
                       // APERTO, non « libero ». « Libero » suonava come « senza regole »; il modo
                       // è invece EQUILIBRIUM che gira SENZA SEQUENZA CICLICA PREDEFINITA — l'ago,
                       // l'assessment e l'R&I ci sono tutti, manca solo il ciclo che li incatena.
-                      free: { lbl: LC('APERTO', 'OUVERT', 'OPEN', 'ABIERTO', 'ÖPPEN'), col: '#8ab4ff',
+                      free: { lbl: LC('APERTO', 'OUVERT', 'OPEN', 'ABIERTO', 'ÖPPEN'),
                         title: LC('Senza sequenza ciclica predefinita. L\'ago, l\'assessment e l\'R&I restano attivi.', 'Sans séquence cyclique prédéfinie. L\'aiguille, l\'assessment et le R&I restent actifs.', 'No predefined cyclic sequence. The needle, assessment and R&I stay active.', 'Sin secuencia cíclica predefinida. La aguja, el assessment y el R&I siguen activos.', 'Utan fördefinierad cyklisk sekvens. Nålen, assessment och R&I förblir aktiva.') },
                     };
                     const seg = META[m];
@@ -7462,10 +7495,18 @@ export default function App() {
                     const vai = () => { if (cycleArmed) finalizeCycle(false); if (mirrorArmed) stopMirror(); resetTone(); setMode(m); };
                     return (
                       <button key={m} type="button" onClick={vai} title={seg.title}
+                        // ── MONOCROMO: IL METODO NON È UN COLORE ────────────────────────
+                        // Erano cinque tinte, una per metodo. Due erano già prese da altro:
+                        // TONE portava #ff5a5a, che nell'app vuol dire CARICA PRESENTE, e
+                        // MIRROR #34d399, che vuol dire TRAGUARDO RAGGIUNTO. Un rosso fisso
+                        // in basso a destra diceva « carica » per tutta la seduta — quindi
+                        // non lo diceva più. Il metodo in corso si dice con la PASTIGLIA
+                        // CHIARA e il testo scuro; il colore resta alla carica e all'ambra
+                        // dell'avviso (docs/refonte-fasi.md §2).
                         style={{ flex: 1, height: 30, borderRadius: 999, border: 'none', cursor: 'pointer',
-                          fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', whiteSpace: 'nowrap',
-                          color: active ? '#07120c' : (isLightTheme ? '#3a3a40' : '#cbd5e1'),
-                          background: active ? seg.col : 'transparent',
+                          fontSize: 11, fontWeight: active ? 800 : 700, letterSpacing: '0.06em', whiteSpace: 'nowrap',
+                          color: active ? '#12141a' : (isLightTheme ? '#3a3a40' : '#cbd5e1'),
+                          background: active ? (isLightTheme ? '#f2f3f6' : 'rgba(240,246,255,0.92)') : 'transparent',
                           boxShadow: active ? '0 2px 6px rgba(0,0,0,0.35)' : 'none', transition: 'color 0.2s, background 0.2s' }}>
                         {seg.lbl}
                       </button>
@@ -7770,7 +7811,13 @@ export default function App() {
             setShowReport(false);
             setShowHistoryModal(true);
           }}
-          onClose={() => setShowReport(false)}
+          onClose={() => {
+            setShowReport(false);
+            // La scelta « senza strumenti » vale per UNA seduta: chiuso il rapporto, la
+            // prossima riparte da una scelta pulita. Senza questo restava incollata, e il
+            // badge non si poteva deselezionare perché commuta solo a seduta ferma.
+            setSenzaStrumenti(false); senzaStrumentiRef.current = false;
+          }}
           onSaveSession={(summary) => {
             // Si aucun profil actif, créer/utiliser un profil par défaut pour ne pas perdre la session
             const profileId = activeProfile?.id || '_default';

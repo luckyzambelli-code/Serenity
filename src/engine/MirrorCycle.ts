@@ -85,6 +85,11 @@ export class MirrorCycle {
   /** AGGANCIO : on donne l'item → on commence à mesurer le contact de sa charge. */
   arm(nowS: number): void {
     this.armed = true;
+    // ⚠️ SI RIPARTE SEMPRE IN AUTOMATICO. `manual` si accende solo quando l'auditor dà il
+    // valore a mano (setManualValue). Senza questo azzeramento, un ciclo condotto a mano
+    // lasciava `manual = true` per sempre: collegando poi il MUSE, `update()` restava un
+    // no-op e MIRROR non misurava più nulla, in silenzio, per tutto il resto della seduta.
+    this.manual = false;
     this.armedAtS = nowS;
     this.baselineQ = Math.max(this.ambientQ, MIRROR_BASELINE_FLOOR);
     this.valueR = 0;

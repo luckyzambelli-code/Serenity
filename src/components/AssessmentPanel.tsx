@@ -2,6 +2,7 @@ import React from 'react';
 import { GlassCollapseToggle } from './GlassCollapseToggle';
 import { useUiStore } from '../store/uiStore';
 import { glassSurface } from '../ui/panel3d';
+import { READ_NON_MISURATO } from '../engine/instantRead';
 import { TOKEN } from '../ui/tokens';
 
 /**
@@ -115,7 +116,14 @@ export function AssessmentPanel({ items, onHide, t, readMeta, openSignal,
   /** Quante volte la lettura di UN ago ha indicato al preclear. Il denominatore conta solo le
    *  righe in cui quell'ago aveva letto qualcosa: un ago che tace non sbaglia. */
   const resa = (leggi: (a: AssessmentItem) => string | undefined) => {
-    const con = validate.filter(a => { const l = leggi(a); return l && l !== 'NULL'; });
+    // ⚠️ Fuori anche il NON MISURATO. « NULL » è un ago che ha guardato e non ha visto: si
+    // esclude perché un ago che tace non sbaglia. Il trattino è un'altra cosa — NESSUNO ha
+    // guardato — e contarlo nel denominatore farebbe scendere la resa di un ago per item che
+    // quell'ago non poteva nemmeno vedere.
+    const con = validate.filter(a => {
+      const l = leggi(a);
+      return l && l !== 'NULL' && l !== READ_NON_MISURATO;
+    });
     return { si: con.filter(a => a.indica).length, tot: con.length };
   };
 
@@ -343,7 +351,12 @@ export function AssessmentPanel({ items, onHide, t, readMeta, openSignal,
 }
 
 /** Una lettura con la sigla del suo ago. `—` quando quell'ago non ha visto niente: è un dato,
- *  non un vuoto — su 89 item il MUSE ha letto da solo 31 volte e il meter 6. */
+ *  non un vuoto — su 89 item il MUSE ha letto da solo 31 volte e il meter 6.
+ *
+ *  ⚠️ Stesso segno, due sensi vicini: QUI il trattino dice « questo ago ha guardato e non ha
+ *  visto », mentre nella colonna della reazione dice « nessuno strumento poteva guardare »
+ *  (READ_NON_MISURATO). Non si confondono perché senza strumenti queste due sotto-colonne non
+ *  esistono affatto: `readMuse`/`readMeter` restano indefiniti e la riga non le disegna. */
 function Lettura({ sigla, valore, colore, tenue }:
                  { sigla: string; valore?: string; colore: string; tenue: string }) {
   const vuoto = !valore || valore === 'NULL';
