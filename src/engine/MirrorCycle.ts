@@ -113,6 +113,9 @@ export class MirrorCycle {
 
   update(q: number, nowS: number): void {
     if (!this.armed) return;
+    // SENZA AGO il ciclo è condotto a mano: la misura non deve toccare nulla, o cancellerebbe
+    // il valore dato dall'auditor e rimetterebbe `reached` a false a ogni tick.
+    if (this.manual) return;
     q = Math.max(0, q);
     this.smoothQ = this.smoothQ * (1 - MIRROR_SMOOTH) + q * MIRROR_SMOOTH;
     this.liveQ = this.smoothQ;
@@ -149,6 +152,38 @@ export class MirrorCycle {
     this.reached = this.dischargeQ >= 2 * this.contactQ;
   }
 
+  // ═════════════════════════════════════════════════════════════════════════════════════════
+  // SENZA AGO — il metodo del doppio condotto a mano
+  // ═════════════════════════════════════════════════════════════════════════════════════════
+  /**
+   * Senza strumenti il ciclo è guidato dall'auditor, non dalla misura.
+   *
+   * Non è un ripiego: il metodo del raddoppio di Ron precede i meter. Quel che cambia è CHI dà
+   * il valore — l'ago o l'auditor col preclear. Senza questo passo il ciclo restava bloccato al
+   * contatto: `valueR` non si fissava mai, quindi non c'era un doppio da raggiungere e
+   * `stopMirror` non registrava nemmeno il ciclo (segnalato: « sembra mancare una tappa »).
+   */
+  manual = false;
+
+  /** (a) L'auditor dà il VALORE 1–10 della carica contattata. Fissa la cifra e apre il doppio. */
+  setManualValue(v: number): void {
+    this.manual = true;
+    this.valueR = Math.max(0, Math.min(10, v));
+    // `contactQ` è la grandezza su cui si misura il doppio: a mano coincide col valore, così
+    // `progress()` e il bersaglio 2× restano gli stessi di sempre.
+    this.contactQ = this.valueR;
+    this.dischargeQ = 0;
+    this.locked = true;
+    this.reached = false;
+  }
+
+  /** (c) L'auditor dichiara che il DOPPIO è stato raggiunto. */
+  declareReached(): void {
+    if (!this.locked) return;
+    this.dischargeQ = 2 * this.contactQ;
+    this.reached = true;
+  }
+
   /** Avancement vers le DOUBLE (0..1) — pour l'anneau de progression. */
   progress(): number {
     const target = 2 * this.contactQ;
@@ -161,6 +196,7 @@ export class MirrorCycle {
 
   reset(): void {
     this.armed = false;
+    this.manual = false;
     this.armedAtS = 0;
     this.preSmoothQ = 0;
     this.hist = [];

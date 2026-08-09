@@ -4589,12 +4589,28 @@ export default function App() {
                   'Ask for a mock-up. He can → EQUILIBRIUM. He can\'t → NO RECHARGING.',
                   'Pide un mock-up. Lo logra → EQUILIBRIUM. No lo logra → NO RECARGA.',
                   'Be om en mock-up. Klarar → EQUILIBRIUM. Klarar inte → LADDAR INTE.');
-      case 'mirror.contact': case 'mirror.doubling':
-        return LC('Dai un valore da 1 a 10 e portalo al doppio.',
-                  'Donne une valeur de 1 à 10 et mène-la au double.',
-                  'Give a value from 1 to 10 and take it to the double.',
-                  'Da un valor de 1 a 10 y llévalo al doble.',
-                  'Ge ett värde 1–10 och för det till dubbeln.');
+      // MIRROR ha CINQUE tempi, non due: coprirne solo la metà lasciava le altre fasi col testo
+      // normale, che nomina la misura — ed è così che il ciclo « sembrava mancare una tappa ».
+      case 'mirror.item': case 'mirror.say_item':
+        return LC('Scrivilo o dillo, poi premi.', 'Écris-le ou dis-le, puis appuie.', 'Type it or say it, then press.', 'Escríbelo o dilo, luego pulsa.', 'Skriv eller säg det, tryck sedan.');
+      case 'mirror.contact':
+        return LC('Quanta carica ha questo item? Dai un valore da 1 a 10.',
+                  'Combien de charge a cet item ? Donne une valeur de 1 à 10.',
+                  'How much charge has this item? Give a value from 1 to 10.',
+                  '¿Cuánta carga tiene este ítem? Da un valor de 1 a 10.',
+                  'Hur mycket laddning har detta item? Ge ett värde 1–10.');
+      case 'mirror.doubling':
+        return LC('Fallo scaricare fino al doppio, poi dichiaralo.',
+                  'Fais-le décharger jusqu\'au double, puis déclare-le.',
+                  'Have it discharge to the double, then declare it.',
+                  'Haz que descargue hasta el doble, luego decláralo.',
+                  'Låt det laddas ur till dubbeln, deklarera sedan.');
+      case 'mirror.reached':
+        return LC('Valida e riparti con un altro item.',
+                  'Valide et repars avec un autre item.',
+                  'Validate and go on with another item.',
+                  'Valida y sigue con otro ítem.',
+                  'Validera och fortsätt med ett annat item.');
       default:
         return null;   // TONE è assessment puro: il suo testo va già bene così com'è.
     }
@@ -4992,7 +5008,12 @@ export default function App() {
       return;
     }
 
-    if (fresh) {
+    // ── SENZA STRUMENTI NON C'È PRONTEZZA DA VERIFICARE ────────────────────────────────────
+    // Il controllo di prontezza (respiro del MUSE, prova delle boîtes) misura che gli strumenti
+    // leggano bene prima di cominciare. Senza strumenti non c'è nulla da misurare: la schermata
+    // del respiro compariva lo stesso e chiedeva di prepararsi a un casco che non c'è
+    // (segnalato). Si va dritti alla seduta.
+    if (fresh && !senzaStrumentiRef.current) {
       metabolicBaseline.reset();
       setMetabAssessment(null);                  // clear any previous reading
       metabolicPhaseRef.current = 'baseline';
@@ -6728,11 +6749,45 @@ export default function App() {
                     );
                     const DAI = LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE THE ITEM', 'DA EL ÍTEM', 'GE ITEM');
 
-                    // ── MIRROR ──
-                    if (mode === 'mirror')
-                      return mirrorArmed
-                        ? riga(btn(LC('OTTENUTO — VALIDA', 'OBTENU — VALIDER', 'OBTAINED — VALIDATE', 'OBTENIDO — VALIDAR', 'UPPNÅTT — VALIDERA'), () => stopMirror(), '#34d399'))
-                        : riga(btn(DAI, () => armMirror(), '#34d399'));
+                    // ── MIRROR — TRE TEMPI, non due ────────────────────────────────────────
+                    // Il metodo del raddoppio ha un passo che senza ago nessuno faceva: DARE IL
+                    // VALORE. Prima si andava da « dai l'item » dritti a « ottenuto », e in mezzo
+                    // non c'era né la cifra né il doppio da raggiungere — cioè mancava il metodo
+                    // (segnalato). Peggio: `valueR` restava 0 e `stopMirror` non registrava
+                    // nemmeno il ciclo.
+                    if (mode === 'mirror') {
+                      if (!mirrorArmed) return riga(btn(DAI, () => armMirror(), '#34d399'));
+                      // (a) IL VALORE — dieci bottoni, la quantità di carica di QUESTO item.
+                      if (!mirrorDisp.locked) return <>
+                        {domanda(LC('Quanta carica? Da 1 a 10.', 'Combien de charge ? De 1 à 10.', 'How much charge? From 1 to 10.', '¿Cuánta carga? De 1 a 10.', 'Hur mycket laddning? Från 1 till 10.'))}
+                        {riga([1,2,3,4,5,6,7,8,9,10].map(v => (
+                          <button key={v} type="button"
+                            onClick={() => {
+                              mirrorCycle.setManualValue(v);
+                              setMirrorDisp({ contactQ: mirrorCycle.contactQ, dischargeQ: 0,
+                                              locked: true, reached: false, valueR: mirrorCycle.valueR });
+                            }}
+                            style={{ width: 40, height: 40, borderRadius: 10, cursor: 'pointer',
+                              fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 800,
+                              background: isLightTheme ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
+                              border: `1px solid ${isLightTheme ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.22)'}`,
+                              color: '#34d399' }}>
+                            {v}
+                          </button>
+                        )))}
+                      </>;
+                      // (b) IL DOPPIO — la meta è scritta, e la raggiunge il preclear.
+                      if (!mirrorDisp.reached) return <>
+                        {domanda(`${LC('Portalo al doppio', 'Mène-le au double', 'Take it to the double', 'Llévalo al doble', 'För det till dubbeln')} — ${mirrorDisp.valueR.toFixed(0)} → ${(2 * mirrorDisp.valueR).toFixed(0)}`)}
+                        {riga(btn(LC('DOPPIO RAGGIUNTO', 'DOUBLE ATTEINT', 'DOUBLE REACHED', 'DOBLE ALCANZADO', 'DUBBELN NÅDD'), () => {
+                          mirrorCycle.declareReached();
+                          setMirrorDisp({ contactQ: mirrorCycle.contactQ, dischargeQ: mirrorCycle.dischargeQ,
+                                          locked: true, reached: true, valueR: mirrorCycle.valueR });
+                        }, '#34d399'))}
+                      </>;
+                      // (c) OTTENUTO — si valida e si riparte.
+                      return riga(btn(LC('OTTENUTO — VALIDA', 'OBTENU — VALIDER', 'OBTAINED — VALIDATE', 'OBTENIDO — VALIDAR', 'UPPNÅTT — VALIDERA'), () => stopMirror(), '#34d399'));
+                    }
 
                     // ── CONTACT ──
                     if (mode === 'contact')
