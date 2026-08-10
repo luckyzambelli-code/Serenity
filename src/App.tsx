@@ -7183,12 +7183,19 @@ export default function App() {
                   const traguardo = active && (k === 'charge'
                     ? faseCiclo === 'contact.asis'
                     : faseCiclo === 'null.equilibrium');
+                  // ⚠️ E « MOCK-UP » NON PRIMA CHE L'ITEM CI SIA. Premuto col campo vuoto il
+                  // bottone diceva già « MOCK-UP » mentre l'istruzione diceva « dì l'item »:
+                  // due ordini contraddittori, lo stesso difetto di sempre in un punto nuovo
+                  // (segnalato). Finché l'item non c'è, il bottone dice che lo si aspetta.
+                  const attesaVoce = active && (faseCiclo === 'contact.say_item' || faseCiclo === 'null.say_item');
                   const tempo = !active ? null
                     : traguardo
                       ? (k === 'charge'
                           ? `AS-IS ${LC('CONFERMATO', 'CONFIRMÉ', 'CONFIRMED', 'CONFIRMADO', 'BEKRÄFTAD')}`
                           : 'EQUILIBRIUM')
-                      : LC('MOCK-UP', 'MOCK-UP', 'MOCK-UP', 'MOCK-UP', 'MOCK-UP');
+                      : attesaVoce
+                        ? LC('DÌ L\'ITEM', 'DIS L\'ITEM', 'SAY THE ITEM', 'DI EL ÍTEM', 'SÄG ITEM')
+                        : LC('MOCK-UP', 'MOCK-UP', 'MOCK-UP', 'MOCK-UP', 'MOCK-UP');
 
                   // ── E AL TRAGUARDO, IL BOTTONE VALIDA ──────────────────────────────────
                   // Il chip « AS-IS CONFERMATO » stava in fondo, accanto alla % di
@@ -7199,14 +7206,22 @@ export default function App() {
                   // senza), e due esiti non stanno in un bottone solo — compaiono accanto,
                   // qui sotto. Questo bottone allora si limita a dire dove si è.
                   const validaQui = traguardo && k === 'charge';
+                  // ── ⚠️ A CICLO ARMATO IL BOTTONE NON SI PREME PIÙ ──────────────────────
+                  // Premendolo chiudeva il ciclo, e nessuno poteva indovinarlo: diceva
+                  // « MOCK-UP », cioè il tempo in corso, e un tempo in corso non si preme
+                  // (segnalato). Adesso è quel che sembra — un'etichetta di stato — e per
+                  // uscire c'è ANNULLA qui accanto, come in TONE.
+                  //
+                  // Resta premibile in due casi soli: quando arma (« dai l'item ») e quando
+                  // valida l'AS-IS confermato. Cioè quando c'è davvero un gesto da fare.
+                  const premibile = !active || validaQui;
                   return (
                     <button key={k}
                       onClick={() => {
                         if (validaQui) validateAsIs();
-                        else if (active && !traguardo) finalizeCycle(false);
                         else if (!cycleArmed) armCycle(k);
                       }}
-                      disabled={blocked || (traguardo && !validaQui)}
+                      disabled={blocked || !premibile}
                       title={validaQui
                         ? LC('L\'AS-IS è confermato — premi per VALIDARLO e chiudere il ciclo', 'L\'AS-IS est confirmé — appuie pour le VALIDER et fermer le cycle', 'The AS-IS is confirmed — press to VALIDATE it and close the cycle', 'El AS-IS está confirmado — pulsa para VALIDARLO y cerrar el ciclo', 'AS-IS bekräftad — tryck för att VALIDERA och stänga cykeln')
                         : traguardo
@@ -7219,23 +7234,23 @@ export default function App() {
                             ? LC('Dai l\'item e premi: ciclo CONTACT → DISSOLUZIONE → AS-IS', 'Donne l\'item et appuie : cycle CONTACT → DISSOLUTION → AS-IS', 'Give the item and press: CONTACT → DISSOLUTION → AS-IS cycle', 'Da el ítem y pulsa: ciclo CONTACT → DISOLUCIÓN → AS-IS', 'Ge item och tryck: CONTACT → UPPLÖSNING → AS-IS')
                             : LC('Dai l\'item e premi: ciclo NULL → RISE (mock-up) → EQUILIBRIUM', 'Donne l\'item et appuie : cycle NULL → RISE (mock-up) → EQUILIBRIUM', 'Give the item and press: NULL → RISE (mock-up) → EQUILIBRIUM cycle', 'Da el ítem y pulsa: ciclo NULL → RISE (mock-up) → EQUILIBRIUM', 'Ge item och tryck: NULL → RISE (mock-up) → EQUILIBRIUM')}
                       style={{ height: 28, padding: '0 12px', borderRadius: 8, flexShrink: 0,
-                        cursor: blocked ? 'not-allowed' : 'pointer',
+                        cursor: !premibile ? 'default' : blocked ? 'not-allowed' : 'pointer',
                         fontFamily: 'monospace', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
                         // AL TRAGUARDO il bottone si accende: è il momento in cui c'è da premere.
                         background: validaQui ? 'rgba(52,211,153,0.20)'
                                   : active ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.45)',
                         border: `1px solid ${validaQui ? '#34d399' : active ? hue.on : RIPOSO}`,
                         color: validaQui ? '#34d399' : active ? hue.ink : 'rgba(235,244,255,0.85)',
+                        // Non premibile ≠ spento: dice DOVE SI È, e si deve leggere bene.
                         opacity: blocked ? 0.35 : 1 }}>
-                      {/* Attivo: il TEMPO in corso + l'icona STOP, che dice che è questo bottone
-                          a chiudere il ciclo. Al traguardo lo stop sparisce: lì non si
-                          interrompe, si valida. */}
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                         {tempo ?? LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE THE ITEM', 'DA EL ÍTEM', 'GE ITEM')}
-                        {active && !traguardo && <Square size={9} strokeWidth={0} fill="currentColor" />}
                       </span>
-                      {/* Premuto col campo vuoto, si aspetta la voce: lo si dice, come in MIRROR. */}
-                      {active && !auditingQuestion.trim() && (
+                      {/* Premuto col campo vuoto, si aspetta la voce: lo si dice, come in MIRROR.
+                          ⚠️ Si guarda la FASE, non il campo: dichiarando « l'item è stato detto »
+                          il campo resta vuoto (la trascrizione può non esserci) e l'avviso
+                          restava acceso a mock-up già chiesto. */}
+                      {attesaVoce && (
                         <span className="animate-pulse" style={{ marginLeft: 8, fontSize: 10, color: '#fbbf24' }}>
                           {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
                         </span>
@@ -7243,6 +7258,21 @@ export default function App() {
                     </button>
                   );
                 })}
+                {/* ── ANNULLA — l'uscita dal ciclo, che prima era il bottone stesso ────────
+                    Chiudere il ciclo si faceva ripremendo « MOCK-UP », e nessuno poteva
+                    indovinarlo. Adesso l'uscita ha il suo bottone e il suo nome, come in
+                    TONE: chiude senza validare, e il ciclo resta « non validato » nel
+                    rapporto — che è esattamente quel che è. */}
+                {cycleArmed && (
+                  <button onClick={() => finalizeCycle(false)}
+                    title={LC('Chiude il ciclo SENZA validarlo', 'Ferme le cycle SANS le valider', 'Closes the cycle WITHOUT validating it', 'Cierra el ciclo SIN validarlo', 'Stänger cykeln UTAN att validera')}
+                    style={{ height: 28, padding: '0 12px', borderRadius: 8, flexShrink: 0, cursor: 'pointer',
+                      fontFamily: 'monospace', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
+                      background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.18)',
+                      color: 'rgba(235,244,255,0.7)' }}>
+                    {LC('ANNULLA', 'ANNULER', 'CANCEL', 'CANCELAR', 'AVBRYT')}
+                  </button>
+                )}
                 {/* ── I DUE ESITI DEL EQUILIBRIUM ─────────────────────────────────────────
                     Stavano in fondo, nella barra dei numeri, accanto alla % di dissoluzione.
                     Salgono qui accanto al bottone del ciclo: chi chiude un ciclo lo chiude
