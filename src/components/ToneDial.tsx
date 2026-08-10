@@ -1,6 +1,6 @@
 import React from 'react';
 import { TONE_SCALE_MAX, TONE_STEP } from '../engine/tuning';
-import { toneOffset, chargeValue, clampTone, type ToneCharge, type TonePhase } from '../engine/toneScale';
+import { toneOffset, clampTone, raiseProgress, TONE_TARGET, type TonePhase } from '../engine/toneScale';
 
 /**
  * ToneDial — la vista TONE SCALE (−40 … +40), la scala del tono di Ron.
@@ -54,7 +54,7 @@ const bandAlpha = (tone: number): number =>
   BAND_FLOOR + (1 - BAND_FLOOR) * (Math.abs(clampTone(tone)) / TONE_SCALE_MAX);
 
 export function ToneDial({
-  tone, hasMeter, approx, located, validated, phase, toneAtStart,
+  tone, hasMeter, approx, located, phase, toneAtStart,
   isLightTheme = false,
 }: {
   /** Tono MISURATO adesso, −40..+40. Ignorato quando `hasMeter` è falso. */
@@ -68,28 +68,29 @@ export function ToneDial({
   located: number | null;
   /** Quel che l'auditor ha VALIDATO. È questo che comanda il bersaglio — e dove la riga
    *  gialla si sposta. */
-  validated: ToneCharge | null;
   phase: TonePhase;
-  /** Tono all'inizio del mock-up — serve alla barra di avanzamento. */
+  /** Tono all'inizio della salita — serve alla barra di avanzamento. */
   toneAtStart: number | null;
   isLightTheme?: boolean;
 }) {
   const ink = isLightTheme ? '#0f172a' : 'rgba(240,246,255,0.95)';
   const hair = isLightTheme ? 'rgba(15,23,42,0.35)' : 'rgba(255,255,255,0.35)';
 
-  const chargeTone = validated ? chargeValue(validated) : null;
-  const targetTone = chargeTone !== null ? -chargeTone : null;
-  const inMockup = phase === 'mockup' || phase === 'done';
+  // ⚠️ LA META È +40, E PRIMA ERA L'OPPOSTO DELLA CARICA. Il vecchio punto 4 faceva mock-uppare
+  // −(valore assessato); il comando di Ron porta tutte le resistenze in cima alla scala. Con
+  // l'assessment se n'è andato `validated`: il valore di partenza è quello MISURATO.
+  const chargeTone = located;
+  const targetTone: number | null = TONE_TARGET;
+  const inSalita = phase === 'raise' || phase === 'done';
   const done = phase === 'done';
 
-  // LA RIGA GIALLA: prima dove l'ago l'ha trovata, poi dove il preclear l'ha confermata.
-  // Un valore solo, che si sposta — non due segni che si accavallano.
-  const rigaGialla = chargeTone !== null ? chargeTone : located;
+  // LA RIGA GIALLA: dove l'ago ha trovato la resistenza.
+  const rigaGialla = located;
 
-  // Avanzamento verso lo zero: solo se c'è davvero qualcosa da misurare. Senza meter la barra
+  // Avanzamento verso il +40: solo se c'è davvero qualcosa da misurare. Senza meter la barra
   // NON compare — non si disegna un progresso che nessuno sta misurando.
-  const progress = (inMockup && hasMeter && toneAtStart !== null && Math.abs(toneAtStart) > 1e-9)
-    ? Math.max(0, Math.min(1, (Math.abs(toneAtStart) - Math.abs(clampTone(tone))) / Math.abs(toneAtStart)))
+  const progress = (inSalita && hasMeter && toneAtStart !== null)
+    ? raiseProgress(toneAtStart, clampTone(tone))
     : 0;
 
   const BAND_R = 422;                      // la fascia: SOTTO i numeri, sopra l'anello di avanzamento
@@ -190,7 +191,7 @@ export function ToneDial({
       {/* BERSAGLIO — l'OPPOSTO da mock-uppare. TEAL, non ambra: l'ambra adesso è il valore in
           gioco, e due stanghette dello stesso colore ai due lati dello zero sarebbero state
           indistinguibili. Il teal è già « ottenuto » nel MIRROR, e qui è dove si vuole arrivare. */}
-      {inMockup && targetTone !== null && (() => {
+      {inSalita && targetTone !== null && (() => {
         const a = tpt(targetTone, R + 30), b = tpt(targetTone, R - 136);
         const lp = tpt(targetTone, R - 164);
         return (
@@ -207,7 +208,7 @@ export function ToneDial({
 
       {/* anello di AVANZAMENTO verso lo zero — solo quando c'è una misura che avanza */}
       <path d={arcPath(-1, 1, PROG_R)} fill="none" stroke={isLightTheme ? 'rgba(15,23,42,0.10)' : 'rgba(255,255,255,0.08)'} strokeWidth={14} strokeLinecap="round" />
-      {inMockup && progress > 0.001 && (
+      {inSalita && progress > 0.001 && (
         <path d={arcPath(-1, -1 + progress * 2, PROG_R)} fill="none" stroke={done ? TEAL : AMBER} strokeWidth={14}
           strokeLinecap="round" opacity={0.92} filter={done ? 'url(#td-glow)' : undefined} />
       )}

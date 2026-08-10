@@ -102,13 +102,12 @@ import { ToneColumn } from './components/ToneColumn';
 import { CycleHint } from './components/CycleHint';
 import { CycleSteps } from './components/CycleSteps';
 import {
-  TONE_STEPS, proposeFromTone, agreementOf, toneFromTa, chargeValue, oppositeOf, ToneLocator,
-  reachedZero, toneWitnesses, toneAsIs, matchToneAnswer,
-  type ToneCharge, type TonePhase, type ToneSign, type ToneStep, type ToneLocateAnchor,
-  type ToneWitness,
+  TONE_TARGET, toneFromTa, ToneLocator,
+  reachedTop, toneWitnesses, toneAsIs,
+  type TonePhase, type ToneLocateAnchor, type ToneWitness,
 } from './engine/toneScale';
 import { TA_MIN, TA_MAX } from './engine/thetaTaScale';
-import { MODE_SPEC, availableModes, fallbackMode, type SessionMode } from './engine/sessionMode';
+import { MODE_SPEC, availableModes, fallbackMode, cycleIsAutomatic, type SessionMode } from './engine/sessionMode';
 import { deriveCyclePhase, phaseFamily } from './engine/sessionPhase';
 import { LAYER } from './ui/layers';
 import { motion } from 'framer-motion';
@@ -1344,24 +1343,13 @@ export default function App() {
              'la reacción NO indica', 'avläsningen indikerar INTE'),
       type: indica ? 'success' : 'normal' });
 
-    // ── NEL CICLO TONE, « INDICA » FA AVANZARE ─────────────────────────────────────────────
-    // Nelle fasi 2 e 3 l'auditor enuncia le risposte e il modulo ASSESSMENT le raccoglie con la
-    // loro lettura. Quando poi indica al preclear e questi conferma, il ciclo deve avanzare da
-    // solo: cliccare « indica » e poi ricliccare il bottone in cima vorrebbe dire dire due volte
-    // la stessa cosa, e con gli occhi in due punti diversi dello schermo (richiesta utente).
+    // ⚠️ QUI C'ERA L'AVANZAMENTO AUTOMATICO DEL CICLO TONE. Serviva alle fasi « positivo o
+    // negativo? » e « quante divisioni? »: l'auditor enunciava le risposte, il modulo
+    // ASSESSMENT le raccoglieva, e indicandole il ciclo passava al tempo dopo.
     //
-    // Solo su SÌ. Un « non indica » è un'informazione, non una risposta al ciclo.
-    if (!indica || modeRef.current !== 'tone' || !riga) return;
-    const risposta = matchToneAnswer(riga.item, tonePhaseRef.current);
-    if (!risposta) return;
-    if (risposta.kind === 'sign' && tonePhaseRef.current === 'sign') {
-      setToneSignPick(risposta.sign);
-      setTonePhase('magnitude');
-    } else if (risposta.kind === 'magnitude' && tonePhaseRef.current === 'magnitude') {
-      setToneValidated({ sign: toneSignPickRef.current ?? 1, magnitude: risposta.magnitude,
-        origin: toneHasMeterRef.current ? 'measured' : 'assessed' });
-      setTonePhase('mockup');
-    }
+    // Quelle due fasi non esistono più — i comandi di Ron sono due, e nessuno dei due è un
+    // assessment a risposte. Con loro se n'è andato `matchToneAnswer`, che riconosceva
+    // « negativo » e « trenta » nelle cinque lingue.
   }, []);
 
   // ── ASSESSMENT — ajoute un item assessé + calcule son READ instantané. Le read est un
@@ -4468,9 +4456,7 @@ export default function App() {
   }, [modiDisponibili, mode, instruments.muse, instruments.theta]);
 
   const [tonePhase, setTonePhase] = useState<TonePhase>('locate');
-  const [toneValidated, setToneValidated] = useState<ToneCharge | null>(null);
-  const [toneProposedAtLock, setToneProposedAtLock] = useState<ToneCharge | null>(null);
-  const [toneSignPick, setToneSignPick] = useState<ToneSign | null>(null);
+  /** Il tono di PARTENZA, misurato. `null` senza meter: non se ne inventa uno. */
   const [toneAtStart, setToneAtStart] = useState<number | null>(null);
   /**
    * QUANTE VOLTE SI È DATO IL COMANDO « porta questo a tono quaranta ».
@@ -4489,7 +4475,6 @@ export default function App() {
   // Specchi in ref: `segnaIndicazione` si aggancia UNA volta sola (deps vuote, come tutte le
   // callback del pannello) e senza questi leggerebbe per sempre la fase d'avvio.
   const tonePhaseRef = useRef(tonePhase); tonePhaseRef.current = tonePhase;
-  const toneSignPickRef = useRef(toneSignPick); toneSignPickRef.current = toneSignPick;
   const modeRef = useRef(mode); modeRef.current = mode;
   // Il tono MISURATO. Oggi passa dal TA e non da ohm veri: `toneFromTa` è dichiaratamente una
   // strada provvisoria, ed è per questo che il quadrante scrive « ≈ ». Diventa esatta il giorno
@@ -4501,16 +4486,13 @@ export default function App() {
   // tick — senza questo il locatore accumulerebbe per sempre il valore d'avvio.
   const toneMeasuredRef = useRef(toneMeasured); toneMeasuredRef.current = toneMeasured;
   const toneHasMeterRef = useRef(toneHasMeter); toneHasMeterRef.current = toneHasMeter;
-  const toneProposed = toneMeasured !== null ? proposeFromTone(toneMeasured) : null;
-  // ⚠️ Si confronta con la MISURA LOCALIZZATA, non con la proposta arrotondata, e CON
-  // TOLLERANZA: l'ago cade fra due divisioni, e a −23 vanno bene sia −20 sia −30. Vedi
-  // `agreementOf` — prima si pretendeva il numero esatto e « l'ago diceva altro » compariva
-  // su metà delle localizzazioni, svuotando di senso proprio quel messaggio.
-  const toneAgreement = toneValidated ? agreementOf(toneAtStart, toneValidated) : null;
+  // ⚠️ QUI C'ERANO LA PROPOSTA E LA SMENTITA. `toneProposed` traduceva la misura in segno +
+  // ampiezza da far verificare all'auditor, e `toneAgreement` diceva se l'assessment fosse
+  // d'accordo con l'ago. Senza le fasi di assessment non c'è più niente da proporre né da
+  // smentire: il tono di partenza è quello misurato, e basta.
 
-  // ── L'AS-IS DEL TONE: TRE TESTIMONI, E L'AUDITOR CHE VALIDA ─────────────────────────────
-  // Il bersaglio è lo ZERO, non il valore opposto: il preclear MOCK-UPPA il +40, e il risultato
-  // è che i due si annullano al centro. Vedi `toneWitnesses` per il perché di ciascuno.
+  // ── IL TONO QUARANTA: TRE TESTIMONI, E L'AUDITOR CHE VALIDA ─────────────────────────────
+  // Il bersaglio è la CIMA della scala — è il comando di Ron. Vedi `toneWitnesses`.
   //
   // I testimoni si AGGANCIANO: una volta che uno ha parlato resta acceso per tutto il mock-up.
   // Un F/N dura pochi secondi e la posizione a zero si attraversa: pretendere che i due siano
@@ -4525,9 +4507,9 @@ export default function App() {
   const toneFnNow = agoPrincipale === 'theta' ? !!theta.fn.fn
     : (needleReactionKey || '').includes('reaction_fn');
   useEffect(() => {
-    if (tonePhase !== 'mockup') return;
+    if (tonePhase !== 'raise') return;
     const nuovi: ToneWitness[] = [];
-    if (toneHasMeter && toneMeasured !== null && reachedZero(toneMeasured)) nuovi.push('zero');
+    if (toneHasMeter && toneMeasured !== null && reachedTop(toneMeasured)) nuovi.push('top');
     if (toneFnNow) nuovi.push('fn');
     if (instruments.muse && asIsSignature) nuovi.push('signature');
     if (!nuovi.length) return;
@@ -4540,58 +4522,43 @@ export default function App() {
     () => toneAsIs(toneWitnessesAvail, toneFired),
     [toneWitnessesAvail, toneFired]);
 
-  // ── L'ASSESSMENT SI ACCENDE E SI SPEGNE DA SÉ NEL CICLO TONE ────────────────────────────
-  // Le fasi 2 e 3 SONO un assessment: si enuncia « negativo? », « positivo? », « 10, 20, 30,
-  // 40 » e si guarda cosa reagisce. Accendere il modulo a mano ogni volta era un gesto in più
-  // proprio nel momento in cui l'auditor deve avere gli occhi sull'ago.
-  //
-  // Si stacca da solo entrando nel mock-up: lì non si assessa più, si aspetta. Il modulo resta
-  // VISIBILE — gli item assessati servono da consultare mentre si valida l'AS-IS, ed è per
-  // questo che si spegne il MOTORE e non il pannello.
-  const toneAssessAutoRef = useRef(false);
-  useEffect(() => {
-    if (mode !== 'tone') return;
-    const serve = tonePhase === 'sign' || tonePhase === 'magnitude';
-    if (serve && !assessActiveRef.current) {
-      toneAssessAutoRef.current = true;
-      toggleAssessment();
-    } else if (!serve && assessActiveRef.current && toneAssessAutoRef.current) {
-      // solo se l'avevamo acceso NOI: se l'ha acceso l'auditor, non glielo si spegne sotto le mani
-      toneAssessAutoRef.current = false;
-      toggleAssessment();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, tonePhase]);
+  // ⚠️ QUI L'ASSESSMENT SI ACCENDEVA DA SÉ nelle fasi « positivo o negativo? » e « quante
+  // divisioni? », che ERANO un assessment. Quelle fasi non ci sono più: i comandi di Ron sono
+  // due, e nessuno dei due si conduce enunciando risposte da far reagire. Il modulo si accende
+  // a mano, come negli altri cicli.
 
   // ── I CICLI TONE SI REGISTRANO ─────────────────────────────────────────────────────────
-  // Non ci finivano né nel rapporto né nel PDF (segnalato): MIRROR sì, TONE no. Si tiene quel
-  // che la MISURA diceva, quel che il preclear ha VALIDATO e se i due concordavano — è proprio
-  // quel disaccordo la cosa da poter rileggere a freddo.
+  // Non ci finivano né nel rapporto né nel PDF (segnalato): MIRROR sì, TONE no.
+  //
+  // Si tiene il tono di PARTENZA misurato (`located`, null senza meter), QUANTE VOLTE si è dato
+  // il comando, e se il tono quaranta è stato raggiunto. Prima si tenevano anche segno,
+  // ampiezza e l'accordo fra misura e assessment: erano le fasi che non ci sono più.
   const toneCyclesRef = useRef<Array<{ n: number; question: string; tStartSec: number; tEndSec: number;
-    located: number | null; sign: ToneSign; magnitude: number; agreement: string | null;
+    located: number | null; repeats: number;
     anchor: string; witnesses: string[]; asIs: boolean }>>([]);
   const toneNRef = useRef(0);
   const toneStartSecRef = useRef(0);
-  const chiudiTone = useCallback((asIs: boolean) => {
-    if (!toneValidated) return;
+  const chiudiTone = useCallback((raggiunto: boolean) => {
     toneCyclesRef.current.push({
       n: ++toneNRef.current, question: auditingQuestion.trim(),
       tStartSec: toneStartSecRef.current, tEndSec: timeRef.current,
-      located: toneAtStart, sign: toneValidated.sign, magnitude: toneValidated.magnitude,
-      agreement: toneAgreement, anchor: toneAnchor?.how ?? 'settled',
-      witnesses: [...toneFired], asIs,
+      located: toneAtStart, repeats: toneRipetizioni, anchor: toneAnchor?.how ?? 'settled',
+      witnesses: [...toneFired], asIs: raggiunto,
     });
+    // SENZA METER non si scrive un « ? » al posto del tono di partenza: un punto interrogativo
+    // sembra un dato mancante per errore, mentre è semplicemente una seduta off-meter — come
+    // quelle di Ron. Si scrive solo dove si andava.
+    const da = toneAtStart !== null
+      ? `${toneAtStart > 0 ? '+' : ''}${toneAtStart.toFixed(0)} → ` : '';
     logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
-      text: `${asIs ? '✓' : '○'} #${toneNRef.current} ${auditingQuestion.trim() || LC('resistenza', 'résistance', 'resistance', 'resistencia', 'motstånd')} — TONE `
-        + `${chargeValue(toneValidated) > 0 ? '+' : ''}${chargeValue(toneValidated)} → `
-        + `${oppositeOf(toneValidated) > 0 ? '+' : ''}${oppositeOf(toneValidated)}`
+      text: `${raggiunto ? '✓' : '○'} #${toneNRef.current} ${auditingQuestion.trim() || LC('resistenza', 'résistance', 'resistance', 'resistencia', 'motstånd')} — TONE `
+        + `${da}+${TONE_TARGET}`
         // QUANTE VOLTE si è dato « porta a tono 40 ». È il processo di Ron: il numero dice
         // quanto è costata questa resistenza, ed è l'unico modo di ritrovarlo dopo.
         + (toneRipetizioni > 0 ? ` · ×${toneRipetizioni}` : '')
-        + (asIs ? ' · AS-IS' : ''),
-      type: asIs ? 'success' : 'normal' });
-  }, [toneValidated, auditingQuestion, toneAtStart, toneAgreement, toneAnchor, toneFired,
-      toneRipetizioni, LC]);
+        + (raggiunto ? ` · ${LC('TONO 40 RAGGIUNTO', 'TON 40 ATTEINT', 'TONE 40 REACHED', 'TONO 40 ALCANZADO', 'TON 40 NÅDD')}` : ''),
+      type: raggiunto ? 'success' : 'normal' });
+  }, [auditingQuestion, toneAtStart, toneAnchor, toneFired, toneRipetizioni, LC]);
 
   // ── « A CHE PUNTO SONO, E COSA DEVO FARE » — per tutti e quattro i cicli ─────────────────
   // Un componente solo (CycleHint), sempre nello stesso posto, con la SUA specificità per ogni
@@ -4618,10 +4585,147 @@ export default function App() {
     mode, cycleArmed, asIsPending, nullPhase,
     mirrorArmed, itemNamed: !!auditingQuestion.trim() || itemSpoken,
     mirrorLocked: mirrorDisp.locked, mirrorReached: mirrorDisp.reached,
-    tonePhase, toneValidated: !!toneValidated,
+    tonePhase,
   }), [showSplash, sessionState, instruments.muse, instruments.theta, metabolicOpen,
        epWindowOpen, showReport, mode, cycleArmed, asIsPending, nullPhase, mirrorArmed,
-       auditingQuestion, itemSpoken, mirrorDisp.locked, mirrorDisp.reached, tonePhase, toneValidated]);
+       auditingQuestion, itemSpoken, mirrorDisp.locked, mirrorDisp.reached, tonePhase]);
+
+
+  /**
+   * I GESTI DEL CICLO, quando non li fa la macchina.
+   *
+   * Senza carica EEG la macchina a stati non riceve i tick che fanno avanzare il ciclo: lo
+   * porta avanti l'auditor. I gesti sono le STESSE funzioni che l'ago scatena da solo
+   * (`validateAsIs`, `validateClearRead`, `stopMirror`) — qui hanno il loro bottone. Non è un
+   * motore nuovo: è la mano dove prima c'era l'automatismo.
+   *
+   * ── PERCHÉ UNA FUNZIONE E NON DUE COPIE ─────────────────────────────────────────────────
+   * Servono in DUE posti, e per la stessa ragione: senza strumenti (il centro dello schermo è
+   * libero, e i gesti stanno lì in grande) e col SOLO METER (il centro è il quadrante, e i
+   * gesti vanno nella barra). Col solo meter non c'erano affatto, quindi un ciclo CONTACT non
+   * si poteva più chiudere — `asIsPending` viene dall'EEG e senza MUSE non scatta mai.
+   * Due copie del blocco divergerebbero alla prima modifica.
+   *
+   * `compatto` cambia solo le misure: nella barra i bottoni sono alti 32 invece di 40 e la riga
+   * è allineata a sinistra invece che al centro.
+   */
+  const comandiManualiCiclo = (compatto: boolean): React.ReactNode => {
+    // `pieno` = UN gesto solo, verde pieno (DAI L'ITEM, DICHIARA AS-IS): è
+    // l'azione ovvia, e nulla la contende. `scelta` = uno FRA più esiti pari:
+    // stesso fondo neutro per tutti e tre, il colore solo sul bordo/testo — così
+    // nessuno sembra GIÀ scelto (il verde pieno del primo faceva credere di sì).
+    const btn = (etichetta: string, onClick: () => void, tinta: string, pieno = true): React.ReactNode => (
+      <button key={etichetta} type="button" onClick={onClick}
+        style={{ height: compatto ? 32 : 40, padding: compatto ? '0 14px' : '0 22px',
+          borderRadius: compatto ? 8 : 10, cursor: 'pointer', flexShrink: 0,
+          fontFamily: 'var(--font-sans)', fontSize: compatto ? 12 : 13, fontWeight: 800,
+          letterSpacing: '0.06em', textTransform: 'uppercase',
+          background: pieno ? `${tinta}22` : (isLightTheme ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'),
+          border: `1px solid ${pieno ? tinta : (isLightTheme ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.22)')}`,
+          color: tinta }}>
+        {etichetta}
+      </button>
+    );
+    const riga = (figli: React.ReactNode) => (
+      <div style={{ display: 'flex', gap: compatto ? 8 : 10, marginTop: compatto ? 0 : 6,
+                    justifyContent: compatto ? 'flex-start' : 'center', flexWrap: 'wrap' }}>{figli}</div>
+    );
+    const domanda = (testo: string) => (
+      <div style={{ marginTop: 4, fontFamily: 'var(--font-sans)', fontSize: compatto ? 12 : 13, fontWeight: 700,
+                    color: isLightTheme ? '#3a3a40' : 'rgba(226,238,255,0.85)' }}>{testo}</div>
+    );
+    const DAI = LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE THE ITEM', 'DA EL ÍTEM', 'GE ITEM');
+
+    // ── SI ASPETTA LA VOCE — UN SOLO GESTO, E NON È QUELLO DOPO ────────────
+    // Premuto col campo vuoto, l'istruzione dice « dì l'item » ma sotto
+    // comparivano già i comandi del tempo SEGUENTE: in CONTACT « DICHIARA
+    // L'AS-IS » (due tempi saltati), in NULL i tre esiti, in MIRROR i dieci
+    // valori. Due ordini contraddittori nello stesso istante — lo stesso
+    // difetto segnalato per la scritta, rimasto nei bottoni.
+    //
+    // Qui c'è il solo gesto che quel tempo ammette. Serve perché l'item detto
+    // arriva nel campo solo se la trascrizione funziona: senza, l'item È stato
+    // detto e il ciclo non poteva avanzare in nessun modo.
+    if (faseCiclo === 'contact.say_item' || faseCiclo === 'null.say_item'
+        || faseCiclo === 'mirror.say_item')
+      return riga(btn(LC('L\'ITEM È STATO DETTO', 'L\'ITEM A ÉTÉ DIT', 'THE ITEM WAS SAID', 'EL ÍTEM FUE DICHO', 'ITEM HAR SAGTS'),
+                      () => dichiaraItemDetto(), '#6ee7b7'));
+
+    // ── MIRROR — TRE TEMPI, non due ────────────────────────────────────────
+    // Il metodo del raddoppio ha un passo che senza ago nessuno faceva: DARE IL
+    // VALORE. Prima si andava da « dai l'item » dritti a « ottenuto », e in mezzo
+    // non c'era né la cifra né il doppio da raggiungere — cioè mancava il metodo
+    // (segnalato). Peggio: `valueR` restava 0 e `stopMirror` non registrava
+    // nemmeno il ciclo.
+    if (mode === 'mirror') {
+      if (!mirrorArmed) return riga(btn(DAI, () => armMirror(), '#34d399'));
+      // (a) IL VALORE — dieci bottoni, la quantità di carica di QUESTO item.
+      if (!mirrorDisp.locked) return <>
+        {domanda(LC('Quanta carica? Da 1 a 10.', 'Combien de charge ? De 1 à 10.', 'How much charge? From 1 to 10.', '¿Cuánta carga? De 1 a 10.', 'Hur mycket laddning? Från 1 till 10.'))}
+        {riga([1,2,3,4,5,6,7,8,9,10].map(v => (
+          <button key={v} type="button"
+            onClick={() => {
+              mirrorCycle.setManualValue(v);
+              setMirrorDisp({ contactQ: mirrorCycle.contactQ, dischargeQ: 0,
+                              locked: true, reached: false, valueR: mirrorCycle.valueR });
+            }}
+            style={{ width: 40, height: 40, borderRadius: 10, cursor: 'pointer',
+              fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 800,
+              background: isLightTheme ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${isLightTheme ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.22)'}`,
+              color: '#34d399' }}>
+            {v}
+          </button>
+        )))}
+      </>;
+      // (b) IL DOPPIO — la meta è scritta, e la raggiunge il preclear.
+      if (!mirrorDisp.reached) return <>
+        {domanda(`${LC('Portalo al doppio', 'Mène-le au double', 'Take it to the double', 'Llévalo al doble', 'För det till dubbeln')} — ${mirrorDisp.valueR.toFixed(0)} → ${(2 * mirrorDisp.valueR).toFixed(0)}`)}
+        {riga(btn(LC('DOPPIO RAGGIUNTO', 'DOUBLE ATTEINT', 'DOUBLE REACHED', 'DOBLE ALCANZADO', 'DUBBELN NÅDD'), () => {
+          mirrorCycle.declareReached();
+          setMirrorDisp({ contactQ: mirrorCycle.contactQ, dischargeQ: mirrorCycle.dischargeQ,
+                          locked: true, reached: true, valueR: mirrorCycle.valueR });
+        }, '#34d399'))}
+      </>;
+      // (c) OTTENUTO — si valida e si riparte.
+      return riga(btn(LC('OTTENUTO — VALIDA', 'OBTENU — VALIDER', 'OBTAINED — VALIDATE', 'OBTENIDO — VALIDAR', 'UPPNÅTT — VALIDERA'), () => stopMirror(), '#34d399'));
+    }
+
+    // ── CONTACT ──
+    if (mode === 'contact')
+      return cycleArmed
+        ? riga(btn(LC('DICHIARA AS-IS', 'DÉCLARE L\'AS-IS', 'DECLARE AS-IS', 'DECLARA AS-IS', 'DEKLARERA AS-IS'), () => validateAsIs(), '#34d399'))
+        : riga(btn(DAI, () => armCycle('charge'), '#6ee7b7'));
+
+    // ── NULL — tre esiti PARI, non uno pre-scelto. La domanda sopra li lega:
+    //    il preclear è riuscito a creare la massa? Sì coi VGI's, sì senza, o non
+    //    ci è riuscito (NON RICARICA — il null non vale nulla). ──
+    if (mode === 'null')
+      return cycleArmed
+        ? <>
+            {domanda(LC('Il preclear ha creato la massa?', 'Le préclair a-t-il créé la masse ?', 'Did the preclear create the mass?', '¿El preclear creó la masa?', 'Skapade preclearen massan?'))}
+            {riga(<>
+              {btn(LC('EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓'), () => validateClearRead(true), '#34d399', false)}
+              {btn(LC('EQUILIBRIUM · senza VGI', 'EQUILIBRIUM · sans VGI', 'EQUILIBRIUM · no VGI', 'EQUILIBRIUM · sin VGI', 'EQUILIBRIUM · utan VGI'), () => validateClearRead(false), isLightTheme ? '#475569' : '#94a3b8', false)}
+              {/* ⚠️ IL VERDETTO VA DICHIARATO, non solo il ciclo chiuso.
+                  Prima chiamava il solo `finalizeCycle(false)`: il ciclo
+                  finiva con `noRecharging: false`, cioè indistinguibile da uno
+                  ABBANDONATO — e il ramo « NO RECHARGING » del rapporto e del
+                  PDF restava irraggiungibile. « Non ricarica » è il risultato
+                  diagnostico più prezioso del ciclo NULL: se non si scrive,
+                  averlo premuto non è servito a niente. */}
+              {btn(LC('NON RICARICA', 'NE RECHARGE PAS', 'NO RECHARGING', 'NO RECARGA', 'LADDAR INTE'), () => {
+                nullCycleStateMachine.declareNoRecharging();
+                setNullNoRecharge(true); nullNoRechargeRef.current = true;
+                finalizeCycle(false);
+              }, '#dc2626', false)}
+            </>)}
+          </>
+        : riga(btn(DAI, () => armCycle('null'), '#cbd5e1'));
+
+    return null;   // TONE ha la sua barra dei quattro tempi, e regge senza ago.
+    return null;   // TONE ha la sua barra, e regge senza ago.
+  };
 
   /**
    * COSA FARE, quando non c'è ago.
@@ -4710,51 +4814,37 @@ export default function App() {
   const spiegazioneCiclo = useMemo((): { titolo: string; comando?: string | null; come: string; avviso?: string | null; fatto?: boolean } => {
     const n = (v: number) => `${v > 0 ? '+' : ''}${Math.round(v)}`;
 
-    // ── TONE : localizza → segno → ampiezza → mock-up ─────────────────────────────────────
+    // ── TONE : dai l'item → portalo a tono 40 ─────────────────────────────────────────────
+    // I DUE COMANDI DI RON, alla lettera. Prima il titolo diceva all'AUDITOR cosa fare
+    // (« localizza la resistenza ») e la frase da DIRE al preclear non era scritta da nessuna
+    // parte: se la doveva sapere a memoria. Adesso il comando è il soggetto della riga.
     if (phaseFamily(faseCiclo) === 'tone') {
-      const p = toneProposedAtLock ? chargeValue(toneProposedAtLock) : null;
-      const smentita = toneAgreement === 'differs' && toneAtStart !== null
-        ? `${LC('l\'ago diceva altro', 'l\'aiguille disait autre chose', 'the needle said otherwise', 'la aguja decía otra cosa', 'nålen sa något annat')} — ${n(toneAtStart)}`
-        : null;
-      // ── ① IL COMANDO DI RON, ALLA LETTERA ─────────────────────────────────────────────
-      // « Locate resistance on your case that can now be run. » Prima il titolo diceva
-      // all'AUDITOR che cosa fare (« localizza la resistenza ») e il comando da DIRE al
-      // preclear non era scritto da nessuna parte: se lo doveva sapere a memoria. Adesso il
-      // comando è il soggetto della riga — si legge e si dice — e il gesto sta sotto.
-      if (faseCiclo === 'tone.locate') return {
-        titolo: LC('1 · DÌ IL COMANDO', '1 · DIS LA COMMANDE', '1 · GIVE THE COMMAND', '1 · DI EL COMANDO', '1 · GE KOMMANDOT'),
+      if (faseCiclo === 'tone.item') return {
+        titolo: LC('1 · DAI L\'ITEM', '1 · DONNE L\'ITEM', '1 · GIVE THE ITEM', '1 · DA EL ÍTEM', '1 · GE ITEM'),
         comando: LC('« Localizza sul tuo caso una resistenza che possa essere corsa adesso. »',
                     '« Localise sur ton cas une résistance qui puisse être courue maintenant. »',
                     '« Locate resistance on your case that can now be run. »',
                     '« Localiza en tu caso una resistencia que pueda correrse ahora. »',
                     '« Lokalisera ett motstånd i ditt fall som kan köras nu. »'),
-        come: toneHasMeter
-          ? LC('Scrivi o dì la resistenza che il preclear trova, poi premi.', 'Écris ou dis la résistance que le préclair trouve, puis appuie.', 'Type or say the resistance the preclear finds, then press.', 'Escribe o di la resistencia que el preclear encuentra, luego pulsa.', 'Skriv eller säg motståndet preclearen hittar, tryck sedan.')
-          : LC('Scrivi o dì la resistenza, poi premi. Segno e ampiezza si assessano.', 'Écris ou dis la résistance, puis appuie. Le signe et l\'ampleur s\'assessent.', 'Type or say the resistance, then press. Sign and magnitude are assessed.', 'Escribe o di la resistencia, luego pulsa. Signo y amplitud se assessan.', 'Skriv eller säg motståndet, tryck sedan. Tecken och storlek assessas.') };
+        come: LC('Scrivi o dì la resistenza che il preclear trova, poi premi.',
+                 'Écris ou dis la résistance que le préclair trouve, puis appuie.',
+                 'Type or say the resistance the preclear finds, then press.',
+                 'Escribe o di la resistencia que el preclear encuentra, luego pulsa.',
+                 'Skriv eller säg motståndet preclearen hittar, tryck sedan.') };
       if (faseCiclo === 'tone.say_item') return {
-        titolo: LC('2 · DÌ LA RESISTENZA', '2 · DIS LA RÉSISTANCE', '2 · SAY THE RESISTANCE', '2 · DI LA RESISTENCIA', '2 · SÄG MOTSTÅNDET'),
+        titolo: LC('1 · DÌ LA RESISTENZA', '1 · DIS LA RÉSISTANCE', '1 · SAY THE RESISTANCE', '1 · DI LA RESISTENCIA', '1 · SÄG MOTSTÅNDET'),
         come: LC('La prima parola che dici diventa la resistenza su cui si lavora.',
                  'Le premier mot que tu dis devient la résistance sur laquelle on travaille.',
                  'The first word you say becomes the resistance being worked.',
                  'La primera palabra que digas se vuelve la resistencia sobre la que se trabaja.',
                  'Det första ordet du säger blir motståndet som körs.') };
-      if (faseCiclo === 'tone.sign') return {
-        titolo: LC('2 · POSITIVO O NEGATIVO?', '2 · POSITIF OU NÉGATIF ?', '2 · POSITIVE OR NEGATIVE?', '2 · ¿POSITIVO O NEGATIVO?', '2 · POSITIVT ELLER NEGATIVT?'),
-        come: LC('Assessa « negativo? » poi « positivo? ». Quello che legge è il segno.', 'Assesse « négatif ? » puis « positif ? ». Celui qui lit est le signe.', 'Assess "negative?" then "positive?". The one that reads is the sign.', 'Assessa « ¿negativo? » luego « ¿positivo? ». El que lee es el signo.', 'Assessa ”negativt?” sedan ”positivt?”. Det som läser är tecknet.')
-          + (p !== null ? ` ${LC('L\'ago propone', 'L\'aiguille propose', 'The needle proposes', 'La aguja propone', 'Nålen föreslår')} ${n(p)}.` : '') };
-      if (faseCiclo === 'tone.magnitude') return {
-        titolo: LC('3 · QUANTE DIVISIONI?', '3 · COMBIEN DE DIVISIONS ?', '3 · HOW MANY DIVISIONS?', '3 · ¿CUÁNTAS DIVISIONES?', '3 · HUR MÅNGA DELSTRECK?'),
-        come: LC('Assessa 10, 20, 30, 40. Non dev\'essere preciso: l\'ago cade fra due divisioni.', 'Assesse 10, 20, 30, 40. Pas besoin d\'être précis : l\'aiguille tombe entre deux divisions.', 'Assess 10, 20, 30, 40. It need not be exact: the needle falls between two divisions.', 'Assessa 10, 20, 30, 40. No hace falta ser exacto: la aguja cae entre dos divisiones.', 'Assessa 10, 20, 30, 40. Det behöver inte vara exakt: nålen faller mellan två delstreck.') };
-      // ── ④ IL COMANDO CHE SI RIPETE ────────────────────────────────────────────────────
+      // ── ② IL COMANDO CHE SI RIPETE ────────────────────────────────────────────────────
       // « Raise this to tone forty on the tone scale. » — chiesto RIPETUTAMENTE, finché non
       // c'è più reazione e il preclear raggiunge la serenità dell'essere (+40, la cima della
-      // colonna a destra). Prima qui c'era « fai mock-uppare l'opposto », che è il punto 4
-      // della vecchia procedura: un mock-up solo, e nessuna ripetizione.
-      //
-      // Il conto delle volte è nel titolo perché è il processo, non un dettaglio: si vede
+      // colonna a destra). Il conto delle volte è nel titolo perché È il processo: si vede
       // salire mentre si conduce, e finisce nel journal a ciclo chiuso.
-      if (faseCiclo === 'tone.mockup' && toneValidated) return {
-        titolo: `4 · ${LC('PORTALO A TONO 40', 'MÈNE-LE AU TON 40', 'RAISE IT TO TONE 40', 'LLÉVALO AL TONO 40', 'FÖR DET TILL TON 40')}`
+      if (faseCiclo === 'tone.raise') return {
+        titolo: `2 · ${LC('PORTALO A TONO 40', 'MÈNE-LE AU TON 40', 'RAISE IT TO TONE 40', 'LLÉVALO AL TONO 40', 'FÖR DET TILL TON 40')}`
           + (toneRipetizioni > 0 ? ` · ×${toneRipetizioni}` : ''),
         comando: LC('« Porta questo a tono quaranta sulla scala del tono. »',
                     '« Mène ceci au ton quarante sur l\'échelle des tons. »',
@@ -4765,11 +4855,13 @@ export default function App() {
                  'Redonne-le jusqu\'à ce qu\'il ne réagisse plus et atteigne la sérénité de l\'être.',
                  'Give it again until there is no reaction and he reaches serenity of beingness.',
                  'Vuelve a darlo hasta que no reaccione más y alcance la serenidad del ser.',
-                 'Ge det igen tills ingen reaktion finns och han når varandets stillhet.'),
-        avviso: smentita };
-      return { titolo: LC('SERENITÀ DELL\'ESSERE', 'SÉRÉNITÉ DE L\'ÊTRE', 'SERENITY OF BEINGNESS', 'SERENIDAD DEL SER', 'VARANDETS STILLHET'), fatto: true,
-        come: LC('Non reagisce più. Validato da te.', 'Il ne réagit plus. Validé par toi.', 'No more reaction. Validated by you.', 'Ya no reacciona. Validado por ti.', 'Ingen reaktion kvar. Validerat av dig.'),
-        avviso: smentita };
+                 'Ge det igen tills ingen reaktion finns och han når varandets stillhet.') };
+      return { titolo: LC('TONO QUARANTA RAGGIUNTO', 'TON QUARANTE ATTEINT', 'TONE FORTY REACHED', 'TONO CUARENTA ALCANZADO', 'TON FYRTIO NÅDD'), fatto: true,
+        come: LC('Non reagisce più: serenità dell\'essere. Validato da te.',
+                 'Il ne réagit plus : sérénité de l\'être. Validé par toi.',
+                 'No more reaction: serenity of beingness. Validated by you.',
+                 'Ya no reacciona: serenidad del ser. Validado por ti.',
+                 'Ingen reaktion kvar: varandets stillhet. Validerat av dig.') };
     }
 
     // ── MIRROR : item → valore → il DOPPIO da smaltire ────────────────────────────────────
@@ -4837,12 +4929,12 @@ export default function App() {
     // La fase copre da sola mode/tonePhase/mirror*/cycleArmed/asIsPending/nullPhase: restano
     // qui solo i valori che entrano nel TESTO (numeri, smentita, riga d'avviso).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [faseCiclo, toneHasMeter, toneProposedAtLock, toneValidated, toneAgreement, toneAtStart,
+  }, [faseCiclo, toneRipetizioni,
       mirrorDisp, chargePhaseNow, noReadSignal, lang]);
 
   const resetTone = useCallback(() => {
-    setTonePhase('locate'); setToneValidated(null); setToneProposedAtLock(null);
-    setToneSignPick(null); setToneAtStart(null); setToneAnchor(null); setToneFired([]);
+    setTonePhase('locate');
+    setToneAtStart(null); setToneAnchor(null); setToneFired([]);
     setToneRipetizioni(0);   // il conto è di QUESTA resistenza, e la resistenza cambia.
     // Il campo si svuota: una resistenza nuova non porta l'etichetta di quella di prima.
     setAuditingQuestion('');
@@ -4860,16 +4952,16 @@ export default function App() {
   const localizzaTone = useCallback(() => {
     const r = toneLocator.locate(timeRef.current, instruments.muse, toneMeasured ?? 0);
     setToneAnchor({ how: r.anchor, ageS: r.ageS });
-    setToneProposedAtLock(toneHasMeter ? proposeFromTone(r.tone) : null);
     setToneAtStart(toneHasMeter ? r.tone : null);
-    toneStartSecRef.current = timeRef.current;   // il ciclo comincia QUI, non al mock-up
+    toneStartSecRef.current = timeRef.current;   // il ciclo comincia QUI, non al comando 2
     // Premuto col campo VUOTO, la prima parola dell'auditor diventa l'item — come in CONTACT,
     // NULL e MIRROR. Senza, in TONE si poteva solo scrivere: e scrivere vuol dire staccare gli
     // occhi dall'ago proprio mentre si localizza.
     toneAwaitItemRef.current = !auditingQuestion.trim();
     toneLogCursorRef.current = logsRef.current.length;
     setToneRipetizioni(0);
-    setTonePhase('sign');
+    setItemSpoken(false);   // la resistenza di QUESTO ciclo va detta da capo.
+    setTonePhase('raise');
   }, [instruments.muse, toneMeasured, toneHasMeter]);
 
   // Specchio in ref: il gestore del worker si aggancia una volta sola, e l'ago si può cambiare
@@ -6905,120 +6997,7 @@ export default function App() {
                       il loro bottone. « Dai l'item » sta già nella barra in alto; qui c'è il
                       passo che chiude il ciclo, e per NULL i due esiti.
                       Non è un motore nuovo: è la mano dove prima c'era l'automatismo. */}
-                  {(() => {
-                    // `pieno` = UN gesto solo, verde pieno (DAI L'ITEM, DICHIARA AS-IS): è
-                    // l'azione ovvia, e nulla la contende. `scelta` = uno FRA più esiti pari:
-                    // stesso fondo neutro per tutti e tre, il colore solo sul bordo/testo — così
-                    // nessuno sembra GIÀ scelto (il verde pieno del primo faceva credere di sì).
-                    const btn = (etichetta: string, onClick: () => void, tinta: string, pieno = true): React.ReactNode => (
-                      <button key={etichetta} type="button" onClick={onClick}
-                        style={{ height: 40, padding: '0 22px', borderRadius: 10, cursor: 'pointer',
-                          fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 800,
-                          letterSpacing: '0.06em', textTransform: 'uppercase',
-                          background: pieno ? `${tinta}22` : (isLightTheme ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'),
-                          border: `1px solid ${pieno ? tinta : (isLightTheme ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.22)')}`,
-                          color: tinta }}>
-                        {etichetta}
-                      </button>
-                    );
-                    const riga = (figli: React.ReactNode) => (
-                      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 6, flexWrap: 'wrap' }}>{figli}</div>
-                    );
-                    const domanda = (testo: string) => (
-                      <div style={{ marginTop: 4, fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700,
-                                    color: isLightTheme ? '#3a3a40' : 'rgba(226,238,255,0.85)' }}>{testo}</div>
-                    );
-                    const DAI = LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE THE ITEM', 'DA EL ÍTEM', 'GE ITEM');
-
-                    // ── SI ASPETTA LA VOCE — UN SOLO GESTO, E NON È QUELLO DOPO ────────────
-                    // Premuto col campo vuoto, l'istruzione dice « dì l'item » ma sotto
-                    // comparivano già i comandi del tempo SEGUENTE: in CONTACT « DICHIARA
-                    // L'AS-IS » (due tempi saltati), in NULL i tre esiti, in MIRROR i dieci
-                    // valori. Due ordini contraddittori nello stesso istante — lo stesso
-                    // difetto segnalato per la scritta, rimasto nei bottoni.
-                    //
-                    // Qui c'è il solo gesto che quel tempo ammette. Serve perché l'item detto
-                    // arriva nel campo solo se la trascrizione funziona: senza, l'item È stato
-                    // detto e il ciclo non poteva avanzare in nessun modo.
-                    if (faseCiclo === 'contact.say_item' || faseCiclo === 'null.say_item'
-                        || faseCiclo === 'mirror.say_item')
-                      return riga(btn(LC('L\'ITEM È STATO DETTO', 'L\'ITEM A ÉTÉ DIT', 'THE ITEM WAS SAID', 'EL ÍTEM FUE DICHO', 'ITEM HAR SAGTS'),
-                                      () => dichiaraItemDetto(), '#6ee7b7'));
-
-                    // ── MIRROR — TRE TEMPI, non due ────────────────────────────────────────
-                    // Il metodo del raddoppio ha un passo che senza ago nessuno faceva: DARE IL
-                    // VALORE. Prima si andava da « dai l'item » dritti a « ottenuto », e in mezzo
-                    // non c'era né la cifra né il doppio da raggiungere — cioè mancava il metodo
-                    // (segnalato). Peggio: `valueR` restava 0 e `stopMirror` non registrava
-                    // nemmeno il ciclo.
-                    if (mode === 'mirror') {
-                      if (!mirrorArmed) return riga(btn(DAI, () => armMirror(), '#34d399'));
-                      // (a) IL VALORE — dieci bottoni, la quantità di carica di QUESTO item.
-                      if (!mirrorDisp.locked) return <>
-                        {domanda(LC('Quanta carica? Da 1 a 10.', 'Combien de charge ? De 1 à 10.', 'How much charge? From 1 to 10.', '¿Cuánta carga? De 1 a 10.', 'Hur mycket laddning? Från 1 till 10.'))}
-                        {riga([1,2,3,4,5,6,7,8,9,10].map(v => (
-                          <button key={v} type="button"
-                            onClick={() => {
-                              mirrorCycle.setManualValue(v);
-                              setMirrorDisp({ contactQ: mirrorCycle.contactQ, dischargeQ: 0,
-                                              locked: true, reached: false, valueR: mirrorCycle.valueR });
-                            }}
-                            style={{ width: 40, height: 40, borderRadius: 10, cursor: 'pointer',
-                              fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 800,
-                              background: isLightTheme ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
-                              border: `1px solid ${isLightTheme ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.22)'}`,
-                              color: '#34d399' }}>
-                            {v}
-                          </button>
-                        )))}
-                      </>;
-                      // (b) IL DOPPIO — la meta è scritta, e la raggiunge il preclear.
-                      if (!mirrorDisp.reached) return <>
-                        {domanda(`${LC('Portalo al doppio', 'Mène-le au double', 'Take it to the double', 'Llévalo al doble', 'För det till dubbeln')} — ${mirrorDisp.valueR.toFixed(0)} → ${(2 * mirrorDisp.valueR).toFixed(0)}`)}
-                        {riga(btn(LC('DOPPIO RAGGIUNTO', 'DOUBLE ATTEINT', 'DOUBLE REACHED', 'DOBLE ALCANZADO', 'DUBBELN NÅDD'), () => {
-                          mirrorCycle.declareReached();
-                          setMirrorDisp({ contactQ: mirrorCycle.contactQ, dischargeQ: mirrorCycle.dischargeQ,
-                                          locked: true, reached: true, valueR: mirrorCycle.valueR });
-                        }, '#34d399'))}
-                      </>;
-                      // (c) OTTENUTO — si valida e si riparte.
-                      return riga(btn(LC('OTTENUTO — VALIDA', 'OBTENU — VALIDER', 'OBTAINED — VALIDATE', 'OBTENIDO — VALIDAR', 'UPPNÅTT — VALIDERA'), () => stopMirror(), '#34d399'));
-                    }
-
-                    // ── CONTACT ──
-                    if (mode === 'contact')
-                      return cycleArmed
-                        ? riga(btn(LC('DICHIARA AS-IS', 'DÉCLARE L\'AS-IS', 'DECLARE AS-IS', 'DECLARA AS-IS', 'DEKLARERA AS-IS'), () => validateAsIs(), '#34d399'))
-                        : riga(btn(DAI, () => armCycle('charge'), '#6ee7b7'));
-
-                    // ── NULL — tre esiti PARI, non uno pre-scelto. La domanda sopra li lega:
-                    //    il preclear è riuscito a creare la massa? Sì coi VGI's, sì senza, o non
-                    //    ci è riuscito (NON RICARICA — il null non vale nulla). ──
-                    if (mode === 'null')
-                      return cycleArmed
-                        ? <>
-                            {domanda(LC('Il preclear ha creato la massa?', 'Le préclair a-t-il créé la masse ?', 'Did the preclear create the mass?', '¿El preclear creó la masa?', 'Skapade preclearen massan?'))}
-                            {riga(<>
-                              {btn(LC('EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓', 'EQUILIBRIUM · VGI ✓'), () => validateClearRead(true), '#34d399', false)}
-                              {btn(LC('EQUILIBRIUM · senza VGI', 'EQUILIBRIUM · sans VGI', 'EQUILIBRIUM · no VGI', 'EQUILIBRIUM · sin VGI', 'EQUILIBRIUM · utan VGI'), () => validateClearRead(false), isLightTheme ? '#475569' : '#94a3b8', false)}
-                              {/* ⚠️ IL VERDETTO VA DICHIARATO, non solo il ciclo chiuso.
-                                  Prima chiamava il solo `finalizeCycle(false)`: il ciclo
-                                  finiva con `noRecharging: false`, cioè indistinguibile da uno
-                                  ABBANDONATO — e il ramo « NO RECHARGING » del rapporto e del
-                                  PDF restava irraggiungibile. « Non ricarica » è il risultato
-                                  diagnostico più prezioso del ciclo NULL: se non si scrive,
-                                  averlo premuto non è servito a niente. */}
-                              {btn(LC('NON RICARICA', 'NE RECHARGE PAS', 'NO RECHARGING', 'NO RECARGA', 'LADDAR INTE'), () => {
-                                nullCycleStateMachine.declareNoRecharging();
-                                setNullNoRecharge(true); nullNoRechargeRef.current = true;
-                                finalizeCycle(false);
-                              }, '#dc2626', false)}
-                            </>)}
-                          </>
-                        : riga(btn(DAI, () => armCycle('null'), '#cbd5e1'));
-
-                    return null;   // TONE ha la sua barra dei quattro tempi, e regge senza ago.
-                  })()}
+                  {comandiManualiCiclo(false)}
                 </motion.div>
               ) : !senzaMisura ? (
               <QuantumSphere
@@ -7080,7 +7059,16 @@ export default function App() {
                             // E MAI PRIMA DELLO START: un campo « dai l'item » e un bottone che
                             // arma un ciclo, su una seduta non ancora cominciata, invitano a un
                             // gesto che non ha effetto. Compaiono quando la seduta parte.
-                            display: (sessionState !== 'running' || !MODE_SPEC[mode].arms || viewMode === 'mirror' || viewMode === 'tone' || eegModulesHidden(instruments)) ? 'none' : 'flex',
+                            //
+                            // ⚠️ QUI C'ERA `eegModulesHidden(instruments)`, e nascondeva TUTTO.
+                            // Col solo THETA-METER (meter sì, MUSE no) sparivano insieme la pista
+                            // dei tempi, il campo dell'item, il bottone che arma e l'istruzione:
+                            // si sceglieva CONTACT e non restava niente da fare né da leggere
+                            // (segnalato). Era il ragionamento « senza EEG il ciclo non ha
+                            // sorgente », già smentito una volta: la sorgente sono la percezione
+                            // del preclear e l'obnosi dell'auditor. Quel che manca senza EEG è
+                            // l'AUTOMATISMO — vedi `cycleIsAutomatic` —, non il ciclo.
+                            display: (sessionState !== 'running' || !MODE_SPEC[mode].arms || viewMode === 'mirror' || viewMode === 'tone') ? 'none' : 'flex',
                             flexDirection: 'column', gap: 6 }}>
                 {/* ── A CICLO ARMATO L'ITEM È UN'ETICHETTA CHIARA, NON UN CAMPO GRIGIO ─────────
                     Quando il ciclo avanza, ciò che conta è LEGGERE su che cosa si sta lavorando.
@@ -7215,9 +7203,20 @@ export default function App() {
                 )}
                 {/* « A che punto sono, e cosa devo fare » — stesso componente e stesso posto del
                     TONE e del MIRROR, col testo di QUESTO ciclo (vedi spiegazioneCiclo). */}
-                {sessionState === 'running' && !eegModulesHidden(instruments) && !senzaMisura && (
+                {/* Anche qui c'era `eegModulesHidden`: col solo meter l'istruzione spariva
+                    insieme al resto, e restava un quadrante senza una riga che dicesse cosa
+                    fare. `senzaMisura` resta, e per un motivo diverso: là il testo sta GRANDE
+                    al centro dello schermo, e ripeterlo qui sotto sarebbe due volte lo stesso. */}
+                {sessionState === 'running' && !senzaMisura && (
                   <CycleHint {...spiegazioneCiclo} titolo={senzaNumero(spiegazioneCiclo.titolo)} />
                 )}
+                {/* ── E I GESTI, quando il ciclo NON avanza da solo ────────────────────────
+                    Col SOLO METER `asIsPending` non scatta mai — viene dall'EEG — quindi il
+                    quadrante non propone la validazione e il ciclo restava armato per sempre.
+                    Sono gli stessi gesti del centro senza strumenti, in versione compatta.
+                    Senza strumenti NON si ripetono qui: là stanno al centro, in grande. */}
+                {sessionState === 'running' && !senzaMisura
+                  && !cycleIsAutomatic(mode, instruments.muse) && comandiManualiCiclo(true)}
               </div>
 
               {/* ── BARRE MIRROR (vue à part) : item + un SEUL geste (aggancio) + readouts. Ni CONTACT
@@ -7355,11 +7354,14 @@ export default function App() {
                             border: `1px solid ${itemModificabile ? 'rgba(255,255,255,0.22)' : 'rgba(255,90,90,0.55)'}`,
                             color: 'rgba(235,244,255,0.92)', outline: 'none' } as React.CSSProperties}
                         />
+                        {/* IL GESTO SI CHIAMA COME IL TEMPO. Diceva « LOCALIZZA QUI » o
+                            « ASSESSA » mentre la pista e il titolo dicevano « DAI L'ITEM »: il
+                            primo tempo aveva due nomi diversi nella stessa schermata, e
+                            « assessa » nominava per giunta le fasi che non ci sono più. È lo
+                            stesso bottone degli altri tre cicli, e ora lo si vede. */}
                         {locabile && (
                         <button style={btn(false, toneHasMeter)} onClick={localizzaTone}>
-                          {toneHasMeter
-                            ? LC('LOCALIZZA QUI', 'LOCALISE ICI', 'LOCATE HERE', 'LOCALIZA AQUÍ', 'LOKALISERA HÄR')
-                            : LC('ASSESSA', 'ASSESSE', 'ASSESS', 'ASSESSA', 'ASSESSA')}
+                          {LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE THE ITEM', 'DA EL ÍTEM', 'GE ITEM')}
                         </button>
                         )}
                       </div>
@@ -7392,36 +7394,20 @@ export default function App() {
                       </button>
                     )}
 
-                    {!toneAttesaItem && tonePhase === 'sign' && ([-1, 1] as ToneSign[]).map(s => (
-                      <button key={s} style={btn(toneSignPick === s, toneProposedAtLock?.sign === s)}
-                        onClick={() => { setToneSignPick(s); setTonePhase('magnitude'); }}>
-                        {s < 0 ? LC('NEGATIVO', 'NÉGATIF', 'NEGATIVE', 'NEGATIVO', 'NEGATIV') : LC('POSITIVO', 'POSITIF', 'POSITIVE', 'POSITIVO', 'POSITIV')}
-                        {toneProposedAtLock?.sign === s ? ' ·' : ''}
-                      </button>
-                    ))}
-
-                    {tonePhase === 'magnitude' && TONE_STEPS.map(m => (
-                      <button key={m} style={btn(false, toneProposedAtLock?.magnitude === m)}
-                        onClick={() => {
-                          const v: ToneCharge = { sign: toneSignPick ?? 1, magnitude: m as ToneStep,
-                            origin: toneHasMeter ? 'measured' : 'assessed' };
-                          setToneValidated(v);
-                          // il tono di partenza è quello della LOCALIZZAZIONE, già fissato: qui
-                          // sarebbe di nuovo il valore del clic, cioè l'errore appena corretto.
-                          setTonePhase('mockup');
-                        }}>
-                        {m}{toneProposedAtLock?.magnitude === m ? ' ·' : ''}
-                      </button>
-                    ))}
-
-                    {(tonePhase === 'mockup' || tonePhase === 'done') && toneValidated && (
+                    {/* ── I DUE COMANDI, E NIENT'ALTRO ──────────────────────────────────────
+                        Qui c'erano POSITIVO / NEGATIVO e le quattro divisioni: due tempi di
+                        assessment che i comandi di Ron non prevedono. Restano il tono di
+                        partenza (quando c'è il meter), il bottone che conta le ripetizioni e
+                        i testimoni. */}
+                    {!toneAttesaItem && (tonePhase === 'raise' || tonePhase === 'done') && (
                       <>
-                        {/* DA DOVE SI PARTE, E DOVE SI VA. La meta non è più l'opposto della
-                            carica (il vecchio punto 4) ma +40 per tutti: è il comando di Ron.
-                            Resta scritto il valore assessato — è da lì che si sale. */}
+                        {/* DA DOVE SI PARTE, E DOVE SI VA. La meta è +40 per tutte le
+                            resistenze — non dipende più da quanta carica c'era. */}
                         <span style={{ fontFamily: 'monospace', fontSize: 12, color: inchiostro }}>
-                          {chargeValue(toneValidated) > 0 ? '+' : ''}{chargeValue(toneValidated)}
-                          <b style={{ color: '#fbbf24', margin: '0 6px' }}>→ +40</b>
+                          {toneAtStart !== null
+                            ? `${toneAtStart > 0 ? '+' : ''}${toneAtStart.toFixed(0)}`
+                            : '—'}
+                          <b style={{ color: '#fbbf24', margin: '0 8px' }}>→ +{TONE_TARGET}</b>
                           <span style={{ opacity: 0.55 }}>
                             {LC('serenità dell\'essere', 'sérénité de l\'être', 'serenity of beingness', 'serenidad del ser', 'varandets stillhet')}
                           </span>
@@ -7430,36 +7416,34 @@ export default function App() {
                             « Command b is asked REPETITIVELY »: ogni volta che lo si ridà, si
                             preme. Il numero è il conto di questa resistenza — va nel journal a
                             ciclo chiuso, e nel frattempo si vede salire. */}
-                        {tonePhase === 'mockup' && (
+                        {tonePhase === 'raise' && (
                           <button style={btn(false, false)}
                             onClick={() => setToneRipetizioni(v => v + 1)}>
                             {LC('RIDÀ IL COMANDO', 'REDONNE LA COMMANDE', 'GIVE THE COMMAND AGAIN', 'VUELVE A DAR EL COMANDO', 'GE KOMMANDOT IGEN')}
                             {toneRipetizioni > 0 ? ` ×${toneRipetizioni}` : ''}
                           </button>
                         )}
-                        {/* ── I TESTIMONI DELL'AS-IS ────────────────────────────────────────
+                        {/* ── I TESTIMONI ───────────────────────────────────────────────────
                             Tre spie che si accendono man mano. L'app PROPONE quando due
                             concordano; validi tu, come nel ciclo CONTACT. Chi non poteva
                             parlare (niente meter, niente MUSE) non compare affatto. */}
-                        {tonePhase === 'mockup' && toneWitnessesAvail.length > 0 && (
+                        {tonePhase === 'raise' && toneWitnessesAvail.length > 0 && (
                           <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
                             {toneWitnessesAvail.map(w => {
                               const on = toneAsIsState.fired.includes(w);
                               // ⚠️ « FIRMA » non voleva dire niente per chi guarda: era il nome
                               // interno del segnale (chargeEpisode), non quel che l'auditor vede
-                              // succedere. Adesso ogni spia dice la COSA, e il tooltip dice da
-                              // dove viene — segnalato: « quand tu fais apparaître signature,
-                              // que veux-tu dire ? ».
-                              const nome = w === 'zero'
-                                ? LC('AGO A ZERO', 'AIGUILLE À ZÉRO', 'NEEDLE AT ZERO', 'AGUJA A CERO', 'NÅL PÅ NOLL')
+                              // succedere. Ogni spia dice la COSA, e il tooltip da dove viene.
+                              const nome = w === 'top'
+                                ? LC('AGO IN CIMA', 'AIGUILLE EN HAUT', 'NEEDLE AT TOP', 'AGUJA ARRIBA', 'NÅL I TOPP')
                                 : w === 'fn' ? 'F/N'
                                 : LC('CARICA DISSOLTA', 'CHARGE DISSOUTE', 'CHARGE GONE', 'CARGA DISUELTA', 'LADDNING BORTA');
-                              const spiega = w === 'zero'
-                                ? LC('La resistenza misurata è tornata al centro della scala. Serve il METER.',
-                                     'La résistance mesurée est revenue au centre de l\'échelle. Demande le METER.',
-                                     'The measured resistance is back at the centre of the scale. Needs the METER.',
-                                     'La resistencia medida volvió al centro de la escala. Requiere el METER.',
-                                     'Det uppmätta motståndet är tillbaka i skalans mitt. Kräver METER.')
+                              const spiega = w === 'top'
+                                ? LC('La resistenza misurata è arrivata in cima alla scala, al tono quaranta. Serve il METER.',
+                                     'La résistance mesurée est arrivée en haut de l\'échelle, au ton quarante. Demande le METER.',
+                                     'The measured resistance has reached the top of the scale, tone forty. Needs the METER.',
+                                     'La resistencia medida llegó a lo alto de la escala, al tono cuarenta. Requiere el METER.',
+                                     'Det uppmätta motståndet har nått skalans topp, ton fyrtio. Kräver METER.')
                                 : w === 'fn'
                                 ? LC('Un Floating Needle sull\'ago in gioco: la firma classica.',
                                      'Un Floating Needle sur l\'aiguille en jeu : la signature classique.',
@@ -7477,21 +7461,20 @@ export default function App() {
                                   textTransform: 'uppercase', padding: '3px 7px', borderRadius: 6, cursor: 'help',
                                   background: on ? 'rgba(52,211,153,0.18)' : 'rgba(255,255,255,0.04)',
                                   border: `1px solid ${on ? 'rgba(52,211,153,0.7)' : 'rgba(255,255,255,0.16)'}`,
-                                  color: on ? '#34d399' : 'rgba(226,238,255,0.4)' }}>
+                                  color: on ? '#34d399' : inchiostroTenue }}>
                                   {on ? '● ' : '○ '}{nome}
                                 </span>
                               );
                             })}
                           </span>
                         )}
-                        {tonePhase === 'mockup' && (
+                        {tonePhase === 'raise' && (
                           <button style={btn(false, toneAsIsState.proposed)}
                             className={toneAsIsState.proposed ? 'animate-pulse' : undefined}
                             onClick={() => { chiudiTone(true); setTonePhase('done'); }}>
-                            {/* Il traguardo del ciclo è quello di Ron: nessuna reazione e la
-                                serenità dell'essere. « Valida l'as-is » nominava il punto 4
-                                della vecchia procedura, che non c'è più. */}
-                            {LC('NON REAGISCE PIÙ — VALIDA', 'NE RÉAGIT PLUS — VALIDE', 'NO MORE REACTION — VALIDATE', 'YA NO REACCIONA — VALIDA', 'INGEN REAKTION — VALIDERA')}
+                            {/* Il traguardo è quello di Ron, detto com'è: il tono quaranta.
+                                « Valida l'as-is » nominava il vecchio punto 4, che non c'è più. */}
+                            {LC('TONO QUARANTA RAGGIUNTO', 'TON QUARANTE ATTEINT', 'TONE FORTY REACHED', 'TONO CUARENTA ALCANZADO', 'TON FYRTIO NÅDD')}
                             {toneAsIsState.singleWitness ? ' ?' : ''}
                           </button>
                         )}
@@ -7505,7 +7488,7 @@ export default function App() {
 
                     {tonePhase !== 'locate' && (
                       <button style={{ ...btn(false, false), border: '1px solid rgba(255,255,255,0.18)', opacity: 0.7 }}
-                        onClick={() => { if (tonePhase === 'mockup') chiudiTone(false); resetTone(); }}>
+                        onClick={() => { if (tonePhase === 'raise') chiudiTone(false); resetTone(); }}>
                         {LC('ANNULLA', 'ANNULER', 'CANCEL', 'CANCELAR', 'AVBRYT')}
                       </button>
                     )}
@@ -7613,10 +7596,13 @@ export default function App() {
                 loro — e ci guadagna anche il senso: la scala nasce dove l'arco si chiude. */}
             {!senzaMisura && viewMode === 'tone' && (
               <div className="absolute pointer-events-none"
-                   style={{ right: 12, top: '30%', bottom: '8%', width: 190, zIndex: LAYER.sphereChrome }}>
+                   style={{ right: 12, top: '30%', bottom: '8%', width: 260, zIndex: LAYER.sphereChrome }}>
                 <ToneColumn
                   tone={toneMeasured ?? 0}
                   hasMeter={toneHasMeter}
+                  // I nomi dei livelli si traducono come tutto il resto: il preclear legge la
+                  // sua posizione sulla scala, e in una lingua che non parla non serve.
+                  lang={lang}
                   // LA CARICA DEL MUSE, se c'è: quanta ce n'è adesso, come barretta a parte.
                   // Non è un tono — è l'altra sorgente, e sta separata per non confonderle.
                   charge={instruments.muse ? Math.max(0, Math.min(1, metricsStore.get().qL)) : null}
@@ -7630,7 +7616,7 @@ export default function App() {
             <div className="absolute inset-0 z-40 pointer-events-none">
               {viewMode === 'tone' ? (
                 <ToneDial tone={toneMeasured ?? 0} hasMeter={toneHasMeter} approx
-                  located={toneAtStart} validated={toneValidated}
+                  located={toneAtStart}
                   phase={tonePhase} toneAtStart={toneAtStart}
                   isLightTheme={isLightTheme} />
               ) : viewMode === 'mirror' ? (

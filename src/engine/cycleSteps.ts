@@ -26,7 +26,7 @@ export type StepId =
   | 'item' | 'mockup' | 'asis'                    // CONTACT
   | 'equilibrium'                                  // NULL (item · mockup · equilibrium)
   | 'value' | 'double' | 'obtained'                // MIRROR (item · value · double · obtained)
-  | 'locate' | 'sign' | 'magnitude' | 'tonemockup';// TONE
+  | 'tone40';                                      // TONE (item · tono 40)
 
 /**
  * I tempi di ciascun metodo, nell'ordine di Ron.
@@ -38,7 +38,9 @@ const STEPS: Record<SessionMode, StepId[]> = {
   contact: ['item', 'mockup', 'asis'],
   null:    ['item', 'mockup', 'equilibrium'],
   mirror:  ['item', 'value', 'double', 'obtained'],
-  tone:    ['locate', 'sign', 'magnitude', 'tonemockup'],
+  // TONE ne ha DUE, uno per comando di Ron — « locate resistance » e « raise this to tone
+  // forty ». Erano quattro: segno e ampiezza erano un assessment che i comandi non prevedono.
+  tone:    ['item', 'tone40'],
   free:    [],   // APERTO non ha sequenza: è il suo senso.
 };
 
@@ -76,13 +78,11 @@ export function currentStep(phase: SessionPhase, mode: SessionMode): number {
     case 'mirror.contact':    return 1;
     case 'mirror.doubling':   return 2;
     case 'mirror.reached':    return 3;
-    // TONE — `say_item` è ancora il tempo della localizzazione: la resistenza non è detta.
-    case 'tone.locate':       return 0;
+    // TONE — `say_item` è ancora il tempo dell'item: la resistenza non è stata detta.
+    case 'tone.item':         return 0;
     case 'tone.say_item':     return 0;
-    case 'tone.sign':         return 1;
-    case 'tone.magnitude':    return 2;
-    case 'tone.mockup':       return 3;
-    case 'tone.done':         return 3;   // compiuto: resta acceso l'ultimo, non se ne inventa un quinto
+    case 'tone.raise':        return 1;
+    case 'tone.done':         return 1;   // compiuto: resta acceso l'ultimo, non se ne inventa un terzo
     default:                  return -1;
   }
 }

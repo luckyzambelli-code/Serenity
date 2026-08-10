@@ -1,22 +1,22 @@
 /**
  * TONE SCALE — la vista della scala del tono di Ron (−40 … +40).
  *
- * LA PROCEDURA, nelle parole di Ron:
- *   1. « locating resistance »            → si trova dove sta la resistenza;
- *   2. « assessing positive or negative » → il SEGNO;
- *   3. « assess 10, 20, 30, or 40 »       → l'AMPIEZZA in divisioni;
- *   4. « mock-up the opposite until an as-isness happens ».
+ * LA PROCEDURA, nelle parole di Ron — DUE COMANDI, non quattro tempi:
+ *   a. « Locate resistance on your case that can now be run. »
+ *   b. « Raise this to tone forty on the tone scale. »
+ *      — chiesto RIPETUTAMENTE, « until there is no reaction and the PC reaches serenity of
+ *      beingness ».
  *
- * ── CHI DECIDE, E QUANDO ────────────────────────────────────────────────────────────────────
- * Ron assessa perché lavora SENZA meter. Con l'ago, il punto 1 dà già un NUMERO: l'ago si posa
- * su una divisione, e segno e ampiezza si LEGGONO invece di indovinarli. Quindi:
+ * ⚠️ QUEL CHE C'ERA PRIMA. Fino alla 2.0.115 il ciclo aveva quattro tempi: si assessava il
+ * SEGNO (positivo/negativo) e l'AMPIEZZA (10/20/30/40), e il quarto tempo faceva mock-uppare
+ * l'OPPOSTO fino allo zero. Non è la procedura: i comandi sono due, e la meta è +40 per tutti.
+ * Segno, ampiezza e mock-up dell'opposto sono usciti — con la « smentita dell'ago », che
+ * esisteva solo per verificare l'assessment.
  *
- *   con il meter   → la MISURA propone, l'assessment VERIFICA (conferma o smentisce);
- *   senza il meter → l'assessment è l'unica fonte, ed è necessario.
- *
- * In tutti e due i casi il valore che vale è quello che l'auditor ha VALIDATO, mai quello
- * calcolato: `origine` dice da dove viene, e una smentita non è un errore da nascondere ma il
- * dato più interessante che questa vista possa produrre.
+ * ── DA DOVE VIENE IL NUMERO ─────────────────────────────────────────────────────────────────
+ * Il tono di PARTENZA lo dà la misura, quando c'è un meter: l'ago si posa su una divisione e la
+ * si legge. Senza meter non c'è numero, e non se ne inventa uno — il ciclo funziona lo stesso,
+ * perché la meta è +40 comunque, e chi dice che ci si è arrivati è l'auditor.
  *
  * ── LA SCALA ────────────────────────────────────────────────────────────────────────────────
  * La mappa resistenza → tono NON è qui: sta in `impedanceMeter.ts` (`toneFromResistance`), dove
@@ -29,31 +29,11 @@
 import { TONE_SCALE_MAX, TONE_STEP, TONE_LOOKBACK_S, TONE_LOCATE_RISE_RATIO } from './tuning';
 import { toneFromResistance } from './impedanceMeter';
 
-/** Le quattro ampiezze che Ron assessa. Non sono un continuo: sono quattro. */
-export const TONE_STEPS = [10, 20, 30, 40] as const;
-export type ToneStep = typeof TONE_STEPS[number];
+/** I due tempi del ciclo, uno per comando, più il compiuto. */
+export type TonePhase = 'locate' | 'raise' | 'done';
 
-/** Il segno: −1 = negativo, +1 = positivo. Mai 0 — « nessuna carica » non è un segno. */
-export type ToneSign = -1 | 1;
-
-/** Le quattro fasi, nell'ordine di Ron. */
-export type TonePhase = 'locate' | 'sign' | 'magnitude' | 'mockup' | 'done';
-
-/** Da dove viene il valore in corso. Cambia quel che l'auditor deve fare, e va SCRITTO nel
- *  rapporto: un valore misurato e uno indovinato non valgono la stessa cosa. */
-export type ToneOrigin = 'measured' | 'assessed';
-
-export interface ToneCharge {
-  sign: ToneSign;
-  magnitude: ToneStep;
-  origin: ToneOrigin;
-}
-
-/** Il valore firmato in divisioni: −40 … +40. */
-export const chargeValue = (c: ToneCharge): number => c.sign * c.magnitude;
-
-/** L'OPPOSTO da mock-uppare: stessa ampiezza, segno rovesciato. È tutto il punto 4 di Ron. */
-export const oppositeOf = (c: ToneCharge): number => -chargeValue(c);
+/** LA META, per tutte le resistenze: tono quaranta. Non dipende da dove si è partiti. */
+export const TONE_TARGET = TONE_SCALE_MAX;
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════
 // 1. LOCALIZZARE — dalla misura al numero
@@ -86,163 +66,56 @@ export const toneFromTa = (ta: number, taMin: number, taMax: number): number => 
   return clampTone(TONE_SCALE_MAX - 2 * TONE_SCALE_MAX * ((ta - taMin) / span));
 };
 
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+// 2. PORTARE A TONO QUARANTA — quanta strada è stata fatta
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+
 /**
- * LA PROPOSTA: dal tono misurato alle due risposte che Ron assessa.
+ * Quanta strada verso il +40, 0 → 1.
  *
- * L'ampiezza si arrotonda alla divisione PIÙ VICINA fra le quattro, non a quella sotto: un tono
- * di −38 è un −40 di cui manca poco, non un −30 abbondante. Sotto mezza divisione dallo zero non
- * si propone nulla — lì non c'è né segno né carica da mock-uppare.
+ * Si misura sul TONO CORRENTE rispetto a quello di partenza, non sul tempo: il comando si ridà
+ * finché non c'è più reazione, e quante volte serva non lo sa nessuno in anticipo. Senza meter
+ * resta a 0 e la barra non compare — non si inventa un avanzamento che nessuno sta misurando.
+ *
+ * ⚠️ Prima questa funzione misurava la strada verso lo ZERO (`mockupProgress`): il vecchio punto
+ * 4 faceva mock-uppare l'opposto, e la meta era il centro. Con il comando di Ron la meta è la
+ * CIMA, e la distanza da percorrere è tutta un'altra.
+ *
+ * Non è mai negativa: se il tono scende invece di salire, l'avanzamento è nullo, non « meno di
+ * nulla ». Una discesa è un fatto da leggere sull'ago, non da scrivere in una barra.
  */
-export const proposeFromTone = (tone: number): ToneCharge | null => {
-  const t = clampTone(tone);
-  if (Math.abs(t) < TONE_STEP / 2) return null;
-  const sign: ToneSign = t < 0 ? -1 : 1;
-  const a = Math.abs(t);
-  let best: ToneStep = TONE_STEPS[0];
-  for (const s of TONE_STEPS) if (Math.abs(a - s) < Math.abs(a - best)) best = s;
-  return { sign, magnitude: best, origin: 'measured' };
+export const raiseProgress = (toneAtStart: number, toneNow: number): number => {
+  const start = clampTone(toneAtStart);
+  const strada = TONE_TARGET - start;
+  if (strada < 1e-9) return 1;                       // si partiva già in cima
+  return Math.max(0, Math.min(1, (clampTone(toneNow) - start) / strada));
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════════════════
-// 2–3. ASSESSARE — e, quando c'è la misura, VERIFICARE
-// ═══════════════════════════════════════════════════════════════════════════════════════════
-
-/** L'esito del confronto fra quel che l'ago diceva e quel che il PC ha confermato. */
-export type ToneAgreement = 'confirmed' | 'differs';
-
-/**
- * Confronta la MISURA con la validazione — CON TOLLERANZA.
- *
- * ⚠️ NON si confronta con la proposta arrotondata, e NON si pretende l'uguaglianza. L'ago cade
- * fra due divisioni: a −23 la proposta è −20, ma se il preclear trova −30 non si è sbagliato
- * nessuno dei due — l'ago era in mezzo. Pretendere il numero esatto faceva comparire « l'ago
- * diceva altro » su metà delle localizzazioni, e quel messaggio deve voler dire qualcosa.
- *
- * La regola: va bene qualunque divisione entro UNA divisione dalla misura. Con −23 passano −20
- * (scarto 3) e −30 (scarto 7); non passano −40 (17) né −10 (13). Un cambio di segno non passa
- * mai, se non a ridosso dello zero — ed è giusto così: è la cosa che più conta sapere.
- *
- * `null` quando non c'era misura: senza meter non si verifica nulla, si assessa e basta.
- */
-export const agreementOf = (
-  measuredTone: number | null, validated: ToneCharge, tol = TONE_STEP,
-): ToneAgreement | null => {
-  if (measuredTone === null || !Number.isFinite(measuredTone)) return null;
-  return Math.abs(chargeValue(validated) - clampTone(measuredTone)) <= tol ? 'confirmed' : 'differs';
-};
+/** Il tono è arrivato in cima alla scala. La SOGLIA è di presentazione — chi valida resta
+ *  l'auditor, come nel ciclo CONTACT. */
+export const reachedTop = (toneNow: number, eps = TONE_STEP / 2): boolean =>
+  clampTone(toneNow) >= TONE_TARGET - eps;
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════
-// 4. MOCK-UP DELL'OPPOSTO — quanto manca allo zero
+// COME SI SA CHE IL TONO QUARANTA È RAGGIUNTO — I TESTIMONI
 // ═══════════════════════════════════════════════════════════════════════════════════════════
 
 /**
- * Quanta strada è stata fatta verso lo zero, 0 → 1.
+ * ⚠️ IL BERSAGLIO È LA CIMA, E PRIMA ERA IL CENTRO.
  *
- * Si misura sul TONO CORRENTE rispetto a quello di partenza, non sul tempo: Ron dice « until an
- * as-isness happens », e l'as-isness è che la resistenza non c'è più. Senza meter resta a 0 e la
- * barra non compare — non si inventa un avanzamento che nessuno sta misurando.
+ * Fino alla 2.0.115 il preclear mock-uppava l'OPPOSTO, i due si annullavano e la resistenza
+ * tornava al CENTRO: il testimone di posizione era « ago a zero ». Il comando di Ron dice
+ * un'altra cosa — « raise this to tone forty » — e allora il testimone di posizione è che il
+ * tono sia arrivato IN CIMA.
  *
- * Non è mai negativa: se il tono si allontana dallo zero, l'avanzamento è nullo, non « meno di
- * nulla ». Un allontanamento è un fatto da leggere sull'ago, non da scrivere in una barra.
- */
-export const mockupProgress = (toneAtStart: number, toneNow: number): number => {
-  const start = Math.abs(clampTone(toneAtStart));
-  if (start < 1e-9) return 1;
-  const now = Math.abs(clampTone(toneNow));
-  return Math.max(0, Math.min(1, (start - now) / start));
-};
-
-/** L'as-isness della scala: la resistenza è arrivata allo zero. La SOGLIA è di presentazione —
- *  chi valida resta l'auditor, come nel ciclo CONTACT. */
-export const reachedZero = (toneNow: number, eps = TONE_STEP / 2): boolean =>
-  Math.abs(clampTone(toneNow)) < eps;
-
-// ═══════════════════════════════════════════════════════════════════════════════════════════
-// DALL'ITEM ASSESSATO ALLA RISPOSTA DEL CICLO
-// ═══════════════════════════════════════════════════════════════════════════════════════════
-
-/**
- * Nelle fasi 2 e 3 l'auditor ENUNCIA le risposte — « negativo? », « positivo? », « 10, 20,
- * 30, 40 » — e il modulo ASSESSMENT le raccoglie con la loro lettura. Quando poi indica al
- * preclear e questi conferma, il ciclo deve avanzare DA SOLO: cliccare « indica » e poi
- * ricliccare il bottone in cima vorrebbe dire dire due volte la stessa cosa.
- *
- * Qui si riconosce QUALE risposta era quell'item. Puro testo → risposta, niente altro.
- *
- * ── PERCHÉ PAROLA INTERA E NON SOTTOSTRINGA ────────────────────────────────────────────────
- * Per i NUMERI si confronta parola per parola: lo svedese « tio » (dieci) è dentro decine di
- * parole comuni, e un item come « la lezione » diventerebbe un 10. Per il SEGNO invece la
- * sottostringa va bene: « negativ » e « positiv » non capitano per caso, e coprono in un colpo
- * negativo/négatif/negative/negativ e le loro coniugazioni.
- */
-export type ToneAnswer =
-  | { kind: 'sign'; sign: ToneSign }
-  | { kind: 'magnitude'; magnitude: ToneStep };
-
-/** Accenti via, minuscole, e i segni fuori: « Négatif ? » e « negativo » devono pareggiare. */
-const norm = (s: string): string =>
-  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-
-/** Le decine dette a parole, nelle cinque lingue. Le cifre si riconoscono a parte. */
-const PAROLE_AMPIEZZA: Record<ToneStep, string[]> = {
-  10: ['dieci', 'dix', 'ten', 'diez', 'tio'],
-  20: ['venti', 'vingt', 'twenty', 'veinte', 'tjugo'],
-  30: ['trenta', 'trente', 'thirty', 'treinta', 'trettio'],
-  40: ['quaranta', 'quarante', 'forty', 'cuarenta', 'fyrtio'],
-};
-
-/**
- * Che risposta è questo item, per la fase in corso? `null` se non è una risposta — ed è il caso
- * normale: nell'assessment ci finisce anche quel che si dice intorno.
- */
-export const matchToneAnswer = (text: string, phase: TonePhase): ToneAnswer | null => {
-  const t = norm(text);
-  if (!t) return null;
-
-  if (phase === 'sign') {
-    // l'ordine conta: « non negativo » non lo trattiamo — è l'auditor che indica, non l'app che
-    // interpreta. Si guarda solo quale delle due parole c'è.
-    const neg = t.includes('negativ') || t.includes('negatif');
-    const pos = t.includes('positiv') || t.includes('positif');
-    if (neg === pos) return null;            // tutte e due, o nessuna → non si indovina
-    return { kind: 'sign', sign: neg ? -1 : 1 };
-  }
-
-  if (phase === 'magnitude') {
-    // le CIFRE per prime: « 30 » è la forma che arriva più spesso da chi scrive
-    const cifre = t.match(/\b(10|20|30|40)\b/);
-    if (cifre) return { kind: 'magnitude', magnitude: Number(cifre[1]) as ToneStep };
-    const parole = t.split(/[^a-z]+/).filter(Boolean);
-    for (const s of TONE_STEPS) {
-      if (PAROLE_AMPIEZZA[s].some(p => parole.includes(p))) return { kind: 'magnitude', magnitude: s };
-    }
-    return null;
-  }
-
-  return null;
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════════════════
-// COME SI SA CHE L'AS-IS È ARRIVATO — I TESTIMONI
-// ═══════════════════════════════════════════════════════════════════════════════════════════
-
-/**
- * ⚠️ IL BERSAGLIO È LO ZERO, NON IL VALORE OPPOSTO.
- *
- * Domanda posta dall'utente: « l'ago dovrebbe andare sul valore opposto? ». No — e la
- * distinzione è tutto il punto del metodo. Il preclear MOCK-UPPA il +40; il RISULTATO è che i
- * due si annullano e la resistenza va al CENTRO. Se l'ago si fermasse sul +40 non ci sarebbe
- * stato nessun as-is: si sarebbe sostituita una carica con un'altra di segno opposto.
- *
- * È anche una previsione FALSIFICABILE, ed è il motivo per cui vale la pena misurarla: se in
- * seduta l'ago finisse davvero sull'opposto invece che a zero, il modello di Ron vorrebbe dire
- * un'altra cosa, e lo sapremmo.
+ * Le due letture non possono essere vere insieme, ed è quel che rende la cosa interessante: si
+ * saprà guardando l'ago in seduta. La domanda è aperta con Ron.
  */
 
-/** Chi può testimoniare che la carica se n'è andata. */
+/** Chi può testimoniare che il tono è arrivato. */
 export type ToneWitness =
-  /** La POSIZIONE: il tono è arrivato a zero. Serve il meter — è una misura. */
-  | 'zero'
+  /** La POSIZIONE: il tono è arrivato in cima. Serve il meter — è una misura. */
+  | 'top'
   /** L'F/N sull'ago in gioco. La firma classica. */
   | 'fn'
   /** La FIRMA ENERGETICA dissolta: quel che il ciclo CONTACT misura già. Serve il MUSE. */
@@ -253,7 +126,7 @@ export interface ToneAsIsState {
   available: ToneWitness[];
   /** Chi HA parlato. */
   fired: ToneWitness[];
-  /** L'app PROPONE l'as-is? Mai lo DICHIARA: valida l'auditor, come ovunque. */
+  /** L'app PROPONE la fine? Mai la DICHIARA: valida l'auditor, come ovunque. */
   proposed: boolean;
   /** Proposto su un testimone SOLO, perché è l'unico che c'era. Va detto. */
   singleWitness: boolean;
@@ -267,12 +140,12 @@ export interface ToneAsIsState {
  *   MUSE + METER    → tutti e tre                        (tre, e indipendenti)
  *   niente          → nessuno: si è off-meter come Ron, e decide l'auditor da solo
  *
- * La POSIZIONE richiede il meter perché senza non c'è un tono misurato da portare a zero. La
+ * La POSIZIONE richiede il meter perché senza non c'è un tono misurato da portare in cima. La
  * FIRMA richiede il MUSE perché è l'EEG a darla. L'F/N lo dà l'ago in gioco, quale che sia.
  */
 export const toneWitnesses = (hasMeter: boolean, hasMuse: boolean): ToneWitness[] => {
   const w: ToneWitness[] = [];
-  if (hasMeter) w.push('zero');
+  if (hasMeter) w.push('top');
   if (hasMeter || hasMuse) w.push('fn');
   if (hasMuse) w.push('signature');
   return w;
@@ -283,7 +156,7 @@ export const toneWitnesses = (hasMeter: boolean, hasMuse: boolean): ToneWitness[
  *
  * DUE testimoni concordi, non uno. Un solo segnale si sbaglia: l'F/N del meter oggi è troppo
  * permissivo (mediana del TA alle F/N = 5,32 su 765 casi, con picchi al fondo scala — misurato
- * sull'archivio), e una posizione a zero può capitare per caso passando. Due che dicono la
+ * sull'archivio), e una posizione in cima può capitare per caso passando. Due che dicono la
  * stessa cosa nello stesso momento è un'altra faccenda.
  *
  * Quando ce n'è UNO SOLO disponibile si propone lo stesso — meglio una proposta dichiarata

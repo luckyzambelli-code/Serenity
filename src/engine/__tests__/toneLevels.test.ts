@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   TONE_LEVELS, TONE_LABELS, TONE_DECADES, levelAt, levelNameAt, exactLevelName,
-  tonePosition,
+  tonePosition, levelName, levelNameAtIn, hasLevelName,
 } from '../toneLevels';
 import { TONE_SCALE_MAX } from '../tuning';
 
@@ -125,6 +125,64 @@ describe('la posizione sulla colonna — è la corrispondenza con l ago', () => 
     for (const t of [-999, -41, 0, 41, 999]) {
       const p = tonePosition(t);
       expect({ t, ok: p >= 0 && p <= 1 }).toEqual({ t, ok: true });
+    }
+  });
+});
+
+describe('i nomi nelle cinque lingue', () => {
+  it('OGNI livello ha la sua riga nel dizionario — nessuno resta indietro', () => {
+    // È il difetto che ritorna col dizionario a cinque lingue: si traduce l'elenco e ne
+    // avanza uno in fondo. Qui non può passare.
+    //
+    // ⚠️ Non si confrontano le STRINGHE: « Action » in francese e « Sacrifice » in spagnolo si
+    // scrivono come in inglese, e un confronto le direbbe non tradotte. Si guarda la riga.
+    for (const l of TONE_LEVELS) {
+      expect({ n: l.name, ok: hasLevelName(l.name) }).toEqual({ n: l.name, ok: true });
+    }
+  });
+
+  it('e ogni riga restituisce qualcosa in tutte e quattro le lingue', () => {
+    for (const l of TONE_LEVELS) {
+      for (const lang of ['it', 'fr', 'es', 'sv']) {
+        expect({ n: l.name, lang, ok: levelName(l.name, lang).trim().length > 0 })
+          .toEqual({ n: l.name, lang, ok: true });
+      }
+    }
+  });
+
+  it("il livello −30 è « Can't Hide », apostrofo compreso — e si traduce", () => {
+    // La chiave era stata ricavata con uno script che si è fermato all'apostrofo: « Can ». Il
+    // livello c'era, la traduzione no, e a schermo non si sarebbe visto nulla di strano.
+    expect(levelNameAtIn(-30, 'it')).toBe('Non potersi nascondere');
+    expect(levelNameAtIn(-30, 'en')).toBe("Can't Hide");
+  });
+
+  it('in inglese resta il nome di Ron, non una copia tradotta', () => {
+    expect(levelName('Anger', 'en')).toBe('Anger');
+    expect(levelName('Serenity of Beingness', 'en')).toBe('Serenity of Beingness');
+  });
+
+  it('una lingua che non conosciamo ricade sull inglese, non su una stringa vuota', () => {
+    expect(levelName('Anger', 'de')).toBe('Anger');
+    expect(levelName('Anger', '')).toBe('Anger');
+  });
+
+  it('un nome che non è nella tabella torna com era: non si inventa', () => {
+    expect(levelName('Qualcosa', 'it')).toBe('Qualcosa');
+  });
+
+  it('e il livello raggiunto si traduce a sua volta', () => {
+    expect(levelNameAtIn(1.5, 'it')).toBe('Collera');
+    expect(levelNameAtIn(1.5, 'fr')).toBe('Colère');
+    expect(levelNameAtIn(40, 'sv')).toBe('Varandets stillhet');
+    expect(levelNameAtIn(1.5, 'en')).toBe('Anger');
+  });
+
+  it('i tre nomi che si ripetono si traducono UNA volta, e uguale nei due posti', () => {
+    for (const n of ['Sympathy', 'Grief', 'Making Amends']) {
+      const v = TONE_LEVELS.filter(l => l.name === n);
+      expect({ n, uguali: levelName(v[0].name, 'it') === levelName(v[1].name, 'it') })
+        .toEqual({ n, uguali: true });
     }
   });
 });

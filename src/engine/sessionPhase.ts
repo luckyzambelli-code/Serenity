@@ -67,12 +67,20 @@ export type MirrorPhase =
   | 'mirror.doubling'  // la meta è il doppio
   | 'mirror.reached';  // ottenuto
 
-/** TONE SCALE — i quattro tempi di Ron, più il compiuto. */
+/**
+ * TONE SCALE — i DUE comandi di Ron, più il compiuto.
+ *
+ * ⚠️ Erano quattro tempi: segno (positivo/negativo), ampiezza (10/20/30/40) e mock-up
+ * dell'OPPOSTO fino allo zero. I comandi di Ron sono due, e la meta è +40 per tutte le
+ * resistenze: l'assessment di segno e ampiezza è uscito dal ciclo.
+ */
 export type TonePhaseId =
-  | 'tone.locate'
-  /** Localizzato col campo VUOTO: si aspetta che la resistenza sia detta. Come negli altri tre. */
+  | 'tone.item'
+  /** Premuto col campo VUOTO: si aspetta che la resistenza sia detta. Come negli altri tre. */
   | 'tone.say_item'
-  | 'tone.sign' | 'tone.magnitude' | 'tone.mockup' | 'tone.done';
+  /** « Raise this to tone forty on the tone scale », ridato finché non c'è più reazione. */
+  | 'tone.raise'
+  | 'tone.done';
 
 export type SessionPhase =
   | CrossPhase | ContactPhase | NullPhaseId | MirrorPhase | TonePhaseId
@@ -134,8 +142,6 @@ export interface PhaseSignals {
 
   // ── TONE ─────────────────────────────────────────────────────────────────────────────────
   tonePhase:      TonePhase;
-  /** Segno e ampiezza sono stati fissati. */
-  toneValidated:  boolean;
 }
 
 /**
@@ -194,18 +200,14 @@ export function derivePhase(s: PhaseSignals): SessionPhase {
  * visibile. Il testo prende dunque la scala di ciclo; lo schermo prenderà `derivePhase`.
  */
 export function deriveCyclePhase(s: PhaseSignals): SessionPhase {
-  // ── TONE : localizza → segno → ampiezza → mock-up ────────────────────────────────────────
+  // ── TONE : dai l'item → portalo a tono 40 ────────────────────────────────────────────────
   if (s.mode === 'tone') {
-    if (s.tonePhase === 'locate')    return 'tone.locate';
-    // Localizzato ma senza resistenza nominata: si aspetta la voce, e NON si assessa ancora il
-    // segno. Prima si passava dritti a « positivo o negativo? » — si sceglieva il segno di una
-    // resistenza che non era stata detta (segnalato).
+    if (s.tonePhase === 'locate')    return 'tone.item';
+    // Premuto ma senza resistenza nominata: si aspetta la voce, e NON si dà ancora il secondo
+    // comando. Prima si passava dritti a « positivo o negativo? » — si assessava il segno di
+    // una resistenza che non era stata detta (segnalato).
     if (!s.itemNamed)                return 'tone.say_item';
-    if (s.tonePhase === 'sign')      return 'tone.sign';
-    if (s.tonePhase === 'magnitude') return 'tone.magnitude';
-    if (s.tonePhase === 'mockup' && s.toneValidated) return 'tone.mockup';
-    // `done`, e il caso « mockup senza valore fissato » — che non accade (l'ampiezza fissa i
-    // due insieme) ma che l'interfaccia mostra come compiuto da sempre: si conserva com'è.
+    if (s.tonePhase === 'raise')     return 'tone.raise';
     return 'tone.done';
   }
 

@@ -1,14 +1,18 @@
 # TONE SCALE
 
-*Note pour Ron · version 2.0.115*
+*Note pour Ron · version 2.0.116*
 
 ---
 
 Ton dernier message est construit. Un cadran de **−40 à +40**, huit divisions de
 dix, le zéro au centre — une quatrième vue à côté de CONTACT, NULL et MIRROR.
 
-Les quatre temps sont à l'écran, l'un après l'autre : **localiser · positif ou
-négatif ? · combien de divisions ? · mener au ton 40**.
+**Deux commandes, deux temps** — et c'est tout ce qu'il y a à l'écran :
+**donner l'item · mener au ton 40**.
+
+Nous en avions mis quatre : entre les deux, on faisait assesser le signe
+(positif ou négatif ?) et l'ampleur (10, 20, 30, 40). Tes commandes n'en
+demandent pas, et Claudio nous l'a fait remarquer : **ils sont sortis**.
 
 ---
 
@@ -23,18 +27,20 @@ regarde, et il n'a qu'à les lire.
 
 La seconde est **répétée**, comme tu l'as demandé. Un bouton *redonne la
 commande* compte les fois ; le nombre reste à l'écran pendant qu'on conduit et
-part dans le journal à la fermeture — `TONE −20 · ×7 · AS-IS`. Une résistance
+part dans le journal à la fermeture — `TONE −20 → +40 · ×7 · TON 40 ATTEINT`. Une résistance
 qui coûte sept passes et une qui en coûte deux ne sont pas le même travail, et
 nous voulons pouvoir les comparer.
 
-Le cycle se ferme sur **« ne réagit plus »** — pas de réaction, et la sérénité
-de l'être en haut de l'échelle.
+Le cycle se ferme sur **« ton quarante atteint »** — plus de réaction, et la
+sérénité de l'être en haut de l'échelle.
 
 ## Chaque niveau de ton, pendant qu'il monte
 
 À droite du cadran, une colonne verticale porte les soixante-deux niveaux. Le
-curseur donne la valeur et **le nom** — Anger, Grief, Apathy — et un trait ambre
-relie le ton de départ au ton actuel, pour qu'on voie le sens de la marche.
+curseur donne la valeur et **le nom** — Colère, Chagrin, Apathie — et un trait
+ambre relie le ton de départ au ton actuel, pour qu'on voie le sens de la marche.
+Les noms sont traduits dans les cinq langues de l'app, et écrits assez gros pour
+se lire à distance : c'est le préclair qui les regarde, pas seulement nous.
 
 Les valeurs écrites sont celles que Claudio a retenues : −40, −30, −20, −10, 0,
 2, 3, 4, 6, 9, 20, 30, 40. Les autres n'apparaissent qu'au curseur, sinon la
@@ -42,18 +48,18 @@ colonne serait illisible.
 
 ---
 
-## Trois choses que nous avons décidées à ta place
+## Ce que nous avions ajouté, et que nous avons retiré
 
-Elles sont à toi, dis-nous si elles ne vont pas.
+Nous avions gardé l'assessment du signe et de l'ampleur, en le présentant comme
+une vérification de la mesure. C'était notre raisonnement, pas ta procédure : tes
+commandes sont deux, et la cible est **+40 pour toutes les résistances** — elle
+ne dépend pas de la charge trouvée au départ.
 
-**La mesure propose, l'assessment vérifie.** Tu assesses parce que tu travailles
-sans mètre. Avec l'aiguille, le point 1 donne déjà un nombre. On garde donc
-l'assessment, mais comme vérification. Sans mètre, il redevient l'unique source —
-ta situation exactement, et la vue marche pareil.
+Ce qui reste de la mesure : le **ton de départ**, quand un mètre est branché. On
+l'écrit, et on écrit le chemin parcouru. Sans mètre, il n'y a pas de nombre — et
+le cycle marche pareil, comme chez toi.
 
-**La vérification ne réclame pas le chiffre exact.** L'aiguille tombe entre deux
-divisions : à −23, si le préclair trouve −20 ou −30, personne ne s'est trompé. On
-tolère une division. Au-delà, l'app écrit que l'aiguille disait autre chose.
+## Une chose que nous avons décidée à ta place
 
 **L'instant qui compte n'est pas celui du clic.** Le préclair a pensé la chose
 avant que la main n'arrive sur le bouton — et appuyer fait souvent partir une

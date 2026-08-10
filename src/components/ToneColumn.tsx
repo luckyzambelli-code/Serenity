@@ -1,6 +1,7 @@
 import React from 'react';
 import { useUiStore } from '../store/uiStore';
-import { TONE_LABELS, TONE_DECADES, levelAt, exactLevelName, tonePosition } from '../engine/toneLevels';
+import { TONE_LABELS, TONE_DECADES, levelAt, exactLevelName, tonePosition, levelName } from '../engine/toneLevels';
+import { pick5 } from '../i18n5';
 import { TOKEN } from '../ui/tokens';
 
 /**
@@ -26,8 +27,18 @@ import { TOKEN } from '../ui/tokens';
  * L'asse è lineare in tono, perché è l'unico modo di restare fedele all'ago. Ma la scala è
  * fitta in basso e rada in alto: fra 0 e 4 ci sono venticinque livelli. Scrivere i nomi alla
  * loro posizione li accavallerebbe tutti in un centimetro. Quindi: sulla colonna solo le
- * diciotto etichette rade, e il nome del livello in cui si è come TESTO accanto al cursore —
+ * tredici etichette rade, e il nome del livello in cui si è come TESTO accanto al cursore —
  * sempre leggibile, qualunque sia l'affollamento.
+ *
+ * ── SI LEGGE, QUINDI È GRANDE ───────────────────────────────────────────────────────────────
+ * I nomi erano a corpo 9 su una colonna larga 190: leggibili col naso sullo schermo, non da
+ * seduti (segnalato). Adesso la colonna è larga 260 e i nomi stanno a 13; quelli lunghi
+ * (« Serenity of Beingness », « Approval from Bodies ») vanno A CAPO invece di rimpicciolirsi
+ * o di uscire dal bordo — meglio due righe che una riga illeggibile.
+ *
+ * ── E SONO NELLA LINGUA DELLA SEDUTA ────────────────────────────────────────────────────────
+ * I nomi dei livelli si traducono come tutto il resto (`levelName`): il preclear legge la sua
+ * posizione sulla scala, e leggerla in una lingua che non parla non serve a niente.
  *
  * ── IL « ≈ » NON È UN VEZZO ─────────────────────────────────────────────────────────────────
  * Il significato ASSOLUTO del tono dipende da R_totale, che è ancora una domanda aperta con Ron
@@ -38,16 +49,40 @@ import { TOKEN } from '../ui/tokens';
  */
 
 /** Altezza utile della colonna, in unità del suo viewBox. */
-const H = 620, W = 190;
+const H = 620, W = 260;
 const TOP = 24, BOT = TOP + H;
+
+/**
+ * Il nome, spezzato in righe che ci stiano.
+ *
+ * Si taglia sulle PAROLE e mai dentro una parola: « Serenity of Beingness » diventa due righe,
+ * « Approval from Bodies » pure. Il limite è in caratteri e non in pixel perché il testo è SVG
+ * e misurarlo davvero vorrebbe dire disegnarlo prima — a corpo 13 su 190 unità di larghezza
+ * utile ci stanno circa 18 caratteri.
+ */
+const MAX_CAR = 18;
+export function spezza(nome: string, max = MAX_CAR): string[] {
+  if (nome.length <= max) return [nome];
+  const righe: string[] = [];
+  let riga = '';
+  for (const parola of nome.split(' ')) {
+    if (!riga) { riga = parola; continue; }
+    if ((riga + ' ' + parola).length <= max) riga += ' ' + parola;
+    else { righe.push(riga); riga = parola; }
+  }
+  if (riga) righe.push(riga);
+  return righe;
+}
 
 /** Tono → y nel viewBox. +40 in alto, −40 in basso. La mappatura vive in `toneLevels`
  *  (`tonePosition`), dove si prova: qui si converte soltanto in coordinate. */
 const y = (tone: number): number => BOT - tonePosition(tone) * H;
 
-export function ToneColumn({ tone, hasMeter, charge, chargeFrom }: {
+export function ToneColumn({ tone, hasMeter, charge, chargeFrom, lang }: {
   /** Il tono in questo istante, −40…+40. */
   tone: number;
+  /** La lingua della seduta: i nomi dei livelli si traducono come tutto il resto. */
+  lang: string;
   /** C'è il meter? Senza, il numero non si mostra: resterebbe una cifra senza misura. */
   hasMeter: boolean;
   /** Carica EEG in corso (0..1), se il MUSE c'è: disegna DA DOVE si è partiti a ORA. */
@@ -63,6 +98,7 @@ export function ToneColumn({ tone, hasMeter, charge, chargeFrom }: {
 
   const yOra = y(tone);
   const liv  = levelAt(tone);
+  const nomeLiv = levelName(liv.name, lang);
   // Il percorso del ciclo: da dove si è partiti a dove si è adesso. Se sale, è il lavoro che
   // sta funzionando; se scende, l'auditor lo deve vedere subito.
   const yDa   = chargeFrom != null ? y(chargeFrom) : null;
@@ -80,18 +116,28 @@ export function ToneColumn({ tone, hasMeter, charge, chargeFrom }: {
               stroke={d === 0 ? inchiostro : tacca} strokeWidth={d === 0 ? 2 : 1.4} />
       ))}
 
-      {/* LE ETICHETTE RADE — le diciotto scelte, col nome del livello. */}
+      {/* LE ETICHETTE RADE — le tredici scelte, col nome del livello nella lingua in corso.
+          Il nome va SOTTO il numero e non di fianco: di fianco, a corpo leggibile, i nomi
+          lunghi uscivano dalla colonna. Sotto, ognuno ha la sua riga (o due). */}
       {TONE_LABELS.map(t => {
-        const nome = exactLevelName(t);
+        const en = exactLevelName(t);
+        const nome = en ? levelName(en, lang) : undefined;
         const yy = y(t);
+        const righe = nome ? spezza(nome) : [];
         return (
           <g key={`l${t}`}>
-            <line x1={54} y1={yy} x2={64} y2={yy} stroke={tacca} strokeWidth={1} />
-            <text x={68} y={yy + 3} fill={tenue}
-                  style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.02em' }}>
-              <tspan style={{ fontWeight: 700 }}>{t > 0 ? `+${t}` : `${t}`}</tspan>
-              {nome ? <tspan dx={5} style={{ opacity: 0.85 }}>{nome}</tspan> : null}
+            <line x1={54} y1={yy} x2={66} y2={yy} stroke={tacca} strokeWidth={1.2} />
+            <text x={72} y={yy + 4} fill={tenue}
+                  style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 800,
+                           letterSpacing: '0.01em' }}>
+              {t > 0 ? `+${t}` : `${t}`}
             </text>
+            {righe.map((r, i) => (
+              <text key={i} x={112} y={yy + 4 + i * 13} fill={tenue}
+                    style={{ fontFamily: 'var(--font-sans)', fontSize: 12, opacity: 0.92 }}>
+                {r}
+              </text>
+            ))}
           </g>
         );
       })}
@@ -102,22 +148,25 @@ export function ToneColumn({ tone, hasMeter, charge, chargeFrom }: {
         <>
           <line x1={54} y1={yDa} x2={54} y2={yOra} stroke={TOKEN.warn} strokeWidth={4}
                 strokeLinecap="round" opacity={0.55} />
-          <line x1={44} y1={yDa} x2={64} y2={yDa} stroke={TOKEN.warn} strokeWidth={1.4} opacity={0.7} />
+          <line x1={44} y1={yDa} x2={66} y2={yDa} stroke={TOKEN.warn} strokeWidth={1.6} opacity={0.7} />
         </>
       )}
 
-      {/* IL CURSORE — dove si è adesso, col nome del livello per esteso. */}
+      {/* IL CURSORE — dove si è adesso, col nome del livello per esteso. È la sola scritta che
+          il preclear cerca davvero: sta più grande di tutto il resto, e va a capo se serve. */}
       <g>
-        <polygon points={`38,${yOra - 6} 52,${yOra} 38,${yOra + 6}`} fill={inchiostro} />
-        <line x1={38} y1={yOra} x2={64} y2={yOra} stroke={inchiostro} strokeWidth={2} />
-        <text x={68} y={yOra - 6} fill={inchiostro}
-              style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 800 }}>
+        <polygon points={`36,${yOra - 7} 52,${yOra} 36,${yOra + 7}`} fill={inchiostro} />
+        <line x1={36} y1={yOra} x2={66} y2={yOra} stroke={inchiostro} strokeWidth={2} />
+        <text x={72} y={yOra - 7} fill={inchiostro}
+              style={{ fontFamily: 'var(--font-sans)', fontSize: 17, fontWeight: 800 }}>
           {hasMeter ? `≈ ${tone > 0 ? '+' : ''}${tone.toFixed(1)}` : '—'}
         </text>
-        <text x={68} y={yOra + 8} fill={inchiostro}
-              style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700, opacity: 0.9 }}>
-          {liv.name}
-        </text>
+        {spezza(nomeLiv).map((r, i) => (
+          <text key={i} x={72} y={yOra + 11 + i * 15} fill={inchiostro}
+                style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 700, opacity: 0.95 }}>
+            {r}
+          </text>
+        ))}
       </g>
 
       {/* LA CARICA DEL MUSE — una barretta a sinistra dell'asta: quanta ce n'è adesso.
@@ -132,7 +181,7 @@ export function ToneColumn({ tone, hasMeter, charge, chargeFrom }: {
 
       {/* Il verso, detto una volta: si SALE. */}
       <text x={54} y={TOP - 10} textAnchor="middle" fill={tenue}
-            style={{ fontFamily: 'var(--font-sans)', fontSize: 8, letterSpacing: '0.18em' }}>
+            style={{ fontFamily: 'var(--font-sans)', fontSize: 11, letterSpacing: '0.18em' }}>
         {sale ? '▲' : ''}
       </text>
     </svg>

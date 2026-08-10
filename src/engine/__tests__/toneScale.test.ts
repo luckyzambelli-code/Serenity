@@ -1,19 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
-  TONE_STEPS, chargeValue, oppositeOf, clampTone, toneFromTa, proposeFromTone,
-  agreementOf, mockupProgress, reachedZero, toneOffset, ToneLocator, toneWitnesses, toneAsIs, matchToneAnswer,
-  type ToneCharge, type ToneWitness,
+  TONE_TARGET, clampTone, toneFromTa,
+  raiseProgress, reachedTop, toneOffset, ToneLocator, toneWitnesses, toneAsIs,
+  type ToneWitness,
 } from '../toneScale';
 import { TONE_SCALE_MAX, TONE_STEP, TONE_LOOKBACK_S } from '../tuning';
 
-const C = (sign: -1 | 1, magnitude: 10 | 20 | 30 | 40): ToneCharge =>
-  ({ sign, magnitude, origin: 'measured' });
-
 describe('scala del tono — la scala stessa', () => {
-  it('ha le quattro ampiezze di Ron, e solo quelle', () => {
-    expect([...TONE_STEPS]).toEqual([10, 20, 30, 40]);
-  });
-
   it('non esce mai dal fondo scala', () => {
     expect(clampTone(999)).toBe(TONE_SCALE_MAX);
     expect(clampTone(-999)).toBe(-TONE_SCALE_MAX);
@@ -47,100 +40,53 @@ describe('dal TONE ARM al tono (strada provvisoria)', () => {
   });
 });
 
-describe('la PROPOSTA che l ago fa all auditor', () => {
-  it('arrotonda alla divisione PIÙ VICINA, non a quella sotto', () => {
-    // −38 è un −40 a cui manca poco, non un −30 abbondante
-    expect(proposeFromTone(-38)).toEqual({ sign: -1, magnitude: 40, origin: 'measured' });
-    expect(proposeFromTone(-32)).toEqual({ sign: -1, magnitude: 30, origin: 'measured' });
-    expect(proposeFromTone(24)).toEqual({ sign: 1, magnitude: 20, origin: 'measured' });
-    expect(proposeFromTone(26)).toEqual({ sign: 1, magnitude: 30, origin: 'measured' });
-  });
-
-  it('non propone nulla troppo vicino allo zero: lì non c è carica da mock-uppare', () => {
-    expect(proposeFromTone(0)).toBeNull();
-    expect(proposeFromTone(TONE_STEP / 2 - 0.01)).toBeNull();
-    expect(proposeFromTone(-(TONE_STEP / 2 - 0.01))).toBeNull();
-    expect(proposeFromTone(TONE_STEP / 2 + 0.01)).not.toBeNull();
-  });
-
-  it('oltre il fondo scala resta al fondo scala', () => {
-    expect(proposeFromTone(-120)?.magnitude).toBe(40);
-    expect(proposeFromTone(120)?.sign).toBe(1);
+describe('la META è sempre la stessa: tono quaranta', () => {
+  it('non dipende da dove si è partiti — è il comando di Ron', () => {
+    expect(TONE_TARGET).toBe(TONE_SCALE_MAX);
+    expect(TONE_TARGET).toBe(40);
   });
 });
 
-describe('l OPPOSTO da mock-uppare (punto 4 di Ron)', () => {
-  it('è la stessa ampiezza col segno rovesciato', () => {
-    expect(oppositeOf(C(-1, 40))).toBe(40);
-    expect(oppositeOf(C(1, 30))).toBe(-30);
-    expect(chargeValue(C(-1, 40))).toBe(-40);
+describe('avanzamento verso il tono quaranta', () => {
+  it('va da 0 a 1 mentre il preclear sale', () => {
+    expect(raiseProgress(-40, -40)).toBe(0);
+    expect(raiseProgress(-40, 0)).toBeCloseTo(0.5, 10);
+    expect(raiseProgress(-40, 40)).toBe(1);
+  });
+
+  it('partendo da metà scala la strada da fare è la METÀ, e si vede', () => {
+    expect(raiseProgress(0, 20)).toBeCloseTo(0.5, 10);
+    expect(raiseProgress(0, 40)).toBe(1);
+  });
+
+  it('SCENDERE non è un avanzamento negativo: è zero', () => {
+    expect(raiseProgress(-20, -30)).toBe(0);
+  });
+
+  it('non supera mai 1, nemmeno oltre il fondo scala', () => {
+    expect(raiseProgress(-20, 999)).toBe(1);
+    expect(raiseProgress(-20, 999)).toBeGreaterThanOrEqual(0);
+  });
+
+  it('partire già in cima è già arrivati', () => {
+    expect(raiseProgress(40, 40)).toBe(1);
+  });
+
+  it('⚠️ NON è più la strada verso lo ZERO: a metà scala i due valori DIFFERISCONO', () => {
+    // Il vecchio `mockupProgress(-40, -20)` dava 0,5 perché la meta era il centro. Salendo
+    // verso il +40 lo stesso tratto è un quarto della strada — il ciclo è cambiato, e il
+    // numero deve cambiare con lui.
+    expect(raiseProgress(-40, -20)).toBeCloseTo(0.25, 10);
   });
 });
 
-describe('verifica: la misura diceva una cosa, il PC ne ha confermata un altra?', () => {
-  it('il numero esatto va bene, ovviamente', () => {
-    expect(agreementOf(-40, C(-1, 40))).toBe('confirmed');
-    expect(agreementOf(20, C(1, 20))).toBe('confirmed');
-  });
-
-  it('NON pretende il numero esatto: l ago cade fra due divisioni', () => {
-    // il caso dell utente: misura −23, il preclear trova −20 OPPURE −30. Vanno bene tutti e due.
-    expect(agreementOf(-23, C(-1, 20))).toBe('confirmed');
-    expect(agreementOf(-23, C(-1, 30))).toBe('confirmed');
-  });
-
-  it('ma oltre UNA divisione è una smentita vera', () => {
-    expect(agreementOf(-23, C(-1, 40))).toBe('differs');   // scarto 17
-    expect(agreementOf(-23, C(-1, 10))).toBe('differs');   // scarto 13
-  });
-
-  it('il cambio di SEGNO non passa — è la cosa che più conta sapere', () => {
-    expect(agreementOf(-23, C(1, 20))).toBe('differs');
-    expect(agreementOf(-40, C(1, 40))).toBe('differs');
-  });
-
-  it('la tolleranza è esattamente UNA divisione, estremo compreso', () => {
-    expect(agreementOf(-30, C(-1, 20))).toBe('confirmed');       // scarto 10 esatto
-    expect(agreementOf(-30.1, C(-1, 20))).toBe('differs');       // 10,1
-  });
-
-  it('senza misura non c è nulla da verificare, e lo dice', () => {
-    expect(agreementOf(null, C(-1, 40))).toBeNull();
-    expect(agreementOf(NaN, C(-1, 40))).toBeNull();
-  });
-});
-
-describe('avanzamento del mock-up verso lo zero', () => {
-  it('va da 0 a 1 mentre la resistenza se ne va', () => {
-    expect(mockupProgress(-40, -40)).toBe(0);
-    expect(mockupProgress(-40, -20)).toBeCloseTo(0.5, 10);
-    expect(mockupProgress(-40, 0)).toBe(1);
-  });
-
-  it('funziona identico dall altro lato', () => {
-    expect(mockupProgress(30, 15)).toBeCloseTo(0.5, 10);
-  });
-
-  it('un ALLONTANAMENTO non è un avanzamento negativo: è zero', () => {
-    expect(mockupProgress(-20, -30)).toBe(0);
-  });
-
-  it('non supera mai 1, nemmeno se il tono scavalca lo zero', () => {
-    expect(mockupProgress(-20, 25)).toBeLessThanOrEqual(1);
-    expect(mockupProgress(-20, 25)).toBeGreaterThanOrEqual(0);
-  });
-
-  it('partire già a zero è già arrivati', () => {
-    expect(mockupProgress(0, 0)).toBe(1);
-  });
-});
-
-describe('lo zero raggiunto', () => {
-  it('è una fascia, non un punto: in virgola mobile lo zero esatto non capita', () => {
-    expect(reachedZero(0)).toBe(true);
-    expect(reachedZero(TONE_STEP / 2 - 0.01)).toBe(true);
-    expect(reachedZero(TONE_STEP / 2 + 0.01)).toBe(false);
-    expect(reachedZero(-40)).toBe(false);
+describe('il tono quaranta raggiunto', () => {
+  it('è una fascia, non un punto: in virgola mobile il valore esatto non capita', () => {
+    expect(reachedTop(40)).toBe(true);
+    expect(reachedTop(40 - TONE_STEP / 2 + 0.01)).toBe(true);
+    expect(reachedTop(40 - TONE_STEP / 2 - 0.01)).toBe(false);
+    expect(reachedTop(0)).toBe(false);
+    expect(reachedTop(-40)).toBe(false);
   });
 });
 
@@ -230,7 +176,7 @@ describe('LOCALIZZARE — quale istante conta davvero', () => {
 
 describe('AS-IS del TONE — chi può testimoniare', () => {
   it('col solo METER: la posizione a zero e la sua F/N', () => {
-    expect(toneWitnesses(true, false)).toEqual(['zero', 'fn']);
+    expect(toneWitnesses(true, false)).toEqual(['top', 'fn']);
   });
 
   it('col solo MUSE: l F/N e la firma energetica — la posizione no, non c è un tono misurato', () => {
@@ -238,7 +184,7 @@ describe('AS-IS del TONE — chi può testimoniare', () => {
   });
 
   it('con tutti e due: tre testimoni indipendenti', () => {
-    expect(toneWitnesses(true, true)).toEqual(['zero', 'fn', 'signature']);
+    expect(toneWitnesses(true, true)).toEqual(['top', 'fn', 'signature']);
   });
 
   it('senza strumenti nessuno parla: si è off-meter come Ron, decide l auditor', () => {
@@ -247,15 +193,15 @@ describe('AS-IS del TONE — chi può testimoniare', () => {
 });
 
 describe('AS-IS del TONE — la proposta', () => {
-  const W3: ToneWitness[] = ['zero', 'fn', 'signature'];
+  const W3: ToneWitness[] = ['top', 'fn', 'signature'];
 
   it('UNO SOLO non basta quando ce ne sono altri: un segnale si sbaglia', () => {
-    expect(toneAsIs(W3, ['zero']).proposed).toBe(false);
+    expect(toneAsIs(W3, ['top']).proposed).toBe(false);
     expect(toneAsIs(W3, ['fn']).proposed).toBe(false);
   });
 
   it('DUE concordi propongono', () => {
-    expect(toneAsIs(W3, ['zero', 'fn']).proposed).toBe(true);
+    expect(toneAsIs(W3, ['top', 'fn']).proposed).toBe(true);
     expect(toneAsIs(W3, ['fn', 'signature']).proposed).toBe(true);
   });
 
@@ -273,64 +219,13 @@ describe('AS-IS del TONE — la proposta', () => {
 
   it('un testimone che non poteva parlare non conta', () => {
     // il MUSE non c è: la firma non è disponibile, quindi non fa numero
-    const s = toneAsIs(['zero', 'fn'], ['zero', 'signature']);
-    expect(s.fired).toEqual(['zero']);
+    const s = toneAsIs(['top', 'fn'], ['top', 'signature']);
+    expect(s.fired).toEqual(['top']);
     expect(s.proposed).toBe(false);
   });
 
   it('senza testimoni non si propone mai — non si inventa un as-is', () => {
     expect(toneAsIs([], []).proposed).toBe(false);
-    expect(toneAsIs([], ['zero', 'fn']).proposed).toBe(false);
-  });
-});
-
-describe('dall item assessato alla risposta del ciclo', () => {
-  it('riconosce il SEGNO nelle cinque lingue, accenti compresi', () => {
-    for (const s of ['negativo', 'négatif', 'negative', 'NEGATIV', 'Négatif ?'])
-      expect(matchToneAnswer(s, 'sign')).toEqual({ kind: 'sign', sign: -1 });
-    for (const s of ['positivo', 'positif', 'positive', 'POSITIV', 'Positif ?'])
-      expect(matchToneAnswer(s, 'sign')).toEqual({ kind: 'sign', sign: 1 });
-  });
-
-  it('se ci sono tutte e due le parole non indovina', () => {
-    expect(matchToneAnswer('positivo o negativo?', 'sign')).toBeNull();
-  });
-
-  it('riconosce le CIFRE dell ampiezza', () => {
-    expect(matchToneAnswer('30', 'magnitude')).toEqual({ kind: 'magnitude', magnitude: 30 });
-    expect(matchToneAnswer('sono 40 divisioni', 'magnitude')).toEqual({ kind: 'magnitude', magnitude: 40 });
-  });
-
-  it('riconosce le decine DETTE A PAROLE, nelle cinque lingue', () => {
-    expect(matchToneAnswer('trenta', 'magnitude')).toEqual({ kind: 'magnitude', magnitude: 30 });
-    expect(matchToneAnswer('quarante', 'magnitude')).toEqual({ kind: 'magnitude', magnitude: 40 });
-    expect(matchToneAnswer('twenty', 'magnitude')).toEqual({ kind: 'magnitude', magnitude: 20 });
-    expect(matchToneAnswer('diez', 'magnitude')).toEqual({ kind: 'magnitude', magnitude: 10 });
-    expect(matchToneAnswer('trettio', 'magnitude')).toEqual({ kind: 'magnitude', magnitude: 30 });
-  });
-
-  it('PAROLA INTERA: « tio » dentro un altra parola non fa un 10', () => {
-    // il caso per cui la sottostringa non si può usare sui numeri
-    expect(matchToneAnswer('la lezione', 'magnitude')).toBeNull();
-    expect(matchToneAnswer('attention', 'magnitude')).toBeNull();
-    expect(matchToneAnswer('tio', 'magnitude')).toEqual({ kind: 'magnitude', magnitude: 10 });
-  });
-
-  it('una cifra dentro un numero più lungo non conta', () => {
-    expect(matchToneAnswer('300', 'magnitude')).toBeNull();
-    expect(matchToneAnswer('102', 'magnitude')).toBeNull();
-  });
-
-  it('ogni fase ascolta solo la SUA risposta', () => {
-    expect(matchToneAnswer('negativo', 'magnitude')).toBeNull();
-    expect(matchToneAnswer('30', 'sign')).toBeNull();
-    expect(matchToneAnswer('negativo', 'locate')).toBeNull();
-    expect(matchToneAnswer('30', 'mockup')).toBeNull();
-  });
-
-  it('quel che non è una risposta resta null — ed è il caso normale', () => {
-    expect(matchToneAnswer('mia madre', 'sign')).toBeNull();
-    expect(matchToneAnswer('', 'sign')).toBeNull();
-    expect(matchToneAnswer('   ', 'magnitude')).toBeNull();
+    expect(toneAsIs([], ['top', 'fn']).proposed).toBe(false);
   });
 });

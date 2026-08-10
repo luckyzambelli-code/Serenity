@@ -48,8 +48,8 @@ describe('R1 — niente si muove alla periferia mentre l ago legge', () => {
     expect(v({ phase: 'contact.mockup' }).has('journal')).toBe(true);
   });
 
-  it('in tone.sign restano due bottoni e nient altro di laterale', () => {
-    const s = v({ phase: 'tone.sign', mode: 'tone' });
+  it('in tone.raise resta il gesto e nient altro di laterale', () => {
+    const s = v({ phase: 'tone.raise', mode: 'tone' });
     expect(s.has('journal')).toBe(false);
     expect(s.has('cam1')).toBe(false);
     expect(s.has('assessment')).toBe(false);
@@ -134,7 +134,7 @@ describe('gli strumenti e il metodo', () => {
   it('la barra del ciclo CONTACT/NULL non si mostra in MIRROR né in TONE', () => {
     expect(v({ phase: 'contact.mockup', mode: 'contact' }).has('cycleStatus')).toBe(true);
     expect(v({ phase: 'mirror.doubling', mode: 'mirror' }).has('cycleStatus')).toBe(false);
-    expect(v({ phase: 'tone.mockup',     mode: 'tone'   }).has('cycleStatus')).toBe(false);
+    expect(v({ phase: 'tone.raise',      mode: 'tone'   }).has('cycleStatus')).toBe(false);
   });
 
   it('il pannello di calibrazione TA non esiste senza il meter, nemmeno in ESPERTO', () => {
@@ -190,7 +190,7 @@ describe('la camera, a distanza, non e periferia: e il preclear', () => {
 
   it('in REMOTO resta, in TUTTE le fasi di ciclo', () => {
     for (const p of ['contact.mockup', 'contact.asis', 'null.rise',
-                     'mirror.doubling', 'tone.magnitude'] as const) {
+                     'mirror.doubling', 'tone.raise'] as const) {
       expect({ p, cam: v({ phase: p, remote: true }).has('cam1') })
         .toEqual({ p, cam: true });
     }

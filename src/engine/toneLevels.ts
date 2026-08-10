@@ -151,3 +151,105 @@ export const levelNameAt = (tone: number): string => levelAt(tone).name;
 /** Il nome scritto accanto a una tacca della colonna, se quel valore ne ha uno esatto. */
 export const exactLevelName = (tone: number): string | undefined =>
   TONE_LEVELS.find(l => Math.abs(l.tone - tone) < 1e-9)?.name;
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+// I NOMI, NELLE CINQUE LINGUE
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ⚠️ LA CHIAVE È IL NOME INGLESE, e non è per pigrizia: è il nome che Ron dà al livello, quello
+ * che compare nella tabella e nei testi. Restando la chiave, cambiare una traduzione non può
+ * spostare un livello — e i tre nomi che si ripetono (Sympathy, Grief, Making Amends, ognuno a
+ * un valore e al suo decimo) si traducono una volta sola, come è giusto.
+ *
+ * ⚠️ Le chiavi si copiano dalla tabella, MAI a mano: il livello −30 si chiama « Can't Hide » e
+ * un elenco ricavato con uno script si era fermato all'apostrofo, lasciando « Can ». Il nome
+ * esisteva, la traduzione no, e guardando lo schermo non si sarebbe visto niente di strano —
+ * `levelName` ricade sull'inglese. È il test `hasLevelName` che l'ha preso.
+ */
+const NOMI: Record<string, [string, string, string, string]> = {
+  //                          IT                       FR                        ES                          SV
+  'Serenity of Beingness': ['Serenità dell\'essere', 'Sérénité de l\'être',   'Serenidad del ser',        'Varandets stillhet'],
+  'Postulates':            ['Postulati',             'Postulats',              'Postulados',               'Postulat'],
+  'Games':                 ['Giochi',                'Jeux',                   'Juegos',                   'Spel'],
+  'Action':                ['Azione',                'Action',                 'Acción',                   'Handling'],
+  'Sympathy':              ['Simpatia',              'Sympathie',              'Simpatía',                 'Sympati'],
+  'Exhilaration / Proportion': ['Esaltazione / Proporzione', 'Exaltation / Proportion', 'Euforia / Proporción', 'Upprymdhet / Proportion'],
+  'Aesthetic':             ['Estetica',              'Esthétique',             'Estética',                 'Estetik'],
+  'Grief':                 ['Dolore',                'Chagrin',                'Pena',                     'Sorg'],
+  'Enthusiasm':            ['Entusiasmo',            'Enthousiasme',           'Entusiasmo',               'Entusiasm'],
+  'Making Amends':         ['Fare ammenda',          'Faire amende',           'Enmendar',                 'Gottgörelse'],
+  'Cheerfulness':          ['Allegria',              'Gaieté',                 'Alegría',                  'Munterhet'],
+  'Strong Interest':       ['Interesse forte',       'Intérêt fort',           'Interés fuerte',           'Starkt intresse'],
+  'Conservatism':          ['Conservatorismo',       'Conservatisme',          'Conservadurismo',          'Konservatism'],
+  'Mild Interest':         ['Interesse lieve',       'Intérêt léger',          'Interés leve',             'Milt intresse'],
+  'Contented':             ['Contentezza',           'Contentement',           'Contento',                 'Belåtenhet'],
+  'Disinterested':         ['Disinteresse',          'Désintérêt',             'Desinterés',               'Ointresse'],
+  'Boredom':               ['Noia',                  'Ennui',                  'Aburrimiento',             'Uttråkning'],
+  'Monotony':              ['Monotonia',             'Monotonie',              'Monotonía',                'Monotoni'],
+  'Antagonism':            ['Antagonismo',           'Antagonisme',            'Antagonismo',              'Antagonism'],
+  'Hostility':             ['Ostilità',              'Hostilité',              'Hostilidad',               'Fientlighet'],
+  'Pain':                  ['Dolore fisico',         'Douleur',                'Dolor',                    'Smärta'],
+  'Anger':                 ['Collera',               'Colère',                 'Ira',                      'Ilska'],
+  'Hate':                  ['Odio',                  'Haine',                  'Odio',                     'Hat'],
+  'Resentment':            ['Risentimento',          'Ressentiment',           'Resentimiento',            'Förbittring'],
+  'No Sympathy':           ['Nessuna simpatia',      'Aucune sympathie',       'Sin simpatía',             'Ingen sympati'],
+  'Unexpressed Resentment':['Risentimento inespresso','Ressentiment inexprimé','Resentimiento no expresado','Outtryckt förbittring'],
+  'Covert Hostility':      ['Ostilità nascosta',     'Hostilité cachée',       'Hostilidad encubierta',    'Dold fientlighet'],
+  'Anxiety':               ['Ansia',                 'Anxiété',                'Ansiedad',                 'Ångest'],
+  'Fear':                  ['Paura',                 'Peur',                   'Miedo',                    'Rädsla'],
+  'Despair':               ['Disperazione',          'Désespoir',              'Desesperación',            'Förtvivlan'],
+  'Terror':                ['Terrore',               'Terreur',                'Terror',                   'Skräck'],
+  'Numb':                  ['Torpore',               'Engourdissement',        'Entumecimiento',           'Domning'],
+  'Propitiation':          ['Propiziazione',         'Propitiation',           'Propiciación',             'Blidkande'],
+  'Undeserving':           ['Immeritevole',          'Indigne',                'Inmerecedor',              'Ovärdig'],
+  'Self-abasement':        ['Autoumiliazione',       'Auto-abaissement',       'Autohumillación',          'Självförnedring'],
+  'Victim':                ['Vittima',               'Victime',                'Víctima',                  'Offer'],
+  'Hopeless':              ['Senza speranza',        'Sans espoir',            'Sin esperanza',            'Hopplös'],
+  'Apathy':                ['Apatia',                'Apathie',                'Apatía',                   'Apati'],
+  'Useless':               ['Inutile',               'Inutile',                'Inútil',                   'Oduglig'],
+  'Dying':                 ['Morire',                'Mourant',                'Muriendo',                 'Döende'],
+  'Body Death':            ['Morte del corpo',       'Mort du corps',          'Muerte del cuerpo',        'Kroppens död'],
+  'Failure':               ['Fallimento',            'Échec',                  'Fracaso',                  'Misslyckande'],
+  'Pity':                  ['Pietà',                 'Pitié',                  'Lástima',                  'Medlidande'],
+  'Shame':                 ['Vergogna',              'Honte',                  'Vergüenza',                'Skam'],
+  'Accountable':           ['Rendere conto',         'Rendre compte',          'Rendir cuentas',           'Ansvarsskyldig'],
+  'Blame':                 ['Colpa',                 'Blâme',                  'Culpa',                    'Skuldbeläggande'],
+  'Regret':                ['Rimpianto',             'Regret',                 'Arrepentimiento',          'Ånger'],
+  'Controlling Bodies':    ['Controllare i corpi',   'Contrôler les corps',    'Controlar cuerpos',        'Styra kroppar'],
+  'Protecting Bodies':     ['Proteggere i corpi',    'Protéger les corps',     'Proteger cuerpos',         'Skydda kroppar'],
+  'Owning Bodies':         ['Possedere i corpi',     'Posséder les corps',     'Poseer cuerpos',           'Äga kroppar'],
+  'Approval from Bodies':  ['Approvazione dai corpi','Approbation des corps',  'Aprobación de los cuerpos','Gillande från kroppar'],
+  'Needing Bodies':        ['Aver bisogno dei corpi','Avoir besoin des corps', 'Necesitar cuerpos',        'Behöva kroppar'],
+  'Worshiping Bodies':     ['Adorare i corpi',       'Adorer les corps',       'Adorar cuerpos',           'Dyrka kroppar'],
+  'Sacrifice':             ['Sacrificio',            'Sacrifice',              'Sacrificio',               'Uppoffring'],
+  'Hiding':                ['Nascondersi',           'Se cacher',              'Esconderse',               'Gömma sig'],
+  'Being Objects':         ['Essere oggetti',        'Être des objets',        'Ser objetos',              'Vara föremål'],
+  'Being Nothing':         ['Essere nulla',          'N\'être rien',           'No ser nada',              'Vara ingenting'],
+  "Can't Hide":            ['Non potersi nascondere','Ne pas pouvoir se cacher','No poder esconderse',      'Kan inte gömma sig'],
+  'Total Failure':         ['Fallimento totale',     'Échec total',            'Fracaso total',            'Totalt misslyckande'],
+};
+
+/**
+ * Il nome del livello nella lingua in corso. Senza traduzione resta l'inglese — che è il nome
+ * originale, non un ripiego: meglio il termine di Ron di una parola inventata al volo.
+ */
+export function levelName(nomeEn: string, lang: string): string {
+  const t = NOMI[nomeEn];
+  if (!t) return nomeEn;
+  const l = (lang || 'en').slice(0, 2).toLowerCase();
+  return l === 'it' ? t[0] : l === 'fr' ? t[1] : l === 'es' ? t[2] : l === 'sv' ? t[3] : nomeEn;
+}
+
+/** Il nome tradotto del livello RAGGIUNTO a questo tono. */
+export const levelNameAtIn = (tone: number, lang: string): string =>
+  levelName(levelNameAt(tone), lang);
+
+/**
+ * Questo nome ha una riga nel dizionario?
+ *
+ * Serve al test che vieta i nomi dimenticati. Non basta confrontare le stringhe: « Action » in
+ * francese si scrive come in inglese, e « Sacrifice » pure — un confronto direbbe « non
+ * tradotto » per una traduzione che c'è ed è giusta.
+ */
+export const hasLevelName = (nomeEn: string): boolean => nomeEn in NOMI;

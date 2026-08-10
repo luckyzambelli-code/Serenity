@@ -21,7 +21,6 @@ const base: PhaseSignals = {
   mirrorLocked: false,
   mirrorReached: false,
   tonePhase: 'locate',
-  toneValidated: false,
 };
 const s = (o: Partial<PhaseSignals>): PhaseSignals => ({ ...base, ...o });
 
@@ -29,7 +28,7 @@ describe('la precedenza fra le fasi', () => {
   it('la finestra EP scavalca TUTTO: è il momento della realizzazione del preclear', () => {
     expect(derivePhase(s({
       epWindowOpen: true,
-      mode: 'tone', tonePhase: 'mockup', toneValidated: true,   // un ciclo in pieno corso
+      mode: 'tone', tonePhase: 'raise',   // un ciclo in pieno corso
       cycleArmed: true, asIsPending: true,
     }))).toBe('ep_window');
   });
@@ -148,52 +147,38 @@ describe('MIRROR — il metodo del raddoppio', () => {
   });
 });
 
-describe('TONE SCALE — i quattro tempi di Ron', () => {
+describe('TONE SCALE — i DUE comandi di Ron', () => {
   const tn = (o: Partial<PhaseSignals>) => derivePhase(s({ mode: 'tone', ...o }));
 
-  it('1 · localizza la resistenza', () => {
-    expect(tn({ tonePhase: 'locate' })).toBe('tone.locate');
+  it('1 · dai l item — « locate resistance on your case »', () => {
+    expect(tn({ tonePhase: 'locate' })).toBe('tone.item');
   });
 
-  it('localizzato col campo vuoto, si aspetta la voce — NON si assessa il segno', () => {
+  it('premuto col campo vuoto, si aspetta la voce — NON si dà il secondo comando', () => {
     // Era il difetto: premuto ASSESSA senza aver detto la resistenza, comparivano già
-    // POSITIVO / NEGATIVO. Il segno è di QUALCOSA, e quel qualcosa va nominato prima.
-    expect(tn({ tonePhase: 'sign', itemNamed: false })).toBe('tone.say_item');
+    // POSITIVO / NEGATIVO. Quelle due fasi non ci sono più, ma la regola resta: si porta a
+    // tono 40 QUALCOSA, e quel qualcosa va nominato prima.
+    expect(tn({ tonePhase: 'raise', itemNamed: false })).toBe('tone.say_item');
   });
 
-  it('e non si salta nemmeno più avanti: vale per tutti i tempi', () => {
-    expect(tn({ tonePhase: 'magnitude', itemNamed: false })).toBe('tone.say_item');
-    expect(tn({ tonePhase: 'mockup', toneValidated: true, itemNamed: false })).toBe('tone.say_item');
+  it('vale anche a ciclo compiuto: senza item non si è compiuto niente', () => {
+    expect(tn({ tonePhase: 'done', itemNamed: false })).toBe('tone.say_item');
   });
 
-  it('LOCALIZZA resta raggiungibile senza item: è il tempo in cui lo si dà', () => {
-    expect(tn({ tonePhase: 'locate', itemNamed: false })).toBe('tone.locate');
+  it('il PRIMO tempo resta raggiungibile senza item: è il tempo in cui lo si dà', () => {
+    expect(tn({ tonePhase: 'locate', itemNamed: false })).toBe('tone.item');
   });
 
-  it('detta la resistenza, si riparte dal segno — il ciclo NON resta bloccato', () => {
-    expect(tn({ tonePhase: 'sign', itemNamed: true })).toBe('tone.sign');
+  it('2 · portalo a tono 40 — il comando che si ripete', () => {
+    expect(tn({ tonePhase: 'raise' })).toBe('tone.raise');
   });
 
-  it('2 · positivo o negativo', () => {
-    expect(tn({ tonePhase: 'sign' })).toBe('tone.sign');
+  it('detta la resistenza, si passa al secondo comando: il ciclo NON resta bloccato', () => {
+    expect(tn({ tonePhase: 'raise', itemNamed: true })).toBe('tone.raise');
   });
 
-  it('3 · quante divisioni', () => {
-    expect(tn({ tonePhase: 'magnitude' })).toBe('tone.magnitude');
-  });
-
-  it('4 · fai mock-uppare l opposto — solo a segno e ampiezza fissati', () => {
-    expect(tn({ tonePhase: 'mockup', toneValidated: true })).toBe('tone.mockup');
-  });
-
-  it('compiuto', () => {
-    expect(tn({ tonePhase: 'done', toneValidated: true })).toBe('tone.done');
-  });
-
-  it('mock-up senza valore fissato resta « compiuto », come mostra l interfaccia da sempre', () => {
-    // Caso che non accade (l'ampiezza fissa valore e fase insieme). Fissato qui perché è una
-    // ricaduta EREDITATA da spiegazioneCiclo: se un giorno cambia, deve rompere un test.
-    expect(tn({ tonePhase: 'mockup', toneValidated: false })).toBe('tone.done');
+  it('compiuto: tono quaranta raggiunto', () => {
+    expect(tn({ tonePhase: 'done' })).toBe('tone.done');
   });
 });
 
@@ -235,7 +220,7 @@ describe('le utilità di lettura', () => {
     expect(phaseFamily('contact.asis')).toBe('contact');
     expect(phaseFamily('null.rise')).toBe('null');
     expect(phaseFamily('mirror.reached')).toBe('mirror');
-    expect(phaseFamily('tone.sign')).toBe('tone');
+    expect(phaseFamily('tone.raise')).toBe('tone');
     expect(phaseFamily('free')).toBe('free');
     expect(phaseFamily('preflight')).toBe('cross');
   });

@@ -89,7 +89,8 @@ export interface ModuleSpec {
 
 /** « DAI L'ITEM »: il ciclo non è ancora partito, si può ancora scegliere e guardarsi intorno. */
 const ITEM: SessionPhase[] = [
-  'contact.item', 'null.item', 'mirror.item', 'mirror.say_item', 'tone.locate', 'free',
+  'contact.item', 'contact.say_item', 'null.item', 'null.say_item',
+  'mirror.item', 'mirror.say_item', 'tone.item', 'tone.say_item', 'free',
 ];
 
 /** Ciclo ARMATO: si legge fine, e la periferia deve stare zitta (R1). */
@@ -97,7 +98,7 @@ const CICLO_ATTIVO: SessionPhase[] = [
   'contact.mockup', 'contact.asis',
   'null.mockup', 'null.rise', 'null.equilibrium',
   'mirror.contact', 'mirror.doubling', 'mirror.reached',
-  'tone.sign', 'tone.magnitude', 'tone.mockup', 'tone.done',
+  'tone.raise', 'tone.done',
 ];
 
 /** Tutta la seduta: item + ciclo. (`ep_window` non c'è: là non resta NIENTE.) */
@@ -126,9 +127,10 @@ export const MODULE_REGISTRY: readonly ModuleSpec[] = [
   // ── Colonna destra ────────────────────────────────────────────────────────────────────────
   {
     id: 'assessment', slot: 'right', level: 'normal',
-    // Ovunque in seduta TRANNE dove l'auditor non deve fare altro che guardare l'ago salire,
-    // e dove la fase offre due o quattro bottoni e nient'altro.
-    autoIn: tranne(IN_SEDUTA, 'null.rise', 'mirror.doubling', 'tone.sign', 'tone.magnitude'),
+    // Ovunque in seduta TRANNE dove l'auditor non deve fare altro che ridare il comando e
+    // guardare l'ago salire. In `tone.raise` è esattamente così: si ripete « portalo a tono
+    // quaranta » e si aspetta — non c'è nessuna lista da passare.
+    autoIn: tranne(IN_SEDUTA, 'null.rise', 'mirror.doubling', 'tone.raise'),
   },
   {
     // LA CAMERA DEL PRECLEAR. In locale sparisce nei momenti di lettura fine; a distanza NON

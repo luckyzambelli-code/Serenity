@@ -77,8 +77,13 @@ interface PostSessionReportProps {
    *  `anchor` dit qui a certifié l'instant (le MUSE, l'aiguille du METER, ou rien).
    *  `witnesses` = les témoins de l'as-is qui se sont allumés. */
   toneCycles?: Array<{ n: number; question: string; tStartSec: number; tEndSec: number;
-    located: number | null; sign: -1 | 1; magnitude: number; agreement: string | null;
-    anchor: string; witnesses: string[]; asIs: boolean }>;
+    /** Tono di PARTENZA misurato — `null` senza meter. */
+    located: number | null;
+    /** Quante volte si è dato « porta questo a tono quaranta ». È il processo di Ron. */
+    repeats: number;
+    anchor: string; witnesses: string[];
+    /** Il tono quaranta è stato raggiunto (nome storico del campo). */
+    asIs: boolean }>;
   /** Cycles ASSESSMENT (l'auditeur donne des items à voix haute ; on inscrit le READ instantané
    *  comme le R&I). Chaque cycle = un lot d'items {texte, read}. Rapporté séparément. */
   assessCycles?: Array<{ n: number; tStartSec: number; tEndSec: number;
@@ -1017,51 +1022,50 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
     if (toneCycles.length > 0) {
       ensureSpace(14 + toneCycles.length * 5);
       const asIsN = toneCycles.filter(c => c.asIs).length;
-      const discN = toneCycles.filter(c => c.agreement === 'differs').length;
+      const passate = toneCycles.reduce((a, c) => a + (c.repeats || 0), 0);
       panelHeader(L('CICLI DI AUDITING - TONE SCALE', 'CYCLES D\'AUDITION - TONE SCALE', 'AUDITING CYCLES - TONE SCALE', 'CICLOS DE AUDITACION - TONE SCALE', 'AUDITINGCYKLER - TONE SCALE'));
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(8);
       pdf.setTextColor(120, 120, 120);
-      pdf.text(`${asIsN}/${toneCycles.length} AS-IS`, pageW - 15, y, { align: 'right' as any });
+      pdf.text(`${asIsN}/${toneCycles.length} ${L('AL TONO 40', 'AU TON 40', 'AT TONE 40', 'AL TONO 40', 'VID TON 40')}`, pageW - 15, y, { align: 'right' as any });
       y += 6;
       const sgn = (v: number) => `${v > 0 ? '+' : ''}${Math.round(v)}`;
       for (const c of toneCycles) {
         ensureSpace(6);
         const dur = Math.max(0, Math.round(c.tEndSec - c.tStartSec));
-        const val = c.sign * c.magnitude;
+
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(8.5);
         pdf.setTextColor(40, 40, 40);
         const q = pdf.splitTextToSize(c.question || '-', pageW - 135)[0] || '-';
         pdf.text(`#${c.n} ${q}`, 20, y);
         pdf.setTextColor(90, 90, 90);
-        const misura = c.located !== null ? `${L('ago', 'aig', 'ndl', 'agj', 'nal')} ${sgn(c.located)} / ` : '';
-        pdf.text(`${misura}${sgn(val)} -> ${sgn(-val)}`, pageW - 62, y, { align: 'right' as any });
+        const misura = c.located !== null ? sgn(c.located) : '?';
+        pdf.text(`${misura} -> +40${c.repeats > 0 ? `  x${c.repeats}` : ''}`, pageW - 62, y, { align: 'right' as any });
         pdf.setFont('helvetica', 'bold');
-        if (c.agreement === 'differs') { pdf.setTextColor(190, 130, 20); pdf.text('=/=', pageW - 46, y, { align: 'right' as any }); }
-        if (c.asIs) { pdf.setTextColor(16, 150, 110); pdf.text('* AS-IS', pageW - 34, y, { align: 'right' as any }); }
+        if (c.asIs) { pdf.setTextColor(16, 150, 110); pdf.text('* TON 40', pageW - 34, y, { align: 'right' as any }); }
         else { pdf.setTextColor(120, 120, 120); pdf.text('-', pageW - 34, y, { align: 'right' as any }); }
         pdf.setFont('helvetica', 'normal');
         pdf.setTextColor(110, 110, 110);
         pdf.text(`${Math.floor(dur / 60)}m ${String(dur % 60).padStart(2, '0')}s`, pageW - 20, y, { align: 'right' as any });
         y += 5;
       }
-      if (discN > 0) {
+      if (passate > 0) {
         ensureSpace(6);
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(8.5);
-        pdf.setTextColor(190, 130, 20);
-        pdf.text(`${L('L\'ago diceva altro', 'L\'aiguille disait autre chose', 'The needle said otherwise', 'La aguja decia otra cosa', 'Nalen sa nagot annat')} : ${discN}/${toneCycles.length}`, 20, y);
+        pdf.setTextColor(110, 110, 110);
+        pdf.text(`${L('Comandi dati', 'Commandes donnees', 'Commands given', 'Comandos dados', 'Givna kommandon')} : ${passate}`, 20, y);
         y += 5;
       }
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(7);
       pdf.setTextColor(130, 130, 130);
-      pdf.text(L('TONE SCALE : localizza / assessa segno e ampiezza / mock-uppa l\'OPPOSTO fino allo ZERO',
-                 'TONE SCALE : localise / assesse signe et ampleur / mock-uppe l\'OPPOSE jusqu\'au ZERO',
-                 'TONE SCALE : locate / assess sign and magnitude / mock up the OPPOSITE until ZERO',
-                 'TONE SCALE : localiza / assessa signo y amplitud / mock-upea el OPUESTO hasta el CERO',
-                 'TONE SCALE : lokalisera / assessa tecken och storlek / mocka upp det MOTSATTA till NOLL'), 20, y);
+      pdf.text(L('TONE SCALE (Ron) : "Locate resistance on your case that can now be run." / "Raise this to tone forty on the tone scale." - ridato finche non reagisce piu',
+                 'TONE SCALE (Ron) : "Locate resistance on your case that can now be run." / "Raise this to tone forty on the tone scale." - redonne jusqu\'a ce qu\'il ne reagisse plus',
+                 'TONE SCALE (Ron): "Locate resistance on your case that can now be run." / "Raise this to tone forty on the tone scale." - repeated until there is no reaction',
+                 'TONE SCALE (Ron) : "Locate resistance on your case that can now be run." / "Raise this to tone forty on the tone scale." - repetido hasta que no reaccione mas',
+                 'TONE SCALE (Ron): "Locate resistance on your case that can now be run." / "Raise this to tone forty on the tone scale." - upprepas tills ingen reaktion'), 20, y);
       y += 4;
       pdf.setTextColor(40, 40, 40);
       y += 4;
@@ -1834,22 +1838,23 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
           )}
 
           {/* CICLI TONE SCALE — famiglia A PARTE (la scala del tono di Ron, −40…+40).
-              Si riporta quel che la MISURA diceva alla localizzazione, quel che il preclear ha
-              VALIDATO, e se i due concordavano: è proprio il DISACCORDO che vale la pena
-              rileggere a freddo, perché è l'unico posto dove strumento e persona si smentiscono
-              a viso aperto. Più i testimoni dell'as-is che si sono accesi. */}
+              Si riporta il tono di PARTENZA misurato, QUANTE VOLTE si è dato il comando, e se
+              il tono quaranta è stato raggiunto. Il numero di passate è il dato da rileggere a
+              freddo: dice quanto è costata quella resistenza. Più i testimoni che si sono
+              accesi. (Prima si riportavano segno, ampiezza e l'accordo fra misura e
+              assessment: erano le fasi che i comandi di Ron non prevedono.) */}
           {toneCycles.length > 0 && (
             <div className="glass-panel p-4 flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-mono text-slate-400 uppercase tracking-widest">{L('Cicli di auditing', 'Cycles d\'audition', 'Auditing cycles', 'Ciclos de auditación', 'Auditingcykler')} · TONE SCALE</h3>
                 <span className="text-xs font-mono" style={{ color: 'rgba(240,246,255,0.95)' }}>
-                  {toneCycles.filter(c => c.asIs).length}/{toneCycles.length} <span className="opacity-60">AS-IS</span>
+                  {toneCycles.filter(c => c.asIs).length}/{toneCycles.length} <span className="opacity-60">{L('al tono 40', 'au ton 40', 'at tone 40', 'al tono 40', 'vid ton 40')}</span>
                 </span>
               </div>
               <div className="flex flex-col gap-1.5">
                 {toneCycles.map((c, i) => {
                   const dur = Math.max(0, Math.round(c.tEndSec - c.tStartSec));
-                  const val = c.sign * c.magnitude;
+          
                   const n = (v: number) => `${v > 0 ? '+' : ''}${Math.round(v)}`;
                   return (
                     <div key={i} className="flex items-center justify-between gap-2 text-xs font-mono bg-white/5 rounded px-2 py-1.5 border border-slate-200/10">
@@ -1858,14 +1863,15 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
                         {c.located !== null && (
                           <span className="text-[10px]" style={{ color: 'rgba(226,238,255,0.6)' }}>{L('ago', 'aiguille', 'needle', 'aguja', 'nål')} {n(c.located)}</span>
                         )}
-                        <span className="text-[10px]" style={{ color: '#fbbf24' }}>{L('validato', 'validé', 'validated', 'validado', 'validerat')} {n(val)}</span>
-                        <span className="text-[10px]" style={{ color: '#34d399' }}>{L('mock-up', 'mock-up', 'mock-up', 'mock-up', 'mock-up')} {n(-val)}</span>
-                        {c.agreement === 'differs' && <span style={{ color: '#fbbf24', fontWeight: 700 }}>≠</span>}
+                        <span className="text-[10px]" style={{ color: '#fbbf24' }}>→ +40</span>
+                        {c.repeats > 0 && (
+                          <span className="text-[10px]" style={{ color: 'rgba(226,238,255,0.75)' }}>×{c.repeats}</span>
+                        )}
                         {c.witnesses.length > 0 && (
                           <span className="text-[10px]" style={{ color: 'rgba(226,238,255,0.5)' }}>{c.witnesses.join('+')}</span>
                         )}
                         {c.asIs
-                          ? <span style={{ color: '#34d399', fontWeight: 700 }}>✓ AS-IS</span>
+                          ? <span style={{ color: '#34d399', fontWeight: 700 }}>✓ {L('TONO 40', 'TON 40', 'TONE 40', 'TONO 40', 'TON 40')}</span>
                           : <span style={{ color: '#94a3b8', fontWeight: 700 }}>—</span>}
                         <span className="text-[10px] text-slate-500">{Math.floor(dur / 60)}m {String(dur % 60).padStart(2, '0')}s</span>
                       </span>
@@ -1873,19 +1879,19 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
                   );
                 })}
               </div>
-              {(() => { const disc = toneCycles.filter(c => c.agreement === 'differs').length;
-                return disc > 0 ? (
-                  <div className="flex items-center justify-between text-xs font-mono px-2 py-1.5 rounded" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.35)' }}>
-                    <span style={{ color: 'rgba(226,238,255,0.8)' }}>{L('L\'ago diceva altro', 'L\'aiguille disait autre chose', 'The needle said otherwise', 'La aguja decía otra cosa', 'Nålen sa något annat')}</span>
-                    <span style={{ color: '#fbbf24', fontWeight: 700 }}>{disc}/{toneCycles.length}</span>
+              {(() => { const passate = toneCycles.reduce((a, c) => a + (c.repeats || 0), 0);
+                return passate > 0 ? (
+                  <div className="flex items-center justify-between text-xs font-mono px-2 py-1.5 rounded" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(226,238,255,0.18)' }}>
+                    <span style={{ color: 'rgba(226,238,255,0.8)' }}>{L('Comandi dati', 'Commandes données', 'Commands given', 'Comandos dados', 'Givna kommandon')}</span>
+                    <span style={{ color: 'rgba(240,246,255,0.95)', fontWeight: 700 }}>{passate}</span>
                   </div>
                 ) : null; })()}
               <div className="text-[10px] text-slate-500 font-mono">
-                {L('TONE SCALE (Ron) → localizza la resistenza · assessa segno e ampiezza · mock-uppa l\'OPPOSTO fino allo ZERO. « ≠ » = misura e validazione distanti più di una divisione. I testimoni dell\'as-is: a zero, F/N, firma energetica.',
-                   'TONE SCALE (Ron) → localise la résistance · assesse signe et ampleur · mock-uppe l\'OPPOSÉ jusqu\'au ZÉRO. « ≠ » = mesure et validation distantes de plus d\'une division. Les témoins de l\'as-is : à zéro, F/N, signature énergétique.',
-                   'TONE SCALE (Ron) → locate the resistance · assess sign and magnitude · mock up the OPPOSITE until ZERO. "≠" = measure and validation more than one division apart. The as-is witnesses: at zero, F/N, energetic signature.',
-                   'TONE SCALE (Ron) → localiza la resistencia · assessa signo y amplitud · mock-upea el OPUESTO hasta el CERO. « ≠ » = medida y validación a más de una división. Los testigos del as-is: a cero, F/N, firma energética.',
-                   'TONE SCALE (Ron) → lokalisera motståndet · assessa tecken och storlek · mocka upp det MOTSATTA till NOLL. ”≠” = mätning och validering mer än ett delstreck isär. As-is-vittnena: på noll, F/N, energisignatur.')}
+                {L('TONE SCALE (Ron) → « Localizza sul tuo caso una resistenza che possa essere corsa adesso. » poi « Porta questo a tono quaranta sulla scala del tono. », ridato finché non reagisce più. « ×n » = quante volte si è dato il comando. I testimoni: ago in cima, F/N, firma energetica.',
+                   'TONE SCALE (Ron) → « Localise sur ton cas une résistance qui puisse être courue maintenant. » puis « Mène ceci au ton quarante sur l\'échelle des tons. », redonné jusqu\'à ce qu\'il ne réagisse plus. « ×n » = combien de fois la commande a été donnée. Les témoins : aiguille en haut, F/N, signature énergétique.',
+                   'TONE SCALE (Ron) → "Locate resistance on your case that can now be run." then "Raise this to tone forty on the tone scale.", repeated until there is no reaction. "×n" = how many times the command was given. The witnesses: needle at top, F/N, energetic signature.',
+                   'TONE SCALE (Ron) → « Localiza en tu caso una resistencia que pueda correrse ahora. » luego « Lleva esto al tono cuarenta en la escala del tono. », repetido hasta que no reaccione más. « ×n » = cuántas veces se dio el comando. Los testigos: aguja arriba, F/N, firma energética.',
+                   'TONE SCALE (Ron) → ”Lokalisera ett motstånd i ditt fall som kan köras nu.” sedan ”För detta till ton fyrtio på tonskalan.”, upprepat tills ingen reaktion. ”×n” = hur många gånger kommandot gavs. Vittnena: nål i topp, F/N, energisignatur.')}
               </div>
             </div>
           )}

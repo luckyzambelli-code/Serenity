@@ -4,11 +4,11 @@ import { SESSION_MODES } from '../sessionMode';
 import type { SessionPhase } from '../sessionPhase';
 
 describe('quanti tempi ha ogni metodo', () => {
-  it('CONTACT e NULL ne hanno tre, MIRROR e TONE quattro', () => {
+  it('CONTACT e NULL tre, MIRROR quattro, TONE due — uno per comando di Ron', () => {
     expect(stepsOf('contact')).toHaveLength(3);
     expect(stepsOf('null')).toHaveLength(3);
     expect(stepsOf('mirror')).toHaveLength(4);
-    expect(stepsOf('tone')).toHaveLength(4);
+    expect(stepsOf('tone')).toHaveLength(2);   // i DUE comandi di Ron
   });
 
   it('APERTO non ha sequenza — è il suo senso, e la pista non si disegna', () => {
@@ -34,8 +34,7 @@ describe('a quale tempo si è', () => {
     ['null.item', 'null', 0], ['null.mockup', 'null', 1], ['null.equilibrium', 'null', 2],
     ['mirror.item', 'mirror', 0], ['mirror.contact', 'mirror', 1],
     ['mirror.doubling', 'mirror', 2], ['mirror.reached', 'mirror', 3],
-    ['tone.locate', 'tone', 0], ['tone.sign', 'tone', 1],
-    ['tone.magnitude', 'tone', 2], ['tone.mockup', 'tone', 3],
+    ['tone.item', 'tone', 0], ['tone.raise', 'tone', 1],
   ];
   for (const [fase, modo, atteso] of casi) {
     it(`${fase} → tempo ${atteso + 1}`, () => expect(currentStep(fase, modo)).toBe(atteso));
@@ -58,12 +57,12 @@ describe('le fasi che condividono un tempo — la pista non deve avanzare a vuot
     expect(currentStep('mirror.say_item', 'mirror')).toBe(currentStep('mirror.item', 'mirror'));
   });
 
-  it('tone.say_item è ancora la LOCALIZZAZIONE: la resistenza non è detta', () => {
-    expect(currentStep('tone.say_item', 'tone')).toBe(currentStep('tone.locate', 'tone'));
+  it('tone.say_item è ancora il tempo dell ITEM: la resistenza non è detta', () => {
+    expect(currentStep('tone.say_item', 'tone')).toBe(currentStep('tone.item', 'tone'));
   });
 
-  it('tone.done non inventa un quinto tempo: resta sull ultimo', () => {
-    expect(currentStep('tone.done', 'tone')).toBe(3);
+  it('tone.done non inventa un terzo tempo: resta sull ultimo', () => {
+    expect(currentStep('tone.done', 'tone')).toBe(1);
   });
 });
 
@@ -74,7 +73,7 @@ describe('fuori dal ciclo non c è tempo', () => {
 
   it('e nemmeno se la fase è di UN ALTRO metodo — la pista non legge la fase sbagliata', () => {
     expect(currentStep('null.mockup', 'contact')).toBe(-1);
-    expect(currentStep('tone.sign', 'mirror')).toBe(-1);
+    expect(currentStep('tone.raise', 'mirror')).toBe(-1);
   });
 });
 
@@ -97,6 +96,8 @@ describe('il ritorno al primo tempo', () => {
 describe('ogni ID ha un posto', () => {
   it('nessun ID orfano fra quelli dichiarati', () => {
     const usati = new Set<StepId>(SESSION_MODES.flatMap(m => stepsOf(m)));
-    expect(usati.size).toBe(11);   // i tre di CONTACT + equilibrium + i tre di MIRROR + i quattro di TONE
+    // i tre di CONTACT + equilibrium + i tre propri di MIRROR + tone40. `item` è condiviso
+    // da tutti e quattro i metodi, e si conta una volta sola.
+    expect(usati.size).toBe(8);
   });
 });

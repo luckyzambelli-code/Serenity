@@ -16,8 +16,11 @@ da sola senza toccare le altre.
 - [ ] **La colonna della SCALA DEL TONO** (`components/ToneColumn.tsx`) — verticale, a destra
       dell'arco, in vista TONE. Compare solo con uno strumento collegato, quindi NON si è
       potuta guardare:
-  - [ ] le diciotto etichette non si accavallano, e le nove tacche dei decimi si vedono;
-  - [ ] il cursore porta « ≈ valore » e il NOME del livello (Anger, Apathy…);
+  - [ ] le tredici etichette non si accavallano, e le nove tacche dei decimi si vedono;
+  - [ ] i nomi sono LEGGIBILI da seduti (corpo 12–14, colonna larga 260) e quelli lunghi
+        vanno a capo su due righe senza uscire dal bordo — `spezza` è provata, la resa no;
+  - [ ] i nomi sono nella LINGUA della seduta, e cambiano cambiando lingua;
+  - [ ] il cursore porta « ≈ valore » e il NOME del livello (Collera, Apatia…);
   - [ ] **ago a destra = colonna che sale**: è la corrispondenza su cui poggia tutto il disegno
         (provata in `tonePosition`, ma da vedere in movimento);
   - [ ] la barretta della carica MUSE, a sinistra dell'asta, non si confonde col tono;
@@ -46,6 +49,24 @@ da sola senza toccare le altre.
   - [ ] le due icone si distinguono a colpo d'occhio e il badge non va a capo;
   - [ ] l'integrità passa all'**ambra** sotto il 60% (`INTEGRITA_SOGLIA`) e resta smorzata sopra;
   - [ ] i due numeri restano allineati mentre cambiano (`tabular-nums`).
+
+- [ ] **⚠️ IL CASO « SOLO THETA-METER »** (`App.tsx`, 2.0.116) — meter collegato e MUSE no. È
+      la configurazione dell'utente in attesa del Muse nuovo, ed era ROTTA: `eegModulesHidden`
+      nascondeva l'INTERO blocco del ciclo (pista, campo item, bottone che arma, istruzione),
+      e i gesti manuali non c'erano perché stavano solo nel ramo « nessuno strumento ». Da
+      provare col meter attaccato e il MUSE spento:
+  - [ ] in CONTACT e NULL si vedono pista, campo dell'item, bottone e istruzione;
+  - [ ] i gesti compatti compaiono sotto l'istruzione (DICHIARA AS-IS / i tre esiti NULL) e
+        CHIUDONO il ciclo — senza, `asIsPending` non scatta mai e il ciclo resta armato;
+  - [ ] col MUSE ANCHE collegato quei gesti SPARISCONO (il ciclo torna automatico);
+  - [ ] senza alcuno strumento restano al centro, grandi, come prima.
+
+- [ ] **Il ciclo TONE a DUE tempi** (2.0.116) — segno e ampiezza sono usciti, la meta è +40
+      per tutte le resistenze. Col meter attaccato:
+  - [ ] la barra d'avanzamento sull'arco sale verso il +40 e non più verso lo zero
+        (`raiseProgress`), e il segno del bersaglio è a destra dell'arco;
+  - [ ] il testimone « AGO IN CIMA » si accende arrivando in cima (`reachedTop`), e NON a zero;
+  - [ ] il journal scrive `TONE <partenza> → +40 · ×n · TONO 40 RAGGIUNTO`.
 
 - [ ] **I comandi manuali senza strumenti** (`App.tsx`) — provati a schermo nel dev server, ma
       col MUSE addosso vanno riguardati in seduta vera:
