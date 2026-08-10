@@ -102,11 +102,10 @@ export function ToneColumn({ tone, toneEeg, hasMeter, charge, chargeFrom, lang, 
    */
   toneEeg?: number | null;
   /**
-   * DIVISIONI TOLTE dal margine della prova delle lattine, e va DETTO.
-   *
-   * Senza la prova del giorno la sensibilità è quella di ripiego e il tono è più incerto di
-   * quanto sembri: si toglie una divisione. Ma una correzione che nessuno vede è peggio di
-   * nessuna correzione — chi legge il numero deve sapere che è stato abbassato, e perché.
+   * ⚠️ IL MARGINE NON SI SCRIVE PIÙ QUI. Stava sotto la colonna; l'utente l'ha voluto sotto il
+   * TONE ARM — « è lì che è interessante » — cioè accanto al numero che corregge, e insieme al
+   * bottone che permette di rifare la prova. Resta il parametro perché il tono che arriva È
+   * già col margine tolto: chi legge questo componente deve sapere perché.
    */
   margin?: number;
   /** La lingua della seduta: i nomi dei livelli si traducono come tutto il resto. */
@@ -250,16 +249,6 @@ export function ToneColumn({ tone, toneEeg, hasMeter, charge, chargeFrom, lang, 
           <rect x={18} y={BOT - Math.max(0, Math.min(1, charge)) * H} width={7}
                 height={Math.max(0, Math.min(1, charge)) * H} rx={3.5} fill={TOKEN.warn} opacity={0.75} />
         </>
-      )}
-
-      {/* ── IL MARGINE, DETTO ─────────────────────────────────────────────────────────
-          Ambra come ogni avviso dell'app. Compare solo quando c'è davvero qualcosa da
-          dichiarare: se la prova è stata fatta oggi, non c'è niente da scrivere. */}
-      {margin > 0 && (
-        <text x={W / 2} y={BOT + 22} textAnchor="middle" fill={TOKEN.warn}
-              style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700 }}>
-          −{margin} · {L('prova lattine da fare', 'test boîtes à faire', 'cans test to do', 'prueba latas por hacer', 'burktest att göra')}
-        </text>
       )}
 
       {/* Il verso, detto una volta: si SALE. */}

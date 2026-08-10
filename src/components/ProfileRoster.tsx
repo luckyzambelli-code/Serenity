@@ -280,6 +280,21 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
                                  : g === 0 ? L('oggi', "aujourd'hui", 'today', 'hoy', 'idag')
                                  : `${g} ${L('giorni fa', 'jours', 'days ago', 'días', 'dagar sedan')}`}
                         />
+                        {/* ⚠️ DOVE LA FAI. La scheda diceva « mai fatta » e nient'altro: si
+                            leggeva un verdetto senza sapere come cambiarlo (segnalato: « la
+                            prova non c'è da nessuna parte, c'è solo scritto, ma dove la fai? »).
+                            La prova è del METER: si fa premendo START col meter collegato, o
+                            dal bottone ambra sotto il TONE ARM in seduta. */}
+                        {g === null && (
+                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, lineHeight: 1.4,
+                                        color: 'rgba(251,191,36,0.85)', marginTop: 3 }}>
+                            {L('Si fa col METER collegato: allo START, o dal bottone ambra sotto il TONE ARM.',
+                               'Se fait avec le METER branché : au START, ou par le bouton ambre sous le TONE ARM.',
+                               'Done with the METER connected: at START, or from the amber button under the TONE ARM.',
+                               'Se hace con el METER conectado: al START, o desde el botón ámbar bajo el TONE ARM.',
+                               'Görs med METER ansluten: vid START, eller via den bärnstensfärgade knappen under TONE ARM.')}
+                          </div>
+                        )}
                         {h.tests.length > 0 && (
                           <Row l={L('Prove', 'Essais', 'Tests', 'Pruebas', 'Test')}
                                v={`${h.tests.length}${due ? ` · ${due.toExponential(1)}` : ''}`} />
@@ -332,6 +347,21 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
                                  : g === 0 ? L('oggi', "aujourd'hui", 'today', 'hoy', 'idag')
                                  : `${g} ${L('giorni fa', 'jours', 'days ago', 'días', 'dagar sedan')}`}
                         />
+                        {/* ⚠️ DOVE LA FAI. La scheda diceva « mai fatta » e nient'altro: si
+                            leggeva un verdetto senza sapere come cambiarlo (segnalato: « la
+                            prova non c'è da nessuna parte, c'è solo scritto, ma dove la fai? »).
+                            La prova è del METER: si fa premendo START col meter collegato, o
+                            dal bottone ambra sotto il TONE ARM in seduta. */}
+                        {g === null && (
+                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, lineHeight: 1.4,
+                                        color: 'rgba(251,191,36,0.85)', marginTop: 3 }}>
+                            {L('Si fa col METER collegato: allo START, o dal bottone ambra sotto il TONE ARM.',
+                               'Se fait avec le METER branché : au START, ou par le bouton ambre sous le TONE ARM.',
+                               'Done with the METER connected: at START, or from the amber button under the TONE ARM.',
+                               'Se hace con el METER conectado: al START, o desde el botón ámbar bajo el TONE ARM.',
+                               'Görs med METER ansluten: vid START, eller via den bärnstensfärgade knappen under TONE ARM.')}
+                          </div>
+                        )}
                         {h.tests.length > 0 && (
                           <Row l={L('Prove', 'Essais', 'Tests', 'Pruebas', 'Test')}
                                v={`${h.tests.length}${due ? ` · ${due.toExponential(1)}` : ''}`} />

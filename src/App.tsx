@@ -134,7 +134,7 @@ import { metabolicBaseline } from './engine/MetabolicBaseline';
 import { MetabolicCheck } from './components/MetabolicCheck';
 import {
   reactionClassifier, REACTION_LABELS, LOGGABLE_REACTIONS, REACTION_OFFSETS } from './engine/ReactionClassifier';
-import { ToneArmReadout, TotalTaReadout, SpeedReadout } from './components/SessionReadouts';
+import { TotalTaReadout, SpeedReadout } from './components/SessionReadouts';
 import { tzoneStore } from './store/tzoneStore';
 import { primeFreqAudio } from './lib/primeFreqAudio';
 // (primeFreqEngine math now consumed via engine/PrimeFreqTracker — slice 2.)
@@ -6947,14 +6947,53 @@ export default function App() {
                   misurato in seduta: noi 6,8 · loro 5,98, con la resistenza in discesa.
                   Il braccio resta quello che regge l'AGO (la deviazione si misura da lui) e il
                   Total TA: quelli devono restare lenti, o ogni reazione conterebbe come TA. */}
-              {senzaMisura ? null
-                : theta.status === 'connected' && theta.taNow !== null ? (
+              {/* ⚠️ SENZA METER NON C'È TONE ARM. Qui compariva il TA RICOSTRUITO dall'EEG
+                  (`ToneArmReadout`): un numero con due decimali, nello stesso posto e con lo
+                  stesso aspetto di quello misurato, che però non veniva da nessuna resistenza.
+                  Col solo MUSE non si mostra più (richiesta utente) — il calcolo resta, serve
+                  altrove; è la CIFRA a schermo che faceva credere a una misura. */}
+              {senzaMisura || theta.status !== 'connected' || theta.taNow === null ? null : (
                 <span style={{ fontFamily: 'monospace', fontSize: 34, fontWeight: 700, lineHeight: 1,
                                color: isLightTheme ? '#1e293b' : 'rgba(240,246,255,0.95)' }}>
                   {theta.taNow.toFixed(2)}
                 </span>
-              ) : (
-                <ToneArmReadout isLightTheme={isLightTheme} />
+              )}
+
+              {/* ── CON QUANTE LATTINE — è lei a dare senso al numero ─────────────────────
+                  Due lattine e una lattina non misurano la stessa resistenza, e il TA che si
+                  legge dipende da quale delle due si sta usando. Va scritto DOVE si legge il
+                  numero (richiesta utente), non nascosto in una schermata di prontezza che si
+                  è vista una volta all'inizio. */}
+              {theta.status === 'connected' && (
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.12em',
+                               textTransform: 'uppercase', marginTop: 2,
+                               color: isLightTheme ? '#64748b' : 'rgba(148,163,184,0.75)' }}>
+                  {theta.setup.config === 'two-cans'
+                    ? LC('TA · 2 lattine', 'TA · 2 boîtes', 'TA · 2 cans', 'TA · 2 latas', 'TA · 2 burkar')
+                    : LC('TA · 1 lattina', 'TA · 1 boîte', 'TA · 1 can', 'TA · 1 lata', 'TA · 1 burk')}
+                </span>
+              )}
+
+              {/* ── IL MARGINE DELLA PROVA, E IL MODO DI FARLA ────────────────────────────
+                  Sta QUI e non sotto la colonna del tono (richiesta utente): è accanto al
+                  numero che il margine corregge, ed è lì che interessa.
+                  È un BOTTONE perché la scheda del preclear diceva « mai fatta » senza dire
+                  dove si facesse (segnalato): premendolo si riapre la schermata delle prove. */}
+              {margineTono > 0 && (
+                <button
+                  onClick={() => { setThetaReadyDone(false); setMetabolicOpen(true); }}
+                  title={LC('Rifai la prova della stretta — fissa la sensibilità dell\'ago',
+                            'Refais le test de pression — il fixe la sensibilité de l\'aiguille',
+                            'Redo the squeeze test — it sets the needle sensitivity',
+                            'Rehaz la prueba de presión — fija la sensibilidad de la aguja',
+                            'Gör om tryckprovet — det ställer nålens känslighet')}
+                  style={{ marginTop: 5, padding: '3px 9px', borderRadius: 7, cursor: 'pointer',
+                           fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700,
+                           letterSpacing: '0.04em', whiteSpace: 'nowrap',
+                           background: 'rgba(251,191,36,0.12)',
+                           border: `1px solid ${TOKEN.warn}`, color: TOKEN.warn }}>
+                  −{margineTono} · {LC('fai la prova delle lattine', 'fais le test des boîtes', 'do the cans test', 'haz la prueba de las latas', 'gör burktestet')}
+                </button>
               )}
 
               {/* Il TA e' UNO SOLO: quello delle boites quando il meter c'e', altrimenti
