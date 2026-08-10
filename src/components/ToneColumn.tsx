@@ -104,9 +104,12 @@ export function ToneColumn({ tone, hasMeter, charge, chargeFrom, lang }: {
 }) {
   const isLightTheme = useUiStore(s => s.isLightTheme);
 
-  const inchiostro = isLightTheme ? '#1a1a1f' : 'rgba(240,246,255,0.96)';
-  const tenue      = isLightTheme ? 'rgba(58,58,64,0.42)' : 'rgba(226,238,255,0.38)';
-  const tacca      = isLightTheme ? 'rgba(58,58,64,0.30)' : 'rgba(226,238,255,0.26)';
+  const inchiostro = isLightTheme ? '#1a1a1f' : 'rgba(240,246,255,0.98)';
+  // ⚠️ MOLTO PIÙ CONTRASTATE DI PRIMA (erano 0,42 e 0,38). La colonna passa SOPRA l'arco, e
+  // sopra un arco chiaro un grigio al 40% non si legge: le etichette c'erano e non si
+  // vedevano (segnalato). Il pannello di fondo qui sotto fa il resto del lavoro.
+  const tenue      = isLightTheme ? 'rgba(26,26,31,0.78)' : 'rgba(240,246,255,0.80)';
+  const tacca      = isLightTheme ? 'rgba(26,26,31,0.45)' : 'rgba(226,238,255,0.42)';
 
   const yOra = y(tone);
   const liv  = levelAt(tone);
@@ -119,6 +122,13 @@ export function ToneColumn({ tone, hasMeter, charge, chargeFrom, lang }: {
   return (
     <svg viewBox={`0 0 ${W} ${BOT + 28}`} width="100%" height="100%"
          style={{ display: 'block', overflow: 'visible' }} aria-hidden>
+      {/* ── IL PANNELLO DI FONDO ────────────────────────────────────────────────────────
+          La colonna sta SOPRA l'arco, e va bene così (richiesta utente) — ma sopra i tratti
+          dell'arco le scritte si perdevano. Un fondo appena velato le stacca senza nascondere
+          l'arco: si vede attraverso, e il testo si legge. */}
+      <rect x={30} y={TOP - 20} width={W - 32} height={H + 42} rx={14}
+            fill={isLightTheme ? 'rgba(238,240,244,0.72)' : 'rgba(11,15,20,0.72)'}
+            stroke={isLightTheme ? 'rgba(26,26,31,0.12)' : 'rgba(226,238,255,0.14)'} strokeWidth={1} />
       {/* L'asta */}
       <line x1={54} y1={TOP} x2={54} y2={BOT} stroke={tacca} strokeWidth={1.5} />
 

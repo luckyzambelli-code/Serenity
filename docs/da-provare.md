@@ -20,6 +20,13 @@ da sola senza toccare le altre.
   - [ ] la scala ADATTATA (2.0.117, non più lineare) mette un tono normale a metà colonna e non
         più in basso: da confermare col meter, che è la cosa che l'ha fatta scoprire;
   - [ ] aprendo DIAGNOSTIC i suoi dati NON coprono più la colonna;
+  - [ ] il PANNELLO DI FONDO della colonna (2.0.118) stacca le scritte dai tratti dell'arco
+        senza nasconderlo: si deve vedere l'arco attraverso, e leggere i nomi sopra;
+  - [ ] **il bottone del ciclo al TRAGUARDO** (2.0.118) — senza strumenti non si vede mai,
+        perché `asIsPending` viene dall'EEG: col MUSE, in CONTACT il bottone deve passare da
+        « MOCK-UP » a « AS-IS CONFERMATO » in verde, e premendolo VALIDA (non chiude e basta);
+  - [ ] in NULL, arrivati al EQUILIBRIUM, i due esiti (VGI's / senza) compaiono ACCANTO al
+        bottone del ciclo, e non più in fondo accanto alla % di dissoluzione.
   - [ ] i nomi sono LEGGIBILI da seduti (corpo 12–14, colonna larga 260) e quelli lunghi
         vanno a capo su due righe senza uscire dal bordo — `spezza` è provata, la resa no;
   - [ ] i nomi sono nella LINGUA della seduta, e cambiano cambiando lingua;

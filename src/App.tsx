@@ -7174,11 +7174,44 @@ export default function App() {
                   // On NE PEUT PAS sauter d'un cycle à l'autre en cours de route (demande utilisateur) :
                   // il faut d'abord FERMER le cycle en action → l'autre bouton est désactivé.
                   const blocked = cycleArmed && !active;
+
+                  // ── ⚠️ IL BOTTONE DICE IL TEMPO, NON IL NOME DEL METODO ─────────────────
+                  // A ciclo armato scriveva « CONTACT » o « NULL » — cioè ripeteva il metodo,
+                  // che è già scelto e scritto nel selettore in basso (segnalato). Adesso dice
+                  // A CHE PUNTO SI È, e cambia col ciclo: MOCK-UP mentre si aspetta, poi il
+                  // traguardo. È la stessa scala di `spiegazioneCiclo`, in una parola.
+                  const traguardo = active && (k === 'charge'
+                    ? faseCiclo === 'contact.asis'
+                    : faseCiclo === 'null.equilibrium');
+                  const tempo = !active ? null
+                    : traguardo
+                      ? (k === 'charge'
+                          ? `AS-IS ${LC('CONFERMATO', 'CONFIRMÉ', 'CONFIRMED', 'CONFIRMADO', 'BEKRÄFTAD')}`
+                          : 'EQUILIBRIUM')
+                      : LC('MOCK-UP', 'MOCK-UP', 'MOCK-UP', 'MOCK-UP', 'MOCK-UP');
+
+                  // ── E AL TRAGUARDO, IL BOTTONE VALIDA ──────────────────────────────────
+                  // Il chip « AS-IS CONFERMATO » stava in fondo, accanto alla % di
+                  // dissoluzione, ed era lui a validare (richiesta utente: toglierlo di lì).
+                  // Il gesto che chiude un ciclo sta dove il ciclo si è aperto.
+                  //
+                  // NULL fa eccezione e non può non farla: i suoi esiti sono DUE (col VGI e
+                  // senza), e due esiti non stanno in un bottone solo — compaiono accanto,
+                  // qui sotto. Questo bottone allora si limita a dire dove si è.
+                  const validaQui = traguardo && k === 'charge';
                   return (
                     <button key={k}
-                      onClick={() => { if (active) finalizeCycle(false); else if (!cycleArmed) armCycle(k); }}
-                      disabled={blocked}
-                      title={active
+                      onClick={() => {
+                        if (validaQui) validateAsIs();
+                        else if (active && !traguardo) finalizeCycle(false);
+                        else if (!cycleArmed) armCycle(k);
+                      }}
+                      disabled={blocked || (traguardo && !validaQui)}
+                      title={validaQui
+                        ? LC('L\'AS-IS è confermato — premi per VALIDARLO e chiudere il ciclo', 'L\'AS-IS est confirmé — appuie pour le VALIDER et fermer le cycle', 'The AS-IS is confirmed — press to VALIDATE it and close the cycle', 'El AS-IS está confirmado — pulsa para VALIDARLO y cerrar el ciclo', 'AS-IS bekräftad — tryck för att VALIDERA och stänga cykeln')
+                        : traguardo
+                          ? LC('Scegli l\'esito qui accanto: coi VGI\'s o senza', 'Choisis l\'issue à côté : avec les VGI\'s ou sans', 'Pick the outcome beside: with VGI\'s or without', 'Elige el resultado al lado: con VGI\'s o sin', 'Välj utfallet bredvid: med VGI\'s eller utan')
+                        : active
                         ? LC(`Ciclo ${label} in corso — premi qui per CHIUDERLO`, `Cycle ${label} en cours — appuie ici pour le FERMER`, `${label} cycle running — press here to CLOSE it`, `Ciclo ${label} en curso — pulsa aquí para CERRARLO`, `${label}-cykel pågår — tryck här för att STÄNGA`)
                         : blocked
                           ? LC('Chiudi prima il ciclo in corso', 'Ferme d\'abord le cycle en cours', 'Close the running cycle first', 'Cierra primero el ciclo en curso', 'Stäng först den pågående cykeln')
@@ -7188,16 +7221,18 @@ export default function App() {
                       style={{ height: 28, padding: '0 12px', borderRadius: 8, flexShrink: 0,
                         cursor: blocked ? 'not-allowed' : 'pointer',
                         fontFamily: 'monospace', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
-                        background: active ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.45)',
-                        border: `1px solid ${active ? hue.on : RIPOSO}`,
-                        color: active ? hue.ink : 'rgba(235,244,255,0.85)',
+                        // AL TRAGUARDO il bottone si accende: è il momento in cui c'è da premere.
+                        background: validaQui ? 'rgba(52,211,153,0.20)'
+                                  : active ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.45)',
+                        border: `1px solid ${validaQui ? '#34d399' : active ? hue.on : RIPOSO}`,
+                        color: validaQui ? '#34d399' : active ? hue.ink : 'rgba(235,244,255,0.85)',
                         opacity: blocked ? 0.35 : 1 }}>
-                      {/* Actif : le nom + le fait qu'il tourne + COMMENT le fermer (c'est ce bouton). */}
-                      {/* Actif : nom + icône STOP pleine (le symbole universel « arrêter ») — dit
-                          que CE bouton ferme le cycle, sans le mot (demande utilisateur). */}
+                      {/* Attivo: il TEMPO in corso + l'icona STOP, che dice che è questo bottone
+                          a chiudere il ciclo. Al traguardo lo stop sparisce: lì non si
+                          interrompe, si valida. */}
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        {active ? label : LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE THE ITEM', 'DA EL ÍTEM', 'GE ITEM')}
-                        {active && <Square size={9} strokeWidth={0} fill="currentColor" />}
+                        {tempo ?? LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE THE ITEM', 'DA EL ÍTEM', 'GE ITEM')}
+                        {active && !traguardo && <Square size={9} strokeWidth={0} fill="currentColor" />}
                       </span>
                       {/* Premuto col campo vuoto, si aspetta la voce: lo si dice, come in MIRROR. */}
                       {active && !auditingQuestion.trim() && (
@@ -7208,6 +7243,27 @@ export default function App() {
                     </button>
                   );
                 })}
+                {/* ── I DUE ESITI DEL EQUILIBRIUM ─────────────────────────────────────────
+                    Stavano in fondo, nella barra dei numeri, accanto alla % di dissoluzione.
+                    Salgono qui accanto al bottone del ciclo: chi chiude un ciclo lo chiude
+                    dove l'ha aperto. Sono DUE perché la scelta è vera — i VGI's ci sono o non
+                    ci sono, e la differenza va scritta nel rapporto. */}
+                {cycleArmed && cycleKind === 'null' && faseCiclo === 'null.equilibrium' && (() => {
+                  const b = (testo: string, vgi: boolean, forte: boolean) => (
+                    <button key={testo} onClick={() => validateClearRead(vgi)}
+                      style={{ height: 28, padding: '0 12px', borderRadius: 8, flexShrink: 0, cursor: 'pointer',
+                        fontFamily: 'monospace', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
+                        background: forte ? 'rgba(52,211,153,0.20)' : 'rgba(0,0,0,0.45)',
+                        border: `1px solid ${forte ? '#34d399' : 'rgba(255,255,255,0.3)'}`,
+                        color: forte ? '#34d399' : 'rgba(235,244,255,0.85)' }}>
+                      {testo}
+                    </button>
+                  );
+                  return <>
+                    {b("EQUILIBRIUM · VGI's", true, true)}
+                    {b(LC('senza VGI', 'sans VGI', 'no VGI', 'sin VGI', 'utan VGI'), false, false)}
+                  </>;
+                })()}
                 </div>
                 )}
                 {/* « A che punto sono, e cosa devo fare » — stesso componente e stesso posto del
@@ -7537,13 +7593,12 @@ export default function App() {
               {/* CYCLE STATUS BAR — comm lag / % diss / AS-IS? validate. Masquée en MIRROR et en
                   TONE (vues à part, sans CONTACT/NULL — demande utilisateur). */}
               {viewMode !== 'mirror' && viewMode !== 'tone' && sessionState === 'running' && (
-                <CycleStatusBar armed={cycleArmed} asIsPending={asIsPending} manualReady={manualReady}
-                  asIsFalse={asIsFalse} deltaStar={deltaStar} deltaStarN={deltaStarN} onValidate={validateAsIs}
+                <CycleStatusBar armed={cycleArmed} manualReady={manualReady}
+                  asIsFalse={asIsFalse} deltaStar={deltaStar} deltaStarN={deltaStarN}
                   isLightTheme={isLightTheme} signalOk={museContact}
-                  cycleKind={cycleKind} nullPhase={nullPhase}
+                  cycleKind={cycleKind}
                   nullSinceMock={nullSinceMock} noReadSignal={noReadSignal}
-                  taBase={pcSex === 'm' ? 3.0 : 2.0} taAtNullStart={taAtNullStart}
-                  onValidateClearRead={validateClearRead} />
+                  taBase={pcSex === 'm' ? 3.0 : 2.0} taAtNullStart={taAtNullStart} />
               )}
               {/* NEEDLE REACTION — relocated to the TOP data-stack (always clear). The
                   dial now sits over the needle, so the QuantumSphere's own SF/FALL/F/N
