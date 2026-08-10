@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { pick5 } from '../i18n5';
+import { loadHistory as loadCanTests, daysSince as canDaysSince, scaleFor, soloRatio } from '../engine/canTest';
 import { UserRound, Eye, Plus, Pencil, Star, X, Camera, Upload, Trash2, Check } from 'lucide-react';
 import {
   UserProfile, getProfiles, getSessions, getSessionsByProfile, saveProfile, deleteProfile,
@@ -255,7 +256,35 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
                       : <span style={{ fontSize: 14, color: 'rgba(200,214,234,0.5)' }}>○</span>}
                   </div>
                   <div style={{ fontSize: 22, fontWeight: 700, color: 'rgba(240,246,255,0.95)', marginTop: 5 }}>{pc.name}</div>
-                  <div style={{ marginTop: 7 }}><Row l={L('Creato', 'Créé', 'Created', 'Creado', 'Skapad')} v={fmtDate(pc.createdAt)} /></div>
+                  <div style={{ marginTop: 7 }}>
+                    <Row l={L('Creato', 'Créé', 'Created', 'Creado', 'Skapad')} v={fmtDate(pc.createdAt)} />
+                    {/* ── LA PROVA DELLE LATTINE ──────────────────────────────────────────
+                        « Che fa fede sono le DUE LATTINE »: la prova della stretta si tiene
+                        per PERSONA, e qui la si ritrova. Senza, si riparte ogni volta da zero
+                        senza sapere che « zero » era diverso l'ultima volta. */}
+                    {(() => {
+                      const h = loadCanTests(pc.name);
+                      const g = canDaysSince(h, Date.now(), 'two-cans');
+                      const r = soloRatio(h);
+                      const due = scaleFor(h, 'two-cans');
+                      return <>
+                        <Row l={L('Prova lattine', 'Test boîtes', 'Cans test', 'Prueba latas', 'Burktest')}
+                             v={g === null
+                                 ? L('mai fatta', 'jamais faite', 'never done', 'nunca hecha', 'aldrig gjord')
+                                 : g === 0 ? L('oggi', "aujourd'hui", 'today', 'hoy', 'idag')
+                                 : `${g} ${L('giorni fa', 'jours', 'days ago', 'días', 'dagar sedan')}`}
+                        />
+                        {h.tests.length > 0 && (
+                          <Row l={L('Prove', 'Essais', 'Tests', 'Pruebas', 'Test')}
+                               v={`${h.tests.length}${due ? ` · ${due.toExponential(1)}` : ''}`} />
+                        )}
+                        {r !== null && (
+                          <Row l={L('Solo (1 lattina)', 'Solo (1 boîte)', 'Solo (1 can)', 'Solo (1 lata)', 'Solo (1 burk)')}
+                               v={`×${r.toFixed(2)}`} />
+                        )}
+                      </>;
+                    })()}
+                  </div>
                   <div style={{ position: 'absolute', right: 10, bottom: 8, display: 'flex', gap: 6 }}>
                     <button onClick={(e) => { e.stopPropagation(); setEdit({ kind: 'pc', id: pc.id, name: pc.name, photo: pc.photo, sex: pc.sex }); }} title={pick5(lang, 'Modifica', 'Modifier', 'Edit', 'Editar', 'Redigera')} style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid rgba(255,255,255,0.22)', background: 'rgba(255,255,255,0.06)', color: 'rgba(240,246,255,0.8)', cursor: 'pointer' }}><Pencil size={12} /></button>
                     <button onClick={(e) => { e.stopPropagation(); removePc(pc.id); }} title={pick5(lang, 'Elimina', 'Supprimer', 'Delete', 'Eliminar', 'Ta bort')} style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.04)', color: 'rgba(240,246,255,0.6)', cursor: 'pointer' }}><Trash2 size={12} /></button>

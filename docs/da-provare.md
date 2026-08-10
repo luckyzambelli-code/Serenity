@@ -143,6 +143,23 @@ da sola senza toccare le altre.
 
 ## THETA-METER (e-meter USB)
 
+### Da provare per prime (2.0.121)
+
+- [ ] **CON TUTTI E DUE gli strumenti l'ago è quello del METER** — `cicloInCorso ? 'eeg'` stava
+      prima della scelta, e bastava armare un ciclo perché tornasse al MUSE (segnalato).
+      Da guardare: coi due collegati, armando CONTACT, l'ago RESTA quello del meter e le
+      reazioni arrivano etichettate METER e MUSE;
+- [ ] **la prova della stretta prende anche una stretta LENTA** — si congelava solo sulla
+      VELOCITÀ (`THETA_MIN_RATE`), e una stretta graduale veniva inseguita fino a scarto zero:
+      la prova diceva che non era successo niente. Ora c'è anche la DISTANZA
+      (`THETA_TEST_START_DEV`). Da provare stringendo piano, e poi di scatto;
+- [ ] **la prova resta in memoria per QUEL preclear** — farla, chiudere, riaprire: sulla scheda
+      in AUDITOR & PC deve dire « oggi », il numero di prove, e (se provate tutte e due le
+      configurazioni) lo scarto del SOLO;
+- [ ] **senza prova del giorno, una divisione in meno sul tono** — da verificare che il numero
+      sulla colonna sia effettivamente 1 più basso finché la stretta non è stata fatta.
+
+
 Protocollo decodificato e coperto da 15 test; il **driver WebHID non è mai girato** contro il
 dispositivo dentro EQUILIBRIUM — finora solo dalla pagina di scoperta.
 

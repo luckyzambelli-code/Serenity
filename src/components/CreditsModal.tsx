@@ -45,9 +45,10 @@ function CreditAvatar({ src, name }: { src?: string; name: string }) {
 /**
  * ONDES — le médaillon rond sous le nom du logiciel.
  *
- * ROND comme les portraits, et volontairement en sourdine : c'est un clin d'œil, pas un crédit.
- * Il s'éclaire au survol, pour qui le remarque. (Le bobtail de Claudio occupait cette place ;
- * l'image d'ondes la reprend, même cercle, même discrétion.)
+ * ROND comme les portraits. Il était en sourdine — 40 px à 80 % — parce qu'on l'avait pensé
+ * comme un clin d'œil ; l'utilisateur l'a demandé VISIBLE à côté du nom du logiciel, et il a
+ * raison : ces ondes SONT le sujet du programme, pas une signature discrète. 56 px, pleine
+ * opacité, et l'anneau s'éclaire au survol.
  */
 function Medaillon({ title }: { title: string }) {
   const [survol, setSurvol] = useState(false);
@@ -62,13 +63,15 @@ function Medaillon({ title }: { title: string }) {
       onMouseEnter={() => setSurvol(true)}
       onMouseLeave={() => setSurvol(false)}
       style={{
-        // 40 px : un peu moins que les 46 des portraits — assez pour qu'on VOIE le chien,
-        // assez peu pour qu'il ne se prenne pas pour un crédit.
-        width: 40, height: 40, borderRadius: '50%', flexShrink: 0, objectFit: 'cover',
-        border: '1px solid rgba(255,255,255,0.18)',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.45)',
-        opacity: survol ? 1 : 0.8,
-        transition: 'opacity 220ms ease',
+        // 56 px : PLUS GRAND que les 46 des portraits — le nom du logiciel et son image vont
+        // ensemble, et l'image ne doit pas avoir l'air d'un crédit de plus.
+        width: 56, height: 56, borderRadius: '50%', flexShrink: 0, objectFit: 'cover',
+        border: `1px solid ${survol ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.22)'}`,
+        boxShadow: survol
+          ? '0 2px 14px rgba(0,0,0,0.5), 0 0 18px rgba(180,210,255,0.25)'
+          : '0 2px 8px rgba(0,0,0,0.45)',
+        opacity: 1,
+        transition: 'border-color 220ms ease, box-shadow 220ms ease',
       }}
     />
   );

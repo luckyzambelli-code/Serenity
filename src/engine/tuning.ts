@@ -408,6 +408,25 @@ export const THETA_BASELINE_CREEP_S = 2.5;
  */
 export const THETA_MIN_RATE = 0.15;
 /**
+ * PROVA DELLA STRETTA — quanto deve essersi ALLONTANATO l'ago perché la prova consideri che
+ * la stretta è cominciata, anche se è stata lenta.
+ *
+ * ⚠️ PERCHÉ NE SERVE UNA SECONDA. Il segno della prova insegue l'ago finché è « fermo », e
+ * fermo lo decide `THETA_MIN_RATE` — una VELOCITÀ. Una stretta decisa la supera subito; una
+ * stretta GRADUALE no, e allora il segno la inseguiva per tutta la discesa: alla fine lo
+ * scarto misurato era zero e la prova diceva che non era successo niente. Segnalato in
+ * seduta: « non sempre su una schiacciata volontaria è ritirata la reazione ».
+ *
+ * Questa è una DISTANZA, e coglie il caso opposto: comunque sia andata, se l'ago si è
+ * spostato di tanto dalla base la stretta è cominciata. Vale un sesto del bersaglio (che è un
+ * terzo di quadrante): abbastanza da non scattare sulla deriva del braccio — che in un intero
+ * minuto ne fa meno — e abbastanza poco da prendere una stretta appena accennata.
+ *
+ * È la manopola da muovere se una stretta lenta continuasse a non essere letta: ABBASSARLA.
+ * Se invece la prova scattasse da sola senza che nessuno stringa, ALZARLA.
+ */
+export const THETA_TEST_START_DEV = 0.075;
+/**
  * Quanto resta scritta la reazione DOPO che l'ago è rientrato (ms).
  *
  * Prima si usava KICK_MS — la durata dell'oscillazione dell'ago dell'EEG, che con l'ago vero

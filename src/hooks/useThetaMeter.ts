@@ -13,7 +13,7 @@ import {
   effectiveScale,
   type ElectrodeConfig, type ThetaSetup,
 } from '../engine/thetaSetup';
-import { THETA_NEEDLE_SCALE, SQUEEZE_TEST_MS, BREATH_TEST_MS, NEEDLE_REST_OFFSET, THETA_TEST_FOLLOW, THETA_MIN_RATE } from '../engine/tuning';
+import { THETA_NEEDLE_SCALE, SQUEEZE_TEST_MS, BREATH_TEST_MS, NEEDLE_REST_OFFSET, THETA_TEST_FOLLOW, THETA_MIN_RATE, THETA_TEST_START_DEV } from '../engine/tuning';
 
 /**
  * useThetaMeter — l'e-meter USB dell'utente dentro EQUILIBRIUM.
@@ -173,7 +173,14 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
           // lo accompagna; appena parte, il segno resta lì e MISURA l'ampiezza.
           if (!testRef.current.congelato && dt > 0) {
             const velocita = Math.abs(st.offset - testRef.current.preOffset) / dt;
-            if (velocita >= THETA_MIN_RATE) {
+            // ⚠️ DUE MODI DI ACCORGERSENE, e servono tutti e due.
+            // La VELOCITÀ prende la stretta decisa. Una stretta GRADUALE non la supera mai, e
+            // allora il segno la inseguiva per tutta la discesa: lo scarto finiva a zero e la
+            // prova diceva che non era successo niente (segnalato). La DISTANZA dalla base
+            // prende quel caso: comunque lento sia andato, se l'ago si è spostato di tanto la
+            // stretta è cominciata.
+            const lontananza = Math.abs(st.offset - testRef.current.baseOffset);
+            if (velocita >= THETA_MIN_RATE || lontananza >= THETA_TEST_START_DEV) {
               testRef.current.congelato = true;      // la stretta è partita
             } else {
               testRef.current.base = r.smooth;

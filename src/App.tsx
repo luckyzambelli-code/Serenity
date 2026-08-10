@@ -100,6 +100,11 @@ import { MirrorDial } from './components/MirrorDial';
 import { ToneDial } from './components/ToneDial';
 import { ToneColumn } from './components/ToneColumn';
 import { TONE_LABELS, exactLevelName, levelName } from './engine/toneLevels';
+import {
+  loadHistory as loadCanTests, saveHistory as saveCanTests, addTest as addCanTest,
+  toneMargin, withMargin, daysSince as canDaysSince, soloRatio,
+  type PcCanHistory,
+} from './engine/canTest';
 import { CycleHint } from './components/CycleHint';
 import { CycleSteps } from './components/CycleSteps';
 import {
@@ -4432,12 +4437,21 @@ export default function App() {
   // chiedere di vederle tutte e due, e allora arrivano etichettate.
   const [reazioniViste, setReazioniViste] = useState<'eeg' | 'theta' | 'both'>('eeg');
   const agoDelModo = MODE_SPEC[mode].needle;
+  //
+  // ── ⚠️ CON DUE STRUMENTI DECIDE L'AUDITOR, NON IL MODO ──────────────────────────────────
+  // `cicloInCorso ? 'eeg'` stava PRIMA della scelta, e siccome il ciclo CONTACT si arma quasi
+  // subito, con METER e MUSE collegati l'ago tornava al MUSE e ci restava: si era deciso
+  // l'opposto — l'ago del METER (misurato, non ricostruito) e le DUE indicazioni di reazione
+  // (segnalato). Il ciclo continua a girare sulla carica EEG comunque: qui si sceglie solo
+  // che cosa si GUARDA, e con due strumenti quella scelta è dell'auditor.
+  //
+  // Resta in cima la prova delle boîtes: si tara il METER guardando il SUO ago, sempre.
   const agoPrincipale: ReadSrc =
     provaBoiteInCorso ? 'theta'
+    : instruments.muse && instruments.theta ? agoScelto
     : cicloInCorso ? 'eeg'
     : agoDelModo === 'theta' && instruments.theta ? 'theta'
     : agoDelModo === 'eeg' && instruments.muse ? 'eeg'
-    : instruments.muse && instruments.theta ? agoScelto
     : instruments.theta ? 'theta' : 'eeg';
   // ── TONE SCALE (Ron, −40…+40) ───────────────────────────────────────────────────────────
   // La procedura in quattro tempi: localizzare la resistenza, il SEGNO, l'AMPIEZZA, poi
@@ -4474,6 +4488,35 @@ export default function App() {
   const [toneAtStart, setToneAtStart] = useState<number | null>(null);
   /** Il tono che l'auditor dichiara senza strumenti — la sorgente quando non c'è misura. */
   const [toneAssessed, setToneAssessed] = useState(0);
+
+  /**
+   * LA PROVA DELLE LATTINE DI QUESTO PRECLEAR — « che fa fede sono le DUE LATTINE ».
+   *
+   * Si rilegge quando cambia il nome: l'archivio è per persona, non per strumento. Da qui
+   * escono il margine sul tono (senza prova, una divisione in meno) e lo scarto del SOLO.
+   */
+  const [canHistory, setCanHistory] = useState<PcCanHistory>(() => loadCanTests(''));
+  useEffect(() => { setCanHistory(loadCanTests(pcName || '')); }, [pcName]);
+  /**
+   * La prova è appena riuscita → si archivia, una volta sola.
+   *
+   * `squeezeOk` resta vero finché non si rifà una prova, quindi senza la guardia si
+   * riarchivierebbe a ogni render — e lo storico si riempirebbe della stessa misura.
+   */
+  const ultimaProvaRef = useRef(0);
+  useEffect(() => {
+    if (theta.squeezeOk !== true || theta.testing) return;
+    const scala = theta.setup.needleScale;
+    if (!(scala > 0)) return;
+    const ora = Date.now();
+    if (ora - ultimaProvaRef.current < 5000) return;   // la stessa prova, riletta
+    ultimaProvaRef.current = ora;
+    setCanHistory(prev => {
+      const h = addCanTest(prev, { t: ora, scale: scala, config: theta.setup.config });
+      saveCanTests(h);
+      return h;
+    });
+  }, [theta.squeezeOk, theta.testing, theta.setup.needleScale, theta.setup.config]);
   /** Le due misure ALL'ISTANTE della localizzazione: da lì si conta il movimento. */
   const toneTaAtStartRef = useRef<number | null>(null);
   const toneQAtStartRef = useRef<number | null>(null);
@@ -4519,9 +4562,20 @@ export default function App() {
    *   • senza strumenti    → quel che dichiara l'auditor: il cursore sta dove l'ha messo.
    */
   const qLnow = useMetric(m => m.qL);
+  /**
+   * ── IL MARGINE DELLA PROVA DELLE LATTINE ────────────────────────────────────────────────
+   * « Nel caso di non test dovresti ritirare almeno una divisione dal calcolo sulla scala del
+   * TONO ». Non è una correzione della misura: è quel che si può SOSTENERE. Senza la prova di
+   * oggi la sensibilità è di ripiego, e un tono dichiarato più alto di così non ha di che
+   * reggersi. Vale solo col meter — senza, il tono lo dice l'auditor e il margine sarebbe
+   * togliere una divisione al suo giudizio.
+   */
+  const margineTono = toneHasMeter ? toneMargin(canHistory, Date.now()) : 0;
   const toneOra = toneAtStart === null ? (toneHasMeter ? toneMeasured : toneAssessed)
     : toneTaAtStartRef.current !== null && theta.ta !== null
-      ? toneFromDelta(toneAtStart, toneTaAtStartRef.current, theta.ta, TA_MAX - TA_MIN)
+      ? withMargin(
+          toneFromDelta(toneAtStart, toneTaAtStartRef.current, theta.ta, TA_MAX - TA_MIN),
+          margineTono)
       : toneAtStart;
   /** Il secondo sguardo: la stessa scala, letta sulla carica EEG. `null` senza MUSE. */
   const toneOraEeg = toneAtStart !== null && toneQAtStartRef.current !== null
@@ -4638,6 +4692,130 @@ export default function App() {
        epWindowOpen, showReport, mode, cycleArmed, asIsPending, nullPhase, mirrorArmed,
        auditingQuestion, itemSpoken, mirrorDisp.locked, mirrorDisp.reached, tonePhase]);
 
+
+
+  /**
+   * IL BOTTONE DEL CICLO — « dai l'item », poi il tempo in corso, poi la validazione.
+   *
+   * È una funzione e non JSX in linea perché va in DUE posti: accanto al campo dell'item
+   * finché il ciclo non è armato — dove sta in MIRROR e in TONE, e dove l'utente l'ha chiesto
+   * anche qui — e nella riga dei comandi quando il ciclo gira, insieme al contatore e ad
+   * ANNULLA. Due copie del blocco divergerebbero alla prima modifica.
+   */
+  /**
+   * « DÌ L'ITEM… » — l'avviso che si aspetta la voce, UGUALE nei quattro cicli.
+   *
+   * CONTACT e NULL lo scrivevano piccolo dentro il bottone, MIRROR dentro un chip col bordo
+   * ambra, TONE non lo scriveva affatto: la stessa cosa detta in tre modi (segnalato). Questa
+   * è la forma di CONTACT/NULL, che è quella che va bene.
+   */
+  const avvisoVoce = (
+    <span className="animate-pulse"
+          style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.04em',
+                   color: TOKEN.warn, whiteSpace: 'nowrap' }}>
+      {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
+    </span>
+  );
+
+  const bottoneCiclo = (): React.ReactNode => {
+    const k = mode === 'null' ? 'null' : 'charge';
+  const active = cycleArmed && cycleKind === k;
+  const label = k === 'charge' ? 'CONTACT' : 'NULL';
+  // ⚠️ A RIPOSO IL COLORE NON C'È PIÙ. Il contorno era teal in CONTACT e ardesia
+  // in NULL anche prima di premere: due bottoni che dicono la stessa cosa
+  // (« dai l'item ») con due colori diversi, mentre MIRROR e TONE lo davano
+  // neutro — quattro cicli, tre aspetti (segnalato). Il metodo lo si è già
+  // scelto nel selettore in basso; qui resta il GESTO, e il gesto è uno.
+  //
+  // A ciclo ARMATO il colore torna, e lì serve: dice QUALE ciclo sta girando.
+  const hue = k === 'charge'
+    ? { on: 'rgba(110,231,183,0.85)', ink: '#6ee7b7' }
+    : { on: 'rgba(203,213,225,0.9)',  ink: '#cbd5e1' };
+  const RIPOSO = 'rgba(255,255,255,0.3)';   // lo stesso di MIRROR e di TONE
+  // On NE PEUT PAS sauter d'un cycle à l'autre en cours de route (demande utilisateur) :
+  // il faut d'abord FERMER le cycle en action → l'autre bouton est désactivé.
+  const blocked = cycleArmed && !active;
+
+  // ── ⚠️ IL BOTTONE DICE IL TEMPO, NON IL NOME DEL METODO ─────────────────
+  // A ciclo armato scriveva « CONTACT » o « NULL » — cioè ripeteva il metodo,
+  // che è già scelto e scritto nel selettore in basso (segnalato). Adesso dice
+  // A CHE PUNTO SI È, e cambia col ciclo: MOCK-UP mentre si aspetta, poi il
+  // traguardo. È la stessa scala di `spiegazioneCiclo`, in una parola.
+  const traguardo = active && (k === 'charge'
+    ? faseCiclo === 'contact.asis'
+    : faseCiclo === 'null.equilibrium');
+  // ⚠️ E « MOCK-UP » NON PRIMA CHE L'ITEM CI SIA. Premuto col campo vuoto il
+  // bottone diceva già « MOCK-UP » mentre l'istruzione diceva « dì l'item »:
+  // due ordini contraddittori, lo stesso difetto di sempre in un punto nuovo
+  // (segnalato). Finché l'item non c'è, il bottone dice che lo si aspetta.
+  const attesaVoce = active && (faseCiclo === 'contact.say_item' || faseCiclo === 'null.say_item');
+  const tempo = !active ? null
+    : traguardo
+      ? (k === 'charge'
+          ? `AS-IS ${LC('CONFERMATO', 'CONFIRMÉ', 'CONFIRMED', 'CONFIRMADO', 'BEKRÄFTAD')}`
+          : 'EQUILIBRIUM')
+      : attesaVoce
+        ? LC('DÌ L\'ITEM', 'DIS L\'ITEM', 'SAY THE ITEM', 'DI EL ÍTEM', 'SÄG ITEM')
+        : LC('MOCK-UP', 'MOCK-UP', 'MOCK-UP', 'MOCK-UP', 'MOCK-UP');
+
+  // ── E AL TRAGUARDO, IL BOTTONE VALIDA ──────────────────────────────────
+  // Il chip « AS-IS CONFERMATO » stava in fondo, accanto alla % di
+  // dissoluzione, ed era lui a validare (richiesta utente: toglierlo di lì).
+  // Il gesto che chiude un ciclo sta dove il ciclo si è aperto.
+  //
+  // NULL fa eccezione e non può non farla: i suoi esiti sono DUE (col VGI e
+  // senza), e due esiti non stanno in un bottone solo — compaiono accanto,
+  // qui sotto. Questo bottone allora si limita a dire dove si è.
+  const validaQui = traguardo && k === 'charge';
+  // ── ⚠️ A CICLO ARMATO IL BOTTONE NON SI PREME PIÙ ──────────────────────
+  // Premendolo chiudeva il ciclo, e nessuno poteva indovinarlo: diceva
+  // « MOCK-UP », cioè il tempo in corso, e un tempo in corso non si preme
+  // (segnalato). Adesso è quel che sembra — un'etichetta di stato — e per
+  // uscire c'è ANNULLA qui accanto, come in TONE.
+  //
+  // Resta premibile in due casi soli: quando arma (« dai l'item ») e quando
+  // valida l'AS-IS confermato. Cioè quando c'è davvero un gesto da fare.
+  const premibile = !active || validaQui;
+    return (
+    <button key={k}
+      onClick={() => {
+        if (validaQui) validateAsIs();
+        else if (!cycleArmed) armCycle(k);
+      }}
+      disabled={blocked || !premibile}
+      title={validaQui
+        ? LC('L\'AS-IS è confermato — premi per VALIDARLO e chiudere il ciclo', 'L\'AS-IS est confirmé — appuie pour le VALIDER et fermer le cycle', 'The AS-IS is confirmed — press to VALIDATE it and close the cycle', 'El AS-IS está confirmado — pulsa para VALIDARLO y cerrar el ciclo', 'AS-IS bekräftad — tryck för att VALIDERA och stänga cykeln')
+        : traguardo
+          ? LC('Scegli l\'esito qui accanto: coi VGI\'s o senza', 'Choisis l\'issue à côté : avec les VGI\'s ou sans', 'Pick the outcome beside: with VGI\'s or without', 'Elige el resultado al lado: con VGI\'s o sin', 'Välj utfallet bredvid: med VGI\'s eller utan')
+        : active
+        ? LC(`Ciclo ${label} in corso — premi qui per CHIUDERLO`, `Cycle ${label} en cours — appuie ici pour le FERMER`, `${label} cycle running — press here to CLOSE it`, `Ciclo ${label} en curso — pulsa aquí para CERRARLO`, `${label}-cykel pågår — tryck här för att STÄNGA`)
+        : blocked
+          ? LC('Chiudi prima il ciclo in corso', 'Ferme d\'abord le cycle en cours', 'Close the running cycle first', 'Cierra primero el ciclo en curso', 'Stäng först den pågående cykeln')
+          : k === 'charge'
+            ? LC('Dai l\'item e premi: ciclo CONTACT → DISSOLUZIONE → AS-IS', 'Donne l\'item et appuie : cycle CONTACT → DISSOLUTION → AS-IS', 'Give the item and press: CONTACT → DISSOLUTION → AS-IS cycle', 'Da el ítem y pulsa: ciclo CONTACT → DISOLUCIÓN → AS-IS', 'Ge item och tryck: CONTACT → UPPLÖSNING → AS-IS')
+            : LC('Dai l\'item e premi: ciclo NULL → RISE (mock-up) → EQUILIBRIUM', 'Donne l\'item et appuie : cycle NULL → RISE (mock-up) → EQUILIBRIUM', 'Give the item and press: NULL → RISE (mock-up) → EQUILIBRIUM cycle', 'Da el ítem y pulsa: ciclo NULL → RISE (mock-up) → EQUILIBRIUM', 'Ge item och tryck: NULL → RISE (mock-up) → EQUILIBRIUM')}
+      style={{ height: 28, padding: '0 12px', borderRadius: 8, flexShrink: 0,
+        cursor: !premibile ? 'default' : blocked ? 'not-allowed' : 'pointer',
+        fontFamily: 'monospace', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
+        // AL TRAGUARDO il bottone si accende: è il momento in cui c'è da premere.
+        background: validaQui ? 'rgba(52,211,153,0.20)'
+                  : active ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.45)',
+        border: `1px solid ${validaQui ? '#34d399' : active ? hue.on : RIPOSO}`,
+        color: validaQui ? '#34d399' : active ? hue.ink : 'rgba(235,244,255,0.85)',
+        // Non premibile ≠ spento: dice DOVE SI È, e si deve leggere bene.
+        opacity: blocked ? 0.35 : 1 }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        {tempo ?? LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE THE ITEM', 'DA EL ÍTEM', 'GE ITEM')}
+      </span>
+      {/* Premuto col campo vuoto, si aspetta la voce: lo si dice, come in MIRROR.
+          ⚠️ Si guarda la FASE, non il campo: dichiarando « l'item è stato detto »
+          il campo resta vuoto (la trascrizione può non esserci) e l'avviso
+          restava acceso a mock-up già chiesto. */}
+      {attesaVoce && <span style={{ marginLeft: 8 }}>{avvisoVoce}</span>}
+    </button>
+  );
+
+  };
 
   /**
    * I GESTI DEL CICLO, quando non li fa la macchina.
@@ -7154,25 +7332,32 @@ export default function App() {
                     </span>
                   </div>
                 ) : (
-                <textarea
-                  value={auditingQuestion}
-                  onChange={(e) => setAuditingQuestion(e.target.value)}
-                  // ENTRÉE n'arme AUCUN cycle (demande utilisateur) : le cycle démarre UNIQUEMENT en
-                  // pressant CONTACT ou NULL — au moment où l'auditeur donne l'item. On avale juste
-                  // la touche pour ne pas insérer un saut de ligne dans l'item.
-                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) e.preventDefault(); }}
-                  rows={1}
-                  placeholder={lang === 'fr' ? "Question d'audition…" : lang === 'it' ? 'Domanda di auditing…' : lang === 'es' ? 'Pregunta de auditación…' : lang === 'sv' ? 'Auditfråga…' : 'Auditing question…'}
-                  style={{
-                    // Pleine largeur + AUTO-GROW (field-sizing) : une question longue reste ENTIÈREMENT
-                    // lisible (jusqu'à ~7 lignes), puis défile.
-                    width: '100%', minHeight: 28, maxHeight: 160, padding: '6px 10px', borderRadius: 8,
-                    fontSize: 12, lineHeight: 1.45, fontFamily: 'monospace', resize: 'none', overflowY: 'auto',
-                    fieldSizing: 'content',
-                    background: 'rgba(0,0,0,0.45)',
-                    border: '1px solid rgba(255,255,255,0.22)',
-                    color: 'rgba(235,244,255,0.92)', outline: 'none' } as React.CSSProperties}
-                />
+                /* ── IL CAMPO E IL GESTO SULLA STESSA RIGA, come in MIRROR e in TONE ────────
+                   Il bottone stava una riga più sotto, in mezzo ai contatori: si scriveva
+                   l'item in un posto e lo si dava in un altro, e negli altri due cicli invece
+                   stava a destra del campo (segnalato). Adesso i quattro si somigliano. */
+                <div style={{ display: 'flex', gap: 10, alignItems: 'stretch', width: '100%' }}>
+                  <textarea
+                    value={auditingQuestion}
+                    onChange={(e) => setAuditingQuestion(e.target.value)}
+                    // ENTRÉE n'arme AUCUN cycle (demande utilisateur) : le cycle démarre UNIQUEMENT en
+                    // pressant CONTACT ou NULL — au moment où l'auditeur donne l'item. On avale juste
+                    // la touche pour ne pas insérer un saut de ligne dans l'item.
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) e.preventDefault(); }}
+                    rows={1}
+                    placeholder={lang === 'fr' ? "Question d'audition…" : lang === 'it' ? 'Domanda di auditing…' : lang === 'es' ? 'Pregunta de auditación…' : lang === 'sv' ? 'Auditfråga…' : 'Auditing question…'}
+                    style={{
+                      // AUTO-GROW (field-sizing) : une question longue reste ENTIÈREMENT
+                      // lisible (jusqu'à ~7 lignes), puis défile.
+                      flex: 1, minWidth: 160, minHeight: 28, maxHeight: 160, padding: '6px 10px', borderRadius: 8,
+                      fontSize: 12, lineHeight: 1.45, fontFamily: 'monospace', resize: 'none', overflowY: 'auto',
+                      fieldSizing: 'content',
+                      background: 'rgba(0,0,0,0.45)',
+                      border: '1px solid rgba(255,255,255,0.22)',
+                      color: 'rgba(235,244,255,0.92)', outline: 'none' } as React.CSSProperties}
+                  />
+                  {bottoneCiclo()}
+                </div>
                 )}
                 {/* Rangée des COMMANDES : compteurs + les deux cycles + mock-up.
                     Prima era « SOLO COL MUSE », col ragionamento che senza EEG il ciclo non ha
@@ -7215,107 +7400,7 @@ export default function App() {
                     Prima erano due, e uno dei due era sempre quello sbagliato — con l'altro
                     disabilitato appena un ciclo girava. Il metodo lo si è già scelto in alto:
                     qui resta il GESTO, cioè dare l'item. Ripremendolo si chiude il ciclo. */}
-                {([mode === 'null' ? 'null' : 'charge'] as const).map((k) => {
-                  const active = cycleArmed && cycleKind === k;
-                  const label = k === 'charge' ? 'CONTACT' : 'NULL';
-                  // ⚠️ A RIPOSO IL COLORE NON C'È PIÙ. Il contorno era teal in CONTACT e ardesia
-                  // in NULL anche prima di premere: due bottoni che dicono la stessa cosa
-                  // (« dai l'item ») con due colori diversi, mentre MIRROR e TONE lo davano
-                  // neutro — quattro cicli, tre aspetti (segnalato). Il metodo lo si è già
-                  // scelto nel selettore in basso; qui resta il GESTO, e il gesto è uno.
-                  //
-                  // A ciclo ARMATO il colore torna, e lì serve: dice QUALE ciclo sta girando.
-                  const hue = k === 'charge'
-                    ? { on: 'rgba(110,231,183,0.85)', ink: '#6ee7b7' }
-                    : { on: 'rgba(203,213,225,0.9)',  ink: '#cbd5e1' };
-                  const RIPOSO = 'rgba(255,255,255,0.3)';   // lo stesso di MIRROR e di TONE
-                  // On NE PEUT PAS sauter d'un cycle à l'autre en cours de route (demande utilisateur) :
-                  // il faut d'abord FERMER le cycle en action → l'autre bouton est désactivé.
-                  const blocked = cycleArmed && !active;
-
-                  // ── ⚠️ IL BOTTONE DICE IL TEMPO, NON IL NOME DEL METODO ─────────────────
-                  // A ciclo armato scriveva « CONTACT » o « NULL » — cioè ripeteva il metodo,
-                  // che è già scelto e scritto nel selettore in basso (segnalato). Adesso dice
-                  // A CHE PUNTO SI È, e cambia col ciclo: MOCK-UP mentre si aspetta, poi il
-                  // traguardo. È la stessa scala di `spiegazioneCiclo`, in una parola.
-                  const traguardo = active && (k === 'charge'
-                    ? faseCiclo === 'contact.asis'
-                    : faseCiclo === 'null.equilibrium');
-                  // ⚠️ E « MOCK-UP » NON PRIMA CHE L'ITEM CI SIA. Premuto col campo vuoto il
-                  // bottone diceva già « MOCK-UP » mentre l'istruzione diceva « dì l'item »:
-                  // due ordini contraddittori, lo stesso difetto di sempre in un punto nuovo
-                  // (segnalato). Finché l'item non c'è, il bottone dice che lo si aspetta.
-                  const attesaVoce = active && (faseCiclo === 'contact.say_item' || faseCiclo === 'null.say_item');
-                  const tempo = !active ? null
-                    : traguardo
-                      ? (k === 'charge'
-                          ? `AS-IS ${LC('CONFERMATO', 'CONFIRMÉ', 'CONFIRMED', 'CONFIRMADO', 'BEKRÄFTAD')}`
-                          : 'EQUILIBRIUM')
-                      : attesaVoce
-                        ? LC('DÌ L\'ITEM', 'DIS L\'ITEM', 'SAY THE ITEM', 'DI EL ÍTEM', 'SÄG ITEM')
-                        : LC('MOCK-UP', 'MOCK-UP', 'MOCK-UP', 'MOCK-UP', 'MOCK-UP');
-
-                  // ── E AL TRAGUARDO, IL BOTTONE VALIDA ──────────────────────────────────
-                  // Il chip « AS-IS CONFERMATO » stava in fondo, accanto alla % di
-                  // dissoluzione, ed era lui a validare (richiesta utente: toglierlo di lì).
-                  // Il gesto che chiude un ciclo sta dove il ciclo si è aperto.
-                  //
-                  // NULL fa eccezione e non può non farla: i suoi esiti sono DUE (col VGI e
-                  // senza), e due esiti non stanno in un bottone solo — compaiono accanto,
-                  // qui sotto. Questo bottone allora si limita a dire dove si è.
-                  const validaQui = traguardo && k === 'charge';
-                  // ── ⚠️ A CICLO ARMATO IL BOTTONE NON SI PREME PIÙ ──────────────────────
-                  // Premendolo chiudeva il ciclo, e nessuno poteva indovinarlo: diceva
-                  // « MOCK-UP », cioè il tempo in corso, e un tempo in corso non si preme
-                  // (segnalato). Adesso è quel che sembra — un'etichetta di stato — e per
-                  // uscire c'è ANNULLA qui accanto, come in TONE.
-                  //
-                  // Resta premibile in due casi soli: quando arma (« dai l'item ») e quando
-                  // valida l'AS-IS confermato. Cioè quando c'è davvero un gesto da fare.
-                  const premibile = !active || validaQui;
-                  return (
-                    <button key={k}
-                      onClick={() => {
-                        if (validaQui) validateAsIs();
-                        else if (!cycleArmed) armCycle(k);
-                      }}
-                      disabled={blocked || !premibile}
-                      title={validaQui
-                        ? LC('L\'AS-IS è confermato — premi per VALIDARLO e chiudere il ciclo', 'L\'AS-IS est confirmé — appuie pour le VALIDER et fermer le cycle', 'The AS-IS is confirmed — press to VALIDATE it and close the cycle', 'El AS-IS está confirmado — pulsa para VALIDARLO y cerrar el ciclo', 'AS-IS bekräftad — tryck för att VALIDERA och stänga cykeln')
-                        : traguardo
-                          ? LC('Scegli l\'esito qui accanto: coi VGI\'s o senza', 'Choisis l\'issue à côté : avec les VGI\'s ou sans', 'Pick the outcome beside: with VGI\'s or without', 'Elige el resultado al lado: con VGI\'s o sin', 'Välj utfallet bredvid: med VGI\'s eller utan')
-                        : active
-                        ? LC(`Ciclo ${label} in corso — premi qui per CHIUDERLO`, `Cycle ${label} en cours — appuie ici pour le FERMER`, `${label} cycle running — press here to CLOSE it`, `Ciclo ${label} en curso — pulsa aquí para CERRARLO`, `${label}-cykel pågår — tryck här för att STÄNGA`)
-                        : blocked
-                          ? LC('Chiudi prima il ciclo in corso', 'Ferme d\'abord le cycle en cours', 'Close the running cycle first', 'Cierra primero el ciclo en curso', 'Stäng först den pågående cykeln')
-                          : k === 'charge'
-                            ? LC('Dai l\'item e premi: ciclo CONTACT → DISSOLUZIONE → AS-IS', 'Donne l\'item et appuie : cycle CONTACT → DISSOLUTION → AS-IS', 'Give the item and press: CONTACT → DISSOLUTION → AS-IS cycle', 'Da el ítem y pulsa: ciclo CONTACT → DISOLUCIÓN → AS-IS', 'Ge item och tryck: CONTACT → UPPLÖSNING → AS-IS')
-                            : LC('Dai l\'item e premi: ciclo NULL → RISE (mock-up) → EQUILIBRIUM', 'Donne l\'item et appuie : cycle NULL → RISE (mock-up) → EQUILIBRIUM', 'Give the item and press: NULL → RISE (mock-up) → EQUILIBRIUM cycle', 'Da el ítem y pulsa: ciclo NULL → RISE (mock-up) → EQUILIBRIUM', 'Ge item och tryck: NULL → RISE (mock-up) → EQUILIBRIUM')}
-                      style={{ height: 28, padding: '0 12px', borderRadius: 8, flexShrink: 0,
-                        cursor: !premibile ? 'default' : blocked ? 'not-allowed' : 'pointer',
-                        fontFamily: 'monospace', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
-                        // AL TRAGUARDO il bottone si accende: è il momento in cui c'è da premere.
-                        background: validaQui ? 'rgba(52,211,153,0.20)'
-                                  : active ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.45)',
-                        border: `1px solid ${validaQui ? '#34d399' : active ? hue.on : RIPOSO}`,
-                        color: validaQui ? '#34d399' : active ? hue.ink : 'rgba(235,244,255,0.85)',
-                        // Non premibile ≠ spento: dice DOVE SI È, e si deve leggere bene.
-                        opacity: blocked ? 0.35 : 1 }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        {tempo ?? LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE THE ITEM', 'DA EL ÍTEM', 'GE ITEM')}
-                      </span>
-                      {/* Premuto col campo vuoto, si aspetta la voce: lo si dice, come in MIRROR.
-                          ⚠️ Si guarda la FASE, non il campo: dichiarando « l'item è stato detto »
-                          il campo resta vuoto (la trascrizione può non esserci) e l'avviso
-                          restava acceso a mock-up già chiesto. */}
-                      {attesaVoce && (
-                        <span className="animate-pulse" style={{ marginLeft: 8, fontSize: 10, color: '#fbbf24' }}>
-                          {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+                {cycleArmed && bottoneCiclo()}
                 {/* ── ANNULLA — l'uscita dal ciclo, che prima era il bottone stesso ────────
                     Chiudere il ciclo si faceva ripremendo « MOCK-UP », e nessuno poteva
                     indovinarlo. Adesso l'uscita ha il suo bottone e il suo nome, come in
@@ -7424,11 +7509,7 @@ export default function App() {
                     const lbl: React.CSSProperties = { fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(226,238,255,0.6)' };
                     return (
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                        {mirrorArmed && !auditingQuestion.trim() && (
-                          <div style={{ ...chip, border: '1px solid rgba(251,191,36,0.55)' }}><span style={{ fontSize: 12, color: '#fbbf24' }} className="animate-pulse">
-                            {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
-                          </span></div>
-                        )}
+                        {faseCiclo === 'mirror.say_item' && avvisoVoce}
                         {mirrorArmed && auditingQuestion.trim() && !mirrorDisp.locked && (
                           <div style={chip}><span style={{ fontSize: 12, color: 'rgba(226,238,255,0.7)' }} className="animate-pulse">
                             {LC('contatto della carica…', 'contact de la charge…', 'contacting the charge…', 'contacto de la carga…', 'kontakt med laddningen…')}
@@ -7566,6 +7647,7 @@ export default function App() {
                         (segnalato). Qui c'è il solo gesto del tempo, come negli altri tre
                         cicli — e serve perché la resistenza detta entra nel campo soltanto se
                         la trascrizione funziona. */}
+                    {toneAttesaItem && avvisoVoce}
                     {toneAttesaItem && (
                       <button style={btn(false, true)} onClick={dichiaraItemDetto}>
                         {LC('LA RESISTENZA È STATA DETTA', 'LA RÉSISTANCE A ÉTÉ DITE', 'THE RESISTANCE WAS SAID', 'LA RESISTENCIA FUE DICHA', 'MOTSTÅNDET HAR SAGTS')}
