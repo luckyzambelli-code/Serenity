@@ -98,10 +98,33 @@ describe('in quale livello si è', () => {
 });
 
 describe('la posizione sulla colonna — è la corrispondenza con l ago', () => {
-  it('+40 in cima, −40 in fondo, 0 esattamente a metà', () => {
+  it('+40 in cima, −40 in fondo — i due estremi non si toccano', () => {
     expect(tonePosition(40)).toBe(1);
     expect(tonePosition(-40)).toBe(0);
-    expect(tonePosition(0)).toBe(0.5);
+  });
+
+  it('lo ZERO sta a un terzo, non a metà: sotto ci sono 4 intervalli e sopra 8', () => {
+    // La colonna non è più lineare. Sotto lo zero le etichette sono −10 −20 −30 −40, sopra
+    // sono 2 3 4 6 9 20 30 40: due terzi della colonna stanno sopra lo zero, ed è giusto —
+    // è là che il preclear deve salire.
+    expect(tonePosition(0)).toBeCloseTo(1 / 3, 10);
+  });
+
+  it('la banda della vita quotidiana (0…9) prende QUASI METÀ colonna', () => {
+    // Lineare valeva 9/80, cioè un nono scarso, e i venticinque livelli che ci stanno dentro
+    // erano illeggibili. Ora attraversa cinque etichette (0 2 3 4 6 9) su dodici intervalli.
+    const banda = tonePosition(9) - tonePosition(0);
+    expect(banda).toBeCloseTo(5 / 12, 10);
+    expect(banda).toBeGreaterThan(9 / 80);
+  });
+
+  it('ogni intervallo fra due etichette scritte vale UGUALE', () => {
+    const passo = 1 / (TONE_LABELS.length - 1);
+    for (let i = 1; i < TONE_LABELS.length; i++) {
+      const d = tonePosition(TONE_LABELS[i - 1]) - tonePosition(TONE_LABELS[i]);
+      expect({ da: TONE_LABELS[i], a: TONE_LABELS[i - 1], ok: Math.abs(d - passo) < 1e-9 })
+        .toEqual({ da: TONE_LABELS[i], a: TONE_LABELS[i - 1], ok: true });
+    }
   });
 
   it('SALE col tono: è tutto il senso della colonna verticale', () => {
@@ -115,10 +138,15 @@ describe('la posizione sulla colonna — è la corrispondenza con l ago', () => 
 
   it('resistenza che SCENDE = tono che SALE = colonna che SALE', () => {
     // tono = 40 − 80·(R/Rtot). Meno resistenza → tono più alto → posizione più alta.
+    // ⚠️ Si prova il VERSO, non la proporzione: la colonna non è lineare (vedi tonePosition),
+    // quindi metà resistenza NON dà metà colonna — e non deve darla.
     const tonoDa = (frazioneR: number) => 40 - 80 * frazioneR;
     expect(tonePosition(tonoDa(1.0))).toBe(0);     // resistenza totale → fondo
-    expect(tonePosition(tonoDa(0.5))).toBe(0.5);   // metà → centro
     expect(tonePosition(tonoDa(0.0))).toBe(1);     // zero → cima
+    for (const [piuR, menoR] of [[1.0, 0.75], [0.75, 0.5], [0.5, 0.25], [0.25, 0.0]]) {
+      expect({ piuR, ok: tonePosition(tonoDa(menoR)) > tonePosition(tonoDa(piuR)) })
+        .toEqual({ piuR, ok: true });
+    }
   });
 
   it('non esce mai da 0..1, nemmeno fuori scala', () => {

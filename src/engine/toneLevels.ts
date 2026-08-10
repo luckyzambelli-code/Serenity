@@ -124,10 +124,35 @@ export const TONE_DECADES: readonly number[] = [-40, -30, -20, -10, 0, 10, 20, 3
  * `tono = 40 − 80·(R/R_totale)`, quindi resistenza che scende = tono che sale, e una caduta
  * dell'ago è resistenza che scende. Ago verso destra e colonna verso l'alto sono lo stesso
  * evento. Una funzione pura si prova; una moltiplicazione dentro un SVG no.
+ *
+ * ── NON È PIÙ LINEARE, ED È IL PUNTO ────────────────────────────────────────────────────────
+ * Lo era, e la colonna non si poteva leggere. La scala di Ron non è distribuita: fra 0 e 4 ci
+ * stanno VENTICINQUE livelli — tutta la vita quotidiana, da Apathy a Enthusiasm — e fra 9 e 40
+ * ce ne stanno tre. Lineare, quei venticinque cadevano dentro il 5% dell'altezza, illeggibili,
+ * e un tono normale (TA ≈ 3 → circa +3) si posava appena sopra la metà con un vuoto enorme
+ * sopra: da cui « ci si ritrova sempre in basso » (segnalato).
+ *
+ * Adesso ogni intervallo fra due etichette scritte occupa la STESSA altezza. La banda
+ * 0…9 — dove il preclear passa il tempo — prende un terzo della colonna invece di un nono, e
+ * lo zero si posa a un terzo dell'altezza invece che a metà: sotto lo zero ci sono quattro
+ * intervalli, sopra otto.
+ *
+ * ⚠️ SI PERDE LA PROPORZIONE, SI TIENE IL VERSO. Due toni distanti ugualmente non stanno più a
+ * distanze uguali sulla colonna, e va bene: la colonna dice DOVE SI È e SE SI SALE, non quanto.
+ * Il « quanto » è dell'ago, che resta lineare. Chi legge un numero lo legge al cursore.
  */
 export const tonePosition = (tone: number): number => {
   const t = Math.max(-TONE_SCALE_MAX, Math.min(TONE_SCALE_MAX, tone));
-  return (t + TONE_SCALE_MAX) / (2 * TONE_SCALE_MAX);
+  // Le etichette vanno dall'alto al basso; qui si scorre dal basso.
+  const nodi = [...TONE_LABELS].slice().reverse();          // −40 … +40
+  const passo = 1 / (nodi.length - 1);
+  for (let i = 1; i < nodi.length; i++) {
+    if (t <= nodi[i]) {
+      const q = (t - nodi[i - 1]) / (nodi[i] - nodi[i - 1]);   // dentro il segmento, 0…1
+      return (i - 1) * passo + q * passo;
+    }
+  }
+  return 1;   // in cima
 };
 
 /**

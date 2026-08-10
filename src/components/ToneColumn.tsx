@@ -1,6 +1,6 @@
 import React from 'react';
 import { useUiStore } from '../store/uiStore';
-import { TONE_LABELS, TONE_DECADES, levelAt, exactLevelName, tonePosition, levelName } from '../engine/toneLevels';
+import { TONE_LABELS, levelAt, exactLevelName, tonePosition, levelName } from '../engine/toneLevels';
 import { pick5 } from '../i18n5';
 import { TOKEN } from '../ui/tokens';
 
@@ -23,12 +23,17 @@ import { TOKEN } from '../ui/tokens';
  * sono lo STESSO evento visto in due modi — non due strumenti che dicono cose diverse. La
  * colonna sta a destra apposta: comincia dove l'arco finisce, all'estremo della liberazione.
  *
- * ── LINEARE, E IL NOME COME TESTO ───────────────────────────────────────────────────────────
- * L'asse è lineare in tono, perché è l'unico modo di restare fedele all'ago. Ma la scala è
- * fitta in basso e rada in alto: fra 0 e 4 ci sono venticinque livelli. Scrivere i nomi alla
- * loro posizione li accavallerebbe tutti in un centimetro. Quindi: sulla colonna solo le
- * tredici etichette rade, e il nome del livello in cui si è come TESTO accanto al cursore —
- * sempre leggibile, qualunque sia l'affollamento.
+ * ── ADATTATA, NON LINEARE — ED È IL PUNTO ───────────────────────────────────────────────────
+ * L'asse ERA lineare in tono. La scala di Ron però non è distribuita: fra 0 e 9 ci stanno
+ * quaranta livelli — tutta la vita quotidiana — e fra 9 e 40 tre. Lineare, quella banda cadeva
+ * in un decimo dell'altezza, illeggibile, e un tono normale si posava appena sopra la metà con
+ * un vuoto enorme sopra: da cui « ci si ritrova sempre in basso » (segnalato).
+ *
+ * Ora ogni intervallo fra due etichette scritte occupa la stessa altezza (`tonePosition`, dove
+ * si prova). Si perde la proporzione e si tiene il verso — il « quanto » è dell'ago, che resta
+ * lineare; la colonna dice DOVE SI È e SE SI SALE.
+ *
+ * I nomi degli altri livelli restano fuori: li dice il cursore, per esteso.
  *
  * ── SI LEGGE, QUINDI È GRANDE ───────────────────────────────────────────────────────────────
  * I nomi erano a corpo 9 su una colonna larga 190: leggibili col naso sullo schermo, non da
@@ -48,9 +53,16 @@ import { TOKEN } from '../ui/tokens';
  * Rendering puro: nessuno stato, nessuna decisione.
  */
 
-/** Altezza utile della colonna, in unità del suo viewBox. */
-const H = 620, W = 260;
-const TOP = 24, BOT = TOP + H;
+/**
+ * Altezza utile della colonna, in unità del suo viewBox.
+ *
+ * ⚠️ PIÙ BASSA di prima (era 620): aprendo DIAGNOSTIC i suoi dati finivano SOPRA la colonna
+ * (segnalato). Accorciandola si guadagna due volte — non si accavalla più, e siccome il
+ * viewBox si accorcia con lei i caratteri restano grandi invece di rimpicciolirsi per stare
+ * dentro un riquadro più corto.
+ */
+const H = 400, W = 260;
+const TOP = 26, BOT = TOP + H;
 
 /**
  * Il nome, spezzato in righe che ci stiano.
@@ -105,16 +117,16 @@ export function ToneColumn({ tone, hasMeter, charge, chargeFrom, lang }: {
   const sale  = yDa != null && yOra < yDa;
 
   return (
-    <svg viewBox={`0 0 ${W} ${BOT + 26}`} width="100%" height="100%"
+    <svg viewBox={`0 0 ${W} ${BOT + 28}`} width="100%" height="100%"
          style={{ display: 'block', overflow: 'visible' }} aria-hidden>
       {/* L'asta */}
       <line x1={54} y1={TOP} x2={54} y2={BOT} stroke={tacca} strokeWidth={1.5} />
 
-      {/* GLI OTTO SEGMENTI — un multiplo di dieci per tacca, nove tacche. */}
-      {TONE_DECADES.map(d => (
-        <line key={`d${d}`} x1={46} y1={y(d)} x2={62} y2={y(d)}
-              stroke={d === 0 ? inchiostro : tacca} strokeWidth={d === 0 ? 2 : 1.4} />
-      ))}
+      {/* LO ZERO — la sola tacca marcata. Le nove tacche dei multipli di dieci non si
+          disegnano più: con la colonna adattata cadono dove capita rispetto alle etichette,
+          e due griglie sovrapposte con passi diversi si leggono peggio di una. Lo zero resta
+          perché è il confine, e si vede a colpo d'occhio dov'è. */}
+      <line x1={44} y1={y(0)} x2={64} y2={y(0)} stroke={inchiostro} strokeWidth={2.2} />
 
       {/* LE ETICHETTE RADE — le tredici scelte, col nome del livello nella lingua in corso.
           Il nome va SOTTO il numero e non di fianco: di fianco, a corpo leggibile, i nomi
@@ -127,14 +139,18 @@ export function ToneColumn({ tone, hasMeter, charge, chargeFrom, lang }: {
         return (
           <g key={`l${t}`}>
             <line x1={54} y1={yy} x2={66} y2={yy} stroke={tacca} strokeWidth={1.2} />
-            <text x={72} y={yy + 4} fill={tenue}
-                  style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 800,
+            <text x={72} y={yy + 5} fill={tenue}
+                  style={{ fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 800,
                            letterSpacing: '0.01em' }}>
               {t > 0 ? `+${t}` : `${t}`}
             </text>
+            {/* IL NOME SI CENTRA SULLA TACCA. Partiva DALLA tacca e scendeva: i nomi a due
+                righe (« Serenità dell'essere », « Non potersi nascondere ») finivano addosso
+                all'etichetta sotto. Centrato, un nome di due righe occupa ±12 su 33 unità di
+                passo e non tocca né sopra né sotto. */}
             {righe.map((r, i) => (
-              <text key={i} x={112} y={yy + 4 + i * 13} fill={tenue}
-                    style={{ fontFamily: 'var(--font-sans)', fontSize: 12, opacity: 0.92 }}>
+              <text key={i} x={116} y={yy + 4 - (righe.length - 1) * 6 + i * 12.5} fill={tenue}
+                    style={{ fontFamily: 'var(--font-sans)', fontSize: 13, opacity: 0.92 }}>
                 {r}
               </text>
             ))}
@@ -153,21 +169,33 @@ export function ToneColumn({ tone, hasMeter, charge, chargeFrom, lang }: {
       )}
 
       {/* IL CURSORE — dove si è adesso, col nome del livello per esteso. È la sola scritta che
-          il preclear cerca davvero: sta più grande di tutto il resto, e va a capo se serve. */}
-      <g>
-        <polygon points={`36,${yOra - 7} 52,${yOra} 36,${yOra + 7}`} fill={inchiostro} />
-        <line x1={36} y1={yOra} x2={66} y2={yOra} stroke={inchiostro} strokeWidth={2} />
-        <text x={72} y={yOra - 7} fill={inchiostro}
-              style={{ fontFamily: 'var(--font-sans)', fontSize: 17, fontWeight: 800 }}>
-          {hasMeter ? `≈ ${tone > 0 ? '+' : ''}${tone.toFixed(1)}` : '—'}
-        </text>
-        {spezza(nomeLiv).map((r, i) => (
-          <text key={i} x={72} y={yOra + 11 + i * 15} fill={inchiostro}
-                style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 700, opacity: 0.95 }}>
-            {r}
-          </text>
-        ))}
-      </g>
+          il preclear cerca davvero: sta più grande di tutto il resto, e va a capo se serve.
+
+          ⚠️ HA UN FONDO PIENO. Senza, le sue due righe si mescolavano alle etichette fisse che
+          gli passano dietro e non si leggeva né l'uno né le altre. Il fondo è il colore della
+          scena: copre, non oscura. */}
+      {(() => {
+        const righeC = spezza(nomeLiv);
+        const alt = 26 + righeC.length * 17;
+        return (
+          <g>
+            <rect x={68} y={yOra - alt / 2} width={W - 70} height={alt} rx={6}
+                  fill={isLightTheme ? '#eef0f4' : '#0b0f14'} opacity={0.92} />
+            <polygon points={`36,${yOra - 7} 52,${yOra} 36,${yOra + 7}`} fill={inchiostro} />
+            <line x1={36} y1={yOra} x2={66} y2={yOra} stroke={inchiostro} strokeWidth={2} />
+            <text x={74} y={yOra - alt / 2 + 19} fill={inchiostro}
+                  style={{ fontFamily: 'var(--font-sans)', fontSize: 20, fontWeight: 800 }}>
+              {hasMeter ? `≈ ${tone > 0 ? '+' : ''}${tone.toFixed(1)}` : '—'}
+            </text>
+            {righeC.map((r, i) => (
+              <text key={i} x={74} y={yOra - alt / 2 + 38 + i * 17} fill={inchiostro}
+                    style={{ fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 700, opacity: 0.95 }}>
+                {r}
+              </text>
+            ))}
+          </g>
+        );
+      })()}
 
       {/* LA CARICA DEL MUSE — una barretta a sinistra dell'asta: quanta ce n'è adesso.
           Non è un tono: è l'altra sorgente, e sta separata apposta. */}
@@ -180,8 +208,8 @@ export function ToneColumn({ tone, hasMeter, charge, chargeFrom, lang }: {
       )}
 
       {/* Il verso, detto una volta: si SALE. */}
-      <text x={54} y={TOP - 10} textAnchor="middle" fill={tenue}
-            style={{ fontFamily: 'var(--font-sans)', fontSize: 11, letterSpacing: '0.18em' }}>
+      <text x={54} y={TOP - 11} textAnchor="middle" fill={tenue}
+            style={{ fontFamily: 'var(--font-sans)', fontSize: 13, letterSpacing: '0.18em' }}>
         {sale ? '▲' : ''}
       </text>
     </svg>

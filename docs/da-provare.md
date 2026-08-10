@@ -16,7 +16,10 @@ da sola senza toccare le altre.
 - [ ] **La colonna della SCALA DEL TONO** (`components/ToneColumn.tsx`) — verticale, a destra
       dell'arco, in vista TONE. Compare solo con uno strumento collegato, quindi NON si è
       potuta guardare:
-  - [ ] le tredici etichette non si accavallano, e le nove tacche dei decimi si vedono;
+  - [ ] le tredici etichette non si accavallano (guardate su pagina di prova, non in app);
+  - [ ] la scala ADATTATA (2.0.117, non più lineare) mette un tono normale a metà colonna e non
+        più in basso: da confermare col meter, che è la cosa che l'ha fatta scoprire;
+  - [ ] aprendo DIAGNOSTIC i suoi dati NON coprono più la colonna;
   - [ ] i nomi sono LEGGIBILI da seduti (corpo 12–14, colonna larga 260) e quelli lunghi
         vanno a capo su due righe senza uscire dal bordo — `spezza` è provata, la resa no;
   - [ ] i nomi sono nella LINGUA della seduta, e cambiano cambiando lingua;

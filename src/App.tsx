@@ -53,7 +53,7 @@ import { CameraFeed } from './components/CameraFeed';
 import { ConnectionModal } from './components/ConnectionModal';
 import { ConnectionProgress } from './components/ConnectionProgress';
 import { AlertTriangle, BookOpen, Headphones, Power, Play, Mic, Square, ClipboardList, Gauge,
-         Battery, Activity, MessageSquare } from 'lucide-react';
+         Battery, Activity, MessageSquare, Megaphone } from 'lucide-react';
 import { cn } from './lib/utils';
 import { useI18n } from './i18n.tsx';
 import { Language } from './i18n';
@@ -4634,7 +4634,11 @@ export default function App() {
       <div style={{ marginTop: 4, fontFamily: 'var(--font-sans)', fontSize: compatto ? 12 : 13, fontWeight: 700,
                     color: isLightTheme ? '#3a3a40' : 'rgba(226,238,255,0.85)' }}>{testo}</div>
     );
-    const DAI = LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE THE ITEM', 'DA EL ÍTEM', 'GE ITEM');
+    // ⚠️ « DAI L'ITEM » NON STA QUI. Stava anche qui, e allora il gesto compariva DUE volte
+    // nella stessa schermata — accanto al campo dell'item e di nuovo al centro, con due
+    // etichette e due colori diversi (segnalato: « non si capisce cosa fare »). Il posto del
+    // gesto è UNO SOLO, accanto al campo dove l'item si scrive, uguale nei quattro cicli.
+    // Qui restano i passi che il campo non ha: chiudere il ciclo, e per NULL i tre esiti.
 
     // ── SI ASPETTA LA VOCE — UN SOLO GESTO, E NON È QUELLO DOPO ────────────
     // Premuto col campo vuoto, l'istruzione dice « dì l'item » ma sotto
@@ -4658,7 +4662,7 @@ export default function App() {
     // (segnalato). Peggio: `valueR` restava 0 e `stopMirror` non registrava
     // nemmeno il ciclo.
     if (mode === 'mirror') {
-      if (!mirrorArmed) return riga(btn(DAI, () => armMirror(), '#34d399'));
+      if (!mirrorArmed) return null;   // il gesto è accanto al campo, in barra
       // (a) IL VALORE — dieci bottoni, la quantità di carica di QUESTO item.
       if (!mirrorDisp.locked) return <>
         {domanda(LC('Quanta carica? Da 1 a 10.', 'Combien de charge ? De 1 à 10.', 'How much charge? From 1 to 10.', '¿Cuánta carga? De 1 a 10.', 'Hur mycket laddning? Från 1 till 10.'))}
@@ -4695,7 +4699,7 @@ export default function App() {
     if (mode === 'contact')
       return cycleArmed
         ? riga(btn(LC('DICHIARA AS-IS', 'DÉCLARE L\'AS-IS', 'DECLARE AS-IS', 'DECLARA AS-IS', 'DEKLARERA AS-IS'), () => validateAsIs(), '#34d399'))
-        : riga(btn(DAI, () => armCycle('charge'), '#6ee7b7'));
+        : null;   // il gesto è accanto al campo, in barra
 
     // ── NULL — tre esiti PARI, non uno pre-scelto. La domanda sopra li lega:
     //    il preclear è riuscito a creare la massa? Sì coi VGI's, sì senza, o non
@@ -4721,7 +4725,7 @@ export default function App() {
               }, '#dc2626', false)}
             </>)}
           </>
-        : riga(btn(DAI, () => armCycle('null'), '#cbd5e1'));
+        : null;   // il gesto è accanto al campo, in barra
 
     return null;   // TONE ha la sua barra dei quattro tempi, e regge senza ago.
     return null;   // TONE ha la sua barra, e regge senza ago.
@@ -7156,12 +7160,17 @@ export default function App() {
                 {([mode === 'null' ? 'null' : 'charge'] as const).map((k) => {
                   const active = cycleArmed && cycleKind === k;
                   const label = k === 'charge' ? 'CONTACT' : 'NULL';
-                  // Contour SOBRE mais DIFFÉRENT même au REPOS (demande utilisateur) : CONTACT = teal
-                  // (la charge), NULL = ardoise (la couleur de l'arc NULL du dial) → on distingue les
-                  // deux boutons d'un coup d'œil sans devoir lire.
+                  // ⚠️ A RIPOSO IL COLORE NON C'È PIÙ. Il contorno era teal in CONTACT e ardesia
+                  // in NULL anche prima di premere: due bottoni che dicono la stessa cosa
+                  // (« dai l'item ») con due colori diversi, mentre MIRROR e TONE lo davano
+                  // neutro — quattro cicli, tre aspetti (segnalato). Il metodo lo si è già
+                  // scelto nel selettore in basso; qui resta il GESTO, e il gesto è uno.
+                  //
+                  // A ciclo ARMATO il colore torna, e lì serve: dice QUALE ciclo sta girando.
                   const hue = k === 'charge'
-                    ? { rest: 'rgba(110,231,183,0.45)', on: 'rgba(110,231,183,0.85)', ink: '#6ee7b7' }
-                    : { rest: 'rgba(148,163,184,0.55)', on: 'rgba(203,213,225,0.9)',  ink: '#cbd5e1' };
+                    ? { on: 'rgba(110,231,183,0.85)', ink: '#6ee7b7' }
+                    : { on: 'rgba(203,213,225,0.9)',  ink: '#cbd5e1' };
+                  const RIPOSO = 'rgba(255,255,255,0.3)';   // lo stesso di MIRROR e di TONE
                   // On NE PEUT PAS sauter d'un cycle à l'autre en cours de route (demande utilisateur) :
                   // il faut d'abord FERMER le cycle en action → l'autre bouton est désactivé.
                   const blocked = cycleArmed && !active;
@@ -7180,14 +7189,14 @@ export default function App() {
                         cursor: blocked ? 'not-allowed' : 'pointer',
                         fontFamily: 'monospace', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
                         background: active ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.45)',
-                        border: `1px solid ${active ? hue.on : hue.rest}`,
-                        color: active ? hue.ink : 'rgba(235,244,255,0.8)',
+                        border: `1px solid ${active ? hue.on : RIPOSO}`,
+                        color: active ? hue.ink : 'rgba(235,244,255,0.85)',
                         opacity: blocked ? 0.35 : 1 }}>
                       {/* Actif : le nom + le fait qu'il tourne + COMMENT le fermer (c'est ce bouton). */}
                       {/* Actif : nom + icône STOP pleine (le symbole universel « arrêter ») — dit
                           que CE bouton ferme le cycle, sans le mot (demande utilisateur). */}
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        {active ? label : LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE ITEM', 'DA EL ÍTEM', 'GE ITEM')}
+                        {active ? label : LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE THE ITEM', 'DA EL ÍTEM', 'GE ITEM')}
                         {active && <Square size={9} strokeWidth={0} fill="currentColor" />}
                       </span>
                       {/* Premuto col campo vuoto, si aspetta la voce: lo si dice, come in MIRROR. */}
@@ -7241,20 +7250,25 @@ export default function App() {
                         border: `1px solid ${mirrorArmed ? 'rgba(52,211,153,0.6)' : 'rgba(255,255,255,0.22)'}`,
                         color: 'rgba(235,244,255,0.92)', outline: 'none' } as React.CSSProperties}
                     />
+                    {/* ⚠️ CHIEDEVA IL CONTATTO DEGLI ELETTRODI (`museContact`), e senza MUSE
+                        restava grigio: il ciclo MIRROR non si poteva proprio cominciare
+                        (segnalato). È lo stesso errore di sempre — il ciclo non ha bisogno
+                        dell'ago per esistere, ha bisogno di un item. Basta che la seduta
+                        giri. */}
                     <button
                       onClick={() => (mirrorArmed ? stopMirror() : armMirror())}
-                      disabled={!(sessionState === 'running' && museContact)}
+                      disabled={sessionState !== 'running'}
                       style={{ height: 32, padding: '0 14px', borderRadius: 8, flexShrink: 0,
-                        cursor: (sessionState === 'running' && museContact) ? 'pointer' : 'not-allowed',
+                        cursor: sessionState === 'running' ? 'pointer' : 'not-allowed',
                         fontFamily: 'monospace', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
                         background: mirrorArmed ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.45)',
                         border: `1px solid ${mirrorArmed ? 'rgba(52,211,153,0.75)' : 'rgba(255,255,255,0.3)'}`,
                         color: mirrorArmed ? '#34d399' : 'rgba(235,244,255,0.85)',
-                        opacity: (sessionState === 'running' && museContact) ? 1 : 0.4 }}>
+                        opacity: sessionState === 'running' ? 1 : 0.4 }}>
                       {/* (c) on VALIDE l'item (obtenu ou non), puis on repart avec un autre item */}
                       {mirrorArmed
                         ? LC('VALIDA', 'VALIDER', 'VALIDATE', 'VALIDAR', 'VALIDERA')
-                        : LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE ITEM', 'DA EL ÍTEM', 'GE ITEM')}
+                        : LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE THE ITEM', 'DA EL ÍTEM', 'GE ITEM')}
                     </button>
                   </div>
                   {(() => {
@@ -7403,23 +7417,35 @@ export default function App() {
                       <>
                         {/* DA DOVE SI PARTE, E DOVE SI VA. La meta è +40 per tutte le
                             resistenze — non dipende più da quanta carica c'era. */}
+                        {/* Senza meter non si scrive un trattino al posto del tono di partenza:
+                            attaccato alla riga dell'ancoraggio sembrava parte della frase.
+                            Resta la meta, che c'è comunque. */}
                         <span style={{ fontFamily: 'monospace', fontSize: 12, color: inchiostro }}>
                           {toneAtStart !== null
                             ? `${toneAtStart > 0 ? '+' : ''}${toneAtStart.toFixed(0)}`
-                            : '—'}
-                          <b style={{ color: '#fbbf24', margin: '0 8px' }}>→ +{TONE_TARGET}</b>
+                            : ''}
+                          <b style={{ color: '#fbbf24', marginRight: 8,
+                                      marginLeft: toneAtStart !== null ? 8 : 0 }}>→ +{TONE_TARGET}</b>
                           <span style={{ opacity: 0.55 }}>
                             {LC('serenità dell\'essere', 'sérénité de l\'être', 'serenity of beingness', 'serenidad del ser', 'varandets stillhet')}
                           </span>
                         </span>
-                        {/* ── RIDÀ IL COMANDO ───────────────────────────────────────────────
-                            « Command b is asked REPETITIVELY »: ogni volta che lo si ridà, si
-                            preme. Il numero è il conto di questa resistenza — va nel journal a
-                            ciclo chiuso, e nel frattempo si vede salire. */}
+                        {/* ── IL COMANDO, E IL CONTO DELLE VOLTE ────────────────────────────
+                            Diceva « RIDÀ IL COMANDO », e appena dato l'item quel « ridà » si
+                            confondeva con l'item appena dato: sembrava chiedere di ripetere
+                            LUI (segnalato). Adesso il bottone dice QUALE comando è — è lo
+                            stesso testo del titolo — e l'icona dice che è una cosa da
+                            PRONUNCIARE, non da confermare.
+
+                            Che si ripeta non c'è bisogno di scriverlo sul bottone: sta già
+                            nell'istruzione sotto (« ridallo finché non reagisce più »). Ogni
+                            pressione conta una passata; il numero va nel journal. */}
                         {tonePhase === 'raise' && (
-                          <button style={btn(false, false)}
+                          <button style={{ ...btn(false, false), display: 'inline-flex',
+                                           alignItems: 'center', gap: 7 }}
                             onClick={() => setToneRipetizioni(v => v + 1)}>
-                            {LC('RIDÀ IL COMANDO', 'REDONNE LA COMMANDE', 'GIVE THE COMMAND AGAIN', 'VUELVE A DAR EL COMANDO', 'GE KOMMANDOT IGEN')}
+                            <Megaphone size={14} strokeWidth={2} />
+                            {LC('PORTALO A TONO 40', 'MÈNE-LE AU TON 40', 'RAISE IT TO TONE 40', 'LLÉVALO AL TONO 40', 'FÖR DET TILL TON 40')}
                             {toneRipetizioni > 0 ? ` ×${toneRipetizioni}` : ''}
                           </button>
                         )}
@@ -7596,7 +7622,10 @@ export default function App() {
                 loro — e ci guadagna anche il senso: la scala nasce dove l'arco si chiude. */}
             {!senzaMisura && viewMode === 'tone' && (
               <div className="absolute pointer-events-none"
-                   style={{ right: 12, top: '30%', bottom: '8%', width: 260, zIndex: LAYER.sphereChrome }}>
+                   // PIÙ CORTA ANCORA: aprendo DIAGNOSTIC i suoi dati finivano sopra la
+                   // colonna (segnalato). Comincia sotto di loro e finisce più in alto — e
+                   // siccome il viewBox si è accorciato con lei, i caratteri non rimpiccioliscono.
+                   style={{ right: 12, top: '38%', bottom: '14%', width: 260, zIndex: LAYER.sphereChrome }}>
                 <ToneColumn
                   tone={toneMeasured ?? 0}
                   hasMeter={toneHasMeter}

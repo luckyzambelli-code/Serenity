@@ -1,6 +1,6 @@
 # TONE SCALE
 
-*Note pour Ron · version 2.0.116*
+*Note pour Ron · version 2.0.117*
 
 ---
 
@@ -25,8 +25,9 @@ regarde, et il n'a qu'à les lire.
 
 > **« Raise this to tone forty on the tone scale. »**
 
-La seconde est **répétée**, comme tu l'as demandé. Un bouton *redonne la
-commande* compte les fois ; le nombre reste à l'écran pendant qu'on conduit et
+La seconde est **répétée**, comme tu l'as demandé. Le bouton porte la commande
+elle-même — *mène-le au ton 40* — avec un mégaphone, pour qu'on voie que c'est
+une chose à dire et non une case à cocher. Il compte les fois ; le nombre reste à l'écran pendant qu'on conduit et
 part dans le journal à la fermeture — `TONE −20 → +40 · ×7 · TON 40 ATTEINT`. Une résistance
 qui coûte sept passes et une qui en coûte deux ne sont pas le même travail, et
 nous voulons pouvoir les comparer.
@@ -45,6 +46,14 @@ se lire à distance : c'est le préclair qui les regarde, pas seulement nous.
 Les valeurs écrites sont celles que Claudio a retenues : −40, −30, −20, −10, 0,
 2, 3, 4, 6, 9, 20, 30, 40. Les autres n'apparaissent qu'au curseur, sinon la
 colonne serait illisible.
+
+**La colonne n'est pas à l'échelle, et c'est exprès.** Ton échelle n'est pas
+répartie : entre 0 et 9 il y a quarante niveaux — toute la vie ordinaire — et
+entre 9 et 40 il y en a trois. Dessinée à l'échelle, cette bande tombait dans un
+dixième de la hauteur, illisible, et un ton normal se posait toujours vers le
+bas. Chaque intervalle entre deux valeurs écrites occupe donc la même hauteur.
+On perd la proportion, on garde le sens de la marche : le « combien » reste à
+l'aiguille, qui elle est linéaire.
 
 ---
 
