@@ -67,6 +67,48 @@ export const toneFromTa = (ta: number, taMin: number, taMax: number): number => 
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════
+// IL TONO SI ANCORA AL CICLO, NON AL FONDO SCALA DELLO STRUMENTO
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ── PERCHÉ ─────────────────────────────────────────────────────────────────────────────────
+ * Ron: « The relationship between the Tone Scale and ohms is an arbitrary one. […] what is
+ * important is TONE. » Se il legame è arbitrario, ancorare la scala al FONDO SCALA DEL METER —
+ * che è quel che faceva `toneFromTa` con TA_MIN…TA_MAX — mette una convenzione dentro l'altra:
+ * quel 6,5 è del Theta-Meter, non della scala del tono.
+ *
+ * Qui l'origine è il PUNTO DI PARTENZA DEL CICLO: alla localizzazione si fissa « qui sei a
+ * −12 », e da lì si misura la SALITA. Il numero assoluto non serve — serve il movimento, ed è
+ * quel che si vuole leggere: quanto è salito, e in quante passate.
+ *
+ * ── LA PENDENZA RESTA QUELLA DI RON ────────────────────────────────────────────────────────
+ * « total resistance in meter divided by 80 »: l'escursione INTERA dello strumento vale 80
+ * divisioni. Cambia l'origine, non la scala — due cicli restano confrontabili.
+ *
+ * ── E VALE PER QUALUNQUE SORGENTE ──────────────────────────────────────────────────────────
+ * La stessa funzione serve al TA del meter e alla carica EEG del MUSE: si passa l'escursione
+ * totale della grandezza e il resto è identico. È il motivo per cui la si scrive una volta
+ * sola: con due strumenti si guardano i DUE, e devono essere calcolati allo stesso modo, se no
+ * confrontarli non vuol dire niente.
+ *
+ * @param partenza   il tono fissato alla localizzazione
+ * @param allaPartenza  la misura in quell'istante
+ * @param adesso        la misura adesso
+ * @param escursione    quanto vale l'INTERA scala della grandezza (80 divisioni)
+ * @param scendeSale    true se la grandezza che CALA fa SALIRE il tono (resistenza, carica)
+ */
+export const toneFromDelta = (
+  partenza: number, allaPartenza: number, adesso: number,
+  escursione: number, scendeSale = true,
+): number => {
+  if (!(escursione > 0) || !Number.isFinite(allaPartenza) || !Number.isFinite(adesso)) {
+    return clampTone(partenza);
+  }
+  const delta = (scendeSale ? allaPartenza - adesso : adesso - allaPartenza) / escursione;
+  return clampTone(partenza + delta * 2 * TONE_SCALE_MAX);
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════
 // 2. PORTARE A TONO QUARANTA — quanta strada è stata fatta
 // ═══════════════════════════════════════════════════════════════════════════════════════════
 

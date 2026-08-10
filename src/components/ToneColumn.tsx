@@ -90,9 +90,17 @@ export function spezza(nome: string, max = MAX_CAR): string[] {
  *  (`tonePosition`), dove si prova: qui si converte soltanto in coordinate. */
 const y = (tone: number): number => BOT - tonePosition(tone) * H;
 
-export function ToneColumn({ tone, hasMeter, charge, chargeFrom, lang }: {
-  /** Il tono in questo istante, −40…+40. */
+export function ToneColumn({ tone, toneEeg, hasMeter, charge, chargeFrom, lang }: {
+  /** Il tono in questo istante, −40…+40. Col meter viene dal TA; senza, lo dichiara l'auditor. */
   tone: number;
+  /**
+   * IL SECONDO SGUARDO — lo stesso tono letto sulla carica EEG. `null` senza MUSE.
+   *
+   * Non è un secondo cursore in concorrenza: è l'altra misura dello stesso movimento. Se sale
+   * insieme al primo, la salita è confermata da due strumenti indipendenti; se resta indietro,
+   * è un'informazione — e sapere che i due non concordano vale più di un numero solo.
+   */
+  toneEeg?: number | null;
   /** La lingua della seduta: i nomi dei livelli si traducono come tutto il resto. */
   lang: string;
   /** C'è il meter? Senza, il numero non si mostra: resterebbe una cifra senza misura. */
@@ -178,6 +186,21 @@ export function ToneColumn({ tone, hasMeter, charge, chargeFrom, lang }: {
         </>
       )}
 
+      {/* ── IL SECONDO SGUARDO (EEG) ────────────────────────────────────────────────────
+          Una marca sottile a sinistra dell'asta, senza scritte: si guarda se sale INSIEME al
+          cursore, non che numero fa. Solo col MUSE, e solo se dice qualcosa di diverso — a un
+          decimo di divisione dal cursore sarebbe una riga sopra l'altra. */}
+      {toneEeg != null && Math.abs(y(toneEeg) - yOra) > 3 && (
+        <g>
+          <line x1={40} y1={y(toneEeg)} x2={62} y2={y(toneEeg)}
+                stroke={inchiostro} strokeWidth={1.6} opacity={0.5} strokeDasharray="3 3" />
+          <text x={30} y={y(toneEeg) - 4} textAnchor="end" fill={inchiostro}
+                style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, opacity: 0.55 }}>
+            EEG
+          </text>
+        </g>
+      )}
+
       {/* IL CURSORE — dove si è adesso, col nome del livello per esteso. È la sola scritta che
           il preclear cerca davvero: sta più grande di tutto il resto, e va a capo se serve.
 
@@ -195,7 +218,10 @@ export function ToneColumn({ tone, hasMeter, charge, chargeFrom, lang }: {
             <line x1={36} y1={yOra} x2={66} y2={yOra} stroke={inchiostro} strokeWidth={2} />
             <text x={74} y={yOra - alt / 2 + 19} fill={inchiostro}
                   style={{ fontFamily: 'var(--font-sans)', fontSize: 20, fontWeight: 800 }}>
-              {hasMeter ? `≈ ${tone > 0 ? '+' : ''}${tone.toFixed(1)}` : '—'}
+              {/* Il « ≈ » dice « misurato, ma non in ohm veri ». Senza meter il numero non è
+                  misurato affatto: è quel che l'auditor ha dichiarato, e si scrive netto. */}
+              {hasMeter ? `≈ ${tone > 0 ? '+' : ''}${tone.toFixed(1)}`
+                        : `${tone > 0 ? '+' : ''}${tone.toFixed(0)}`}
             </text>
             {righeC.map((r, i) => (
               <text key={i} x={74} y={yOra - alt / 2 + 38 + i * 17} fill={inchiostro}

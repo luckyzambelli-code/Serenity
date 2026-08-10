@@ -19,6 +19,12 @@ da sola senza toccare le altre.
   - [ ] le tredici etichette non si accavallano (guardate su pagina di prova, non in app);
   - [ ] la scala ADATTATA (2.0.117, non più lineare) mette un tono normale a metà colonna e non
         più in basso: da confermare col meter, che è la cosa che l'ha fatta scoprire;
+  - [ ] **l'ANCORAGGIO al ciclo** (2.0.120) — il tono non si legge più in assoluto: alla
+        localizzazione si fissa la partenza e da lì si conta la salita. Col meter:
+    - [ ] stringendo le lattine il cursore SALE (resistenza giù = tono su) e riscende lasciando;
+    - [ ] la salita è proporzionata — tutta l'escursione del TA vale 80 divisioni;
+    - [ ] col MUSE ANCHE collegato compare la marca tratteggiata « EEG »: da guardare se sale
+          INSIEME al cursore. È il dato che questa versione esiste per raccogliere;
   - [ ] aprendo DIAGNOSTIC i suoi dati NON coprono più la colonna;
   - [ ] il PANNELLO DI FONDO della colonna (2.0.118) stacca le scritte dai tratti dell'arco
         senza nasconderlo: si deve vedere l'arco attraverso, e leggere i nomi sopra;

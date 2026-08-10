@@ -1,6 +1,6 @@
 # TONE SCALE
 
-*Note pour Ron · version 2.0.119*
+*Note pour Ron · version 2.0.120*
 
 ---
 
@@ -92,6 +92,40 @@ L'app **propose** la fin quand deux signaux indépendants concordent — jamais 
 un seul. **C'est toujours l'auditeur qui valide.**
 
 ---
+
+## Ta réponse sur les ohms, et ce qu'elle a changé
+
+> « The relationship between the Tone Scale and ohms is an arbitrary one. […]
+> what is important is TONE. »
+
+Nous en avons tiré une conséquence, et elle a simplifié les choses.
+
+Jusqu'ici le ton se lisait en **absolu** sur le fond d'échelle de notre mètre :
+un TA de 0 à 6,5 étalé sur les 80 divisions. C'était mettre une convention dans
+une autre — ce 6,5 appartient au Theta-Meter, pas à ton échelle. Et ça donnait
+un défaut visible en séance : un ton ordinaire se posait toujours vers le bas.
+
+Maintenant **l'origine est le cycle**. À la localisation on fixe « ici tu es à
+−12 », et à partir de là on mesure la MONTÉE. La pente reste la tienne : toute
+l'étendue de la grandeur vaut 80 divisions. Ce qu'on lit n'est plus une position
+absolue mais un trajet — et c'est bien ce qui nous intéresse : de combien il est
+monté, en combien de passes.
+
+D'où vient ce point de départ, selon ce qu'on a sous la main :
+
+- **avec le mètre** — la mesure le propose ;
+- **avec le mètre ET le MUSE** — les deux, et on les voit ensemble : une marque
+  pointillée montre la même montée lue sur l'activité cérébrale. Si les deux
+  montent de concert, la montée est confirmée par deux instruments qui ne se
+  parlent pas. Si l'un reste en arrière, c'est une information — nous te dirons
+  ce que ça donne ;
+- **sans rien** — ce que le préclair dit, plus l'obnosis de l'auditeur. C'est ta
+  situation, et la vue marche pareil : l'auditeur pose le point de départ et
+  fait monter.
+
+Le rapport écrit d'où vient le chiffre : mesuré, mesuré+EEG, ou assessé. Un ton
+mesuré et un ton dit ne valent pas la même chose, et à froid on ne saurait plus
+les distinguer.
 
 ## Ce qu'il nous manque : les ohms
 

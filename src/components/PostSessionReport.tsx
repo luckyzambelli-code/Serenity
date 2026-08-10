@@ -81,6 +81,8 @@ interface PostSessionReportProps {
     located: number | null;
     /** Quante volte si è dato « porta questo a tono quaranta ». È il processo di Ron. */
     repeats: number;
+    /** Da dove viene il tono di partenza. Assente nei cicli registrati prima della 2.0.120. */
+    source?: 'meter' | 'meter+eeg' | 'assessed';
     anchor: string; witnesses: string[];
     /** Il tono quaranta è stato raggiunto (nome storico del campo). */
     asIs: boolean }>;
@@ -1866,6 +1868,15 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
                         <span className="text-[10px]" style={{ color: '#fbbf24' }}>→ +40</span>
                         {c.repeats > 0 && (
                           <span className="text-[10px]" style={{ color: 'rgba(226,238,255,0.75)' }}>×{c.repeats}</span>
+                        )}
+                        {/* DA DOVE VIENE IL NUMERO. Un tono misurato e uno dichiarato non
+                            valgono la stessa cosa, e a freddo non si distinguerebbero. */}
+                        {c.source && (
+                          <span className="text-[10px]" style={{ color: 'rgba(226,238,255,0.5)' }}>
+                            {c.source === 'assessed'
+                              ? L('assessato', 'assessé', 'assessed', 'assessado', 'assessad')
+                              : c.source}
+                          </span>
                         )}
                         {c.witnesses.length > 0 && (
                           <span className="text-[10px]" style={{ color: 'rgba(226,238,255,0.5)' }}>{c.witnesses.join('+')}</span>

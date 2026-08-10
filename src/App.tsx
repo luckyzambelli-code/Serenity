@@ -99,10 +99,11 @@ import { mirrorCycle, mirrorReading } from './engine/MirrorCycle';
 import { MirrorDial } from './components/MirrorDial';
 import { ToneDial } from './components/ToneDial';
 import { ToneColumn } from './components/ToneColumn';
+import { TONE_LABELS, exactLevelName, levelName } from './engine/toneLevels';
 import { CycleHint } from './components/CycleHint';
 import { CycleSteps } from './components/CycleSteps';
 import {
-  TONE_TARGET, toneFromTa, ToneLocator,
+  TONE_TARGET, toneFromTa, toneFromDelta, ToneLocator,
   reachedTop, toneWitnesses, toneAsIs,
   type TonePhase, type ToneLocateAnchor, type ToneWitness,
 } from './engine/toneScale';
@@ -4456,8 +4457,26 @@ export default function App() {
   }, [modiDisponibili, mode, instruments.muse, instruments.theta]);
 
   const [tonePhase, setTonePhase] = useState<TonePhase>('locate');
-  /** Il tono di PARTENZA, misurato. `null` senza meter: non se ne inventa uno. */
+  /**
+   * IL TONO DI PARTENZA — l'origine della scala, e da questa versione è l'origine VERA.
+   *
+   * Ron: « the relationship between the Tone Scale and ohms is an arbitrary one ». Prima il
+   * tono si leggeva in assoluto dal fondo scala del meter (0…6,5 di TA): una convenzione
+   * dentro l'altra, e quel 6,5 è del Theta-Meter, non della scala del tono. Adesso alla
+   * localizzazione si fissa « qui sei a −12 » e da lì si misura la SALITA.
+   *
+   *   col METER  → lo propone la misura;
+   *   senza      → lo dice l'auditor (quel che il preclear dichiara più la sua obnosi), e
+   *                si sceglie dal selettore accanto al campo.
+   *
+   * `null` solo prima di localizzare.
+   */
   const [toneAtStart, setToneAtStart] = useState<number | null>(null);
+  /** Il tono che l'auditor dichiara senza strumenti — la sorgente quando non c'è misura. */
+  const [toneAssessed, setToneAssessed] = useState(0);
+  /** Le due misure ALL'ISTANTE della localizzazione: da lì si conta il movimento. */
+  const toneTaAtStartRef = useRef<number | null>(null);
+  const toneQAtStartRef = useRef<number | null>(null);
   /**
    * QUANTE VOLTE SI È DATO IL COMANDO « porta questo a tono quaranta ».
    *
@@ -4485,6 +4504,29 @@ export default function App() {
   // Specchio in ref: il gestore del worker si aggancia UNA volta sola e il tono cambia a ogni
   // tick — senza questo il locatore accumulerebbe per sempre il valore d'avvio.
   const toneMeasuredRef = useRef(toneMeasured); toneMeasuredRef.current = toneMeasured;
+
+  /**
+   * ── DOVE SI È ADESSO SULLA SCALA, e da quale sguardo ──────────────────────────────────
+   *
+   * Non è più il valore assoluto del meter. Si parte dal tono fissato alla localizzazione e si
+   * conta il MOVIMENTO delle misure da quell'istante — la pendenza resta quella di Ron
+   * (l'intera escursione della grandezza vale 80 divisioni, vedi `toneFromDelta`).
+   *
+   * TRE CASI, come chiesto:
+   *   • col METER          → il TA;
+   *   • col METER e il MUSE → tutti e due, e si vedono INSIEME sulla colonna: il TA dice la
+   *     resistenza, l'EEG dice l'attività, e guardarli salire insieme (o no) è il dato;
+   *   • senza strumenti    → quel che dichiara l'auditor: il cursore sta dove l'ha messo.
+   */
+  const qLnow = useMetric(m => m.qL);
+  const toneOra = toneAtStart === null ? (toneHasMeter ? toneMeasured : toneAssessed)
+    : toneTaAtStartRef.current !== null && theta.ta !== null
+      ? toneFromDelta(toneAtStart, toneTaAtStartRef.current, theta.ta, TA_MAX - TA_MIN)
+      : toneAtStart;
+  /** Il secondo sguardo: la stessa scala, letta sulla carica EEG. `null` senza MUSE. */
+  const toneOraEeg = toneAtStart !== null && toneQAtStartRef.current !== null
+    ? toneFromDelta(toneAtStart, toneQAtStartRef.current, qLnow, 1)
+    : null;
   const toneHasMeterRef = useRef(toneHasMeter); toneHasMeterRef.current = toneHasMeter;
   // ⚠️ QUI C'ERANO LA PROPOSTA E LA SMENTITA. `toneProposed` traduceva la misura in segno +
   // ampiezza da far verificare all'auditor, e `toneAgreement` diceva se l'assessment fosse
@@ -4509,7 +4551,7 @@ export default function App() {
   useEffect(() => {
     if (tonePhase !== 'raise') return;
     const nuovi: ToneWitness[] = [];
-    if (toneHasMeter && toneMeasured !== null && reachedTop(toneMeasured)) nuovi.push('top');
+    if (toneHasMeter && toneOra !== null && reachedTop(toneOra)) nuovi.push('top');
     if (toneFnNow) nuovi.push('fn');
     if (instruments.muse && asIsSignature) nuovi.push('signature');
     if (!nuovi.length) return;
@@ -4517,7 +4559,7 @@ export default function App() {
       const add = nuovi.filter(w => !p.includes(w));
       return add.length ? [...p, ...add] : p;
     });
-  }, [tonePhase, toneHasMeter, toneMeasured, toneFnNow, asIsSignature, instruments.muse]);
+  }, [tonePhase, toneHasMeter, toneOra, toneFnNow, asIsSignature, instruments.muse]);
   const toneAsIsState = useMemo(
     () => toneAsIs(toneWitnessesAvail, toneFired),
     [toneWitnessesAvail, toneFired]);
@@ -4535,6 +4577,9 @@ export default function App() {
   // ampiezza e l'accordo fra misura e assessment: erano le fasi che non ci sono più.
   const toneCyclesRef = useRef<Array<{ n: number; question: string; tStartSec: number; tEndSec: number;
     located: number | null; repeats: number;
+    /** DA DOVE viene il tono di partenza: la misura, l'auditor, o tutti e due gli sguardi.
+     *  Campo NUOVO (2.0.120): i cicli registrati prima non ce l'hanno, e restano leggibili. */
+    source?: 'meter' | 'meter+eeg' | 'assessed';
     anchor: string; witnesses: string[]; asIs: boolean }>>([]);
   const toneNRef = useRef(0);
   const toneStartSecRef = useRef(0);
@@ -4542,7 +4587,9 @@ export default function App() {
     toneCyclesRef.current.push({
       n: ++toneNRef.current, question: auditingQuestion.trim(),
       tStartSec: toneStartSecRef.current, tEndSec: timeRef.current,
-      located: toneAtStart, repeats: toneRipetizioni, anchor: toneAnchor?.how ?? 'settled',
+      located: toneAtStart, repeats: toneRipetizioni,
+      source: toneHasMeter ? (instruments.muse ? 'meter+eeg' : 'meter') : 'assessed',
+      anchor: toneAnchor?.how ?? 'settled',
       witnesses: [...toneFired], asIs: raggiunto,
     });
     // SENZA METER non si scrive un « ? » al posto del tono di partenza: un punto interrogativo
@@ -4558,7 +4605,8 @@ export default function App() {
         + (toneRipetizioni > 0 ? ` · ×${toneRipetizioni}` : '')
         + (raggiunto ? ` · ${LC('TONO 40 RAGGIUNTO', 'TON 40 ATTEINT', 'TONE 40 REACHED', 'TONO 40 ALCANZADO', 'TON 40 NÅDD')}` : ''),
       type: raggiunto ? 'success' : 'normal' });
-  }, [auditingQuestion, toneAtStart, toneAnchor, toneFired, toneRipetizioni, LC]);
+  }, [auditingQuestion, toneAtStart, toneAnchor, toneFired, toneRipetizioni,
+      toneHasMeter, instruments.muse, LC]);
 
   // ── « A CHE PUNTO SONO, E COSA DEVO FARE » — per tutti e quattro i cicli ─────────────────
   // Un componente solo (CycleHint), sempre nello stesso posto, con la SUA specificità per ogni
@@ -4939,6 +4987,7 @@ export default function App() {
   const resetTone = useCallback(() => {
     setTonePhase('locate');
     setToneAtStart(null); setToneAnchor(null); setToneFired([]);
+    toneTaAtStartRef.current = null; toneQAtStartRef.current = null;
     setToneRipetizioni(0);   // il conto è di QUESTA resistenza, e la resistenza cambia.
     // Il campo si svuota: una resistenza nuova non porta l'etichetta di quella di prima.
     setAuditingQuestion('');
@@ -4956,7 +5005,13 @@ export default function App() {
   const localizzaTone = useCallback(() => {
     const r = toneLocator.locate(timeRef.current, instruments.muse, toneMeasured ?? 0);
     setToneAnchor({ how: r.anchor, ageS: r.ageS });
-    setToneAtStart(toneHasMeter ? r.tone : null);
+    // ── L'ORIGINE DELLA SCALA SI FISSA QUI ────────────────────────────────────────────────
+    // Col meter la propone la misura; senza, è quel che l'auditor ha dichiarato guardando il
+    // preclear. Da questo istante il tono non si legge più in assoluto: si conta il MOVIMENTO
+    // delle misure rispetto a ORA (vedi `toneOra`).
+    setToneAtStart(toneHasMeter ? r.tone : toneAssessed);
+    toneTaAtStartRef.current = theta.ta ?? null;
+    toneQAtStartRef.current = instruments.muse ? metricsStore.get().qL : null;
     toneStartSecRef.current = timeRef.current;   // il ciclo comincia QUI, non al comando 2
     // Premuto col campo VUOTO, la prima parola dell'auditor diventa l'item — come in CONTACT,
     // NULL e MIRROR. Senza, in TONE si poteva solo scrivere: e scrivere vuol dire staccare gli
@@ -4966,7 +5021,7 @@ export default function App() {
     setToneRipetizioni(0);
     setItemSpoken(false);   // la resistenza di QUESTO ciclo va detta da capo.
     setTonePhase('raise');
-  }, [instruments.muse, toneMeasured, toneHasMeter]);
+  }, [instruments.muse, toneMeasured, toneHasMeter, toneAssessed, theta.ta]);
 
   // Specchio in ref: il gestore del worker si aggancia una volta sola, e l'ago si può cambiare
   // in seduta — senza questo continuerebbe a usare quello scelto all'avvio.
@@ -6964,7 +7019,10 @@ export default function App() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                  // IN TONE la colonna sta a destra e larga 260: senza questo margine il
+                  // testo del ciclo le finiva sotto, e sotto il pannello di fondo spariva.
                   style={{ maxWidth: 560, padding: '0 24px', textAlign: 'center',
+                           marginRight: viewMode === 'tone' ? 260 : 0,
                            display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {/* Lo stesso testo del CycleHint, ma in grande: qui è il soggetto dello
                       schermo, non una didascalia sotto un quadrante. */}
@@ -7447,13 +7505,33 @@ export default function App() {
                           disabled={!itemModificabile}
                           rows={1}
                           placeholder={LC('Item… (o dillo a voce)', 'Item… (ou dis-le à voix)', 'Item… (or say it aloud)', 'Ítem… (o dilo en voz)', 'Item… (eller säg det högt)')}
-                          style={{ flex: 1, minWidth: 0, minHeight: 32, maxHeight: 80, padding: '6px 10px', borderRadius: 8,
+                          style={{ flex: 1, minWidth: 160, minHeight: 32, maxHeight: 80, padding: '6px 10px', borderRadius: 8,
                             fontSize: 12, lineHeight: 1.4, fontFamily: 'monospace', resize: 'none', overflowY: 'auto',
                             fieldSizing: 'content',
                             background: itemModificabile ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.12)',
                             border: `1px solid ${itemModificabile ? 'rgba(255,255,255,0.22)' : 'rgba(255,90,90,0.55)'}`,
                             color: 'rgba(235,244,255,0.92)', outline: 'none' } as React.CSSProperties}
                         />
+                        {/* ── DA DOVE SI PARTE, quando non c'è un meter a dirlo ───────────
+                            Ron: il legame tono↔ohm è arbitrario, conta il TONO. Senza
+                            strumento la sorgente è quel che il preclear dichiara più l'obnosi
+                            dell'auditor — e allora il punto di partenza si dà a mano, qui,
+                            prima di cominciare. Col meter non compare: lo propone la misura. */}
+                        {locabile && !toneHasMeter && (
+                          <select value={toneAssessed}
+                            onChange={(e) => setToneAssessed(Number(e.target.value))}
+                            title={LC('Dove sta il preclear adesso sulla scala', 'Où est le préclair maintenant sur l\'échelle', 'Where the preclear is now on the scale', 'Dónde está el preclear ahora en la escala', 'Var preclearen är nu på skalan')}
+                            style={{ height: 32, borderRadius: 8, flexShrink: 0, cursor: 'pointer',
+                              maxWidth: 200, padding: '0 8px', fontFamily: 'monospace', fontSize: 12, fontWeight: 700,
+                              background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.3)',
+                              color: 'rgba(235,244,255,0.85)' }}>
+                            {TONE_LABELS.map(v => (
+                              <option key={v} value={v}>
+                                {v > 0 ? `+${v}` : `${v}`} · {levelName(exactLevelName(v) ?? '', lang)}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                         {/* IL GESTO SI CHIAMA COME IL TEMPO. Diceva « LOCALIZZA QUI » o
                             « ASSESSA » mentre la pista e il titolo dicevano « DAI L'ITEM »: il
                             primo tempo aveva due nomi diversi nella stessa schermata, e
@@ -7705,14 +7783,21 @@ export default function App() {
             {/* PIÙ IN BASSO: in alto a destra ci sono TONE ARM, DIAGNOSTIC, ASSESS ed EP.
                 La colonna partiva dal 6% e ci finiva sopra (segnalato). Comincia sotto di
                 loro — e ci guadagna anche il senso: la scala nasce dove l'arco si chiude. */}
-            {!senzaMisura && viewMode === 'tone' && (
+            {/* ⚠️ COMPARE ANCHE SENZA STRUMENTI. Prima no, e senza strumenti la vista TONE
+                restava senza la sua scala — proprio nel caso in cui è l'unico riferimento che
+                l'auditor ha: il tono lo dichiara lui, e deve poter vedere dove l'ha messo e
+                quanto manca al 40. */}
+            {viewMode === 'tone' && sessionState === 'running' && (
               <div className="absolute pointer-events-none"
                    // PIÙ CORTA ANCORA: aprendo DIAGNOSTIC i suoi dati finivano sopra la
                    // colonna (segnalato). Comincia sotto di loro e finisce più in alto — e
                    // siccome il viewBox si è accorciato con lei, i caratteri non rimpiccioliscono.
                    style={{ right: 12, top: '38%', bottom: '14%', width: 260, zIndex: LAYER.sphereChrome }}>
                 <ToneColumn
-                  tone={toneMeasured ?? 0}
+                  // IL TONO ANCORATO AL CICLO, non più il valore assoluto del meter.
+                  tone={toneOra ?? 0}
+                  // Il secondo sguardo: la stessa salita letta sull'EEG. Compare col MUSE.
+                  toneEeg={toneOraEeg}
                   hasMeter={toneHasMeter}
                   // I nomi dei livelli si traducono come tutto il resto: il preclear legge la
                   // sua posizione sulla scala, e in una lingua che non parla non serve.
@@ -7729,7 +7814,7 @@ export default function App() {
             {!senzaMisura && (
             <div className="absolute inset-0 z-40 pointer-events-none">
               {viewMode === 'tone' ? (
-                <ToneDial tone={toneMeasured ?? 0} hasMeter={toneHasMeter} approx
+                <ToneDial tone={toneOra ?? 0} hasMeter={toneHasMeter} approx
                   located={toneAtStart}
                   phase={tonePhase} toneAtStart={toneAtStart}
                   isLightTheme={isLightTheme} />

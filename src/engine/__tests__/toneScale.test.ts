@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  TONE_TARGET, clampTone, toneFromTa,
+  TONE_TARGET, clampTone, toneFromTa, toneFromDelta,
   raiseProgress, reachedTop, toneOffset, ToneLocator, toneWitnesses, toneAsIs,
   type ToneWitness,
 } from '../toneScale';
@@ -37,6 +37,62 @@ describe('dal TONE ARM al tono (strada provvisoria)', () => {
   it('una scala degenere non esplode: dà zero', () => {
     expect(toneFromTa(3, 5, 5)).toBe(0);
     expect(toneFromTa(3, 6, 2)).toBe(0);
+  });
+});
+
+describe('il tono ANCORATO al ciclo — l origine è la partenza, non lo strumento', () => {
+  // L'escursione del Theta-Meter: 0…6,5 di TA valgono le 80 divisioni della scala.
+  const TA_SPAN = 6.5;
+
+  it('senza movimento si resta dove si è partiti', () => {
+    expect(toneFromDelta(-12, 3.0, 3.0, TA_SPAN)).toBe(-12);
+    expect(toneFromDelta(0, 4.2, 4.2, TA_SPAN)).toBe(0);
+  });
+
+  it('la RESISTENZA CHE CALA fa SALIRE il tono — è il verso di Ron', () => {
+    // mezzo punto di TA in meno su un'escursione di 6,5 → 0,5/6,5 × 80 ≈ 6,15 divisioni
+    expect(toneFromDelta(-12, 3.0, 2.5, TA_SPAN)).toBeCloseTo(-12 + 0.5 / 6.5 * 80, 10);
+    expect(toneFromDelta(-12, 3.0, 2.5, TA_SPAN)).toBeGreaterThan(-12);
+  });
+
+  it('e la resistenza che SALE fa scendere il tono', () => {
+    expect(toneFromDelta(-12, 3.0, 3.5, TA_SPAN)).toBeLessThan(-12);
+  });
+
+  it('la PENDENZA è quella di Ron: tutta l escursione vale 80 divisioni', () => {
+    // dal fondo alla cima della grandezza si percorre l'intera scala
+    expect(toneFromDelta(-40, TA_SPAN, 0, TA_SPAN)).toBe(40);
+    expect(toneFromDelta(40, 0, TA_SPAN, TA_SPAN)).toBe(-40);
+  });
+
+  it('funziona identico su UN ALTRA grandezza: è il punto di poterla riusare', () => {
+    // la carica EEG va da 0 a 1, e come la resistenza SCENDE mentre il tono sale
+    expect(toneFromDelta(-12, 0.8, 0.3, 1)).toBeCloseTo(-12 + 0.5 * 80, 10);
+  });
+
+  it('con `scendeSale` a false il verso si rovescia, per una grandezza che sale col tono', () => {
+    expect(toneFromDelta(0, 0.2, 0.7, 1, false)).toBeGreaterThan(0);
+  });
+
+  it('non esce MAI dal fondo scala, per quanto grande sia il movimento', () => {
+    expect(toneFromDelta(0, 6.5, 0, 0.1)).toBe(40);
+    expect(toneFromDelta(0, 0, 6.5, 0.1)).toBe(-40);
+  });
+
+  it('una misura assente o un escursione nulla NON spostano il cursore', () => {
+    // Sarebbe il difetto peggiore: il tono che salta perché un dato manca.
+    expect(toneFromDelta(-12, NaN, 3.0, TA_SPAN)).toBe(-12);
+    expect(toneFromDelta(-12, 3.0, NaN, TA_SPAN)).toBe(-12);
+    expect(toneFromDelta(-12, 3.0, 2.0, 0)).toBe(-12);
+  });
+
+  it('⚠️ NON è più il valore ASSOLUTO dello strumento: due cicli allo stesso TA possono stare a toni diversi', () => {
+    // È la conseguenza voluta dell'ancoraggio: quel che conta è di quanto si è saliti in
+    // QUESTO ciclo, non dove cade il TA sul fondo scala del meter.
+    const a = toneFromDelta(-30, 3.0, 2.5, TA_SPAN);
+    const b = toneFromDelta(0, 3.0, 2.5, TA_SPAN);
+    expect(a).not.toBeCloseTo(b, 5);
+    expect(b - a).toBeCloseTo(30, 10);   // la SALITA però è la stessa
   });
 });
 
