@@ -90,7 +90,7 @@ export function spezza(nome: string, max = MAX_CAR): string[] {
  *  (`tonePosition`), dove si prova: qui si converte soltanto in coordinate. */
 const y = (tone: number): number => BOT - tonePosition(tone) * H;
 
-export function ToneColumn({ tone, toneEeg, hasMeter, charge, chargeFrom, lang }: {
+export function ToneColumn({ tone, toneEeg, hasMeter, charge, chargeFrom, lang, margin = 0 }: {
   /** Il tono in questo istante, −40…+40. Col meter viene dal TA; senza, lo dichiara l'auditor. */
   tone: number;
   /**
@@ -101,6 +101,14 @@ export function ToneColumn({ tone, toneEeg, hasMeter, charge, chargeFrom, lang }
    * è un'informazione — e sapere che i due non concordano vale più di un numero solo.
    */
   toneEeg?: number | null;
+  /**
+   * DIVISIONI TOLTE dal margine della prova delle lattine, e va DETTO.
+   *
+   * Senza la prova del giorno la sensibilità è quella di ripiego e il tono è più incerto di
+   * quanto sembri: si toglie una divisione. Ma una correzione che nessuno vede è peggio di
+   * nessuna correzione — chi legge il numero deve sapere che è stato abbassato, e perché.
+   */
+  margin?: number;
   /** La lingua della seduta: i nomi dei livelli si traducono come tutto il resto. */
   lang: string;
   /** C'è il meter? Senza, il numero non si mostra: resterebbe una cifra senza misura. */
@@ -111,6 +119,7 @@ export function ToneColumn({ tone, toneEeg, hasMeter, charge, chargeFrom, lang }
   chargeFrom?: number | null;
 }) {
   const isLightTheme = useUiStore(s => s.isLightTheme);
+  const L = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang, it, fr, en, es, sv);
 
   const inchiostro = isLightTheme ? '#1a1a1f' : 'rgba(240,246,255,0.98)';
   // ⚠️ MOLTO PIÙ CONTRASTATE DI PRIMA (erano 0,42 e 0,38). La colonna passa SOPRA l'arco, e
@@ -241,6 +250,16 @@ export function ToneColumn({ tone, toneEeg, hasMeter, charge, chargeFrom, lang }
           <rect x={18} y={BOT - Math.max(0, Math.min(1, charge)) * H} width={7}
                 height={Math.max(0, Math.min(1, charge)) * H} rx={3.5} fill={TOKEN.warn} opacity={0.75} />
         </>
+      )}
+
+      {/* ── IL MARGINE, DETTO ─────────────────────────────────────────────────────────
+          Ambra come ogni avviso dell'app. Compare solo quando c'è davvero qualcosa da
+          dichiarare: se la prova è stata fatta oggi, non c'è niente da scrivere. */}
+      {margin > 0 && (
+        <text x={W / 2} y={BOT + 22} textAnchor="middle" fill={TOKEN.warn}
+              style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700 }}>
+          −{margin} · {L('prova lattine da fare', 'test boîtes à faire', 'cans test to do', 'prueba latas por hacer', 'burktest att göra')}
+        </text>
       )}
 
       {/* Il verso, detto una volta: si SALE. */}

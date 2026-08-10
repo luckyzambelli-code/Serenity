@@ -214,7 +214,10 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
             return (
               <div key={p.id} onClick={() => onActivate(p)} style={{ ...cardBase, borderColor: active ? 'rgba(255,255,255,0.85)' : (cardBase.border as string), boxShadow: active ? '0 0 24px rgba(255,255,255,0.12), inset 0 0 24px rgba(255,255,255,0.06)' : cardBase.boxShadow }}>
                 <div style={phCol(false)}>{p.photo ? <img src={p.photo} alt="" style={avatar(false)} /> : <div style={avatar(false)}><Eye size={28} style={{ color: 'rgba(240,246,255,0.85)' }} /></div>}</div>
-                <div style={{ flex: 1, padding: '13px 15px', position: 'relative' }}>
+                {/* `paddingBottom` 34: matita e cestino sono ancorati in basso a destra, e le
+                    righe aggiunte (la prova delle lattine) ci finivano sotto — si leggeva
+                    « mai fatta » con un'icona in mezzo (segnalato guardando la scheda). */}
+                <div style={{ flex: 1, padding: '13px 15px 34px', position: 'relative' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.14em', color: 'rgba(226,238,255,0.72)' }}>{p.preferences?.soloMode ? 'AUDITEUR · SOLO' : 'AUDITEUR'}</span>
                     {active
@@ -248,7 +251,10 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
             return (
               <div key={pc.id} onClick={() => { setPcName(pc.name); if (pc.photo) setPcPhoto(pc.photo); setPcSex(pc.sex); refresh(); }} style={{ ...cardBase, borderColor: sel ? 'rgba(255,255,255,0.85)' : (cardBase.border as string), boxShadow: sel ? '0 0 24px rgba(255,255,255,0.12), inset 0 0 24px rgba(255,255,255,0.06)' : cardBase.boxShadow }}>
                 <div style={phCol(true)}>{pc.photo ? <img src={pc.photo} alt="" style={avatar(true)} /> : <div style={avatar(true)}><UserRound size={28} style={{ color: 'rgba(240,246,255,0.85)' }} /></div>}</div>
-                <div style={{ flex: 1, padding: '13px 15px', position: 'relative' }}>
+                {/* `paddingBottom` 34: matita e cestino sono ancorati in basso a destra, e le
+                    righe aggiunte (la prova delle lattine) ci finivano sotto — si leggeva
+                    « mai fatta » con un'icona in mezzo (segnalato guardando la scheda). */}
+                <div style={{ flex: 1, padding: '13px 15px 34px', position: 'relative' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.14em', color: AMBER }}>{L('PRECLEAR', 'PRÉCLAIR', 'PRECLEAR', 'PRECLEAR', 'PRECLEAR')}</span>
                     {sel
@@ -306,7 +312,37 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
                       : <span style={{ fontSize: 14, color: 'rgba(200,214,234,0.5)' }}>○</span>}
                   </div>
                   <div style={{ fontSize: 22, fontWeight: 700, color: 'rgba(240,246,255,0.95)', marginTop: 5 }}>{pc.name}</div>
-                  <div style={{ marginTop: 7 }}><Row l={L('Sessioni', 'Séances', 'Sessions', 'Sesiones', 'Sessioner')} v={String(pc.count)} /><Row l={L('Ultima', 'Dernière', 'Last', 'Última', 'Senaste')} v={fmtDate(pc.last)} /></div>
+                  <div style={{ marginTop: 7 }}>
+                    <Row l={L('Sessioni', 'Séances', 'Sessions', 'Sesiones', 'Sessioner')} v={String(pc.count)} />
+                    <Row l={L('Ultima', 'Dernière', 'Last', 'Última', 'Senaste')} v={fmtDate(pc.last)} />
+                    {/* ⚠️ ANCHE QUI. La prova delle lattine era solo sulle schede REGISTRATE, e
+                        chi non ha ancora registrato un profilo — cioè chi ha solo le schede
+                        dedotte dalle sedute — non la vedeva da nessuna parte (segnalato:
+                        « dove vedo la prova delle lattine? »). L'archivio è per NOME, e il
+                        nome ce l'hanno tutte e due. */}
+                    {(() => {
+                      const h = loadCanTests(pc.name);
+                      const g = canDaysSince(h, Date.now(), 'two-cans');
+                      const r = soloRatio(h);
+                      const due = scaleFor(h, 'two-cans');
+                      return <>
+                        <Row l={L('Prova lattine', 'Test boîtes', 'Cans test', 'Prueba latas', 'Burktest')}
+                             v={g === null
+                                 ? L('mai fatta', 'jamais faite', 'never done', 'nunca hecha', 'aldrig gjord')
+                                 : g === 0 ? L('oggi', "aujourd'hui", 'today', 'hoy', 'idag')
+                                 : `${g} ${L('giorni fa', 'jours', 'days ago', 'días', 'dagar sedan')}`}
+                        />
+                        {h.tests.length > 0 && (
+                          <Row l={L('Prove', 'Essais', 'Tests', 'Pruebas', 'Test')}
+                               v={`${h.tests.length}${due ? ` · ${due.toExponential(1)}` : ''}`} />
+                        )}
+                        {r !== null && (
+                          <Row l={L('Solo (1 lattina)', 'Solo (1 boîte)', 'Solo (1 can)', 'Solo (1 lata)', 'Solo (1 burk)')}
+                               v={`×${r.toFixed(2)}`} />
+                        )}
+                      </>;
+                    })()}
+                  </div>
                   {/* ── PERCHÉ QUESTA SCHEDA NON SI MODIFICAVA ─────────────────────────────────
                       Non è un profilo: è l'OMBRA delle sedute — nome, foto e conteggio dedotti
                       da `getSessions()`. Non c'era un record da modificare, quindi mancavano

@@ -4571,12 +4571,22 @@ export default function App() {
    * togliere una divisione al suo giudizio.
    */
   const margineTono = toneHasMeter ? toneMargin(canHistory, Date.now()) : 0;
-  const toneOra = toneAtStart === null ? (toneHasMeter ? toneMeasured : toneAssessed)
+  //
+  // ⚠️ IL MARGINE SI TOGLIE OVUNQUE IL TONO VENGA DA UNA MISURA, non solo dopo la
+  // localizzazione. Stava sul solo ramo centrale, e allora prima di localizzare — cioè proprio
+  // quando si guarda il numero per decidere da dove partire — il tono compariva pieno. Il
+  // margine dice « la sensibilità non è stata verificata oggi »: vale da quando la misura
+  // esiste, non da quando comincia il ciclo.
+  //
+  // Senza meter resta zero, ed è voluto: là il tono non è misurato, lo dichiara l'auditor, e
+  // togliere una divisione al suo giudizio sarebbe correggere una cosa che non è una misura.
+  const toneOra = toneAtStart === null
+    ? (toneHasMeter && toneMeasured !== null ? withMargin(toneMeasured, margineTono) : toneAssessed)
     : toneTaAtStartRef.current !== null && theta.ta !== null
       ? withMargin(
           toneFromDelta(toneAtStart, toneTaAtStartRef.current, theta.ta, TA_MAX - TA_MIN),
           margineTono)
-      : toneAtStart;
+      : withMargin(toneAtStart, margineTono);
   /** Il secondo sguardo: la stessa scala, letta sulla carica EEG. `null` senza MUSE. */
   const toneOraEeg = toneAtStart !== null && toneQAtStartRef.current !== null
     ? toneFromDelta(toneAtStart, toneQAtStartRef.current, qLnow, 1)
@@ -7880,6 +7890,8 @@ export default function App() {
                   tone={toneOra ?? 0}
                   // Il secondo sguardo: la stessa salita letta sull'EEG. Compare col MUSE.
                   toneEeg={toneOraEeg}
+                  // Le divisioni tolte dal margine: si scrivono, se no è una correzione muta.
+                  margin={margineTono}
                   hasMeter={toneHasMeter}
                   // I nomi dei livelli si traducono come tutto il resto: il preclear legge la
                   // sua posizione sulla scala, e in una lingua che non parla non serve.
