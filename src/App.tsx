@@ -102,7 +102,7 @@ import { ToneColumn } from './components/ToneColumn';
 import { TONE_LABELS, exactLevelName, levelName } from './engine/toneLevels';
 import {
   loadHistory as loadCanTests, saveHistory as saveCanTests, addTest as addCanTest,
-  toneMargin, withMargin, daysSince as canDaysSince, soloRatio,
+  toneMargin, withMargin, taToTwoCans,
   type PcCanHistory,
 } from './engine/canTest';
 import { CycleHint } from './components/CycleHint';
@@ -4571,6 +4571,19 @@ export default function App() {
    * togliere una divisione al suo giudizio.
    */
   const margineTono = toneHasMeter ? toneMargin(canHistory, Date.now()) : 0;
+  /**
+   * ── IL TA CHE SI MOSTRA, RIPORTATO ALLE DUE LATTINE ─────────────────────────────────────
+   * « Che fa fede sono le DUE LATTINE ». Con una lattina sola la resistenza è un'altra, e più
+   * alta: mostrarla tale e quale farebbe credere a un caso più carico di quel che è.
+   *
+   *   due lattine            → il numero è già il riferimento;
+   *   una lattina, MISURATA  → si applica lo scarto di questa persona (pannello TRIM);
+   *   una lattina, NON misurata → si toglie UNA DIVISIONE — 4 diventa 3 — e si scrive.
+   *
+   * La correzione si TOGLIE davvero, non si annuncia soltanto: era la richiesta.
+   */
+  const taMostrato = theta.taNow === null ? null
+    : taToTwoCans(theta.taNow, theta.setup.config, theta.setup.offsets?.['solo-can'] ?? 0);
   //
   // ⚠️ IL MARGINE SI TOGLIE OVUNQUE IL TONO VENGA DA UNA MISURA, non solo dopo la
   // localizzazione. Stava sul solo ramo centrale, e allora prima di localizzare — cioè proprio
@@ -6952,10 +6965,10 @@ export default function App() {
                   stesso aspetto di quello misurato, che però non veniva da nessuna resistenza.
                   Col solo MUSE non si mostra più (richiesta utente) — il calcolo resta, serve
                   altrove; è la CIFRA a schermo che faceva credere a una misura. */}
-              {senzaMisura || theta.status !== 'connected' || theta.taNow === null ? null : (
+              {senzaMisura || theta.status !== 'connected' || taMostrato === null ? null : (
                 <span style={{ fontFamily: 'monospace', fontSize: 34, fontWeight: 700, lineHeight: 1,
                                color: isLightTheme ? '#1e293b' : 'rgba(240,246,255,0.95)' }}>
-                  {theta.taNow.toFixed(2)}
+                  {taMostrato.ta.toFixed(2)}
                 </span>
               )}
 
@@ -6964,13 +6977,21 @@ export default function App() {
                   legge dipende da quale delle due si sta usando. Va scritto DOVE si legge il
                   numero (richiesta utente), non nascosto in una schermata di prontezza che si
                   è vista una volta all'inizio. */}
-              {theta.status === 'connected' && (
-                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.12em',
-                               textTransform: 'uppercase', marginTop: 2,
-                               color: isLightTheme ? '#64748b' : 'rgba(148,163,184,0.75)' }}>
-                  {theta.setup.config === 'two-cans'
+              {/* ── SU CHE COSA SI BASA IL NUMERO ────────────────────────────────────────
+                  In TUTTI E TRE i casi si dice da dove viene, perché in tutti e tre è un TA
+                  diverso: il riferimento a due lattine, quello a una riportato a due con lo
+                  scarto misurato, o quello a una con la divisione tolta. Senza questa riga il
+                  numero è lo stesso a vedersi e vuol dire tre cose. */}
+              {theta.status === 'connected' && taMostrato && (
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, letterSpacing: '0.10em',
+                               textTransform: 'uppercase', marginTop: 2, textAlign: 'right',
+                               color: taMostrato.margin > 0 ? TOKEN.warn
+                                    : isLightTheme ? '#64748b' : 'rgba(148,163,184,0.75)' }}>
+                  {taMostrato.basis === 'two-cans'
                     ? LC('TA · 2 lattine', 'TA · 2 boîtes', 'TA · 2 cans', 'TA · 2 latas', 'TA · 2 burkar')
-                    : LC('TA · 1 lattina', 'TA · 1 boîte', 'TA · 1 can', 'TA · 1 lata', 'TA · 1 burk')}
+                    : taMostrato.basis === 'solo-measured'
+                    ? LC('TA · 1 lattina → 2', 'TA · 1 boîte → 2', 'TA · 1 can → 2', 'TA · 1 lata → 2', 'TA · 1 burk → 2')
+                    : LC('TA · 1 lattina − 1 divisione', 'TA · 1 boîte − 1 division', 'TA · 1 can − 1 division', 'TA · 1 lata − 1 división', 'TA · 1 burk − 1 delstreck')}
                 </span>
               )}
 

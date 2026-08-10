@@ -192,3 +192,69 @@ export function saveHistory(h: PcCanHistory): void {
     localStorage.setItem(CHIAVE, JSON.stringify(a));
   } catch (_) { /* quota o modalità privata */ }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+// IL TA CHE SI MOSTRA — sempre riportato alle DUE LATTINE
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ── PERCHÉ IL RIFERIMENTO SONO LE DUE LATTINE ───────────────────────────────────────────────
+ * « Che fa fede sono le DUE LATTINE » (richiesta utente). Non è una convenzione arbitraria: con
+ * due lattine la corrente attraversa il corpo da una mano all'altra, e la resistenza che si
+ * misura è quella del preclear. Con UNA sola il circuito si chiude altrimenti — la resistenza
+ * è un'altra, e più alta. Lo stesso preclear, nello stesso istante, dà due TA diversi secondo
+ * quante lattine tiene.
+ *
+ * Se non si dicesse quale delle due si sta guardando, due sedute dello stesso caso non sarebbero
+ * confrontabili — e nessuno saprebbe perché.
+ *
+ * ── COSA SI FA, ALLORA ──────────────────────────────────────────────────────────────────────
+ *   due lattine        → il TA è già il riferimento: non si tocca.
+ *   una lattina, PROVATA  → si conosce lo scarto di QUESTA persona, e si riporta a due.
+ *   una lattina, NON provata → si toglie UNA DIVISIONE (4 diventa 3) e LO SI DICE.
+ *
+ * L'ultima riga è quel che l'utente ha chiesto alla lettera. Non è una stima dello scarto vero:
+ * è un margine dichiarato, nel verso prudente. Una lattina legge PIÙ resistenza, quindi un TA
+ * più alto: mostrarlo tale e quale farebbe credere a un caso più carico di quel che è.
+ */
+export const TA_MARGIN_SOLO_NO_TEST = 1;
+
+/** Da dove viene il TA che si sta guardando — va scritto accanto al numero. */
+export type TaBasis =
+  /** Due lattine: il riferimento, nessuna correzione. */
+  | 'two-cans'
+  /** Una lattina, con lo scarto misurato su questa persona: riportato a due. */
+  | 'solo-measured'
+  /** Una lattina senza prova: una divisione tolta, e dichiarata. */
+  | 'solo-margin';
+
+export interface TaReading {
+  /** Il numero da mostrare. */
+  ta: number;
+  basis: TaBasis;
+  /** Divisioni tolte (0 o 1). Serve a scriverlo. */
+  margin: number;
+}
+
+/**
+ * Il TA da mostrare, riportato alle due lattine.
+ *
+ * @param taGrezzo   il TA letto dallo strumento, nella configurazione in uso
+ * @param config     quante lattine il preclear sta tenendo
+ * @param offsetSolo la correzione MISURATA per la configurazione a una lattina, in divisioni di
+ *                   TA (dal pannello TRIM). `0` = mai misurata.
+ */
+export function taToTwoCans(
+  taGrezzo: number, config: ElectrodeConfig, offsetSolo: number,
+): TaReading {
+  if (config === 'two-cans') return { ta: taGrezzo, basis: 'two-cans', margin: 0 };
+  // Una correzione misurata batte sempre un margine: è un dato, l'altro è prudenza.
+  if (Number.isFinite(offsetSolo) && offsetSolo !== 0) {
+    return { ta: taGrezzo + offsetSolo, basis: 'solo-measured', margin: 0 };
+  }
+  return {
+    ta: taGrezzo - TA_MARGIN_SOLO_NO_TEST,
+    basis: 'solo-margin',
+    margin: TA_MARGIN_SOLO_NO_TEST,
+  };
+}

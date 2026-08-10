@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   emptyHistory, addTest, scaleFor, soloRatio, daysSince, testedToday,
   toneMargin, withMargin, TONE_MARGIN_NO_TEST, MAX_TESTS, pcKey,
+  taToTwoCans, TA_MARGIN_SOLO_NO_TEST,
 } from '../canTest';
 
 const GIORNO = 86_400_000;
@@ -145,5 +146,54 @@ describe('la chiave del preclear', () => {
     // Senza questo, tutte le sedute senza nome finirebbero nello stesso mucchio.
     expect(pcKey('')).toBe('');
     expect(pcKey('   ')).toBe('');
+  });
+});
+
+describe('il TA riportato alle DUE LATTINE — è lì il riferimento', () => {
+  it('con due lattine il TA non si tocca: è già il riferimento', () => {
+    const r = taToTwoCans(3.2, 'two-cans', 0);
+    expect(r).toEqual({ ta: 3.2, basis: 'two-cans', margin: 0 });
+  });
+
+  it('con due lattine un offset del SOLO non c entra e non si applica', () => {
+    // L'offset è della configurazione a una lattina: applicarlo qui falserebbe il riferimento.
+    expect(taToTwoCans(3.2, 'two-cans', -0.8).ta).toBe(3.2);
+  });
+
+  it('una lattina PROVATA: si riporta a due con lo scarto misurato', () => {
+    const r = taToTwoCans(4.0, 'solo-can', -0.6);
+    expect(r.basis).toBe('solo-measured');
+    expect(r.ta).toBeCloseTo(3.4, 10);
+    expect(r.margin).toBe(0);   // misurato: niente margine, è un dato
+  });
+
+  it('una lattina NON provata: UNA DIVISIONE in meno — 4 diventa 3', () => {
+    // È l'esempio dell'utente, alla lettera.
+    const r = taToTwoCans(4, 'solo-can', 0);
+    expect(r.ta).toBe(3);
+    expect(r.basis).toBe('solo-margin');
+    expect(r.margin).toBe(TA_MARGIN_SOLO_NO_TEST);
+    expect(TA_MARGIN_SOLO_NO_TEST).toBe(1);
+  });
+
+  it('⚠️ una misura BATTE il margine: il dato viene prima della prudenza', () => {
+    const misurato = taToTwoCans(4, 'solo-can', -0.3);
+    const prudente = taToTwoCans(4, 'solo-can', 0);
+    expect(misurato.margin).toBe(0);
+    expect(prudente.margin).toBe(1);
+    expect(misurato.ta).not.toBe(prudente.ta);
+  });
+
+  it('un offset non finito ricade sul margine invece di produrre NaN', () => {
+    const r = taToTwoCans(4, 'solo-can', NaN);
+    expect(r.ta).toBe(3);
+    expect(r.basis).toBe('solo-margin');
+  });
+
+  it('la BASE si può sempre scrivere accanto al numero — mai indefinita', () => {
+    for (const [ta, cfg, off] of [[3, 'two-cans', 0], [3, 'solo-can', 0], [3, 'solo-can', -0.5]] as const) {
+      const r = taToTwoCans(ta, cfg, off);
+      expect(['two-cans', 'solo-measured', 'solo-margin']).toContain(r.basis);
+    }
   });
 });

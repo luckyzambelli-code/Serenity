@@ -1,5 +1,6 @@
 import React from 'react';
 import { useI18n } from '../i18n';
+import { pick5 } from '../i18n5';
 import { SQUEEZE_TARGET_OFFSET, BREATH_MIN_OFFSET } from '../engine/thetaSetup';
 import { LAYER } from "../ui/layers";
 
@@ -64,7 +65,8 @@ export function ThetaReadyCheck({
   startSqueezeTest, startBreathTest, sensTrim, setSensTrim, config, setConfig, onProceed, onCancel,
   unknownFormat = false, rawSamples = [],
 }: ThetaReadyCheckProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const L = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang as string, it, fr, en, es, sv);
 
   const prove = [
     {
@@ -159,6 +161,21 @@ export function ThetaReadyCheck({
           <div style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.14em',
                         textTransform: 'uppercase', color: 'rgba(226,238,255,0.45)', marginBottom: 6 }}>
             {t('theta_how_held') as string}
+          </div>
+          {/* ── PERCHÉ LA DOMANDA ─────────────────────────────────────────────────────────
+              La si faceva senza dire a che serve, e sembrava una formalità da sbrigare. Non
+              lo è: con DUE lattine la corrente attraversa il corpo da una mano all'altra e la
+              resistenza che si misura è quella del preclear; con UNA sola il circuito si
+              chiude altrimenti e la resistenza è più alta. Lo stesso preclear, nello stesso
+              istante, dà due TA diversi. Il riferimento sono le due — e a una lattina, senza
+              lo scarto misurato, il programma toglie una divisione e lo scrive. */}
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, lineHeight: 1.5,
+                        color: 'rgba(226,238,255,0.62)', marginBottom: 8 }}>
+            {L('Con DUE lattine la corrente passa da una mano all\'altra: la resistenza è quella del preclear, ed è il riferimento. Con UNA sola il circuito si chiude altrimenti e la resistenza è più alta — lo stesso preclear dà un TA diverso. Se lo scarto non è stato misurato, il programma toglie una divisione al TA e lo scrive accanto al numero.',
+               'Avec DEUX boîtes le courant passe d\'une main à l\'autre : la résistance est celle du préclair, et c\'est la référence. Avec UNE seule le circuit se ferme autrement et la résistance est plus haute — le même préclair donne un TA différent. Si l\'écart n\'a pas été mesuré, le programme retire une division au TA et l\'écrit à côté du nombre.',
+               'With TWO cans the current runs from hand to hand: the resistance is the preclear\'s, and that is the reference. With ONE the circuit closes otherwise and the resistance is higher — the same preclear gives a different TA. If the offset has not been measured, the program takes one division off the TA and says so beside the number.',
+               'Con DOS latas la corriente pasa de una mano a otra: la resistencia es la del preclear, y es la referencia. Con UNA sola el circuito se cierra de otro modo y la resistencia es más alta — el mismo preclear da un TA distinto. Si no se ha medido la diferencia, el programa quita una división al TA y lo escribe junto al número.',
+               'Med TVÅ burkar går strömmen från hand till hand: motståndet är preclearens, och det är referensen. Med EN sluts kretsen annorlunda och motståndet är högre — samma preclear ger ett annat TA. Om skillnaden inte mätts drar programmet av ett delstreck från TA och skriver det bredvid siffran.')}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {(['two-cans', 'solo-can'] as const).map(c => (
