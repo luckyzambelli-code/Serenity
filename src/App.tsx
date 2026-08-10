@@ -4538,11 +4538,30 @@ export default function App() {
   // callback del pannello) e senza questi leggerebbe per sempre la fase d'avvio.
   const tonePhaseRef = useRef(tonePhase); tonePhaseRef.current = tonePhase;
   const modeRef = useRef(mode); modeRef.current = mode;
+  /**
+   * ── IL TA CHE SI MOSTRA, RIPORTATO ALLE DUE LATTINE ─────────────────────────────────────
+   * « Che fa fede sono le DUE LATTINE ». Con una lattina sola la resistenza è un'altra, e più
+   * alta: mostrarla tale e quale farebbe credere a un caso più carico di quel che è.
+   *
+   *   due lattine               → il numero è già il riferimento;
+   *   una lattina, MISURATA     → si applica lo scarto di questa persona (pannello TRIM);
+   *   una lattina, NON misurata → si toglie UNA DIVISIONE — 4 diventa 3 — e si scrive.
+   *
+   * ⚠️ STA QUI, PRIMA DEL TONO, e non è un dettaglio di ordinamento: LA SCALA DEL TONO SI
+   * TARA SU QUESTO NUMERO. Prima il tono si calcolava dal TA GREZZO, quindi con una lattina
+   * partiva da un valore più alto del vero e tutta la scala era spostata — « sinon l'échelle
+   * est fausse » (segnalato). Il TA corretto è l'unico che possa tararla.
+   */
+  const taMostrato = theta.taNow === null ? null
+    : taToTwoCans(theta.taNow, theta.setup.config, theta.setup.offsets?.['solo-can'] ?? 0);
+  /** Lo stesso, sul TA del BRACCIO — è quello che ancora il ciclo (vedi `toneFromDelta`). */
+  const taCorretto = theta.ta === null ? null
+    : taToTwoCans(theta.ta, theta.setup.config, theta.setup.offsets?.['solo-can'] ?? 0).ta;
   // Il tono MISURATO. Oggi passa dal TA e non da ohm veri: `toneFromTa` è dichiaratamente una
   // strada provvisoria, ed è per questo che il quadrante scrive « ≈ ». Diventa esatta il giorno
   // che si tara il meter con due resistenze note.
-  const toneMeasured = instruments.theta && theta.ta !== null
-    ? toneFromTa(theta.ta, TA_MIN, TA_MAX) : null;
+  const toneMeasured = instruments.theta && taCorretto !== null
+    ? toneFromTa(taCorretto, TA_MIN, TA_MAX) : null;
   const toneHasMeter = toneMeasured !== null;
   // Specchio in ref: il gestore del worker si aggancia UNA volta sola e il tono cambia a ogni
   // tick — senza questo il locatore accumulerebbe per sempre il valore d'avvio.
@@ -4571,19 +4590,6 @@ export default function App() {
    * togliere una divisione al suo giudizio.
    */
   const margineTono = toneHasMeter ? toneMargin(canHistory, Date.now()) : 0;
-  /**
-   * ── IL TA CHE SI MOSTRA, RIPORTATO ALLE DUE LATTINE ─────────────────────────────────────
-   * « Che fa fede sono le DUE LATTINE ». Con una lattina sola la resistenza è un'altra, e più
-   * alta: mostrarla tale e quale farebbe credere a un caso più carico di quel che è.
-   *
-   *   due lattine            → il numero è già il riferimento;
-   *   una lattina, MISURATA  → si applica lo scarto di questa persona (pannello TRIM);
-   *   una lattina, NON misurata → si toglie UNA DIVISIONE — 4 diventa 3 — e si scrive.
-   *
-   * La correzione si TOGLIE davvero, non si annuncia soltanto: era la richiesta.
-   */
-  const taMostrato = theta.taNow === null ? null
-    : taToTwoCans(theta.taNow, theta.setup.config, theta.setup.offsets?.['solo-can'] ?? 0);
   //
   // ⚠️ IL MARGINE SI TOGLIE OVUNQUE IL TONO VENGA DA UNA MISURA, non solo dopo la
   // localizzazione. Stava sul solo ramo centrale, e allora prima di localizzare — cioè proprio
@@ -4595,9 +4601,9 @@ export default function App() {
   // togliere una divisione al suo giudizio sarebbe correggere una cosa che non è una misura.
   const toneOra = toneAtStart === null
     ? (toneHasMeter && toneMeasured !== null ? withMargin(toneMeasured, margineTono) : toneAssessed)
-    : toneTaAtStartRef.current !== null && theta.ta !== null
+    : toneTaAtStartRef.current !== null && taCorretto !== null
       ? withMargin(
-          toneFromDelta(toneAtStart, toneTaAtStartRef.current, theta.ta, TA_MAX - TA_MIN),
+          toneFromDelta(toneAtStart, toneTaAtStartRef.current, taCorretto, TA_MAX - TA_MIN),
           margineTono)
       : withMargin(toneAtStart, margineTono);
   /** Il secondo sguardo: la stessa scala, letta sulla carica EEG. `null` senza MUSE. */
@@ -5211,7 +5217,9 @@ export default function App() {
     // preclear. Da questo istante il tono non si legge più in assoluto: si conta il MOVIMENTO
     // delle misure rispetto a ORA (vedi `toneOra`).
     setToneAtStart(toneHasMeter ? r.tone : toneAssessed);
-    toneTaAtStartRef.current = theta.ta ?? null;
+    // ⚠️ IL TA CORRETTO, non quello grezzo: se si ancorasse al grezzo e la configurazione
+    // cambiasse in seduta, il tono salterebbe di una divisione senza che nulla sia successo.
+    toneTaAtStartRef.current = taCorretto;
     toneQAtStartRef.current = instruments.muse ? metricsStore.get().qL : null;
     toneStartSecRef.current = timeRef.current;   // il ciclo comincia QUI, non al comando 2
     // Premuto col campo VUOTO, la prima parola dell'auditor diventa l'item — come in CONTACT,
@@ -5222,7 +5230,7 @@ export default function App() {
     setToneRipetizioni(0);
     setItemSpoken(false);   // la resistenza di QUESTO ciclo va detta da capo.
     setTonePhase('raise');
-  }, [instruments.muse, toneMeasured, toneHasMeter, toneAssessed, theta.ta]);
+  }, [instruments.muse, toneMeasured, toneHasMeter, toneAssessed, taCorretto]);
 
   // Specchio in ref: il gestore del worker si aggancia una volta sola, e l'ago si può cambiare
   // in seduta — senza questo continuerebbe a usare quello scelto all'avvio.

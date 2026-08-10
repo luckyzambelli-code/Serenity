@@ -31,6 +31,8 @@
  */
 
 import type { ElectrodeConfig } from './thetaSetup';
+import { TONE_SCALE_MAX } from './tuning';
+import { clampTa } from './thetaTaScale';
 
 /** Una prova, com'è uscita. */
 export interface CanTest {
@@ -137,8 +139,13 @@ export const toneMargin = (h: PcCanHistory, now: number): number =>
  * ⚠️ SI TOGLIE SEMPRE, in tutti e due i versi della scala: il margine dice « non so con
  * precisione », non « sei più in basso ». Togliere vuol dire prudenza — verso il basso, che è
  * il verso in cui una dichiarazione ottimista fa danno.
+ *
+ * ⚠️ E SI FERMA AL FONDO SCALA. Senza il limite, un tono a −40 col margine diventava −41 — un
+ * valore che sulla scala di Ron non esiste (segnalato: « perché indichi −41? la scala si ferma
+ * a −40 »). Il margine dice che non si sa con precisione; non può far uscire dalla scala.
  */
-export const withMargin = (tone: number, margin: number): number => tone - margin;
+export const withMargin = (tone: number, margin: number): number =>
+  Math.max(-TONE_SCALE_MAX, Math.min(TONE_SCALE_MAX, tone - margin));
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════
 // PERSISTENZA — per PRECLEAR, e non per strumento
@@ -249,11 +256,13 @@ export function taToTwoCans(
 ): TaReading {
   if (config === 'two-cans') return { ta: taGrezzo, basis: 'two-cans', margin: 0 };
   // Una correzione misurata batte sempre un margine: è un dato, l'altro è prudenza.
+  // ⚠️ `clampTa` come ovunque: il TA vive fra 0 e il fondo scala dello strumento, e una
+  // correzione non può portarlo fuori — un TA negativo non è un TA basso, è un errore.
   if (Number.isFinite(offsetSolo) && offsetSolo !== 0) {
-    return { ta: taGrezzo + offsetSolo, basis: 'solo-measured', margin: 0 };
+    return { ta: clampTa(taGrezzo + offsetSolo), basis: 'solo-measured', margin: 0 };
   }
   return {
-    ta: taGrezzo - TA_MARGIN_SOLO_NO_TEST,
+    ta: clampTa(taGrezzo - TA_MARGIN_SOLO_NO_TEST),
     basis: 'solo-margin',
     margin: TA_MARGIN_SOLO_NO_TEST,
   };

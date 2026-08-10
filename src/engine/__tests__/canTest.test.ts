@@ -130,6 +130,17 @@ describe('il margine sulla scala del tono', () => {
     expect(withMargin(0, 1)).toBe(-1);
   });
 
+  it('⚠️ MA SI FERMA AL FONDO SCALA: −40 non diventa −41', () => {
+    // Segnalato: la scala di Ron finisce a −40, e il margine la faceva uscire.
+    expect(withMargin(-40, 1)).toBe(-40);
+    expect(withMargin(-39.5, 1)).toBe(-40);
+    expect(withMargin(-40, 5)).toBe(-40);
+  });
+
+  it('e nemmeno dall altra parte, per quanto strano sarebbe un margine negativo', () => {
+    expect(withMargin(40, -5)).toBe(40);
+  });
+
   it('senza margine il tono non si tocca', () => {
     expect(withMargin(12, 0)).toBe(12);
   });
@@ -182,6 +193,12 @@ describe('il TA riportato alle DUE LATTINE — è lì il riferimento', () => {
     expect(misurato.margin).toBe(0);
     expect(prudente.margin).toBe(1);
     expect(misurato.ta).not.toBe(prudente.ta);
+  });
+
+  it('⚠️ il TA non esce dal fondo scala dello strumento: 0,5 − 1 non fa −0,5', () => {
+    // Un TA negativo non è un TA basso: è un errore, e a schermo sarebbe incomprensibile.
+    expect(taToTwoCans(0.5, 'solo-can', 0).ta).toBe(0);
+    expect(taToTwoCans(6.4, 'solo-can', 3).ta).toBeLessThanOrEqual(6.5);
   });
 
   it('un offset non finito ricade sul margine invece di produrre NaN', () => {

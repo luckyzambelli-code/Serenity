@@ -19,6 +19,15 @@ da sola senza toccare le altre.
   - [ ] le tredici etichette non si accavallano (guardate su pagina di prova, non in app);
   - [ ] la scala ADATTATA (2.0.117, non più lineare) mette un tono normale a metà colonna e non
         più in basso: da confermare col meter, che è la cosa che l'ha fatta scoprire;
+  - [ ] **IL TA RIPORTATO ALLE DUE LATTINE** (2.0.124–125) — col meter, provando le due
+        configurazioni:
+    - [ ] a DUE lattine sotto il numero c'è « TA · 2 lattine » e il valore non è corretto;
+    - [ ] a UNA lattina senza scarto misurato il TA CALA di una divisione (4 → 3) e la riga
+          passa all'ambra: « TA · 1 lattina − 1 divisione »;
+    - [ ] misurando lo scarto nel pannello TRIM, la riga diventa « TA · 1 lattina → 2 » e il
+          margine sparisce (una misura batte la prudenza);
+    - [ ] **la SCALA DEL TONO segue il TA corretto**: passando da due lattine a una, il tono
+          NON deve saltare di una divisione — è il difetto che questa versione toglie;
   - [ ] **l'ANCORAGGIO al ciclo** (2.0.120) — il tono non si legge più in assoluto: alla
         localizzazione si fissa la partenza e da lì si conta la salita. Col meter:
     - [ ] stringendo le lattine il cursore SALE (resistenza giù = tono su) e riscende lasciando;
