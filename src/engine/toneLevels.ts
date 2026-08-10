@@ -14,8 +14,10 @@
  * Da qui due elenchi, che rispondono a due domande diverse:
  *   • `TONE_LEVELS`  — TUTTI i livelli. Serve a dire COME SI CHIAMA il punto in cui si è
  *     (« ≈ 1,5 · ANGER »): è testo accanto al cursore, quindi l'affollamento non lo tocca.
- *   • `TONE_LABELS`  — i diciotto che si scrivono SULLA colonna. Sono scelti dall'utente, non
- *     campionati a caso: coprono la scala senza sovrapporsi.
+ *   • `TONE_LABELS`  — i TREDICI che si scrivono SULLA colonna. Sono scelti dall'utente, non
+ *     campionati a caso: coprono la scala senza sovrapporsi. Erano diciotto e si accavallavano
+ *     ancora nella parte bassa; il cursore dice comunque il nome di QUALUNQUE livello, quindi
+ *     togliere etichette non toglie informazione — toglie rumore.
  *
  * ── I DOPPIONI SONO VOLUTI ──────────────────────────────────────────────────────────────────
  * Sympathy sta a 9,0 e a 0,9; Grief a 5,0 e a 0,5; Making Amends a 3,75 e a 0,375. Sono nella
@@ -107,7 +109,7 @@ export const TONE_LEVELS: readonly ToneLevel[] = [
  * accavallarsi. Gli altri restano leggibili dal cursore, che ne dice il nome per esteso.
  */
 export const TONE_LABELS: readonly number[] =
-  [40, 30, 20, 9, 4, 3, 2, 1.5, 1, 0, -1, -1.5, -3, -6, -10, -20, -30, -40] as const;
+  [40, 30, 20, 9, 6, 4, 3, 2, 0, -10, -20, -30, -40] as const;
 
 /**
  * Le tacche degli OTTO SEGMENTI: ogni multiplo di dieci, da −40 a +40. Nove tacche, otto

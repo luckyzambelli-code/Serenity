@@ -15,16 +15,24 @@ import React from 'react';
  * togliere.
  *
  * ── ALTEZZA LIMITATA ───────────────────────────────────────────────────────────────────────
- * `maxHeight` 84 px: sotto c'è la colonna dei selettori, che sta più in alto nell'ordine di
- * impilamento (z-50 contro z-30) e coprirebbe il testo invece di essere spinta giù. 84 px sono
- * il titolo più tre righe — di più non ci sta, e un'istruzione di quattro righe non è
+ * `maxHeight` 104 px: sotto c'è la colonna dei selettori, che sta più in alto nell'ordine di
+ * impilamento (z-50 contro z-30) e coprirebbe il testo invece di essere spinta giù. Sono il
+ * titolo, il comando e tre righe — di più non ci sta, e un'istruzione di quattro righe non è
  * un'istruzione: è un manuale, e il manuale sta nel GUIDE.
  *
  * Rendering puro, nessuno stato.
  */
-export function CycleHint({ titolo, come, avviso, fatto = false }: {
+export function CycleHint({ titolo, comando, come, avviso, fatto = false }: {
   /** Il passo: « 2 · POSITIVO O NEGATIVO? ». Numerato quando la procedura ha più tempi. */
   titolo: string;
+  /**
+   * LA FRASE DA DIRE AL PRECLEAR, alla lettera, fra virgolette caporali.
+   *
+   * `come` dice all'AUDITOR cosa fare; questa è la cosa da PRONUNCIARE. Le due si confondevano
+   * — il comando di Ron non era scritto da nessuna parte e bisognava saperlo a memoria — quindi
+   * ha una riga sua, in tondo e in evidenza: si legge e si dice.
+   */
+  comando?: string | null;
   /** Che cosa fare adesso, in una riga. Se ne servono due, la seconda va in `avviso`. */
   come: string;
   /** Riga in ambra, per quel che l'auditor deve SAPERE e non fare: una smentita dell'ago, una
@@ -34,11 +42,17 @@ export function CycleHint({ titolo, come, avviso, fatto = false }: {
   fatto?: boolean;
 }) {
   return (
-    <div style={{ width: '100%', marginTop: 2, maxHeight: 84, overflow: 'hidden' }}>
+    <div style={{ width: '100%', marginTop: 2, maxHeight: 104, overflow: 'hidden' }}>
       <div style={{ fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 800, letterSpacing: '0.04em',
                     color: fatto ? '#34d399' : 'rgba(240,246,255,0.95)' }}>
         {titolo}
       </div>
+      {comando && (
+        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, lineHeight: 1.4, marginTop: 3,
+                      color: 'rgba(240,246,255,0.92)' }}>
+          {comando}
+        </div>
+      )}
       <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, lineHeight: 1.45, marginTop: 2,
                     color: 'rgba(226,238,255,0.72)' }}>
         {come}

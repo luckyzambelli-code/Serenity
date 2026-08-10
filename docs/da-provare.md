@@ -23,6 +23,23 @@ da sola senza toccare le altre.
   - [ ] la barretta della carica MUSE, a sinistra dell'asta, non si confonde col tono;
   - [ ] il segmento ambra fra tono di partenza e tono attuale dice il verso.
 
+- [ ] **Il ciclo TONE coi comandi di Ron** (`App.tsx`, v2.0.115) — provato a schermo senza
+      strumenti; col meter va riguardato, perché con la misura i tempi 2 e 3 arrivano con una
+      proposta e il comportamento cambia:
+  - [ ] i due comandi si leggono a voce senza inciampi (sono la frase, non un riassunto);
+  - [ ] **RIDÀ IL COMANDO** conta bene le passate, e il numero finisce nel journal (`· ×7`);
+  - [ ] **NON REAGISCE PIÙ — VALIDA** chiude il ciclo e scrive la riga;
+  - [ ] con METER: l'ago finisce **al centro** o **in cima**? È la domanda aperta con Ron —
+        la vecchia procedura prevedeva il centro, il comando nuovo dice +40. Va OSSERVATO.
+
+- [ ] **« L'ITEM È STATO DETTO »** (`App.tsx`, v2.0.115) — l'uscita a mano dalla fase d'attesa
+      della voce, nei quattro cicli:
+  - [ ] con la trascrizione FUNZIONANTE il bottone non serve (l'item arriva da sé): verificare
+        che premerlo comunque non rompa nulla;
+  - [ ] il chip ambra « dì l'item… » si SPEGNE premendolo — se resta acceso, la parola detta
+        dopo si prende il posto dell'item a ciclo avviato;
+  - [ ] chiuso il ciclo, il seguente torna a CHIEDERE l'item (non deve saltare il tempo 1).
+
 - [ ] **Il badge del MUSE con le due percentuali** (`App.tsx`) — batteria e integrità stanno
       ora affiancate nel badge in alto, ognuna con la sua icona (pila · onda). Si vedono SOLO a
       casco collegato, quindi non si sono potute guardare:

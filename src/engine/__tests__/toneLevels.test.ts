@@ -45,8 +45,8 @@ describe('gli otto segmenti', () => {
 });
 
 describe('le etichette rade della colonna', () => {
-  it('sono diciotto, ordinate dall alto al basso', () => {
-    expect(TONE_LABELS).toHaveLength(18);
+  it('sono tredici, ordinate dall alto al basso', () => {
+    expect(TONE_LABELS).toHaveLength(13);
     for (let i = 1; i < TONE_LABELS.length; i++) {
       expect(TONE_LABELS[i]).toBeLessThan(TONE_LABELS[i - 1]);
     }

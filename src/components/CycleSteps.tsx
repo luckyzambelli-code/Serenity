@@ -52,7 +52,9 @@ export function CycleSteps({ mode, phase, lang, compact = false }: {
     locate:      L('LOCALIZZA', 'LOCALISE', 'LOCATE', 'LOCALIZA', 'LOKALISERA'),
     sign:        L('SEGNO', 'SIGNE', 'SIGN', 'SIGNO', 'TECKEN'),
     magnitude:   L('AMPIEZZA', 'AMPLEUR', 'MAGNITUDE', 'AMPLITUD', 'STORLEK'),
-    tonemockup:  L('MOCK-UP', 'MOCK-UP', 'MOCK-UP', 'MOCK-UP', 'MOCK-UP'),
+    // Il tempo 4 non è più un mock-up dell'opposto: è il comando « raise this to tone forty »,
+    // ridato finché la reazione non si spegne. La pista dice dove si va, cioè +40.
+    tonemockup:  L('TONO 40', 'TON 40', 'TONE 40', 'TONO 40', 'TON 40'),
   };
 
   const fatto  = isLightTheme ? 'rgba(58,58,64,0.55)'  : 'rgba(226,238,255,0.45)';

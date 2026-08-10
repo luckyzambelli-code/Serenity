@@ -50,7 +50,7 @@ export const stepsOf = (mode: SessionMode): StepId[] => STEPS[mode];
  * finestra EP) o quando il metodo non ha tempi.
  *
  * ── LE FASI CHE CONDIVIDONO UN TEMPO ────────────────────────────────────────────────────────
- * Non c'è una fase per tempo, e non deve essercene una: `mirror.say_item` è ancora « dai
+ * Non c'è una fase per tempo, e non deve essercene una: i tre `*.say_item` sono ancora « dai
  * l'item » (si è premuto col campo vuoto e si aspetta la voce), e `null.rise` è ancora « chiedi
  * il mock-up » — l'ago sale, ma l'auditor non ha un gesto nuovo da fare. Mostrarli come tempi a
  * sé farebbe avanzare la pista senza che sia avanzato il lavoro.
@@ -61,10 +61,12 @@ export function currentStep(phase: SessionPhase, mode: SessionMode): number {
   switch (phase) {
     // CONTACT
     case 'contact.item':      return 0;
+    case 'contact.say_item':  return 0;   // armato, ma l'item non è ancora detto
     case 'contact.mockup':    return 1;
     case 'contact.asis':      return 2;
     // NULL — `rise` è ancora il tempo del mock-up: si guarda, non si fa.
     case 'null.item':         return 0;
+    case 'null.say_item':     return 0;
     case 'null.mockup':       return 1;
     case 'null.rise':         return 1;
     case 'null.equilibrium':  return 2;
@@ -74,8 +76,9 @@ export function currentStep(phase: SessionPhase, mode: SessionMode): number {
     case 'mirror.contact':    return 1;
     case 'mirror.doubling':   return 2;
     case 'mirror.reached':    return 3;
-    // TONE
+    // TONE — `say_item` è ancora il tempo della localizzazione: la resistenza non è detta.
     case 'tone.locate':       return 0;
+    case 'tone.say_item':     return 0;
     case 'tone.sign':         return 1;
     case 'tone.magnitude':    return 2;
     case 'tone.mockup':       return 3;

@@ -58,6 +58,10 @@ describe('le fasi che condividono un tempo — la pista non deve avanzare a vuot
     expect(currentStep('mirror.say_item', 'mirror')).toBe(currentStep('mirror.item', 'mirror'));
   });
 
+  it('tone.say_item è ancora la LOCALIZZAZIONE: la resistenza non è detta', () => {
+    expect(currentStep('tone.say_item', 'tone')).toBe(currentStep('tone.locate', 'tone'));
+  });
+
   it('tone.done non inventa un quinto tempo: resta sull ultimo', () => {
     expect(currentStep('tone.done', 'tone')).toBe(3);
   });

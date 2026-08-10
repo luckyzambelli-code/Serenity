@@ -48,10 +48,16 @@ export type CrossPhase =
   | 'debrief';     // seduta finita, rapporto
 
 /** CONTACT — la carica contattata si dissolve fino all'AS-IS. Tre tempi, non quattro. */
-export type ContactPhase = 'contact.item' | 'contact.mockup' | 'contact.asis';
+export type ContactPhase =
+  | 'contact.item'
+  /** Premuto col campo VUOTO: si aspetta che l'item sia detto a voce. Vedi la nota sotto. */
+  | 'contact.say_item'
+  | 'contact.mockup' | 'contact.asis';
 
 /** NULL — il ciclo speculare: si lavora su ciò che NON reagisce. */
-export type NullPhaseId = 'null.item' | 'null.mockup' | 'null.rise' | 'null.equilibrium';
+export type NullPhaseId =
+  | 'null.item' | 'null.say_item'
+  | 'null.mockup' | 'null.rise' | 'null.equilibrium';
 
 /** MIRROR — il metodo del raddoppio di Ron. */
 export type MirrorPhase =
@@ -63,7 +69,10 @@ export type MirrorPhase =
 
 /** TONE SCALE — i quattro tempi di Ron, più il compiuto. */
 export type TonePhaseId =
-  | 'tone.locate' | 'tone.sign' | 'tone.magnitude' | 'tone.mockup' | 'tone.done';
+  | 'tone.locate'
+  /** Localizzato col campo VUOTO: si aspetta che la resistenza sia detta. Come negli altri tre. */
+  | 'tone.say_item'
+  | 'tone.sign' | 'tone.magnitude' | 'tone.mockup' | 'tone.done';
 
 export type SessionPhase =
   | CrossPhase | ContactPhase | NullPhaseId | MirrorPhase | TonePhaseId
@@ -107,10 +116,19 @@ export interface PhaseSignals {
   asIsPending: boolean;
   nullPhase:   NullStateId;
 
+  /**
+   * L'ITEM È STATO NOMINATO? (campo pieno)
+   *
+   * Vale per TUTTI i cicli, non solo per MIRROR. Premuto col campo vuoto si aspetta la voce, e
+   * finché la parola non arriva il ciclo è armato ma l'item non c'è. Senza questa distinzione
+   * CONTACT e NULL saltavano diritti al mock-up: l'etichetta diceva « dillo a voce » e
+   * l'istruzione sotto « chiedi un mock-up », due ordini contraddittori nello stesso istante
+   * (segnalato). MIRROR aveva già la sua fase; ora ce l'hanno tutti e tre.
+   */
+  itemNamed: boolean;
+
   // ── MIRROR ───────────────────────────────────────────────────────────────────────────────
   mirrorArmed:     boolean;
-  /** L'item è stato nominato (campo pieno). Premuto col campo vuoto, si aspetta la voce. */
-  mirrorItemNamed: boolean;
   mirrorLocked:    boolean;
   mirrorReached:   boolean;
 
@@ -179,6 +197,10 @@ export function deriveCyclePhase(s: PhaseSignals): SessionPhase {
   // ── TONE : localizza → segno → ampiezza → mock-up ────────────────────────────────────────
   if (s.mode === 'tone') {
     if (s.tonePhase === 'locate')    return 'tone.locate';
+    // Localizzato ma senza resistenza nominata: si aspetta la voce, e NON si assessa ancora il
+    // segno. Prima si passava dritti a « positivo o negativo? » — si sceglieva il segno di una
+    // resistenza che non era stata detta (segnalato).
+    if (!s.itemNamed)                return 'tone.say_item';
     if (s.tonePhase === 'sign')      return 'tone.sign';
     if (s.tonePhase === 'magnitude') return 'tone.magnitude';
     if (s.tonePhase === 'mockup' && s.toneValidated) return 'tone.mockup';
@@ -189,8 +211,8 @@ export function deriveCyclePhase(s: PhaseSignals): SessionPhase {
 
   // ── MIRROR : item → valore → il DOPPIO da smaltire ───────────────────────────────────────
   if (s.mode === 'mirror') {
-    if (!s.mirrorArmed)     return 'mirror.item';
-    if (!s.mirrorItemNamed) return 'mirror.say_item';
+    if (!s.mirrorArmed)  return 'mirror.item';
+    if (!s.itemNamed)    return 'mirror.say_item';
     if (!s.mirrorLocked)    return 'mirror.contact';
     if (s.mirrorReached)    return 'mirror.reached';
     return 'mirror.doubling';
@@ -199,6 +221,8 @@ export function deriveCyclePhase(s: PhaseSignals): SessionPhase {
   // ── NULL : item → mock-up → RISE → EQUILIBRIUM ───────────────────────────────────────────
   if (s.mode === 'null') {
     if (!s.cycleArmed)                  return 'null.item';
+    // Armato ma senza item: si aspetta la voce. Prima si passava dritti al mock-up.
+    if (!s.itemNamed)                   return 'null.say_item';
     if (s.nullPhase === 'rise')         return 'null.rise';
     if (s.nullPhase === 'clear_read')   return 'null.equilibrium';
     return 'null.mockup';
@@ -213,5 +237,7 @@ export function deriveCyclePhase(s: PhaseSignals): SessionPhase {
   // ── CONTACT : item → il ciclo avanza da sé → AS-IS ───────────────────────────────────────
   if (!s.cycleArmed)  return 'contact.item';
   if (s.asIsPending)  return 'contact.asis';
+  // Armato ma senza item: si aspetta la voce, e NON si chiede ancora il mock-up.
+  if (!s.itemNamed)   return 'contact.say_item';
   return 'contact.mockup';
 }

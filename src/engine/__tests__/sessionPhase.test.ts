@@ -17,7 +17,7 @@ const base: PhaseSignals = {
   asIsPending: false,
   nullPhase: 'neutral',
   mirrorArmed: false,
-  mirrorItemNamed: false,
+  itemNamed: true,   // caso normale: l'item è stato scritto prima di premere
   mirrorLocked: false,
   mirrorReached: false,
   tonePhase: 'locate',
@@ -123,28 +123,28 @@ describe('MIRROR — il metodo del raddoppio', () => {
   });
 
   it('2 · premuto col campo vuoto, si aspetta la voce', () => {
-    expect(m({ mirrorArmed: true, mirrorItemNamed: false })).toBe('mirror.say_item');
+    expect(m({ mirrorArmed: true, itemNamed: false })).toBe('mirror.say_item');
   });
 
   it('3 · contatto: il valore 1–10 non si è ancora fissato', () => {
-    expect(m({ mirrorArmed: true, mirrorItemNamed: true })).toBe('mirror.contact');
+    expect(m({ mirrorArmed: true, itemNamed: true })).toBe('mirror.contact');
   });
 
   it('4 · porta al doppio', () => {
     expect(m({
-      mirrorArmed: true, mirrorItemNamed: true, mirrorLocked: true,
+      mirrorArmed: true, itemNamed: true, mirrorLocked: true,
     })).toBe('mirror.doubling');
   });
 
   it('OTTENUTO: lo smaltito ha raggiunto il doppio', () => {
     expect(m({
-      mirrorArmed: true, mirrorItemNamed: true, mirrorLocked: true, mirrorReached: true,
+      mirrorArmed: true, itemNamed: true, mirrorLocked: true, mirrorReached: true,
     })).toBe('mirror.reached');
   });
 
   it('l item viene prima dell aggancio: nominarlo non si salta', () => {
     // Agganciato ma senza item nominato → si resta a « dì l'item », non si passa a contatto.
-    expect(m({ mirrorArmed: true, mirrorLocked: true })).toBe('mirror.say_item');
+    expect(m({ mirrorArmed: true, mirrorLocked: true, itemNamed: false })).toBe('mirror.say_item');
   });
 });
 
@@ -153,6 +153,25 @@ describe('TONE SCALE — i quattro tempi di Ron', () => {
 
   it('1 · localizza la resistenza', () => {
     expect(tn({ tonePhase: 'locate' })).toBe('tone.locate');
+  });
+
+  it('localizzato col campo vuoto, si aspetta la voce — NON si assessa il segno', () => {
+    // Era il difetto: premuto ASSESSA senza aver detto la resistenza, comparivano già
+    // POSITIVO / NEGATIVO. Il segno è di QUALCOSA, e quel qualcosa va nominato prima.
+    expect(tn({ tonePhase: 'sign', itemNamed: false })).toBe('tone.say_item');
+  });
+
+  it('e non si salta nemmeno più avanti: vale per tutti i tempi', () => {
+    expect(tn({ tonePhase: 'magnitude', itemNamed: false })).toBe('tone.say_item');
+    expect(tn({ tonePhase: 'mockup', toneValidated: true, itemNamed: false })).toBe('tone.say_item');
+  });
+
+  it('LOCALIZZA resta raggiungibile senza item: è il tempo in cui lo si dà', () => {
+    expect(tn({ tonePhase: 'locate', itemNamed: false })).toBe('tone.locate');
+  });
+
+  it('detta la resistenza, si riparte dal segno — il ciclo NON resta bloccato', () => {
+    expect(tn({ tonePhase: 'sign', itemNamed: true })).toBe('tone.sign');
   });
 
   it('2 · positivo o negativo', () => {
@@ -219,5 +238,26 @@ describe('le utilità di lettura', () => {
     expect(phaseFamily('tone.sign')).toBe('tone');
     expect(phaseFamily('free')).toBe('free');
     expect(phaseFamily('preflight')).toBe('cross');
+  });
+});
+
+
+describe('ARMATO MA SENZA ITEM — l ordine contraddittorio che non deve piu accadere', () => {
+  it('CONTACT: premuto col campo vuoto si aspetta la VOCE, non si chiede il mock-up', () => {
+    expect(derivePhase(s({ cycleArmed: true, itemNamed: false }))).toBe('contact.say_item');
+    expect(derivePhase(s({ cycleArmed: true, itemNamed: true  }))).toBe('contact.mockup');
+  });
+
+  it('NULL: idem', () => {
+    expect(derivePhase(s({ mode: 'null', cycleArmed: true, itemNamed: false }))).toBe('null.say_item');
+    expect(derivePhase(s({ mode: 'null', cycleArmed: true, itemNamed: true, nullPhase: 'null' }))).toBe('null.mockup');
+  });
+
+  it('MIRROR lo faceva gia: ora i tre cicli si comportano allo stesso modo', () => {
+    expect(derivePhase(s({ mode: 'mirror', mirrorArmed: true, itemNamed: false }))).toBe('mirror.say_item');
+  });
+
+  it('ma l AS-IS proposto VINCE su « dì l item »: il ciclo è arrivato in fondo comunque', () => {
+    expect(derivePhase(s({ cycleArmed: true, itemNamed: false, asIsPending: true }))).toBe('contact.asis');
   });
 });

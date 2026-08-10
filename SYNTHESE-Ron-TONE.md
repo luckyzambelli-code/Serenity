@@ -1,6 +1,6 @@
 # TONE SCALE
 
-*Note pour Ron · version 2.0.113*
+*Note pour Ron · version 2.0.115*
 
 ---
 
@@ -8,7 +8,37 @@ Ton dernier message est construit. Un cadran de **−40 à +40**, huit divisions
 dix, le zéro au centre — une quatrième vue à côté de CONTACT, NULL et MIRROR.
 
 Les quatre temps sont à l'écran, l'un après l'autre : **localiser · positif ou
-négatif ? · combien de divisions ? · mock-upper l'opposé**.
+négatif ? · combien de divisions ? · mener au ton 40**.
+
+---
+
+## Tes deux commandes, mot pour mot
+
+Elles ne sont plus à retenir : elles sont écrites en grand, là où l'auditeur
+regarde, et il n'a qu'à les lire.
+
+> **« Locate resistance on your case that can now be run. »**
+
+> **« Raise this to tone forty on the tone scale. »**
+
+La seconde est **répétée**, comme tu l'as demandé. Un bouton *redonne la
+commande* compte les fois ; le nombre reste à l'écran pendant qu'on conduit et
+part dans le journal à la fermeture — `TONE −20 · ×7 · AS-IS`. Une résistance
+qui coûte sept passes et une qui en coûte deux ne sont pas le même travail, et
+nous voulons pouvoir les comparer.
+
+Le cycle se ferme sur **« ne réagit plus »** — pas de réaction, et la sérénité
+de l'être en haut de l'échelle.
+
+## Chaque niveau de ton, pendant qu'il monte
+
+À droite du cadran, une colonne verticale porte les soixante-deux niveaux. Le
+curseur donne la valeur et **le nom** — Anger, Grief, Apathy — et un trait ambre
+relie le ton de départ au ton actuel, pour qu'on voie le sens de la marche.
+
+Les valeurs écrites sont celles que Claudio a retenues : −40, −30, −20, −10, 0,
+2, 3, 4, 6, 9, 20, 30, 40. Les autres n'apparaissent qu'au curseur, sinon la
+colonne serait illisible.
 
 ---
 
@@ -32,16 +62,18 @@ pensée), le METER dit *combien*.
 
 ---
 
-## L'as-isness : le zéro, pas l'opposé
+## Une question que ta commande nous pose
 
-Le préclair *mock-uppe* le +40 ; le résultat est que les deux s'annulent et que la
-résistance revient **au centre**. Si l'aiguille se fixait sur le +40, on aurait
-remplacé une charge par une autre.
+Avant, le point 4 faisait mock-upper l'**opposé** : la charge et son contraire
+s'annulaient, et la résistance revenait **au centre**. Ta commande dit autre
+chose — on monte à **+40**, pas à zéro.
 
-C'est une prédiction falsifiable, et c'est pour ça qu'elle vaut la peine d'être
-mesurée : si en séance l'aiguille finissait sur l'opposé, nous le saurions.
+Nous avons mis ta commande, pas notre raisonnement. Mais alors la question
+reste ouverte, et elle est mesurable : à la fin, l'aiguille doit-elle se poser
+**au centre** ou **en haut** ? Nous le saurons en séance, et nous te dirons ce
+qu'elle a fait.
 
-L'app **propose** l'as-is quand deux signaux indépendants concordent — jamais sur
+L'app **propose** la fin quand deux signaux indépendants concordent — jamais sur
 un seul. **C'est toujours l'auditeur qui valide.**
 
 ---
