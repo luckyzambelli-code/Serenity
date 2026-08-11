@@ -306,17 +306,6 @@ export function Sidebar({
         onClick={onShowHistory}
       />
 
-      {/* ── GUIDA ────────────────────────────────────────────────────────────────────────
-          Il manuale viveva fuori dall'app, in un file da aprire nel browser: chi ha un dubbio
-          in seduta non va a cercare una cartella. Sta qui, sotto lo storico, e si apre come
-          ogni altro pannello — è lo stesso documento, copiato dentro l'app a ogni build. */}
-      <SideBtn
-        label={t('sidebar_guide')}
-        active={!!guideOpen}
-        icon={<HelpCircle size={34} strokeWidth={1.4} />}
-        onClick={onShowGuide}
-      />
-
       {/* LANG */}
       <SideBtn
         label={(lang || '').toUpperCase()}
@@ -324,6 +313,18 @@ export function Sidebar({
         icon={<Languages size={34} strokeWidth={1.4} />}
         onClick={() => toggleDrawer('lang')}
       />
+
+      {/* ── GUIDA ────────────────────────────────────────────────────────────────────────
+          Il manuale viveva fuori dall'app, in un file da aprire nel browser: chi ha un dubbio
+          in seduta non va a cercare una cartella. Sta qui, sotto la LINGUA (richiesta utente),
+          e si apre come ogni altro pannello — lo stesso documento, copiato dentro l'app. */}
+      <SideBtn
+        label={t('sidebar_guide')}
+        active={!!guideOpen}
+        icon={<HelpCircle size={34} strokeWidth={1.4} />}
+        onClick={onShowGuide}
+      />
+
 
       {/* Spacer */}
       <div style={{ flex: 1, minHeight: 8 }} />

@@ -103,7 +103,7 @@ import { ToneColumn } from './components/ToneColumn';
 import { TONE_LABELS, exactLevelName, levelName } from './engine/toneLevels';
 import {
   loadHistory as loadCanTests, saveHistory as saveCanTests, addTest as addCanTest,
-  toneMargin, withMargin, taToTwoCans,
+  toneMargin, withMargin, taToTwoCans, testedToday,
   type PcCanHistory,
 } from './engine/canTest';
 import { CycleHint } from './components/CycleHint';
@@ -4780,6 +4780,26 @@ export default function App() {
     </span>
   );
 
+  /**
+   * L'ITEM A CICLO AVVIATO — grande, bianco, uguale nei quattro cicli.
+   *
+   * Quando il ciclo avanza, quel che conta è LEGGERE su che cosa si sta lavorando. CONTACT e
+   * NULL lo mostravano così; MIRROR e TONE lasciavano il campo di scrittura disabilitato —
+   * piccolo, monospace, sbiadito — e la stessa cosa si leggeva in due modi (segnalato).
+   */
+  const etichettaItem = (): React.ReactNode => (
+    <div style={{ width: '100%', padding: '6px 10px', borderRadius: 8,
+                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+                  display: 'flex', alignItems: 'baseline', gap: 8 }}>
+      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 700, letterSpacing: '0.14em',
+                     textTransform: 'uppercase', color: 'rgba(226,238,255,0.5)', flexShrink: 0 }}>ITEM</span>
+      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 800, lineHeight: 1.2,
+                     color: 'rgba(240,246,255,0.96)' }}>
+        {auditingQuestion.trim() || LC('(dillo a voce…)', '(dis-le à voix…)', '(say it aloud…)', '(dilo en voz…)', '(säg det högt…)')}
+      </span>
+    </div>
+  );
+
   const bottoneCiclo = (): React.ReactNode => {
     const k = mode === 'null' ? 'null' : 'charge';
   const active = cycleArmed && cycleKind === k;
@@ -7434,18 +7454,7 @@ export default function App() {
                     prometteva una sequenza e non la mostrava mai. Sta SOPRA il campo, cioè
                     dove comincia il lavoro. */}
                 <CycleSteps mode={mode} phase={faseCiclo} lang={lang} />
-                {cycleArmed ? (
-                  <div style={{ width: '100%', padding: '6px 10px', borderRadius: 8,
-                                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
-                                display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 700, letterSpacing: '0.14em',
-                                   textTransform: 'uppercase', color: 'rgba(226,238,255,0.5)', flexShrink: 0 }}>ITEM</span>
-                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 800, lineHeight: 1.2,
-                                   color: 'rgba(240,246,255,0.96)' }}>
-                      {auditingQuestion.trim() || LC('(dillo a voce…)', '(dis-le à voix…)', '(say it aloud…)', '(dilo en voz…)', '(säg det högt…)')}
-                    </span>
-                  </div>
-                ) : (
+                {cycleArmed ? etichettaItem() : (
                 /* ── IL CAMPO E IL GESTO SULLA STESSA RIGA, come in MIRROR e in TONE ────────
                    Il bottone stava una riga più sotto, in mezzo ai contatori: si scriveva
                    l'item in un posto e lo si dava in un altro, e negli altri due cicli invece
@@ -7580,19 +7589,20 @@ export default function App() {
                       ne avevano più bisogno. */}
                   <CycleSteps mode={mode} phase={faseCiclo} lang={lang} />
                   <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
+                    {mirrorArmed ? etichettaItem() : (
                     <textarea
                       value={auditingQuestion}
                       onChange={(e) => setAuditingQuestion(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) e.preventDefault(); }}
-                      disabled={mirrorArmed}
                       rows={1}
                       placeholder={LC('Item… (o dillo a voce)', 'Item… (ou dis-le à voix)', 'Item… (or say it aloud)', 'Ítem… (o dilo en voz)', 'Item… (eller säg det högt)')}
                       style={{ flex: 1, minWidth: 0, minHeight: 32, maxHeight: 100, padding: '6px 10px', borderRadius: 8,
                         fontSize: 12, lineHeight: 1.4, fontFamily: 'monospace', resize: 'none', overflowY: 'auto',
-                        fieldSizing: 'content', background: mirrorArmed ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.45)',
-                        border: `1px solid ${mirrorArmed ? 'rgba(52,211,153,0.6)' : 'rgba(255,255,255,0.22)'}`,
+                        fieldSizing: 'content', background: 'rgba(0,0,0,0.45)',
+                        border: '1px solid rgba(255,255,255,0.22)',
                         color: 'rgba(235,244,255,0.92)', outline: 'none' } as React.CSSProperties}
                     />
+                    )}
                     {/* ⚠️ CHIEDEVA IL CONTATTO DEGLI ELETTRODI (`museContact`), e senza MUSE
                         restava grigio: il ciclo MIRROR non si poteva proprio cominciare
                         (segnalato). È lo stesso errore di sempre — il ciclo non ha bisogno
@@ -7693,20 +7703,24 @@ export default function App() {
                       const itemModificabile = locabile || !auditingQuestion.trim();
                       return (
                       <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
+                        {/* Ciclo avviato con l'item già dato → l'ETICHETTA, come negli altri tre.
+                            Il campo resta finché l'item manca: senza trascrizione è l'unico modo
+                            di scriverlo. */}
+                        {!itemModificabile ? etichettaItem() : (
                         <textarea
                           value={auditingQuestion}
                           onChange={(e) => setAuditingQuestion(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) e.preventDefault(); }}
-                          disabled={!itemModificabile}
                           rows={1}
                           placeholder={LC('Item… (o dillo a voce)', 'Item… (ou dis-le à voix)', 'Item… (or say it aloud)', 'Ítem… (o dilo en voz)', 'Item… (eller säg det högt)')}
                           style={{ flex: 1, minWidth: 160, minHeight: 32, maxHeight: 80, padding: '6px 10px', borderRadius: 8,
                             fontSize: 12, lineHeight: 1.4, fontFamily: 'monospace', resize: 'none', overflowY: 'auto',
                             fieldSizing: 'content',
-                            background: itemModificabile ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.12)',
-                            border: `1px solid ${itemModificabile ? 'rgba(255,255,255,0.22)' : 'rgba(255,90,90,0.55)'}`,
+                            background: 'rgba(0,0,0,0.45)',
+                            border: '1px solid rgba(255,255,255,0.22)',
                             color: 'rgba(235,244,255,0.92)', outline: 'none' } as React.CSSProperties}
                         />
+                        )}
                         {/* ── DA DOVE SI PARTE, quando non c'è un meter a dirlo ───────────
                             Ron: il legame tono↔ohm è arbitrario, conta il TONO. Senza
                             strumento la sorgente è quel che il preclear dichiara più l'obnosi
@@ -8291,7 +8305,16 @@ export default function App() {
               squeezeOk={theta.squeezeOk}
               testing={theta.testing}
               peakOffset={theta.testPeakOffset}
-              startSqueezeTest={theta.startSqueezeTest}
+              // ⚠️ IL TA SI PRENDE QUI, prima che la stretta lo muova: è il riposo in questa
+              // configurazione, e la coppia dei due riposi è lo scarto che si cerca.
+              startSqueezeTest={() => {
+                const ta = theta.ta;
+                if (ta !== null) {
+                  setProvaTa(p => theta.setup.config === 'two-cans'
+                    ? { ...p, two: ta } : { ...p, solo: ta });
+                }
+                theta.startSqueezeTest();
+              }}
               startBreathTest={theta.startBreathTest}
               sensTrim={theta.setup.sensTrim}
               setSensTrim={theta.setSensTrim}
@@ -8299,7 +8322,6 @@ export default function App() {
               setConfig={theta.setConfig}
               // Misurato lo scarto, l'invito a fare la prova a due lattine non serve più.
               soloOffsetMisurato={(theta.setup.offsets?.['solo-can'] ?? 0) !== 0}
-              // La prova doppia: i due TA e il gesto che applica la loro differenza.
               taTwo={provaTa.two}
               taSolo={provaTa.solo}
               onApplySoloOffset={(off) => theta.setSoloOffset(off)}
@@ -8381,6 +8403,16 @@ export default function App() {
           auditingCycles={auditingCyclesRef.current}
           mirrorCycles={mirrorCyclesRef.current}
           toneCycles={toneCyclesRef.current}
+          // ── LA PROVA DELLE LATTINE NEL RAPPORTO ────────────────────────────────────
+          // Fatta o non fatta, e con che scarto: è la condizione in cui TUTTI i numeri della
+          // seduta sono stati letti. Senza, a freddo non si sa se quel TA valeva.
+          cansTest={{
+            done: testedToday(canHistory, Date.now()),
+            config: theta.setup.config,
+            soloOffset: theta.setup.offsets?.['solo-can'] ?? 0,
+            taMargin: taMostrato?.margin ?? 0,
+            hasMeter: theta.status === 'connected',
+          }}
           assessCycles={assessCyclesRef.current}
           deltaStar={deltaStar}
           deltaStarN={deltaStarN}

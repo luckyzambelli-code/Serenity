@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, ExternalLink } from 'lucide-react';
 import { pick5 } from '../i18n5';
 import { LAYER } from '../ui/layers';
@@ -30,6 +30,20 @@ export function GuideModal({ onClose, lang }: { onClose: () => void; lang: strin
   const L = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang, it, fr, en, es, sv);
   const [mancante, setMancante] = useState(false);
   const SRC = '/guide/EQUILIBRIUM-manuale.html';
+
+  /**
+   * ESC CHIUDE — e senza questo il bottone prometteva una scorciatoia che non esisteva.
+   *
+   * ⚠️ Il tasto si ascolta sulla FINESTRA, non sul riquadro: la guida sta dentro un iframe, e
+   * quando il fuoco è lì dentro il documento esterno non riceve più i tasti. Quello che si può
+   * fare è tenerlo per quando il fuoco è fuori — dentro l'iframe resta il bottone, che è
+   * comunque visibile in cima.
+   */
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, [onClose]);
 
   return (
     <div
@@ -66,12 +80,24 @@ export function GuideModal({ onClose, lang }: { onClose: () => void; lang: strin
                        color: 'rgba(240,246,255,0.8)' }}>
               <ExternalLink size={14} />
             </button>
+            {/* ── L'USCITA, DETTA A PAROLE ──────────────────────────────────────────────
+                Era una crocetta di 30 px in un angolo, e la guida è a tutto schermo: aprendola
+                non si capiva come tornare all'app (segnalato). Adesso il bottone porta il nome
+                di dove si torna, e l'ESC è scritto sopra — chi cerca un'uscita cerca prima
+                quello. */}
             <button type="button" onClick={onClose}
-              style={{ width: 30, height: 30, borderRadius: 8, cursor: 'pointer',
-                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                       background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.2)',
-                       color: 'rgba(240,246,255,0.8)' }}>
+              title={L('Torna a EQUILIBRIUM — o premi ESC', 'Retour à EQUILIBRIUM — ou touche ESC',
+                       'Back to EQUILIBRIUM — or press ESC', 'Volver a EQUILIBRIUM — o pulsa ESC',
+                       'Tillbaka till EQUILIBRIUM — eller ESC')}
+              style={{ height: 32, padding: '0 14px', borderRadius: 8, cursor: 'pointer',
+                       display: 'flex', alignItems: 'center', gap: 7,
+                       fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 700,
+                       letterSpacing: '0.04em',
+                       background: 'rgba(52,211,153,0.16)', border: '1px solid rgba(52,211,153,0.6)',
+                       color: '#34d399' }}>
               <X size={15} />
+              {L('Torna all\'app', 'Retour à l\'app', 'Back to the app', 'Volver a la app', 'Tillbaka till appen')}
+              <span style={{ fontSize: 9, opacity: 0.7, letterSpacing: '0.1em' }}>ESC</span>
             </button>
           </div>
         </div>

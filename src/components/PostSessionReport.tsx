@@ -76,6 +76,24 @@ interface PostSessionReportProps {
    *  concordaient : c'est précisément ce désaccord-là qu'on veut pouvoir relire après coup.
    *  `anchor` dit qui a certifié l'instant (le MUSE, l'aiguille du METER, ou rien).
    *  `witnesses` = les témoins de l'as-is qui se sont allumés. */
+  /**
+   * LA PROVA DELLE LATTINE — la condizione in cui i numeri di questa seduta sono stati letti.
+   *
+   * Non è un dettaglio da archivio: se la prova non è stata fatta, la sensibilità dell'ago era
+   * quella di ripiego e il TA porta una divisione tolta. A freddo, senza questa riga, non si
+   * saprebbe se quel 3,40 valeva — e due sedute non sarebbero confrontabili.
+   */
+  cansTest?: {
+    /** Stretta fatta OGGI con le due lattine. */
+    done: boolean;
+    config: 'two-cans' | 'solo-can';
+    /** Scarto misurato per il solo, in divisioni di TA. 0 = mai misurato. */
+    soloOffset: number;
+    /** Divisioni tolte al TA per mancanza di misura. */
+    taMargin: number;
+    /** Col meter scollegato la riga non ha oggetto. */
+    hasMeter: boolean;
+  };
   toneCycles?: Array<{ n: number; question: string; tStartSec: number; tEndSec: number;
     /** Tono di PARTENZA misurato — `null` senza meter. */
     located: number | null;
@@ -117,7 +135,7 @@ interface PostSessionReportProps {
 }
 
 
-export function PostSessionReport({ history, csvData, logs, mass, startTime, endTime, auditorName, pcName, pcPhoto, auditorPhoto, isSoloSession, noInstruments = false, onClose, onSaveSession, sessionObjective, sessionProcessObjective, sessionPhysicalCheck, sessionBriefing, onOpenHistory, reactions = [], epValidated = false, epCognitionText = '', epAuditorNote = '', epReactionType = '', epRealization = '', epDurationMin = '', epVgi = false, epVvgi = false, epTimestamp = null, totalTa = 0, massTime = 0, dissolutionTime = 0, avgReleaseVel = 0, relVelBaseline = 0, dissolvedPctMass, massChargeQ = 0, dissChargeQ = 0, auditingCycles = [], mirrorCycles = [], toneCycles = [], assessCycles = [], deltaStar = 0, deltaStarN = 0, deltaTrend = 0, deltaBaseline = 0, deltaAdaptive = 0,
+export function PostSessionReport({ history, csvData, logs, mass, startTime, endTime, auditorName, pcName, pcPhoto, auditorPhoto, isSoloSession, noInstruments = false, onClose, onSaveSession, sessionObjective, sessionProcessObjective, sessionPhysicalCheck, sessionBriefing, onOpenHistory, reactions = [], epValidated = false, epCognitionText = '', epAuditorNote = '', epReactionType = '', epRealization = '', epDurationMin = '', epVgi = false, epVvgi = false, epTimestamp = null, totalTa = 0, massTime = 0, dissolutionTime = 0, avgReleaseVel = 0, relVelBaseline = 0, dissolvedPctMass, massChargeQ = 0, dissChargeQ = 0, auditingCycles = [], mirrorCycles = [], toneCycles = [], assessCycles = [], cansTest, deltaStar = 0, deltaStarN = 0, deltaTrend = 0, deltaBaseline = 0, deltaAdaptive = 0,
   breathReactivity, breathContactPct, breathBpm,
   profileId, mnaData }: PostSessionReportProps) {
   // ── ZONES AS-IS: charge lifecycle of the contacted masses ──
@@ -1021,6 +1039,37 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
     // que la MESURE disait, ce que le preclair a VALIDE, et le desaccord entre les deux : c'est
     // la seule ligne du rapport ou l'instrument et la personne se contredisent en clair.
     // ASCII seulement (jsPDF helvetica) : pas de fleches ni de signes typographiques.
+    // ── LA PROVA DELLE LATTINE — prima dei cicli, perché è la loro condizione ─────────
+    if (cansTest?.hasMeter) {
+      ensureSpace(16);
+      panelHeader(L('TEST DES BOITES', 'TEST DES BOITES', 'CANS TEST', 'PRUEBA DE LATAS', 'BURKTEST'));
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(40, 40, 40);
+      const cfg = cansTest.config === 'two-cans'
+        ? L('2 boites', '2 boites', '2 cans', '2 latas', '2 burkar')
+        : L('1 boite', '1 boite', '1 can', '1 lata', '1 burk');
+      pdf.text(`${L('Configurazione', 'Configuration', 'Configuration', 'Configuracion', 'Konfiguration')} : ${cfg}`, 20, y);
+      y += 5;
+      pdf.text(`${L('Stretta con 2 boites, oggi', 'Pression 2 boites, aujourd hui', 'Squeeze with 2 cans, today', 'Presion 2 latas, hoy', 'Tryck 2 burkar, idag')} : `
+        + (cansTest.done ? L('SI', 'OUI', 'YES', 'SI', 'JA') : L('NO', 'NON', 'NO', 'NO', 'NEJ')), 20, y);
+      y += 5;
+      pdf.text(`${L('Scarto 1 boite -> 2', 'Ecart 1 boite -> 2', 'Offset 1 can -> 2', 'Diferencia 1 lata -> 2', 'Skillnad 1 burk -> 2')} : `
+        + (cansTest.soloOffset !== 0 ? cansTest.soloOffset.toFixed(2)
+           : L('non misurato', 'non mesure', 'not measured', 'no medido', 'ej mätt')), 20, y);
+      y += 5;
+      if (cansTest.taMargin > 0) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(190, 130, 20);
+        pdf.text(`${L('TA con', 'TA avec', 'TA with', 'TA con', 'TA med')} -${cansTest.taMargin} `
+          + L('divisione (prova mancante)', 'division (test manquant)', 'division (test missing)', 'division (prueba ausente)', 'delstreck (test saknas)'), 20, y);
+        y += 5;
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(40, 40, 40);
+      }
+      y += 3;
+    }
+
     if (toneCycles.length > 0) {
       ensureSpace(14 + toneCycles.length * 5);
       const asIsN = toneCycles.filter(c => c.asIs).length;
@@ -1845,6 +1894,61 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
               freddo: dice quanto è costata quella resistenza. Più i testimoni che si sono
               accesi. (Prima si riportavano segno, ampiezza e l'accordo fra misura e
               assessment: erano le fasi che i comandi di Ron non prevedono.) */}
+          {/* ── LA PROVA DELLE LATTINE — la condizione dei numeri di questa seduta ────── */}
+          {cansTest?.hasMeter && (
+            <div className="glass-panel p-4 flex flex-col gap-2">
+              <h3 className="text-sm font-mono text-slate-400 uppercase tracking-widest">
+                {L('Prova delle lattine', 'Test des boîtes', 'Cans test', 'Prueba de latas', 'Burktest')}
+              </h3>
+              <div className="flex flex-col gap-1.5 text-xs font-mono">
+                <div className="flex items-center justify-between bg-white/5 rounded px-2 py-1.5 border border-slate-200/10">
+                  <span style={{ color: 'rgba(226,238,255,0.7)' }}>
+                    {L('Configurazione', 'Configuration', 'Configuration', 'Configuración', 'Konfiguration')}
+                  </span>
+                  <span style={{ color: 'rgba(240,246,255,0.95)' }}>
+                    {cansTest.config === 'two-cans'
+                      ? L('2 lattine', '2 boîtes', '2 cans', '2 latas', '2 burkar')
+                      : L('1 lattina', '1 boîte', '1 can', '1 lata', '1 burk')}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between bg-white/5 rounded px-2 py-1.5 border border-slate-200/10">
+                  <span style={{ color: 'rgba(226,238,255,0.7)' }}>
+                    {L('Stretta con 2 lattine, oggi', 'Pression 2 boîtes, aujourd\'hui', 'Squeeze with 2 cans, today', 'Presión 2 latas, hoy', 'Tryck 2 burkar, idag')}
+                  </span>
+                  <span style={{ color: cansTest.done ? '#34d399' : '#fbbf24', fontWeight: 700 }}>
+                    {cansTest.done ? L('✓ fatta', '✓ faite', '✓ done', '✓ hecha', '✓ gjord')
+                                   : L('non fatta', 'non faite', 'not done', 'no hecha', 'ej gjord')}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between bg-white/5 rounded px-2 py-1.5 border border-slate-200/10">
+                  <span style={{ color: 'rgba(226,238,255,0.7)' }}>
+                    {L('Scarto 1 lattina → 2', 'Écart 1 boîte → 2', 'Offset 1 can → 2', 'Diferencia 1 lata → 2', 'Skillnad 1 burk → 2')}
+                  </span>
+                  <span style={{ color: cansTest.soloOffset !== 0 ? '#34d399' : 'rgba(226,238,255,0.6)', fontWeight: 700 }}>
+                    {cansTest.soloOffset !== 0 ? cansTest.soloOffset.toFixed(2)
+                      : L('non misurato', 'non mesuré', 'not measured', 'no medido', 'ej mätt')}
+                  </span>
+                </div>
+                {cansTest.taMargin > 0 && (
+                  <div className="flex items-center justify-between px-2 py-1.5 rounded"
+                       style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.35)' }}>
+                    <span style={{ color: 'rgba(226,238,255,0.8)' }}>
+                      {L('Divisioni tolte al TA', 'Divisions retirées au TA', 'Divisions taken off the TA', 'Divisiones quitadas al TA', 'Delstreck avdragna från TA')}
+                    </span>
+                    <span style={{ color: '#fbbf24', fontWeight: 700 }}>−{cansTest.taMargin}</span>
+                  </div>
+                )}
+              </div>
+              <div className="text-[10px] text-slate-500 font-mono">
+                {L('Le due lattine sono il riferimento. Senza la prova del giorno la sensibilità è quella di ripiego e il TA porta una divisione in meno: i numeri di questa seduta vanno letti sapendolo.',
+                   'Les deux boîtes sont la référence. Sans le test du jour la sensibilité est celle de repli et le TA porte une division en moins : les nombres de cette séance se lisent en le sachant.',
+                   'The two cans are the reference. Without the day\'s test the sensitivity is the fallback one and the TA carries one division less: this session\'s numbers must be read knowing that.',
+                   'Las dos latas son la referencia. Sin la prueba del día la sensibilidad es la de reserva y el TA lleva una división menos: los números de esta sesión se leen sabiéndolo.',
+                   'De två burkarna är referensen. Utan dagens test är känsligheten reservvärdet och TA bär ett delstreck mindre: denna sessions siffror ska läsas med det i åtanke.')}
+              </div>
+            </div>
+          )}
+
           {toneCycles.length > 0 && (
             <div className="glass-panel p-4 flex flex-col gap-2">
               <div className="flex items-center justify-between">
