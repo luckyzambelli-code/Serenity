@@ -52,6 +52,8 @@ export interface ThetaReadyCheckProps {
    *  boîte sola — si tarerebbe su una configurazione e si auditerebbe su un'altra. */
   config: 'two-cans' | 'solo-can';
   setConfig: (c: 'two-cans' | 'solo-can') => void;
+  /** Lo scarto fra una lattina e due è stato misurato? Se sì, l'invito non serve più. */
+  soloOffsetMisurato?: boolean;
   /** L'apparecchio trasmette ma non è del modello che sappiamo leggere. */
   unknownFormat?: boolean;
   /** I suoi report grezzi, da copiare e mandare per farne scrivere la decodifica. */
@@ -63,6 +65,7 @@ export interface ThetaReadyCheckProps {
 export function ThetaReadyCheck({
   scaleMeasured, breathOk, squeezeOk, testing, peakOffset,
   startSqueezeTest, startBreathTest, sensTrim, setSensTrim, config, setConfig, onProceed, onCancel,
+  soloOffsetMisurato = false,
   unknownFormat = false, rawSamples = [],
 }: ThetaReadyCheckProps) {
   const { t, lang } = useI18n();

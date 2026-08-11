@@ -8261,6 +8261,8 @@ export default function App() {
               setSensTrim={theta.setSensTrim}
               config={theta.setup.config}
               setConfig={theta.setConfig}
+              // Misurato lo scarto, l'invito a fare la prova a due lattine non serve più.
+              soloOffsetMisurato={(theta.setup.offsets?.['solo-can'] ?? 0) !== 0}
               unknownFormat={theta.unknownFormat}
               rawSamples={theta.rawSamples}
               // Col Muse collegato si passa alla SUA prova; da soli si parte e basta.
