@@ -179,54 +179,19 @@ export type ToneWitness =
   /** La FIRMA ENERGETICA dissolta: quel che il ciclo CONTACT misura già. Serve il MUSE. */
   | 'signature';
 
-export interface ToneAsIsState {
-  /** Chi PUÒ parlare, con gli strumenti collegati. */
-  available: ToneWitness[];
-  /** Chi HA parlato. */
-  fired: ToneWitness[];
-  /** L'app PROPONE la fine? Mai la DICHIARA: valida l'auditor, come ovunque. */
-  proposed: boolean;
-  /** Proposto su un testimone SOLO, perché è l'unico che c'era. Va detto. */
-  singleWitness: boolean;
-}
-
 /**
- * Quali testimoni esistono, secondo cosa è collegato.
+ * ⚠️ QUI C'ERANO `ToneAsIsState`, `toneWitnesses` e `toneAsIs` — chi poteva testimoniare, chi
+ * aveva parlato, e la PROPOSTA quando due concordavano.
  *
- *   solo METER      → posizione + F/N del meter          (due)
- *   solo MUSE       → F/N + firma energetica             (due)
- *   MUSE + METER    → tutti e tre                        (tre, e indipendenti)
- *   niente          → nessuno: si è off-meter come Ron, e decide l'auditor da solo
+ * Servivano al vecchio ciclo, dove l'app proponeva l'AS-IS e l'auditor confermava. Il comando
+ * di Ron dice un'altra cosa: « ridallo finché non c'è più reazione ». Chi giudica è l'auditor,
+ * che sta guardando il preclear — e tre pastiglie accanto a un bottone non lo aiutavano
+ * (richiesta utente: « non so se sono utili, non credo »).
  *
- * La POSIZIONE richiede il meter perché senza non c'è un tono misurato da portare in cima. La
- * FIRMA richiede il MUSE perché è l'EEG a darla. L'F/N lo dà l'ago in gioco, quale che sia.
+ * `ToneWitness` resta, e non per inerzia: QUALI segnali si siano accesi durante la salita
+ * finisce nel rapporto. A freddo dice se la fine del ciclo aveva un riscontro strumentale o
+ * soltanto l'obnosi — che è esattamente la cosa da poter rileggere.
  */
-export const toneWitnesses = (hasMeter: boolean, hasMuse: boolean): ToneWitness[] => {
-  const w: ToneWitness[] = [];
-  if (hasMeter) w.push('top');
-  if (hasMeter || hasMuse) w.push('fn');
-  if (hasMuse) w.push('signature');
-  return w;
-};
-
-/**
- * La proposta.
- *
- * DUE testimoni concordi, non uno. Un solo segnale si sbaglia: l'F/N del meter oggi è troppo
- * permissivo (mediana del TA alle F/N = 5,32 su 765 casi, con picchi al fondo scala — misurato
- * sull'archivio), e una posizione in cima può capitare per caso passando. Due che dicono la
- * stessa cosa nello stesso momento è un'altra faccenda.
- *
- * Quando ce n'è UNO SOLO disponibile si propone lo stesso — meglio una proposta dichiarata
- * fragile che nessuna — ma si SCRIVE che è uno solo.
- */
-export const toneAsIs = (available: ToneWitness[], fired: ToneWitness[]): ToneAsIsState => {
-  const f = fired.filter(x => available.includes(x));
-  const proposed = available.length === 0 ? false
-    : available.length === 1 ? f.length === 1
-    : f.length >= 2;
-  return { available, fired: f, proposed, singleWitness: proposed && available.length === 1 };
-};
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════
 // GEOMETRIA DEL QUADRANTE

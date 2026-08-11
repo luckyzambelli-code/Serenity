@@ -110,7 +110,7 @@ import { CycleHint } from './components/CycleHint';
 import { CycleSteps } from './components/CycleSteps';
 import {
   TONE_TARGET, toneFromTa, toneFromDelta, ToneLocator,
-  reachedTop, toneWitnesses, toneAsIs,
+  reachedTop,
   type TonePhase, type ToneLocateAnchor, type ToneWitness,
 } from './engine/toneScale';
 import { TA_MAX } from './engine/thetaTaScale';
@@ -4653,12 +4653,10 @@ export default function App() {
   // ── IL TONO QUARANTA: TRE TESTIMONI, E L'AUDITOR CHE VALIDA ─────────────────────────────
   // Il bersaglio è la CIMA della scala — è il comando di Ron. Vedi `toneWitnesses`.
   //
-  // I testimoni si AGGANCIANO: una volta che uno ha parlato resta acceso per tutto il mock-up.
-  // Un F/N dura pochi secondi e la posizione a zero si attraversa: pretendere che i due siano
-  // veri nello STESSO istante vorrebbe dire non proporre quasi mai.
-  const toneWitnessesAvail = useMemo(
-    () => toneWitnesses(toneHasMeter, instruments.muse),
-    [toneHasMeter, instruments.muse]);
+  // ⚠️ NON SI MOSTRANO PIÙ, MA SI REGISTRANO. Le tre spie a schermo — e la proposta
+  // automatica che ne discendeva — sono uscite: nel ciclo di Ron chi giudica è l'auditor.
+  // Quali segnali si siano accesi resta però un DATO del rapporto: a freddo dice se la fine
+  // del ciclo aveva un riscontro strumentale o solo l'obnosi.
   const [toneFired, setToneFired] = useState<ToneWitness[]>([]);
   const asIsSignature = useMetric(m => m.asIsSignature);
   /** Fase del ciclo di carica (neutral|contact|discharge|asis) — la stessa che colora l'ago. */
@@ -4677,9 +4675,6 @@ export default function App() {
       return add.length ? [...p, ...add] : p;
     });
   }, [tonePhase, toneHasMeter, toneOra, toneFnNow, asIsSignature, instruments.muse]);
-  const toneAsIsState = useMemo(
-    () => toneAsIs(toneWitnessesAvail, toneFired),
-    [toneWitnessesAvail, toneFired]);
 
   // ⚠️ QUI L'ASSESSMENT SI ACCENDEVA DA SÉ nelle fasi « positivo o negativo? » e « quante
   // divisioni? », che ERANO un assessment. Quelle fasi non ci sono più: i comandi di Ron sono
@@ -4788,13 +4783,18 @@ export default function App() {
    * piccolo, monospace, sbiadito — e la stessa cosa si leggeva in due modi (segnalato).
    */
   const etichettaItem = (): React.ReactNode => (
+    // ⚠️ I COLORI SEGUONO IL TEMA. Erano cablati per lo sfondo scuro — bianco su un velo
+    // bianco — e in tema chiaro l'item si leggeva appena (segnalato in TONE, ma valeva per
+    // tutti e quattro i cicli).
     <div style={{ width: '100%', padding: '6px 10px', borderRadius: 8,
-                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)',
+                  background: isLightTheme ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)',
+                  border: `1px solid ${isLightTheme ? 'rgba(0,0,0,0.14)' : 'rgba(255,255,255,0.16)'}`,
                   display: 'flex', alignItems: 'baseline', gap: 8 }}>
       <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 700, letterSpacing: '0.14em',
-                     textTransform: 'uppercase', color: 'rgba(226,238,255,0.5)', flexShrink: 0 }}>ITEM</span>
+                     textTransform: 'uppercase', flexShrink: 0,
+                     color: isLightTheme ? 'rgba(26,26,31,0.55)' : 'rgba(226,238,255,0.5)' }}>ITEM</span>
       <span style={{ fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 800, lineHeight: 1.2,
-                     color: 'rgba(240,246,255,0.96)' }}>
+                     color: isLightTheme ? '#1a1a1f' : 'rgba(240,246,255,0.96)' }}>
         {auditingQuestion.trim() || LC('(dillo a voce…)', '(dis-le à voix…)', '(say it aloud…)', '(dilo en voz…)', '(säg det högt…)')}
       </span>
     </div>
@@ -7823,59 +7823,23 @@ export default function App() {
                             {toneRipetizioni > 0 ? ` ×${toneRipetizioni}` : ''}
                           </button>
                         )}
-                        {/* ── I TESTIMONI ───────────────────────────────────────────────────
-                            Tre spie che si accendono man mano. L'app PROPONE quando due
-                            concordano; validi tu, come nel ciclo CONTACT. Chi non poteva
-                            parlare (niente meter, niente MUSE) non compare affatto. */}
-                        {tonePhase === 'raise' && toneWitnessesAvail.length > 0 && (
-                          <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                            {toneWitnessesAvail.map(w => {
-                              const on = toneAsIsState.fired.includes(w);
-                              // ⚠️ « FIRMA » non voleva dire niente per chi guarda: era il nome
-                              // interno del segnale (chargeEpisode), non quel che l'auditor vede
-                              // succedere. Ogni spia dice la COSA, e il tooltip da dove viene.
-                              const nome = w === 'top'
-                                ? LC('AGO IN CIMA', 'AIGUILLE EN HAUT', 'NEEDLE AT TOP', 'AGUJA ARRIBA', 'NÅL I TOPP')
-                                : w === 'fn' ? 'F/N'
-                                : LC('CARICA DISSOLTA', 'CHARGE DISSOUTE', 'CHARGE GONE', 'CARGA DISUELTA', 'LADDNING BORTA');
-                              const spiega = w === 'top'
-                                ? LC('La resistenza misurata è arrivata in cima alla scala, al tono quaranta. Serve il METER.',
-                                     'La résistance mesurée est arrivée en haut de l\'échelle, au ton quarante. Demande le METER.',
-                                     'The measured resistance has reached the top of the scale, tone forty. Needs the METER.',
-                                     'La resistencia medida llegó a lo alto de la escala, al tono cuarenta. Requiere el METER.',
-                                     'Det uppmätta motståndet har nått skalans topp, ton fyrtio. Kräver METER.')
-                                : w === 'fn'
-                                ? LC('Un Floating Needle sull\'ago in gioco: la firma classica.',
-                                     'Un Floating Needle sur l\'aiguille en jeu : la signature classique.',
-                                     'A Floating Needle on the needle in play: the classic signature.',
-                                     'Un Floating Needle en la aguja en juego: la firma clásica.',
-                                     'En Floating Needle på nålen i spel: den klassiska signaturen.')
-                                : LC('L\'attività EEG della massa contattata è collassata — la stessa misura con cui il ciclo CONTACT dichiara la dissoluzione. Serve il MUSE.',
-                                     'L\'activité EEG de la masse contactée s\'est effondrée — la mesure même par laquelle le cycle CONTACT déclare la dissolution. Demande le MUSE.',
-                                     'The EEG activity of the contacted mass has collapsed — the same measure the CONTACT cycle uses to declare dissolution. Needs the MUSE.',
-                                     'La actividad EEG de la masa contactada colapsó — la misma medida con que el ciclo CONTACT declara la disolución. Requiere el MUSE.',
-                                     'EEG-aktiviteten hos den kontaktade massan har kollapsat — samma mått som CONTACT-cykeln använder. Kräver MUSE.');
-                              return (
-                                <span key={w} title={spiega}
-                                  style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.08em',
-                                  textTransform: 'uppercase', padding: '3px 7px', borderRadius: 6, cursor: 'help',
-                                  background: on ? 'rgba(52,211,153,0.18)' : 'rgba(255,255,255,0.04)',
-                                  border: `1px solid ${on ? 'rgba(52,211,153,0.7)' : 'rgba(255,255,255,0.16)'}`,
-                                  color: on ? '#34d399' : inchiostroTenue }}>
-                                  {on ? '● ' : '○ '}{nome}
-                                </span>
-                              );
-                            })}
-                          </span>
-                        )}
+                        {/* ⚠️ QUI C'ERANO I TESTIMONI — « AGO IN CIMA », « F/N », « CARICA
+                            DISSOLTA »: tre spie che si accendevano e, quando due concordavano,
+                            facevano pulsare il bottone di validazione.
+                            Erano un residuo del vecchio ciclo, dove l'app PROPONEVA l'AS-IS. Il
+                            comando di Ron dice un'altra cosa — « ridallo finché non c'è più
+                            reazione » — e chi giudica è l'auditor, che sta guardando il
+                            preclear, non tre pastiglie accanto a un bottone (segnalato: « non
+                            so se sono utili, non credo »).
+                            Con loro se n'è andata la proposta automatica: il bottone non pulsa
+                            più da sé, e non c'era modo di tenerla senza lasciare a schermo il
+                            motivo per cui pulsava. */}
                         {tonePhase === 'raise' && (
-                          <button style={btn(false, toneAsIsState.proposed)}
-                            className={toneAsIsState.proposed ? 'animate-pulse' : undefined}
+                          <button style={btn(false, false)}
                             onClick={() => { chiudiTone(true); setTonePhase('done'); }}>
                             {/* Il traguardo è quello di Ron, detto com'è: il tono quaranta.
                                 « Valida l'as-is » nominava il vecchio punto 4, che non c'è più. */}
                             {LC('TONO QUARANTA RAGGIUNTO', 'TON QUARANTE ATTEINT', 'TONE FORTY REACHED', 'TONO CUARENTA ALCANZADO', 'TON FYRTIO NÅDD')}
-                            {toneAsIsState.singleWitness ? ' ?' : ''}
                           </button>
                         )}
                         {tonePhase === 'done' && (

@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   TONE_TARGET, clampTone, toneFromTa, toneFromDelta,
-  raiseProgress, reachedTop, toneOffset, ToneLocator, toneWitnesses, toneAsIs,
-  type ToneWitness,
+  raiseProgress, reachedTop, toneOffset, ToneLocator,
 } from '../toneScale';
 import { TONE_SCALE_MAX, TONE_STEP, TONE_LOOKBACK_S } from '../tuning';
 
@@ -251,61 +250,5 @@ describe('LOCALIZZARE — quale istante conta davvero', () => {
     loc.reset();
     expect(loc.samples).toBe(0);
     expect(loc.locate(t, true, 5).tone).toBe(5);
-  });
-});
-
-describe('AS-IS del TONE — chi può testimoniare', () => {
-  it('col solo METER: la posizione a zero e la sua F/N', () => {
-    expect(toneWitnesses(true, false)).toEqual(['top', 'fn']);
-  });
-
-  it('col solo MUSE: l F/N e la firma energetica — la posizione no, non c è un tono misurato', () => {
-    expect(toneWitnesses(false, true)).toEqual(['fn', 'signature']);
-  });
-
-  it('con tutti e due: tre testimoni indipendenti', () => {
-    expect(toneWitnesses(true, true)).toEqual(['top', 'fn', 'signature']);
-  });
-
-  it('senza strumenti nessuno parla: si è off-meter come Ron, decide l auditor', () => {
-    expect(toneWitnesses(false, false)).toEqual([]);
-  });
-});
-
-describe('AS-IS del TONE — la proposta', () => {
-  const W3: ToneWitness[] = ['top', 'fn', 'signature'];
-
-  it('UNO SOLO non basta quando ce ne sono altri: un segnale si sbaglia', () => {
-    expect(toneAsIs(W3, ['top']).proposed).toBe(false);
-    expect(toneAsIs(W3, ['fn']).proposed).toBe(false);
-  });
-
-  it('DUE concordi propongono', () => {
-    expect(toneAsIs(W3, ['top', 'fn']).proposed).toBe(true);
-    expect(toneAsIs(W3, ['fn', 'signature']).proposed).toBe(true);
-  });
-
-  it('tutti e tre, a maggior ragione', () => {
-    const s = toneAsIs(W3, W3);
-    expect(s.proposed).toBe(true);
-    expect(s.singleWitness).toBe(false);
-  });
-
-  it('con un testimone SOLO disponibile si propone, ma lo si DICE', () => {
-    const s = toneAsIs(['fn'], ['fn']);
-    expect(s.proposed).toBe(true);
-    expect(s.singleWitness).toBe(true);
-  });
-
-  it('un testimone che non poteva parlare non conta', () => {
-    // il MUSE non c è: la firma non è disponibile, quindi non fa numero
-    const s = toneAsIs(['top', 'fn'], ['top', 'signature']);
-    expect(s.fired).toEqual(['top']);
-    expect(s.proposed).toBe(false);
-  });
-
-  it('senza testimoni non si propone mai — non si inventa un as-is', () => {
-    expect(toneAsIs([], []).proposed).toBe(false);
-    expect(toneAsIs([], ['top', 'fn']).proposed).toBe(false);
   });
 });
