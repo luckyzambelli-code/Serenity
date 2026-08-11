@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Play, Pause, Square, History, Eye, Sliders,
   Languages, UserRound, Loader2, Headphones } from 'lucide-react';
-import { BookOpen, Settings } from 'lucide-react';
+import { BookOpen, Settings, HelpCircle } from 'lucide-react';
 import { SideBtn } from './SideBtn';
 import { GlassIconOrb } from './GlassIconOrb';
 import type { DrawerKey } from './SidebarDrawer';
@@ -32,6 +32,9 @@ interface SidebarProps {
   historyOpen?:   boolean;
   onShowProcessus:() => void;
   onShowHistory:  () => void;
+  /** Apre la GUIDA, che sta dentro l'app. Vedi `GuideModal`. */
+  onShowGuide:    () => void;
+  guideOpen?:     boolean;
   onConnectMuse:  () => void;
   onStart:        () => void;
   onPause:        () => void;
@@ -44,7 +47,7 @@ export function Sidebar({
   appMode, sidebarDrawer, setSidebarDrawer,
   processusCount, lang, museConnection, pcCoLocated = false, sessionState,
   processusOpen, historyOpen,
-  onShowProcessus, onShowHistory, onConnectMuse,
+  onShowProcessus, onShowHistory, onShowGuide, guideOpen = false, onConnectMuse,
   onStart, onPause, onResume, onEnd, t }: SidebarProps) {
   const isLightTheme  = useUiStore(s => s.isLightTheme);
   const activeProfile = useProfileStore(s => s.activeProfile);
@@ -301,6 +304,17 @@ export function Sidebar({
         badge={sessionCount || undefined}
         icon={<History size={34} strokeWidth={1.4} />}
         onClick={onShowHistory}
+      />
+
+      {/* ── GUIDA ────────────────────────────────────────────────────────────────────────
+          Il manuale viveva fuori dall'app, in un file da aprire nel browser: chi ha un dubbio
+          in seduta non va a cercare una cartella. Sta qui, sotto lo storico, e si apre come
+          ogni altro pannello — è lo stesso documento, copiato dentro l'app a ogni build. */}
+      <SideBtn
+        label={t('sidebar_guide')}
+        active={!!guideOpen}
+        icon={<HelpCircle size={34} strokeWidth={1.4} />}
+        onClick={onShowGuide}
       />
 
       {/* LANG */}

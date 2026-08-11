@@ -84,6 +84,7 @@ const ASSESS_READ_META = (reaction: string): { short: string; color: string; bor
 };
 const HistoryModal = lazy(() => import('./components/HistoryModal').then(m => ({ default: m.HistoryModal })));
 import { ProfileRoster } from './components/ProfileRoster';
+import { GuideModal } from './components/GuideModal';
 import { AIAssistant } from './components/AIAssistant';
 import { getProfiles, setActiveProfileId, saveProfile, saveSession, getSessions, getSessionsByProfile, saveSessionDraft, loadSessionDraftAsync, clearSessionDraft, SessionDraft } from './lib/storage';
 import { isServerAvailable, serverSaveProfiles, serverSaveSessions } from './lib/serverStorage';
@@ -517,6 +518,8 @@ export default function App() {
   const setActiveProfile = useProfileStore(s => s.setActiveProfile);
   const setSessionCount  = useProfileStore(s => s.setSessionCount);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  /** La GUIDA, dentro l'app: sta nella barra accanto allo storico. Vedi `GuideModal`. */
+  const [showGuide, setShowGuide] = useState(false);
   const [showReport, setShowReport] = useState(false);
   // R3: a recoverable in-progress session draft found at boot (crash recovery).
   const [recoverableDraft, setRecoverableDraft] = useState<SessionDraft | null>(null);
@@ -4503,6 +4506,18 @@ export default function App() {
    * `squeezeOk` resta vero finché non si rifà una prova, quindi senza la guardia si
    * riarchivierebbe a ogni render — e lo storico si riempirebbe della stessa misura.
    */
+  /**
+   * LA PROVA DOPPIA — i due TA letti, uno per configurazione.
+   *
+   * Si riempiono facendo la stretta: quella con due lattine dà il riferimento, quella con una
+   * dà la lettura da confrontare. La loro DIFFERENZA è la correzione del solo — e finché ne
+   * manca una il programma ripiega sul margine di una divisione.
+   *
+   * Vive nella seduta e non si persiste: quel che si tiene è la differenza (in `ThetaSetup`),
+   * non le due letture che l'hanno prodotta.
+   */
+  const [provaTa, setProvaTa] = useState<{ two: number | null; solo: number | null }>(
+    { two: null, solo: null });
   const ultimaProvaRef = useRef(0);
   useEffect(() => {
     if (theta.squeezeOk !== true || theta.testing) return;
@@ -4516,7 +4531,14 @@ export default function App() {
       saveCanTests(h);
       return h;
     });
-  }, [theta.squeezeOk, theta.testing, theta.setup.needleScale, theta.setup.config]);
+    // E IL TA DI QUESTA CONFIGURAZIONE, per il confronto fra le due prove. Si prende quello del
+    // BRACCIO (`theta.ta`), che è la media lenta: la stretta appena finita non l'ha spostato,
+    // ed è quindi la lettura di riposo — che è quel che si vuole confrontare.
+    if (theta.ta !== null) {
+      const t = theta.ta;
+      setProvaTa(p => theta.setup.config === 'two-cans' ? { ...p, two: t } : { ...p, solo: t });
+    }
+  }, [theta.squeezeOk, theta.testing, theta.setup.needleScale, theta.setup.config, theta.ta]);
   /** Le due misure ALL'ISTANTE della localizzazione: da lì si conta il movimento. */
   const toneTaAtStartRef = useRef<number | null>(null);
   const toneQAtStartRef = useRef<number | null>(null);
@@ -6599,6 +6621,8 @@ export default function App() {
           historyOpen={showHistoryModal}
           onShowProcessus={sbOnShowProcessus}
           onShowHistory={sbOnShowHistory}
+          onShowGuide={() => setShowGuide(true)}
+          guideOpen={showGuide}
           onConnectMuse={sbOnConnectMuse}
           onStart={sbOnStart}
           onPause={sbOnPause}
@@ -8275,6 +8299,10 @@ export default function App() {
               setConfig={theta.setConfig}
               // Misurato lo scarto, l'invito a fare la prova a due lattine non serve più.
               soloOffsetMisurato={(theta.setup.offsets?.['solo-can'] ?? 0) !== 0}
+              // La prova doppia: i due TA e il gesto che applica la loro differenza.
+              taTwo={provaTa.two}
+              taSolo={provaTa.solo}
+              onApplySoloOffset={(off) => theta.setSoloOffset(off)}
               unknownFormat={theta.unknownFormat}
               rawSamples={theta.rawSamples}
               // Col Muse collegato si passa alla SUA prova; da soli si parte e basta.
@@ -8488,6 +8516,9 @@ export default function App() {
           t={t as (key: string) => string}
         />
       )}
+
+      {/* LA GUIDA — sempre a portata, anche in seduta. */}
+      {showGuide && <GuideModal lang={lang} onClose={() => setShowGuide(false)} />}
 
       {/* Modals */}
       {/* CONN-99: PROFILE MANAGEMENT — single place to select + create auditors

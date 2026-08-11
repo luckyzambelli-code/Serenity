@@ -3,6 +3,7 @@ import {
   emptyHistory, addTest, scaleFor, soloRatio, daysSince, testedToday,
   toneMargin, withMargin, TONE_MARGIN_NO_TEST, MAX_TESTS, pcKey,
   taToTwoCans, TA_MARGIN_SOLO_NO_TEST,
+  emptyCompare, soloTaOffset, compareReady, MAX_SOLO_OFFSET,
 } from '../canTest';
 
 const GIORNO = 86_400_000;
@@ -212,5 +213,50 @@ describe('il TA riportato alle DUE LATTINE — è lì il riferimento', () => {
       const r = taToTwoCans(ta, cfg, off);
       expect(['two-cans', 'solo-measured', 'solo-margin']).toContain(r.basis);
     }
+  });
+});
+
+describe('la PROVA DOPPIA — due lattine, poi una, e la differenza', () => {
+  it('con una lettura sola non c è niente da confrontare', () => {
+    expect(compareReady(emptyCompare())).toBe(false);
+    expect(compareReady({ taTwo: 3.1, taSolo: null })).toBe(false);
+    expect(compareReady({ taTwo: null, taSolo: 4.0 })).toBe(false);
+    expect(soloTaOffset({ taTwo: 3.1, taSolo: null })).toBeNull();
+  });
+
+  it('con tutte e due, lo scarto è la loro differenza', () => {
+    expect(compareReady({ taTwo: 3.1, taSolo: 4.05 })).toBe(true);
+    expect(soloTaOffset({ taTwo: 3.1, taSolo: 4.05 })).toBeCloseTo(-0.95, 10);
+  });
+
+  it('è NEGATIVO perché una lattina legge PIÙ resistenza: sommandolo si scende', () => {
+    const off = soloTaOffset({ taTwo: 3.0, taSolo: 4.0 })!;
+    expect(off).toBeLessThan(0);
+    expect(4.0 + off).toBeCloseTo(3.0, 10);   // il TA a una lattina torna al riferimento
+  });
+
+  it('⚠️ uno scarto ASSURDO si rifiuta: è una lettura presa male, non una configurazione', () => {
+    // La lattina lasciata, la mano asciutta, la prova fatta due giorni dopo.
+    expect(soloTaOffset({ taTwo: 1.0, taSolo: 5.5 })).toBeNull();
+    expect(MAX_SOLO_OFFSET).toBe(3);
+    // al limite passa ancora
+    expect(soloTaOffset({ taTwo: 1.0, taSolo: 4.0 })).toBeCloseTo(-3, 10);
+  });
+
+  it('e uno scarto NULLO è un dato: vuol dire misurato, e uguali', () => {
+    expect(soloTaOffset({ taTwo: 3.2, taSolo: 3.2 })).toBe(0);
+  });
+
+  it('una lettura non finita non produce NaN', () => {
+    expect(soloTaOffset({ taTwo: NaN, taSolo: 4 })).toBeNull();
+  });
+
+  it('lo scarto misurato, applicato, RIPORTA il TA al riferimento', () => {
+    // È il ciclo intero, dalla prova doppia al numero a schermo.
+    const off = soloTaOffset({ taTwo: 3.1, taSolo: 4.05 })!;
+    const letto = taToTwoCans(4.05, 'solo-can', off);
+    expect(letto.basis).toBe('solo-measured');
+    expect(letto.ta).toBeCloseTo(3.1, 10);
+    expect(letto.margin).toBe(0);
   });
 });

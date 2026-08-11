@@ -267,3 +267,57 @@ export function taToTwoCans(
     margin: TA_MARGIN_SOLO_NO_TEST,
   };
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+// LA PROVA DOPPIA — due lattine, poi una, e la DIFFERENZA
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ── PERCHÉ UNA PROVA SOLA NON BASTA ─────────────────────────────────────────────────────────
+ * La prova della stretta tara la SENSIBILITÀ dell'ago, e la si fa in UNA configurazione. Ma la
+ * correzione che serve al TA è un'altra cosa: di quanto lo stesso preclear, nello stesso
+ * istante, legge diverso con una lattina invece che con due. Quella non si deduce da una prova
+ * sola — servono le DUE, e la loro differenza.
+ *
+ * Il ciclo è quindi: due lattine → si legge il TA · una lattina → si legge il TA · si confronta.
+ * Finché mancano tutte e due le letture non c'è niente da confrontare, e il programma ripiega
+ * sul margine di una divisione (vedi `taToTwoCans`).
+ *
+ * ── COSA SI TIENE ───────────────────────────────────────────────────────────────────────────
+ * La DIFFERENZA, non le due letture: è lei che si somma al TA quando si audita in solo, ed è
+ * lei che finisce in `ThetaSetup.offsets['solo-can']`. Le due letture sono il modo di
+ * ottenerla, non il risultato.
+ */
+export interface CanCompare {
+  /** Il TA letto con DUE lattine — il riferimento. */
+  taTwo: number | null;
+  /** Il TA letto con UNA lattina. */
+  taSolo: number | null;
+}
+
+export const emptyCompare = (): CanCompare => ({ taTwo: null, taSolo: null });
+
+/**
+ * Lo SCARTO da sommare al TA letto con una lattina per riportarlo alle due.
+ *
+ * Con una lattina la resistenza è più alta, quindi il TA è più alto: lo scarto è NEGATIVO, e
+ * sommandolo si scende. `null` finché manca una delle due letture — con una sola non c'è
+ * differenza da misurare, e inventarla sarebbe peggio che non averla.
+ *
+ * ⚠️ SI RIFIUTA UNO SCARTO ASSURDO. Oltre mezza scala di TA non è una differenza di
+ * configurazione: è una lettura presa male — la lattina lasciata, la mano asciutta, la prova
+ * fatta due giorni dopo. Meglio nessuna correzione che una correzione sbagliata di due punti.
+ */
+export const MAX_SOLO_OFFSET = 3;
+
+export function soloTaOffset(c: CanCompare): number | null {
+  if (c.taTwo === null || c.taSolo === null) return null;
+  if (!Number.isFinite(c.taTwo) || !Number.isFinite(c.taSolo)) return null;
+  const scarto = c.taTwo - c.taSolo;
+  if (Math.abs(scarto) > MAX_SOLO_OFFSET) return null;
+  return scarto;
+}
+
+/** Tutte e due le letture ci sono? Serve a sapere quando mostrare il confronto. */
+export const compareReady = (c: CanCompare): boolean =>
+  c.taTwo !== null && c.taSolo !== null;

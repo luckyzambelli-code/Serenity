@@ -320,6 +320,24 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
 
   const setConfig = useCallback((config: ElectrodeConfig) => updateSetup({ config }), [updateSetup]);
 
+  /**
+   * LO SCARTO DEL SOLO, dalla PROVA DOPPIA.
+   *
+   * Si misura confrontando il TA letto con due lattine e quello letto con una: la differenza è
+   * quanto va sommato alla lettura in solo per riportarla al riferimento. Da qui in poi il TA a
+   * una lattina non porta più il margine di una divisione — c'è un dato al suo posto.
+   *
+   * Si PERSISTE (`saveSetup` la scrive): vale per questo apparecchio e questa configurazione,
+   * e rifarla a ogni seduta sarebbe rifare due prove per ritrovare lo stesso numero.
+   */
+  const setSoloOffset = useCallback((v: number) => {
+    setState(p => {
+      const s = { ...p.setup, offsets: { ...p.setup.offsets, 'solo-can': v } };
+      saveSetup(s);
+      return { ...p, setup: s };
+    });
+  }, []);
+
   /** Il TRIM della sensibilità, −10..+10 — vive nel pannello TRIM insieme a quello dell'ago
    *  EEG, perché è LATERALE: regolare guardando l'ago è impossibile se il pannello lo copre. */
   const setSensTrim = useCallback((v: number) => {
@@ -411,7 +429,7 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
 
   return {
     ...state, connect, disconnect, resetTotal, captureRaw, applyTaPoints, clearTaCalibration,
-    setConfig, addPointFromReference, startSqueezeTest, startBreathTest, setSensTrim, resetToSet,
+    setConfig, setSoloOffset, addPointFromReference, startSqueezeTest, startBreathTest, setSensTrim, resetToSet,
     /** Diagnosi: quanto si è mosso l'ago fra due istanti, e se c'era agitazione. */
     escursione: (daSec: number, aSec: number) => {
       // SPAN = massimo − minimo: è QUANTO l'ago si è mosso. La sola distanza da SET non lo dice

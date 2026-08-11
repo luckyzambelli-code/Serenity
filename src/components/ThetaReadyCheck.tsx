@@ -1,6 +1,7 @@
 import React from 'react';
 import { useI18n } from '../i18n';
 import { pick5 } from '../i18n5';
+import { compareReady, soloTaOffset } from '../engine/canTest';
 import { SQUEEZE_TARGET_OFFSET, BREATH_MIN_OFFSET } from '../engine/thetaSetup';
 import { LAYER } from "../ui/layers";
 
@@ -54,6 +55,16 @@ export interface ThetaReadyCheckProps {
   setConfig: (c: 'two-cans' | 'solo-can') => void;
   /** Lo scarto fra una lattina e due è stato misurato? Se sì, l'invito non serve più. */
   soloOffsetMisurato?: boolean;
+  /**
+   * LA PROVA DOPPIA — i due TA letti, uno per configurazione.
+   *
+   * Il ciclo è: due lattine → si legge il TA · una lattina → si legge il TA · si confronta.
+   * Finché ne manca uno non c'è niente da confrontare e il riquadro non compare.
+   */
+  taTwo?: number | null;
+  taSolo?: number | null;
+  /** Applica la differenza misurata: da qui in poi il TA a una lattina si riporta a due. */
+  onApplySoloOffset?: (offset: number) => void;
   /** L'apparecchio trasmette ma non è del modello che sappiamo leggere. */
   unknownFormat?: boolean;
   /** I suoi report grezzi, da copiare e mandare per farne scrivere la decodifica. */
@@ -65,7 +76,7 @@ export interface ThetaReadyCheckProps {
 export function ThetaReadyCheck({
   scaleMeasured, breathOk, squeezeOk, testing, peakOffset,
   startSqueezeTest, startBreathTest, sensTrim, setSensTrim, config, setConfig, onProceed, onCancel,
-  soloOffsetMisurato = false,
+  soloOffsetMisurato = false, taTwo = null, taSolo = null, onApplySoloOffset,
   unknownFormat = false, rawSamples = [],
 }: ThetaReadyCheckProps) {
   const { t, lang } = useI18n();
@@ -201,6 +212,67 @@ export function ThetaReadyCheck({
               DUE lattine, si fa la stretta, e poi si torna a una.
               Scompare da sé quando lo scarto è stato misurato — allora non c'è più niente da
               invitare a fare. */}
+          {/* ── LA PROVA DOPPIA, IL CONFRONTO ────────────────────────────────────────────
+              Fatte tutte e due le strette — con due lattine e con una — qui si vedono i due
+              TA e la loro DIFFERENZA. È il dato che mancava: la prova della stretta tara la
+              SENSIBILITÀ dell'ago, ma la correzione che serve al TA è di quanto lo stesso
+              preclear legge diverso con una lattina invece che con due, e quella non si
+              deduce da una prova sola (segnalato: « si deve avere la schermata comparativa
+              della differenza »).
+              Applicandola, da lì in poi il TA a una lattina si riporta alle due e il margine
+              di una divisione non serve più. */}
+          {(() => {
+            const cfr = { taTwo, taSolo };
+            if (!compareReady(cfr)) return null;
+            const off = soloTaOffset(cfr);
+            return (
+              <div style={{ marginTop: 10, padding: '11px 13px', borderRadius: 10,
+                            background: off === null ? 'rgba(248,113,113,0.10)' : 'rgba(52,211,153,0.10)',
+                            border: `1px solid ${off === null ? 'rgba(248,113,113,0.5)' : 'rgba(52,211,153,0.5)'}` }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.14em',
+                              textTransform: 'uppercase', color: 'rgba(226,238,255,0.5)', marginBottom: 7 }}>
+                  {L('Confronto delle due prove', 'Comparaison des deux tests', 'The two tests compared', 'Comparación de las dos pruebas', 'De två testen jämförda')}
+                </div>
+                <div style={{ display: 'flex', gap: 18, alignItems: 'baseline', flexWrap: 'wrap',
+                              fontFamily: 'monospace', fontSize: 14, color: 'rgba(240,246,255,0.95)' }}>
+                  <span><span style={{ fontSize: 10, opacity: 0.6 }}>2 · </span>{taTwo!.toFixed(2)}</span>
+                  <span><span style={{ fontSize: 10, opacity: 0.6 }}>1 · </span>{taSolo!.toFixed(2)}</span>
+                  <span style={{ color: off === null ? '#f87171' : '#34d399', fontWeight: 700 }}>
+                    {off === null ? '—' : `${off > 0 ? '+' : ''}${off.toFixed(2)}`}
+                  </span>
+                </div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, lineHeight: 1.5, marginTop: 7,
+                              color: off === null ? 'rgba(248,113,113,0.9)' : 'rgba(226,238,255,0.7)' }}>
+                  {off === null
+                    ? L('Lo scarto è troppo grande per essere una differenza di configurazione: è una lettura presa male. Rifai le due prove.',
+                        'L\'écart est trop grand pour être une différence de configuration : c\'est une lecture mal prise. Refais les deux tests.',
+                        'The gap is too large to be a configuration difference: it is a badly taken reading. Redo both tests.',
+                        'La diferencia es demasiado grande para ser de configuración: es una lectura mal tomada. Rehaz las dos pruebas.',
+                        'Skillnaden är för stor för att vara en konfigurationsskillnad: avläsningen är dåligt tagen. Gör om båda testen.')
+                    : L('È di quanto QUESTO preclear legge diverso con una lattina. Applicandolo, in solo il TA si riporta alle due lattine e non si toglie più nessuna divisione.',
+                        'C\'est de combien CE préclair lit différemment avec une seule boîte. En l\'appliquant, en solo le TA revient aux deux boîtes et plus aucune division n\'est retirée.',
+                        'It is how much THIS preclear reads differently with one can. Applied, in solo the TA comes back to two cans and no division is taken off.',
+                        'Es cuánto lee distinto ESTE preclear con una lata. Aplicándolo, en solo el TA vuelve a dos latas y no se quita ninguna división.',
+                        'Det är hur mycket DENNA preclear läser annorlunda med en burk. Tillämpat återförs TA i solo till två burkar och inget delstreck dras av.')}
+                </div>
+                {off !== null && !soloOffsetMisurato && (
+                  <button type="button" onClick={() => onApplySoloOffset?.(off)}
+                    style={{ marginTop: 9, height: 30, padding: '0 12px', borderRadius: 8, cursor: 'pointer',
+                             fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700,
+                             background: 'rgba(52,211,153,0.2)', border: '1px solid rgba(52,211,153,0.7)',
+                             color: '#34d399' }}>
+                    {L('Usa questa differenza', 'Utilise cet écart', 'Use this offset', 'Usa esta diferencia', 'Använd denna skillnad')}
+                  </button>
+                )}
+                {soloOffsetMisurato && (
+                  <div style={{ marginTop: 7, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700, color: '#34d399' }}>
+                    ✓ {L('applicata', 'appliqué', 'applied', 'aplicada', 'tillämpad')}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {config === 'solo-can' && !soloOffsetMisurato && (
             <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 10,
                           background: 'rgba(245,158,11,0.10)',
