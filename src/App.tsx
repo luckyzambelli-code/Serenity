@@ -112,7 +112,7 @@ import {
   reachedTop, toneWitnesses, toneAsIs,
   type TonePhase, type ToneLocateAnchor, type ToneWitness,
 } from './engine/toneScale';
-import { TA_MIN, TA_MAX } from './engine/thetaTaScale';
+import { TA_MAX } from './engine/thetaTaScale';
 import { MODE_SPEC, availableModes, fallbackMode, cycleIsAutomatic, type SessionMode } from './engine/sessionMode';
 import { deriveCyclePhase, phaseFamily } from './engine/sessionPhase';
 import { LAYER } from './ui/layers';
@@ -4557,11 +4557,21 @@ export default function App() {
   /** Lo stesso, sul TA del BRACCIO — è quello che ancora il ciclo (vedi `toneFromDelta`). */
   const taCorretto = theta.ta === null ? null
     : taToTwoCans(theta.ta, theta.setup.config, theta.setup.offsets?.['solo-can'] ?? 0).ta;
+  /**
+   * ── IL TA DI CLEAR — il tono 40 di QUESTA persona ───────────────────────────────────────
+   * 3,0 per l'uomo, 2,0 per la donna: la lettura di un caso pulito. È la base costituzionale
+   * che l'app conosce già (`pcSex`, usata dal `taAccumulator` e dal ciclo NULL) e che la scala
+   * del tono ignorava — ancorandosi invece al TA 0, che non si raggiunge mai (segnalato).
+   *
+   * Senza il sesso dichiarato si prende 2,0, il più prudente: parte più in basso, e chi è più
+   * pulito ci arriva lo stesso.
+   */
+  const taClear = pcSex === 'm' ? 3.0 : 2.0;
   // Il tono MISURATO. Oggi passa dal TA e non da ohm veri: `toneFromTa` è dichiaratamente una
   // strada provvisoria, ed è per questo che il quadrante scrive « ≈ ». Diventa esatta il giorno
   // che si tara il meter con due resistenze note.
   const toneMeasured = instruments.theta && taCorretto !== null
-    ? toneFromTa(taCorretto, TA_MIN, TA_MAX) : null;
+    ? toneFromTa(taCorretto, taClear, TA_MAX) : null;
   const toneHasMeter = toneMeasured !== null;
   // Specchio in ref: il gestore del worker si aggancia UNA volta sola e il tono cambia a ogni
   // tick — senza questo il locatore accumulerebbe per sempre il valore d'avvio.
@@ -4603,7 +4613,9 @@ export default function App() {
     ? (toneHasMeter && toneMeasured !== null ? withMargin(toneMeasured, margineTono) : toneAssessed)
     : toneTaAtStartRef.current !== null && taCorretto !== null
       ? withMargin(
-          toneFromDelta(toneAtStart, toneTaAtStartRef.current, taCorretto, TA_MAX - TA_MIN),
+          // L'escursione è quella della SCALA DEL TONO — dal TA di clear al fondo scala —,
+          // non l'intero range dello strumento: è lei a valere 80 divisioni.
+          toneFromDelta(toneAtStart, toneTaAtStartRef.current, taCorretto, TA_MAX - taClear),
           margineTono)
       : withMargin(toneAtStart, margineTono);
   /** Il secondo sguardo: la stessa scala, letta sulla carica EEG. `null` senza MUSE. */

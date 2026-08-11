@@ -21,17 +21,41 @@ describe('scala del tono — la scala stessa', () => {
   });
 });
 
-describe('dal TONE ARM al tono (strada provvisoria)', () => {
-  const MIN = 0, MAX = 6.5;
+describe('dal TONE ARM al tono — il 40 è la LETTURA DI CLEAR', () => {
+  const MAX = 6.5;
+  const UOMO = 3.0, DONNA = 2.0;   // il TA di clear, la base costituzionale
 
-  it('mette lo ZERO al CENTRO dello strumento — risposta di Ron', () => {
-    expect(toneFromTa((MIN + MAX) / 2, MIN, MAX)).toBeCloseTo(0, 10);
+  it('⚠️ il TA di CLEAR è il tono 40 — non il TA zero', () => {
+    // Era ancorato al TA 0, che nessun corpo raggiunge: il tono 40 era irraggiungibile per
+    // costruzione, e un uomo clear compariva a +3 invece che in cima (segnalato).
+    expect(toneFromTa(UOMO, UOMO, MAX)).toBe(TONE_SCALE_MAX);
+    expect(toneFromTa(DONNA, DONNA, MAX)).toBe(TONE_SCALE_MAX);
+  });
+
+  it('e il fondo scala dello strumento è il −40: la resistenza che non si scioglie', () => {
+    expect(toneFromTa(MAX, UOMO, MAX)).toBe(-TONE_SCALE_MAX);
+    expect(toneFromTa(MAX, DONNA, MAX)).toBe(-TONE_SCALE_MAX);
   });
 
   it('più resistenza = TA più alto = tono più NEGATIVO', () => {
-    expect(toneFromTa(MAX, MIN, MAX)).toBe(-TONE_SCALE_MAX);
-    expect(toneFromTa(MIN, MIN, MAX)).toBe(TONE_SCALE_MAX);
-    expect(toneFromTa(5, MIN, MAX)).toBeLessThan(toneFromTa(4, MIN, MAX));
+    expect(toneFromTa(5, UOMO, MAX)).toBeLessThan(toneFromTa(4, UOMO, MAX));
+  });
+
+  it('SOTTO il clear non si va oltre il 40: la scala finisce lì', () => {
+    // « Più pulito di clear » non è un punto della scala di Ron.
+    expect(toneFromTa(2.0, UOMO, MAX)).toBe(TONE_SCALE_MAX);
+    expect(toneFromTa(0, UOMO, MAX)).toBe(TONE_SCALE_MAX);
+  });
+
+  it('uomo e donna NON danno lo stesso tono allo stesso TA — ed è il punto', () => {
+    // A TA 3,0 l'uomo è clear (+40); la donna, il cui clear è 2,0, è già scesa.
+    expect(toneFromTa(3.0, UOMO, MAX)).toBe(40);
+    expect(toneFromTa(3.0, DONNA, MAX)).toBeLessThan(40);
+  });
+
+  it('lo ZERO cade a metà strada FRA IL CLEAR E IL FONDO SCALA', () => {
+    expect(toneFromTa((UOMO + MAX) / 2, UOMO, MAX)).toBeCloseTo(0, 10);
+    expect(toneFromTa((DONNA + MAX) / 2, DONNA, MAX)).toBeCloseTo(0, 10);
   });
 
   it('una scala degenere non esplode: dà zero', () => {

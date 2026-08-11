@@ -50,20 +50,36 @@ export const clampTone = (t: number): number =>
 export const toneFromOhm = toneFromResistance;
 
 /**
- * Il TONO dal TONE ARM — strada PROVVISORIA per il THETA-METER, che dà un TA e non degli ohm.
+ * Il TONO dal TONE ARM.
  *
- * ⚠️ È LINEARE NEL TA, e Ron ha chiesto lineare negli OHM. Le due cose non coincidono: il legame
- * TA → ohm è curvo. Questa via serve a poter USARE la vista da subito; diventa esatta il giorno
- * che si tara il meter con due resistenze note (`solveThetaCalibration`, già scritta e non
- * ancora usata da nessuno). Finché è così, il numero va mostrato con un « ≈ ».
+ * ── ⚠️ IL TONO 40 È IL TA DI CLEAR, NON LA RESISTENZA ZERO ─────────────────────────────────
+ * Era ancorato al fondo scala dello strumento: TA 0 → tono +40, TA 6,5 → −40. Sbagliato, e in
+ * un modo che rendeva la scala inservibile — segnalato: « le TA homme est de 3.0 et pour la
+ * femme 2.0 en lecture CLAIR. Donc on n'est jamais à 0 pour atteindre le ton 40 ».
  *
- * VERSO: più resistenza = TA più alto = tono più NEGATIVO, come vuole Ron (−40 = resistenza
- * totale). Il centro della scala del meter cade sullo zero.
+ * La resistenza di un corpo non va a zero: il TA 0 non lo raggiunge nessuno, mai. Ancorandoci il
+ * tono 40, il tono 40 diventava irraggiungibile per costruzione — e un uomo CLEAR, a TA 3,0,
+ * compariva a +3 « Conservatorismo » invece che in cima alla scala.
+ *
+ * Il riferimento alto è la LETTURA DI CLEAR: TA 3,0 per l'uomo, 2,0 per la donna — la base
+ * costituzionale che l'app conosce già (`pcSex`). Quello è il tono 40. Il fondo scala dello
+ * strumento resta il −40: è la resistenza che non si scioglie.
+ *
+ * ⚠️ SOTTO il TA di clear si è OLTRE il 40: si limita alla cima. « Più pulito di clear » non è
+ * un punto della scala di Ron, è la scala che finisce lì.
+ *
+ * Resta LINEARE NEL TA mentre Ron chiede lineare negli OHM: il legame TA → ohm è curvo, e
+ * questa via diventerà esatta il giorno che si tara il meter con due resistenze note
+ * (`solveThetaCalibration`). Finché è così, il numero si mostra con un « ≈ ».
+ *
+ * @param ta       il tone arm letto
+ * @param taClear  il TA di CLEAR di questa persona (3,0 uomo · 2,0 donna) → tono +40
+ * @param taMax    il fondo scala dello strumento → tono −40
  */
-export const toneFromTa = (ta: number, taMin: number, taMax: number): number => {
-  const span = taMax - taMin;
+export const toneFromTa = (ta: number, taClear: number, taMax: number): number => {
+  const span = taMax - taClear;
   if (!(span > 0)) return 0;
-  return clampTone(TONE_SCALE_MAX - 2 * TONE_SCALE_MAX * ((ta - taMin) / span));
+  return clampTone(TONE_SCALE_MAX - 2 * TONE_SCALE_MAX * ((ta - taClear) / span));
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════

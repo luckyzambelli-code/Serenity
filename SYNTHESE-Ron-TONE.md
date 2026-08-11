@@ -1,6 +1,6 @@
 # TONE SCALE
 
-*Note pour Ron · version 2.0.126*
+*Note pour Ron · version 2.0.127*
 
 ---
 
@@ -126,6 +126,24 @@ D'où vient ce point de départ, selon ce qu'on a sous la main :
 Le rapport écrit d'où vient le chiffre : mesuré, mesuré+EEG, ou assessé. Un ton
 mesuré et un ton dit ne valent pas la même chose, et à froid on ne saurait plus
 les distinguer.
+
+## Le ton 40, c'est la lecture de CLAIR
+
+Nous l'avions accroché au TA zéro — le bas de l'échelle de notre mètre. C'était
+faux, et Claudio l'a vu tout de suite : **la résistance d'un corps ne descend
+jamais à zéro**. Le ton 40 était donc inatteignable par construction, et un
+homme clair, à TA 3,0, s'affichait à +3 « Conservatisme » au lieu d'être en haut
+de l'échelle.
+
+Maintenant le haut de l'échelle est la **lecture de clair** : TA 3,0 pour
+l'homme, 2,0 pour la femme. Le bas du mètre (6,5) reste le −40.
+
+Une conséquence que nous n'avions pas vue : **le sexe change l'échelle**. Au même
+TA 3,0, l'homme est clair et la femme est déjà descendue de vingt divisions.
+L'app demandait déjà le sexe pour le cycle NULL ; elle s'en sert maintenant aussi
+pour la scale.
+
+Dis-nous si les deux valeurs de référence sont bien celles-là.
 
 ## Ce qu'il nous manque : les ohms
 
