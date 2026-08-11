@@ -193,6 +193,37 @@ export function ThetaReadyCheck({
               </button>
             ))}
           </div>
+
+          {/* ── SCELTA « UNA LATTINA » → L'INVITO A FARE PRIMA QUELLA A DUE ─────────────
+              Sceglierla e passare oltre vuol dire lavorare tutta la seduta con un TA che non
+              è il riferimento, e con una divisione tolta d'ufficio. L'invito lo dice QUI, nel
+              momento in cui la scelta si fa, e porta il gesto con sé: un bottone che rimette
+              DUE lattine, si fa la stretta, e poi si torna a una.
+              Scompare da sé quando lo scarto è stato misurato — allora non c'è più niente da
+              invitare a fare. */}
+          {config === 'solo-can' && !soloOffsetMisurato && (
+            <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 10,
+                          background: 'rgba(245,158,11,0.10)',
+                          border: '1px solid rgba(245,158,11,0.45)' }}>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, lineHeight: 1.5,
+                            color: 'rgba(251,191,36,0.95)' }}>
+                {L('Per misurare il TA come si deve, fai la stretta con DUE lattine: è il riferimento. Poi torna a una e riprendi. Se non la fai, il TA di questa seduta avrà UNA DIVISIONE IN MENO — e sarà scritto accanto al numero.',
+                   'Pour mesurer le TA correctement, fais la pression avec DEUX boîtes : c\'est la référence. Reviens ensuite à une seule et reprends. Si tu ne le fais pas, le TA de cette séance aura UNE DIVISION EN MOINS — et ce sera écrit à côté du nombre.',
+                   'To measure the TA properly, do the squeeze with TWO cans: that is the reference. Then go back to one and carry on. If you skip it, this session\'s TA will be ONE DIVISION LOWER — and it will say so beside the number.',
+                   'Para medir el TA como se debe, haz la presión con DOS latas: es la referencia. Luego vuelve a una y sigue. Si no lo haces, el TA de esta sesión tendrá UNA DIVISIÓN MENOS — y se escribirá junto al número.',
+                   'För att mäta TA rätt, gör trycket med TVÅ burkar: det är referensen. Gå sedan tillbaka till en och fortsätt. Om du hoppar över det får denna sessions TA ETT DELSTRECK MINDRE — och det skrivs bredvid siffran.')}
+              </div>
+              <button type="button" onClick={() => setConfig('two-cans')}
+                style={{ marginTop: 8, height: 30, padding: '0 12px', borderRadius: 8, cursor: 'pointer',
+                         fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700,
+                         background: 'rgba(245,158,11,0.2)', border: '1px solid rgba(245,158,11,0.7)',
+                         color: '#f59e0b' }}>
+                {L('Passa a DUE lattine e fai la prova', 'Passe à DEUX boîtes et fais le test',
+                   'Switch to TWO cans and run the test', 'Pasa a DOS latas y haz la prueba',
+                   'Byt till TVÅ burkar och gör testet')}
+              </button>
+            </div>
+          )}
         </div>
 
         {prove.map(p => (
