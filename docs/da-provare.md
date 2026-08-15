@@ -241,6 +241,26 @@ audio vera. Procedura completa in [can-meter-montaggio.md](can-meter-montaggio.m
 
 ---
 
+## SERENITY — il pezzo che il MUSE solo può provare
+
+L'estrazione dei cicli in `src/session/` è verificata a schermo per tutto ciò che si comanda a
+mano: armamento, chiusura, giornale, contatori, rapporto. Ma il corpo di
+`useContactNullCycle.trackCycle` — un centinaio di righe — gira **solo col MUSE addosso**, e
+lì la verifica senza strumenti non arriva.
+
+- [ ] **col MUSE, un ciclo CONTACT intero**: la fase avanza (contact → discharge → asis), il
+      **comm lag** compare e si aggiorna, l'offerta « AS-IS? » esce quando la carica è scesa e
+      **non sfarfalla**;
+- [ ] **il falso AS-IS**: dopo un AS-IS dichiarato senza vero rilascio, l'avviso ambra con l'IO;
+- [ ] **il segnale « sembra NULL »** su un ciclo CONTACT dove niente reagisce;
+- [ ] **col MUSE, un ciclo NULL**: il mock-up fa salire la carica (RISE) e il ritorno alla base
+      dà l'EQUILIBRIUM da sé.
+
+Se una di queste non si comporta come prima, è il `trackCycle` estratto: si torna a
+`equilibrium-2.0.134`, dove quel codice stava ancora in `App.tsx`.
+
+---
+
 ## Tarature in attesa di numeri veri
 
 - [ ] **MIRROR retrospezione** — servono i numeri di `MIRROR contact:` dal journal per tarare

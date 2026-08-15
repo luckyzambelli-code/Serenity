@@ -109,6 +109,7 @@ import { CycleHint } from './components/CycleHint';
 import { CycleSteps } from './components/CycleSteps';
 import { useToneCycle } from './session/useToneCycle';
 import { useMirrorCycle } from './session/useMirrorCycle';
+import { useContactNullCycle, type CycleTick } from './session/useContactNullCycle';
 // Del motore del TONE all'interfaccia resta il solo bersaglio, che si SCRIVE (« → +40 »).
 // Il calcolo — conversioni, locatore, testimoni — è passato tutto in `session/useToneCycle`.
 import { TONE_TARGET } from './engine/toneScale';
@@ -268,9 +269,6 @@ export default function App() {
   // ref che alimenta il motore dal worker EEG: quel gestore si aggancia una volta sola, prima
   // che il hook esista.
   const trackMirrorRef = useRef<(q: number, nowSec: number, pushUi: boolean) => void>(() => {});
-  // Idem per i cicli CONTACT/NULL: premuto col campo vuoto, la prima parola diventa l'item.
-  const cycleAwaitItemRef = useRef(false);
-  const cycleLogCursorRef = useRef(0);
   /** Il locatore del ciclo TONE, alimentato dal worker EEG. Vedi `useToneCycle.trackTone`. */
   const trackToneRef = useRef<(q: number, nowSec: number) => void>(() => {});
   // E per il TONE la stessa coppia sta in `session/useToneCycle`: la resistenza si dà a voce
@@ -964,9 +962,6 @@ export default function App() {
   // item (auditing question) BEFORE asking it. The cycle indicators only SHOW
   // while armed; the engines compute regardless (so the t_Item marker + cycle
   // outcome are recorded for the report and for the future Ron's Lag Δt*). ──
-  const [cycleArmed, setCycleArmed] = useState(false);
-  const cycleArmedRef = useRef(false);
-  cycleArmedRef.current = cycleArmed;
   const [auditingQuestion, setAuditingQuestion] = useState('');
   /**
    * L'ITEM È STATO DETTO — l'uscita a mano dalla fase « dì l'item ».
@@ -1002,70 +997,10 @@ export default function App() {
   // l'ambiguïté (« null car propre » vs « null car rien ne lit ») en demandant un MOCK-UP : si la
   // charge MONTE (RISE) l'instrument+PC répondent, puis le retour à la base = EQUILIBRIUM (validé
   // par l'auditeur AVEC les VGI's). Si rien ne monte → flag « no recharging » (null non validé).
-  const [cycleKind, setCycleKind] = useState<'charge' | 'null'>('charge');
-  const cycleKindRef = useRef<'charge' | 'null'>('charge');
-  cycleKindRef.current = cycleKind;
-  const [nullPhase, setNullPhase] = useState<NullStateId>('neutral');
-  const [nullNoRecharge, setNullNoRecharge] = useState(false);
-  /** Secondi dall'avvio del ciclo NULL — solo INFO (nessun conto alla rovescia: ogni PC ha il suo tempo). */
-  const [nullSinceMock, setNullSinceMock] = useState(0);
-  /** SEGNALE del motore su un ciclo CONTACT: nessuna lettura entro la finestra del comm lag
-   *  (t_Item = pressione del pulsante = momento in cui dai l'item) → "sembra NULL". È solo
-   *  un'INDICAZIONE: non cambia ciclo da solo, sei tu a premere NULL se vuoi. */
-  const [noReadSignal, setNoReadSignal] = useState(false);
-  // Miroirs pour finalizeCycle (closures) : flag « rien ne recharge », clear read validé + VGI's.
-  const nullNoRechargeRef = useRef(false);
-  nullNoRechargeRef.current = nullNoRecharge;
-  const clearReadValidRef = useRef(false);
-  const clearReadVgiRef   = useRef(false);
-  /** TA au moment où le cycle NULL démarre — ANCRE de la mesure. On montre l'écart par rapport à
-   *  CE point (3.5 → 3.1 = 0.4), pas la distance à la convention 3/2 : c'est le TRAVAIL du cycle,
-   *  et c'est RELATIF donc immunisé contre l'étalonnage absolu du TA (démontré non fiable). */
-  const [taAtNullStart, setTaAtNullStart] = useState(0);
-  interface ArmedCycle { n: number; question: string; tItemMs: number; tStartSec: number; tEndSec: number; phaseReached: ChargeStateId; completed: boolean; leadMs?: number; falseAsIs?: boolean; io?: number; taAtAsIs?: number;
-    /** Cycle NULL : type, flag « rien ne recharge », et VGI's inscrits à la validation. */
-    kind?: 'charge' | 'null'; noRecharging?: boolean; clearRead?: boolean; vgi?: boolean; }
-  const curCycleRef = useRef<{ n: number; question: string; tItemMs: number; tStartSec: number; phaseReached: ChargeStateId; leadMs: number | null } | null>(null);
-  const auditingCyclesRef = useRef<ArmedCycle[]>([]);
-  const phaseOrder: Record<ChargeStateId, number> = { neutral: 0, contact: 1, discharge: 2, asis: 3 };
-  // AS-IS? (manualReady) selectivity — tune on the field.
-  //   A: the ≥90% blow-down must hold this long before "AS-IS?" is offered (kills dips/noise).
-  //   B: the cycle peak must reach this qL — a REAL charge, not a graze just above CONTACT (0.8).
-  const AS_IS_SUSTAIN_MS = 1500;
-  const AS_IS_MIN_PEAK   = 1.2;
-  // Progressive per-session cycle numbering + the start/AS-IS counters shown on the
-  // arm bar; refs are authoritative (event handlers), state mirrors for display.
-  const cyclesStartedRef = useRef(0);
-  const cyclesAsIsRef = useRef(0);
-  // Compteurs SÉPARÉS par type de cycle (demande utilisateur : « l'indicazione dei numeri di cicli
-  // deve aver separato Contact et Null ») : armés / menés à leur fin (AS-IS vs EQUILIBRIUM).
-  const cStartedRef = useRef(0), cDoneRef = useRef(0);   // cycle CONTACT → AS-IS
-  const nStartedRef = useRef(0), nDoneRef = useRef(0);   // cycle NULL    → EQUILIBRIUM
-  const [cycleStats, setCycleStats] = useState({ cStarted: 0, cDone: 0, nStarted: 0, nDone: 0 });
-  const pushCycleStats = () => setCycleStats({
-    cStarted: cStartedRef.current, cDone: cDoneRef.current,
-    nStarted: nStartedRef.current, nDone: nDoneRef.current });
-  // AS-IS reached but NOT yet validated by the auditor: the indicator must persist
-  // (stay on AS-IS) and a clear "Valida AS-IS" button is shown until they press it.
-  const [asIsPending, setAsIsPending] = useState(false);
-  const asIsPendingRef = useRef(false);
-  // MANUAL-READY (LATCHED): when the auto F/N AS-IS hasn't fired but the charge has blown
-  // down (completion ≥ ON threshold), the dial offers validation. LATCHED with hysteresis
-  // so it does NOT flicker as qL wobbles near the threshold — it stays until validate /
-  // stop / a real re-contact (completion falls back below OFF). One stable "AS-IS · valida".
-  const [manualReady, setManualReady] = useState(false);
-  const manualReadyRef = useRef(false);
-  const setManualReadyBoth = (v: boolean) => { if (manualReadyRef.current !== v) { manualReadyRef.current = v; setManualReady(v); } };
-  // When the AS-IS? offer conditions (A: sustained ≥90% blow-down; B: real peak) FIRST
-  // became true — manualReady only latches after they HOLD for AS_IS_SUSTAIN_MS. null =
-  // conditions not currently met. (Reset alongside manualReady on arm/validate/stop.)
-  const manualReadySinceRef = useRef<number | null>(null);
-  // FALSE AS-IS: γ persisted + no HR deceleration through the AS-IS → charge duplicated,
-  // not released (it will re-arm). Indice d'Origine (IO) graded score; amber warning.
-  const [asIsFalse, setAsIsFalse] = useState(false);
-  const [asIsIO, setAsIsIO] = useState(0);
-  const asIsFalseRef = useRef(false);   // captured into the cycle at finalize (for the report)
-  const asIsIORef = useRef(0);
+  // Lo stato dei due cicli — tipo, fase NULL, AS-IS in attesa, falso AS-IS, contatori — sta
+  // in `session/useContactNullCycle`. Qui resta il ref che li alimenta dal worker EEG: quel
+  // gestore si aggancia una volta sola, prima che il hook esista.
+  const trackCycleRef = useRef<(t: CycleTick) => void>(() => {});
   // Ron's Lag Δt* — measured per-PC from the t_Item→leading-edge lag (LagMeter).
   const [deltaStar, setDeltaStar] = useState(0);   // 0 = no measurement yet (full Δt*)
   const [deltaStarN, setDeltaStarN] = useState(0); // # of cycles contributing
@@ -1128,80 +1063,6 @@ export default function App() {
       proc: sessionProcObjRef.current.trim() || undefined,
     }));
   };
-  const finalizeCycle = (completed: boolean) => {
-    // L'attesa dell'item dettato finisce col ciclo: senza questo, una parola detta DOPO la
-    // chiusura si sarebbe presa l'etichetta del ciclo appena finito.
-    cycleAwaitItemRef.current = false;
-    const c = curCycleRef.current;
-    if (c) {
-      // TA at the AS-IS moment (end of cycle) — the auditor wants it recorded per cycle
-      // in the report alongside the AS-IS. Snapshot the live tone-arm now.
-      const taFine = metricsStore.get().toneArm;
-      auditingCyclesRef.current.push({ ...c, tEndSec: timeRef.current, completed, falseAsIs: asIsFalseRef.current, io: asIsIORef.current, taAtAsIs: taFine,
-        kind: cycleKindRef.current, noRecharging: nullNoRechargeRef.current, clearRead: clearReadValidRef.current, vgi: clearReadVgiRef.current });
-      // ── CORPUS: il ciclo, concluso o abbandonato ───────────────────────────────────────────
-      // Si scrive in ENTRAMBI i casi: un ciclo abbandonato dice quanto spesso un procedimento
-      // non arriva in fondo, che è informazione clinica quanto un AS-IS raggiunto.
-      if (corpusSessionRef.current) {
-        corpusWrite(cycleRecord(corpusSessionRef.current, new Date().toISOString(), {
-          kind: cycleKindRef.current || 'charge',
-          durSec: Math.max(0, timeRef.current - c.tStartSec),
-          qlAtContact: cycleQlAtContactRef.current ?? undefined,
-          taStart: cycleTaStartRef.current ?? undefined,
-          taEnd: taFine,
-          done: completed,
-          falseAsIs: asIsFalseRef.current || undefined,
-          proc: sessionProcObjRef.current.trim() || undefined,
-        }));
-      }
-      if (completed) {
-        // Validé par l'auditeur → ligne de journal (avec le n° de cycle) + compteur. Le cycle NULL
-        // se termine sur un EQUILIBRIUM (avec les VGI's inscrits), pas sur un AS-IS.
-        logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
-          text: cycleKindRef.current === 'null'
-            ? `✓ #${c.n} ${c.question || LC('ciclo', 'cycle', 'cycle', 'ciclo', 'cykel')} — EQUILIBRIUM · ${clearReadVgiRef.current ? 'VGIs' : 'no VGIs'}`
-            : `✓ #${c.n} ${c.question || LC('ciclo', 'cycle', 'cycle', 'ciclo', 'cykel')} — AS-IS`,
-          type: 'success' });
-        cyclesAsIsRef.current += 1;
-        // CORPUS: l'AS-IS è stato dichiarato → l'F/N su cui si è deciso porta il flag.
-        flushEegFn(true);
-        if (cycleKindRef.current === 'null') nDoneRef.current += 1; else cDoneRef.current += 1;
-        pushCycleStats();
-        // AS-IS reached → also CLOSE any running neuro-acoustic sonification: the charge
-        // is gone, so the prime tone has nothing left to address. Kill local audio, send
-        // STOP to the PC, and reset the MNA phase to CAPTURE for the next cycle.
-        if (primePhaseRef.current === 'SONIFY' || primePhaseRef.current === 'CLEAN' || primePhaseRef.current === 'HARMONICS') {
-          try { primeFreqAudio.killAll(); } catch (_) {}
-          try { networkManager.send({ type: 'MNA_AUDIO', action: 'stop' }, true); } catch (_) {}
-          setPrimePhase('CAPTURE'); primePhaseRef.current = 'CAPTURE';
-          setPrimeCopies([]);
-        }
-      }
-    }
-    curCycleRef.current = null;
-    setCycleArmed(false);
-    setAsIsPending(false); asIsPendingRef.current = false;
-    setManualReadyBoth(false); manualReadySinceRef.current = null;
-    setAsIsFalse(false); falseAsIsDetector.reset();
-    // IL CAMPO ITEM SI SVUOTA A CICLO CHIUSO. Se no, il prossimo DAI L'ITEM ritrova il vecchio
-    // item in `auditingQuestion`, lo prende per buono (`cycleAwaitItemRef = !q` → false) e NON
-    // aspetta la voce: si riparte con l'item di prima (segnalato). Svuotandolo, il nuovo item
-    // detto a voce prende il posto del vecchio, che è quel che ci si aspetta.
-    setAuditingQuestion('');
-    setItemSpoken(false);   // e il prossimo ciclo torna a CHIEDERE l'item.
-  };
-  // Plus de « no recharging » déclaré : si ça ne recharge pas, l'auditeur met simplement FIN au
-  // cycle (STOP) — pas de bouton (demande utilisateur). Un null non mené au EQUILIBRIUM reste
-  // « non validé » dans le rapport, ce qui suffit.
-  /** CYCLE NULL — l'auditeur VALIDE le EQUILIBRIUM en INSCRIVANT les VGI's (demande utilisateur :
-   *  « abbiamo bisogno di VGI's alla fine del ciclo, conviene validare iscrivendo se ci sono »). */
-  const validateClearRead = (vgi: boolean) => {
-    clearReadValidRef.current = true;
-    clearReadVgiRef.current = vgi;
-    finalizeCycle(true);
-  };
-  /** The auditor presses "Valida AS-IS" → confirm + close the cycle. */
-  const validateAsIs = () => finalizeCycle(true);
   /** Arme un cycle pour l'item courant. Les DEUX cycles s'arment MANUELLEMENT et SÉPARÉMENT
    *  (demande utilisateur — aucune bascule automatique) :
    *    • 'charge' (bouton START) → CONTACT → DISCHARGE → AS-IS
@@ -1485,50 +1346,6 @@ export default function App() {
       logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
         text: `◎ ASSESSMENT — ${LC('inizio · dai gli item a voce', 'début · donne les items à voix', 'start · give items aloud', 'inicio · da los ítems en voz', 'start · ge items högt')}`, type: 'normal' });
     }
-  };
-  const armCycle = (kind: 'charge' | 'null' = 'charge') => {
-    if (curCycleRef.current) finalizeCycle(false); // close any open cycle first
-    freeNeedleForNewItem();   // on donne l'item → l'aiguille est libre de réagir à CELUI-CI
-    const q = auditingQuestion.trim();
-    const n = ++cyclesStartedRef.current;          // numérotation GLOBALE (progressive par séance)
-    if (kind === 'null') nStartedRef.current += 1; else cStartedRef.current += 1;
-    pushCycleStats();
-    curCycleRef.current = { n, question: q, tItemMs: Date.now(), tStartSec: timeRef.current, phaseReached: 'neutral', leadMs: null };
-    // CORPUS: il TA di partenza del ciclo. Con le boîtes è quello dell'ago vero, se no l'EEG:
-    // è lo stesso numero che l'auditor vede in cima al quadrante.
-    ultimoItemSecRef.current = timeRef.current;
-    cycleTaStartRef.current = thetaTaRef.current ?? metricsStore.get().toneArm;
-    cycleQlAtContactRef.current = null;
-    // fresh cycle: reset FSM/predictor/episode so the next contact is THIS item's.
-    cycleStateMachine.reset(); chargeEpisode.resetSession(); contactPredictor.reset();
-    falseAsIsDetector.reset();
-    nullCycleStateMachine.reset(); clearReadDetector.reset();
-    setItemSpoken(false);   // nuovo ciclo → l'item torna da dare.
-    setCycleKind(kind); setNullNoRecharge(false); setNullSinceMock(0);
-    setNoReadSignal(false);
-    if (kind === 'null') { nullCycleStateMachine.armNull(Date.now()); setNullPhase('null'); setTaAtNullStart(taAccumulator.toneArm); }
-    else setNullPhase('neutral');
-    clearReadValidRef.current = false; clearReadVgiRef.current = false;
-    tzoneStore.resetCycle(); // per-cycle dissolution % starts fresh (session total kept)
-    setCycleArmed(true);
-    setAsIsPending(false); asIsPendingRef.current = false;
-    setManualReadyBoth(false); manualReadySinceRef.current = null;
-    setAsIsFalse(false); setAsIsIO(0); asIsFalseRef.current = false; asIsIORef.current = 0;
-    logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
-      text: kind === 'null'
-        ? `○ #${n} ${q || LC('ciclo', 'cycle', 'cycle', 'ciclo', 'cykel')} — NULL · ${LC('chiedi un mock-up', 'demande un mock-up', 'ask for a mock-up', 'pide un mock-up', 'be om en mock-up')}`
-        : `▶ #${n} ${q || LC('ciclo', 'cycle', 'cycle', 'ciclo', 'cykel')}`,
-      type: 'normal' });
-    // ── ITEM DETTATO A VOCE, come in MIRROR ──────────────────────────────────────────────
-    // Premuto col campo VUOTO, la PRIMA parola dell'auditor diventa l'item. In MIRROR
-    // funzionava già e in CONTACT/NULL no: si era costretti a scrivere, cioè a staccare gli
-    // occhi dall'ago proprio nel momento in cui si dà l'item (richiesta utente).
-    cycleAwaitItemRef.current = !q;
-    cycleLogCursorRef.current = logsRef.current.length;   // solo ciò che si dice DOPO il tasto
-    // DANDO L'ITEM A VOCE, l'assessment si accende da sé: così gli item detti si vedono nella
-    // lista senza dover premere ASSESS a parte (richiesta utente). Solo se l'item è a voce
-    // (`!q`) e l'assessment non gira già — se scrivi l'item non serve aprire la cattura vocale.
-    if (!q && !assessActiveRef.current) toggleAssessment();
   };
 
   const [sensitivity] = useState(1.0); // 1.0 = default; matches qL-scale thresholds (setter dropped — no UI binding)
@@ -1885,102 +1702,15 @@ export default function App() {
 
         // ── ARMED CYCLE: track the furthest phase reached for the current auditing
         // item; when it reaches AS-IS the cycle is COMPLETE → record + auto-disarm.
-        if (cycleArmedRef.current && curCycleRef.current) {
-          const _cc = curCycleRef.current;
-          if (phaseOrder[_phase] > phaseOrder[_cc.phaseReached]) _cc.phaseReached = _phase;
-          // CORPUS: la carica al CONTATTO, presa una volta sola — è « quanta ce n'era » in
-          // partenza, il termine di paragone di tutto quello che il ciclo poi scarica.
-          if (cycleQlAtContactRef.current == null && _phase === 'contact') {
-            cycleQlAtContactRef.current = _qlDisp;
-          }
-          // LAG-METER: the FIRST leading-edge after arming (γ spike or qL rising edge)
-          // → reaction time t_LE − t_Item. Median across cycles = Δt* (Ron's Lag).
-          if (_cc.leadMs == null && _validSignal && (_gammaSpike || _pred.contactEvent)) {
-            const _lag = Date.now() - _cc.tItemMs;
-            // NE CONSOMME le « premier leading-edge » du cycle QUE si le lag est PLAUSIBLE
-            // (recordLag l'accepte, ∈ [120, 3000] ms). Sinon un spike γ IMMÉDIAT (< 120 ms :
-            // le PC réagissait DÉJÀ, pas à l'item) brûlait l'unique mesure → recordLag le
-            // rejetait → _cc.leadMs restait posé → Δt* FIGÉ au baseline (450 ms). En laissant
-            // leadMs à null on continue à guetter le VRAI leading-edge dans la fenêtre valide.
-            if (lagMeter.recordLag(_lag)) {
-              _cc.leadMs = _lag;
-              const _ds = lagMeter.getDeltaStar();
-              setDeltaStar(_ds); setDeltaStarN(lagMeter.getN()); setDeltaTrend(lagMeter.getTrend());
-              setDeltaBaseline(lagMeter.getBaseline()); setDeltaAdaptive(lagMeter.getAdaptive());
-              // Apply to the needle projection, CLAMPED: a long reaction time must NOT
-              // be projected 1:1 onto the needle (overshoot) — cap at the Pre-Read range.
-              contactPredictor.setLagMs(Math.max(120, Math.min(500, _ds)));
-            }
-          }
-
-          // ── SIGNAL du moteur sur un cycle CONTACT : « il y a de la charge » ou « c'est nul ».
-          // t_Item = la pression du bouton = le moment où l'auditeur DONNE l'item → la fenêtre du
-          // comm lag (Δt* + marge) est enfin JUSTE. Aucune bascule automatique : c'est une simple
-          // INDICATION, l'auditeur presse NULL s'il le décide.
-          if (cycleKindRef.current === 'charge' && _validSignal) {
-            const _win = Math.max(1500, lagMeter.getDeltaStar() + 1200);
-            setNoReadSignal(_cc.leadMs == null && Date.now() - _cc.tItemMs >= _win);
-          }
-
-          // ── CYCLE NULL — AUCUNE bascule automatique (demande utilisateur : « il nous faut pouvoir
-          // activer les deux cycles MANUELLEMENT et SÉPARÉMENT »). C'est l'auditeur qui arme le
-          // cycle NULL (bouton NULL) ; ici on ne fait qu'ALIMENTER sa FSM quand il est actif.
-          // `rising` = la charge MONTE (le mock-up crée de la masse) ;
-          // `clearHeld` = le TA est revenu à SA base (3/2) et s'y tient (ClearReadDetector).
-          if (cycleKindRef.current === 'null') {
-            const _base = taAccumulator.getCalibration().baseline;
-            const _clearHeld = clearReadDetector.update(taAccumulator.toneArm, _base, Date.now());
-            const _np = nullCycleStateMachine.update(_pred.rising && _validSignal, _clearHeld, Date.now());
-            // Ces états changent RAREMENT (phase/flags) → React bail-out si la valeur est identique,
-            // pas besoin du gate 10 Hz (qui est déclaré plus bas de toute façon).
-            setNullPhase(_np.phase); setNullNoRecharge(_np.noRecharging);
-            // Temps écoulé depuis l'armement du NULL : INFO (arrondi à la seconde → 1 re-render/s max).
-            setNullSinceMock(Math.floor(nullCycleStateMachine.sinceArmS(Date.now())));
-          }
-
-          if (!asIsPendingRef.current) {
-            // Before AS-IS: build the baselines (γ + BPM + contact + charge slope) for IO.
-            falseAsIsDetector.feedCycle(_gam, realBpmRef.current, _pred.slope, signalQualityRef.current);
-            // MANUAL-READY latch — STICKY (no flicker): once the cycle has really
-            // discharged, offer validation ("AS-IS?") and KEEP it shown for the rest of
-            // the cycle. Resets only on arm/validate/stop. Uses RAW qL (smoother than the
-            // predicted one near the F/N). The dial qualifies it with "AS-IS?" until F/N.
-            // Two guards so it doesn't fire on every little charge (user: appeared too often):
-            //   A — the ≥90% blow-down must be SUSTAINED (not a momentary dip/noise);
-            //   B — the cycle peak must be a REAL charge, not a graze just above CONTACT.
-            if (!manualReadyRef.current) {
-              const _asIsReady =
-                phaseOrder[_cc.phaseReached] >= phaseOrder['discharge']
-                && tzoneStore.get().cyclePeakQ >= AS_IS_MIN_PEAK            // B
-                && tzoneStore.cycleDissolved(qL) >= 0.90;
-              if (_asIsReady) {
-                if (manualReadySinceRef.current == null) manualReadySinceRef.current = Date.now();
-                if (Date.now() - manualReadySinceRef.current >= AS_IS_SUSTAIN_MS) setManualReadyBoth(true); // A
-              } else {
-                manualReadySinceRef.current = null; // conditions broke → restart the sustain timer
-              }
-            }
-            if (_phase === 'asis') {
-              // AS-IS reached. Do NOT auto-close: the indicator stays on AS-IS and a
-              // clear "Valida AS-IS" button waits for the auditor to confirm.
-              _cc.phaseReached = 'asis';
-              asIsPendingRef.current = true;
-              setAsIsPending(true);
-              falseAsIsDetector.startWatch(Date.now()); // open the release watch window
-            }
-          } else {
-            // AS-IS pending: watch γ-release + velocity-collapse + BPM-decel → Indice d'Origine.
-            const _verdict = falseAsIsDetector.watch(_gam, realBpmRef.current, _pred.slope, Date.now());
-            if (_verdict !== 'pending') {
-              const _false = _verdict === 'false';
-              const _io = falseAsIsDetector.getIO();
-              asIsFalseRef.current = _false; asIsIORef.current = _io;
-              setAsIsFalse(_false); setAsIsIO(_io);
-              if (_false) logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
-                text: `⚠ #${_cc.n} AS-IS da verificare — IO ${_io.toFixed(2)} (rilascio debole)`, type: 'highlight' });
-            }
-          }
-        }
+        // ── IL CICLO ARMATO si alimenta qui — CONTACT e NULL insieme, in `session/
+        // useContactNullCycle`. Fase più avanzata raggiunta, lag di Ron, segnale « sembra
+        // NULL », FSM del NULL, AS-IS in attesa e falso AS-IS: tutto di là.
+        trackCycleRef.current({
+          phase: _phase, rising: _pred.rising, contactEvent: _pred.contactEvent, slope: _pred.slope,
+          validSignal: _validSignal, qlDisp: _qlDisp, qL,
+          gam: _gam, gammaSpike: _gammaSpike,
+          bpm: realBpmRef.current, signalQuality: signalQualityRef.current,
+        });
 
         // ── JOURNAL: charge-state changes (debounced) → log + History PDF ──
         if (sessionStateRef.current === 'running') {
@@ -3442,12 +3172,7 @@ export default function App() {
     for (let i = cursor; i < logs.length; i++) {
       const e = logs[i];
       if (e.speaker === 'Aud' && isAssessableItem(e.text)) {   // stesso filtro: un « ok » non è un item
-        const txt = e.text.trim();
-        cycleAwaitItemRef.current = false;
-        setAuditingQuestion(txt);
-        if (curCycleRef.current) curCycleRef.current.question = txt;
-        logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
-          text: `▶ #${curCycleRef.current.n} ${LC('item', 'item', 'item', 'ítem', 'item')} · ${txt}`, type: 'normal' });
+        cycleItemDettato(e.text.trim());
         break;
       }
     }
@@ -4329,6 +4054,55 @@ export default function App() {
     return v === 'eeg' || v === 'theta' ? v : 'theta';
   });
   useEffect(() => { localStorage.setItem('equilibrium_ago', agoScelto); }, [agoScelto]);
+  /**
+   * ── E I DUE CICLI CENTRALI ──────────────────────────────────────────────────────────────
+   * Terza estrazione, la più grossa: CONTACT e NULL insieme, perché condividono numerazione,
+   * ciclo corrente, chiusura e contatori. Le dipendenze qui sotto sono molte, e lo sono in modo
+   * onesto: ognuna dice una cosa che il ciclo non sa fare da sé. Prima quelle chiamate c'erano
+   * lo stesso, sparse fra 8 000 righe, dove nessuno le contava.
+   */
+  const cycles = useContactNullCycle({
+    auditingQuestion, setAuditingQuestion, setItemSpoken,
+    nowSec: () => timeRef.current,
+    logLength: () => logsRef.current.length,
+    log: (text, type) => logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE', text, type }),
+    LC,
+    thetaTa: () => thetaTaRef.current,
+    freeNeedleForNewItem: () => freeNeedleForNewItem(),
+    // Solo se non gira già: se l'auditor l'ha aperto a mano, riaprirlo lo CHIUDEREBBE.
+    ensureAssessmentOn: () => { if (!assessActiveRef.current) toggleAssessment(); },
+    onItemGiven: (sec) => { ultimoItemSecRef.current = sec; },
+    writeCycleCorpus: (row) => {
+      if (!corpusSessionRef.current) return;   // fuori seduta non si archivia
+      corpusWrite(cycleRecord(corpusSessionRef.current, new Date().toISOString(), {
+        ...row, proc: sessionProcObjRef.current.trim() || undefined,
+      }));
+    },
+    markFnAsIs: () => flushEegFn(true),
+    stopSonification: () => {
+      // Si spegne l'audio locale, si manda STOP al preclear, e la fase MNA torna a CAPTURE.
+      if (primePhaseRef.current === 'SONIFY' || primePhaseRef.current === 'CLEAN' || primePhaseRef.current === 'HARMONICS') {
+        try { primeFreqAudio.killAll(); } catch (_) {}
+        try { networkManager.send({ type: 'MNA_AUDIO', action: 'stop' }, true); } catch (_) {}
+        setPrimePhase('CAPTURE'); primePhaseRef.current = 'CAPTURE';
+        setPrimeCopies([]);
+      }
+    },
+    onLagMeasured: (m) => {
+      setDeltaStar(m.deltaStar); setDeltaStarN(m.n); setDeltaTrend(m.trend);
+      setDeltaBaseline(m.baseline); setDeltaAdaptive(m.adaptive);
+    },
+  });
+  trackCycleRef.current = cycles.trackCycle;
+  const {
+    cycleArmed, cycleArmedRef, cycleKind,
+    nullPhase, nullSinceMock, noReadSignal, taAtNullStart,
+    asIsPending, manualReady, asIsFalse, asIsIO, cycleStats,
+    armCycle, finalizeCycle, validateAsIs, validateClearRead,
+    curCycleRef, auditingCyclesRef, cycleAwaitItemRef, cycleLogCursorRef,
+  } = cycles;
+  const cycleItemDettato = cycles.itemDettato;
+
   // ── DURANTE UN CICLO L'AGO È QUELLO DEL MUSE, E NON SI SCEGLIE ──────────────────────────
   // I cicli CONTACT e NULL girano su `qL`, cioè sull'EEG: `cycleStateMachine.update(qL, …)`.
   // Mostrare l'ago delle boîtes mentre si segue un ciclo vorrebbe dire guardare uno strumento
@@ -4833,11 +4607,8 @@ export default function App() {
                   PDF restava irraggiungibile. « Non ricarica » è il risultato
                   diagnostico più prezioso del ciclo NULL: se non si scrive,
                   averlo premuto non è servito a niente. */}
-              {btn(LC('NON RICARICA', 'NE RECHARGE PAS', 'NO RECHARGING', 'NO RECARGA', 'LADDAR INTE'), () => {
-                nullCycleStateMachine.declareNoRecharging();
-                setNullNoRecharge(true); nullNoRechargeRef.current = true;
-                finalizeCycle(false);
-              }, '#dc2626', false)}
+              {btn(LC('NON RICARICA', 'NE RECHARGE PAS', 'NO RECHARGING', 'NO RECARGA', 'LADDAR INTE'),
+                   () => cycles.declareNoRecharging(), '#dc2626', false)}
             </>)}
           </>
         : null;   // il gesto è accanto al campo, in barra
@@ -5248,11 +5019,7 @@ export default function App() {
       contactPredictor.reset();     // predictive contact (leading-edge) — Phase 1
       cycleStateMachine.reset();    // per-item charge phase FSM
       reactionClassifier.reset();   // dirty-needle + F/N latch persistence
-      curCycleRef.current = null; auditingCyclesRef.current = []; setCycleArmed(false); setAuditingQuestion('');
-      cyclesStartedRef.current = 0; cyclesAsIsRef.current = 0;
-      cStartedRef.current = 0; cDoneRef.current = 0; nStartedRef.current = 0; nDoneRef.current = 0;
-      setCycleStats({ cStarted: 0, cDone: 0, nStarted: 0, nDone: 0 });
-      setAsIsPending(false); asIsPendingRef.current = false;
+      cycles.resetCycles(); setAuditingQuestion('');
       // Comm lag : on part du BASELINE (Pre-Read ~450 ms) déjà VISIBLE (au lieu de « — »),
       // puis il se personnalise par cycle. N=0 → l'UI le marque « ~ » (estimation, pas encore
       // mesuré sur ce PC). Évite le « je ne vois plus le comm lag » quand aucun cycle n'a encore
@@ -5260,7 +5027,7 @@ export default function App() {
       lagMeter.reset();
       setDeltaStar(lagMeter.getDeltaStar()); setDeltaStarN(0); setDeltaTrend(0);
       setDeltaBaseline(lagMeter.getBaseline()); setDeltaAdaptive(0); gammaEmaRef.current = 0;
-      falseAsIsDetector.reset(); setAsIsFalse(false);
+      falseAsIsDetector.reset();
       mirror.resetMirror();
       tone.resetTone(); toneCyclesRef.current = [];
       setAssessActive(false); setAssessSession([]); assessCyclesRef.current = []; assessNRef.current = 0; assessPrevAtRef.current = -Infinity;
@@ -5428,26 +5195,9 @@ export default function App() {
       networkManager.send({ type: 'SESSION_STATE', state: 'ended', time: timeRef.current, seq: ++sessionStateSeqRef.current }, true);
     }
     setTimeout(() => voiceToneAnalyzer.stop(), 3000);
-    // Close any still-armed cycle as "not completed" so it appears in the report.
-    if (curCycleRef.current) {
-      const _c = curCycleRef.current;
-      auditingCyclesRef.current.push({ ..._c, tEndSec: timeRef.current, completed: false });
-      // CORPUS: anche questo ciclo lasciato aperto va archiviato. Questa via non passa da
-      // finalizeCycle (non deve incrementare i contatori né scrivere nel journal), ma per
-      // l'archivio è un ciclo non concluso come gli altri, e sparirebbe.
-      if (corpusSessionRef.current) {
-        corpusWrite(cycleRecord(corpusSessionRef.current, new Date().toISOString(), {
-          kind: cycleKindRef.current || 'charge',
-          durSec: Math.max(0, timeRef.current - _c.tStartSec),
-          qlAtContact: cycleQlAtContactRef.current ?? undefined,
-          taStart: cycleTaStartRef.current ?? undefined,
-          taEnd: thetaTaRef.current ?? metricsStore.get().toneArm,
-          done: false,
-          proc: sessionProcObjRef.current.trim() || undefined,
-        }));
-      }
-      curCycleRef.current = null;
-    }
+    // Un ciclo ancora armato si chiude « non concluso » — il ciclo sa come, e sa che questa
+    // via non deve toccare i contatori né il giornale.
+    cycles.closeOpenCycleAtEnd();
     // Idem pour un cycle MIRROR encore armé : on l'enregistre avec son état courant.
     if (mirrorArmedRef.current && mirrorCurRef.current) { stopMirror(); }
     // ASSESSMENT encore actif → on fige le dernier cycle pour le rapport.
@@ -5456,8 +5206,6 @@ export default function App() {
       if (cyc) cyc.tEndSec = timeRef.current;
       setAssessActive(false);
     }
-    setCycleArmed(false);
-    setAsIsPending(false); asIsPendingRef.current = false;
     // CORPUS: si scrive quel che resta in coda SUBITO. Le righe della fine — l'ultimo ciclo,
     // le ultime reazioni — sono spesso le più interessanti, e aspettare il prossimo giro
     // vorrebbe dire perderle se l'applicazione si chiude qui.
