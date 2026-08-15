@@ -108,6 +108,7 @@ import {
 } from './engine/canTest';
 import { CycleHint } from './components/CycleHint';
 import { CycleSteps } from './components/CycleSteps';
+import { useToneCycle } from './session/useToneCycle';
 import {
   TONE_TARGET, toneFromTa, toneFromDelta, ToneLocator,
   reachedTop,
@@ -291,10 +292,10 @@ export default function App() {
   // Idem per i cicli CONTACT/NULL: premuto col campo vuoto, la prima parola diventa l'item.
   const cycleAwaitItemRef = useRef(false);
   const cycleLogCursorRef = useRef(0);
-  // E per il TONE: anche la resistenza si dà a voce, come ogni altro item (richiesta utente:
-  // « il ciclo resistenza deve essere come gli altri »).
-  const toneAwaitItemRef = useRef(false);
-  const toneLogCursorRef = useRef(0);
+  /** Il locatore del ciclo TONE, alimentato dal worker EEG. Vedi `useToneCycle.trackTone`. */
+  const trackToneRef = useRef<(q: number, nowSec: number) => void>(() => {});
+  // E per il TONE la stessa coppia sta in `session/useToneCycle`: la resistenza si dà a voce
+  // come ogni altro item, ma è il ciclo a saperlo, non l'interfaccia.
   // ── ASSESSMENT (bouton « ASSESSMENT », même nom dans toutes les langues) — l'auditeur donne des
   //    items à voix haute ; comme le R&I on inscrit le READ instantané (même calcul, fenêtre de
   //    réaction). Les items s'affichent SOUS l'arc. Re-presser → arrête (les items restent) ; presser
@@ -2120,7 +2121,7 @@ export default function App() {
         // L'instant du clic sur LOCALISER est le pire des trois (voir ToneLocator) : il faut
         // pouvoir remonter. On accumule donc en continu, en vue TONE seulement.
         if (viewModeRef.current === 'tone') {
-          toneLocator.track(toneMeasuredRef.current ?? 0, _validSignal ? qL : 0, timeRef.current);
+          trackToneRef.current(_validSignal ? qL : 0, timeRef.current);
         }
         // Instrumentation calibration TA (Option B) : snapshot LIVE des 5 bandes BRUTES + BPM,
         // lu par le panneau au moment d'une capture (mS, TA_meter). Offline on formera les RATIOS
@@ -4473,24 +4474,7 @@ export default function App() {
     if (!modiDisponibili.includes(mode)) setMode(fallbackMode(instruments.muse, instruments.theta));
   }, [modiDisponibili, mode, instruments.muse, instruments.theta]);
 
-  const [tonePhase, setTonePhase] = useState<TonePhase>('locate');
-  /**
-   * IL TONO DI PARTENZA — l'origine della scala, e da questa versione è l'origine VERA.
-   *
-   * Ron: « the relationship between the Tone Scale and ohms is an arbitrary one ». Prima il
-   * tono si leggeva in assoluto dal fondo scala del meter (0…6,5 di TA): una convenzione
-   * dentro l'altra, e quel 6,5 è del Theta-Meter, non della scala del tono. Adesso alla
-   * localizzazione si fissa « qui sei a −12 » e da lì si misura la SALITA.
-   *
-   *   col METER  → lo propone la misura;
-   *   senza      → lo dice l'auditor (quel che il preclear dichiara più la sua obnosi), e
-   *                si sceglie dal selettore accanto al campo.
-   *
-   * `null` solo prima di localizzare.
-   */
-  const [toneAtStart, setToneAtStart] = useState<number | null>(null);
-  /** Il tono che l'auditor dichiara senza strumenti — la sorgente quando non c'è misura. */
-  const [toneAssessed, setToneAssessed] = useState(0);
+
 
   /**
    * LA PROVA DELLE LATTINE DI QUESTO PRECLEAR — « che fa fede sono le DUE LATTINE ».
@@ -4539,65 +4523,7 @@ export default function App() {
       setProvaTa(p => theta.setup.config === 'two-cans' ? { ...p, two: t } : { ...p, solo: t });
     }
   }, [theta.squeezeOk, theta.testing, theta.setup.needleScale, theta.setup.config, theta.ta]);
-  /** Le due misure ALL'ISTANTE della localizzazione: da lì si conta il movimento. */
-  const toneTaAtStartRef = useRef<number | null>(null);
-  const toneQAtStartRef = useRef<number | null>(null);
-  /**
-   * QUANTE VOLTE SI È DATO IL COMANDO « porta questo a tono quaranta ».
-   *
-   * Ron: « Command b is asked REPETITIVELY, until there is no reaction and the PC reaches
-   * serenity of beingness. » La ripetizione È il processo — non un dettaglio di conduzione: si
-   * ridà lo stesso comando finché la reazione non si spegne. Un ciclo chiuso alla seconda
-   * ripetizione e uno chiuso alla ventesima non sono lo stesso lavoro, e il numero va visto
-   * mentre si conduce (e finisce nel journal a ciclo chiuso).
-   *
-   * Si azzera alla localizzazione e a ogni reset: è il conto di QUESTA resistenza.
-   */
-  const [toneRipetizioni, setToneRipetizioni] = useState(0);
-  /** Come si è scelto l'istante della localizzazione, e da quanti secondi prima viene. */
-  const [toneAnchor, setToneAnchor] = useState<{ how: ToneLocateAnchor; ageS: number } | null>(null);
-  // Specchi in ref: `segnaIndicazione` si aggancia UNA volta sola (deps vuote, come tutte le
-  // callback del pannello) e senza questi leggerebbe per sempre la fase d'avvio.
-  const tonePhaseRef = useRef(tonePhase); tonePhaseRef.current = tonePhase;
   const modeRef = useRef(mode); modeRef.current = mode;
-  /**
-   * ── IL TA CHE SI MOSTRA, RIPORTATO ALLE DUE LATTINE ─────────────────────────────────────
-   * « Che fa fede sono le DUE LATTINE ». Con una lattina sola la resistenza è un'altra, e più
-   * alta: mostrarla tale e quale farebbe credere a un caso più carico di quel che è.
-   *
-   *   due lattine               → il numero è già il riferimento;
-   *   una lattina, MISURATA     → si applica lo scarto di questa persona (pannello TRIM);
-   *   una lattina, NON misurata → si toglie UNA DIVISIONE — 4 diventa 3 — e si scrive.
-   *
-   * ⚠️ STA QUI, PRIMA DEL TONO, e non è un dettaglio di ordinamento: LA SCALA DEL TONO SI
-   * TARA SU QUESTO NUMERO. Prima il tono si calcolava dal TA GREZZO, quindi con una lattina
-   * partiva da un valore più alto del vero e tutta la scala era spostata — « sinon l'échelle
-   * est fausse » (segnalato). Il TA corretto è l'unico che possa tararla.
-   */
-  const taMostrato = theta.taNow === null ? null
-    : taToTwoCans(theta.taNow, theta.setup.config, theta.setup.offsets?.['solo-can'] ?? 0);
-  /** Lo stesso, sul TA del BRACCIO — è quello che ancora il ciclo (vedi `toneFromDelta`). */
-  const taCorretto = theta.ta === null ? null
-    : taToTwoCans(theta.ta, theta.setup.config, theta.setup.offsets?.['solo-can'] ?? 0).ta;
-  /**
-   * ── IL TA DI CLEAR — il tono 40 di QUESTA persona ───────────────────────────────────────
-   * 3,0 per l'uomo, 2,0 per la donna: la lettura di un caso pulito. È la base costituzionale
-   * che l'app conosce già (`pcSex`, usata dal `taAccumulator` e dal ciclo NULL) e che la scala
-   * del tono ignorava — ancorandosi invece al TA 0, che non si raggiunge mai (segnalato).
-   *
-   * Senza il sesso dichiarato si prende 2,0, il più prudente: parte più in basso, e chi è più
-   * pulito ci arriva lo stesso.
-   */
-  const taClear = pcSex === 'm' ? 3.0 : 2.0;
-  // Il tono MISURATO. Oggi passa dal TA e non da ohm veri: `toneFromTa` è dichiaratamente una
-  // strada provvisoria, ed è per questo che il quadrante scrive « ≈ ». Diventa esatta il giorno
-  // che si tara il meter con due resistenze note.
-  const toneMeasured = instruments.theta && taCorretto !== null
-    ? toneFromTa(taCorretto, taClear, TA_MAX) : null;
-  const toneHasMeter = toneMeasured !== null;
-  // Specchio in ref: il gestore del worker si aggancia UNA volta sola e il tono cambia a ogni
-  // tick — senza questo il locatore accumulerebbe per sempre il valore d'avvio.
-  const toneMeasuredRef = useRef(toneMeasured); toneMeasuredRef.current = toneMeasured;
 
   /**
    * ── DOVE SI È ADESSO SULLA SCALA, e da quale sguardo ──────────────────────────────────
@@ -4613,112 +4539,51 @@ export default function App() {
    *   • senza strumenti    → quel che dichiara l'auditor: il cursore sta dove l'ha messo.
    */
   const qLnow = useMetric(m => m.qL);
-  /**
-   * ── IL MARGINE DELLA PROVA DELLE LATTINE ────────────────────────────────────────────────
-   * « Nel caso di non test dovresti ritirare almeno una divisione dal calcolo sulla scala del
-   * TONO ». Non è una correzione della misura: è quel che si può SOSTENERE. Senza la prova di
-   * oggi la sensibilità è di ripiego, e un tono dichiarato più alto di così non ha di che
-   * reggersi. Vale solo col meter — senza, il tono lo dice l'auditor e il margine sarebbe
-   * togliere una divisione al suo giudizio.
-   */
-  const margineTono = toneHasMeter ? toneMargin(canHistory, Date.now()) : 0;
-  //
-  // ⚠️ IL MARGINE SI TOGLIE OVUNQUE IL TONO VENGA DA UNA MISURA, non solo dopo la
-  // localizzazione. Stava sul solo ramo centrale, e allora prima di localizzare — cioè proprio
-  // quando si guarda il numero per decidere da dove partire — il tono compariva pieno. Il
-  // margine dice « la sensibilità non è stata verificata oggi »: vale da quando la misura
-  // esiste, non da quando comincia il ciclo.
-  //
-  // Senza meter resta zero, ed è voluto: là il tono non è misurato, lo dichiara l'auditor, e
-  // togliere una divisione al suo giudizio sarebbe correggere una cosa che non è una misura.
-  const toneOra = toneAtStart === null
-    ? (toneHasMeter && toneMeasured !== null ? withMargin(toneMeasured, margineTono) : toneAssessed)
-    : toneTaAtStartRef.current !== null && taCorretto !== null
-      ? withMargin(
-          // L'escursione è quella della SCALA DEL TONO — dal TA di clear al fondo scala —,
-          // non l'intero range dello strumento: è lei a valere 80 divisioni.
-          toneFromDelta(toneAtStart, toneTaAtStartRef.current, taCorretto, TA_MAX - taClear),
-          margineTono)
-      : withMargin(toneAtStart, margineTono);
-  /** Il secondo sguardo: la stessa scala, letta sulla carica EEG. `null` senza MUSE. */
-  const toneOraEeg = toneAtStart !== null && toneQAtStartRef.current !== null
-    ? toneFromDelta(toneAtStart, toneQAtStartRef.current, qLnow, 1)
-    : null;
-  const toneHasMeterRef = useRef(toneHasMeter); toneHasMeterRef.current = toneHasMeter;
-  // ⚠️ QUI C'ERANO LA PROPOSTA E LA SMENTITA. `toneProposed` traduceva la misura in segno +
-  // ampiezza da far verificare all'auditor, e `toneAgreement` diceva se l'assessment fosse
-  // d'accordo con l'ago. Senza le fasi di assessment non c'è più niente da proporre né da
-  // smentire: il tono di partenza è quello misurato, e basta.
-
-  // ── IL TONO QUARANTA: TRE TESTIMONI, E L'AUDITOR CHE VALIDA ─────────────────────────────
-  // Il bersaglio è la CIMA della scala — è il comando di Ron. Vedi `toneWitnesses`.
-  //
-  // ⚠️ NON SI MOSTRANO PIÙ, MA SI REGISTRANO. Le tre spie a schermo — e la proposta
-  // automatica che ne discendeva — sono uscite: nel ciclo di Ron chi giudica è l'auditor.
-  // Quali segnali si siano accesi resta però un DATO del rapporto: a freddo dice se la fine
-  // del ciclo aveva un riscontro strumentale o solo l'obnosi.
-  const [toneFired, setToneFired] = useState<ToneWitness[]>([]);
   const asIsSignature = useMetric(m => m.asIsSignature);
   /** Fase del ciclo di carica (neutral|contact|discharge|asis) — la stessa che colora l'ago. */
   const chargePhaseNow = useMetric(m => m.chargePhase);
   const toneFnNow = agoPrincipale === 'theta' ? !!theta.fn.fn
     : (needleReactionKey || '').includes('reaction_fn');
-  useEffect(() => {
-    if (tonePhase !== 'raise') return;
-    const nuovi: ToneWitness[] = [];
-    if (toneHasMeter && toneOra !== null && reachedTop(toneOra)) nuovi.push('top');
-    if (toneFnNow) nuovi.push('fn');
-    if (instruments.muse && asIsSignature) nuovi.push('signature');
-    if (!nuovi.length) return;
-    setToneFired(p => {
-      const add = nuovi.filter(w => !p.includes(w));
-      return add.length ? [...p, ...add] : p;
-    });
-  }, [tonePhase, toneHasMeter, toneOra, toneFnNow, asIsSignature, instruments.muse]);
+
+  /**
+   * ── IL CICLO TONE, FUORI DA QUI ─────────────────────────────────────────────────────────
+   * Primo pezzo del SESSION CONTROLLER estratto (vedi la cartografia SERENITY). Lo stato del
+   * ciclo e i suoi gesti vivono in `session/useToneCycle`; qui resta il render, che li usa
+   * con gli STESSI NOMI di prima — è così che l'estrazione si verifica: nessuna riga di JSX
+   * è cambiata, quindi una seduta condotta prima e dopo deve dare lo stesso giornale.
+   */
+  const tone = useToneCycle({
+    ta: theta.ta, taNow: theta.taNow,
+    config: theta.setup.config, soloOffset: theta.setup.offsets?.['solo-can'] ?? 0,
+    hasTheta: instruments.theta, hasMuse: instruments.muse,
+    pcSex, canHistory, qL: qLnow,
+    fnNow: toneFnNow, asIsSignature,
+    auditingQuestion, setAuditingQuestion,
+    nowSec: () => timeRef.current,
+    logLength: () => logsRef.current.length,
+    log: (text, type) => logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE', text, type }),
+    setItemSpoken,
+    LC,
+  });
+  // Il gestore del worker si aggancia UNA volta sola, prima che il hook esista: prende la
+  // funzione da un ref, che qui sotto si tiene aggiornato.
+  trackToneRef.current = tone.trackTone;
+  const {
+    tonePhase, setTonePhase, tonePhaseRef,
+    toneAtStart, toneAssessed, setToneAssessed,
+    toneRipetizioni, setToneRipetizioni,
+    taMostrato,
+    toneMeasured, toneHasMeter, margineTono, toneOra, toneOraEeg,
+    localizzaTone, chiudiTone, resetTone,
+    toneCyclesRef, toneAwaitItemRef, toneLogCursorRef,
+  } = tone;
+  const toneAnchor = tone.toneAnchor;
 
   // ⚠️ QUI L'ASSESSMENT SI ACCENDEVA DA SÉ nelle fasi « positivo o negativo? » e « quante
   // divisioni? », che ERANO un assessment. Quelle fasi non ci sono più: i comandi di Ron sono
   // due, e nessuno dei due si conduce enunciando risposte da far reagire. Il modulo si accende
   // a mano, come negli altri cicli.
 
-  // ── I CICLI TONE SI REGISTRANO ─────────────────────────────────────────────────────────
-  // Non ci finivano né nel rapporto né nel PDF (segnalato): MIRROR sì, TONE no.
-  //
-  // Si tiene il tono di PARTENZA misurato (`located`, null senza meter), QUANTE VOLTE si è dato
-  // il comando, e se il tono quaranta è stato raggiunto. Prima si tenevano anche segno,
-  // ampiezza e l'accordo fra misura e assessment: erano le fasi che non ci sono più.
-  const toneCyclesRef = useRef<Array<{ n: number; question: string; tStartSec: number; tEndSec: number;
-    located: number | null; repeats: number;
-    /** DA DOVE viene il tono di partenza: la misura, l'auditor, o tutti e due gli sguardi.
-     *  Campo NUOVO (2.0.120): i cicli registrati prima non ce l'hanno, e restano leggibili. */
-    source?: 'meter' | 'meter+eeg' | 'assessed';
-    anchor: string; witnesses: string[]; asIs: boolean }>>([]);
-  const toneNRef = useRef(0);
-  const toneStartSecRef = useRef(0);
-  const chiudiTone = useCallback((raggiunto: boolean) => {
-    toneCyclesRef.current.push({
-      n: ++toneNRef.current, question: auditingQuestion.trim(),
-      tStartSec: toneStartSecRef.current, tEndSec: timeRef.current,
-      located: toneAtStart, repeats: toneRipetizioni,
-      source: toneHasMeter ? (instruments.muse ? 'meter+eeg' : 'meter') : 'assessed',
-      anchor: toneAnchor?.how ?? 'settled',
-      witnesses: [...toneFired], asIs: raggiunto,
-    });
-    // SENZA METER non si scrive un « ? » al posto del tono di partenza: un punto interrogativo
-    // sembra un dato mancante per errore, mentre è semplicemente una seduta off-meter — come
-    // quelle di Ron. Si scrive solo dove si andava.
-    const da = toneAtStart !== null
-      ? `${toneAtStart > 0 ? '+' : ''}${toneAtStart.toFixed(0)} → ` : '';
-    logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
-      text: `${raggiunto ? '✓' : '○'} #${toneNRef.current} ${auditingQuestion.trim() || LC('resistenza', 'résistance', 'resistance', 'resistencia', 'motstånd')} — TONE `
-        + `${da}+${TONE_TARGET}`
-        // QUANTE VOLTE si è dato « porta a tono 40 ». È il processo di Ron: il numero dice
-        // quanto è costata questa resistenza, ed è l'unico modo di ritrovarlo dopo.
-        + (toneRipetizioni > 0 ? ` · ×${toneRipetizioni}` : '')
-        + (raggiunto ? ` · ${LC('TONO 40 RAGGIUNTO', 'TON 40 ATTEINT', 'TONE 40 REACHED', 'TONO 40 ALCANZADO', 'TON 40 NÅDD')}` : ''),
-      type: raggiunto ? 'success' : 'normal' });
-  }, [auditingQuestion, toneAtStart, toneAnchor, toneFired, toneRipetizioni,
-      toneHasMeter, instruments.muse, LC]);
 
   // ── « A CHE PUNTO SONO, E COSA DEVO FARE » — per tutti e quattro i cicli ─────────────────
   // Un componente solo (CycleHint), sempre nello stesso posto, con la SUA specificità per ogni
@@ -5245,46 +5110,6 @@ export default function App() {
   }, [faseCiclo, toneRipetizioni,
       mirrorDisp, chargePhaseNow, noReadSignal, lang]);
 
-  const resetTone = useCallback(() => {
-    setTonePhase('locate');
-    setToneAtStart(null); setToneAnchor(null); setToneFired([]);
-    toneTaAtStartRef.current = null; toneQAtStartRef.current = null;
-    setToneRipetizioni(0);   // il conto è di QUESTA resistenza, e la resistenza cambia.
-    // Il campo si svuota: una resistenza nuova non porta l'etichetta di quella di prima.
-    setAuditingQuestion('');
-    toneAwaitItemRef.current = false;
-    toneLocator.reset();
-  }, []);
-  /**
-   * LOCALIZZA — e NON col valore del clic.
-   *
-   * Il MUSE dice QUANDO (il suo picco è il pensiero del preclear, e l'EEG lo coglie prima che il
-   * corpo lo manifesti), il METER dice QUANTO (il TA a quell'istante). Divisione del lavoro
-   * chiesta dall'utente. Senza MUSE si ripiega sul movimento del METER; se non ha reagito nulla,
-   * sulla mediana della finestra — che l'artefatto del clic non sposta.
-   */
-  const localizzaTone = useCallback(() => {
-    const r = toneLocator.locate(timeRef.current, instruments.muse, toneMeasured ?? 0);
-    setToneAnchor({ how: r.anchor, ageS: r.ageS });
-    // ── L'ORIGINE DELLA SCALA SI FISSA QUI ────────────────────────────────────────────────
-    // Col meter la propone la misura; senza, è quel che l'auditor ha dichiarato guardando il
-    // preclear. Da questo istante il tono non si legge più in assoluto: si conta il MOVIMENTO
-    // delle misure rispetto a ORA (vedi `toneOra`).
-    setToneAtStart(toneHasMeter ? r.tone : toneAssessed);
-    // ⚠️ IL TA CORRETTO, non quello grezzo: se si ancorasse al grezzo e la configurazione
-    // cambiasse in seduta, il tono salterebbe di una divisione senza che nulla sia successo.
-    toneTaAtStartRef.current = taCorretto;
-    toneQAtStartRef.current = instruments.muse ? metricsStore.get().qL : null;
-    toneStartSecRef.current = timeRef.current;   // il ciclo comincia QUI, non al comando 2
-    // Premuto col campo VUOTO, la prima parola dell'auditor diventa l'item — come in CONTACT,
-    // NULL e MIRROR. Senza, in TONE si poteva solo scrivere: e scrivere vuol dire staccare gli
-    // occhi dall'ago proprio mentre si localizza.
-    toneAwaitItemRef.current = !auditingQuestion.trim();
-    toneLogCursorRef.current = logsRef.current.length;
-    setToneRipetizioni(0);
-    setItemSpoken(false);   // la resistenza di QUESTO ciclo va detta da capo.
-    setTonePhase('raise');
-  }, [instruments.muse, toneMeasured, toneHasMeter, toneAssessed, taCorretto]);
 
   // Specchio in ref: il gestore del worker si aggancia una volta sola, e l'ago si può cambiare
   // in seduta — senza questo continuerebbe a usare quello scelto all'avvio.
@@ -5498,7 +5323,7 @@ export default function App() {
       mirrorCycle.reset(); setMirrorArmed(false); setMirrorDisp({ contactQ: 0, dischargeQ: 0, locked: false, reached: false, valueR: 0 });
       setMirrorSession({ count: 0, erased: 0, sumV: 0 });
       mirrorCyclesRef.current = []; mirrorCurRef.current = null; mStartedRef.current = 0; mDoneRef.current = 0;
-      toneCyclesRef.current = []; toneNRef.current = 0;
+      tone.resetTone(); toneCyclesRef.current = [];
       mirrorVoiceModeRef.current = false; mirrorAwaitItemRef.current = false; mirrorLogCursorRef.current = 0;
       setAssessActive(false); setAssessSession([]); assessCyclesRef.current = []; assessNRef.current = 0; assessPrevAtRef.current = -Infinity;
       shownReadsRef.current = [];   // trace des réactions montrées : repart à zéro
