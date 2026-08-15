@@ -4,6 +4,7 @@ import {
   toneMargin, withMargin, TONE_MARGIN_NO_TEST, MAX_TESTS, pcKey,
   taToTwoCans, TA_MARGIN_SOLO_NO_TEST,
   emptyCompare, soloTaOffset, compareReady, MAX_SOLO_OFFSET,
+  offsetDrift, MIN_OFFSET_CHANGE,
 } from '../canTest';
 
 const GIORNO = 86_400_000;
@@ -258,5 +259,36 @@ describe('la PROVA DOPPIA — due lattine, poi una, e la differenza', () => {
     expect(letto.basis).toBe('solo-measured');
     expect(letto.ta).toBeCloseTo(3.1, 10);
     expect(letto.margin).toBe(0);
+  });
+});
+
+describe('rifare la prova: lo scarto è cambiato?', () => {
+  it('la PRIMA volta non c è deriva — non c era niente con cui confrontarsi', () => {
+    const d = offsetDrift(null, -0.9);
+    expect(d.prima).toBeNull();
+    expect(d.deriva).toBeNull();
+    expect(d.cambiato).toBe(false);
+  });
+
+  it('uno zero memorizzato vale « mai misurato », non « misurato e uguale a zero »', () => {
+    expect(offsetDrift(0, -0.9).prima).toBeNull();
+  });
+
+  it('rifatta, dice di QUANTO è cambiato', () => {
+    const d = offsetDrift(-0.95, -0.80);
+    expect(d.deriva).toBeCloseTo(0.15, 10);
+    expect(d.cambiato).toBe(true);
+  });
+
+  it('sotto un decimo di TA NON è un cambiamento: è il rumore della misura', () => {
+    // Se no lo si segnalerebbe ogni volta, cioè non lo si segnalerebbe mai.
+    expect(offsetDrift(-0.95, -0.92).cambiato).toBe(false);
+    expect(offsetDrift(-0.95, -0.85).cambiato).toBe(true);   // esattamente 0,10 conta
+    expect(MIN_OFFSET_CHANGE).toBe(0.1);
+  });
+
+  it('vale nei due versi', () => {
+    expect(offsetDrift(-0.5, -0.9).cambiato).toBe(true);
+    expect(offsetDrift(-0.9, -0.5).cambiato).toBe(true);
   });
 });

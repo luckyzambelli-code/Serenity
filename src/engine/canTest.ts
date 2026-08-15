@@ -321,3 +321,37 @@ export function soloTaOffset(c: CanCompare): number | null {
 /** Tutte e due le letture ci sono? Serve a sapere quando mostrare il confronto. */
 export const compareReady = (c: CanCompare): boolean =>
   c.taTwo !== null && c.taSolo !== null;
+
+/**
+ * LO SCARTO È CAMBIATO dall'ultima volta?
+ *
+ * La prova doppia si rifà a ogni seduta — la pelle non è quella di ieri, e la presa nemmeno.
+ * Rifarla serve a poco se non si vede il confronto con quel che si era misurato prima: è la
+ * DERIVA il dato interessante, non il numero nuovo da solo.
+ *
+ * Sotto un decimo di TA non si parla di cambiamento: è il rumore della misura, e chiamarlo
+ * « cambiato » vorrebbe dire farlo notare ogni volta, cioè non farlo notare mai.
+ */
+export const MIN_OFFSET_CHANGE = 0.1;
+
+export interface OffsetDrift {
+  /** Lo scarto memorizzato prima di questa prova. `null` = mai misurato. */
+  prima: number | null;
+  /** Quello appena misurato. */
+  ora: number;
+  /** Di quanto è cambiato. `null` quando non c'era niente con cui confrontarsi. */
+  deriva: number | null;
+  /** Vale la pena dirlo? */
+  cambiato: boolean;
+}
+
+export function offsetDrift(prima: number | null, ora: number): OffsetDrift {
+  if (prima === null || prima === 0 || !Number.isFinite(prima)) {
+    return { prima: null, ora, deriva: null, cambiato: false };
+  }
+  const deriva = ora - prima;
+  // ⚠️ CON UNA TOLLERANZA, e serve davvero: −0,85 meno −0,95 dà 0,09999999999999998 in virgola
+  // mobile, e un confronto secco scartava come « rumore » uno scarto che vale ESATTAMENTE la
+  // soglia. Due valori distanti quanto la soglia devono superarla.
+  return { prima, ora, deriva, cambiato: Math.abs(deriva) >= MIN_OFFSET_CHANGE - 1e-9 };
+}
