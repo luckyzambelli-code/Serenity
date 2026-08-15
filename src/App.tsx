@@ -107,6 +107,7 @@ import {
 } from './engine/canTest';
 import { CycleHint } from './components/CycleHint';
 import { CycleSteps } from './components/CycleSteps';
+import { useSessionJournal } from './session/useSessionJournal';
 import { useToneCycle } from './session/useToneCycle';
 import { useMirrorCycle } from './session/useMirrorCycle';
 import { useContactNullCycle, type CycleTick } from './session/useContactNullCycle';
@@ -180,9 +181,11 @@ export default function App() {
   /** Crédits (clic sur le logo Alternative Scientology). */
   const [showCredits, setShowCredits] = useState(false);
 
-  const INITIAL_LOGS: LogEntry[] = [
-    { time: 0, speaker: 'SYS', text: t('sys_init') }
-  ];
+  // ── IL GIORNALE, FUORI DA QUI ───────────────────────────────────────────────────────────
+  // Ultimo pezzo della fase 1. Le due vie per scrivere — subito, o dal cuscinetto a 500 ms per
+  // chi gira nel worker EEG — stanno in `session/useSessionJournal`, coi nomi di sempre.
+  const journal = useSessionJournal(t('sys_init') as string);
+  const { logs, setLogs, logsRef, logBufferRef, addLog } = journal;
 
   const [sessionState, setSessionState] = useState<SessionState>('idle');
   // PHASE-A: `time` now lives in `sessionClock` (drift-free, derived from
@@ -201,10 +204,6 @@ export default function App() {
   const [sessionEndTime, setSessionEndTime] = useState<Date | null>(null);
   // FIX cleanup: dropped `[data, setData]` — write-only state, no consumer.
   // Full-resolution history still lives in sessionHistoryRef (used by report).
-  const [logs, setLogs] = useState<LogEntry[]>(INITIAL_LOGS);
-  // Specchio in ref: la ricerca « questa parola è già stata detta? » parte da una callback
-  // stabile, che senza questo leggerebbe la trascrizione com'era a inizio seduta.
-  const logsRef = useRef<LogEntry[]>(INITIAL_LOGS); logsRef.current = logs;
   // STALE-CLOSURE FIX: the worker onmessage handler is created ONCE (deps []),
   // so reading state there would capture the FIRST render's value forever — e.g.
   // `t` (journal entries froze in the boot language) and `epWindowOpen` (the
@@ -482,7 +481,6 @@ export default function App() {
   const [sessionObjective, setSessionObjective] = useState('');
   
   // Buffer per evitare crash -2 con dati ad alta frequenza
-  const logBufferRef = useRef<LogEntry[]>([]);
   const [sessionProcessObjective, setSessionProcessObjective] = useState('');
   const [sessionPhysicalCheck, setSessionPhysicalCheck] = useState('');
   const [sessionBriefing, setSessionBriefing] = useState('');
@@ -1382,7 +1380,7 @@ export default function App() {
   const logSttOnce = useCallback((key: string, text: string, type: 'normal' | 'success' | 'highlight') => {
     if (sttMsgLoggedRef.current.has(key)) return;
     sttMsgLoggedRef.current.add(key);
-    setLogs(prev => [...prev, { time: 0, speaker: 'SYS', text, type }]);
+    journal.addSysLine(text, type);
   }, []);
   // Session data sinks (chart / reactions / metrics / qL / needle-offset trail /
   // CSV) → engine/SessionRecorder (SessionEngine slice 3).
@@ -2419,7 +2417,7 @@ export default function App() {
         // unavailable → fall back to the offline Whisper engine. Previously only
         // 'network' triggered the fallback, so other codes left the STT muted.
         if (event.error === 'not-allowed' || event.error === 'audio-capture') {
-          setLogs(prev => [...prev, { time: 0, speaker: 'SYS', text: t('log_mic_denied') as string || 'Microphone refusé — reconnaissance vocale désactivée.', type: 'highlight' }]);
+          journal.addSysLine((t('log_mic_denied') as string) || 'Microphone refusé — reconnaissance vocale désactivée.', 'highlight');
           recognitionRef.current = null;
         } else {
           // Cloud Web Speech unavailable → switch to the offline Whisper engine.
@@ -2675,21 +2673,6 @@ export default function App() {
     }
     return () => { if (interval) clearInterval(interval); };
   }, [museConnection, appMode, remoteMuseStreaming]);
-
-  // Timer di svuotamento del buffer per evitare crash -2
-  useEffect(() => {
-    const flushInterval = setInterval(() => {
-      if (logBufferRef.current.length > 0) {
-        // FIX M-05: drain the buffer atomically BEFORE the functional update.
-        // The previous order (spread, then reassign) lost any entries pushed
-        // by other async paths between the spread and `= []`.
-        const drained = logBufferRef.current.splice(0);
-        setLogs(prevLogs => [...prevLogs, ...drained]);
-      }
-    }, 500);
-
-    return () => clearInterval(flushInterval);
-  }, [sessionState, museConnection]);
 
   useEffect(() => {
     if (sessionState === 'running') {
@@ -3103,16 +3086,6 @@ export default function App() {
     quitAfterSaveRef.current = false;
     try { void corpusFlushNow(); } catch (_) { /* l'archivio non deve impedire l'uscita */ }
     try { (window as any).electronAPI?.confirmClose?.(); } catch (_) {}
-  }, []);
-
-  const addLog = useCallback((entry: Omit<LogEntry, 'time'> & { time?: number }) => {
-    const newEntry = {
-      ...entry,
-      time: entry.time ?? Date.now() / 1000
-    };
-    
-    // Utiliser (prev) => [...] est CRUCIAL pour ne pas perdre de données
-    setLogs((prev) => [...prev, newEntry]);
   }, []);
 
   // ── ASSESSMENT capture : quand le mode est actif, CHAQUE nouvelle parole de l'auditeur ('Aud')
@@ -5044,11 +5017,8 @@ export default function App() {
       needleEngine.reset(); // PHASE-A: full physics reset (cancels RAF, snaps to SET, clears timers)
       virtualNeedle.reset(); needleVirtualRef.current = []; // hidden classifier spring + history
       activeKickRef.current = null; if (kickFlybackRef.current) { clearTimeout(kickFlybackRef.current); kickFlybackRef.current = null; }
-      setLogs([
-        { time: 0, speaker: 'SYS', text: t('sys_start') as string },
-        // Le transcript vocal est maintenant AFFICHÉ aussi en SOLO (choix utilisateur : c'est
-        // mieux). Plus de note « PDF-only ».
-      ]);
+      // Il transcript vocale si mostra anche in SOLO (scelta utente): niente più nota « solo PDF ».
+      journal.resetJournal(t('sys_start') as string);
       setDisplayMass(0);
       massAccumulator.current = 0;
       tickRef.current = 0;
