@@ -222,5 +222,7 @@ export class MirrorCycle {
   }
 }
 
-/** Singleton — un cycle MIRROR par pipeline de session. */
-export const mirrorCycle = new MirrorCycle();
+// ⚠️ IL SINGLETON NON C'È PIÙ. Era `export const mirrorCycle = new MirrorCycle()`: una sola
+// istanza per tutta la vita della pagina. Adesso il ciclo se ne costruisce una sua in
+// `session/useMirrorCycle` — due interfacce nello stesso processo non devono spartirsi
+// l'ambiente e lo storico della carica.

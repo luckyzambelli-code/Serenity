@@ -96,7 +96,6 @@ import { metricsStore, useMetric } from './store/metricsStore';
 import { velocityTracker } from './engine/VelocityTracker';
 import { taAccumulator } from './engine/TaAccumulator';
 import { calibFeatures } from './engine/CalibFeatures';
-import { mirrorCycle, mirrorReading } from './engine/MirrorCycle';
 import { MirrorDial } from './components/MirrorDial';
 import { ToneDial } from './components/ToneDial';
 import { ToneColumn } from './components/ToneColumn';
@@ -109,20 +108,15 @@ import {
 import { CycleHint } from './components/CycleHint';
 import { CycleSteps } from './components/CycleSteps';
 import { useToneCycle } from './session/useToneCycle';
-import {
-  TONE_TARGET, toneFromTa, toneFromDelta, ToneLocator,
-  reachedTop,
-  type TonePhase, type ToneLocateAnchor, type ToneWitness,
-} from './engine/toneScale';
-import { TA_MAX } from './engine/thetaTaScale';
+import { useMirrorCycle } from './session/useMirrorCycle';
+// Del motore del TONE all'interfaccia resta il solo bersaglio, che si SCRIVE (« → +40 »).
+// Il calcolo — conversioni, locatore, testimoni — è passato tutto in `session/useToneCycle`.
+import { TONE_TARGET } from './engine/toneScale';
 import { MODE_SPEC, availableModes, fallbackMode, cycleIsAutomatic, type SessionMode } from './engine/sessionMode';
 import { deriveCyclePhase, phaseFamily } from './engine/sessionPhase';
 import { LAYER } from './ui/layers';
 import { motion } from 'framer-motion';
 import { useUiModeStore } from './store/uiModeStore';
-/** Un solo locatore per l'app, come `mirrorCycle`: tiene gli ultimi secondi fuori da React,
- *  perché il gestore del worker gira a 60 Hz e non deve far ridisegnare nulla per accumulare. */
-const toneLocator = new ToneLocator();
 import { nullCycleStateMachine, type NullStateId } from './engine/NullCycleStateMachine';
 import { clearReadDetector } from './engine/ClearReadDetector';
 import { falseAsIsDetector } from './engine/FalseAsIsDetector';
@@ -269,26 +263,11 @@ export default function App() {
     : mode === 'tone' ? 'tone'
     : showTrailPref ? 'needle' : 'needle_pure';
   const viewModeRef = useRef(viewMode); viewModeRef.current = viewMode;
-  // MIRROR (méthode de Ron : « double the instant charge to erase it ») — 3e vue, chose À PART.
-  const [mirrorArmed, setMirrorArmed] = useState(false);
-  const mirrorArmedRef = useRef(false); mirrorArmedRef.current = mirrorArmed;
-  const [mirrorDisp, setMirrorDisp] = useState({ contactQ: 0, dischargeQ: 0, locked: false, reached: false, valueR: 0 });
-  // TOTAL DE SÉANCE (point d de Ron/utilisateur) — compteur SÉPARÉ (la somme déborde de 1–10) :
-  // nb d'items, nb effacés, et Σ des valeurs effectives (son double = valeur doublée totale).
-  const [mirrorSession, setMirrorSession] = useState({ count: 0, erased: 0, sumV: 0 });
-  // ── ENREGISTREMENT des cycles MIRROR pour le rapport/PDF (famille SÉPARÉE de CONTACT et NULL,
-  //    demande utilisateur : « come ciclo a parte sotto CONTACT, NULL, e dunque MIRROR »). Lecture
-  //    directe : READ = pic rencontré (1–10), DOUBLE = total présent (2–20), F/N = revenu à float. ──
-  interface MirrorRecord { n: number; question: string; tStartSec: number; tEndSec: number;
-    readInst: number; readDouble: number; erased: boolean; }
-  const mirrorCyclesRef = useRef<MirrorRecord[]>([]);
-  const mirrorCurRef = useRef<{ n: number; question: string; tStartSec: number } | null>(null);
-  const mStartedRef = useRef(0), mDoneRef = useRef(0);   // cycle MIRROR armés / effacés (F/N)
-  /** MIRROR — ITEM À LA VOIX : champ vide à l'aggancio → on inscrit ce que l'auditeur DIT comme
-   *  item, et on ré-ancre la mesure de charge à cet instant (= charge INSTANTANÉE de cet item). */
-  const mirrorVoiceModeRef = useRef(false);   // ce cycle attend/attendait un item dicté
-  const mirrorAwaitItemRef = useRef(false);   // capture en cours
-  const mirrorLogCursorRef = useRef(0);       // index de logs déjà consommés
+  // MIRROR (metodo di Ron: « double the instant charge to erase it ») — 3ª vista, cosa A PARTE.
+  // Lo stato e i gesti stanno in `session/useMirrorCycle`, come per il TONE. Qui resta solo il
+  // ref che alimenta il motore dal worker EEG: quel gestore si aggancia una volta sola, prima
+  // che il hook esista.
+  const trackMirrorRef = useRef<(q: number, nowSec: number, pushUi: boolean) => void>(() => {});
   // Idem per i cicli CONTACT/NULL: premuto col campo vuoto, la prima parola diventa l'item.
   const cycleAwaitItemRef = useRef(false);
   const cycleLogCursorRef = useRef(0);
@@ -1227,56 +1206,6 @@ export default function App() {
    *  (demande utilisateur — aucune bascule automatique) :
    *    • 'charge' (bouton START) → CONTACT → DISCHARGE → AS-IS
    *    • 'null'   (bouton NULL)  → NULL → RISE → EQUILIBRIUM (mock-up, VGI's) */
-  /** MIRROR (méthode de Ron) — AGGANCIO : on donne l'item, le cycle du double démarre. Chose à
-   *  part : ni CONTACT ni NULL. Le pic du read = charge instantanée, la cible = son double. */
-  const armMirror = () => {
-    mirrorCycle.arm(timeRef.current);
-    setMirrorArmed(true);
-    setItemSpoken(false);
-    setMirrorDisp({ contactQ: 0, dischargeQ: 0, locked: false, reached: false, valueR: 0 });
-    const n = ++mStartedRef.current;
-    mirrorCurRef.current = { n, question: auditingQuestion.trim(), tStartSec: timeRef.current };
-    // ITEM À LA VOIX : si le champ est VIDE, on inscrit ce que l'auditeur va DIRE comme item,
-    // et on RÉ-ANCRE la mesure à cet instant → la valeur est la CHARGE INSTANTANÉE de cet item.
-    mirrorVoiceModeRef.current = !auditingQuestion.trim();
-    mirrorAwaitItemRef.current = mirrorVoiceModeRef.current;
-    mirrorLogCursorRef.current = logs.length;   // ne capter QUE ce qui est dit APRÈS l'appui
-    logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
-      text: `◎ ${LC('MIRROR — item dato · corri fino al doppio', 'MIRROR — item donné · fais tourner jusqu\'au double', 'MIRROR — item given · run to the double', 'MIRROR — ítem dado · corre hasta el doble', 'MIRROR — item givet · kör till dubbeln')} ${auditingQuestion.trim() ? '· ' + auditingQuestion.trim() : ''}`, type: 'normal' });
-  };
-  const stopMirror = () => {
-    const erased = mirrorCycle.reached;   // cible (le double) atteinte = OBTENU
-    // Enregistrer l'item (valeur effective, double, effacé) + l'AJOUTER au TOTAL DE SÉANCE (point d).
-    const cur = mirrorCurRef.current;
-    if (cur) {
-      const readInst = mirrorCycle.valueR;                           // valore 1-10 RELATIVO all'ambiente
-      // DIAGNOSTICA per la taratura: i numeri veri di questa macchina/persona nel journal.
-      logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
-        text: `MIRROR contact: amb ${mirrorCycle.baselineQ.toFixed(2)} pic ${mirrorCycle.contactQ.toFixed(2)} (x${(mirrorCycle.contactQ / Math.max(mirrorCycle.baselineQ, 0.05)).toFixed(2)}) -> ${readInst.toFixed(1)}/10${mirrorCycle.peakAgeS > 0.15 ? ` · ${LC('picco preso', 'pic pris', 'peak taken', 'pico tomado', 'topp tagen')} ${mirrorCycle.peakAgeS.toFixed(1)}s ${LC('PRIMA dell\'item', 'AVANT l\'item', 'BEFORE the item', 'ANTES del ítem', 'FÖRE item')}` : ''}`,
-        type: 'normal' });
-      if (readInst > 0.1 || erased) {
-        mirrorCyclesRef.current.push({ n: cur.n, question: cur.question, tStartSec: cur.tStartSec, tEndSec: timeRef.current,
-          readInst, readDouble: 2 * readInst, erased });
-        if (erased) mDoneRef.current++;
-        // Compteur de séance : Σ des valeurs effectives (son double = valeur doublée totale).
-        setMirrorSession(prev => ({ count: prev.count + 1, erased: prev.erased + (erased ? 1 : 0), sumV: prev.sumV + readInst }));
-      }
-    }
-    mirrorCurRef.current = null;
-    mirrorCycle.disarm();
-    setMirrorArmed(false);
-    // Item DICTÉ → on vide le champ pour que l'item SUIVANT soit à nouveau capté à la voix.
-    if (mirrorVoiceModeRef.current) setAuditingQuestion('');
-    setItemSpoken(false);
-    mirrorVoiceModeRef.current = false;
-    mirrorAwaitItemRef.current = false;
-    logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
-      text: erased
-        ? `✓ MIRROR — ${LC('OTTENUTO (doppio raggiunto)', 'OBTENU (double atteint)', 'OBTAINED (double reached)', 'OBTENIDO (doble alcanzado)', 'UPPNÅTT (dubbeln nådd)')}`
-        : `◎ MIRROR — ${LC('validato senza raggiungere il doppio', 'validé sans atteindre le double', 'validated without reaching the double', 'validado sin alcanzar el doble', 'validerad utan att nå dubbeln')}`,
-      type: erased ? 'success' : 'normal' });
-  };
-
   // ── R&I — SOLO GLI ITEM CHE L'AUDITOR SCRIVE ───────────────────────────────────────────
   // Le reazioni di seduta aprivano una riga da validare ciascuna. In una seduta sono decine:
   // la vista MANUALE si riempiva di « DISSOLUZIONE · Tick » e l'auditor non ci trovava più
@@ -2109,13 +2038,10 @@ export default function App() {
         }
         // ── CYCLE MIRROR (méthode de Ron) — vue à part, « DOUBLE POUR EFFACER » par item : valeur
         // effective = pic ; on efface quand le smaltito cumulé = 2× la valeur effective.
+        // L'AMBIENTE si misura sempre (anche senza item): è il riferimento del valore relativo.
+        // Il resto — aggancio, blocco del valore, smaltito — lo sa il ciclo, non l'interfaccia.
         if (viewModeRef.current === 'mirror') {
-          // l'AMBIENTE si misura sempre (anche senza item): è il riferimento del valore relativo
-          mirrorCycle.track(_validSignal ? qL : 0, timeRef.current);
-        }
-        if (viewModeRef.current === 'mirror' && mirrorArmedRef.current) {
-          mirrorCycle.update(_validSignal ? qL : 0, timeRef.current);
-          if (pushUi) setMirrorDisp({ contactQ: mirrorCycle.contactQ, dischargeQ: mirrorCycle.dischargeQ, locked: mirrorCycle.locked, reached: mirrorCycle.reached, valueR: mirrorCycle.valueR });
+          trackMirrorRef.current(_validSignal ? qL : 0, timeRef.current, pushUi);
         }
         // ── TONE SCALE : on tient les dernières secondes du TON et de la CHARGE ────────────
         // L'instant du clic sur LOCALISER est le pire des trois (voir ToneLocator) : il faut
@@ -3493,14 +3419,7 @@ export default function App() {
     for (let i = cursor; i < logs.length; i++) {
       const e = logs[i];
       if (e.speaker === 'Aud' && isAssessableItem(e.text)) {   // même filtre : pas un « ok » comme item
-        const txt = e.text.trim();
-        mirrorAwaitItemRef.current = false;
-        setAuditingQuestion(txt);                                   // l'item s'affiche dans le champ
-        if (mirrorCurRef.current) mirrorCurRef.current.question = txt;
-        mirrorCycle.arm(timeRef.current);                                          // ré-ancrage = charge INSTANTANÉE
-        setMirrorDisp({ contactQ: 0, dischargeQ: 0, locked: false, reached: false, valueR: 0 });
-        logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
-          text: `◎ MIRROR — ${LC('item', 'item', 'item', 'ítem', 'item')} · ${txt}`, type: 'normal' });
+        mirrorItemDettato(e.text.trim());   // riancoraggio compreso — lo fa il ciclo
         break;
       }
     }
@@ -4579,6 +4498,28 @@ export default function App() {
   } = tone;
   const toneAnchor = tone.toneAnchor;
 
+  /**
+   * ── E IL CICLO MIRROR, ALLO STESSO MODO ─────────────────────────────────────────────────
+   * Secondo pezzo estratto. Stesso patto del TONE: nomi identici, JSX invariato — e il motore
+   * `MirrorCycle` non è più un singleton di modulo ma appartiene al ciclo.
+   */
+  const mirror = useMirrorCycle({
+    auditingQuestion, setAuditingQuestion,
+    setItemSpoken,
+    nowSec: () => timeRef.current,
+    logLength: () => logsRef.current.length,
+    log: (text, type) => logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE', text, type }),
+    LC,
+  });
+  trackMirrorRef.current = mirror.trackMirror;
+  const {
+    mirrorCycle, mirrorArmed, mirrorDisp, setMirrorDisp, mirrorSession,
+    armMirror, stopMirror,
+    mirrorCyclesRef, mirrorCurRef, mirrorArmedRef,
+    mirrorAwaitItemRef, mirrorLogCursorRef,
+  } = mirror;
+  const mirrorItemDettato = mirror.itemDettato;
+
   // ⚠️ QUI L'ASSESSMENT SI ACCENDEVA DA SÉ nelle fasi « positivo o negativo? » e « quante
   // divisioni? », che ERANO un assessment. Quelle fasi non ci sono più: i comandi di Ron sono
   // due, e nessuno dei due si conduce enunciando risposte da far reagire. Il modulo si accende
@@ -5320,11 +5261,8 @@ export default function App() {
       setDeltaStar(lagMeter.getDeltaStar()); setDeltaStarN(0); setDeltaTrend(0);
       setDeltaBaseline(lagMeter.getBaseline()); setDeltaAdaptive(0); gammaEmaRef.current = 0;
       falseAsIsDetector.reset(); setAsIsFalse(false);
-      mirrorCycle.reset(); setMirrorArmed(false); setMirrorDisp({ contactQ: 0, dischargeQ: 0, locked: false, reached: false, valueR: 0 });
-      setMirrorSession({ count: 0, erased: 0, sumV: 0 });
-      mirrorCyclesRef.current = []; mirrorCurRef.current = null; mStartedRef.current = 0; mDoneRef.current = 0;
+      mirror.resetMirror();
       tone.resetTone(); toneCyclesRef.current = [];
-      mirrorVoiceModeRef.current = false; mirrorAwaitItemRef.current = false; mirrorLogCursorRef.current = 0;
       setAssessActive(false); setAssessSession([]); assessCyclesRef.current = []; assessNRef.current = 0; assessPrevAtRef.current = -Infinity;
       shownReadsRef.current = [];   // trace des réactions montrées : repart à zéro
       assessTimesRef.current = [];
