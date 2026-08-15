@@ -57,7 +57,6 @@ import { AlertTriangle, BookOpen, Headphones, Power, Play, Mic, Square, Clipboar
 import { cn } from './lib/utils';
 import { useI18n } from './i18n.tsx';
 import { Language } from './i18n';
-import { MuseClient } from 'muse-js';
 import NestWorker from './workers/nestEngine?worker';
 // O2 (optimization): PostSessionReport (~1.5k lines, pulls in jsPDF) and HistoryModal
 // are only shown on demand (showReport / showHistoryModal), so they are LAZY-loaded —
@@ -108,6 +107,7 @@ import {
 import { CycleHint } from './components/CycleHint';
 import { CycleSteps } from './components/CycleSteps';
 import { useSessionJournal } from './session/useSessionJournal';
+import { useMuseConnection } from './hooks/useMuseConnection';
 import { useToneCycle } from './session/useToneCycle';
 import { useMirrorCycle } from './session/useMirrorCycle';
 import { useContactNullCycle, type CycleTick } from './session/useContactNullCycle';
@@ -594,33 +594,6 @@ export default function App() {
     if (isSoloSession) setPcSex(activeProfile?.sex);
   }, [isSoloSession, activeProfile?.sex, setPcSex]);
 
-  // Muse connection state
-  const [museConnection, setMuseConnection] = useState<'disconnected' | 'searching' | 'connected'>('disconnected');
-  // Has the MUSE connected at least once this app run? Drives the badge wording:
-  // never connected → "CONNECT", after a drop → "RECONNECT" (was always "RECONNECT").
-  const [museEverConnected, setMuseEverConnected] = useState(false);
-  // MUSE PERDU EN SÉANCE : il s'est déconnecté et ne revient pas. La reconnexion est SILENCIEUSE
-  // (tentatives auto), donc on laisse un DÉLAI DE GRÂCE avant de crier — sinon on alarmerait sur
-  // un simple hoquet BLE. Passé ce délai on l'affiche devant l'arc des réactions (demande
-  // utilisateur : « affinché l'auditor lo veda »).
-  const MUSE_LOST_GRACE_MS = 10000;
-  const [museLostLong, setMuseLostLong] = useState(false);
-  useEffect(() => {
-    const lost = museConnection !== 'connected' && museEverConnected;
-    if (!lost) { setMuseLostLong(false); return; }
-    const t0 = Date.now();
-    setMuseLostLong(false);
-    const id = setInterval(() => {
-      if (Date.now() - t0 >= MUSE_LOST_GRACE_MS) setMuseLostLong(true);
-    }, 1000);
-    return () => clearInterval(id);
-  }, [museConnection, museEverConnected]);
-  useEffect(() => { if (museConnection === 'connected') setMuseEverConnected(true); }, [museConnection]);
-  // FIX #4: timestamp of the last LOCAL Muse EEG sample. A watchdog uses it to
-  // self-correct the badge: if data is flowing, the headset IS connected (the
-  // status sometimes got stuck at 'disconnected' after a failed silent reconnect
-  // even though EEG resumed).
-  const lastLocalEegAtRef = useRef(0);
   // FIX MUSE-REMOTE: auditor heartbeat — timestamp of the last RAW_EEG actually RECEIVED
   // from the preclear over the network. Lets the auditor tell "MUSE really streaming into
   // this session" from "MUSE connected to another program / not forwarding" (frozen needle).
@@ -628,12 +601,6 @@ export default function App() {
   // DIAGNOSTIC séance à distance : a-t-on VU au moins un paquet EEG du préclair sur ce lien ?
   // (log unique par connexion → dit si les données traversent réellement le canal P2P.)
   const remoteEegSeenRef = useRef(false);
-  // DIAGNOSTIC côté PRÉCLAIR : le MUSE produit-il vraiment de l'EEG AF7 (envoyé à l'auditeur) ?
-  const af7StreamLoggedRef = useRef(false);
-  // À DISTANCE : électrode EEG à TRANSMETTRE à l'auditeur. AF7 (1) par défaut, mais si le front
-  // n'a pas de contact (AF7 plat/saturé) on bascule sur le meilleur électrode plausible, sinon
-  // l'auditeur n'a AUCUN signal EEG (l'aiguille ne bouge pas — seuls PPG/BPM + Gyro passent).
-  const bestEegElectrodeRef = useRef(1);
   const [remoteMuseStreaming, setRemoteMuseStreaming] = useState(false);
   const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
   // #2: on Android Chrome, SpeechRecognition.start() is blocked unless it is
@@ -687,67 +654,6 @@ export default function App() {
   // flottanti). È il gate "vero": senza contatto NON c'è attività EEG reale.
   const [museContact, setMuseContact] = useState(false);
 
-  // MUSE status self-correction from real data — BIDIRECTIONAL:
-  //  • upgrade: data flowing but badge stale on 'disconnected' → 'connected';
-  //  • downgrade: badge says 'connected' but no EEG samples for >6 s → 'disconnected'
-  //    (silent BLE death: battery, out of range, driver freeze — muse-js' own disconnect
-  //    event doesn't always fire, so the badge would otherwise lie forever).
-  // Only acts in local/satellite mode where lastLocalEegAtRef is authoritative; in
-  // network-PC mode the auditor reads the remote PC's badge instead.
-  useEffect(() => {
-    const id = setInterval(() => {
-      // FIX MUSE-REMOTE: also runs in PARTICIPANT mode. Previously only local/satellite
-      // self-corrected, so a preclear whose headset was silently dead or held by another
-      // Equilibrium instance kept broadcasting "connected" → auditor saw a frozen needle
-      // under a green "MUSE ✓". Now the participant downgrades on real data-flow loss and
-      // tells the auditor the truth.
-      const isParticipant = appMode === 'participant';
-      if (appMode !== 'local' && !satelliteMode && !isParticipant) return;
-      const age = Date.now() - lastLocalEegAtRef.current;
-      const alive = age < 3000 && lastLocalEegAtRef.current > 0;
-      if (age < 3000 && museConnection !== 'connected') setMuseConnection('connected');
-      else if (age > 6000 && museConnection === 'connected' && lastLocalEegAtRef.current > 0) {
-        // Real data was flowing once (lastLocalEegAtRef > 0) and now stopped — flag it.
-        setMuseConnection('disconnected');
-        setBatteryLevel(null);
-        if (isParticipant) {
-          // Tell the auditor the headset actually stopped streaming (truthful badge).
-          try { networkManager.send({ type: 'MUSE_STATUS', connected: false }, true); } catch (_) {}
-        }
-        addLog({ time: timeRef.current, speaker: 'SYS',
-          text: (t('log_muse_link_lost') as string) || '⊘ MUSE link lost (no data 6 s)', type: 'highlight' });
-      }
-      // HEARTBEAT MUSE-REMOTE : le préclair RE-diffuse périodiquement son vrai statut MUSE
-      // « connecté » tant que des données arrivent. L'envoi unique au moment du connect peut
-      // être raté par l'auditeur (join tardif, ou reconnexion qui remet remoteMuseConnected=false)
-      // → sans ce battement, l'auditeur reste bloqué sur « MUSE : non » alors que le PC est
-      // bien connecté et streame. Message minuscule sur le canal fiable → convergence rapide.
-      if (isParticipant && alive) {
-        try { networkManager.send({ type: 'MUSE_STATUS', connected: true }, true); } catch (_) {}
-      }
-      // À DISTANCE : choisir l'électrode EEG à transmettre = un électrode dont le RMS est dans la
-      // bande physiologique plausible. On PRÉFÈRE AF7 (1) tant qu'il est bon ; s'il est plat
-      // (<2 : pas de contact) ou saturé (>320 : flottement), on bascule sur le meilleur des 4.
-      if (isParticipant) {
-        const rmsOf = (ch: number): number => {
-          const s = eegBuffer.current[ch] || [];
-          if (s.length < 32) return -1;
-          const win = s.slice(-128);
-          let acc = 0; for (let k = 0; k < win.length; k++) acc += win[k] * win[k];
-          return Math.sqrt(acc / win.length);
-        };
-        const plausible = (r: number) => r >= 2 && r <= 320;
-        const af7 = rmsOf(1);
-        if (plausible(af7)) bestEegElectrodeRef.current = 1;
-        else {
-          let bestCh = -1, bestRms = 0;
-          for (let ch = 0; ch < 4; ch++) { const r = rmsOf(ch); if (plausible(r) && r > bestRms) { bestRms = r; bestCh = ch; } }
-          if (bestCh >= 0) bestEegElectrodeRef.current = bestCh;
-        }
-      }
-    }, 1500);
-    return () => clearInterval(id);
-  }, [appMode, satelliteMode, museConnection, t]);
 
   // FIX MUSE-REMOTE (auditor): the preclear's MUSE is only "streaming into this session"
   // when its status is connected AND fresh EEG is actually arriving over the network. If
@@ -1440,34 +1346,39 @@ export default function App() {
   // Last reaction logged to the session journal (prevents spam)
   const lastLoggedReactionRef = useRef<{ reaction: string; t: number } | null>(null);
 
-  const museClientRef = useRef<MuseClient | null>(null);
-  const eegSubscriptionRef = useRef<any>(null);
-  const telemetrySubscriptionRef = useRef<any>(null);
-  // CONN-105: ALL data-stream subscriptions (eeg/ppg/acc/gyro/telemetry) so we
-  // can tear them down and re-wire on a silent reconnect (muse-js re-acquires
-  // fresh GATT characteristics; without re-subscribing, data never resumes →
-  // "connected" but frozen needle).
-  const museSubsRef = useRef<any[]>([]);
-  // FIX C-02/C-03: token bumped on every connect/disconnect call.
-  // Async tasks (connect/start, silent-reconnect setTimeouts) capture the value
-  // at start and bail out if it no longer matches when they resume.
-  const museTokenRef = useRef(0);
-  // FIX C-03: track pending Muse silent-reconnect timeouts so we can cancel them
-  const museReconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // FIX MUSE-RC: keep our own handle on the paired BluetoothDevice. muse-js drops
-  // its internal `gatt` (→ null) on `gattserverdisconnected`, and calling
-  // client.connect() with no arg re-runs navigator.bluetooth.requestDevice(),
-  // which REQUIRES a user gesture — impossible inside a reconnect setTimeout, so
-  // silent reconnect always failed. With the device retained we can call
-  // device.gatt.connect() ourselves (allowed without a gesture on an
-  // already-granted device) and then hand the live GATT to client.connect(gatt).
-  const museDeviceRef = useRef<any>(null);
   // Stable ref for the participant's full-screen auditor video
   const participantVideoRef = useRef<HTMLVideoElement>(null);
 
   // Real EEG Data Buffers
   const eegBuffer = useRef<{ [channel: number]: number[] }>({ 0: [], 1: [], 2: [], 3: [] });
   const gyroBuffer = useRef<{ x: number[]; y: number[]; z: number[] }>({ x: [], y: [], z: [] });
+
+  /**
+   * ── LA CUFFIA, FUORI DA QUI ─────────────────────────────────────────────────────────────
+   * Fase 2. Il protocollo Bluetooth, il ricablaggio dei flussi, la riconnessione silenziosa e
+   * la sorveglianza che corregge il badge dai dati veri stanno in `hooks/useMuseConnection`,
+   * accanto a `useThetaMeter` — l'e-meter aveva già il suo modulo, la cuffia no.
+   *
+   * ⚠️ È il pezzo che questa macchina NON PUÒ PROVARE: ogni riga gira solo con un MUSE
+   * appaiato. Punto di ritorno: l'etichetta `serenity-fase1`.
+   */
+  const muse = useMuseConnection({
+    eegBuffer, gyroBuffer, eegBatchRef, ppgBatchRef, gyroBatchRef,
+    postToWorker: (msg) => workerRef.current?.postMessage(msg),
+    appMode: () => appModeRef.current,
+    satelliteMode: () => satelliteModeRef.current,
+    sessionRunning: () => sessionStateRef.current === 'running',
+    nowSec: () => timeRef.current,
+    uiTime: () => sessionClock.getWholeSeconds(),
+    addLog: (e) => addLog(e as any),
+    tr: (key) => t(key as never) as string,
+    setBatteryLevel,
+    pauseOnLoss: () => setSessionState(prev => prev === 'running' ? 'paused' : prev),
+  });
+  const {
+    museConnection, setMuseConnection, museEverConnected, museLostLong,
+    handleConnectMuse, museClientRef, lastLocalEegAtRef, bestEegElectrodeRef,
+  } = muse;
   // PHASE-A: refs collapsed into runtime engines / hook-managed refs.
   //   • needleInMotionRef → needleEngine.isInMotion
   //   • needleOffsetRef   → needleEngine.pos
@@ -2716,317 +2627,6 @@ export default function App() {
   // dispositivo che non trasmette possono restare APPESI per sempre ("searching" infinito, badge
   // che mente, riconnessione impossibile). Ogni attesa Bluetooth è ora limitata nel tempo, e
   // l'annullamento pulisce anche la callback pendente nel processo main (ble-cancel).
-  const MUSE_CONNECT_TIMEOUT_MS = 20000;   // ricerca+connessione iniziale
-  const MUSE_GATT_TIMEOUT_MS = 4000;       // singolo tentativo di riconnessione silenziosa
-  const withTimeout = <T,>(pr: Promise<T>, ms: number, label: string): Promise<T> =>
-    Promise.race([pr, new Promise<never>((_, rej) => setTimeout(() => rej(new Error(label)), ms))]);
-  const bleCancel = () => { try { (window as any).electronAPI?.bleCancel?.(); } catch (_) {} };
-
-  const handleConnectMuse = async (): Promise<boolean> => {
-    if (museConnection === 'searching') {
-      // Annulation explicite de la recherche en cours
-      // FIX C-02/C-03: bump token to invalidate any in-flight connect()/start()
-      // promises and cancel any pending silent-reconnect timeouts.
-      museTokenRef.current++;
-      if (museReconnectTimerRef.current) {
-        clearTimeout(museReconnectTimerRef.current);
-        museReconnectTimerRef.current = null;
-      }
-      if (museClientRef.current) {
-        try { museClientRef.current.disconnect(); } catch (_) {}
-        museClientRef.current = null;
-      }
-      bleCancel();   // risolve la richiesta Bluetooth pendente nel main (altrimenti resta appesa)
-      setMuseConnection('disconnected');
-      addLog({ time, speaker: 'SYS', text: '⊘ Recherche MUSE annulée.' });
-      return false;
-    }
-    if (museConnection === 'connected') {
-      // FIX C-03: cancel silent reconnect loop when user explicitly disconnects
-      museTokenRef.current++;
-      if (museReconnectTimerRef.current) {
-        clearTimeout(museReconnectTimerRef.current);
-        museReconnectTimerRef.current = null;
-      }
-      if (museClientRef.current) {
-        try { museClientRef.current.disconnect(); } catch (_) {}
-        museClientRef.current = null;
-      }
-      // CONN-105: tear down the data-stream subscriptions on explicit disconnect
-      museSubsRef.current.forEach(s => { try { s.unsubscribe(); } catch (_) {} });
-      museSubsRef.current = [];
-      museDeviceRef.current = null; // FIX MUSE-RC: drop retained device on explicit disconnect
-      setMuseConnection('disconnected');
-      return false;
-    }
-
-    // FIX C-02: capture token at start; abort if it changes during async work
-    museTokenRef.current++;
-    const token = museTokenRef.current;
-
-    setMuseConnection('searching');
-    addLog({ time, speaker: 'SYS', text: '> muselsl stream --ppg --acc --gyro' });
-    addLog({ time, speaker: 'SYS', text: t('log_searching') as string });
-
-    if (!navigator.bluetooth) {
-      addLog({ time, speaker: 'SYS', text: t('log_error_bt') as string, type: 'highlight' });
-      setMuseConnection('disconnected');
-      return false;
-    }
-
-    try {
-      const client = new MuseClient();
-      client.enablePpg = true;
-      client.enableAux = true;
-      museClientRef.current = client;
-
-      await withTimeout(client.connect(), MUSE_CONNECT_TIMEOUT_MS, 'MUSE connect timeout');
-      await withTimeout(client.start(), MUSE_CONNECT_TIMEOUT_MS, 'MUSE start timeout');
-
-      // FIX C-02: bail out if the user cancelled during await
-      if (token !== museTokenRef.current) {
-        try { client.disconnect(); } catch (_) {}
-        return false;
-      }
-
-      // FIX MUSE-RC: retain the paired device so silent reconnect can re-open the
-      // GATT without a user gesture (see museDeviceRef declaration).
-      museDeviceRef.current = (client as any).gatt?.device ?? null;
-
-      addLog({ time, speaker: 'SYS', text: (t('log_found') as string).replace('{name}', client.deviceName || 'Muse') });
-      
-      setMuseConnection('connected');
-      addLog({ time, speaker: 'SYS', text: t('log_connected') as string });
-      addLog({ time, speaker: 'SYS', text: t('log_streaming_eeg') as string });
-      addLog({ time, speaker: 'SYS', text: t('log_streaming_ppg') as string });
-      addLog({ time, speaker: 'SYS', text: t('log_streaming_acc') as string });
-      addLog({ time, speaker: 'SYS', text: t('log_streaming_gyro') as string, type: 'success' });
-
-      // FIX CONN-19: explicitly broadcast Muse status to the auditor instead
-      // of relying on the connectionStatus.subscribe path. The ReplaySubject
-      // emission can race with the relay setup or be missed if the relay
-      // wasn't yet connected at subscribe time. A direct send here, plus the
-      // queued bufferable send() guarantees the auditor sees the latest status.
-      if (appModeRef.current === 'participant') {
-        networkManager.send({ type: 'MUSE_STATUS', connected: true }, true);
-        af7StreamLoggedRef.current = false; // ré-armer le diagnostic AF7 pour cette connexion MUSE
-      }
-      
-      const pushCsv = (type: string, ...data: any[]) => {
-        if (sessionStateRef.current === 'running') {
-          sessionRecorder.pushCsv(`${timeRef.current.toFixed(3)},${type},${data.join(',')}`);
-        }
-      };
-
-      // CONN-105: wire ALL data streams as a re-callable unit. On a silent
-      // reconnect muse-js re-acquires fresh GATT characteristics, so the old
-      // subscriptions stop receiving — we must tear them down and re-subscribe,
-      // otherwise the device reads "connected" but no data flows (frozen needle).
-      const wireStreams = (client: MuseClient) => {
-      // Tear down any previous subscriptions first (avoid duplicate handlers)
-      museSubsRef.current.forEach(s => { try { s.unsubscribe(); } catch (_) {} });
-      museSubsRef.current = [];
-      // Subscribe to EEG data
-      eegSubscriptionRef.current = client.eegReadings.subscribe(reading => {
-        // Data Router: use ref so mode changes after Muse connect are respected
-        // LOCAL / SATELLITE : Muse câblé DIRECTEMENT sur ce Mac → on alimente le worker local
-        // avec AF7 (électrode 1), comme avant. Le téléphone n'envoie pas d'EEG dans ce mode.
-        if (reading.electrode === 1 && (appModeRef.current === 'local' || satelliteModeRef.current)) {
-          lastLocalEegAtRef.current = Date.now(); // FIX #4: local Muse is alive
-          workerRef.current?.postMessage({ type: 'RAW_EEG', payload: reading.samples });
-        } else if (appModeRef.current === 'participant' && reading.electrode === bestEegElectrodeRef.current) {
-          // À DISTANCE : on transmet le MEILLEUR électrode EEG (AF7 par défaut ; bascule
-          // automatiquement si le front n'a pas de contact — AF7 plat/saturé). Sans ça
-          // l'auditeur ne recevait qu'un EEG PLAT → aiguille figée (seuls PPG/BPM + Gyro passaient).
-          lastLocalEegAtRef.current = Date.now();
-          eegBatchRef.current.push({ ts: timeRef.current, s: reading.samples });
-          if (!af7StreamLoggedRef.current) {
-            af7StreamLoggedRef.current = true;
-            addLog({ time: timeRef.current, speaker: 'SYS', text: `✅ MUSE : EEG capté (électrode ${bestEegElectrodeRef.current}) — envoi à l'auditeur`, type: 'success' });
-          }
-        }
-        
-        // Store for visualization
-        if (reading.electrode >= 0 && reading.electrode <= 3) {
-          eegBuffer.current[reading.electrode].push(...reading.samples);
-          // Keep only last 256 samples (approx 1 second)
-          if (eegBuffer.current[reading.electrode].length > 256) {
-            eegBuffer.current[reading.electrode] = eegBuffer.current[reading.electrode].slice(-256);
-          }
-        }
-
-        if (sessionStateRef.current === 'running') {
-          pushCsv('EEG', reading.electrode, ...reading.samples);
-        }
-      });
-
-      // Subscribe to PPG data
-      const ppgSub = client.ppgReadings.subscribe(reading => {
-        // FIX CONN-55: the Muse 2 streams THREE PPG channels (0=ambient,
-        // 1=infrared, 2=red). Only the INFRARED channel carries a clean
-        // pulse waveform for heart-rate. Previously all three were interleaved
-        // into the BPM buffer → corrupted signal + bogus BPM. Feed the worker
-        // (and the relay batch) with the infrared channel ONLY.
-        const isHrChannel = reading.ppgChannel === 1;
-        // Data Router: instrada dati PPG basato sulla modalità
-        if (isHrChannel) {
-          if (appModeRef.current === 'local' || satelliteModeRef.current) {
-            workerRef.current?.postMessage({ type: 'RAW_PPG', payload: reading.samples });
-          } else if (appModeRef.current === 'participant') {
-            // Accumulate in batch buffer with session-time timestamp
-            ppgBatchRef.current.push({ ts: timeRef.current, s: reading.samples });
-          }
-        }
-        // In auditor mode, PPG arrives from networkManager
-
-        if (sessionStateRef.current === 'running') {
-          pushCsv('PPG', reading.ppgChannel, ...reading.samples);
-        }
-      });
-
-      // Subscribe to Accelerometer
-      const accSub = client.accelerometerData.subscribe(reading => {
-        if (sessionStateRef.current === 'running') {
-          reading.samples.forEach(sample => {
-            pushCsv('ACC', sample.x, sample.y, sample.z);
-          });
-        }
-      });
-
-      // Subscribe to Gyroscope
-      const gyroSub = client.gyroscopeData.subscribe(reading => {
-        reading.samples.forEach(sample => {
-          gyroBuffer.current.x.push(sample.x);
-          gyroBuffer.current.y.push(sample.y);
-          gyroBuffer.current.z.push(sample.z);
-          if (gyroBuffer.current.x.length > 256) gyroBuffer.current.x = gyroBuffer.current.x.slice(-256);
-          if (gyroBuffer.current.y.length > 256) gyroBuffer.current.y = gyroBuffer.current.y.slice(-256);
-          if (gyroBuffer.current.z.length > 256) gyroBuffer.current.z = gyroBuffer.current.z.slice(-256);
-        });
-        // O4: RAW_GYRO post to the worker removed (worker never handled it). The
-        // gyroBuffer above still feeds HealthPanel's GyroRadar, and the batch below
-        // still streams gyro to the auditor (CONN-30).
-        // FIX CONN-30: accumulate gyro for transmission to the auditor.
-        if (appModeRef.current === 'participant') {
-          for (const sample of reading.samples) {
-            gyroBatchRef.current.push({ x: sample.x, y: sample.y, z: sample.z });
-          }
-        }
-        if (sessionStateRef.current === 'running') {
-          reading.samples.forEach(sample => pushCsv('GYRO', sample.x, sample.y, sample.z));
-        }
-      });
-
-      // Subscribe to Telemetry
-      telemetrySubscriptionRef.current = client.telemetryData.subscribe(telemetry => {
-        setBatteryLevel(telemetry.batteryLevel);
-        // Transmit battery to auditor — use ref so mode changes are respected
-        if (appModeRef.current === 'participant') {
-          networkManager.send({ type: 'BATTERY', level: telemetry.batteryLevel }, true);
-        }
-      });
-
-      // Track all subscriptions so a reconnect can tear them down + re-wire
-      museSubsRef.current = [
-        eegSubscriptionRef.current, ppgSub, accSub, gyroSub, telemetrySubscriptionRef.current,
-      ];
-      };
-
-      // Initial wiring of the data streams
-      wireStreams(client);
-
-      client.connectionStatus.subscribe(status => {
-        // Transmit Muse status to auditor — use ref so mode changes are respected
-        if (appModeRef.current === 'participant') {
-          networkManager.send({ type: 'MUSE_STATUS', connected: !!status }, true);
-        }
-        if (!status) {
-          // ── Silent Reconnect Protocol ──────────────────────────────────────
-          // GATT dropped: on tente la reconnexion silencieuse pendant 30s
-          // sans toucher à la session ni aux données accumulées
-          let reconnectAttempts = 0;
-          const MAX_ATTEMPTS = 6;
-          const ATTEMPT_INTERVAL = 5000; // 5s entre chaque tentative
-
-          // Il badge non deve MENTIRE: durante la riconnessione silenziosa lo stato è 'searching'
-          // (prima restava 'connected' su un GATT morto, e il bottone faceva la cosa sbagliata).
-          setMuseConnection('searching');
-          addLog({ time: timeRef.current, speaker: 'SYS',
-            text: (t('log_muse_signal_lost') as string) || '⚠ MUSE signal lost — reconnexion silencieuse…', type: 'highlight' });
-
-          // FIX C-03: capture token so any in-flight reconnect aborts when
-          // the user explicitly disconnects or starts a new connection.
-          const reconnectToken = token;
-
-          const tryReconnect = async () => {
-            if (reconnectToken !== museTokenRef.current) return; // cancelled
-            reconnectAttempts++;
-            try {
-              // FIX MUSE-RC: re-open the GATT ourselves on the retained device.
-              // muse-js nulled its own `gatt` on disconnect, and connect() with no
-              // arg would pop the device chooser (needs a user gesture → fails in
-              // this timer). Re-establishing the GATT first, then passing it to
-              // connect(gatt), reconnects silently to the already-paired Muse.
-              const dev = museDeviceRef.current;
-              if (!dev || !dev.gatt) throw new Error('no retained Muse device');
-              // gatt.connect() su un device che non trasmette può PENDERE per sempre → timeout,
-              // e prima di riprovare si ABORTISCE il tentativo pendente (disconnect).
-              let server;
-              try {
-                server = await withTimeout(dev.gatt.connect(), MUSE_GATT_TIMEOUT_MS, 'gatt timeout');
-              } catch (e) {
-                try { dev.gatt.disconnect(); } catch (_) {}
-                throw e;
-              }
-              await withTimeout(client.connect(server), MUSE_GATT_TIMEOUT_MS, 'muse connect timeout');
-              await withTimeout(client.start(), MUSE_GATT_TIMEOUT_MS, 'muse start timeout');
-              if (reconnectToken !== museTokenRef.current) {
-                try { client.disconnect(); } catch (_) {}
-                return;
-              }
-              // CONN-105: re-wire the data streams. muse-js re-acquires fresh
-              // GATT characteristics on reconnect, so the previous subscriptions
-              // no longer receive — without this the needle stays frozen even
-              // though the device reports "connected".
-              wireStreams(client);
-              setMuseConnection('connected');
-              addLog({ time: timeRef.current, speaker: 'SYS',
-                text: ((t('log_muse_reconnected') as string) || '✓ MUSE reconnecté').replace('{n}', String(reconnectAttempts)), type: 'success' });
-            } catch {
-              if (reconnectToken !== museTokenRef.current) return;
-              if (reconnectAttempts < MAX_ATTEMPTS) {
-                museReconnectTimerRef.current = setTimeout(tryReconnect, ATTEMPT_INTERVAL);
-              } else {
-                setMuseConnection('disconnected');
-                setBatteryLevel(null);
-                setSessionState(prev => prev === 'running' ? 'paused' : prev);
-                addLog({ time: timeRef.current, speaker: 'SYS',
-                  text: (t('log_muse_reconnect_failed') as string) || '✗ Reconnexion MUSE échouée — session mise en pause, données préservées.', type: 'highlight' });
-              }
-            }
-          };
-
-          // Premier essai après 5s (grace period Bluetooth)
-          museReconnectTimerRef.current = setTimeout(() => {
-            if (reconnectToken !== museTokenRef.current) return;
-            if (museClientRef.current?.connectionStatus.value === false) {
-              tryReconnect();
-            }
-          }, ATTEMPT_INTERVAL);
-        }
-      });
-
-      return true;
-    } catch (error) {
-      console.warn("Muse connection error:", error);
-      bleCancel();   // il timeout può lasciare una richiesta pendente nel main: si risolve qui
-      if (museClientRef.current) { try { museClientRef.current.disconnect(); } catch (_) {} museClientRef.current = null; }
-      setMuseConnection('disconnected');
-      setBatteryLevel(null);
-      addLog({ time, speaker: 'SYS', text: t('log_not_found') as string, type: 'highlight' });
-      return false;
-    }
-  };
 
   // Session clock — only updates time, EEG data comes exclusively from Muse
   // PHASE-A: session tick is now owned by sessionClock. Each tick, we mirror
@@ -5192,7 +4792,7 @@ export default function App() {
     const pending = pendingTimersRef.current;
     return () => {
       if (kickFlybackRef.current) clearTimeout(kickFlybackRef.current);
-      if (museReconnectTimerRef.current) clearTimeout(museReconnectTimerRef.current);
+      // Il timer della riconnessione MUSE si spegne da sé: sta in `useMuseConnection`.
       if (epWindowTimerRef.current) clearTimeout(epWindowTimerRef.current);
       pending.forEach(id => window.clearTimeout(id));
       pending.clear();

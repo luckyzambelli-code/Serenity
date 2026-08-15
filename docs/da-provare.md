@@ -259,6 +259,27 @@ lì la verifica senza strumenti non arriva.
 Se una di queste non si comporta come prima, è il `trackCycle` estratto: si torna a
 `equilibrium-2.0.134`, dove quel codice stava ancora in `App.tsx`.
 
+### E la fase 2 — la connessione della cuffia
+
+`hooks/useMuseConnection` è uscito da `App.tsx` senza che qui si potesse provarlo: di verificato
+c'è solo il GUSCIO — premere connetti, le due righe d'apertura, la ricerca, e il ramo « nessun
+MUSE trovato » che rimette il badge a posto. Tutto ciò che viene DOPO una connessione riuscita
+non è mai stato eseguito.
+
+- [ ] **connettere la cuffia**: il badge passa a connesso, la batteria compare, l'ago si muove;
+- [ ] **disconnettere col bottone**: si stacca davvero e il badge dice « riconnetti »;
+- [ ] **annullare la ricerca** premendo mentre cerca — ⚠️ è il ramo che ho dovuto correggere:
+      la funzione leggeva lo stato del primo render e non ci sarebbe MAI entrata;
+- [ ] **spegnere la cuffia a seduta aperta**: badge « searching », riconnessione silenziosa, e
+      dopo sei tentativi la seduta va in pausa coi dati salvi;
+- [ ] **riaccenderla**: si riattacca da sé E L'AGO RIPARTE (se resta fermo, è il ricablaggio dei
+      flussi);
+- [ ] **seduta a distanza**: l'auditor vede l'EEG del preclear, e la scelta dell'elettrodo
+      migliore funziona ancora se la fronte non fa contatto.
+
+Se qualcosa qui non va: si torna a `serenity-fase1`, dove la connessione stava ancora in
+`App.tsx` — e questo separa la fase 2 dal `trackCycle` qui sopra.
+
 ---
 
 ## Tarature in attesa di numeri veri
