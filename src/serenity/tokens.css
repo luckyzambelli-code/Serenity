@@ -19,6 +19,16 @@
  * schiarirla darebbe un'applicazione che sembra EQUILIBRIUM malriuscito. SERENITY è un'altra
  * lettura della stessa seduta, e parte dalla sua superficie.
  *
+ * ── E IL TEMA SCURO, LO STESSO LINGUAGGIO SU UN FONDO DIVERSO ───────────────────────────────
+ * Prima versione di questo file: nessun tema scuro, per scelta — solo il quadrante (fase 5)
+ * seguiva `isLightTheme`, il resto della superficie restava sempre perla. Segnalato: « le thème
+ * DARK doit être non gris perle, mais dark pour TOUTE l'interface » — giusto, « toutes les
+ * fonctionnalités de EQUILIBRIUM » vale anche qui, e uno switch che scurisce solo l'ago non è
+ * un tema scuro. Sotto, `:root[data-tema="scuro"]` ridefinisce OGNI token — stessa gerarchia,
+ * stessa regola in cima al file (niente accento saturo, niente bordi), fondo scuro invece di
+ * perla. Non i colori di EQUILIBRIUM: una lettura scura di QUESTA tavolozza, non un secondo
+ * travestimento della prima.
+ *
  * ⚠️ Il MOTORE invece è lo stesso, ed è tutto il punto della refonte: qui c'è solo la
  * superficie. Nessun calcolo, nessuna soglia, nessuna decisione di auditing.
  */
@@ -69,9 +79,46 @@
   --s-mono:  ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 }
 
-/* ⚠️ NESSUN TEMA SCURO, ed è una scelta, non una dimenticanza. SERENITY È la superficie
-   chiara: un suo tema scuro sarebbe EQUILIBRIUM, che esiste già ed è lì per chi lo preferisce.
-   Due applicazioni, due letture — non due sfumature della stessa. */
+/*
+ * IL TEMA SCURO — stessi nomi, stessa gerarchia, fondo scuro.
+ *
+ * `data-tema` (non `isLightTheme` letto due volte) è scritto UNA VOLTA su `<html>` da
+ * `Serenity.tsx`, in un `useEffect` che segue la stessa preferenza condivisa con EQUILIBRIUM
+ * (`useUiStore().isLightTheme`) — qui la si legge come attributo, non come prop passata a ogni
+ * componente: 30+ punti userebbero altrimenti `isLightTheme ? x : y` invece di `var(--s-x)`,
+ * ed è esattamente la duplicazione che i token esistono per evitare.
+ *
+ * ── LA GERARCHIA SI INVERTE, NON SI INVENTA ───────────────────────────────────────────────
+ * Famiglia « ground » (fondo) e famiglia « ink » (testo) si scambiano il ruolo: dove l'inchiostro
+ * era scuro su un fondo chiaro, ora è chiaro su un fondo scuro. `--s-ground-warm` resta nella
+ * famiglia FONDO anche qui — è per questo che `pillola(true)` in `PannelloProfilo.tsx`
+ * (`background: var(--s-ink)`, `color: var(--s-ground-warm)`) continua a leggersi giusta senza
+ * essere toccata: il bottone pieno resta « inchiostro con sopra il colore del fondo », a
+ * prescindere da quale dei due sia chiaro. I CERCHI restano un RILIEVO sul fondo — qui una
+ * superficie leggermente più CHIARA del fondo (una carta si vede per la luce che prende, in
+ * chiaro come in scuro), mai un bordo.
+ */
+:root[data-tema='scuro'] {
+  --s-ground:      #17181a;
+  --s-ground-warm: #1f2022;
+  --s-veil:        rgba(0, 0, 0, 0.45);
+
+  --s-ink:       #e8e6e1;
+  --s-ink-soft:  #a6a9ac;
+  --s-ink-faint: #74787a;
+  --s-ink-ghost: #45484a;
+
+  --s-disc:        #232427;
+  --s-disc-sunk:   #1c1d1f;
+  --s-shadow:      0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.45);
+  --s-shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.40), 0 16px 44px rgba(0, 0, 0, 0.55);
+
+  /* Stessa tinta dei tre segnali, luminosità alzata — sennò su un fondo scuro si spengono
+     invece di restare « qui », non « ADESSO » (vedi la regola dei tre segnali sopra). */
+  --s-alive:   #8fa0ba;
+  --s-still:   #9db9a7;
+  --s-reserve: #c9ac7c;
+}
 
 * { box-sizing: border-box; }
 

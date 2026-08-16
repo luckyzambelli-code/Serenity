@@ -25,6 +25,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { User, Users } from 'lucide-react';
 import {
   AVVIO_VUOTO, passoCorrente, restano, rispondi, indietro,
   MODO_AUTO, MODO_AUTO_MS, type Avvio as StatoAvvio, type PassoId,
@@ -51,9 +52,18 @@ import { SelettoreLingua, SelettoreTema, linguaValida } from './Impostazioni';
  * hover l'avrebbe resa introvabile allo stesso modo — è per quello che mancava. Il gesto è un
  * bottone SEPARATO da quello che sceglie: toccare il cerchio sceglie la persona, « modifica »
  * apre il suo profilo.
+ *
+ * ── E « ICONA », PER LE SCELTE CHE NON SONO PERSONE ─────────────────────────────────────────
+ * Segnalato: i cerchi di « da solo » e « con un preclear » restavano vuoti — niente foto (non
+ * sono nessuno), niente iniziali (`persona` è falso apposta, per non farli leggere come un
+ * ritratto). Un cerchio vuoto tocca lo stesso, ma non dice nulla finché non si legge la scritta
+ * sotto — mentre una sagoma dice la forma della scelta ancora prima della parola. `icona` è
+ * SOLO questo: una forma, non un colore in più — eredita il grigio di sempre (`--s-ink-soft`),
+ * mai un accento saturo che tirerebbe l'occhio come le altre scritte di questa superficie.
  */
-function Scelta({ etichetta, sotto, foto, persona, onClick, onModifica, dimensione = 116 }: {
+function Scelta({ etichetta, sotto, foto, persona, icona, onClick, onModifica, dimensione = 116 }: {
   etichetta: string; sotto?: string; foto?: string; persona?: boolean;
+  icona?: React.ReactNode;
   onClick: () => void; onModifica?: () => void; dimensione?: number;
 }) {
   const { t } = useI18n();
@@ -83,7 +93,12 @@ function Scelta({ etichetta, sotto, foto, persona, onClick, onModifica, dimensio
             : persona
               ? <span style={{ fontFamily: 'var(--s-serif)', fontSize: dimensione * 0.3,
                                color: 'var(--s-ink-soft)' }}>{iniziali}</span>
-              : null}
+              : icona
+                ? <span style={{
+                    color: 'var(--s-ink-soft)', display: 'flex',
+                    width: dimensione * 0.4, height: dimensione * 0.4,
+                  }}>{icona}</span>
+                : null}
         </div>
         <div style={{ display: 'grid', justifyItems: 'center', gap: 2 }}>
           <span style={{ fontSize: 14, color: 'var(--s-ink)' }}>{etichetta}</span>
@@ -192,8 +207,12 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
         </>;
       case 'chi':
         return <>
-          <Scelta etichetta={t('ser_solo')} sotto={t('ser_solo_sub')} onClick={() => dai('solo')} />
-          <Scelta etichetta={t('ser_with_pc')} onClick={() => dai('preclear')} />
+          <Scelta etichetta={t('ser_solo')} sotto={t('ser_solo_sub')}
+                  icona={<User strokeWidth={1.4} style={{ width: '100%', height: '100%' }} />}
+                  onClick={() => dai('solo')} />
+          <Scelta etichetta={t('ser_with_pc')}
+                  icona={<Users strokeWidth={1.4} style={{ width: '100%', height: '100%' }} />}
+                  onClick={() => dai('preclear')} />
         </>;
       case 'preclear':
         return <>

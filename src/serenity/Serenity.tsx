@@ -49,6 +49,14 @@ export default function Serenity() {
   // fonctionnalités de EQUILIBRIUM ». `isLightTheme` è la stessa chiave che governa
   // `GlassThemeToggle`, stesso `localStorage`: cambiarla qui la cambia anche di là.
   const isLightTheme = useUiStore(s => s.isLightTheme);
+  // ⚠️ SEGNALATO: « le thème DARK doit être... dark pour toute l'interface », non solo il
+  // quadrante. `data-tema` su `<html>` fa scattare `tokens.css`'s `:root[data-tema='scuro']`,
+  // che ridefinisce OGNI colore della superficie — non solo quello del pannello dell'ago.
+  // Un attributo sul documento, non una prop passata a ogni componente: gli oltre trenta punti
+  // che già usano `var(--s-x)` cambiano da soli, senza toccarli uno per uno.
+  useEffect(() => {
+    document.documentElement.dataset.tema = isLightTheme ? 'chiaro' : 'scuro';
+  }, [isLightTheme]);
   const journal = useSessionJournal('SERENITY');
   const [aperta, setAperta] = useState(false);
   const [tempo, setTempo] = useState(0);
