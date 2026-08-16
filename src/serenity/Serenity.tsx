@@ -25,7 +25,8 @@ import { useEffect, useRef, useState } from 'react';
 import { sessionClock } from '../runtime/SessionClock';
 import { useThetaMeter } from '../hooks/useThetaMeter';
 import { SET_OFFSET } from '../engine/dialGeometry';
-import { Ago } from './Ago';
+import { THETA_LABEL_AFTER_MS } from '../engine/tuning';
+import { QuantumSphere } from '../components/QuantumSphere';
 import { useSessionJournal } from '../session/useSessionJournal';
 import { getProfiles, getPcProfiles } from '../lib/storage';
 import { Cerchio } from './Cerchio';
@@ -53,18 +54,21 @@ export default function Serenity() {
    * ── IL METER, LO STESSO ─────────────────────────────────────────────────────────────────
    * `useThetaMeter` è il modulo che EQUILIBRIUM usa da sempre: driver WebHID, modello
    * dell'ago, TA, reazioni, F/N. Qui non si aggiunge NIENTE — si legge e si disegna.
+   *
+   * ── E L'ETICHETTA DELLA REAZIONE, con lo STESSO ciclo di vita ────────────────────────────
+   * `thetaReactionKey` è la copia esatta di come App.tsx alimenta il quadrante: si accende al
+   * verdetto e resta finché l'ago sta ancora scendendo; al verdetto FINALE (`r.final`) si tiene
+   * ancora `THETA_LABEL_AFTER_MS` — il tempo di leggerla — poi si spegne. Stessa costante,
+   * stesso comportamento: è QuantumSphere stesso a leggere questa chiave e a colorarsi.
    */
-  const [vivo, setVivo] = useState(false);
+  const [thetaReactionKey, setThetaReactionKey] = useState('');
   const spegniRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const theta = useThetaMeter({
     nowSec: () => sessionClock.now(),
-    // L'ago « vivo » è l'unico momento in cui il colore compare. Si accende all'inizio del
-    // movimento e si spegne poco DOPO che è rientrato: sparire nell'istante del rientro
-    // toglierebbe la conferma proprio a chi ha alzato gli occhi un attimo tardi.
     onReaction: r => {
-      setVivo(true);
+      setThetaReactionKey(r.key);
       if (spegniRef.current) { clearTimeout(spegniRef.current); spegniRef.current = null; }
-      if (r.final) spegniRef.current = setTimeout(() => setVivo(false), 1200);
+      if (r.final) spegniRef.current = setTimeout(() => setThetaReactionKey(''), THETA_LABEL_AFTER_MS);
     },
   });
   useEffect(() => () => { if (spegniRef.current) clearTimeout(spegniRef.current); }, []);
@@ -138,14 +142,29 @@ export default function Serenity() {
             spento, all'ago di riposo — perché uno strumento che sparisce quando si stacca
             fa credere di averlo perso invece che scollegato. */}
         <Cerchio dimensione={340} viva={aperta}>
-          <div style={{ display: 'grid', justifyItems: 'center', gap: 2 }}>
-            <Ago
-              offset={meterC ? theta.offset : SET_OFFSET}
-              vivo={meterC && vivo}
-              fn={meterC && theta.fn.fn}
-              ta={meterC ? theta.ta : null}
-              larghezza={250}
-            />
+          <div style={{ display: 'grid', justifyItems: 'center', gap: 6 }}>
+            {/* ── IL QUADRANTE È LO STESSO DI EQUILIBRIUM ─────────────────────────────────
+                Non un secondo disegno degli stessi angoli: LO STESSO COMPONENTE, con
+                `forceLightTheme` perché SERENITY è sempre a fondo chiaro senza toccare la
+                preferenza di tema (condivisa con EQUILIBRIUM in localStorage).
+
+                `thetaOffset={null}` quando il meter è scollegato: l'ago allora NON SI
+                DISEGNA, invece di restare fermo su SET a sembrare vero — è la stessa regola
+                che EQUILIBRIUM applica già (vedi il commento sul prop in QuantumSphere). */}
+            <div style={{ width: 250, height: 250 }}>
+              <QuantumSphere
+                needleOffsetProp={SET_OFFSET}
+                thetaOffset={meterC ? theta.offset : null}
+                showEegNeedle={false}
+                targetOffset={null}
+                needleReactionKey={thetaReactionKey}
+                asIsnessState="persist"
+                onClick={theta.resetToSet}
+                showTrail
+                sessionState={aperta ? 'running' : 'idle'}
+                forceLightTheme
+              />
+            </div>
             {/* L'orologio scende sotto l'ago e si fa piccolo: il tempo di seduta si guarda
                 una volta ogni tanto, l'ago in continuazione. */}
             <span style={{

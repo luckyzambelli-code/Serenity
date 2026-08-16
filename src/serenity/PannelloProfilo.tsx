@@ -1,11 +1,16 @@
 /**
- * CREARE UN AUDITOR O UN PRECLEAR — in SERENITY.
+ * CREARE, MODIFICARE, ELIMINARE — un auditor o un preclear, in SERENITY.
  *
- * ── STESSA CREAZIONE, ALTRA SUPERFICIE ──────────────────────────────────────────────────────
+ * ── STESSA LOGICA, ALTRA SUPERFICIE ─────────────────────────────────────────────────────────
  * Il nome, il RITRATTO (dalla camera o da un file, ridotto a 320 px) e il SESSO sono gli stessi
  * campi di EQUILIBRIUM, e passano per le stesse funzioni: `lib/profiloEdit`. Un profilo creato
- * qui è indistinguibile da uno creato di là, si sincronizza allo stesso modo, e compare
- * nell'altra applicazione — è la verifica scritta per la fase 4.
+ * o modificato qui è indistinguibile da uno creato di là, si sincronizza allo stesso modo, e
+ * compare nell'altra applicazione — è la verifica scritta per la fase 4.
+ *
+ * ⚠️ SEGNALATO IN SEDUTA: « on ne peut pas éditer les auditeurs et PC existants ». La prima
+ * versione di questo pannello sapeva solo creare. Adesso lo stesso modulo fa le tre cose che
+ * EQUILIBRIUM fa da sempre in `ProfileRoster` — perché sono la stessa cosa, non due moduli
+ * paralleli che potrebbero divergere su cosa vuol dire « modificare un profilo ».
  *
  * ⚠️ IL SESSO NON È ANAGRAFICA. Decide il TA di clear — 3,0 uomo, 2,0 donna — cioè l'origine
  * della scala del tono di quella persona. Lasciarlo vuoto non è neutro: si ripiega su 2,0, il
@@ -15,21 +20,32 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { fotoDaVideo, fotoDaFile, salvaAuditor, salvaPreclear } from '../lib/profiloEdit';
+import {
+  fotoDaVideo, fotoDaFile, salvaAuditor, salvaPreclear,
+  eliminaAuditor, eliminaPreclear, type DatiProfilo,
+} from '../lib/profiloEdit';
 
 export type Tipo = 'auditor' | 'preclear';
 
-export function NuovoProfilo({ tipo, onFatto, onAnnulla }: {
+export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnulla }: {
   tipo: Tipo;
-  /** Rende l'id del profilo appena scritto. */
+  /** Assente = si crea un profilo nuovo. Presente = si modifica QUESTO. */
+  esistente?: DatiProfilo;
+  /** Rende l'id del profilo scritto (nuovo o modificato). */
   onFatto: (id: string) => void;
+  /** Il profilo È STATO eliminato. */
+  onEliminato: () => void;
   onAnnulla: () => void;
 }) {
-  const [nome, setNome] = useState('');
-  const [foto, setFoto] = useState<string | undefined>();
-  const [sesso, setSesso] = useState<'m' | 'f' | undefined>();
+  const modifica = !!esistente;
+  const [nome, setNome] = useState(esistente?.nome ?? '');
+  const [foto, setFoto] = useState<string | undefined>(esistente?.foto);
+  const [sesso, setSesso] = useState<'m' | 'f' | undefined>(esistente?.sesso);
   const [camera, setCamera] = useState(false);
   const [errore, setErrore] = useState('');
+  /** Eliminare chiede conferma con un secondo tocco, non con una finestra del sistema che
+   *  romperebbe la superficie: si preme una volta e il bottone stesso diventa la domanda. */
+  const [confermaElimina, setConfermaElimina] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const flussoRef = useRef<MediaStream | null>(null);
@@ -43,6 +59,14 @@ export function NuovoProfilo({ tipo, onFatto, onAnnulla }: {
   // La camera si spegne SEMPRE allo smontaggio: una spia accesa dopo che la schermata è
   // sparita è la cosa peggiore che un'applicazione possa lasciarsi dietro.
   useEffect(() => spegniCamera, []);
+  // E riparte da capo se si passa a modificare un'ALTRA persona senza smontare il pannello
+  // (la macchina resta la stessa, cambia solo `esistente`): senza questo, il nome della prima
+  // persona restava scritto sopra quello della seconda.
+  useEffect(() => {
+    setNome(esistente?.nome ?? ''); setFoto(esistente?.foto); setSesso(esistente?.sesso);
+    setErrore(''); setConfermaElimina(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [esistente?.id]);
 
   const accendiCamera = async () => {
     try {
@@ -60,14 +84,22 @@ export function NuovoProfilo({ tipo, onFatto, onAnnulla }: {
   };
 
   const salva = () => {
-    const p = tipo === 'auditor'
-      ? salvaAuditor({ nome, foto, sesso })
-      : salvaPreclear({ nome, foto, sesso });
+    const dati: DatiProfilo = { id: esistente?.id, nome, foto, sesso };
+    const p = tipo === 'auditor' ? salvaAuditor(dati) : salvaPreclear(dati);
     // `null` = nome vuoto. Un profilo senza nome non si ritrova più, e le sedute che gli si
     // appendono restano senza padrone.
     if (!p) { setErrore('serve un nome'); return; }
     spegniCamera();
     onFatto(p.id);
+  };
+
+  const elimina = () => {
+    if (!esistente?.id) return;
+    if (!confermaElimina) { setConfermaElimina(true); return; }
+    // ⚠️ NON tocca le sedute già archiviate di questa persona: restano, col nome che avevano.
+    // Un rapporto già consegnato non si può disfare per un ripensamento sull'anagrafica.
+    (tipo === 'auditor' ? eliminaAuditor : eliminaPreclear)(esistente.id);
+    onEliminato();
   };
 
   const disco: React.CSSProperties = {
@@ -94,7 +126,9 @@ export function NuovoProfilo({ tipo, onFatto, onAnnulla }: {
     <section style={{ height: '100%', display: 'grid', gridTemplateRows: 'auto 1fr auto',
                       alignItems: 'center', gap: 24, justifyItems: 'center' }}>
       <h1 style={{ margin: 0, fontFamily: 'var(--s-serif)', fontWeight: 400, fontSize: 28 }}>
-        {tipo === 'auditor' ? 'Un auditor nuovo' : 'Un preclear nuovo'}
+        {modifica
+          ? `Modifica ${esistente!.nome}`
+          : (tipo === 'auditor' ? 'Un auditor nuovo' : 'Un preclear nuovo')}
       </h1>
 
       <div style={{ display: 'grid', justifyItems: 'center', gap: 22 }}>
@@ -153,6 +187,21 @@ export function NuovoProfilo({ tipo, onFatto, onAnnulla }: {
           fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
         }}>← torna indietro</button>
         <button onClick={salva} style={pillola(true)}>salva</button>
+        {/* ⚠️ ELIMINARE SOLO SU UN PROFILO ESISTENTE, e con la conferma DENTRO il bottone
+            stesso — un secondo tocco, non una finestra di sistema che romperebbe la
+            superficie. Il colore passa alla riserva (ambra) solo quando chiede conferma:
+            non è un rosso d'allarme, è « stai per fare una cosa che non si disfa ». */}
+        {modifica && (
+          <button onClick={elimina} style={{
+            border: 'none', cursor: 'pointer', borderRadius: 999, padding: '8px 20px',
+            fontFamily: 'var(--s-sans)', fontSize: 12.5, letterSpacing: '0.06em',
+            background: confermaElimina ? 'var(--s-reserve)' : 'none',
+            color: confermaElimina ? 'var(--s-ground-warm)' : 'var(--s-ink-faint)',
+            transition: 'background var(--s-slow) var(--s-ease), color var(--s-slow) var(--s-ease)',
+          }}>
+            {confermaElimina ? 'tocca ancora per confermare' : 'elimina'}
+          </button>
+        )}
         {errore && <span style={{ fontSize: 12, color: 'var(--s-reserve)' }}>{errore}</span>}
       </div>
     </section>

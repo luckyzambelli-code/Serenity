@@ -3,14 +3,14 @@ import { pick5 } from '../i18n5';
 import { loadHistory as loadCanTests, daysSince as canDaysSince, scaleFor, soloRatio } from '../engine/canTest';
 import { UserRound, Eye, Plus, Pencil, Star, X, Camera, Upload, Trash2, Check } from 'lucide-react';
 import {
-  UserProfile, getProfiles, getSessions, getSessionsByProfile, deleteProfile,
-  getPcProfiles, deletePcProfile } from '../lib/storage';
+  UserProfile, getProfiles, getSessions, getSessionsByProfile,
+  getPcProfiles } from '../lib/storage';
 // La creazione vera — ritratto ridotto, sesso, salvataggio e spinta al server — sta in
 // `lib/profiloEdit`, condivisa con SERENITY (fase 4 della refonte).
-import { fotoDaVideo, fotoDaFile, salvaAuditor, salvaPreclear } from '../lib/profiloEdit';
+import { fotoDaVideo, fotoDaFile, salvaAuditor, salvaPreclear,
+         eliminaAuditor, eliminaPreclear } from '../lib/profiloEdit';
 import { useProfileStore } from '../store/profileStore';
 import { useUiStore } from '../store/uiStore';
-import { serverDeleteProfile, serverDeletePcProfile } from '../lib/serverStorage';
 import { LAYER } from '../ui/layers';
 
 /**
@@ -127,8 +127,8 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
     }
     closeEdit(); refresh();
   };
-  const removeAuditor = (id: string) => { if (confirm(L('Eliminare questo auditor?', 'Supprimer cet auditeur ?', 'Delete this auditor?', '¿Eliminar este auditor?', 'Ta bort denna auditör?'))) { deleteProfile(id); serverDeleteProfile(id).catch(() => {}); refresh(); } };
-  const removePc = (id: string) => { if (confirm(L('Eliminare questo preclear?', 'Supprimer ce préclair ?', 'Delete this preclear?', '¿Eliminar este preclear?', 'Ta bort denna preclear?'))) { deletePcProfile(id); serverDeletePcProfile(id).catch(() => {}); refresh(); } };
+  const removeAuditor = (id: string) => { if (confirm(L('Eliminare questo auditor?', 'Supprimer cet auditeur ?', 'Delete this auditor?', '¿Eliminar este auditor?', 'Ta bort denna auditör?'))) { eliminaAuditor(id); refresh(); } };
+  const removePc = (id: string) => { if (confirm(L('Eliminare questo preclear?', 'Supprimer ce préclair ?', 'Delete this preclear?', '¿Eliminar este preclear?', 'Ta bort denna preclear?'))) { eliminaPreclear(id); refresh(); } };
 
   // ── styles ────────────────────────────────────────────────────────────────
   // MONOCHROME : plus de bleu (auditeur) ni d'ambre (PC) → tout en verre charcoal + encre

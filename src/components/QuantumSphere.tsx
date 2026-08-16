@@ -27,6 +27,15 @@ interface QuantumSphereProps {
   museConnection?: 'disconnected' | 'searching' | 'connected';
   signalQuality?: number; needleReactionKey?: string; epValidated?: boolean;
   // PHASE-B: isLightTheme prop removed — read from uiStore.
+  /**
+   * ⚠️ SOLO per SERENITY (fase 5 della refonte). `isLightTheme` è una PREFERENZA CONDIVISA
+   * (localStorage `nest_ui_preferences`, la stessa cartella per le due applicazioni): se
+   * SERENITY la cambiasse, cambierebbe anche il tema di EQUILIBRIUM aperto la volta dopo.
+   * SERENITY è però SEMPRE a fondo chiaro — ha bisogno dei colori chiari per contrasto, senza
+   * toccare la preferenza di nessuno. Questo prop FORZA la resa per questo montaggio soltanto;
+   * omesso (il caso di EQUILIBRIUM), il comportamento è quello di sempre: si legge dallo store.
+   */
+  forceLightTheme?: boolean;
   speedValue?: number;
   taValue?: number;
   /** Show colored bands (red/orange/yellow/green) on the dial. Default true. */
@@ -132,9 +141,10 @@ export function QuantumSphere({
   showColorBands = true,
   showTrail = true,
   releaseActive = false,
-  fnMode = 'normal' }: QuantumSphereProps) {
+  fnMode = 'normal', forceLightTheme }: QuantumSphereProps) {
   const { t } = useI18n();
-  const isLightTheme = useUiStore(s => s.isLightTheme);
+  const temaDalloStore = useUiStore(s => s.isLightTheme);
+  const isLightTheme = forceLightTheme ?? temaDalloStore;
   // APERÇU inclus dans isFN → le float (mouvement + couleur/épaisseur F/N) s'active aussi en aperçu,
   // pour régler le style sans MUSE. Un vrai F/N vient de needleReactionKey='reaction_fn'.
   const isFN = (needleReactionKey || '').includes('reaction_fn');

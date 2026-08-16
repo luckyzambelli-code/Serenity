@@ -287,6 +287,34 @@ sta in `lib/profiloEdit`, condivisa: `ProfileRoster` di EQUILIBRIUM ci passa ade
 
 ---
 
+## Da provare col METER — il quadrante di SERENITY è ORA QuantumSphere vero (fase 5, 2/2)
+
+Segnalato: « l'arco dell'ago lo vorrei esattamente come in equilibrium ». Non un secondo
+disegno degli stessi angoli — LO STESSO COMPONENTE (`components/QuantumSphere.tsx`), con un
+nuovo prop `forceLightTheme` che lo rende leggibile sul fondo chiaro di SERENITY senza toccare
+il tema di EQUILIBRIUM (la preferenza è condivisa in localStorage).
+
+- [ ] **fianco a fianco**: la stessa seduta, la stessa reazione, guardata nelle due
+      applicazioni — l'arco, le bande, la scia, le scritte SF/FALL devono essere IDENTICHE;
+- [ ] **F/N**: la resa sul quadrante è quella di sempre (il quadrante ora è lo stesso identico
+      codice, quindi qui il rischio è basso, ma va guardato);
+- [ ] **cambiare tema in EQUILIBRIUM** (chiaro/scuro) e riaprire SERENITY: deve restare chiara
+      SEMPRE — `forceLightTheme` non deve MAI lasciar trapelare il tema scuro.
+
+## Modificare ed eliminare auditor e preclear — anche questo da EQUILIBRIUM
+
+Segnalato: « on ne peut pas éditer les auditeurs et PC existants ». `lib/profiloEdit` ha ora
+anche `eliminaAuditor`/`eliminaPreclear`, e SERENITY mostra « modifica » sotto ogni profilo
+(non solo su hover — segnalato che mancava del tutto, quindi doveva essere ben visibile).
+
+- [ ] **modificare un auditor creato in EQUILIBRIUM, da SERENITY**: la foto e il sesso nuovi
+      si vedono anche riaprendo EQUILIBRIUM;
+- [ ] **eliminare un preclear da SERENITY**: sparisce anche da EQUILIBRIUM, le sue sedute
+      passate RESTANO nell'archivio (non si toccano — verificato a schermo che la logica c'è,
+      da controllare che il rapporto di una vecchia seduta si apra ancora col nome giusto).
+
+---
+
 ## Tarature in attesa di numeri veri
 
 - [ ] **MIRROR retrospezione** — servono i numeri di `MIRROR contact:` dal journal per tarare

@@ -23,7 +23,8 @@ import {
 } from './flussoAvvio';
 import { getProfiles, getPcProfiles } from '../lib/storage';
 import { loadHistory, daysSince, testedToday } from '../engine/canTest';
-import { NuovoProfilo, type Tipo } from './NuovoProfilo';
+import { PannelloProfilo, type Tipo } from './PannelloProfilo';
+import type { DatiProfilo } from '../lib/profiloEdit';
 
 /** Le domande, dette come le direbbe un auditor — non come le scriverebbe un modulo. */
 const DOMANDA: Record<PassoId, string> = {
@@ -43,43 +44,61 @@ const DOMANDA: Record<PassoId, string> = {
  * persone. Una scelta non ha un ritratto: il suo cerchio resta vuoto, e a dire cosa sia è
  * l'etichetta sotto. È coerente col resto: il cerchio si coglie per posizione e dimensione,
  * non si legge.
+ *
+ * ── E « MODIFICA », SEMPRE VISIBILE ─────────────────────────────────────────────────────────
+ * Segnalato: « on ne peut pas éditer les auditeurs et PC existants ». Non è dietro un passaggio
+ * del mouse: EQUILIBRIUM tiene la matita SEMPRE a vista sulla scheda, e nasconderla dietro un
+ * hover l'avrebbe resa introvabile allo stesso modo — è per quello che mancava. Il gesto è un
+ * bottone SEPARATO da quello che sceglie: toccare il cerchio sceglie la persona, « modifica »
+ * apre il suo profilo.
  */
-function Scelta({ etichetta, sotto, foto, persona, onClick, dimensione = 116 }: {
+function Scelta({ etichetta, sotto, foto, persona, onClick, onModifica, dimensione = 116 }: {
   etichetta: string; sotto?: string; foto?: string; persona?: boolean;
-  onClick: () => void; dimensione?: number;
+  onClick: () => void; onModifica?: () => void; dimensione?: number;
 }) {
   const [sopra, setSopra] = useState(false);
   const iniziali = etichetta.trim().split(/\s+/).slice(0, 2).map(p => p[0] ?? '').join('').toUpperCase();
   return (
-    <button
-      onClick={onClick}
+    <div
       onMouseEnter={() => setSopra(true)}
       onMouseLeave={() => setSopra(false)}
-      style={{
-        border: 'none', background: 'none', padding: 0, cursor: 'pointer',
-        display: 'grid', justifyItems: 'center', gap: 12,
-        fontFamily: 'var(--s-sans)',
-      }}>
-      <div style={{
-        width: dimensione, height: dimensione, borderRadius: '50%',
-        display: 'grid', placeItems: 'center', overflow: 'hidden',
-        background: 'var(--s-disc)',
-        boxShadow: sopra ? 'var(--s-shadow-lift)' : 'var(--s-shadow)',
-        transform: sopra ? 'translateY(-2px)' : 'none',
-        transition: 'box-shadow var(--s-slow) var(--s-ease), transform var(--s-slow) var(--s-ease)',
-      }}>
-        {foto
-          ? <img src={foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : persona
-            ? <span style={{ fontFamily: 'var(--s-serif)', fontSize: dimensione * 0.3,
-                             color: 'var(--s-ink-soft)' }}>{iniziali}</span>
-            : null}
-      </div>
-      <div style={{ display: 'grid', justifyItems: 'center', gap: 2 }}>
-        <span style={{ fontSize: 14, color: 'var(--s-ink)' }}>{etichetta}</span>
-        {sotto && <span style={{ fontSize: 11.5, color: 'var(--s-ink-faint)' }}>{sotto}</span>}
-      </div>
-    </button>
+      style={{ display: 'grid', justifyItems: 'center', gap: 8, fontFamily: 'var(--s-sans)' }}>
+      <button
+        onClick={onClick}
+        style={{
+          border: 'none', background: 'none', padding: 0, cursor: 'pointer',
+          display: 'grid', justifyItems: 'center', gap: 12,
+        }}>
+        <div style={{
+          width: dimensione, height: dimensione, borderRadius: '50%',
+          display: 'grid', placeItems: 'center', overflow: 'hidden',
+          background: 'var(--s-disc)',
+          boxShadow: sopra ? 'var(--s-shadow-lift)' : 'var(--s-shadow)',
+          transform: sopra ? 'translateY(-2px)' : 'none',
+          transition: 'box-shadow var(--s-slow) var(--s-ease), transform var(--s-slow) var(--s-ease)',
+        }}>
+          {foto
+            ? <img src={foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : persona
+              ? <span style={{ fontFamily: 'var(--s-serif)', fontSize: dimensione * 0.3,
+                               color: 'var(--s-ink-soft)' }}>{iniziali}</span>
+              : null}
+        </div>
+        <div style={{ display: 'grid', justifyItems: 'center', gap: 2 }}>
+          <span style={{ fontSize: 14, color: 'var(--s-ink)' }}>{etichetta}</span>
+          {sotto && <span style={{ fontSize: 11.5, color: 'var(--s-ink-faint)' }}>{sotto}</span>}
+        </div>
+      </button>
+      {onModifica && (
+        <button onClick={onModifica} style={{
+          border: 'none', background: 'none', cursor: 'pointer', padding: '2px 4px',
+          fontFamily: 'var(--s-sans)', fontSize: 10.5, letterSpacing: '0.04em',
+          color: 'var(--s-ink-faint)',
+        }}>
+          modifica
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -93,9 +112,12 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
     try { return { a: getProfiles(), p: getPcProfiles() }; } catch { return { a: [], p: [] }; }
   };
   const [liste, setListe] = useState(leggi);
-  /** Si sta creando un profilo? È uno stato del DISEGNO, non del flusso: la macchina delle
-   *  domande non deve sapere che esiste un modo di crearne uno. */
-  const [creando, setCreando] = useState<Tipo | null>(null);
+  /**
+   * SI STA CREANDO O MODIFICANDO un profilo? È uno stato del DISEGNO, non del flusso: la
+   * macchina delle domande non deve sapere che esiste un modo di crearne o cambiarne uno.
+   * `esistente` assente = si crea; presente = si modifica QUELLO.
+   */
+  const [pannello, setPannello] = useState<{ tipo: Tipo; esistente?: DatiProfilo } | null>(null);
 
   const dai = (v: string | boolean) => setStato(s => rispondi(s, passoCorrente(s), v));
 
@@ -147,10 +169,12 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
       case 'auditor':
         return <>
           {liste.a.map(p => (
-            <Scelta key={p.id} etichetta={p.name} foto={p.photo} persona onClick={() => dai(p.id)} />
+            <Scelta key={p.id} etichetta={p.name} foto={p.photo} persona onClick={() => dai(p.id)}
+                    onModifica={() => setPannello({ tipo: 'auditor',
+                      esistente: { id: p.id, nome: p.name, foto: p.photo, sesso: p.sex } })} />
           ))}
           <Scelta etichetta="Nuovo" sotto="nome, ritratto, sesso" dimensione={96}
-                  onClick={() => setCreando('auditor')} />
+                  onClick={() => setPannello({ tipo: 'auditor' })} />
         </>;
       case 'chi':
         return <>
@@ -161,10 +185,12 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
         return <>
           {liste.p.map(p => (
             <Scelta key={p.id} etichetta={p.name} foto={p.photo} persona
-                    sotto={lattine(p.name)} onClick={() => dai(p.id)} />
+                    sotto={lattine(p.name)} onClick={() => dai(p.id)}
+                    onModifica={() => setPannello({ tipo: 'preclear',
+                      esistente: { id: p.id, nome: p.name, foto: p.photo, sesso: p.sex } })} />
           ))}
           <Scelta etichetta="Nuovo" sotto="nome, ritratto, sesso" dimensione={96}
-                  onClick={() => setCreando('preclear')} />
+                  onClick={() => setPannello({ tipo: 'preclear' })} />
         </>;
       case 'dove':
         return <>
@@ -183,14 +209,26 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
 
   const quante = restano(stato);
 
-  // Creare un profilo NON è un passo del flusso: è una deviazione. Quando finisce, il profilo
-  // appena fatto è la risposta alla domanda in corso — non si deve sceglierlo un'altra volta.
-  if (creando) {
+  // Creare o modificare un profilo NON è un passo del flusso: è una deviazione.
+  //   • CREARE: il profilo appena fatto è la risposta alla domanda in corso — si sceglie da sé,
+  //     esattamente come premere il suo cerchio. Non farlo vorrebbe dire crearlo e poi
+  //     ritrovarsi comunque davanti alla lista per sceglierlo un'altra volta.
+  //   • MODIFICARE: NON sceglie nessuno. Si può star guardando la lista per scegliere qualcun
+  //     altro, e aver toccato « modifica » solo per correggere una foto — scegliere al posto
+  //     dell'auditor sarebbe decidere una cosa che lui non ha deciso.
+  if (pannello) {
     return (
-      <NuovoProfilo
-        tipo={creando}
-        onAnnulla={() => setCreando(null)}
-        onFatto={id => { setListe(leggi()); setCreando(null); dai(id); }}
+      <PannelloProfilo
+        tipo={pannello.tipo}
+        esistente={pannello.esistente}
+        onAnnulla={() => setPannello(null)}
+        onEliminato={() => { setListe(leggi()); setPannello(null); }}
+        onFatto={id => {
+          setListe(leggi());
+          const eraNuovo = !pannello.esistente;
+          setPannello(null);
+          if (eraNuovo) dai(id);
+        }}
       />
     );
   }

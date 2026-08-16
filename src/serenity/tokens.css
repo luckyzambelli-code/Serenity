@@ -106,3 +106,26 @@ body {
   0%, 100% { transform: scale(1); }
   50%      { transform: scale(1.01); }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   SEI CLASSI, PER UN COMPONENTE CONDIVISO — fase 5.
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   `QuantumSphere` è L'AGO VERO di EQUILIBRIUM, riusato qui perché l'utente lo vuole
+   « esattamente come in EQUILIBRIUM » — non un secondo disegno degli stessi angoli, lo
+   STESSO componente. Il suo contenitore usa sei classi Tailwind (`w-full h-full flex
+   items-center justify-center relative rounded-xl`).
+
+   SERENITY non carica Tailwind: farlo vorrebbe dire importare `index.css` di EQUILIBRIUM
+   intero — duecento righe di stili globali per un tema scuro (colori di scrollbar, sfondi
+   animati, pulsanti «vetro») che non c'entrano nulla con questa superficie, e che potrebbero
+   scontrarsi con le regole qui sopra in modi difficili da prevedere.
+
+   Sei righe, letterali, sono più sicure di un intero framework preso per una sola riga
+   di quel framework. */
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.relative { position: relative; }
+.rounded-xl { border-radius: 0.75rem; }

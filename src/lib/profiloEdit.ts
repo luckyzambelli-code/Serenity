@@ -21,10 +21,12 @@
  */
 
 import {
-  saveProfile, savePcProfile, type UserProfile, type PcProfile,
+  saveProfile, savePcProfile, deleteProfile, deletePcProfile,
+  type UserProfile, type PcProfile,
 } from './storage';
 import {
   isServerAvailable, serverSaveProfiles, serverSavePcProfiles,
+  serverDeleteProfile, serverDeletePcProfile,
 } from './serverStorage';
 
 /** Il lato del quadrato in cui si riduce ogni ritratto, e la qualità del JPEG. Vedi in cima:
@@ -134,4 +136,24 @@ export function salvaPreclear(d: DatiProfilo, precedente?: PcProfile | null): Pc
   savePcProfile(p);
   spingi(p, 'pc');
   return p;
+}
+
+/**
+ * ELIMINARE — in locale e sul server.
+ *
+ * ⚠️ NON tocca le SEDUTE già archiviate di quella persona: restano, col nome che avevano.
+ * Cancellarle insieme al profilo vorrebbe dire perdere il lavoro fatto per un ripensamento
+ * sull'anagrafica — e un rapporto già consegnato non si può disfare.
+ *
+ * La cancellazione sul server non blocca: se non c'è, la copia locale è già sparita e le due
+ * si riallineano al prossimo giro.
+ */
+export function eliminaAuditor(id: string): void {
+  deleteProfile(id);
+  void serverDeleteProfile(id).catch(() => {});
+}
+
+export function eliminaPreclear(id: string): void {
+  deletePcProfile(id);
+  void serverDeletePcProfile(id).catch(() => {});
 }
