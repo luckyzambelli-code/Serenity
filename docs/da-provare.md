@@ -329,6 +329,35 @@ anche `eliminaAuditor`/`eliminaPreclear`, e SERENITY mostra « modifica » sotto
 
 ---
 
+## Seduta a distanza da SERENITY (fase 7) — auditor SERENITY, preclear su EQUILIBRIUM/telefono
+
+`hooks/useRemoteSession.ts` + `serenity/Connessione.tsx`, nuovi: link/tunnel, WebRTC
+video+audio, stato del preclear, lingua della seduta, `SESSION_STATE`. Il preclear apre il
+link sul suo telefono — apre sempre EQUILIBRIUM (`ParticipantView`), MAI SERENITY, per
+costruzione del server. Non ancora cablato: `RAW_EEG`/`RAW_PPG`/`RAW_GYRO` (fase 6).
+
+- [ ] **rispondere « a distanza »**: compare la schermata di connessione con QR + link,
+      copiabile con un tocco;
+- [ ] **il preclear scansiona/apre il link**: arriva su EQUILIBRIUM, non su SERENITY;
+- [ ] **connessione stabilita**: la schermata mostra « preclear connesso », appare il
+      pulsante per proseguire, e proseguendo si arriva al quadrante;
+- [ ] **intestazione durante la seduta**: mostra « preclear connesso · batteria% · MUSE ✓ »
+      (o « MUSE Preclear non connesso » se non ha ancora abbinato il suo Muse);
+- [ ] **la lingua dell'auditor arriva al telefono del preclear** alla connessione;
+- [ ] **aprire la seduta (SERENITY)**: il device del preclear si arma per trascrivere (stesso
+      comportamento di quando l'auditor è su EQUILIBRIUM);
+- [ ] **le parole del preclear compaiono nel giornale di SERENITY** (etichetta PC);
+- [ ] **un blip di rete a metà seduta**: il preclear si riconnette da sé (stesso meccanismo
+      di App.tsx) e la seduta SERENITY non si interrompe — l'auditor non torna alla
+      schermata di connessione;
+- [ ] **« ricomincia » (torna alle domande)**: chiude anche la connessione di rete — un
+      nuovo preclear scelto dopo non deve poter usare il vecchio link ancora aperto;
+- [ ] **fianco a fianco**: la stessa seduta condotta con l'auditor su EQUILIBRIUM e poi con
+      l'auditor su SERENITY (stesso preclear, stesso telefono) deve comportarsi allo stesso
+      modo dal lato del preclear — è la verifica scritta per questa fase.
+
+---
+
 ## Tarature in attesa di numeri veri
 
 - [ ] **MIRROR retrospezione** — servono i numeri di `MIRROR contact:` dal journal per tarare

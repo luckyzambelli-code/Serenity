@@ -34,6 +34,8 @@ import { AVVIO_VUOTO, type Avvio as StatoAvvio } from './flussoAvvio';
 import { useI18n } from '../i18n';
 import { useUiStore } from '../store/uiStore';
 import { SelettoreLingua, SelettoreTema } from './Impostazioni';
+import { useRemoteSession } from '../hooks/useRemoteSession';
+import { Connessione } from './Connessione';
 
 /** mm:ss — l'unico formato di tempo che serve in seduta. */
 const orologio = (s: number) => {
@@ -42,7 +44,7 @@ const orologio = (s: number) => {
 };
 
 export default function Serenity() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   // ⚠️ STESSA PREFERENZA DI EQUILIBRIUM — non uno stato di SERENITY. Segnalato: « toutes les
   // fonctionnalités de EQUILIBRIUM ». `isLightTheme` è la stessa chiave che governa
   // `GlassThemeToggle`, stesso `localStorage`: cambiarla qui la cambia anche di là.
@@ -52,6 +54,14 @@ export default function Serenity() {
   const [tempo, setTempo] = useState(0);
   /** Le quattro risposte dell'avvio. `null` = le domande non sono ancora state fatte. */
   const [avvio, setAvvio] = useState<StatoAvvio | null>(null);
+  /** Si è passati OLTRE la schermata di connessione? Un flag a parte, non `remote.isConnected`
+   *  direttamente: un blip di rete a metà seduta non deve risbattere l'auditor sulla schermata
+   *  del link — la connessione può cadere e riprendersi, la seduta resta aperta lo stesso. */
+  const [collegato, setCollegato] = useState(false);
+  const remote = useRemoteSession({
+    lang,
+    onTrascrizione: testo => journal.addLog({ speaker: 'PC', text: testo, time: sessionClock.now() }),
+  });
 
   // L'orologio è QUELLO DI EQUILIBRIUM: `sessionClock` è un modulo unico, e conta i secondi
   // fuori da React perché il ridisegno non deve poter far perdere un secondo di seduta.
@@ -92,16 +102,26 @@ export default function Serenity() {
   const apri = () => {
     sessionClock.reset(); sessionClock.start();
     journal.resetJournal(t('ser_session_opened'));
+    // Il device del preclear si arma DA QUESTO pacchetto, non da un pulsante che lui preme —
+    // stesso protocollo di App.tsx (`SESSION_STATE`).
+    if (avvio?.distanza) remote.impostaStatoSeduta('running');
     setAperta(true);
   };
   const chiudi = () => {
     sessionClock.end();
     journal.addLog({ speaker: 'SYS', text: t('ser_session_closed'), time: sessionClock.now() });
+    if (avvio?.distanza) remote.impostaStatoSeduta('ended');
     setAperta(false);
   };
   /** Si ricomincia dalle domande. Solo a seduta chiusa: cambiare preclear a metà seduta
-   *  vorrebbe dire attribuire a una persona quel che ha fatto un'altra. */
-  const ricomincia = () => setAvvio(null);
+   *  vorrebbe dire attribuire a una persona quel che ha fatto un'altra. Una seduta a distanza
+   *  si chiude anche sulla rete — altrimenti il link resterebbe aperto per il PROSSIMO preclear
+   *  scelto qui, che non è più chi era dall'altra parte. */
+  const ricomincia = () => {
+    if (avvio?.distanza) remote.disconnetti();
+    setCollegato(false);
+    setAvvio(null);
+  };
 
   // ── LE QUATTRO DOMANDE, PRIMA DI TUTTO ────────────────────────────────────────────────
   // Non è una schermata di benvenuto che si può saltare: senza sapere chi audita e chi si
@@ -110,6 +130,23 @@ export default function Serenity() {
     return (
       <main style={{ height: '100%', padding: '38px 44px' }}>
         <Avvio onPronto={setAvvio} />
+      </main>
+    );
+  }
+
+  // ── LA CONNESSIONE, PRIMA DELLA SEDUTA ────────────────────────────────────────────────────
+  // Risposto « a distanza » a `dove`: non si entra nel campo finché il preclear non si è unito.
+  // Non è un'attesa forzata — è la stessa ragione per cui EQUILIBRIUM tiene `ConnectionModal`
+  // aperto finché isConnected non è vero: cominciare la seduta prima vorrebbe dire un ago che
+  // aspetta dati che ancora non arrivano.
+  if (avvio.distanza && !collegato) {
+    return (
+      <main style={{ height: '100%' }}>
+        <Connessione
+          remote={remote}
+          onAnnulla={ricomincia}
+          onPronti={() => setCollegato(true)}
+        />
       </main>
     );
   }
@@ -141,6 +178,24 @@ export default function Serenity() {
           {nomeAuditor}{avvio.solo ? ` · ${t('ser_alone_tag')}` : ` · ${nomePreclear}`}
           {avvio.distanza ? ` · ${t('ser_remote_tag')}` : ''}{avvio.esperto ? ` · ${t('ser_expert_tag')}` : ''}
         </span>
+        {/* Lo stato della RETE, detto a parole — non un badge colorato che chiama l'occhio: un
+            blip di connessione non è un allarme, è un'informazione da controllare se serve. */}
+        {avvio.distanza && (
+          <span style={{
+            display: 'flex', alignItems: 'center', gap: 7, fontSize: 12,
+            color: remote.isConnected ? 'var(--s-still)' : 'var(--s-reserve)',
+          }}>
+            <span style={{
+              width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+              background: remote.isConnected ? 'var(--s-still)' : 'var(--s-reserve)',
+            }} />
+            {remote.isConnected ? t('conn_badge_auditor_ok') : t('conn_badge_auditor_waiting')}
+            {remote.isConnected && remote.remoteBatteryLevel !== null && ` · ${remote.remoteBatteryLevel}%`}
+            {/* "MUSE ✓" non tradotto: stesso simbolo universale che usa il badge di App.tsx,
+                non una frase — un segno di spunta non ha bisogno delle cinque lingue. */}
+            {remote.isConnected && (remote.remoteMuseConnected ? ' · MUSE ✓' : ` · ${t('conn_muse_preclear_disconnected')}`)}
+          </span>
+        )}
       </header>
 
       {/* ── IL CAMPO ──────────────────────────────────────────────────────────────────────

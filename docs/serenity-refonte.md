@@ -27,8 +27,14 @@ Punti di ritorno, in ordine: `equilibrium-2.0.132` (prima di tutto) →
 | 4 | Il flusso di partenza — auditor → solo/PC → qui/distanza → normale/esperto | ✅ fatta |
 | 5 | Il Meter al centro — stesso arco, stesso ago, **stesse dimensioni** | ✅ fatta |
 | 6 | R-Factor, processo, cicli, giornale, assessment | ⏳ da fare |
-| 7 | Seduta a distanza | ⏳ da fare |
+| 7 | Seduta a distanza — link, stato remoto, video/audio | ✅ fatta¹ |
 | 8 | Fine seduta e rapporto | ⏳ da fare |
+
+¹ Fase 7: `hooks/useRemoteSession` + `serenity/Connessione.tsx` coprono link/tunnel, WebRTC
+video+audio, stato del preclear (batteria, MUSE connesso, qualità segnale), lingua della seduta
+e `SESSION_STATE`. **Non** cablato: `RAW_EEG`/`RAW_PPG`/`RAW_GYRO` — SERENITY non ha ancora un
+ago EEG (fase 5 legge solo il Theta-Meter USB), instradare l'EEG remoto ora sarebbe un tubo
+senza un ago all'arrivo. Si aggancia quando la fase 6 porta la pipeline EEG in SERENITY.
 
 Verifica di ogni fase: la stessa seduta, condotta nelle due applicazioni, deve dare lo
 stesso giornale, lo stesso rapporto, gli stessi test verdi.
@@ -111,3 +117,36 @@ const isLightTheme = useUiStore(s => s.isLightTheme);   // la STESSA preferenza 
 Questo è il modello da ripetere per R-Factor, i pannelli dei quattro cicli,
 l'assessment e tutto il resto delle fasi 6–8: **stesso componente o stessa logica dove
 possibile, stessa taglia sempre, pelle nuova.**
+
+---
+
+## La seduta a distanza (fase 7)
+
+Diverso dalle fasi precedenti: qui non si riusa un componente EQUILIBRIUM travestito, si
+scrive un collante NUOVO (`hooks/useRemoteSession.ts`) — perché è legittimamente nuovo, non
+motore duplicato. La differenza:
+
+- **Il motore è `lib/networkManager`**, un'istanza SINGOLA (non una per applicazione):
+  WebRTC, tunnel Cloudflare, riconnessione del preclear, protocollo via dati. Quello non si
+  tocca, ed è lo stesso per le due applicazioni — non girano mai insieme (un solo
+  `userData`), quindi assegnargli i callback da SERENITY non confligge con App.tsx.
+- **L'orchestrazione (quando chiamare cosa) è per forza diversa**, perché guida un flusso
+  diverso: EQUILIBRIUM apre un `ConnectionModal` sopra la seduta già in corso; SERENITY apre
+  `serenity/Connessione.tsx` come schermata piena, fra le quattro domande dell'avvio e il
+  quadrante — non c'è ancora una seduta da coprire quando ci si sta ancora connettendo.
+  `useRemoteSession` è quella nuova orchestrazione, scritta seguendo lo STESSO protocollo via
+  dati di `App.tsx` (`BATTERY`, `MUSE_STATUS`, `SIGNAL_QUALITY`, `LANG`, `SESSION_STATE`,
+  `TRANSCRIPT`) così che un auditor su SERENITY e un preclear su EQUILIBRIUM (l'unico che il
+  link possa aprire — vedi sotto) si capiscano.
+
+**Il preclear non apre mai SERENITY.** `server-core.cjs` serve `index.html` per qualunque
+richiesta arrivi dal tunnel, indipendentemente da quale applicazione desktop l'auditor ha
+aperto — il link generato porta sempre al `ParticipantView` di EQUILIBRIUM, già collaudato su
+telefono. Questa fase costruisce SOLO il lato dell'auditor: è per questo che non esiste (e non
+deve esistere) un secondo `ParticipantView` dentro `src/serenity/`.
+
+**Quel che resta fuori, di proposito.** `RAW_EEG`/`RAW_PPG`/`RAW_GYRO` non sono cablati: il
+quadrante di SERENITY (fase 5) legge solo il Theta-Meter USB fisico, non ancora un ago EEG —
+quella pipeline (worker, buffer, badge di qualità del segnale) è materia della fase 6.
+Instradare qui l'EEG remoto senza un ago locale che lo mostri sarebbe un tubo che non arriva
+in nessun posto — il preclear continua comunque a inviarlo, resta solo da agganciarlo.
