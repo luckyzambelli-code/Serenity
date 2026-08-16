@@ -20,6 +20,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { UserRound, Eye } from 'lucide-react';
 import {
   fotoDaVideo, fotoDaFile, salvaAuditor, salvaPreclear,
   eliminaAuditor, eliminaPreclear, type DatiProfilo,
@@ -140,7 +141,12 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : foto
               ? <img src={foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <span style={{ fontSize: 11, color: 'var(--s-ink-faint)' }}>{t('ser_no_portrait')}</span>}
+              /* Stessa distinzione del pannello di modifica in `ProfileRoster.tsx`: `Eye` per
+                 l'auditor (chi osserva), `UserRound` per il preclear (la persona) — non
+                 un'icona generica ripetuta identica per i due ruoli. */
+              : (tipo === 'auditor'
+                  ? <Eye strokeWidth={1.4} size={48} style={{ color: 'var(--s-ink-faint)' }} />
+                  : <UserRound strokeWidth={1.4} size={48} style={{ color: 'var(--s-ink-faint)' }} />)}
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>

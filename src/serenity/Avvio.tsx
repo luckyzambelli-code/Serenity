@@ -25,7 +25,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { User, Users } from 'lucide-react';
+import { User, Users, Plus, Wifi, Eye, Wrench, CircleUser } from 'lucide-react';
 import {
   AVVIO_VUOTO, passoCorrente, restano, rispondi, indietro,
   MODO_AUTO, MODO_AUTO_MS, type Avvio as StatoAvvio, type PassoId,
@@ -54,12 +54,19 @@ import { SelettoreLingua, SelettoreTema, linguaValida } from './Impostazioni';
  * apre il suo profilo.
  *
  * ── E « ICONA », PER LE SCELTE CHE NON SONO PERSONE ─────────────────────────────────────────
- * Segnalato: i cerchi di « da solo » e « con un preclear » restavano vuoti — niente foto (non
- * sono nessuno), niente iniziali (`persona` è falso apposta, per non farli leggere come un
- * ritratto). Un cerchio vuoto tocca lo stesso, ma non dice nulla finché non si legge la scritta
- * sotto — mentre una sagoma dice la forma della scelta ancora prima della parola. `icona` è
- * SOLO questo: una forma, non un colore in più — eredita il grigio di sempre (`--s-ink-soft`),
- * mai un accento saturo che tirerebbe l'occhio come le altre scritte di questa superficie.
+ * Segnalato due volte: prima « da solo »/« con un preclear » restavano vuoti, poi tutti gli
+ * altri cerchi senza foto — « nuovo », « qui »/« a distanza », « normale »/« esperto ». Un
+ * cerchio vuoto tocca lo stesso, ma non dice nulla finché non si legge la scritta sotto —
+ * mentre una sagoma dice la forma della scelta ancora prima della parola.
+ *
+ * ⚠️ LE ICONE NON SI INVENTANO QUI: si riprendono da dove EQUILIBRIUM la stessa scelta la
+ * disegna già — stessa funzione, stessa forma, solo lo spessore del tratto (1.4, non il default
+ * di lucide) e il colore (`--s-ink-soft`, mai un accento saturo) cambiano per la lingua visiva
+ * di SERENITY. Da dove viene ciascuna, sotto ai punti in cui si usano: `+` da
+ * `ProfileRoster.tsx` (« nuovo auditor/preclear »), Wifi/Eye da `ModeSelector.tsx` (local/
+ * auditor — lo stesso `appMode` di `qui`/`a distanza`), chiave inglese/persona da
+ * `Sidebar.tsx` (lo stesso interruttore esperto/normale). `icona` resta comunque generico:
+ * una forma, non un colore in più.
  */
 function Scelta({ etichetta, sotto, foto, persona, icona, onClick, onModifica, dimensione = 116 }: {
   etichetta: string; sotto?: string; foto?: string; persona?: boolean;
@@ -203,6 +210,7 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
                       esistente: { id: p.id, nome: p.name, foto: p.photo, sesso: p.sex } })} />
           ))}
           <Scelta etichetta={t('ser_new')} sotto={t('ser_new_sub')} dimensione={96}
+                  icona={<Plus strokeWidth={1.4} style={{ width: '100%', height: '100%' }} />}
                   onClick={() => setPannello({ tipo: 'auditor' })} />
         </>;
       case 'chi':
@@ -223,17 +231,31 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
                       esistente: { id: p.id, nome: p.name, foto: p.photo, sesso: p.sex } })} />
           ))}
           <Scelta etichetta={t('ser_new')} sotto={t('ser_new_sub')} dimensione={96}
+                  icona={<Plus strokeWidth={1.4} style={{ width: '100%', height: '100%' }} />}
                   onClick={() => setPannello({ tipo: 'preclear' })} />
         </>;
       case 'dove':
+        // Wifi/Eye: le stesse icone di `ModeSelector.tsx` per 'local'/'auditor' — la
+        // domanda « qui o a distanza » è esattamente quella scelta, solo binaria (SERENITY
+        // non prende mai il ruolo 'participant').
         return <>
-          <Scelta etichetta={t('ser_here')} sotto={t('ser_here_sub')} onClick={() => dai('qui')} />
-          <Scelta etichetta={t('ser_remote')} sotto={t('ser_remote_sub')} onClick={() => dai('distanza')} />
+          <Scelta etichetta={t('ser_here')} sotto={t('ser_here_sub')}
+                  icona={<Wifi strokeWidth={1.4} style={{ width: '100%', height: '100%' }} />}
+                  onClick={() => dai('qui')} />
+          <Scelta etichetta={t('ser_remote')} sotto={t('ser_remote_sub')}
+                  icona={<Eye strokeWidth={1.4} style={{ width: '100%', height: '100%' }} />}
+                  onClick={() => dai('distanza')} />
         </>;
       case 'modo':
+        // Chiave inglese/persona: le stesse icone del selettore ESPERTO/NORMALE di
+        // `Sidebar.tsx` — « chiave = si tara, persona = si conduce ».
         return <>
-          <Scelta etichetta={t('ser_normal')} sotto={t('ser_normal_sub')} onClick={() => dai('normale')} />
-          <Scelta etichetta={t('ser_expert')} sotto={t('ser_expert_sub')} onClick={() => dai('esperto')} />
+          <Scelta etichetta={t('ser_normal')} sotto={t('ser_normal_sub')}
+                  icona={<CircleUser strokeWidth={1.4} style={{ width: '100%', height: '100%' }} />}
+                  onClick={() => dai('normale')} />
+          <Scelta etichetta={t('ser_expert')} sotto={t('ser_expert_sub')}
+                  icona={<Wrench strokeWidth={1.4} style={{ width: '100%', height: '100%' }} />}
+                  onClick={() => dai('esperto')} />
         </>;
       default:
         return null;
