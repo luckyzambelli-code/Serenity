@@ -49,23 +49,38 @@ export function passoCorrente(a: Avvio): PassoId {
   if (a.auditorId === null) return 'auditor';
   if (a.solo === null) return 'chi';
   if (!a.solo && a.pcId === null) return 'preclear';
-  if (a.distanza === null) return 'dove';
+  // ⚠️ E NEMMENO « QUI O A DISTANZA » ESISTE IN SOLO. Segnalato in seduta: chiedeva se auditor
+  // e preclear fossero nella stessa stanza a chi audita SÉ STESSO. La distanza è una proprietà
+  // del legame fra due persone — senza la seconda, non c'è niente da mettere lontano. È la
+  // stessa ragione per cui si salta il preclear, e me l'ero scordata qui.
+  if (!a.solo && a.distanza === null) return 'dove';
   if (a.esperto === null) return 'modo';
   return 'pronto';
 }
 
 export const pronto = (a: Avvio): boolean => passoCorrente(a) === 'pronto';
 
-/** Quante domande restano — serve al disegno per dire « ci siamo quasi » senza una barra. */
+/**
+ * QUANTE DOMANDE RESTANO — serve al disegno per dire « ci siamo quasi » senza una barra.
+ *
+ * ⚠️ FINCHÉ NON SI SA SE È IN SOLO, SI CONTA IL CAMMINO PIÙ LUNGO. Contando solo le domande
+ * CERTE il numero poteva SALIRE: 3 all'inizio, e 3 di nuovo dopo aver scelto « con un preclear »
+ * che ne aggiunge due. Un conto alla rovescia che sale è peggio di nessun conto — chi lo legge
+ * smette di fidarsene. Così invece scende e basta: 5, 4, poi 1 (solo) oppure 3 (preclear).
+ */
 export function restano(a: Avvio): number {
   let n = 0;
   if (a.auditorId === null) n++;
-  if (a.solo === null) n++;
-  // Il preclear conta solo se lo si sta ancora chiedendo: in SOLO non è una domanda saltata,
-  // è una domanda che non esiste.
-  if (a.solo === false && a.pcId === null) n++;
-  if (a.distanza === null) n++;
   if (a.esperto === null) n++;
+  if (a.solo === null) {
+    n += 1     // « da solo o con un preclear »
+       + 2;    // e le due che quella risposta può ancora aprire
+  } else if (!a.solo) {
+    // Con un preclear, le due domande esistono davvero.
+    if (a.pcId === null) n++;
+    if (a.distanza === null) n++;
+  }
+  // In SOLO non si aggiunge nulla: né il preclear né la distanza sono domande.
   return n;
 }
 
@@ -84,7 +99,13 @@ export function rispondi(a: Avvio, passo: PassoId, valore: string | boolean): Av
       // ⚠️ Passando a SOLO si SCORDA il preclear scelto prima. Se restasse, tornando indietro
       // due volte si finirebbe in seduta SOLO con un preclear appeso — e il rapporto direbbe
       // due persone dove ce n'è una.
-      return { ...a, solo, pcId: solo ? null : a.pcId };
+      //
+      // E la distanza si DECIDE: in SOLO si è per forza dove si è, quindi `false` — chi legge
+      // trova sempre un valore, non un « non chiesto » da interpretare. Tornando invece a
+      // « con un preclear » la si rimette a null, o la domanda resterebbe saltata per sempre.
+      return solo
+        ? { ...a, solo: true, pcId: null, distanza: false }
+        : { ...a, solo: false, distanza: null };
     }
     case 'preclear':
       return { ...a, pcId: String(valore) };
@@ -100,9 +121,11 @@ export function rispondi(a: Avvio, passo: PassoId, valore: string | boolean): Av
 /** TORNA INDIETRO di una domanda: si cancella l'ultima risposta data, non la corrente. */
 export function indietro(a: Avvio): Avvio {
   if (a.esperto !== null) return { ...a, esperto: null };
-  if (a.distanza !== null) return { ...a, distanza: null };
+  // In SOLO la distanza non è mai stata CHIESTA (vale `false` perché è ovvia): tornare indietro
+  // non deve svuotarla, o comparirebbe una domanda che non era stata fatta. Si risale a « chi ».
+  if (!a.solo && a.distanza !== null) return { ...a, distanza: null };
   if (!a.solo && a.pcId !== null) return { ...a, pcId: null };
-  if (a.solo !== null) return { ...a, solo: null, pcId: null };
+  if (a.solo !== null) return { ...a, solo: null, pcId: null, distanza: null };
   if (a.auditorId !== null) return { ...a, auditorId: null };
   return a;
 }

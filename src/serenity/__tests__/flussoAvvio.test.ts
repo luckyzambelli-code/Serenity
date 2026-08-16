@@ -25,19 +25,52 @@ describe('l ordine delle domande', () => {
     expect(pronto(a)).toBe(true);
   });
 
-  it('⚠️ in SOLO la domanda sul preclear NON ESISTE, non è saltata', () => {
-    // In SOLO l'auditor È il preclear: offrirgliene un altro sarebbe offrire uno stato
-    // che non esiste.
+  it('⚠️ in SOLO il preclear E LA DISTANZA non esistono, non sono saltati', () => {
+    // Segnalato in seduta: « quando scegli solo, ti chiede se auditor e PC sono nella stessa
+    // stanza — è il ciclo a distanza, non solo ». In SOLO l'auditor È il preclear: non c'è
+    // nessuno da mettere altrove, e la distanza è una proprietà del legame fra DUE persone.
     const a = con(['auditor', 'a1'], ['chi', 'solo']);
-    expect(passoCorrente(a)).toBe('dove');
-    expect(restano(a)).toBe(2);   // dove, modo — e basta
+    expect(passoCorrente(a)).toBe('modo');   // NON 'preclear' e NON 'dove'
+    expect(restano(a)).toBe(1);              // resta solo il modo
+  });
+
+  it('e in SOLO la distanza vale FALSO, non « non chiesta »', () => {
+    // Chi legge deve trovare un valore, non un null da interpretare: audire sé stessi
+    // avviene per forza dove si è.
+    const a = con(['auditor', 'a1'], ['chi', 'solo']);
+    expect(a.distanza).toBe(false);
+  });
+
+  it('in SOLO si apre la seduta con DUE risposte', () => {
+    const a = con(['auditor', 'a1'], ['chi', 'solo'], ['modo', 'normale']);
+    expect(pronto(a)).toBe(true);
   });
 
   it('quante ne restano lo dice senza contare i passi', () => {
-    expect(restano(AVVIO_VUOTO)).toBe(4);   // auditor, chi, dove, modo (il preclear non si sa ancora)
+    expect(restano(AVVIO_VUOTO)).toBe(5);   // il cammino più lungo, finché non si sa
+    expect(restano(con(['auditor', 'a1']))).toBe(4);
     expect(restano(con(['auditor', 'a1'], ['chi', 'preclear']))).toBe(3);
-    expect(restano(con(['auditor', 'a1'], ['chi', 'solo']))).toBe(2);
-    expect(restano(con(['auditor', 'a1'], ['chi', 'solo'], ['dove', 'qui'], ['modo', 'normale']))).toBe(0);
+    expect(restano(con(['auditor', 'a1'], ['chi', 'solo']))).toBe(1);
+    expect(restano(con(['auditor', 'a1'], ['chi', 'solo'], ['modo', 'normale']))).toBe(0);
+  });
+
+  it('⚠️ e il conto NON SALE MAI, comunque si risponda', () => {
+    // Contando solo le domande certe faceva 3 all'inizio e 3 di nuovo dopo « con un preclear »,
+    // che ne aggiunge due. Un conto alla rovescia che sale non lo si crede più.
+    const cammini: Array<Array<[Parameters<typeof rispondi>[1], string | boolean]>> = [
+      [['auditor', 'a1'], ['chi', 'solo'], ['modo', 'normale']],
+      [['auditor', 'a1'], ['chi', 'preclear'], ['preclear', 'p1'], ['dove', 'distanza'], ['modo', 'esperto']],
+    ];
+    for (const cammino of cammini) {
+      let a = AVVIO_VUOTO, prima = restano(a);
+      for (const [p, v] of cammino) {
+        a = rispondi(a, p, v);
+        const ora = restano(a);
+        expect(ora).toBeLessThanOrEqual(prima);
+        prima = ora;
+      }
+      expect(prima).toBe(0);
+    }
   });
 });
 
@@ -78,10 +111,19 @@ describe('tornare indietro', () => {
     b = indietro(b);       expect(passoCorrente(b)).toBe('auditor');
   });
 
-  it('e da SOLO risale a « chi », senza inventarsi un preclear da cancellare', () => {
-    const a = con(['auditor', 'a1'], ['chi', 'solo'], ['dove', 'qui']);
-    const b = indietro(indietro(a));
-    expect(passoCorrente(b)).toBe('chi');
+  it('e da SOLO risale a « chi » in un colpo: non c erano preclear né distanza da cancellare', () => {
+    const a = con(['auditor', 'a1'], ['chi', 'solo'], ['modo', 'normale']);
+    expect(passoCorrente(indietro(a))).toBe('modo');
+    expect(passoCorrente(indietro(indietro(a)))).toBe('chi');
+  });
+
+  it('⚠️ e tornando da SOLO a « con un preclear » la distanza si RICHIEDE', () => {
+    // Restando a `false` (il valore ovvio del SOLO) la domanda resterebbe saltata per sempre,
+    // e una seduta a distanza si aprirebbe come se fossero nella stessa stanza.
+    const a = con(['auditor', 'a1'], ['chi', 'solo']);
+    const b = rispondi(a, 'chi', 'preclear');
+    expect(b.distanza).toBeNull();
+    expect(passoCorrente(rispondi(b, 'preclear', 'p1'))).toBe('dove');
   });
 
   it('dal principio non si va più indietro', () => {
