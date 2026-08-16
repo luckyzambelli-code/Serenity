@@ -22,6 +22,8 @@ import {
   MODO_AUTO, MODO_AUTO_MS, type Avvio as StatoAvvio, type PassoId,
 } from './flussoAvvio';
 import { getProfiles, getPcProfiles } from '../lib/storage';
+import { loadHistory, daysSince, testedToday } from '../engine/canTest';
+import { NuovoProfilo, type Tipo } from './NuovoProfilo';
 
 /** Le domande, dette come le direbbe un auditor — non come le scriverebbe un modulo. */
 const DOMANDA: Record<PassoId, string> = {
@@ -85,11 +87,35 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
   const [stato, setStato] = useState<StatoAvvio>(AVVIO_VUOTO);
   const passo = passoCorrente(stato);
 
-  // I profili si leggono UNA volta: sono quelli di EQUILIBRIUM, dallo stesso armadio.
-  const [auditor] = useState(() => { try { return getProfiles(); } catch { return []; } });
-  const [preclear] = useState(() => { try { return getPcProfiles(); } catch { return []; } });
+  // I profili sono quelli di EQUILIBRIUM, dallo stesso armadio. Si rileggono dopo ogni
+  // creazione: il profilo appena fatto dev'essere lì fra gli altri, non in un elenco a parte.
+  const leggi = () => {
+    try { return { a: getProfiles(), p: getPcProfiles() }; } catch { return { a: [], p: [] }; }
+  };
+  const [liste, setListe] = useState(leggi);
+  /** Si sta creando un profilo? È uno stato del DISEGNO, non del flusso: la macchina delle
+   *  domande non deve sapere che esiste un modo di crearne uno. */
+  const [creando, setCreando] = useState<Tipo | null>(null);
 
   const dai = (v: string | boolean) => setStato(s => rispondi(s, passoCorrente(s), v));
+
+  /**
+   * LA PROVA DELLE LATTINE DI QUESTO PRECLEAR.
+   *
+   * ⚠️ Si mostra QUI, quando lo si sceglie, e non altrove: è il momento in cui si decide se
+   * farla. « Che fa fede sono le due lattine » — senza una prova di oggi si toglie una
+   * divisione dalla scala del tono, e chi sceglie il preclear deve poterlo sapere prima, non
+   * scoprirlo a rapporto fatto.
+   */
+  const lattine = (nome: string): string => {
+    try {
+      const h = loadHistory(nome);
+      if (!h.tests.length) return 'lattine mai provate';
+      if (testedToday(h, Date.now())) return 'lattine provate oggi';
+      const g = daysSince(h, Date.now());
+      return g === 1 ? 'lattine provate ieri' : `lattine provate ${g} giorni fa`;
+    } catch { return ''; }
+  };
 
   useEffect(() => { if (passo === 'pronto') onPronto(stato); }, [passo, stato, onPronto]);
 
@@ -120,10 +146,11 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
     switch (passo) {
       case 'auditor':
         return <>
-          {auditor.map(p => (
+          {liste.a.map(p => (
             <Scelta key={p.id} etichetta={p.name} foto={p.photo} persona onClick={() => dai(p.id)} />
           ))}
-          <Scelta etichetta="Nuovo" sotto="crea un profilo" dimensione={96} onClick={() => dai('nuovo')} />
+          <Scelta etichetta="Nuovo" sotto="nome, ritratto, sesso" dimensione={96}
+                  onClick={() => setCreando('auditor')} />
         </>;
       case 'chi':
         return <>
@@ -132,10 +159,12 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
         </>;
       case 'preclear':
         return <>
-          {preclear.map(p => (
-            <Scelta key={p.id} etichetta={p.name} foto={p.photo} persona onClick={() => dai(p.id)} />
+          {liste.p.map(p => (
+            <Scelta key={p.id} etichetta={p.name} foto={p.photo} persona
+                    sotto={lattine(p.name)} onClick={() => dai(p.id)} />
           ))}
-          <Scelta etichetta="Nuovo" sotto="crea un preclear" dimensione={96} onClick={() => dai('nuovo')} />
+          <Scelta etichetta="Nuovo" sotto="nome, ritratto, sesso" dimensione={96}
+                  onClick={() => setCreando('preclear')} />
         </>;
       case 'dove':
         return <>
@@ -153,6 +182,18 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
   };
 
   const quante = restano(stato);
+
+  // Creare un profilo NON è un passo del flusso: è una deviazione. Quando finisce, il profilo
+  // appena fatto è la risposta alla domanda in corso — non si deve sceglierlo un'altra volta.
+  if (creando) {
+    return (
+      <NuovoProfilo
+        tipo={creando}
+        onAnnulla={() => setCreando(null)}
+        onFatto={id => { setListe(leggi()); setCreando(null); dai(id); }}
+      />
+    );
+  }
 
   return (
     <section style={{

@@ -4,6 +4,7 @@ import { useUiStore } from '../store/uiStore';
 import { useMetric } from '../store/metricsStore';
 import { chargeStateById } from '../lib/chargeState';
 import { floatOffset, type FnMode } from '../engine/FloatGenerator';
+import { SWEEP_DEG as SWEEP, SET_OFFSET, off2ang } from '../engine/dialGeometry';
 
 interface QuantumSphereProps {
   needleOffsetProp: number;
@@ -70,13 +71,16 @@ const R_IN   = 494;
 const R_COLOR = 527;
 const R_MID  = (R_OUT + R_IN) / 2;
 
-// Arc réduit : 75% de 180° = 135° total → ±67.5° de la verticale
-const SWEEP  = 67.5;
-
-const SET_OFFSET = -0.35; // Spec §18 NEURAL CORE: "SET_OFFSET = -0.35 (fin zone RISE)"
+// ── L'APERTURA DELL'ARCO E IL RIPOSO VENGONO DA `engine/dialGeometry` ──────────────────────
+// Erano scritti qui, e `SET_OFFSET = -0.35` era una COPIA di `NEEDLE_REST_OFFSET` in tuning:
+// due numeri uguali per caso, che potevano scostarsi in silenzio. Da quando SERENITY disegna
+// lo stesso ago (fase 5 della refonte), l'angolo dev'essere calcolato in UN posto solo — se no
+// lo stesso blow-down cadrebbe di 40° in un'applicazione e di 45° nell'altra.
+//
+// ⚠️ I VALORI NON SONO CAMBIATI: 67,5° e −0,35, gli stessi su cui sono tarate le ampiezze
+// delle reazioni. Qui è cambiato da dove si prendono.
 
 function deg2rad(d: number) { return d * Math.PI / 180; }
-function off2ang(offset: number): number { return 90 - offset * SWEEP; }
 
 /** Colore dell'ago delle lattine — ambra, distinto da tutti gli stati di carica dell'ago EEG
  *  (che vanno sui verdi/ciano/violetti), così i due non si confondono mai a colpo d'occhio. */

@@ -3,13 +3,14 @@ import { pick5 } from '../i18n5';
 import { loadHistory as loadCanTests, daysSince as canDaysSince, scaleFor, soloRatio } from '../engine/canTest';
 import { UserRound, Eye, Plus, Pencil, Star, X, Camera, Upload, Trash2, Check } from 'lucide-react';
 import {
-  UserProfile, getProfiles, getSessions, getSessionsByProfile, saveProfile, deleteProfile,
-  getPcProfiles, savePcProfile, deletePcProfile } from '../lib/storage';
+  UserProfile, getProfiles, getSessions, getSessionsByProfile, deleteProfile,
+  getPcProfiles, deletePcProfile } from '../lib/storage';
+// La creazione vera — ritratto ridotto, sesso, salvataggio e spinta al server — sta in
+// `lib/profiloEdit`, condivisa con SERENITY (fase 4 della refonte).
+import { fotoDaVideo, fotoDaFile, salvaAuditor, salvaPreclear } from '../lib/profiloEdit';
 import { useProfileStore } from '../store/profileStore';
 import { useUiStore } from '../store/uiStore';
-import {
-  isServerAvailable, serverSaveProfiles, serverSavePcProfiles,
-  serverDeleteProfile, serverDeletePcProfile } from '../lib/serverStorage';
+import { serverDeleteProfile, serverDeletePcProfile } from '../lib/serverStorage';
 import { LAYER } from '../ui/layers';
 
 /**
@@ -95,62 +96,33 @@ export function ProfileRoster({ onActivate, lang }: ProfileRosterProps) {
   };
   const capture = () => {
     const v = videoRef.current; if (!v) return;
-    const c = document.createElement('canvas'); const sz = 320;
-    c.width = sz; c.height = sz;
-    const ctx = c.getContext('2d'); if (!ctx) return;
-    const s = Math.min(v.videoWidth, v.videoHeight) || sz;
-    ctx.drawImage(v, (v.videoWidth - s) / 2, (v.videoHeight - s) / 2, s, s, 0, 0, sz, sz);
-    setEdit(e => e ? { ...e, photo: c.toDataURL('image/jpeg', 0.85) } : e);
+    const foto = fotoDaVideo(v);
+    if (foto) setEdit(e => e ? { ...e, photo: foto } : e);
     stopCam();
   };
-  // CONN-104: downscale the imported image to a 320px square JPEG before storing.
-  // A raw full-res photo as base64 can be several MB and blow the localStorage
-  // quota → the profile save then FAILS and the edit silently reverts ("I find
-  // back what was there before"). Downscaling keeps it ~20–40 KB and syncs fine.
+  // Il ridimensionamento a 320 px sta in `lib/profiloEdit`, condiviso con SERENITY: una foto
+  // a piena risoluzione fa saltare la quota di localStorage e il salvataggio torna indietro da
+  // solo, senza un messaggio. Averlo in due posti vorrebbe dire poterlo perdere in uno dei due.
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return;
-    const r = new FileReader();
-    r.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        try {
-          const c = document.createElement('canvas'); const sz = 320; c.width = sz; c.height = sz;
-          const ctx = c.getContext('2d'); if (!ctx) { setEdit(p => p ? { ...p, photo: String(r.result) } : p); return; }
-          const s = Math.min(img.width, img.height) || sz;
-          ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, sz, sz);
-          setEdit(p => p ? { ...p, photo: c.toDataURL('image/jpeg', 0.85) } : p);
-        } catch { setEdit(p => p ? { ...p, photo: String(r.result) } : p); }
-      };
-      img.onerror = () => setEdit(p => p ? { ...p, photo: String(r.result) } : p);
-      img.src = String(r.result);
-    };
-    r.readAsDataURL(f);
+    void fotoDaFile(f).then(foto => { if (foto) setEdit(p => p ? { ...p, photo: foto } : p); });
   };
 
   // ── save / delete ────────────────────────────────────────────────────────────
   const closeEdit = () => { stopCam(); setEdit(null); };
-  // CONN-102: push to the server immediately so the other client (Electron ↔
-  // Chrome) sees the create/edit within seconds (and on its next 25 s poll).
-  const pushServer = (obj: any, kind: EditKind) => {
-    (async () => { try { if (await isServerAvailable()) { kind === 'auditor' ? await serverSaveProfiles([obj]) : await serverSavePcProfiles([obj]); } } catch (_) {} })();
-  };
+  // La spinta immediata al server (CONN-102) — perché l'altro cliente veda il profilo nuovo in
+  // pochi secondi invece che al prossimo giro — la fa `salvaAuditor`/`salvaPreclear`.
   const saveEdit = () => {
-    if (!edit || !edit.name.trim()) return;
+    if (!edit) return;
+    const dati = { id: edit.id, nome: edit.name, foto: edit.photo, sesso: edit.sex };
     if (edit.kind === 'auditor') {
       const existing = edit.id ? auditors.find(p => p.id === edit.id) : null;
-      const prof = {
-        id: edit.id || Date.now().toString(),
-        name: edit.name.trim(),
-        photo: edit.photo,
-        sex: edit.sex,   // SOLO: drives the Tone-Arm baseline when the auditor is the PC
-        preferences: existing?.preferences || { lang: (lang || 'fr'), soloMode: false },
-        createdAt: existing?.createdAt || Date.now() };
-      saveProfile(prof); pushServer(prof, 'auditor');
-      // If this auditor is the active one in a solo session, refresh the live baseline.
+      if (!salvaAuditor(dati, existing, lang || 'fr')) return;   // nome vuoto: non si salva
+      // Se questo auditor è quello attivo in una seduta SOLO, il TA di clear si aggiorna subito.
       if (edit.id && activeProfile?.id === edit.id && activeProfile?.preferences?.soloMode) setPcSex(edit.sex);
     } else {
-      const pc = { id: edit.id || ('pc_' + Date.now()), name: edit.name.trim(), photo: edit.photo, sex: edit.sex, createdAt: Date.now() };
-      savePcProfile(pc); pushServer(pc, 'pc');
+      const pc = salvaPreclear(dati);
+      if (!pc) return;
       setPcName(pc.name); if (pc.photo) setPcPhoto(pc.photo); setPcSex(pc.sex);
     }
     closeEdit(); refresh();

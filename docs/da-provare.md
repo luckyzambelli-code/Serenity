@@ -261,6 +261,32 @@ e cosa andrà riprovato se un giorno una di quelle parti si tocca di nuovo.
 `hooks/useMuseConnection`, o il silenzio in `hooks/useThetaMeter` — sono le tre parti che
 nessuna prova a tavolino raggiunge.
 
+## Da provare col METER — SERENITY (fasi 4 e 5)
+
+**Il quadrante.** L'ago di SERENITY prende gli angoli da `engine/dialGeometry`, gli STESSI di
+`QuantumSphere` (12 test, valori invariati: 67,5° e SET a −0,35). La sola prova che conta è
+vedere i due aghi fare la stessa cosa.
+
+- [ ] **stretta delle lattine**: l'ago cade dello STESSO tanto nelle due applicazioni;
+- [ ] **F/N**: compare in tutte e due — in SERENITY come alone di quiete dietro l'arco;
+- [ ] **blow-down**: arriva allo stesso punto del quadrante;
+- [ ] **il TA sotto l'ago** in SERENITY è lo stesso numero che EQUILIBRIUM mostra in cima;
+- [ ] **senza meter** il quadrante resta, spento, con l'ago a SET — non deve sparire.
+
+⚠️ `QuantumSphere` importa adesso apertura dell'arco e riposo da `dialGeometry` invece di
+tenerne una copia. I numeri sono identici, ma è l'ago di EQUILIBRIUM: se qualcosa si muovesse
+diversamente da prima, si torna a `serenity-3.0.2`.
+
+**I profili.** La creazione (ritratto ridotto a 320 px, sesso, salvataggio, spinta al server)
+sta in `lib/profiloEdit`, condivisa: `ProfileRoster` di EQUILIBRIUM ci passa adesso anche lui.
+
+- [ ] **creare un auditor in EQUILIBRIUM** con foto e sesso: si salva e si ritrova come prima;
+- [ ] **crearne uno in SERENITY**: compare in EQUILIBRIUM, con ritratto e sesso;
+- [ ] **una foto grande da file**: si riduce e NON fa fallire il salvataggio;
+- [ ] lo stato delle lattine appare sotto ogni preclear al momento di sceglierlo.
+
+---
+
 ## Tarature in attesa di numeri veri
 
 - [ ] **MIRROR retrospezione** — servono i numeri di `MIRROR contact:` dal journal per tarare

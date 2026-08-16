@@ -21,8 +21,11 @@
  * @see docs/refonte-fasi.md
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { sessionClock } from '../runtime/SessionClock';
+import { useThetaMeter } from '../hooks/useThetaMeter';
+import { SET_OFFSET } from '../engine/dialGeometry';
+import { Ago } from './Ago';
 import { useSessionJournal } from '../session/useSessionJournal';
 import { getProfiles, getPcProfiles } from '../lib/storage';
 import { Cerchio } from './Cerchio';
@@ -45,6 +48,27 @@ export default function Serenity() {
   // L'orologio è QUELLO DI EQUILIBRIUM: `sessionClock` è un modulo unico, e conta i secondi
   // fuori da React perché il ridisegno non deve poter far perdere un secondo di seduta.
   useEffect(() => sessionClock.subscribe(() => setTempo(sessionClock.now())), []);
+
+  /**
+   * ── IL METER, LO STESSO ─────────────────────────────────────────────────────────────────
+   * `useThetaMeter` è il modulo che EQUILIBRIUM usa da sempre: driver WebHID, modello
+   * dell'ago, TA, reazioni, F/N. Qui non si aggiunge NIENTE — si legge e si disegna.
+   */
+  const [vivo, setVivo] = useState(false);
+  const spegniRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const theta = useThetaMeter({
+    nowSec: () => sessionClock.now(),
+    // L'ago « vivo » è l'unico momento in cui il colore compare. Si accende all'inizio del
+    // movimento e si spegne poco DOPO che è rientrato: sparire nell'istante del rientro
+    // toglierebbe la conferma proprio a chi ha alzato gli occhi un attimo tardi.
+    onReaction: r => {
+      setVivo(true);
+      if (spegniRef.current) { clearTimeout(spegniRef.current); spegniRef.current = null; }
+      if (r.final) spegniRef.current = setTimeout(() => setVivo(false), 1200);
+    },
+  });
+  useEffect(() => () => { if (spegniRef.current) clearTimeout(spegniRef.current); }, []);
+  const meterC = theta.status === 'connected';
 
   // I profili vengono dallo stesso armadio di EQUILIBRIUM — è la verifica di questa fase.
   const nome = (lista: Array<{ id: string; name: string }>, id: string | null | undefined) =>
@@ -109,14 +133,29 @@ export default function Serenity() {
           servono e si ritirano quando non servono più, ed è per questo che non hanno una
           griglia. Qui sono spenti: il guscio non ha ancora nulla da dire. */}
       <section style={{ position: 'relative', display: 'grid', placeItems: 'center' }}>
-        <Cerchio dimensione={300} viva={aperta}>
-          <div style={{
-            fontFamily: 'var(--s-mono)', fontSize: 46, letterSpacing: '0.04em',
-            color: aperta ? 'var(--s-ink)' : 'var(--s-ink-ghost)',
-            transition: `color var(--s-slow) var(--s-ease)`,
-            fontVariantNumeric: 'tabular-nums',
-          }}>
-            {orologio(tempo)}
+        {/* IL METER AL CENTRO. Il cerchio grande è il suo posto: l'ago sta lì, e tutto il
+            resto della seduta gli gira intorno. Senza meter il quadrante resta comunque —
+            spento, all'ago di riposo — perché uno strumento che sparisce quando si stacca
+            fa credere di averlo perso invece che scollegato. */}
+        <Cerchio dimensione={340} viva={aperta}>
+          <div style={{ display: 'grid', justifyItems: 'center', gap: 2 }}>
+            <Ago
+              offset={meterC ? theta.offset : SET_OFFSET}
+              vivo={meterC && vivo}
+              fn={meterC && theta.fn.fn}
+              ta={meterC ? theta.ta : null}
+              larghezza={250}
+            />
+            {/* L'orologio scende sotto l'ago e si fa piccolo: il tempo di seduta si guarda
+                una volta ogni tanto, l'ago in continuazione. */}
+            <span style={{
+              fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.06em',
+              color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-ghost)',
+              transition: 'color var(--s-slow) var(--s-ease)',
+              fontVariantNumeric: 'tabular-nums',
+            }}>
+              {orologio(tempo)}
+            </span>
           </div>
         </Cerchio>
 
@@ -145,6 +184,11 @@ export default function Serenity() {
             l'ago legge. Qui si dice solo che sta scrivendo, e quante righe ha. */}
         <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
           giornale · {journal.logs.length} {journal.logs.length === 1 ? 'riga' : 'righe'}
+        </span>
+        {/* Lo stato del meter si dice a parole e in grigio: è una cosa che si controlla
+            all'inizio, non che si sorveglia in seduta. */}
+        <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
+          {meterC ? 'meter collegato' : theta.unavailable ? 'meter non disponibile qui' : 'meter scollegato'}
         </span>
         <span style={{ flex: 1 }} />
         {!aperta && (
