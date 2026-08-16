@@ -241,56 +241,25 @@ audio vera. Procedura completa in [can-meter-montaggio.md](can-meter-montaggio.m
 
 ---
 
-## SERENITY — il pezzo che il MUSE solo può provare
+## ✅ SERENITY — le fasi 1, 2 e 3, provate in seduta (16/08/2026, 2.0.139 · 3.0.0)
 
-L'estrazione dei cicli in `src/session/` è verificata a schermo per tutto ciò che si comanda a
-mano: armamento, chiusura, giornale, contatori, rapporto. Ma il corpo di
-`useContactNullCycle.trackCycle` — un centinaio di righe — gira **solo col MUSE addosso**, e
-lì la verifica senza strumenti non arriva.
+Le tre modifiche che questa macchina non poteva far girare da sola sono state percorse col
+MUSE e col meter veri, e **tornano tutte**. Restano scritte perché dicono cosa fu il rischio,
+e cosa andrà riprovato se un giorno una di quelle parti si tocca di nuovo.
 
-- [ ] **col MUSE, un ciclo CONTACT intero**: la fase avanza (contact → discharge → asis), il
-      **comm lag** compare e si aggiorna, l'offerta « AS-IS? » esce quando la carica è scesa e
-      **non sfarfalla**;
-- [ ] **il falso AS-IS**: dopo un AS-IS dichiarato senza vero rilascio, l'avviso ambra con l'IO;
-- [ ] **il segnale « sembra NULL »** su un ciclo CONTACT dove niente reagisce;
-- [ ] **col MUSE, un ciclo NULL**: il mock-up fa salire la carica (RISE) e il ritorno alla base
-      dà l'EQUILIBRIUM da sé.
+- ✅ **`trackCycle`** (fase 1) — un ciclo CONTACT intero col MUSE: fasi, comm lag, offerta
+      « AS-IS? », falso AS-IS, FSM del NULL. Era un centinaio di righe spostate e mai eseguite.
+- ✅ **`useMuseConnection`** (fase 2) — connettere, disconnettere, **annullare la ricerca**
+      (il ramo che leggeva uno stato congelato), perdere la cuffia e riprenderla con l'ago che
+      riparte, cioè il ricablaggio dei flussi.
+- ✅ **il silenzio del classificatore** (2.0.138) — la prova delle lattine rifatta IN SEDUTA non
+      scrive più reazioni false, né alla stretta né al rilascio; una reazione vera subito dopo
+      si vede ancora. `THETA_TEST_MUTE_AFTER_S = 2 s` è quindi **confermato sul campo**.
+- ✅ **archivio unico** (fase 3) — SERENITY legge gli stessi profili di EQUILIBRIUM.
 
-Se una di queste non si comporta come prima, è il `trackCycle` estratto: si torna a
-`equilibrium-2.0.134`, dove quel codice stava ancora in `App.tsx`.
-
-### E la fase 2 — la connessione della cuffia
-
-`hooks/useMuseConnection` è uscito da `App.tsx` senza che qui si potesse provarlo: di verificato
-c'è solo il GUSCIO — premere connetti, le due righe d'apertura, la ricerca, e il ramo « nessun
-MUSE trovato » che rimette il badge a posto. Tutto ciò che viene DOPO una connessione riuscita
-non è mai stato eseguito.
-
-- [ ] **connettere la cuffia**: il badge passa a connesso, la batteria compare, l'ago si muove;
-- [ ] **disconnettere col bottone**: si stacca davvero e il badge dice « riconnetti »;
-- [ ] **annullare la ricerca** premendo mentre cerca — ⚠️ è il ramo che ho dovuto correggere:
-      la funzione leggeva lo stato del primo render e non ci sarebbe MAI entrata;
-- [ ] **spegnere la cuffia a seduta aperta**: badge « searching », riconnessione silenziosa, e
-      dopo sei tentativi la seduta va in pausa coi dati salvi;
-- [ ] **riaccenderla**: si riattacca da sé E L'AGO RIPARTE (se resta fermo, è il ricablaggio dei
-      flussi);
-- [ ] **seduta a distanza**: l'auditor vede l'EEG del preclear, e la scelta dell'elettrodo
-      migliore funziona ancora se la fronte non fa contatto.
-
-Se qualcosa qui non va: si torna a `serenity-fase1`, dove la connessione stava ancora in
-`App.tsx` — e questo separa la fase 2 dal `trackCycle` qui sopra.
-
----
-
-## Da riprovare col METER (2.0.138)
-
-- [ ] **rifare la prova delle lattine IN SEDUTA**: nessuna riga `⊙ METER · …` nel giornale
-      durante la stretta **né quando si mollano le lattine**, e nessuna lettura falsa
-      nell'ASSESSMENT dell'item in corso;
-- [ ] **subito dopo**, una reazione VERA si vede ancora (il silenzio non deve restare acceso);
-- [ ] **ricentrare l'ago** (torna su SET): non deve scrivere una reazione.
-
----
+⚠️ Da rifare queste stesse prove se si tocca `session/useContactNullCycle.trackCycle`,
+`hooks/useMuseConnection`, o il silenzio in `hooks/useThetaMeter` — sono le tre parti che
+nessuna prova a tavolino raggiunge.
 
 ## Tarature in attesa di numeri veri
 
@@ -298,9 +267,8 @@ Se qualcosa qui non va: si torna a `serenity-fase1`, dove la connessione stava a
       `MIRROR_RATIO_FULL`, `MIRROR_LOOKBACK_S`, `MIRROR_CONTACT_RISE_RATIO`;
 - [ ] **`MOTION_ARTIFACT_RMS`** (=30) — se in seduta spariscono letture vere, va **alzato**;
 - [ ] **profili del generatore F/N** — da tarare sui video;
-- [ ] **`THETA_TEST_MUTE_AFTER_S`** (=2 s) — quanto il classificatore tace DOPO la prova delle
-      lattine. Copre il rilascio: se una reazione falsa sfugge ancora al momento in cui si
-      mollano, va **alzato**; se una reazione vera subito dopo la prova non si vede, **abbassato**.
+- ✅ **`THETA_TEST_MUTE_AFTER_S`** (=2 s) — confermato in seduta il 16/08/2026: copre il
+      rilascio delle lattine e non mangia la reazione vera che segue.
 
 ---
 

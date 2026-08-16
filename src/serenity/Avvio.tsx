@@ -1,0 +1,203 @@
+/**
+ * L'AVVIO — quattro domande, in cerchi.
+ *
+ * ── PERCHÉ NON È UNA PROCEDURA GUIDATA ──────────────────────────────────────────────────────
+ * Una procedura guidata mette una domanda per schermata, con avanti e indietro in fondo: si
+ * legge, si clicca, si aspetta la successiva. Qui le risposte SONO i cerchi, e non c'è nessun
+ * « avanti »: si tocca la risposta e la domanda dopo prende il posto. Un gesto per domanda,
+ * quattro gesti per aprire una seduta.
+ *
+ * ── COSA STA QUI E COSA NO ──────────────────────────────────────────────────────────────────
+ * Qui c'è solo il disegno. L'ordine delle domande, cosa si scorda quando si torna indietro, e
+ * cosa vuol dire una frase detta a voce stanno in `avvio.ts`, che si prova senza aprire niente.
+ * I profili si leggono da `lib/storage`, lo stesso di EQUILIBRIUM — e sono gli stessi profili,
+ * che è la verifica scritta per questa fase.
+ *
+ * @see docs/refonte-fasi.md — fase 4.
+ */
+
+import { useEffect, useRef, useState } from 'react';
+import {
+  AVVIO_VUOTO, passoCorrente, restano, rispondi, indietro,
+  MODO_AUTO, MODO_AUTO_MS, type Avvio as StatoAvvio, type PassoId,
+} from './flussoAvvio';
+import { getProfiles, getPcProfiles } from '../lib/storage';
+
+/** Le domande, dette come le direbbe un auditor — non come le scriverebbe un modulo. */
+const DOMANDA: Record<PassoId, string> = {
+  auditor:  'Chi audita?',
+  chi:      'Da solo, o con un preclear?',
+  preclear: 'Chi è il preclear?',
+  dove:     'Siete qui, o a distanza?',
+  modo:     'Quanto vuoi vedere?',
+  pronto:   '',
+};
+
+/**
+ * Un cerchio che si può toccare.
+ *
+ * ⚠️ LE INIZIALI SOLO PER LE PERSONE. Su una scelta come « con un preclear » davano « CU », che
+ * si legge come le iniziali di qualcuno — e nella schermata PRIMA i cerchi erano davvero
+ * persone. Una scelta non ha un ritratto: il suo cerchio resta vuoto, e a dire cosa sia è
+ * l'etichetta sotto. È coerente col resto: il cerchio si coglie per posizione e dimensione,
+ * non si legge.
+ */
+function Scelta({ etichetta, sotto, foto, persona, onClick, dimensione = 116 }: {
+  etichetta: string; sotto?: string; foto?: string; persona?: boolean;
+  onClick: () => void; dimensione?: number;
+}) {
+  const [sopra, setSopra] = useState(false);
+  const iniziali = etichetta.trim().split(/\s+/).slice(0, 2).map(p => p[0] ?? '').join('').toUpperCase();
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setSopra(true)}
+      onMouseLeave={() => setSopra(false)}
+      style={{
+        border: 'none', background: 'none', padding: 0, cursor: 'pointer',
+        display: 'grid', justifyItems: 'center', gap: 12,
+        fontFamily: 'var(--s-sans)',
+      }}>
+      <div style={{
+        width: dimensione, height: dimensione, borderRadius: '50%',
+        display: 'grid', placeItems: 'center', overflow: 'hidden',
+        background: 'var(--s-disc)',
+        boxShadow: sopra ? 'var(--s-shadow-lift)' : 'var(--s-shadow)',
+        transform: sopra ? 'translateY(-2px)' : 'none',
+        transition: 'box-shadow var(--s-slow) var(--s-ease), transform var(--s-slow) var(--s-ease)',
+      }}>
+        {foto
+          ? <img src={foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : persona
+            ? <span style={{ fontFamily: 'var(--s-serif)', fontSize: dimensione * 0.3,
+                             color: 'var(--s-ink-soft)' }}>{iniziali}</span>
+            : null}
+      </div>
+      <div style={{ display: 'grid', justifyItems: 'center', gap: 2 }}>
+        <span style={{ fontSize: 14, color: 'var(--s-ink)' }}>{etichetta}</span>
+        {sotto && <span style={{ fontSize: 11.5, color: 'var(--s-ink-faint)' }}>{sotto}</span>}
+      </div>
+    </button>
+  );
+}
+
+export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
+  const [stato, setStato] = useState<StatoAvvio>(AVVIO_VUOTO);
+  const passo = passoCorrente(stato);
+
+  // I profili si leggono UNA volta: sono quelli di EQUILIBRIUM, dallo stesso armadio.
+  const [auditor] = useState(() => { try { return getProfiles(); } catch { return []; } });
+  const [preclear] = useState(() => { try { return getPcProfiles(); } catch { return []; } });
+
+  const dai = (v: string | boolean) => setStato(s => rispondi(s, passoCorrente(s), v));
+
+  useEffect(() => { if (passo === 'pronto') onPronto(stato); }, [passo, stato, onPronto]);
+
+  /**
+   * IL MODO SI PRENDE DA SÉ DOPO DIECI SECONDI.
+   *
+   * ⚠️ È L'UNICA domanda che lo fa, e la ragione è che ha una risposta giusta per quasi tutti:
+   * chi vuole EXPERT lo sa e lo tocca. Le altre tre non hanno un valore prudente da indovinare
+   * — chi è il preclear e dove si audita, sbagliati, falsano la seduta.
+   */
+  const [rimasti, setRimasti] = useState(MODO_AUTO_MS);
+  const statoRef = useRef(stato); statoRef.current = stato;
+  useEffect(() => {
+    if (passo !== 'modo') { setRimasti(MODO_AUTO_MS); return; }
+    const t0 = Date.now();
+    const id = setInterval(() => {
+      const r = MODO_AUTO_MS - (Date.now() - t0);
+      setRimasti(Math.max(0, r));
+      if (r <= 0) {
+        clearInterval(id);
+        setStato(s => rispondi(s, 'modo', MODO_AUTO));
+      }
+    }, 100);
+    return () => clearInterval(id);
+  }, [passo]);
+
+  const opzioni = () => {
+    switch (passo) {
+      case 'auditor':
+        return <>
+          {auditor.map(p => (
+            <Scelta key={p.id} etichetta={p.name} foto={p.photo} persona onClick={() => dai(p.id)} />
+          ))}
+          <Scelta etichetta="Nuovo" sotto="crea un profilo" dimensione={96} onClick={() => dai('nuovo')} />
+        </>;
+      case 'chi':
+        return <>
+          <Scelta etichetta="Da solo" sotto="audito me stesso" onClick={() => dai('solo')} />
+          <Scelta etichetta="Con un preclear" onClick={() => dai('preclear')} />
+        </>;
+      case 'preclear':
+        return <>
+          {preclear.map(p => (
+            <Scelta key={p.id} etichetta={p.name} foto={p.photo} persona onClick={() => dai(p.id)} />
+          ))}
+          <Scelta etichetta="Nuovo" sotto="crea un preclear" dimensione={96} onClick={() => dai('nuovo')} />
+        </>;
+      case 'dove':
+        return <>
+          <Scelta etichetta="Qui" sotto="nella stessa stanza" onClick={() => dai('qui')} />
+          <Scelta etichetta="A distanza" sotto="il preclear è altrove" onClick={() => dai('distanza')} />
+        </>;
+      case 'modo':
+        return <>
+          <Scelta etichetta="Normale" sotto="solo ciò che serve" onClick={() => dai('normale')} />
+          <Scelta etichetta="Esperto" sotto="tutti i numeri" onClick={() => dai('esperto')} />
+        </>;
+      default:
+        return null;
+    }
+  };
+
+  const quante = restano(stato);
+
+  return (
+    <section style={{
+      height: '100%', display: 'grid', gridTemplateRows: 'auto 1fr auto',
+      alignItems: 'center', gap: 28,
+    }}>
+      {/* La domanda, e basta. Nessun titolo di sezione, nessun numero di passo: sapere di
+          essere « al 3 di 4 » non serve a rispondere. */}
+      <div style={{ display: 'grid', justifyItems: 'center', gap: 10 }}>
+        <h1 style={{
+          margin: 0, fontFamily: 'var(--s-serif)', fontWeight: 400,
+          fontSize: 30, letterSpacing: '-0.01em', color: 'var(--s-ink)',
+        }}>
+          {DOMANDA[passo]}
+        </h1>
+        {/* Quante ne restano, detto a parole. Una barra di avanzamento sarebbe un pannello. */}
+        <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
+          {quante > 1 ? `ancora ${quante} domande` : quante === 1 ? 'ultima domanda' : ''}
+        </span>
+      </div>
+
+      <div style={{
+        display: 'flex', flexWrap: 'wrap', gap: 46,
+        justifyContent: 'center', alignItems: 'flex-start',
+      }}>
+        {opzioni()}
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20, minHeight: 30 }}>
+        {passo !== 'auditor' && (
+          <button onClick={() => setStato(indietro)} style={{
+            border: 'none', background: 'none', cursor: 'pointer',
+            fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+          }}>
+            ← torna indietro
+          </button>
+        )}
+        {passo === 'modo' && (
+          // Il tempo che passa si vede, così la scelta automatica non arriva a sorpresa —
+          // ma si dice a parole, non con una barra che si riempie alla periferia dell'occhio.
+          <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
+            senza risposta, fra {Math.ceil(rimasti / 1000)} s si va in NORMALE
+          </span>
+        )}
+      </div>
+    </section>
+  );
+}

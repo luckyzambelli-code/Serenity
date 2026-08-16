@@ -26,6 +26,8 @@ import { sessionClock } from '../runtime/SessionClock';
 import { useSessionJournal } from '../session/useSessionJournal';
 import { getProfiles, getPcProfiles } from '../lib/storage';
 import { Cerchio } from './Cerchio';
+import { Avvio } from './Avvio';
+import { AVVIO_VUOTO, type Avvio as StatoAvvio } from './flussoAvvio';
 
 /** mm:ss — l'unico formato di tempo che serve in seduta. */
 const orologio = (s: number) => {
@@ -37,16 +39,20 @@ export default function Serenity() {
   const journal = useSessionJournal('SERENITY');
   const [aperta, setAperta] = useState(false);
   const [tempo, setTempo] = useState(0);
+  /** Le quattro risposte dell'avvio. `null` = le domande non sono ancora state fatte. */
+  const [avvio, setAvvio] = useState<StatoAvvio | null>(null);
 
   // L'orologio è QUELLO DI EQUILIBRIUM: `sessionClock` è un modulo unico, e conta i secondi
   // fuori da React perché il ridisegno non deve poter far perdere un secondo di seduta.
   useEffect(() => sessionClock.subscribe(() => setTempo(sessionClock.now())), []);
 
-  // I profili vengono dallo stesso armadio — è la verifica di questa fase.
-  const [conti] = useState(() => {
-    try { return { auditor: getProfiles().length, pc: getPcProfiles().length }; }
-    catch { return { auditor: 0, pc: 0 }; }
-  });
+  // I profili vengono dallo stesso armadio di EQUILIBRIUM — è la verifica di questa fase.
+  const nome = (lista: Array<{ id: string; name: string }>, id: string | null | undefined) =>
+    id === 'nuovo' ? 'nuovo' : (lista.find(p => p.id === id)?.name ?? '—');
+  const nomeAuditor = nome(
+    (() => { try { return getProfiles(); } catch { return []; } })(), avvio?.auditorId);
+  const nomePreclear = nome(
+    (() => { try { return getPcProfiles(); } catch { return []; } })(), avvio?.pcId);
 
   const apri = () => {
     sessionClock.reset(); sessionClock.start();
@@ -58,6 +64,20 @@ export default function Serenity() {
     journal.addLog({ speaker: 'SYS', text: 'seduta chiusa', time: sessionClock.now() });
     setAperta(false);
   };
+  /** Si ricomincia dalle domande. Solo a seduta chiusa: cambiare preclear a metà seduta
+   *  vorrebbe dire attribuire a una persona quel che ha fatto un'altra. */
+  const ricomincia = () => setAvvio(null);
+
+  // ── LE QUATTRO DOMANDE, PRIMA DI TUTTO ────────────────────────────────────────────────
+  // Non è una schermata di benvenuto che si può saltare: senza sapere chi audita e chi si
+  // audita, una seduta non si può nemmeno archiviare — finirebbe senza nome.
+  if (!avvio) {
+    return (
+      <main style={{ height: '100%', padding: '38px 44px' }}>
+        <Avvio onPronto={setAvvio} />
+      </main>
+    );
+  }
 
   return (
     <main style={{
@@ -75,10 +95,11 @@ export default function Serenity() {
           {__SERENITY_VERSION__}
         </span>
         <span style={{ flex: 1 }} />
+        {/* Chi audita, chi si audita, e dove — detto in una riga sola e in grigio: sono cose
+            che si controllano una volta all'inizio, non che si guardano in seduta. */}
         <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
-          {conti.auditor + conti.pc > 0
-            ? `stesso archivio · ${conti.auditor} auditor · ${conti.pc} preclear`
-            : 'archivio vuoto'}
+          {nomeAuditor}{avvio.solo ? ' · da solo' : ` · ${nomePreclear}`}
+          {avvio.distanza ? ' · a distanza' : ''}{avvio.esperto ? ' · esperto' : ''}
         </span>
       </header>
 
@@ -125,6 +146,15 @@ export default function Serenity() {
         <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
           giornale · {journal.logs.length} {journal.logs.length === 1 ? 'riga' : 'righe'}
         </span>
+        <span style={{ flex: 1 }} />
+        {!aperta && (
+          <button onClick={ricomincia} style={{
+            border: 'none', background: 'none', cursor: 'pointer',
+            fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+          }}>
+            ← cambia auditor o preclear
+          </button>
+        )}
       </footer>
     </main>
   );
