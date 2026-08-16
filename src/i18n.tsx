@@ -664,7 +664,9 @@ export const translations = {
     ser_meter_disconnected: "meter disconnected",
     ser_change_people: "change auditor or preclear",
     ser_session_opened: "session opened",
-    ser_session_closed: "session closed"
+    ser_session_closed: "session closed",
+    ser_theme_light: "light",
+    ser_theme_dark: "dark"
   },
   fr: {
     title: "",
@@ -1327,7 +1329,9 @@ export const translations = {
     ser_meter_disconnected: "meter déconnecté",
     ser_change_people: "changer d'auditeur ou de préclair",
     ser_session_opened: "séance ouverte",
-    ser_session_closed: "séance fermée"
+    ser_session_closed: "séance fermée",
+    ser_theme_light: "clair",
+    ser_theme_dark: "sombre"
   },
   it: {
     title: "",
@@ -1930,7 +1934,7 @@ export const translations = {
     ep_reaction_label: "Reazione",
     ep_note_label: "Nota",
     // ── SERENITY (fase 4/5 della refonte) ──
-    ser_q_auditor: "Chi audita?",
+    ser_q_auditor: "Chi audisce?",
     ser_q_chi: "Da solo, o con un preclear?",
     ser_q_preclear: "Chi è il preclear?",
     ser_q_dove: "Qui, o a distanza?",
@@ -1938,7 +1942,7 @@ export const translations = {
     ser_new: "Nuovo",
     ser_new_sub: "nome, ritratto, sesso",
     ser_solo: "Da solo",
-    ser_solo_sub: "audito me stesso",
+    ser_solo_sub: "audisco me stesso",
     ser_with_pc: "Con un preclear",
     ser_here: "Qui",
     ser_here_sub: "nella stessa stanza",
@@ -1990,7 +1994,9 @@ export const translations = {
     ser_meter_disconnected: "meter scollegato",
     ser_change_people: "cambia auditor o preclear",
     ser_session_opened: "seduta aperta",
-    ser_session_closed: "seduta chiusa"
+    ser_session_closed: "seduta chiusa",
+    ser_theme_light: "chiaro",
+    ser_theme_dark: "scuro"
   },
   es: {
     title: "",
@@ -2653,7 +2659,9 @@ export const translations = {
     ser_meter_disconnected: "meter desconectado",
     ser_change_people: "cambiar auditor o preclear",
     ser_session_opened: "sesión abierta",
-    ser_session_closed: "sesión cerrada"
+    ser_session_closed: "sesión cerrada",
+    ser_theme_light: "claro",
+    ser_theme_dark: "oscuro"
   },
   sv: {
     title: "",
@@ -3316,7 +3324,9 @@ export const translations = {
     ser_meter_disconnected: "meter frånkopplat",
     ser_change_people: "byt auditör eller preclear",
     ser_session_opened: "session öppnad",
-    ser_session_closed: "session stängd"
+    ser_session_closed: "session stängd",
+    ser_theme_light: "ljust",
+    ser_theme_dark: "mörkt"
   }
 };
 

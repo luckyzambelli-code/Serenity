@@ -72,13 +72,17 @@ non si riscrive.
 `components/QuantumSphere` — lo STESSO componente di EQUILIBRIUM, non un secondo disegno:
 
 ```tsx
+const isLightTheme = useUiStore(s => s.isLightTheme);   // la STESSA preferenza di EQUILIBRIUM
+// …
 <div style={{
   width: 'min(100%, 1400px)', aspectRatio: '1600 / 850', maxHeight: 'calc(100% - 44px)',
   borderRadius: 18, overflow: 'hidden',
-  background: 'radial-gradient(130% 120% at 50% 22%, #2e2e33 0%, #2a2a2f 55%, #262629 100%)',
-  boxShadow: 'var(--s-shadow-lift)',
+  background: isLightTheme
+    ? 'var(--s-ground)'   // bianco perla — la superficie STESSA di SERENITY
+    : 'radial-gradient(130% 120% at 50% 22%, #2e2e33 0%, #2a2a2f 55%, #262629 100%)',
+  boxShadow: isLightTheme ? 'var(--s-shadow)' : 'var(--s-shadow-lift)',
 }}>
-  <QuantumSphere /* …stesse props di EQUILIBRIUM… */ forceTheme="dark" />
+  <QuantumSphere /* …stesse props di EQUILIBRIUM, nessun forceTheme… */ />
 </div>
 ```
 
@@ -88,13 +92,21 @@ non si riscrive.
   come farebbe `w-full h-full`, con un tetto solo per non diventare assurdo su schermi
   enormi. Su una finestra piccola si restringe SENZA smettere di leggersi (verificato:
   a 900×700 le scritte SF/FALL/LONG FALL restano nitide).
-- **`forceTheme="dark"`** — il pannello resta scuro perché ogni colore di
-  `QuantumSphere` (« STYLE B, monocromo, bianco su nero ») è tarato per quel fondo.
-  Il gradiente radiale è LO STESSO di `AppBackground.tsx` in tema scuro — copiato, non
-  approssimato — perché altrimenti sarebbe di nuovo « stesso codice, non stesso disegno ».
-- **`forceTheme`, non la preferenza condivisa** — SERENITY non legge né scrive
-  `nest_ui_preferences` (la stessa cartella di EQUILIBRIUM): il suo strumento sta scuro
-  a prescindere da cosa l'utente ha scelto nell'altra applicazione.
+- **Il tema NON è più fissato.** Prima versione: `forceTheme="dark"`, fisso — ma
+  segnalato: « aiguilles avec light… le fond de l'arc doit pouvoir être blanc perle
+  aussi ». `QuantumSphere` è tornato a leggere `isLightTheme` da solo (il suo
+  comportamento di sempre, nessuna prop in più); `Serenity.tsx` legge la STESSA chiave
+  per colorare il pannello che lo contiene, e un `SelettoreTema` (in `Impostazioni.tsx`,
+  visibile in `Avvio.tsx` E durante la seduta) la cambia in entrambe le direzioni.
+- **È la preferenza di EQUILIBRIUM, non una copia.** Stesso `localStorage`
+  (`nest_ui_preferences`), stessa chiave di `GlassThemeToggle`: cambiare tema in
+  SERENITY lo cambia anche per la prossima apertura di EQUILIBRIUM, e viceversa —
+  coerente con l'archivio unico, i profili unici, la lingua per-profilo. « Toutes les
+  fonctionnalités de EQUILIBRIUM » vale anche per questa preferenza.
+- **In tema chiaro il pannello sparisce**, letteralmente: `var(--s-ground)`, lo stesso
+  bianco perla della pagina. I colori di `QuantumSphere` in tema chiaro sono già
+  inchiostro scuro leggibile su bianco — un bezel a parte sarebbe stato un pannello
+  chiaro dentro una pagina chiara, cioè un bordo che non serve a niente.
 
 Questo è il modello da ripetere per R-Factor, i pannelli dei quattro cicli,
 l'assessment e tutto il resto delle fasi 6–8: **stesso componente o stessa logica dove

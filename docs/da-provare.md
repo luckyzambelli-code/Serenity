@@ -287,28 +287,33 @@ sta in `lib/profiloEdit`, condivisa: `ProfileRoster` di EQUILIBRIUM ci passa ade
 
 ---
 
-## Da provare col METER — il quadrante di SERENITY è QuantumSphere vero (fase 5, 2/2)
+## Da provare col METER — il quadrante di SERENITY è QuantumSphere vero (fase 5, 3/3)
 
-Segnalato la prima volta: « l'arco dell'ago lo vorrei esattamente come in equilibrium ». Poi,
-vista la prima resa (chiara, `forceLightTheme`): « non ho visto che l'arco e l'ago siano uguali
-come in equilibrium, voglio stesso disegno, stessa grafica ». Giusto: un componente uguale con
-colori diversi è lo stesso CODICE, non lo stesso DISEGNO — e il disegno di EQUILIBRIUM è tarato
-sul tema SCURO (« STYLE B, monocromo, bianco su nero »), non sul chiaro.
+Tre segnalazioni in fila, sullo stesso quadrante: prima « l'arco dell'ago lo vorrei esattamente
+come in equilibrium »; poi, vista la resa chiara (`forceLightTheme`), « voglio stesso disegno,
+stessa grafica » (colori sbagliati); poi, vista la resa scura ma piccola, « le stesse dimensioni
+che in Equilibrium » (taglia sbagliata); infine « aiguilles avec light… le fond de l'arc doit
+pouvoir être blanc perle aussi » — il tema NON va fissato, va reso scegliibile come in
+EQUILIBRIUM, e il pannello deve saper diventare bianco perla davvero, non solo scuro.
 
-Ora `forceTheme="dark"` fissa QuantumSphere sul suo tema nativo, SENZA toccare la preferenza
-condivisa (EQUILIBRIUM resta libero di stare dov'è). E gli si dà lo sfondo che quei colori si
-aspettano — lo STESSO gradiente radiale di `AppBackground.tsx` in tema scuro, non un nero
-inventato — in un pannello proprio, con la sua proporzione vera (1600×850), inscritto nel
-cerchio di SERENITY.
+Ora `QuantumSphere` non riceve più `forceTheme`: legge `isLightTheme` da sé, la STESSA
+preferenza condivisa di EQUILIBRIUM (`nest_ui_preferences`). Il pannello che lo contiene legge
+la stessa chiave: scuro → il gradiente radiale autentico di `AppBackground.tsx`; chiaro →
+`var(--s-ground)`, il bianco perla della pagina stessa, senza bezel. Un `SelettoreTema` in
+`Impostazioni.tsx` la cambia — visibile in `Avvio.tsx` e per tutta la seduta.
 
-- [ ] **fianco a fianco**: la stessa seduta, la stessa reazione, guardata nelle due
+- [ ] **fianco a fianco, tema scuro**: la stessa seduta, la stessa reazione, guardata nelle due
       applicazioni — l'arco, le bande, la scia, le scritte SF/FALL devono essere IDENTICHE,
-      pixel per pixel, non solo nella stessa famiglia di colori;
-- [ ] **F/N**: la resa sul quadrante è quella di sempre (il quadrante è lo stesso identico
-      codice, quindi qui il rischio è basso, ma va guardato);
-- [ ] **cambiare tema in EQUILIBRIUM** (chiaro/scuro) e riaprire SERENITY: l'ago di SERENITY
-      NON deve muoversi da « scuro » — `forceTheme` non legge più la preferenza condivisa,
-      quindi non c'è più un tema chiaro possibile per questo quadrante, in nessun caso.
+      pixel per pixel;
+- [ ] **fianco a fianco, tema chiaro**: stessa prova, con `chiaro` scelto in SERENITY — i colori
+      del tema chiaro di `QuantumSphere` (mai visti fuori da EQUILIBRIUM finora) devono
+      corrispondere;
+- [ ] **F/N**: la resa sul quadrante è quella di sempre in tutti e due i temi;
+- [ ] **cambiare tema DA SERENITY e riaprire EQUILIBRIUM**: deve ritrovarlo cambiato — è la
+      STESSA preferenza, non una copia; e viceversa, cambiarlo in EQUILIBRIUM e riaprire
+      SERENITY deve mostrarlo già così;
+- [ ] **cambiare tema A SEDUTA APERTA**: il pannello e l'ago devono transitare senza rompere
+      la lettura in corso (transizione di 1,2s già scritta, da confermare che non disturbi).
 
 ## Modificare ed eliminare auditor e preclear — anche questo da EQUILIBRIUM
 

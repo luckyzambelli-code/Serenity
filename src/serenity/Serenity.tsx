@@ -32,6 +32,8 @@ import { getProfiles, getPcProfiles } from '../lib/storage';
 import { Avvio } from './Avvio';
 import { AVVIO_VUOTO, type Avvio as StatoAvvio } from './flussoAvvio';
 import { useI18n } from '../i18n';
+import { useUiStore } from '../store/uiStore';
+import { SelettoreLingua, SelettoreTema } from './Impostazioni';
 
 /** mm:ss — l'unico formato di tempo che serve in seduta. */
 const orologio = (s: number) => {
@@ -41,6 +43,10 @@ const orologio = (s: number) => {
 
 export default function Serenity() {
   const { t } = useI18n();
+  // ⚠️ STESSA PREFERENZA DI EQUILIBRIUM — non uno stato di SERENITY. Segnalato: « toutes les
+  // fonctionnalités de EQUILIBRIUM ». `isLightTheme` è la stessa chiave che governa
+  // `GlassThemeToggle`, stesso `localStorage`: cambiarla qui la cambia anche di là.
+  const isLightTheme = useUiStore(s => s.isLightTheme);
   const journal = useSessionJournal('SERENITY');
   const [aperta, setAperta] = useState(false);
   const [tempo, setTempo] = useState(0);
@@ -124,6 +130,11 @@ export default function Serenity() {
           {__SERENITY_VERSION__}
         </span>
         <span style={{ flex: 1 }} />
+        {/* ⚠️ SEGNALATO: « la langue doit pouvoir être changée en cours de route » — non solo
+            alle quattro domande d'avvio. Stessi due selettori di `Avvio.tsx`, condivisi da
+            `Impostazioni.tsx`: qui restano visibili per tutta la seduta, non solo prima. */}
+        <SelettoreTema />
+        <SelettoreLingua />
         {/* Chi audita, chi si audita, e dove — detto in una riga sola e in grigio: sono cose
             che si controllano una volta all'inizio, non che si guardano in seduta. */}
         <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
@@ -142,21 +153,34 @@ export default function Serenity() {
       }}>
         {/*
           ── LE STESSE DIMENSIONI, NON SOLO GLI STESSI COLORI ────────────────────────────
-          Segnalato due volte di seguito: prima « stesso disegno, stessa grafica » (i colori
-          — risolto con `forceTheme`), poi « lo schermo dell'arco è piccolo, devi avere le
-          stesse dimensioni che in Equilibrium ». Giusto: in EQUILIBRIUM il quadrante non è
-          un cerchio fra i moduli — è `w-full h-full` del suo spazio, cioè occupa la parte
-          centrale dello schermo quasi per intero. Chiuderlo in un cerchio da 380 px, per
-          quanto disegnato bene, restava un ninnolo al centro della pagina, non lo strumento.
-          Qui niente `Cerchio`: la proporzione vera (1600×850) riempie lo spazio disponibile
-          con `aspect-ratio`, esattamente come `w-full h-full` fa in EQUILIBRIUM — nessuna
-          taglia inventata, quella che il momento concede.
+          Segnalato più volte di seguito: prima « stesso disegno, stessa grafica » (i colori),
+          poi « lo schermo dell'arco è piccolo, devi avere le stesse dimensioni che in
+          Equilibrium », infine « aiguilles avec light… le fond de l'arc doit pouvoir être
+          blanc perle aussi ». Giusto: in EQUILIBRIUM il quadrante non è un cerchio fra i
+          moduli — è `w-full h-full` del suo spazio. Qui niente `Cerchio`: la proporzione vera
+          (1600×850) riempie lo spazio disponibile con `aspect-ratio`, esattamente come
+          `w-full h-full` fa in EQUILIBRIUM — nessuna taglia inventata, quella che il momento
+          concede.
+
+          ── E IL TEMA NON È PIÙ FISSATO ────────────────────────────────────────────────────
+          Nessun `forceTheme`: `QuantumSphere` legge la STESSA preferenza condivisa
+          (`isLightTheme`, sopra) che governa `SelettoreTema`, senza bisogno di passargliela —
+          è la sua lettura di sempre. Il PANNELLO che lo contiene segue la stessa preferenza:
+            • SCURO  → il gradiente radiale autentico di EQUILIBRIUM (`AppBackground.tsx`),
+              perché i colori chiari dell'ago in tema scuro sarebbero bianco su niente;
+            • CHIARO → bianco perla, la superficie STESSA di SERENITY: in tema chiaro l'ago
+              disegna già in inchiostro scuro (« STYLE B » del componente), leggibile sulla
+              pagina senza bisogno di un pannello a parte — « le fond… blanc perle » è
+              letteralmente questo, non un chiaro inventato apposta.
         */}
         <div style={{
           width: 'min(100%, 1400px)', aspectRatio: '1600 / 850', maxHeight: 'calc(100% - 44px)',
           borderRadius: 18, overflow: 'hidden',
-          background: 'radial-gradient(130% 120% at 50% 22%, #2e2e33 0%, #2a2a2f 55%, #262629 100%)',
-          boxShadow: 'var(--s-shadow-lift)',
+          background: isLightTheme
+            ? 'var(--s-ground)'
+            : 'radial-gradient(130% 120% at 50% 22%, #2e2e33 0%, #2a2a2f 55%, #262629 100%)',
+          boxShadow: isLightTheme ? 'var(--s-shadow)' : 'var(--s-shadow-lift)',
+          transition: 'background var(--s-calm) var(--s-ease), box-shadow var(--s-calm) var(--s-ease)',
         }}>
           <QuantumSphere
             needleOffsetProp={SET_OFFSET}
@@ -168,7 +192,6 @@ export default function Serenity() {
             onClick={theta.resetToSet}
             showTrail
             sessionState={aperta ? 'running' : 'idle'}
-            forceTheme="dark"
           />
         </div>
         {/* L'orologio resta sulla superficie di SERENITY, fuori dal pannello scuro: si

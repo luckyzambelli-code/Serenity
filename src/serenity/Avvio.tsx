@@ -33,14 +33,8 @@ import { getProfiles, getPcProfiles, type UserProfile, type PcProfile } from '..
 import { loadHistory, daysSince, testedToday } from '../engine/canTest';
 import { PannelloProfilo, type Tipo } from './PannelloProfilo';
 import type { DatiProfilo } from '../lib/profiloEdit';
-import { useI18n, type Language } from '../i18n';
-
-const LINGUE: Language[] = ['en', 'fr', 'it', 'es', 'sv'];
-/** Il codice di una lingua VALIDA, o `null`. Il profilo di un auditor può avere `lang`
- *  mancante o corrotto (import vecchio, seduta remota) — non si passa un valore a caso a
- *  `setLang`, si controlla prima. */
-const linguaValida = (l: string | undefined): Language | null =>
-  (LINGUE as string[]).includes(l ?? '') ? (l as Language) : null;
+import { useI18n } from '../i18n';
+import { SelettoreLingua, SelettoreTema, linguaValida } from './Impostazioni';
 
 /**
  * Un cerchio che si può toccare.
@@ -109,31 +103,6 @@ function Scelta({ etichetta, sotto, foto, persona, onClick, onModifica, dimensio
   );
 }
 
-/**
- * IL SELETTORE DI LINGUA — cinque codici, non cinque bandiere.
- *
- * Una bandiera porta un carico politico che una scelta di lingua non ha bisogno di portare
- * (l'inglese di quale bandiera? lo spagnolo di quale?), ed è comunque un'icona da leggere —
- * contro la dottrina di SERENITY. Il codice a due lettere si legge come si legge un'etichetta:
- * di sbieco, per la sua forma.
- */
-function SelettoreLingua() {
-  const { lang, setLang } = useI18n();
-  return (
-    <div style={{ display: 'flex', gap: 10, justifySelf: 'end' }}>
-      {LINGUE.map(l => (
-        <button key={l} onClick={() => setLang(l)} style={{
-          border: 'none', background: 'none', cursor: 'pointer', padding: 2,
-          fontFamily: 'var(--s-mono)', fontSize: 11, letterSpacing: '0.04em',
-          color: l === lang ? 'var(--s-ink)' : 'var(--s-ink-ghost)',
-          fontWeight: l === lang ? 600 : 400,
-        }}>
-          {l.toUpperCase()}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
   const { t, setLang } = useI18n();
@@ -287,7 +256,10 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
       height: '100%', display: 'grid', gridTemplateRows: 'auto auto 1fr auto',
       alignItems: 'center', gap: 28,
     }}>
-      <div style={{ justifySelf: 'end' }}><SelettoreLingua /></div>
+      <div style={{ justifySelf: 'end', display: 'flex', gap: 20 }}>
+        <SelettoreTema />
+        <SelettoreLingua />
+      </div>
 
       {/* La domanda, e basta. Nessun titolo di sezione, nessun numero di passo: sapere di
           essere « al 3 di 4 » non serve a rispondere. */}
