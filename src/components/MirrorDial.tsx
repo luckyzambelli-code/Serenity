@@ -20,7 +20,12 @@ const arc = (o0: number, o1: number, r: number) => {
   return `M ${s.x.toFixed(1)} ${s.y.toFixed(1)} A ${r} ${r} 0 0 1 ${e.x.toFixed(1)} ${e.y.toFixed(1)}`;
 };
 
-export function MirrorDial({
+/**
+ * ⚠️ MEMOIZZATO — stesso motivo di `QuantumSphere` e `ClearDial`: senza `React.memo`, ogni
+ * ridisegno di App.tsx rifà da capo l'SVG del quadrante anche quando i suoi props non sono
+ * cambiati. I props sono numeri, booleani e stringhe primitive: il confronto superficiale li individua identici.
+ */
+export const MirrorDial = React.memo(function MirrorDial({
   armed, valueR, contactQ, dischargeQ, locked, reached, isLightTheme = false, lang = 'it',
 }: {
   /** Valore 1–10 dell'item, RELATIVO all'ambiente (fissato al contatto). */
@@ -145,4 +150,4 @@ export function MirrorDial({
       )}
     </svg>
   );
-}
+});

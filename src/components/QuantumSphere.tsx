@@ -131,7 +131,16 @@ function reactionKeyToOffset(key: string): number {
   return SET_OFFSET;
 }
 
-export function QuantumSphere({
+/**
+ * ⚠️ MEMOIZZATO — è il componente più grande e più chiamato dell'applicazione (l'ago principale,
+ * disegnato a ogni vista). Senza `React.memo`, ogni stato che cambia in App.tsx (il giornale,
+ * una spunta nella barra laterale, un timer) fa ricalcolare da capo le sue ~680 righe di SVG
+ * anche quando NESSUNO dei suoi props è cambiato. Tutti i props passati dal chiamante sono
+ * primitivi o funzioni stabili (`useCallback` a dipendenze vuote): il confronto superficiale di
+ * `memo` li individua come identici, e il ridisegno si salta davvero. Stesso pattern già usato
+ * per `ClearDial`.
+ */
+export const QuantumSphere = React.memo(function QuantumSphere({
   needleOffsetProp, thetaOffset = null, targetOffset = null, showEegNeedle = true,
   asIsnessState, onClick,
   asIsnessConfidence = 0,
@@ -677,4 +686,4 @@ export function QuantumSphere({
       </svg>
     </div>
   );
-}
+});

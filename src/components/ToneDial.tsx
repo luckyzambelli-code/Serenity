@@ -53,7 +53,12 @@ const BAND_FLOOR = 0.10;
 const bandAlpha = (tone: number): number =>
   BAND_FLOOR + (1 - BAND_FLOOR) * (Math.abs(clampTone(tone)) / TONE_SCALE_MAX);
 
-export function ToneDial({
+/**
+ * ⚠️ MEMOIZZATO — stesso motivo di `QuantumSphere` e `ClearDial`: senza `React.memo`, ogni
+ * ridisegno di App.tsx rifà da capo l'SVG del quadrante anche quando i suoi props non sono
+ * cambiati. I props sono numeri e stringhe primitive: il confronto superficiale li individua identici.
+ */
+export const ToneDial = React.memo(function ToneDial({
   tone, hasMeter, approx, located, phase, toneAtStart,
   isLightTheme = false,
 }: {
@@ -233,4 +238,4 @@ export function ToneDial({
       )}
     </svg>
   );
-}
+});
