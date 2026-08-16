@@ -9,9 +9,17 @@
  *
  * ── COSA STA QUI E COSA NO ──────────────────────────────────────────────────────────────────
  * Qui c'è solo il disegno. L'ordine delle domande, cosa si scorda quando si torna indietro, e
- * cosa vuol dire una frase detta a voce stanno in `avvio.ts`, che si prova senza aprire niente.
- * I profili si leggono da `lib/storage`, lo stesso di EQUILIBRIUM — e sono gli stessi profili,
- * che è la verifica scritta per questa fase.
+ * cosa vuol dire una frase detta a voce stanno in `flussoAvvio.ts`, che si prova senza aprire
+ * niente. I profili si leggono da `lib/storage`, lo stesso di EQUILIBRIUM — e sono gli stessi
+ * profili, che è la verifica scritta per questa fase.
+ *
+ * ── E ADESSO LE CINQUE LINGUE ────────────────────────────────────────────────────────────────
+ * « Mi raccomando, le 5 lingue »: ogni scritta passa da `useI18n()`/`t()`, lo STESSO dizionario
+ * di EQUILIBRIUM (`src/i18n.tsx`, chiavi `ser_*`) — non un secondo sistema di traduzione che
+ * potrebbe divergere. La lingua della SEDUTA è quella dell'auditor: appena se ne sceglie uno
+ * ESISTENTE, `preferences.lang` del suo profilo diventa la lingua di schermo, esattamente come
+ * fa `App.tsx` quando carica un profilo. Prima di quella scelta — o mentre lo si sta creando —
+ * un piccolo selettore in alto lascia cambiare lingua a mano.
  *
  * @see docs/refonte-fasi.md — fase 4.
  */
@@ -21,20 +29,18 @@ import {
   AVVIO_VUOTO, passoCorrente, restano, rispondi, indietro,
   MODO_AUTO, MODO_AUTO_MS, type Avvio as StatoAvvio, type PassoId,
 } from './flussoAvvio';
-import { getProfiles, getPcProfiles } from '../lib/storage';
+import { getProfiles, getPcProfiles, type UserProfile, type PcProfile } from '../lib/storage';
 import { loadHistory, daysSince, testedToday } from '../engine/canTest';
 import { PannelloProfilo, type Tipo } from './PannelloProfilo';
 import type { DatiProfilo } from '../lib/profiloEdit';
+import { useI18n, type Language } from '../i18n';
 
-/** Le domande, dette come le direbbe un auditor — non come le scriverebbe un modulo. */
-const DOMANDA: Record<PassoId, string> = {
-  auditor:  'Chi audita?',
-  chi:      'Da solo, o con un preclear?',
-  preclear: 'Chi è il preclear?',
-  dove:     'Siete qui, o a distanza?',
-  modo:     'Quanto vuoi vedere?',
-  pronto:   '',
-};
+const LINGUE: Language[] = ['en', 'fr', 'it', 'es', 'sv'];
+/** Il codice di una lingua VALIDA, o `null`. Il profilo di un auditor può avere `lang`
+ *  mancante o corrotto (import vecchio, seduta remota) — non si passa un valore a caso a
+ *  `setLang`, si controlla prima. */
+const linguaValida = (l: string | undefined): Language | null =>
+  (LINGUE as string[]).includes(l ?? '') ? (l as Language) : null;
 
 /**
  * Un cerchio che si può toccare.
@@ -56,6 +62,7 @@ function Scelta({ etichetta, sotto, foto, persona, onClick, onModifica, dimensio
   etichetta: string; sotto?: string; foto?: string; persona?: boolean;
   onClick: () => void; onModifica?: () => void; dimensione?: number;
 }) {
+  const { t } = useI18n();
   const [sopra, setSopra] = useState(false);
   const iniziali = etichetta.trim().split(/\s+/).slice(0, 2).map(p => p[0] ?? '').join('').toUpperCase();
   return (
@@ -95,21 +102,48 @@ function Scelta({ etichetta, sotto, foto, persona, onClick, onModifica, dimensio
           fontFamily: 'var(--s-sans)', fontSize: 10.5, letterSpacing: '0.04em',
           color: 'var(--s-ink-faint)',
         }}>
-          modifica
+          {t('ser_modify')}
         </button>
       )}
     </div>
   );
 }
 
+/**
+ * IL SELETTORE DI LINGUA — cinque codici, non cinque bandiere.
+ *
+ * Una bandiera porta un carico politico che una scelta di lingua non ha bisogno di portare
+ * (l'inglese di quale bandiera? lo spagnolo di quale?), ed è comunque un'icona da leggere —
+ * contro la dottrina di SERENITY. Il codice a due lettere si legge come si legge un'etichetta:
+ * di sbieco, per la sua forma.
+ */
+function SelettoreLingua() {
+  const { lang, setLang } = useI18n();
+  return (
+    <div style={{ display: 'flex', gap: 10, justifySelf: 'end' }}>
+      {LINGUE.map(l => (
+        <button key={l} onClick={() => setLang(l)} style={{
+          border: 'none', background: 'none', cursor: 'pointer', padding: 2,
+          fontFamily: 'var(--s-mono)', fontSize: 11, letterSpacing: '0.04em',
+          color: l === lang ? 'var(--s-ink)' : 'var(--s-ink-ghost)',
+          fontWeight: l === lang ? 600 : 400,
+        }}>
+          {l.toUpperCase()}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
+  const { t, setLang } = useI18n();
   const [stato, setStato] = useState<StatoAvvio>(AVVIO_VUOTO);
   const passo = passoCorrente(stato);
 
   // I profili sono quelli di EQUILIBRIUM, dallo stesso armadio. Si rileggono dopo ogni
   // creazione: il profilo appena fatto dev'essere lì fra gli altri, non in un elenco a parte.
   const leggi = () => {
-    try { return { a: getProfiles(), p: getPcProfiles() }; } catch { return { a: [], p: [] }; }
+    try { return { a: getProfiles(), p: getPcProfiles() }; } catch { return { a: [] as UserProfile[], p: [] as PcProfile[] }; }
   };
   const [liste, setListe] = useState(leggi);
   /**
@@ -122,6 +156,17 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
   const dai = (v: string | boolean) => setStato(s => rispondi(s, passoCorrente(s), v));
 
   /**
+   * SCEGLIERE L'AUDITOR SCEGLIE ANCHE LA LINGUA — se il suo profilo ne ha una. È lo stesso
+   * momento in cui `App.tsx` lo fa quando carica un profilo (`setLang(p.preferences.lang)`):
+   * la lingua è un dato DELL'AUDITOR, non dell'applicazione.
+   */
+  const scegliAuditor = (p: UserProfile) => {
+    const l = linguaValida(p.preferences?.lang);
+    if (l) setLang(l);
+    dai(p.id);
+  };
+
+  /**
    * LA PROVA DELLE LATTINE DI QUESTO PRECLEAR.
    *
    * ⚠️ Si mostra QUI, quando lo si sceglie, e non altrove: è il momento in cui si decide se
@@ -132,10 +177,10 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
   const lattine = (nome: string): string => {
     try {
       const h = loadHistory(nome);
-      if (!h.tests.length) return 'lattine mai provate';
-      if (testedToday(h, Date.now())) return 'lattine provate oggi';
+      if (!h.tests.length) return t('ser_cans_never');
+      if (testedToday(h, Date.now())) return t('ser_cans_today');
       const g = daysSince(h, Date.now());
-      return g === 1 ? 'lattine provate ieri' : `lattine provate ${g} giorni fa`;
+      return g === 1 ? t('ser_cans_yesterday') : t('ser_cans_days_ago').replace('{n}', String(g));
     } catch { return ''; }
   };
 
@@ -169,17 +214,17 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
       case 'auditor':
         return <>
           {liste.a.map(p => (
-            <Scelta key={p.id} etichetta={p.name} foto={p.photo} persona onClick={() => dai(p.id)}
+            <Scelta key={p.id} etichetta={p.name} foto={p.photo} persona onClick={() => scegliAuditor(p)}
                     onModifica={() => setPannello({ tipo: 'auditor',
                       esistente: { id: p.id, nome: p.name, foto: p.photo, sesso: p.sex } })} />
           ))}
-          <Scelta etichetta="Nuovo" sotto="nome, ritratto, sesso" dimensione={96}
+          <Scelta etichetta={t('ser_new')} sotto={t('ser_new_sub')} dimensione={96}
                   onClick={() => setPannello({ tipo: 'auditor' })} />
         </>;
       case 'chi':
         return <>
-          <Scelta etichetta="Da solo" sotto="audito me stesso" onClick={() => dai('solo')} />
-          <Scelta etichetta="Con un preclear" onClick={() => dai('preclear')} />
+          <Scelta etichetta={t('ser_solo')} sotto={t('ser_solo_sub')} onClick={() => dai('solo')} />
+          <Scelta etichetta={t('ser_with_pc')} onClick={() => dai('preclear')} />
         </>;
       case 'preclear':
         return <>
@@ -189,18 +234,18 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
                     onModifica={() => setPannello({ tipo: 'preclear',
                       esistente: { id: p.id, nome: p.name, foto: p.photo, sesso: p.sex } })} />
           ))}
-          <Scelta etichetta="Nuovo" sotto="nome, ritratto, sesso" dimensione={96}
+          <Scelta etichetta={t('ser_new')} sotto={t('ser_new_sub')} dimensione={96}
                   onClick={() => setPannello({ tipo: 'preclear' })} />
         </>;
       case 'dove':
         return <>
-          <Scelta etichetta="Qui" sotto="nella stessa stanza" onClick={() => dai('qui')} />
-          <Scelta etichetta="A distanza" sotto="il preclear è altrove" onClick={() => dai('distanza')} />
+          <Scelta etichetta={t('ser_here')} sotto={t('ser_here_sub')} onClick={() => dai('qui')} />
+          <Scelta etichetta={t('ser_remote')} sotto={t('ser_remote_sub')} onClick={() => dai('distanza')} />
         </>;
       case 'modo':
         return <>
-          <Scelta etichetta="Normale" sotto="solo ciò che serve" onClick={() => dai('normale')} />
-          <Scelta etichetta="Esperto" sotto="tutti i numeri" onClick={() => dai('esperto')} />
+          <Scelta etichetta={t('ser_normal')} sotto={t('ser_normal_sub')} onClick={() => dai('normale')} />
+          <Scelta etichetta={t('ser_expert')} sotto={t('ser_expert_sub')} onClick={() => dai('esperto')} />
         </>;
       default:
         return null;
@@ -208,6 +253,10 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
   };
 
   const quante = restano(stato);
+  const DOMANDA: Record<PassoId, string> = {
+    auditor: t('ser_q_auditor'), chi: t('ser_q_chi'), preclear: t('ser_q_preclear'),
+    dove: t('ser_q_dove'), modo: t('ser_q_modo'), pronto: '',
+  };
 
   // Creare o modificare un profilo NON è un passo del flusso: è una deviazione.
   //   • CREARE: il profilo appena fatto è la risposta alla domanda in corso — si sceglie da sé,
@@ -235,9 +284,11 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
 
   return (
     <section style={{
-      height: '100%', display: 'grid', gridTemplateRows: 'auto 1fr auto',
+      height: '100%', display: 'grid', gridTemplateRows: 'auto auto 1fr auto',
       alignItems: 'center', gap: 28,
     }}>
+      <div style={{ justifySelf: 'end' }}><SelettoreLingua /></div>
+
       {/* La domanda, e basta. Nessun titolo di sezione, nessun numero di passo: sapere di
           essere « al 3 di 4 » non serve a rispondere. */}
       <div style={{ display: 'grid', justifyItems: 'center', gap: 10 }}>
@@ -249,7 +300,8 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
         </h1>
         {/* Quante ne restano, detto a parole. Una barra di avanzamento sarebbe un pannello. */}
         <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
-          {quante > 1 ? `ancora ${quante} domande` : quante === 1 ? 'ultima domanda' : ''}
+          {quante > 1 ? t('ser_questions_left').replace('{n}', String(quante))
+            : quante === 1 ? t('ser_last_question') : ''}
         </span>
       </div>
 
@@ -266,14 +318,14 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
             border: 'none', background: 'none', cursor: 'pointer',
             fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
           }}>
-            ← torna indietro
+            ← {t('ser_back')}
           </button>
         )}
         {passo === 'modo' && (
           // Il tempo che passa si vede, così la scelta automatica non arriva a sorpresa —
           // ma si dice a parole, non con una barra che si riempie alla periferia dell'occhio.
           <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
-            senza risposta, fra {Math.ceil(rimasti / 1000)} s si va in NORMALE
+            {t('ser_auto_normal').replace('{n}', String(Math.ceil(rimasti / 1000)))}
           </span>
         )}
       </div>

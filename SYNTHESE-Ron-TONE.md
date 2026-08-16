@@ -1,6 +1,6 @@
 # TONE SCALE
 
-*Note pour Ron · version 2.0.142*
+*Note pour Ron · version 2.0.143*
 
 ---
 

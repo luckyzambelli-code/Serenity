@@ -21,12 +21,10 @@ const LINGUE = ['en', 'fr', 'it', 'es', 'sv'] as const;
 const files = (dir: string, out: string[] = []): string[] => {
   for (const nome of readdirSync(dir)) {
     const p = join(dir, nome);
-    // ⚠️ `src/serenity` ESCLUSO: SERENITY non ha ancora adottato il dizionario a cinque
-    // lingue — è ancora tutta in italiano, deliberatamente, mentre l'interfaccia si assesta
-    // (fase 4/5 della refonte). Farla passare da questa guardia oggi vorrebbe dire tradurre
-    // testo che potrebbe cambiare la settimana prossima. Quando SERENITY smette di essere un
-    // cantiere, questa riga va tolta e il resto del test fa il suo lavoro anche lì.
-    if (statSync(p).isDirectory()) { if (nome !== '__tests__' && nome !== 'serenity') files(p, out); }
+    // `src/serenity` è dentro la guardia come tutto il resto (dal 16/08/2026): « mi
+    // raccomando, le 5 lingue » — SERENITY passa dallo stesso dizionario di EQUILIBRIUM
+    // (chiavi `ser_*` in `src/i18n.tsx`), non da un secondo sistema di traduzione.
+    if (statSync(p).isDirectory()) { if (nome !== '__tests__') files(p, out); }
     else if (/\.tsx?$/.test(nome)) out.push(p);
   }
   return out;

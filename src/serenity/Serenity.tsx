@@ -32,6 +32,7 @@ import { getProfiles, getPcProfiles } from '../lib/storage';
 import { Cerchio } from './Cerchio';
 import { Avvio } from './Avvio';
 import { AVVIO_VUOTO, type Avvio as StatoAvvio } from './flussoAvvio';
+import { useI18n } from '../i18n';
 
 /** mm:ss — l'unico formato di tempo che serve in seduta. */
 const orologio = (s: number) => {
@@ -40,6 +41,7 @@ const orologio = (s: number) => {
 };
 
 export default function Serenity() {
+  const { t } = useI18n();
   const journal = useSessionJournal('SERENITY');
   const [aperta, setAperta] = useState(false);
   const [tempo, setTempo] = useState(0);
@@ -84,12 +86,12 @@ export default function Serenity() {
 
   const apri = () => {
     sessionClock.reset(); sessionClock.start();
-    journal.resetJournal('seduta aperta');
+    journal.resetJournal(t('ser_session_opened'));
     setAperta(true);
   };
   const chiudi = () => {
     sessionClock.end();
-    journal.addLog({ speaker: 'SYS', text: 'seduta chiusa', time: sessionClock.now() });
+    journal.addLog({ speaker: 'SYS', text: t('ser_session_closed'), time: sessionClock.now() });
     setAperta(false);
   };
   /** Si ricomincia dalle domande. Solo a seduta chiusa: cambiare preclear a metà seduta
@@ -126,8 +128,8 @@ export default function Serenity() {
         {/* Chi audita, chi si audita, e dove — detto in una riga sola e in grigio: sono cose
             che si controllano una volta all'inizio, non che si guardano in seduta. */}
         <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
-          {nomeAuditor}{avvio.solo ? ' · da solo' : ` · ${nomePreclear}`}
-          {avvio.distanza ? ' · a distanza' : ''}{avvio.esperto ? ' · esperto' : ''}
+          {nomeAuditor}{avvio.solo ? ` · ${t('ser_alone_tag')}` : ` · ${nomePreclear}`}
+          {avvio.distanza ? ` · ${t('ser_remote_tag')}` : ''}{avvio.esperto ? ` · ${t('ser_expert_tag')}` : ''}
         </span>
       </header>
 
@@ -197,17 +199,17 @@ export default function Serenity() {
           fontFamily: 'var(--s-sans)',
           transition: `box-shadow var(--s-slow) var(--s-ease)`,
         }}>
-          {aperta ? 'chiudi' : 'apri una seduta'}
+          {aperta ? t('ser_close_session') : t('ser_open_session')}
         </button>
         {/* Il giornale NON si mostra: scorrere alla periferia tira l'occhio proprio mentre
             l'ago legge. Qui si dice solo che sta scrivendo, e quante righe ha. */}
         <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
-          giornale · {journal.logs.length} {journal.logs.length === 1 ? 'riga' : 'righe'}
+          {t('ser_journal')} · {journal.logs.length} {t(journal.logs.length === 1 ? 'ser_line' : 'ser_lines')}
         </span>
         {/* Lo stato del meter si dice a parole e in grigio: è una cosa che si controlla
             all'inizio, non che si sorveglia in seduta. */}
         <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
-          {meterC ? 'meter collegato' : theta.unavailable ? 'meter non disponibile qui' : 'meter scollegato'}
+          {t(meterC ? 'ser_meter_connected' : theta.unavailable ? 'ser_meter_unavailable' : 'ser_meter_disconnected')}
         </span>
         <span style={{ flex: 1 }} />
         {!aperta && (
@@ -215,7 +217,7 @@ export default function Serenity() {
             border: 'none', background: 'none', cursor: 'pointer',
             fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
           }}>
-            ← cambia auditor o preclear
+            ← {t('ser_change_people')}
           </button>
         )}
       </footer>

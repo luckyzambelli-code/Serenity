@@ -24,6 +24,7 @@ import {
   fotoDaVideo, fotoDaFile, salvaAuditor, salvaPreclear,
   eliminaAuditor, eliminaPreclear, type DatiProfilo,
 } from '../lib/profiloEdit';
+import { useI18n } from '../i18n';
 
 export type Tipo = 'auditor' | 'preclear';
 
@@ -37,6 +38,7 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
   onEliminato: () => void;
   onAnnulla: () => void;
 }) {
+  const { t } = useI18n();
   const modifica = !!esistente;
   const [nome, setNome] = useState(esistente?.nome ?? '');
   const [foto, setFoto] = useState<string | undefined>(esistente?.foto);
@@ -75,7 +77,7 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
       requestAnimationFrame(() => {
         if (videoRef.current) { videoRef.current.srcObject = st; void videoRef.current.play().catch(() => {}); }
       });
-    } catch { setErrore('camera non disponibile'); }
+    } catch { setErrore(t('ser_camera_unavailable')); }
   };
 
   const scatta = () => {
@@ -88,7 +90,7 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
     const p = tipo === 'auditor' ? salvaAuditor(dati) : salvaPreclear(dati);
     // `null` = nome vuoto. Un profilo senza nome non si ritrova più, e le sedute che gli si
     // appendono restano senza padrone.
-    if (!p) { setErrore('serve un nome'); return; }
+    if (!p) { setErrore(t('ser_need_name')); return; }
     spegniCamera();
     onFatto(p.id);
   };
@@ -127,8 +129,8 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
                       alignItems: 'center', gap: 24, justifyItems: 'center' }}>
       <h1 style={{ margin: 0, fontFamily: 'var(--s-serif)', fontWeight: 400, fontSize: 28 }}>
         {modifica
-          ? `Modifica ${esistente!.nome}`
-          : (tipo === 'auditor' ? 'Un auditor nuovo' : 'Un preclear nuovo')}
+          ? t('ser_edit_title').replace('{nome}', esistente!.nome)
+          : t(tipo === 'auditor' ? 'ser_new_auditor_title' : 'ser_new_preclear_title')}
       </h1>
 
       <div style={{ display: 'grid', justifyItems: 'center', gap: 22 }}>
@@ -138,19 +140,19 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : foto
               ? <img src={foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <span style={{ fontSize: 11, color: 'var(--s-ink-faint)' }}>nessun ritratto</span>}
+              : <span style={{ fontSize: 11, color: 'var(--s-ink-faint)' }}>{t('ser_no_portrait')}</span>}
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>
           {camera
             ? <>
-                <button onClick={scatta} style={pillola(true)}>scatta</button>
-                <button onClick={spegniCamera} style={pillola(false)}>annulla</button>
+                <button onClick={scatta} style={pillola(true)}>{t('ser_shoot')}</button>
+                <button onClick={spegniCamera} style={pillola(false)}>{t('ser_cancel')}</button>
               </>
             : <>
-                <button onClick={accendiCamera} style={pillola(false)}>camera</button>
-                <button onClick={() => fileRef.current?.click()} style={pillola(false)}>da un file</button>
-                {foto && <button onClick={() => setFoto(undefined)} style={pillola(false)}>togli</button>}
+                <button onClick={accendiCamera} style={pillola(false)}>{t('ser_camera')}</button>
+                <button onClick={() => fileRef.current?.click()} style={pillola(false)}>{t('ser_from_file')}</button>
+                {foto && <button onClick={() => setFoto(undefined)} style={pillola(false)}>{t('ser_remove')}</button>}
               </>}
           <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
                  onChange={e => {
@@ -161,7 +163,7 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
 
         <input
           value={nome} onChange={e => { setNome(e.target.value); setErrore(''); }}
-          placeholder="nome" style={testo} autoFocus
+          placeholder={t('ser_name_placeholder')} style={testo} autoFocus
           onKeyDown={e => { if (e.key === 'Enter') salva(); }}
         />
 
@@ -170,13 +172,13 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
             l'applicazione ripiega su 2,0, che è la scelta prudente ma non è la sua. */}
         <div style={{ display: 'grid', justifyItems: 'center', gap: 8 }}>
           <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={() => setSesso('m')} style={pillola(sesso === 'm')}>uomo</button>
-            <button onClick={() => setSesso('f')} style={pillola(sesso === 'f')}>donna</button>
+            <button onClick={() => setSesso('m')} style={pillola(sesso === 'm')}>{t('ser_man')}</button>
+            <button onClick={() => setSesso('f')} style={pillola(sesso === 'f')}>{t('ser_woman')}</button>
           </div>
           <span style={{ fontSize: 11.5, color: 'var(--s-ink-faint)' }}>
-            {sesso === 'm' ? 'lettura di clear a TA 3,0'
-              : sesso === 'f' ? 'lettura di clear a TA 2,0'
-              : 'decide la lettura di clear — senza, si prende 2,0'}
+            {sesso === 'm' ? t('ser_clear_male')
+              : sesso === 'f' ? t('ser_clear_female')
+              : t('ser_clear_undecided')}
           </span>
         </div>
       </div>
@@ -185,8 +187,8 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
         <button onClick={onAnnulla} style={{
           border: 'none', background: 'none', cursor: 'pointer',
           fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
-        }}>← torna indietro</button>
-        <button onClick={salva} style={pillola(true)}>salva</button>
+        }}>← {t('ser_back')}</button>
+        <button onClick={salva} style={pillola(true)}>{t('ser_save')}</button>
         {/* ⚠️ ELIMINARE SOLO SU UN PROFILO ESISTENTE, e con la conferma DENTRO il bottone
             stesso — un secondo tocco, non una finestra di sistema che romperebbe la
             superficie. Il colore passa alla riserva (ambra) solo quando chiede conferma:
@@ -199,7 +201,7 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
             color: confermaElimina ? 'var(--s-ground-warm)' : 'var(--s-ink-faint)',
             transition: 'background var(--s-slow) var(--s-ease), color var(--s-slow) var(--s-ease)',
           }}>
-            {confermaElimina ? 'tocca ancora per confermare' : 'elimina'}
+            {confermaElimina ? t('ser_confirm_delete') : t('ser_delete')}
           </button>
         )}
         {errore && <span style={{ fontSize: 12, color: 'var(--s-reserve)' }}>{errore}</span>}
