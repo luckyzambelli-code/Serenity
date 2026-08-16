@@ -1,0 +1,131 @@
+/**
+ * SERENITY — il guscio.
+ *
+ * ── CHE COS'È, E CHE COSA NON È ─────────────────────────────────────────────────────────────
+ * Fase 3 della refonte: la SECONDA applicazione esiste, si apre, e gira sullo STESSO MOTORE.
+ * Non è ancora un'interfaccia di seduta — non c'è l'ago, non ci sono i cicli, non c'è il
+ * giornale a schermo. Quelli arrivano nelle fasi 5, 6 e 8.
+ *
+ * Quel che questo guscio deve DIMOSTRARE, e dimostra:
+ *   • che una seconda superficie può montarsi su `src/engine` e `src/session` senza copiarne
+ *     una riga — l'orologio qui sotto è `runtime/SessionClock`, lo stesso che conta i secondi
+ *     in EQUILIBRIUM, e il giornale è `session/useSessionJournal`, non un secondo giornale;
+ *   • che l'archivio è UNO SOLO: i profili elencati qui sono quelli di EQUILIBRIUM, letti
+ *     dallo stesso `lib/storage`. Se ne compare uno, le due applicazioni guardano lo stesso
+ *     armadio — che è la verifica scritta nel piano per questa fase.
+ *
+ * ⚠️ ZERO LOGICA DI AUDITING. Nessuna soglia, nessuna reazione, nessuna decisione. Se un giorno
+ * una regola di auditing comparisse in questo file, sarebbe la prova che la refonte ha fallito:
+ * vorrebbe dire che la stessa regola vive in due posti e che i due potranno divergere.
+ *
+ * @see docs/refonte-fasi.md
+ */
+
+import { useEffect, useState } from 'react';
+import { sessionClock } from '../runtime/SessionClock';
+import { useSessionJournal } from '../session/useSessionJournal';
+import { getProfiles, getPcProfiles } from '../lib/storage';
+import { Cerchio } from './Cerchio';
+
+/** mm:ss — l'unico formato di tempo che serve in seduta. */
+const orologio = (s: number) => {
+  const m = Math.floor(s / 60), r = Math.floor(s % 60);
+  return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+};
+
+export default function Serenity() {
+  const journal = useSessionJournal('SERENITY');
+  const [aperta, setAperta] = useState(false);
+  const [tempo, setTempo] = useState(0);
+
+  // L'orologio è QUELLO DI EQUILIBRIUM: `sessionClock` è un modulo unico, e conta i secondi
+  // fuori da React perché il ridisegno non deve poter far perdere un secondo di seduta.
+  useEffect(() => sessionClock.subscribe(() => setTempo(sessionClock.now())), []);
+
+  // I profili vengono dallo stesso armadio — è la verifica di questa fase.
+  const [conti] = useState(() => {
+    try { return { auditor: getProfiles().length, pc: getPcProfiles().length }; }
+    catch { return { auditor: 0, pc: 0 }; }
+  });
+
+  const apri = () => {
+    sessionClock.reset(); sessionClock.start();
+    journal.resetJournal('seduta aperta');
+    setAperta(true);
+  };
+  const chiudi = () => {
+    sessionClock.end();
+    journal.addLog({ speaker: 'SYS', text: 'seduta chiusa', time: sessionClock.now() });
+    setAperta(false);
+  };
+
+  return (
+    <main style={{
+      height: '100%', display: 'grid', gridTemplateRows: 'auto 1fr auto',
+      padding: '38px 44px', gap: 24,
+    }}>
+      {/* ── L'INTESTAZIONE, che non è una barra ───────────────────────────────────────────
+          Nessun fondo, nessuna linea di separazione: il nome sta posato sulla stessa
+          superficie di tutto il resto. Una barra è già un pannello. */}
+      <header style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
+        <span style={{ fontFamily: 'var(--s-serif)', fontSize: 21, letterSpacing: '0.14em' }}>
+          SERENITY
+        </span>
+        <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11, color: 'var(--s-ink-faint)' }}>
+          {__SERENITY_VERSION__}
+        </span>
+        <span style={{ flex: 1 }} />
+        <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
+          {conti.auditor + conti.pc > 0
+            ? `stesso archivio · ${conti.auditor} auditor · ${conti.pc} preclear`
+            : 'archivio vuoto'}
+        </span>
+      </header>
+
+      {/* ── IL CAMPO ──────────────────────────────────────────────────────────────────────
+          Un cerchio grande al centro — è il posto dell'ago, e resta vuoto finché l'ago non
+          arriva (fase 5). Intorno, i cerchi che diventeranno i moduli: compaiono quando
+          servono e si ritirano quando non servono più, ed è per questo che non hanno una
+          griglia. Qui sono spenti: il guscio non ha ancora nulla da dire. */}
+      <section style={{ position: 'relative', display: 'grid', placeItems: 'center' }}>
+        <Cerchio dimensione={300} viva={aperta}>
+          <div style={{
+            fontFamily: 'var(--s-mono)', fontSize: 46, letterSpacing: '0.04em',
+            color: aperta ? 'var(--s-ink)' : 'var(--s-ink-ghost)',
+            transition: `color var(--s-slow) var(--s-ease)`,
+            fontVariantNumeric: 'tabular-nums',
+          }}>
+            {orologio(tempo)}
+          </div>
+        </Cerchio>
+
+        <Cerchio dimensione={78} x={-250} y={-96} ritardo={0}   spenta />
+        <Cerchio dimensione={62} x={252}  y={-124} ritardo={180} spenta />
+        <Cerchio dimensione={92} x={228}  y={112}  ritardo={360} spenta />
+        <Cerchio dimensione={54} x={-232} y={132}  ritardo={540} spenta />
+      </section>
+
+      {/* ── IL GESTO ──────────────────────────────────────────────────────────────────────
+          Uno solo. Il guscio sa fare una cosa: aprire e chiudere una seduta sull'orologio
+          vero. Tutto il resto delle fasi si appende a questo. */}
+      <footer style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+        <button onClick={aperta ? chiudi : apri} style={{
+          border: 'none', cursor: 'pointer',
+          background: 'var(--s-disc)', color: 'var(--s-ink)',
+          boxShadow: 'var(--s-shadow)',
+          borderRadius: 999, padding: '11px 28px',
+          fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase',
+          fontFamily: 'var(--s-sans)',
+          transition: `box-shadow var(--s-slow) var(--s-ease)`,
+        }}>
+          {aperta ? 'chiudi' : 'apri una seduta'}
+        </button>
+        {/* Il giornale NON si mostra: scorrere alla periferia tira l'occhio proprio mentre
+            l'ago legge. Qui si dice solo che sta scrivendo, e quante righe ha. */}
+        <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
+          giornale · {journal.logs.length} {journal.logs.length === 1 ? 'riga' : 'righe'}
+        </span>
+      </footer>
+    </main>
+  );
+}

@@ -9,8 +9,12 @@ import { defineConfig } from 'vite';
 // `dist:mac` the bump script rewrites package.json, but the child `npm run build`
 // INHERITS npm_package_version from the parent process at its PRE-bump value, so
 // the in-app version lagged one behind the DMG. Reading the file is always correct.
-const APP_VERSION =
-  JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf8')).version;
+const PKG = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf8'));
+const APP_VERSION = PKG.version;
+// ⚠️ SERENITY HA LA SUA NUMERAZIONE, e parte da 3.0.0. Non è un capriccio: sono due
+// applicazioni separate che escono dallo stesso deposito, e una versione sola vorrebbe dire
+// che un ritocco all'una fa avanzare il numero dell'altra senza che nulla sia cambiato.
+const SERENITY_VERSION = PKG.serenityVersion;
 
 export default defineConfig({
   base: './', // Forza Vite a usare percorsi relativi (fondamentale per Electron)
@@ -21,6 +25,7 @@ export default defineConfig({
   define: {
     'process.env.GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || ''),
     __APP_VERSION__: JSON.stringify(APP_VERSION),
+    __SERENITY_VERSION__: JSON.stringify(SERENITY_VERSION),
   },
   resolve: {
     alias: {
@@ -47,5 +52,15 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     emptyOutDir: true,
+    rollupOptions: {
+      // DUE PAGINE, un solo deposito e un solo motore: `index.html` è EQUILIBRIUM,
+      // `serenity.html` è SERENITY. Quel che condividono — engine, session, lib — Vite lo
+      // mette da sé in un pezzo comune, e quindi nel pacchetto è LO STESSO CODICE, non una
+      // copia che un giorno potrà divergere.
+      input: {
+        index: path.resolve(__dirname, 'index.html'),
+        serenity: path.resolve(__dirname, 'serenity.html'),
+      },
+    },
   },
 });

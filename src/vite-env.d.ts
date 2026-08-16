@@ -2,6 +2,9 @@
 
 // CONN-113: injected at build time from package.json (see vite.config.ts).
 declare const __APP_VERSION__: string;
+/** SERENITY ha la SUA numerazione (parte da 3.0.0): due applicazioni separate dallo stesso
+ *  deposito, e un numero solo farebbe avanzare l'una quando si tocca l'altra. */
+declare const __SERENITY_VERSION__: string;
 
 // ── WebHID ──────────────────────────────────────────────────────────────────────────────────
 // L'API non è nella libreria standard di TypeScript. Si dichiara QUI il minimo indispensabile

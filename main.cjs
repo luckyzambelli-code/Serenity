@@ -12,9 +12,32 @@ const DIST_DIR = path.join(__dirname, 'dist');
 // localStorage = profiles, session history, settings) is keyed by the product name,
 // so a rename would otherwise orphan all existing data. Pin userData to the original
 // "Static Meter" folder so nothing is lost across the rename. Must run before ready.
+//
+// ⚠️ E VALE PER TUTTE E DUE LE APPLICAZIONI. EQUILIBRIUM e SERENITY escono dallo stesso
+// deposito e sono due eseguibili distinti, ma guardano UN SOLO ARMADIO: gli stessi profili,
+// lo stesso archivio, le stesse sedute. È la verifica scritta per la fase 3 della refonte —
+// un profilo creato di là si deve vedere di qua.
+//
+// La conseguenza da sapere: Chromium mette un lucchetto su questa cartella, quindi le due
+// applicazioni NON possono stare aperte insieme. Non è un limite che dà fastidio (non si
+// audita due volte in una volta), ed è il prezzo di avere una verità sola invece di due
+// archivi che divergono.
 try {
   app.setPath('userData', path.join(app.getPath('appData'), 'Static Meter'));
 } catch (_) { /* dev/non-packaged: ignore */ }
+
+// ── QUALE DELLE DUE INTERFACCE SI APRE ───────────────────────────────────────
+// Un solo `main.cjs` per due applicazioni: quel che cambia è la pagina che si carica, perché
+// il resto — server locale, Bluetooth, HID, archivio, PDF — è identico e non va scritto due
+// volte. Il nome del prodotto lo mette electron-builder; in sviluppo si può forzare con
+// SM_ENTRY=serenity.html, dove il nome è ancora quello del package.
+// L'entrata è SCRITTA nel pacchetto (`smEntry`), non dedotta dal nome: dedurla vorrebbe dire
+// che un giorno, su un'altra piattaforma o dopo un cambio di nome, si apre l'interfaccia
+// sbagliata senza un messaggio. In sviluppo, dove il pacchetto non c'è, si forza con
+// SM_ENTRY=serenity.html; se non è scritto niente, si apre EQUILIBRIUM.
+let ENTRY = 'index.html';
+try { ENTRY = process.env.SM_ENTRY || require('./package.json').smEntry || 'index.html'; }
+catch (_) { /* package.json illeggibile: EQUILIBRIUM */ }
 
 // Kill whatever process is occupying PORT (macOS/Linux only)
 function freePort(port) {
@@ -291,7 +314,7 @@ function createWindow() {
   win.on('move',   () => { if (!win.isDestroyed()) win.webContents.send('window-moved'); });
   win.on('resize', () => { if (!win.isDestroyed()) win.webContents.send('window-resized'); });
 
-  win.loadURL(`http://127.0.0.1:${PORT}/index.html`).catch(console.error);
+  win.loadURL(`http://127.0.0.1:${PORT}/${ENTRY}`).catch(console.error);
 }
 
 

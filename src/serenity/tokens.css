@@ -1,0 +1,108 @@
+/**
+ * SERENITY — IL LINGUAGGIO.
+ *
+ * ── LA REGOLA CHE GENERA TUTTO IL RESTO ─────────────────────────────────────────────────────
+ * L'attenzione dell'auditor sta sul PRECLEAR, non sullo schermo. Lo schermo si legge con la coda
+ * dell'occhio, mai fissandolo. Da qui discende ogni scelta di questo file:
+ *
+ *   • BIANCO PERLA, non nero. Uno schermo scuro in una stanza illuminata è una lampada puntata:
+ *     l'occhio ci torna da solo. Una superficie chiara e poco contrastata si lascia guardare
+ *     senza chiamare.
+ *   • NIENTE ACCENTO SATURO. Un rosso o un verde vivo alla periferia del campo visivo tira lo
+ *     sguardo proprio nell'istante in cui l'ago legge. I colori qui dicono, non gridano.
+ *   • NIENTE BORDI, NIENTE PANNELLI. Un riquadro chiede di essere letto per intero. Un cerchio
+ *     che galleggia si coglie di sbieco, per posizione e dimensione, senza leggere.
+ *   • MOVIMENTI LENTI. Tutto ciò che si muove in fretta alla periferia è un allarme per l'occhio.
+ *
+ * ── PERCHÉ NON RIUSA I COLORI DI EQUILIBRIUM ────────────────────────────────────────────────
+ * `ui/tokens.ts` è la tavolozza dell'interfaccia scura, tarata su un fondo nero. Prenderla e
+ * schiarirla darebbe un'applicazione che sembra EQUILIBRIUM malriuscito. SERENITY è un'altra
+ * lettura della stessa seduta, e parte dalla sua superficie.
+ *
+ * ⚠️ Il MOTORE invece è lo stesso, ed è tutto il punto della refonte: qui c'è solo la
+ * superficie. Nessun calcolo, nessuna soglia, nessuna decisione di auditing.
+ */
+
+:root {
+  /* ── LA SUPERFICIE ───────────────────────────────────────────────────────────────────────
+     Non bianco puro: il bianco pieno su uno schermo acceso abbaglia in una stanza in penombra,
+     ed è la stanza tipica di una seduta. Perla = un bianco che ha già un po' di grigio dentro. */
+  --s-ground:      #f4f3f0;
+  --s-ground-warm: #faf9f7;
+  --s-veil:        rgba(255, 255, 255, 0.55);
+
+  /* ── L'INCHIOSTRO ────────────────────────────────────────────────────────────────────────
+     Nessun nero: il massimo contrasto è riservato all'UNICA cosa che deve essere letta
+     davvero, cioè il numero della lettura. Tutto il resto sta sotto. */
+  --s-ink:       #2c2f33;
+  --s-ink-soft:  #6b7076;
+  --s-ink-faint: #a3a8ad;
+  --s-ink-ghost: #cfd2d5;
+
+  /* ── I CERCHI ────────────────────────────────────────────────────────────────────────────
+     Non hanno bordo: hanno una superficie appena più chiara o appena più scura del fondo, e
+     un'ombra bassissima. Si vedono per RILIEVO, che è come si vede un oggetto vero. */
+  --s-disc:        #ffffff;
+  --s-disc-sunk:   #eceae6;
+  --s-shadow:      0 1px 2px rgba(44, 47, 51, 0.04), 0 8px 24px rgba(44, 47, 51, 0.06);
+  --s-shadow-lift: 0 2px 4px rgba(44, 47, 51, 0.05), 0 16px 44px rgba(44, 47, 51, 0.09);
+
+  /* ── I TRE SEGNALI, E BASTA ──────────────────────────────────────────────────────────────
+     Tre e non dieci: un linguaggio di colore che l'auditor deve ricordare è un linguaggio che
+     non guarderà. Tenui apposta — dicono « qui », non « ADESSO ».
+       vivo    = qualcosa sta accadendo sull'ago
+       quiete  = raggiunto (F/N, AS-IS, tono quaranta)
+       riserva = il dato c'è ma non è sostenibile (prova non fatta, margine tolto) */
+  --s-alive:   #7a8ba6;
+  --s-still:   #8aa694;
+  --s-reserve: #b8a179;
+
+  /* ── I TEMPI ─────────────────────────────────────────────────────────────────────────────
+     Lenti apposta. Un cerchio che compare in 90 ms è un lampo alla periferia; in 600 ms è un
+     cambiamento di cui ci si accorge senza esserne interrotti. */
+  --s-slow: 600ms;
+  --s-calm: 1200ms;
+  --s-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  --s-serif: "Iowan Old Style", Charter, Palatino, Georgia, serif;
+  --s-sans:  ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
+  --s-mono:  ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+
+/* ⚠️ NESSUN TEMA SCURO, ed è una scelta, non una dimenticanza. SERENITY È la superficie
+   chiara: un suo tema scuro sarebbe EQUILIBRIUM, che esiste già ed è lì per chi lo preferisce.
+   Due applicazioni, due letture — non due sfumature della stessa. */
+
+* { box-sizing: border-box; }
+
+html, body, #serenity {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--s-ground);
+  color: var(--s-ink);
+  font-family: var(--s-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  /* La seduta non si trascina: non c'è niente sotto il bordo dello schermo da andare a cercare. */
+  overflow: hidden;
+}
+
+/* Chi ha chiesto meno movimento non deve subire il respiro dei cerchi. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Il RESPIRO dei cerchi vivi. Un per cento in dodici secondi: a guardarlo fisso non si vede
+   muovere — ed è il punto, perché non va guardato fisso. Vedi `Cerchio.tsx`. */
+@keyframes respiro {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.01); }
+}
