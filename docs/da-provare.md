@@ -287,19 +287,28 @@ sta in `lib/profiloEdit`, condivisa: `ProfileRoster` di EQUILIBRIUM ci passa ade
 
 ---
 
-## Da provare col METER — il quadrante di SERENITY è ORA QuantumSphere vero (fase 5, 2/2)
+## Da provare col METER — il quadrante di SERENITY è QuantumSphere vero (fase 5, 2/2)
 
-Segnalato: « l'arco dell'ago lo vorrei esattamente come in equilibrium ». Non un secondo
-disegno degli stessi angoli — LO STESSO COMPONENTE (`components/QuantumSphere.tsx`), con un
-nuovo prop `forceLightTheme` che lo rende leggibile sul fondo chiaro di SERENITY senza toccare
-il tema di EQUILIBRIUM (la preferenza è condivisa in localStorage).
+Segnalato la prima volta: « l'arco dell'ago lo vorrei esattamente come in equilibrium ». Poi,
+vista la prima resa (chiara, `forceLightTheme`): « non ho visto che l'arco e l'ago siano uguali
+come in equilibrium, voglio stesso disegno, stessa grafica ». Giusto: un componente uguale con
+colori diversi è lo stesso CODICE, non lo stesso DISEGNO — e il disegno di EQUILIBRIUM è tarato
+sul tema SCURO (« STYLE B, monocromo, bianco su nero »), non sul chiaro.
+
+Ora `forceTheme="dark"` fissa QuantumSphere sul suo tema nativo, SENZA toccare la preferenza
+condivisa (EQUILIBRIUM resta libero di stare dov'è). E gli si dà lo sfondo che quei colori si
+aspettano — lo STESSO gradiente radiale di `AppBackground.tsx` in tema scuro, non un nero
+inventato — in un pannello proprio, con la sua proporzione vera (1600×850), inscritto nel
+cerchio di SERENITY.
 
 - [ ] **fianco a fianco**: la stessa seduta, la stessa reazione, guardata nelle due
-      applicazioni — l'arco, le bande, la scia, le scritte SF/FALL devono essere IDENTICHE;
-- [ ] **F/N**: la resa sul quadrante è quella di sempre (il quadrante ora è lo stesso identico
+      applicazioni — l'arco, le bande, la scia, le scritte SF/FALL devono essere IDENTICHE,
+      pixel per pixel, non solo nella stessa famiglia di colori;
+- [ ] **F/N**: la resa sul quadrante è quella di sempre (il quadrante è lo stesso identico
       codice, quindi qui il rischio è basso, ma va guardato);
-- [ ] **cambiare tema in EQUILIBRIUM** (chiaro/scuro) e riaprire SERENITY: deve restare chiara
-      SEMPRE — `forceLightTheme` non deve MAI lasciar trapelare il tema scuro.
+- [ ] **cambiare tema in EQUILIBRIUM** (chiaro/scuro) e riaprire SERENITY: l'ago di SERENITY
+      NON deve muoversi da « scuro » — `forceTheme` non legge più la preferenza condivisa,
+      quindi non c'è più un tema chiaro possibile per questo quadrante, in nessun caso.
 
 ## Modificare ed eliminare auditor e preclear — anche questo da EQUILIBRIUM
 

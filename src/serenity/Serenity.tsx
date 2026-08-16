@@ -143,17 +143,32 @@ export default function Serenity() {
             resto della seduta gli gira intorno. Senza meter il quadrante resta comunque —
             spento, all'ago di riposo — perché uno strumento che sparisce quando si stacca
             fa credere di averlo perso invece che scollegato. */}
-        <Cerchio dimensione={340} viva={aperta}>
-          <div style={{ display: 'grid', justifyItems: 'center', gap: 6 }}>
-            {/* ── IL QUADRANTE È LO STESSO DI EQUILIBRIUM ─────────────────────────────────
-                Non un secondo disegno degli stessi angoli: LO STESSO COMPONENTE, con
-                `forceLightTheme` perché SERENITY è sempre a fondo chiaro senza toccare la
-                preferenza di tema (condivisa con EQUILIBRIUM in localStorage).
+        <Cerchio dimensione={380} viva={aperta}>
+          <div style={{ display: 'grid', justifyItems: 'center', gap: 14 }}>
+            {/*
+              ── LO STESSO DISEGNO, LA STESSA GRAFICA ────────────────────────────────────
+              Segnalato: « voglio stesso disegno, stessa grafica », non una versione chiara
+              dello stesso componente. `QuantumSphere` è tarato — ogni colore, per nome nei
+              suoi stessi commenti — sul tema SCURO: « STYLE B, monocromo, bianco su nero,
+              come la referenza ». Renderlo chiaro (quel che facevo prima con
+              `forceLightTheme`) era ancora lo stesso codice, ma non più lo stesso disegno.
 
-                `thetaOffset={null}` quando il meter è scollegato: l'ago allora NON SI
-                DISEGNA, invece di restare fermo su SET a sembrare vero — è la stessa regola
-                che EQUILIBRIUM applica già (vedi il commento sul prop in QuantumSphere). */}
-            <div style={{ width: 250, height: 250 }}>
+              Ora `forceTheme="dark"` lo fissa lì, SENZA leggere né scrivere la preferenza
+              di tema condivisa con EQUILIBRIUM (che resta libera di stare dov'è). E gli si
+              dà lo sfondo che quei colori si aspettano — lo STESSO gradiente radiale del
+              fondo di EQUILIBRIUM (`AppBackground.tsx`, tema scuro), non un nero a caso:
+              bianco su un nero qualunque non è « lo stesso disegno », è un'approssimazione.
+
+              Il pannello è un rettangolo e non un cerchio — SERENITY dice « ogni modulo è
+              un cerchio », ma qui il modulo resta il cerchio grande che lo contiene; dentro,
+              lo strumento tiene la SUA proporzione vera (1600×850), o sarebbe di nuovo un
+              ridisegno, stavolta per adattarlo a un cerchio che non è il suo.
+            */}
+            <div style={{
+              width: 300, height: 159, borderRadius: 14, overflow: 'hidden',
+              background: 'radial-gradient(130% 120% at 50% 22%, #2e2e33 0%, #2a2a2f 55%, #262629 100%)',
+              boxShadow: 'var(--s-shadow)',
+            }}>
               <QuantumSphere
                 needleOffsetProp={SET_OFFSET}
                 thetaOffset={meterC ? theta.offset : null}
@@ -164,11 +179,11 @@ export default function Serenity() {
                 onClick={theta.resetToSet}
                 showTrail
                 sessionState={aperta ? 'running' : 'idle'}
-                forceLightTheme
+                forceTheme="dark"
               />
             </div>
-            {/* L'orologio scende sotto l'ago e si fa piccolo: il tempo di seduta si guarda
-                una volta ogni tanto, l'ago in continuazione. */}
+            {/* L'orologio resta sulla superficie di SERENITY, fuori dal pannello scuro:
+                si guarda una volta ogni tanto, lo strumento in continuazione. */}
             <span style={{
               fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.06em',
               color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-ghost)',
