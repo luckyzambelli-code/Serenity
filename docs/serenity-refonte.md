@@ -26,7 +26,7 @@ Punti di ritorno, in ordine: `equilibrium-2.0.132` (prima di tutto) →
 | 3 | SERENITY, guscio vuoto — seconda applicazione, stesso motore | ✅ fatta |
 | 4 | Il flusso di partenza — auditor → solo/PC → qui/distanza → normale/esperto | ✅ fatta |
 | 5 | Il Meter al centro — stesso arco, stesso ago, **stesse dimensioni** | ✅ fatta |
-| 6 | R-Factor, processo, cicli, giornale, assessment | ⏳ da fare |
+| 6 | R-Factor, processo, cicli, giornale, assessment | ⏳ in corso² |
 | 7 | Seduta a distanza — link, stato remoto, video/audio | ✅ fatta¹ |
 | 8 | Fine seduta e rapporto | ⏳ da fare |
 
@@ -35,6 +35,19 @@ video+audio, stato del preclear (batteria, MUSE connesso, qualità segnale), lin
 e `SESSION_STATE`. **Non** cablato: `RAW_EEG`/`RAW_PPG`/`RAW_GYRO` — SERENITY non ha ancora un
 ago EEG (fase 5 legge solo il Theta-Meter USB), instradare l'EEG remoto ora sarebbe un tubo
 senza un ago all'arrivo. Si aggancia quando la fase 6 porta la pipeline EEG in SERENITY.
+
+² Fase 6, primo passo (16/08/2026): `hooks/useChargeEngine` — spawn del worker EEG, lettura dei
+suoi messaggi, calcolo di carica/fase/AS-IS/reazione. Prima di questo, i quattro cicli (fase 1,
+già pronti) non avevano un `qL` vivo a cui agganciarsi — un tubo senza un ago all'arrivo. Non è
+una riscrittura: è lo stesso codice che stava nell'onmessage del worker in `App.tsx`, spostato
+— le variabili libere sono diventate una `ChargeEngineDeps` esplicita (larga ma onesta, stesso
+principio di `ContactNullDeps`), la sequenza delle chiamate no. `App.tsx` è stato riscritto per
+usare l'hook al posto del proprio effetto — non un secondo motore parallelo. **Non** ancora
+fatto: montare i cicli e il campo item/assessment DENTRO SERENITY (quello resta il prossimo
+passo di questa fase) — questo primo passo prepara solo il tubo, non ancora l'ago che ci si
+aggancia. ⚠️ Estrazione grossa e sensibile (rilevamento di carica/AS-IS usato in seduta reale):
+verificata con typecheck, lint, i 639 test e una build completa, ma il collaudo vero resta con
+un MUSE appaiato — questa macchina non può provarlo da sé.
 
 Verifica di ogni fase: la stessa seduta, condotta nelle due applicazioni, deve dare lo
 stesso giornale, lo stesso rapporto, gli stessi test verdi.

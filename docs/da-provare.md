@@ -13,6 +13,24 @@ Il file si valida solo indossando il casco: `tsc`, ESLint e i 109 test coprono l
 comportamento. Ogni estrazione è in un commit separato, quindi una singola voce si può annullare
 da sola senza toccare le altre.
 
+- [ ] **`hooks/useChargeEngine` (SERENITY fase 6, 16/08/2026)** — l'onmessage del worker EEG
+      (spawn, carica/fase/AS-IS/reazione) spostato fuori da `App.tsx` in un hook condiviso.
+      È lo STESSO codice, non riscritto — ma è il pezzo più sensibile mai estratto finora
+      (rilevamento di carica/AS-IS usato in seduta reale), e questa macchina non ha un MUSE per
+      provarlo. Verificato: `tsc`, lint (0 errori), i 639 test, una build completa, e un avvio
+      di EQUILIBRIUM senza errori console — ma nessuno di questi tocca davvero il worker.
+      **Con un MUSE appaiato, una seduta intera, uguale prima e dopo:**
+  - [ ] l'ago EEG si muove e le reazioni (Fall, F/N, Blow Down…) si vedono uguali a prima;
+  - [ ] il ciclo CONTACT → DISSOLUZIONE → AS-IS avanza e si chiude correttamente;
+  - [ ] il ciclo NULL → RISE → EQUILIBRIUM idem;
+  - [ ] MIRROR e TONE SCALE (che leggono `qL` dallo stesso motore) restano invariati;
+  - [ ] il TOTAL TA sale come prima, e il giornale scrive le stesse righe (cambi di stato di
+        carica, reazioni significative, con l'anti-spam di sempre);
+  - [ ] la validazione EP (PERSIST → AS-IS → COGNITION → EP) segue la stessa sequenza;
+  - [ ] il pannello MNA (SONIFY/CLEAN/HARMONICS) cattura I_m e frequenza come prima;
+  - [ ] una seduta condotta uguale in EQUILIBRIUM e (quando la fase 6 monterà i cicli) in
+        SERENITY dà lo stesso giornale — è la verifica scritta per ogni fase di questo piano.
+
 - [ ] **La colonna della SCALA DEL TONO** (`components/ToneColumn.tsx`) — verticale, a destra
       dell'arco, in vista TONE. Compare solo con uno strumento collegato, quindi NON si è
       potuta guardare:
