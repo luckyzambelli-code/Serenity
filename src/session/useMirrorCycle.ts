@@ -63,6 +63,8 @@ export interface MirrorCycleDeps {
   logLength: () => number;
   /** Scrive una riga nel giornale. */
   log: (text: string, type: 'normal' | 'success') => void;
+  /** Item dato a voce → l'assessment si accende da sé, se non gira già. */
+  ensureAssessmentOn: () => void;
   /** La traduzione, che il controllore non conosce. */
   LC: (it: string, fr: string, en: string, es: string, sv: string) => string;
 }
@@ -110,6 +112,10 @@ export function useMirrorCycle(d: MirrorCycleDeps) {
     mirrorVoiceModeRef.current = !d.auditingQuestion.trim();
     mirrorAwaitItemRef.current = mirrorVoiceModeRef.current;
     mirrorLogCursorRef.current = d.logLength();   // captare SOLO ciò che si dice DOPO il tasto
+    // DANDO L'ITEM A VOCE l'assessment si accende da sé — come in CONTACT/NULL. Senza, in
+    // MIRROR l'item detto non compariva nella lista e bisognava premere ASSESS a parte
+    // (segnalato in seduta): il gesto è lo stesso, la conseguenza dev'essere la stessa.
+    if (mirrorVoiceModeRef.current) d.ensureAssessmentOn();
     d.log(`◎ ${d.LC('MIRROR — item dato · corri fino al doppio', 'MIRROR — item donné · fais tourner jusqu\'au double', 'MIRROR — item given · run to the double', 'MIRROR — ítem dado · corre hasta el doble', 'MIRROR — item givet · kör till dubbeln')} ${d.auditingQuestion.trim() ? '· ' + d.auditingQuestion.trim() : ''}`, 'normal');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [d.auditingQuestion, d.LC]);

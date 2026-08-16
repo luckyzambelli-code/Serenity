@@ -282,12 +282,25 @@ Se qualcosa qui non va: si torna a `serenity-fase1`, dove la connessione stava a
 
 ---
 
+## Da riprovare col METER (2.0.138)
+
+- [ ] **rifare la prova delle lattine IN SEDUTA**: nessuna riga `⊙ METER · …` nel giornale
+      durante la stretta **né quando si mollano le lattine**, e nessuna lettura falsa
+      nell'ASSESSMENT dell'item in corso;
+- [ ] **subito dopo**, una reazione VERA si vede ancora (il silenzio non deve restare acceso);
+- [ ] **ricentrare l'ago** (torna su SET): non deve scrivere una reazione.
+
+---
+
 ## Tarature in attesa di numeri veri
 
 - [ ] **MIRROR retrospezione** — servono i numeri di `MIRROR contact:` dal journal per tarare
       `MIRROR_RATIO_FULL`, `MIRROR_LOOKBACK_S`, `MIRROR_CONTACT_RISE_RATIO`;
 - [ ] **`MOTION_ARTIFACT_RMS`** (=30) — se in seduta spariscono letture vere, va **alzato**;
-- [ ] **profili del generatore F/N** — da tarare sui video.
+- [ ] **profili del generatore F/N** — da tarare sui video;
+- [ ] **`THETA_TEST_MUTE_AFTER_S`** (=2 s) — quanto il classificatore tace DOPO la prova delle
+      lattine. Copre il rilascio: se una reazione falsa sfugge ancora al momento in cui si
+      mollano, va **alzato**; se una reazione vera subito dopo la prova non si vede, **abbassato**.
 
 ---
 

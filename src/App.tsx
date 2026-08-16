@@ -3829,6 +3829,7 @@ export default function App() {
     logLength: () => logsRef.current.length,
     log: (text, type) => logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE', text, type }),
     setItemSpoken,
+    ensureAssessmentOn: () => { if (!assessActiveRef.current) toggleAssessment(); },
     LC,
   });
   // Il gestore del worker si aggancia UNA volta sola, prima che il hook esista: prende la
@@ -3856,6 +3857,7 @@ export default function App() {
     nowSec: () => timeRef.current,
     logLength: () => logsRef.current.length,
     log: (text, type) => logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE', text, type }),
+    ensureAssessmentOn: () => { if (!assessActiveRef.current) toggleAssessment(); },
     LC,
   });
   trackMirrorRef.current = mirror.trackMirror;

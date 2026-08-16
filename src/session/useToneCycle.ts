@@ -82,6 +82,8 @@ export interface ToneCycleDeps {
   log: (text: string, type: 'normal' | 'success') => void;
   /** « L'item è stato detto » va riazzerato a ogni nuova resistenza. */
   setItemSpoken: (v: boolean) => void;
+  /** Resistenza detta a voce → l'assessment si accende da sé, se non gira già. */
+  ensureAssessmentOn: () => void;
   /** La traduzione, che il controllore non conosce. */
   LC: (it: string, fr: string, en: string, es: string, sv: string) => string;
 }
@@ -284,6 +286,9 @@ export function useToneCycle(d: ToneCycleDeps) {
     // occhi dall'ago proprio mentre si localizza.
     toneAwaitItemRef.current = !d.auditingQuestion.trim();
     toneLogCursorRef.current = d.logLength();
+    // E anche qui l'assessment si accende da sé (segnalato): dare la resistenza a voce è lo
+    // stesso gesto che dare un item, e deve avere la stessa conseguenza in tutti e quattro i cicli.
+    if (toneAwaitItemRef.current) d.ensureAssessmentOn();
     setToneRipetizioni(0);
     d.setItemSpoken(false);   // la resistenza di QUESTO ciclo va detta da capo.
     setTonePhase('raise');

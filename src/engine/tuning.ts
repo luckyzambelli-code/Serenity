@@ -627,3 +627,9 @@ export const TONE_LOCATE_RISE_RATIO = 1.35;
  * non essere più guardata; più basso = si audita più a lungo sopra un segnale mediocre.
  */
 export const INTEGRITA_SOGLIA = 60;
+
+/** PROVE DELLE LATTINE — quanto il classificatore deve TACERE DOPO la fine della prova.
+ *  Non è la durata della prova: è il tempo in cui si MOLLANO le lattine e l'ago rientra. Quel
+ *  rientro è una corsa ampia quanto la stretta, e senza questo silenzio diventa una seconda
+ *  reazione falsa. Da tarare: 2 s copre un rilascio normale. Vedi `ThetaReactionTracker.muteUntil`. */
+export const THETA_TEST_MUTE_AFTER_S = 2.0;

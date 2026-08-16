@@ -563,3 +563,69 @@ describe('ThetaReactionTracker — velocità, non solo ampiezza', () => {
     expect(verdetti(out).length).toBeGreaterThanOrEqual(1);
   });
 });
+
+describe('la prova delle lattine NON è una reazione', () => {
+  /**
+   * ⚠️ Segnalato in seduta: « scrivi delle reazioni del METER che non ci sono ».
+   *
+   * La stretta delle lattine fa cadere l'ago di un terzo di quadrante — è il suo SCOPO. Ma il
+   * classificatore vede solo un'ampiezza, e quella caduta la chiamava LONG FALL: finiva nel
+   * giornale, nell'archivio, e fra le LETTURE su cui ASSESSMENT giudica l'item in corso.
+   * Finché le prove si facevano prima della seduta non si vedeva; da quando la prova si può
+   * RIFARE IN SEDUTA quelle righe entrano davvero — ed è la mano dell'auditor, non il preclear.
+   */
+  it('mentre la prova è in corso non esce niente', () => {
+    const tr = new ThetaReactionTracker();
+    passa(tr, [0, 0, 0], 10);
+    tr.muteUntil(14);
+    // una stretta intera, andata e ritorno, dentro il silenzio
+    const durante = passa(tr, [0.2, 0.6, 1.0, 1.3, 0.9, 0.4, 0.05], 11);
+    expect(durante).toHaveLength(0);
+  });
+
+  /**
+   * ⚠️ ED È QUI CHE IL PRIMO TENTATIVO SBAGLIAVA. Azzerare al momento della prova non basta:
+   * quando si MOLLANO le lattine l'ago rientra, e quel rientro è una corsa ampia quanto la
+   * stretta — cioè una SECONDA reazione falsa, emessa DOPO la fine della prova. Il silenzio
+   * deve durare oltre.
+   */
+  it('e nemmeno il RIENTRO quando si mollano le lattine, se il silenzio dura oltre', () => {
+    const tr = new ThetaReactionTracker();
+    passa(tr, [0, 0, 0], 10);
+    tr.muteUntil(16);                                  // la prova finisce a 14, il silenzio a 16
+    passa(tr, [0.2, 0.6, 1.0, 1.3], 11);               // stretta
+    const rientro = passa(tr, [1.0, 0.6, 0.2, 0.02], 14.2);   // si mollano le lattine
+    expect(rientro).toHaveLength(0);
+  });
+
+  it('un silenzio TROPPO CORTO lascia passare il rientro — è la ragione della costante', () => {
+    // Il contro-esempio: senza margine dopo la prova, il rientro diventa una reazione.
+    const tr = new ThetaReactionTracker();
+    passa(tr, [0, 0, 0], 10);
+    tr.muteUntil(14);
+    passa(tr, [0.2, 0.6, 1.0, 1.3], 11);
+    const rientro = passa(tr, [1.3, 1.3, 1.3, 0.9, 0.5, 0.1, 0, 0], 14.1);
+    expect(rientro.length).toBeGreaterThan(0);
+  });
+
+  it('finito il silenzio il classificatore RIPARTE: la reazione vera si vede', () => {
+    // Il test di riarmo: tacere non deve lasciare il motore muto per il resto della seduta.
+    const tr = new ThetaReactionTracker();
+    tr.muteUntil(14);
+    passa(tr, [0.5, 1.0, 0.5], 11);
+    const vera = passa(tr, [0, 0, 0, 0.3, 0.6, THETA_REACT_FALL + 0.1,
+                            0.3, 0.05, 0, 0], 20);
+    expect(verdetti(vera).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('`reset` NON toglie il silenzio, `resetAll` sì — se no si annullerebbe da sé', () => {
+    // `muteUntil` chiama `reset`: se `reset` togliesse il silenzio, non ci sarebbe mai silenzio.
+    const tr = new ThetaReactionTracker();
+    tr.muteUntil(20);
+    expect(tr.isMuted(15)).toBe(true);
+    tr.reset();
+    expect(tr.isMuted(15)).toBe(true);
+    tr.resetAll();
+    expect(tr.isMuted(15)).toBe(false);
+  });
+});

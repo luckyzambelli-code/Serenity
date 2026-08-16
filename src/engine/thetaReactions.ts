@@ -173,7 +173,35 @@ export class ThetaReactionTracker {
    * @param nowSec  tempo di seduta
    * @param bodyMotion  la persona si sta muovendo: nessuna lettura è attribuibile
    */
+  /** Fino a quando il classificatore deve TACERE (s di seduta). Vedi `muteUntil`. */
+  private mutoFino = -1;
+
+  /**
+   * TACI FINO A — quel che l'ago fa adesso non è il preclear.
+   *
+   * ⚠️ Serve per le PROVE DELLE LATTINE. La stretta fa cadere l'ago di un terzo di quadrante:
+   * è il suo scopo, ma il classificatore vede solo un'ampiezza e la chiamava LONG FALL. Finché
+   * le prove si facevano prima della seduta non si vedeva; da quando si possono RIFARE IN
+   * SEDUTA quelle righe entrano davvero — nel giornale, nell'archivio, e fra le LETTURE su cui
+   * ASSESSMENT giudica l'item in corso (segnalato in seduta).
+   *
+   * ⚠️ E il silenzio deve durare OLTRE la fine della prova: quando si MOLLANO le lattine l'ago
+   * rientra, e quel rientro è a sua volta una corsa ampia — cioè una seconda reazione falsa. È
+   * la ragione per cui non basta azzerare: azzerare toglie l'episodio aperto, non quello che
+   * comincia subito dopo.
+   */
+  muteUntil(secondi: number): void {
+    this.mutoFino = Math.max(this.mutoFino, secondi);
+    this.reset();
+  }
+
+  /** Sta tacendo? (per chi deve saperlo senza spingere un campione) */
+  isMuted(nowSec: number): boolean { return nowSec < this.mutoFino; }
+
   push(dev: number, nowSec: number, bodyMotion = false): ThetaReaction | null {
+    // Finché dura il silenzio non si accumula NIENTE: né episodio, né base. Al risveglio si
+    // riparte dall'ago com'è in quel momento, che è esattamente quel che si vuole.
+    if (nowSec < this.mutoFino) { this.reset(); return null; }
     // ── IL MOVIMENTO CORPOREO NON ACCECA PIÙ ──────────────────────────────────────────────
     // Prima si abbandonava l'episodio: sembrava prudente, e invece l'agitazione resta alta per
     // TRE SECONDI dopo ogni stretta, e in quei tre secondi si perdevano anche gli item veri che
@@ -296,4 +324,8 @@ export class ThetaReactionTracker {
 
   reset(): void { this.open = null; this.trough = 0; this.troughAtSec = 0; this.episodio = 0; this.lastSec = -1;
                   this.cand = null; this.candDa = 0; this.sopraDa = -1; }
+
+  /** Azzeramento COMPLETO, silenzio compreso — seduta nuova. `reset()` da solo non lo toglie,
+   *  perché `muteUntil` lo chiama e si annullerebbe da sé. */
+  resetAll(): void { this.mutoFino = -1; this.reset(); }
 }

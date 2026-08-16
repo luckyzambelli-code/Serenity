@@ -13,7 +13,7 @@ import {
   effectiveScale,
   type ElectrodeConfig, type ThetaSetup,
 } from '../engine/thetaSetup';
-import { THETA_NEEDLE_SCALE, SQUEEZE_TEST_MS, BREATH_TEST_MS, NEEDLE_REST_OFFSET, THETA_TEST_FOLLOW, THETA_MIN_RATE, THETA_TEST_START_DEV } from '../engine/tuning';
+import { THETA_NEEDLE_SCALE, SQUEEZE_TEST_MS, BREATH_TEST_MS, NEEDLE_REST_OFFSET, THETA_TEST_FOLLOW, THETA_MIN_RATE, THETA_TEST_START_DEV, THETA_TEST_MUTE_AFTER_S } from '../engine/tuning';
 
 /**
  * useThetaMeter — l'e-meter USB dell'utente dentro EQUILIBRIUM.
@@ -192,15 +192,40 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
           const dev = Math.abs(testRef.current.base - r.smooth);
           if (dev > testRef.current.peak) testRef.current.peak = dev;
         }
-        // REAZIONI sull'ago vero. Si passa la deviazione RISPETTO A SET, che è la grandezza in
-        // cui sono espresse le ampiezze delle reazioni.
-        const reaction = reactRef.current.push(
-          st.offset - NEEDLE_REST_OFFSET, optsRef.current.nowSec?.() ?? 0, st.bodyMotion);
-        if (reaction) optsRef.current.onReaction?.(reaction);
-        // FLOATING NEEDLE. Va valutato a OGNI lettura, non alla pubblicazione: il ritmo dello
-        // spazzare è il dato, e campionarlo più lento ne falserebbe i periodi.
-        fnRef.current = floatRef.current.push(
-          st.offset - NEEDLE_REST_OFFSET, optsRef.current.nowSec?.() ?? 0, st.bodyMotion);
+        // ── ⚠️ DURANTE UNA PROVA L'AGO NON STA REAGENDO ───────────────────────────────────
+        // La stretta delle lattine fa cadere l'ago di un terzo di quadrante — è il suo scopo.
+        // Ma il classificatore vede solo un'ampiezza, e quella caduta la chiamava LONG FALL o
+        // BLOW DOWN: finiva nel giornale come « ⊙ METER · … », nell'archivio, e soprattutto in
+        // `shownReads`, cioè fra le LETTURE su cui ASSESSMENT giudica l'item in corso.
+        //
+        // Finché le prove si facevano prima della seduta non si vedeva: `sessionState` non era
+        // « running » e le righe cadevano. Da quando la prova delle lattine si può RIFARE IN
+        // SEDUTA — per vedere se lo scarto è cambiato — quelle reazioni entrano davvero, e
+        // sono la mano dell'auditor, non il preclear (segnalato in seduta).
+        //
+        // Si azzerano tutti e due invece di saltare la spinta: un episodio aperto prima della
+        // prova emetterebbe il suo verdetto al rientro, con l'ampiezza della stretta dentro.
+        //
+        // ⚠️ E il silenzio dura OLTRE la fine della prova: quando si MOLLANO le lattine l'ago
+        // rientra, e quel rientro è una corsa ampia quanto la stretta — cioè una SECONDA
+        // reazione falsa. Azzerare non basterebbe: toglie l'episodio aperto, non quello che
+        // comincia subito dopo. Per questo si spinge avanti la scadenza a ogni lettura della
+        // prova, e il classificatore resta muto ancora `THETA_TEST_MUTE_AFTER_S`.
+        if (testRef.current.on) {
+          const t = optsRef.current.nowSec?.() ?? 0;
+          reactRef.current.muteUntil(t + THETA_TEST_MUTE_AFTER_S);
+          floatRef.current.reset();
+        } else {
+          // REAZIONI sull'ago vero. Si passa la deviazione RISPETTO A SET, che è la grandezza in
+          // cui sono espresse le ampiezze delle reazioni.
+          const reaction = reactRef.current.push(
+            st.offset - NEEDLE_REST_OFFSET, optsRef.current.nowSec?.() ?? 0, st.bodyMotion);
+          if (reaction) optsRef.current.onReaction?.(reaction);
+          // FLOATING NEEDLE. Va valutato a OGNI lettura, non alla pubblicazione: il ritmo dello
+          // spazzare è il dato, e campionarlo più lento ne falserebbe i periodi.
+          fnRef.current = floatRef.current.push(
+            st.offset - NEEDLE_REST_OFFSET, optsRef.current.nowSec?.() ?? 0, st.bodyMotion);
+        }
         {
           const t = optsRef.current.nowSec?.() ?? 0;
           const tr = tracciaRef.current;
@@ -265,7 +290,7 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
   const disconnect = useCallback(async () => {
     await hidRef.current?.disconnect();
     needleRef.current.reset();
-    reactRef.current.reset();
+    reactRef.current.resetAll();   // il silenzio delle prove NON deve sopravvivere alla seduta
     floatRef.current.reset();
     fnRef.current = { fn: false, sinceSec: null, widthAvg: 0, periodSec: 0, motion: false };
     setState(p => ({ ...p, offset: 0, arm: 0, raw: 0, rawSmooth: 0, totalTa: 0,
@@ -274,7 +299,19 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
 
   /** Riporta l'ago su SET — stesso gesto che ricentra quello dell'EEG (clic sul quadrante).
    *  Non tocca il Total TA: ricentrare a mano non è carica smaltita. */
-  const resetToSet = useCallback(() => { needleRef.current.resetToSet(); }, []);
+  /**
+   * RICENTRAGGIO — l'ago torna su SET.
+   *
+   * ⚠️ Si azzerano anche il classificatore e il rilevatore di F/N. `resetToSet` sposta l'ago
+   * DI COLPO: senza questo, il classificatore vedeva quel salto come una corsa dell'ago e ne
+   * dichiarava la reazione — una caduta grande quanto lo scarto che si è appena tolto a mano.
+   * È la manopola dell'auditor, non il preclear.
+   */
+  const resetToSet = useCallback(() => {
+    needleRef.current.resetToSet();
+    reactRef.current.muteUntil((optsRef.current.nowSec?.() ?? 0) + THETA_TEST_MUTE_AFTER_S);
+    floatRef.current.reset();
+  }, []);
 
   /** Azzera il Total TA all'inizio di una seduta, SENZA perdere l'aggancio al preclear
    *  (il braccio resta dov'è, quindi l'ago non salta). */
