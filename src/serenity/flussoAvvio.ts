@@ -19,7 +19,7 @@
  * l'auditor farebbe comunque. Il sesso del preclear, che sì tocca l'auditing (è il TA di clear),
  * NON si decide qui: si legge dal profilo, che è quello condiviso con EQUILIBRIUM.
  *
- * @see docs/refonte-fasi.md — fase 4.
+ * @see docs/serenity-refonte.md — fase 4.
  */
 
 /** Le domande, nell'ordine in cui si fanno. */

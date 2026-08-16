@@ -23,7 +23,7 @@
  * `tzoneStore`, `metricsStore`) NON passano da qui: si importano, come faceva App. Sono già
  * ognuno la sua cosa, provata a parte.
  *
- * @see docs/refonte-fasi.md — le fasi della refonte.
+ * @see docs/serenity-refonte.md — le fasi della refonte.
  */
 
 import { useCallback, useRef, useState } from 'react';

@@ -16,7 +16,7 @@
  * della scala del tono di quella persona. Lasciarlo vuoto non è neutro: si ripiega su 2,0, il
  * più prudente. Per questo la domanda è qui e non fra le impostazioni.
  *
- * @see docs/refonte-fasi.md — fase 4.
+ * @see docs/serenity-refonte.md — fase 4.
  */
 
 import { useEffect, useRef, useState } from 'react';

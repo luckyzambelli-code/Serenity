@@ -21,7 +21,7 @@
  * ⚠️ E non ci sta il testo: le righe del giornale hanno bisogno della lingua, quindi chi usa il
  * hook passa la sua funzione di traduzione.
  *
- * @see docs/refonte-fasi.md — le fasi della refonte.
+ * @see docs/serenity-refonte.md — le fasi della refonte.
  */
 
 import { useCallback, useRef, useState } from 'react';

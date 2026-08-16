@@ -21,7 +21,7 @@
  * fa `App.tsx` quando carica un profilo. Prima di quella scelta — o mentre lo si sta creando —
  * un piccolo selettore in alto lascia cambiare lingua a mano.
  *
- * @see docs/refonte-fasi.md — fase 4.
+ * @see docs/serenity-refonte.md — fase 4.
  */
 
 import { useEffect, useRef, useState } from 'react';

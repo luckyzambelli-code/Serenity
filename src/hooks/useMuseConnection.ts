@@ -32,7 +32,7 @@
  * stanno altrove e non sanno da dove arrivano i campioni — è per questo che una seduta a
  * distanza funziona: gli stessi campioni entrano dalla rete invece che dal Bluetooth.
  *
- * @see docs/refonte-fasi.md — le fasi della refonte.
+ * @see docs/serenity-refonte.md — le fasi della refonte.
  */
 
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';

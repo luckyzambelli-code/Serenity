@@ -20,7 +20,7 @@
  * chi usa il hook passa la sua funzione di traduzione: un controllore di sessione che sapesse
  * di francese e italiano sarebbe di nuovo interfaccia travestita.
  *
- * @see docs/refonte-fasi.md — le fasi della refonte.
+ * @see docs/serenity-refonte.md — le fasi della refonte.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';

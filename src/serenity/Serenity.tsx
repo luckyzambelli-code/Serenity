@@ -18,7 +18,7 @@
  * una regola di auditing comparisse in questo file, sarebbe la prova che la refonte ha fallito:
  * vorrebbe dire che la stessa regola vive in due posti e che i due potranno divergere.
  *
- * @see docs/refonte-fasi.md
+ * @see docs/serenity-refonte.md
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -29,7 +29,6 @@ import { THETA_LABEL_AFTER_MS } from '../engine/tuning';
 import { QuantumSphere } from '../components/QuantumSphere';
 import { useSessionJournal } from '../session/useSessionJournal';
 import { getProfiles, getPcProfiles } from '../lib/storage';
-import { Cerchio } from './Cerchio';
 import { Avvio } from './Avvio';
 import { AVVIO_VUOTO, type Avvio as StatoAvvio } from './flussoAvvio';
 import { useI18n } from '../i18n';
@@ -134,71 +133,61 @@ export default function Serenity() {
       </header>
 
       {/* ── IL CAMPO ──────────────────────────────────────────────────────────────────────
-          Un cerchio grande al centro — è il posto dell'ago, e resta vuoto finché l'ago non
-          arriva (fase 5). Intorno, i cerchi che diventeranno i moduli: compaiono quando
-          servono e si ritirano quando non servono più, ed è per questo che non hanno una
-          griglia. Qui sono spenti: il guscio non ha ancora nulla da dire. */}
-      <section style={{ position: 'relative', display: 'grid', placeItems: 'center' }}>
-        {/* IL METER AL CENTRO. Il cerchio grande è il suo posto: l'ago sta lì, e tutto il
-            resto della seduta gli gira intorno. Senza meter il quadrante resta comunque —
-            spento, all'ago di riposo — perché uno strumento che sparisce quando si stacca
-            fa credere di averlo perso invece che scollegato. */}
-        <Cerchio dimensione={380} viva={aperta}>
-          <div style={{ display: 'grid', justifyItems: 'center', gap: 14 }}>
-            {/*
-              ── LO STESSO DISEGNO, LA STESSA GRAFICA ────────────────────────────────────
-              Segnalato: « voglio stesso disegno, stessa grafica », non una versione chiara
-              dello stesso componente. `QuantumSphere` è tarato — ogni colore, per nome nei
-              suoi stessi commenti — sul tema SCURO: « STYLE B, monocromo, bianco su nero,
-              come la referenza ». Renderlo chiaro (quel che facevo prima con
-              `forceLightTheme`) era ancora lo stesso codice, ma non più lo stesso disegno.
+          Lo strumento occupa lo spazio, come in EQUILIBRIUM — non è un modulo fra gli altri,
+          è QUELLO su cui gli altri si dispongono. I quattro cerchi che diventeranno i moduli
+          (fase 6+) restano ai bordi: compaiono quando servono, e per ora sono spenti. */}
+      <section style={{
+        position: 'relative', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: 16, minHeight: 0,
+      }}>
+        {/*
+          ── LE STESSE DIMENSIONI, NON SOLO GLI STESSI COLORI ────────────────────────────
+          Segnalato due volte di seguito: prima « stesso disegno, stessa grafica » (i colori
+          — risolto con `forceTheme`), poi « lo schermo dell'arco è piccolo, devi avere le
+          stesse dimensioni che in Equilibrium ». Giusto: in EQUILIBRIUM il quadrante non è
+          un cerchio fra i moduli — è `w-full h-full` del suo spazio, cioè occupa la parte
+          centrale dello schermo quasi per intero. Chiuderlo in un cerchio da 380 px, per
+          quanto disegnato bene, restava un ninnolo al centro della pagina, non lo strumento.
+          Qui niente `Cerchio`: la proporzione vera (1600×850) riempie lo spazio disponibile
+          con `aspect-ratio`, esattamente come `w-full h-full` fa in EQUILIBRIUM — nessuna
+          taglia inventata, quella che il momento concede.
+        */}
+        <div style={{
+          width: 'min(100%, 1400px)', aspectRatio: '1600 / 850', maxHeight: 'calc(100% - 44px)',
+          borderRadius: 18, overflow: 'hidden',
+          background: 'radial-gradient(130% 120% at 50% 22%, #2e2e33 0%, #2a2a2f 55%, #262629 100%)',
+          boxShadow: 'var(--s-shadow-lift)',
+        }}>
+          <QuantumSphere
+            needleOffsetProp={SET_OFFSET}
+            thetaOffset={meterC ? theta.offset : null}
+            showEegNeedle={false}
+            targetOffset={null}
+            needleReactionKey={thetaReactionKey}
+            asIsnessState="persist"
+            onClick={theta.resetToSet}
+            showTrail
+            sessionState={aperta ? 'running' : 'idle'}
+            forceTheme="dark"
+          />
+        </div>
+        {/* L'orologio resta sulla superficie di SERENITY, fuori dal pannello scuro: si
+            guarda una volta ogni tanto, lo strumento in continuazione. */}
+        <span style={{
+          fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.06em',
+          color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-ghost)',
+          transition: 'color var(--s-slow) var(--s-ease)',
+          fontVariantNumeric: 'tabular-nums',
+        }}>
+          {orologio(tempo)}
+        </span>
 
-              Ora `forceTheme="dark"` lo fissa lì, SENZA leggere né scrivere la preferenza
-              di tema condivisa con EQUILIBRIUM (che resta libera di stare dov'è). E gli si
-              dà lo sfondo che quei colori si aspettano — lo STESSO gradiente radiale del
-              fondo di EQUILIBRIUM (`AppBackground.tsx`, tema scuro), non un nero a caso:
-              bianco su un nero qualunque non è « lo stesso disegno », è un'approssimazione.
-
-              Il pannello è un rettangolo e non un cerchio — SERENITY dice « ogni modulo è
-              un cerchio », ma qui il modulo resta il cerchio grande che lo contiene; dentro,
-              lo strumento tiene la SUA proporzione vera (1600×850), o sarebbe di nuovo un
-              ridisegno, stavolta per adattarlo a un cerchio che non è il suo.
-            */}
-            <div style={{
-              width: 300, height: 159, borderRadius: 14, overflow: 'hidden',
-              background: 'radial-gradient(130% 120% at 50% 22%, #2e2e33 0%, #2a2a2f 55%, #262629 100%)',
-              boxShadow: 'var(--s-shadow)',
-            }}>
-              <QuantumSphere
-                needleOffsetProp={SET_OFFSET}
-                thetaOffset={meterC ? theta.offset : null}
-                showEegNeedle={false}
-                targetOffset={null}
-                needleReactionKey={thetaReactionKey}
-                asIsnessState="persist"
-                onClick={theta.resetToSet}
-                showTrail
-                sessionState={aperta ? 'running' : 'idle'}
-                forceTheme="dark"
-              />
-            </div>
-            {/* L'orologio resta sulla superficie di SERENITY, fuori dal pannello scuro:
-                si guarda una volta ogni tanto, lo strumento in continuazione. */}
-            <span style={{
-              fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.06em',
-              color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-ghost)',
-              transition: 'color var(--s-slow) var(--s-ease)',
-              fontVariantNumeric: 'tabular-nums',
-            }}>
-              {orologio(tempo)}
-            </span>
-          </div>
-        </Cerchio>
-
-        <Cerchio dimensione={78} x={-250} y={-96} ritardo={0}   spenta />
-        <Cerchio dimensione={62} x={252}  y={-124} ritardo={180} spenta />
-        <Cerchio dimensione={92} x={228}  y={112}  ritardo={360} spenta />
-        <Cerchio dimensione={54} x={-232} y={132}  ritardo={540} spenta />
+        {/* ⚠️ I QUATTRO CERCHI SATELLITE (assessment, cycle hint, …) SONO STATI TOLTI DA QUI,
+            non solo spenti. Erano posizionati per orbitare un cerchio centrale da 380 px; con
+            lo strumento che ora occupa quasi tutta la larghezza, quelle stesse coordinate
+            fisse li avrebbero messi ADDOSSO al pannello scuro invece che intorno. Tornano
+            nella fase 6, quando avranno un vero contenuto e si potrà decidere dove stanno
+            DAVVERO — accanto a un ingombro reale, non a una stima. */}
       </section>
 
       {/* ── IL GESTO ──────────────────────────────────────────────────────────────────────

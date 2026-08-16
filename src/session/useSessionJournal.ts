@@ -22,7 +22,7 @@
  * ⚠️ E si SVUOTA prima di aggiungere, non dopo. L'ordine inverso — copia, poi azzera — perdeva
  * le righe spinte da altre vie asincrone nel mezzo.
  *
- * @see docs/refonte-fasi.md — le fasi della refonte.
+ * @see docs/serenity-refonte.md — le fasi della refonte.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
