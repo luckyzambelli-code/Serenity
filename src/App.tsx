@@ -16,6 +16,7 @@ import { useEpValidation } from './hooks/useEpValidation';
 import { useMnaModule } from './hooks/useMnaModule';
 import { useChargeEngine } from './hooks/useChargeEngine';
 import { useMuseContactGate } from './hooks/useMuseContactGate';
+import { useStableReleaseState } from './hooks/useStableReleaseState';
 import { useMediaRelayFallback } from './hooks/useMediaRelayFallback';
 import { useThetaMeter } from './hooks/useThetaMeter';
 import { effectiveModules, eegModulesHidden, noInstruments } from './engine/instrumentModules';
@@ -706,13 +707,8 @@ export default function App() {
   const smoothPct  = useSyncExternalStore(integrityTracker.subscribe, integrityTracker.getCurrent);
   const needleReactionRef = useRef<string>('Set'); // for T60 detection in closure
   // toneArm smoothing + Total-TA high-water → moved to engine/TaAccumulator (slice 1).
-  // ── Stable release state — debouncé pour éviter le clignotement ──
-  const [stableReleaseState, setStableReleaseState] = useState<'active' | 'flow' | 'resistance'>('resistance');
-  const stableReleaseStateRef = useRef(stableReleaseState);
-  stableReleaseStateRef.current = stableReleaseState;
-  const releaseStateTimerRef = useRef<{ candidate: 'active' | 'flow' | 'resistance' | null; sinceMs: number }>({ candidate: null, sinceMs: 0 });
-  const taTrendRef = useRef<{ ta: number; ms: number }[]>([]);
-  // (release-state classifier defined below, after needleReactionKey is declared)
+  // `stableReleaseState`/`stableReleaseStateRef` vivono ora in `hooks/useStableReleaseState`
+  // (fase 6) — la chiamata sta più sotto, dopo `needleReactionKeyRef` (ne ha bisogno).
 
   // FIX B-10: removed `[sessionTaSum, setSessionTaSum]` and
   // `[sessionTaCount, setSessionTaCount]` — write-only state that backed the
@@ -800,53 +796,15 @@ export default function App() {
   const needleReactionKeyRef = useRef(needleReactionKey);
   needleReactionKeyRef.current = needleReactionKey;
 
-  // CONN-110 (#7 redesign): "LIBÉRATION ACTIVE" must reflect ACTUAL release —
-  // charge leaving the case — NOT raw process velocity (vProc). Before, eta was
-  // algebraically vProc/1000, so a faster process flagged "active release" while
-  // ALSO pushing the Tone Arm UP (= more mass): the contradiction the testers saw.
-  // Auditing truth: release = the Tone Arm BLOWING DOWN (descending) and/or a
-  // Floating Needle; mass/resistance = the TA climbing or the needle stuck.
-  // Classified from the visible TA trend + the reaction key (same source as the
-  // needle reactions), not from an absolute band-energy number.
-  // CONN-122: toneArm now lives in metricsStore (no longer App state), so this
-  // runs on a 250 ms interval reading the store directly — App no longer needs to
-  // re-render to re-evaluate the release state.
-  useEffect(() => {
-    const tick = () => {
-      const now = Date.now();
-      const ta = metricsStore.get().toneArm;
-      const buf = taTrendRef.current;
-      buf.push({ ta, ms: now });
-      while (buf.length > 1 && now - buf[0].ms > 4000) buf.shift(); // ~4s window
-      const dTA = buf.length >= 2 ? buf[buf.length - 1].ta - buf[0].ta : 0;
-      const key = needleReactionKeyRef.current || '';
-      const isFN   = key.includes('reaction_fn');
-      const isBlow = key === 'reaction_blow_down'; // TA blow-down = release
-      const taFalling = dTA < -0.05;  // Tone Arm descending = mass blowing down
-      const taRising  = dTA >  0.06;  // Tone Arm climbing  = accumulating mass
-
-      const candidate: 'active' | 'flow' | 'resistance' =
-          (isFN || isBlow || taFalling)            ? 'active'      // libération active
-        : (taRising || key === 'reaction_stuck')   ? 'resistance'  // masse / résistance
-        :                                            'flow';        // flux constant
-
-      const HOLD_MS = 2500; // 2.5 s minimum avant changement (anti-flicker)
-      const ref = releaseStateTimerRef.current;
-      if (candidate === stableReleaseStateRef.current) {
-        ref.candidate = null;
-        ref.sinceMs = 0;
-      } else if (ref.candidate !== candidate) {
-        ref.candidate = candidate;
-        ref.sinceMs = now;
-      } else if (now - ref.sinceMs >= HOLD_MS) {
-        setStableReleaseState(candidate);
-        ref.candidate = null;
-        ref.sinceMs = 0;
-      }
-    };
-    const id = setInterval(tick, 250);
-    return () => clearInterval(id);
-  }, []);
+  /**
+   * ── « LIBERAZIONE ATTIVA », FUORI DA QUI ────────────────────────────────────────────────
+   * Fase 6. CONN-110: la libertà è il Tone Arm che SCENDE (o F/N) — non la velocità del
+   * processo, che può anche voler dire massa che sale. `hooks/useStableReleaseState` legge lo
+   * stesso trend del TA vero da `metricsStore`, con la stessa isteresi di 2,5 s. Serve DOPO
+   * `needleReactionKeyRef` — è la reazione mostrata che dice se c'è stato un Blow Down o un F/N.
+   */
+  const release = useStableReleaseState({ needleReactionKeyRef });
+  const { stableReleaseState, stableReleaseStateRef } = release;
   // Mot/phrase associé à la réaction actuelle (ce que l'auditeur disait quand l'aiguille a réagi)
   // (reactionContext removed — the needle reads SF/FALL/… are shown by QuantumSphere
   //  via needleReactionKey; this state was set but no longer displayed.)

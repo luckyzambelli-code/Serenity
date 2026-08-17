@@ -65,6 +65,23 @@ connessione MUSE** — `Serenity.tsx` chiamava solo `useThetaMeter` (l'e-meter U
 `useMuseConnection`. Senza cuffia appaiata il motore della carica non ha campioni EEG da
 leggere: montare i cicli richiede prima questo. EQUILIBRIUM 2.0.151.
 
+**Fase 6, terzo passo (17/08/2026) — SERENITY ha un ago EEG vero**: due pezzi in più estratti
+con lo stesso principio (`hooks/useStableReleaseState`, « LIBERAZIONE ATTIVA » — CONN-110, il
+Tone Arm che scende conta, la velocità del processo no — letto da `useChargeEngine` e influenza
+la macchina a stati del ciclo), poi `Serenity.tsx` monta per la prima volta `useMuseConnection`
++ `useMuseContactGate` + `useStableReleaseState` + `useChargeEngine` + `useEpValidation` (lo
+stesso EP a 4 stadi di EQUILIBRIUM, condiviso). Un bottone « connect muse » appare in
+intestazione; l'ago EEG si muove per davvero (`needleOffsetProp` legge `needleEngine`, il
+motore fisico condiviso, invece della costante `SET_OFFSET`); l'AS-IS del quadrante segue lo
+stato vero (`ep.asIsnessState`) invece del `"persist"` fisso di prima.
+
+⚠️ **Cosa c'è e cosa non c'è ancora**: l'ago EEG reagisce (Fall, F/N, Blow Down…), il Tone Arm
+sale, l'EP segue la seduta — ma **nessun ciclo è ancora armabile**: `session/useContactNullCycle`
+(pronto dalla fase 1) non è ancora montato, quindi niente item, niente ARM/AS-IS, niente
+CORPUS, niente pannello MNA, niente assessment con più item. `cycleArmedRef` e i tre
+`track*Ref` sono placeholder onesti — dichiarati per soddisfare `ChargeEngineDeps`, mai armati
+da nessuno. Prossimo passo di questa fase. EQUILIBRIUM 2.0.152, SERENITY 3.0.15.
+
 Verifica di ogni fase: la stessa seduta, condotta nelle due applicazioni, deve dare lo
 stesso giornale, lo stesso rapporto, gli stessi test verdi.
 

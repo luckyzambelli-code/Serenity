@@ -44,6 +44,29 @@ da sola senza toccare le altre.
   - [ ] con la fascia rimossa e RIMESSA a metà seduta, il log SYS "MUSE contact: [...]" compare
         una sola volta per episodio, non ripetuto ogni secondo.
 
+- [ ] **`hooks/useStableReleaseState` (SERENITY fase 6, 17/08/2026)** — « LIBERAZIONE ATTIVA »
+      spostato fuori da `App.tsx`. Su EQUILIBRIUM, con un MUSE appaiato:
+  - [ ] il Tone Arm che SCENDE (o un F/N) porta la libertà a « attiva » entro ~2,5 s, non prima
+        (l'isteresi anti-sfarfallio) — stesso comportamento di prima dell'estrazione;
+  - [ ] il Tone Arm che SALE porta a « resistenza »; senza trend, a « flusso ».
+
+- [ ] **SERENITY monta un ago EEG vero (fase 6, terzo passo, 17/08/2026)** — `Serenity.tsx` ora
+      chiama `useMuseConnection`/`useMuseContactGate`/`useChargeEngine`/`useEpValidation` per la
+      prima volta. Verificato SENZA hardware: build pulita, avvio senza errori console, bottone
+      « connect muse » risponde (scrive nel giornale), apertura/chiusura seduta invariata. **Con
+      un MUSE vero, in SERENITY** (aprire `serenity.html`, non `index.html`):
+  - [ ] « connect muse » appaia davvero la cuffia (stesso flusso WebBluetooth di EQUILIBRIUM);
+  - [ ] indossando la fascia l'ago EEG si muove sul quadrante di SERENITY e reagisce (Fall,
+        F/N, Blow Down…) — confrontare CONTRO EQUILIBRIUM nella STESSA seduta non è possibile
+        (le due app non si aprono insieme), ma le reazioni devono somigliare a una seduta
+        equivalente condotta in EQUILIBRIUM;
+  - [ ] col Theta-Meter ANCHE collegato, è il suo ago a mostrarsi (non quello EEG) — la
+        precedenza scelta per questo passo, finché non arriva la selezione dell'auditor;
+  - [ ] il Tone Arm sale nel tempo, visibile nel comportamento dell'ago (nessun numero mostrato
+        ancora — nessun readout costruito per questo in SERENITY);
+  - [ ] **NESSUN ciclo si arma ancora** — è atteso: manca il tasto, non la carica. Verificare
+        solo che l'ago REAGISCE, non che un ciclo si chiuda.
+
 - [ ] **La colonna della SCALA DEL TONO** (`components/ToneColumn.tsx`) — verticale, a destra
       dell'arco, in vista TONE. Compare solo con uno strumento collegato, quindi NON si è
       potuta guardare:
