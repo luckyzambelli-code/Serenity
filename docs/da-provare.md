@@ -81,6 +81,24 @@ da sola senza toccare le altre.
   - [ ] chiudendo la seduta A METÀ CICLO (bottone FERMER/CLOSE) niente va in errore — il ciclo
         aperto resta semplicemente non validato, come farebbe EQUILIBRIUM.
 
+- [ ] **SERENITY: NULL e CORPUS (fase 6, quinto passo, 17/08/2026)** — verificato A SCHERMO
+      senza MUSE reale (ciclo NULL armato e chiuso, VGI ✓, giornale avanza; nessun errore
+      console alla scrittura CORPUS in Chrome, dove `corpusAvailable()` è falso e compare
+      l'avviso). **Con l'APP ELECTRON (non il browser) e — quando possibile — un MUSE vero:**
+  - [ ] aprendo una seduta in SERENITY, il file CORPUS del mese riceve una riga `session` (si
+        legge con `npm run corpus` o aprendo il file `.jsonl` in `~/.../CORPUS/` — stesso posto
+        di EQUILIBRIUM, è LO STESSO archivio);
+  - [ ] un ciclo CONTACT chiuso con AS-IS scrive una riga `cycle` con `done:true`; abbandonato
+        (chiudendo la seduta a metà) scrive comunque una riga, con `done:false`;
+  - [ ] un ciclo NULL chiuso con VGI scrive `cycle` con `kind:'null'`, e la scelta VGI/senza VGI
+        SI VEDE nel giornale (due righe diverse, non genericamente "chiuso");
+  - [ ] un F/N dell'ago EEG durante un ciclo, se l'auditor dichiara l'AS-IS mentre è a schermo,
+        scrive una riga `fn` con `asIs:true` — è il legame fra l'indicatore e la decisione,
+        la riga più importante dell'archivio (vedi `equilibrium_corpus_ai.md`);
+  - [ ] aprendo la STESSA seduta (stesso auditor, stesso giorno) prima in EQUILIBRIUM e poi in
+        SERENITY (o viceversa), le righe finiscono nello STESSO file `.jsonl` del mese — è la
+        verifica scritta per questa fase: un archivio solo, non due.
+
 - [ ] **La colonna della SCALA DEL TONO** (`components/ToneColumn.tsx`) — verticale, a destra
       dell'arco, in vista TONE. Compare solo con uno strumento collegato, quindi NON si è
       potuta guardare:

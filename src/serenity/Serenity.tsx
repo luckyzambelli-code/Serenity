@@ -38,6 +38,8 @@ import { THETA_LABEL_AFTER_MS } from '../engine/tuning';
 import { QuantumSphere } from '../components/QuantumSphere';
 import { useSessionJournal } from '../session/useSessionJournal';
 import { useContactNullCycle } from '../session/useContactNullCycle';
+import { sessionRecord, cycleRecord, fnRecord } from '../engine/corpus';
+import { corpusWrite, corpusAvailable } from '../lib/corpusWriter';
 import { getProfiles, getPcProfiles } from '../lib/storage';
 import { Avvio } from './Avvio';
 import { AVVIO_VUOTO, type Avvio as StatoAvvio } from './flussoAvvio';
@@ -199,9 +201,10 @@ export default function Serenity() {
   const lastLoggedChargeRef = useRef('neutral');
   const chargeLogPendingRef = useRef<{ candidate: string | null; sinceMs: number }>({ candidate: null, sinceMs: 0 });
   const lastLoggedReactionRef = useRef<{ reaction: string; t: number } | null>(null);
-  /** Nessun ciclo ancora — vedi la nota in cima al blocco. Sempre `''`/`false`: il motore
-   *  della carica non scrive quindi mai nel CORPUS né segna un assessment attivo. */
+  /** L'identificativo della seduta nel CORPUS — l'ora d'apertura, come in App.tsx. Vuoto fuori
+   *  seduta: senza seduta non c'è configurazione con cui interpretare una riga. */
   const corpusSessionRef = useRef('');
+  /** Nessun assessment multi-item da voce ancora — sempre spento. */
   const assessActiveRef = useRef(false);
 
   const release = useStableReleaseState({ needleReactionKeyRef });
@@ -279,19 +282,30 @@ export default function Serenity() {
     virtualNeedle.reset();
     needleVirtualRef.current = [];
   };
-  /** Nessun CORPUS ancora in SERENITY (vedi la nota in cima al blocco) — consuma solo la coda
-   *  dell'F/N in sospeso, senza scrivere nulla. */
-  const flushEegFn = () => { pendingEegFnRef.current = null; };
+  /** Chiude (o apre) la riga CORPUS dell'F/N EEG — stessa logica di App.tsx (`flushEegFn`):
+   *  scrive solo se una seduta è aperta (`corpusSessionRef` non vuoto, vedi `apri()`) e c'era
+   *  davvero un F/N in sospeso. `asIs` lega l'indicatore alla decisione: senza, non si potrebbe
+   *  sapere se un AS-IS dichiarato fosse confermato dall'ago vero. */
+  const flushEegFn = (asIs = false) => {
+    const p = pendingEegFnRef.current;
+    pendingEegFnRef.current = null;
+    if (!p || !corpusSessionRef.current) return;
+    corpusWrite(fnRecord(corpusSessionRef.current, new Date().toISOString(), {
+      src: 'eeg', tSec: p.tSec, ta: p.ta,
+      durSec: Math.max(0, timeRef.current - p.tSec) || undefined,
+      asIs: asIs || undefined,
+    }));
+  };
 
   /**
    * ── IL CICLO — CONTACT e NULL, lo stesso motore di App.tsx ─────────────────────────────
    * `session/useContactNullCycle` è pronto dalla fase 1: qui lo si monta per la prima volta.
    * Nessuna soglia nuova, nessuna macchina a stati riscritta — solo l'item (un campo di testo)
-   * e i due gesti (ARM, AS-IS) che gliela danno.
+   * e i due gesti (ARM, AS-IS) che gliela danno. Ogni ciclo, concluso o abbandonato, scrive
+   * ora nel CORPUS come farebbe App.tsx (`writeCycleCorpus`) — l'archivio è UNO SOLO.
    *
-   * ⚠️ COSA MANCA ANCORA: il ciclo NULL (solo CONTACT armabile da qui, per ora), CORPUS
-   * (`writeCycleCorpus`/`markFnAsIs` sono no-op — `corpusSessionRef` resta sempre vuoto), il
-   * lag di Ron (`onLagMeasured` no-op, nessun readout), e l'assessment automatico da voce
+   * ⚠️ COSA MANCA ANCORA: il ciclo NULL (solo CONTACT armabile da qui, per ora), il lag di Ron
+   * (`onLagMeasured` no-op, nessun readout), e l'assessment automatico da voce
    * (`ensureAssessmentOn` no-op — l'item si scrive, non si detta ancora).
    */
   const [item, setItem] = useState('');
@@ -307,8 +321,11 @@ export default function Serenity() {
     freeNeedleForNewItem,
     ensureAssessmentOn: () => {},
     onItemGiven: sec => { ultimoItemSecRef.current = sec; },
-    writeCycleCorpus: () => {},
-    markFnAsIs: () => flushEegFn(),
+    writeCycleCorpus: row => {
+      if (!corpusSessionRef.current) return;   // fuori seduta non si archivia
+      corpusWrite(cycleRecord(corpusSessionRef.current, new Date().toISOString(), row));
+    },
+    markFnAsIs: () => flushEegFn(true),
     stopSonification: () => {},
     onLagMeasured: () => {},
   });
@@ -364,6 +381,30 @@ export default function Serenity() {
   const apri = () => {
     sessionClock.reset(); sessionClock.start();
     journal.resetJournal(t('ser_session_opened'));
+    // ── CORPUS: apertura di seduta — stessa logica di App.tsx ────────────────────────────
+    // Va scritta ADESSO, non alla fine: è la configurazione con cui si leggerà tutto il resto,
+    // e se la seduta si interrompe le reazioni già scritte devono restare interpretabili.
+    // L'identificativo è l'ora d'inizio: unico in pratica, e ordinabile.
+    {
+      const at = new Date().toISOString();
+      corpusSessionRef.current = at;
+      if (!corpusAvailable()) {
+        journal.addLog({ speaker: 'SYS', time: 0, type: 'highlight', text:
+          LC('⚠ ARCHIVIO NON ATTIVO — sei in un browser: questa seduta NON verrà archiviata. Usa l\'applicazione SERENITY.',
+             '⚠ ARCHIVE INACTIVE — vous êtes dans un navigateur : cette séance NE SERA PAS archivée. Utilisez l\'application SERENITY.',
+             '⚠ ARCHIVE INACTIVE — you are in a browser: this session will NOT be archived. Use the SERENITY application.',
+             '⚠ ARCHIVO INACTIVO — estás en un navegador: esta sesión NO se archivará. Usa la aplicación SERENITY.',
+             '⚠ ARKIVET AV — du är i en webbläsare: den här sessionen arkiveras INTE. Använd SERENITY-appen.') });
+      }
+      corpusWrite(sessionRecord(at, at, {
+        inst: { muse: muse.museConnection === 'connected', theta: meterC },
+        cans: meterC ? theta.setup.config : undefined,
+        sens: meterC ? theta.setup.needleScale : undefined,
+        sensTrim: meterC ? theta.setup.sensTrim : undefined,
+        taPoints: theta.taScale ? theta.taScale.points.length : undefined,
+        taFactory: theta.taScale ? theta.taScale.madeAt === 0 : undefined,
+      }));
+    }
     // Il device del preclear si arma DA QUESTO pacchetto, non da un pulsante che lui preme —
     // stesso protocollo di App.tsx (`SESSION_STATE`).
     if (avvio?.distanza) remote.impostaStatoSeduta('running');
@@ -372,6 +413,7 @@ export default function Serenity() {
   const chiudi = () => {
     sessionClock.end();
     journal.addLog({ speaker: 'SYS', text: t('ser_session_closed'), time: sessionClock.now() });
+    corpusSessionRef.current = '';
     if (avvio?.distanza) remote.impostaStatoSeduta('ended');
     setAperta(false);
   };
@@ -569,10 +611,11 @@ export default function Serenity() {
         }}>
           {aperta ? t('ser_close_session') : t('ser_open_session')}
         </button>
-        {/* ── IL CICLO — un item, due gesti ────────────────────────────────────────────────
-            Solo CONTACT per ora (vedi la nota sopra `useContactNullCycle`). Il campo e il
-            bottone stanno sulla STESSA riga, come in App.tsx dopo il segnalato « il campo e il
-            gesto in un posto, il bottone in un altro »: non si separano qui da capo. */}
+        {/* ── IL CICLO — un item, due strade, due gesti di chiusura ────────────────────────
+            CONTACT (→ AS-IS) e NULL (→ EQUILIBRIUM, con o senza VGI) condividono lo STESSO
+            campo item — sono due strade sullo stesso motore, non due cicli diversi da
+            scrivere. Il campo e i bottoni stanno sulla STESSA riga, come in App.tsx dopo il
+            segnalato « il campo e il gesto in un posto, il bottone in un altro ». */}
         {aperta && !cycles.cycleArmed && (
           <>
             <input
@@ -592,6 +635,12 @@ export default function Serenity() {
             }}>
               {t('ser_arm_contact')}
             </button>
+            <button onClick={() => cycles.armCycle('null')} style={{
+              border: 'none', cursor: 'pointer', background: 'none',
+              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+            }}>
+              {t('ser_arm_null')}
+            </button>
           </>
         )}
         {aperta && cycles.cycleArmed && (
@@ -599,12 +648,29 @@ export default function Serenity() {
             <span style={{ fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)' }}>
               {item || t('ser_item_placeholder')}
             </span>
-            <button onClick={() => cycles.validateAsIs()} style={{
-              border: 'none', cursor: 'pointer', background: 'none',
-              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-still)',
-            }}>
-              {t('ser_validate_asis')}
-            </button>
+            {cycles.cycleKind === 'null' ? (
+              <>
+                <button onClick={() => cycles.validateClearRead(true)} style={{
+                  border: 'none', cursor: 'pointer', background: 'none',
+                  fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-still)',
+                }}>
+                  {t('ser_validate_equilibrium_vgi')}
+                </button>
+                <button onClick={() => cycles.validateClearRead(false)} style={{
+                  border: 'none', cursor: 'pointer', background: 'none',
+                  fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+                }}>
+                  {t('ser_validate_equilibrium_novgi')}
+                </button>
+              </>
+            ) : (
+              <button onClick={() => cycles.validateAsIs()} style={{
+                border: 'none', cursor: 'pointer', background: 'none',
+                fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-still)',
+              }}>
+                {t('ser_validate_asis')}
+              </button>
+            )}
           </>
         )}
         {/* Il giornale NON si mostra: scorrere alla periferia tira l'occhio proprio mentre

@@ -86,11 +86,26 @@ la chiama. Verificato A SCHERMO (senza MUSE reale, ma l'intero giro dell'interfa
 l'item scrive « ▶ #1 … » nel giornale e fa comparire « dichiara AS-IS »; dichiarare l'AS-IS
 scrive « ✓ #1 … — AS-IS » e torna al campo vuoto, pronto per il prossimo.
 
-⚠️ **Cosa manca ancora**: solo CONTACT (non NULL), nessun CORPUS (`writeCycleCorpus`/
-`markFnAsIs` restano no-op — `corpusSessionRef` resta sempre vuoto), nessun lag di Ron
-(`onLagMeasured` no-op), nessun assessment automatico da voce (`ensureAssessmentOn` no-op —
-l'item si scrive, non si detta ancora), nessun pannello MNA, MIRROR o TONE. Ognuno di questi è
-un passo a parte, quando servirà. EQUILIBRIUM 2.0.153, SERENITY 3.0.16.
+⚠️ A quel punto mancavano ancora: NULL, CORPUS, lag di Ron, assessment da voce, MNA/MIRROR/TONE.
+
+**Fase 6, quinto passo (17/08/2026) — NULL e CORPUS**: due aggiunte, stesso principio « il
+motore già lo sa fare, qui si collega ». `cycles.armCycle('null')` (un secondo bottone, « dai
+l'item (NULL) ») e la sua chiusura (`cycles.validateClearRead(vgi)`, due bottoni — « EQUILIBRIUM
+· VGI ✓ » e « · senza VGI », stesso lessico di App.tsx) — CONTACT e NULL condividono lo stesso
+campo item, sono due strade sullo stesso motore, non due cicli da scrivere due volte.
+
+`apri()`/`chiudi()` scrivono ora davvero nel CORPUS come App.tsx: `corpusSessionRef` prende
+l'ora d'apertura (l'identificativo di seduta) e la riga `sessionRecord` parte SUBITO — se la
+seduta si interrompe, le reazioni già scritte restano interpretabili. Con `corpusAvailable()`
+falso (Chrome, non l'app Electron) compare lo stesso avviso « archivio non attivo » di
+App.tsx, tradotto per SERENITY. `writeCycleCorpus`/`markFnAsIs` (passo precedente, no-op)
+scrivono ora `cycleRecord`/`fnRecord` per davvero.
+
+Verificato A SCHERMO: un ciclo NULL armato con « le passé » mostra entrambi i bottoni di
+chiusura; « EQUILIBRIUM · VGI ✓ » chiude il ciclo e il giornale avanza di una riga; nessun
+errore console alla scrittura CORPUS (compreso il percorso "non disponibile in browser").
+Ancora da fare: il lag di Ron, l'assessment da voce, MNA/MIRROR/TONE — un passo a parte per
+ciascuno. EQUILIBRIUM 2.0.154, SERENITY 3.0.17.
 
 Verifica di ogni fase: la stessa seduta, condotta nelle due applicazioni, deve dare lo
 stesso giornale, lo stesso rapporto, gli stessi test verdi.
