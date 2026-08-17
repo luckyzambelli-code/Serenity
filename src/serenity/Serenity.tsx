@@ -542,7 +542,7 @@ export default function Serenity() {
   return (
     <main style={{
       height: '100%', display: 'grid', gridTemplateRows: 'auto 1fr auto',
-      padding: '38px 44px', gap: 24,
+      padding: '38px 44px', gap: 24, position: 'relative',
     }}>
       {/* ── L'INTESTAZIONE, che non è una barra ───────────────────────────────────────────
           Nessun fondo, nessuna linea di separazione: il nome sta posato sulla stessa
@@ -562,7 +562,7 @@ export default function Serenity() {
         <SelettoreLingua />
         {/* Chi audita, chi si audita, e dove — detto in una riga sola e in grigio: sono cose
             che si controllano una volta all'inizio, non che si guardano in seduta. */}
-        <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
+        <span style={{ fontSize: 12.5, color: 'var(--s-ink-soft)' }}>
           {nomeAuditor}{avvio.solo ? ` · ${t('ser_alone_tag')}` : ` · ${nomePreclear}`}
           {avvio.distanza ? ` · ${t('ser_remote_tag')}` : ''}{avvio.esperto ? ` · ${t('ser_expert_tag')}` : ''}
         </span>
@@ -626,39 +626,47 @@ export default function Serenity() {
             />
           </>
         )}
-        {/* ── LE CAMERE, IN CERCHIO — vedi CameraCerchio.tsx ─────────────────────────────────
-            Segnalato assente dalla revisione: l'auditor non poteva VEDERE il preclear collegato
-            a distanza. CAM 2 (PC): lo stream remoto vero in seduta a distanza; la webcam locale
-            quando l'auditor sta testando da solo (`avvio.solo`) — nessuna delle due quando è
-            co-locato con un preclear reale nella stessa stanza, senza un secondo dispositivo da
-            riprendere. CAM 1 (auditor): sempre la webcam locale, come in EQUILIBRIUM. Solo a
-            seduta aperta: una camera accesa fuori seduta sarebbe una luce accesa per niente.
-            `moduleVis`/CONFIG decide se sono accese; `opacita` legge la stessa trasparenza. */}
-        {aperta && moduleVis.cam2 && (avvio.distanza || avvio.solo) && (
-          <CameraCerchio
-            dimensione={44}
-            titolo={t('cam2') as string}
-            externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
-            offlineLabel={t('camera_offline') as string}
-            opacita={uiAlpha}
-          />
-        )}
-        {aperta && moduleVis.cam1 && (
-          <CameraCerchio
-            dimensione={44}
-            titolo={t('cam1') as string}
-            offlineLabel={t('camera_offline') as string}
-            opacita={uiAlpha}
-          />
-        )}
         {/* CONFIG — raggiungibile in ogni momento, come il cassetto di EQUILIBRIUM. */}
         <button onClick={() => setConfigAperto(true)} title={t('config') as string} style={{
           border: 'none', background: 'none', cursor: 'pointer', padding: 0,
-          display: 'flex', color: 'var(--s-ink-faint)',
+          display: 'flex', color: 'var(--s-ink-soft)',
         }}>
           <Settings size={16} strokeWidth={1.6} />
         </button>
       </header>
+
+      {/* ── LE CAMERE, GRANDI, FUORI DALL'INTESTAZIONE ─────────────────────────────────────────
+          Segnalato: « troppo piccole, l'auditor deve vedere il PC correttamente » — 44 px
+          nell'intestazione erano un'icona, non un volto. Qui galleggiano SOPRA la superficie,
+          ancorate all'angolo (`position:absolute` su `main`, non nel flusso della sezione): lo
+          strumento al centro NON perde un pixel della sua taglia per fare posto alle camere —
+          la stessa regola per cui il quadrante è `w-full h-full` e non un cerchio fra i moduli.
+          CAM 2 (PC), la priorità: molto più grande. CAM 1 (auditor), un controllo secondario:
+          più piccola. `moduleVis`/CONFIG decide se sono accese; `opacita` legge la trasparenza. */}
+      {aperta && (moduleVis.cam1 || (moduleVis.cam2 && (avvio.distanza || avvio.solo))) && (
+        <div style={{
+          position: 'absolute', top: 76, right: 44, zIndex: 5,
+          display: 'flex', alignItems: 'flex-start', gap: 24,
+        }}>
+          {moduleVis.cam1 && (
+            <CameraCerchio
+              dimensione={100}
+              titolo={t('cam1') as string}
+              offlineLabel={t('camera_offline') as string}
+              opacita={uiAlpha}
+            />
+          )}
+          {moduleVis.cam2 && (avvio.distanza || avvio.solo) && (
+            <CameraCerchio
+              dimensione={190}
+              titolo={t('cam2') as string}
+              externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
+              offlineLabel={t('camera_offline') as string}
+              opacita={uiAlpha}
+            />
+          )}
+        </div>
+      )}
 
       {/* ── IL CAMPO ──────────────────────────────────────────────────────────────────────
           Lo strumento occupa lo spazio, come in EQUILIBRIUM — non è un modulo fra gli altri,

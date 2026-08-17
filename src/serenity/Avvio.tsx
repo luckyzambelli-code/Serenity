@@ -311,7 +311,7 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
         <SelettoreLingua />
         <button onClick={() => setConfigAperto(true)} title={t('config') as string} style={{
           border: 'none', background: 'none', cursor: 'pointer', padding: 0,
-          display: 'flex', color: 'var(--s-ink-faint)',
+          display: 'flex', color: 'var(--s-ink-soft)',
         }}>
           <Settings size={16} strokeWidth={1.6} />
         </button>

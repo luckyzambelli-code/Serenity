@@ -52,7 +52,7 @@ const MODULI_IN_ARRIVO = ['config_mod_journal', 'config_mod_health', 'config_mod
 
 const etichetta: React.CSSProperties = {
   fontFamily: 'var(--s-sans)', fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase',
-  color: 'var(--s-ink-faint)', marginBottom: 10, display: 'block',
+  color: 'var(--s-ink-soft)', marginBottom: 10, display: 'block',
 };
 
 export function PannelloConfig({ onChiudi }: { onChiudi: () => void }) {
@@ -84,12 +84,12 @@ export function PannelloConfig({ onChiudi }: { onChiudi: () => void }) {
         borderBottom: '1px solid var(--s-ink-ghost)',
       }}>
       <span style={{
-        fontFamily: 'var(--s-sans)', fontSize: 13.5,
-        color: disabilitata ? 'var(--s-ink-faint)' : 'var(--s-ink)',
+        fontFamily: 'var(--s-sans)', fontSize: 14,
+        color: disabilitata ? 'var(--s-ink-soft)' : 'var(--s-ink)',
       }}>
         {testo}
         {disabilitata && (
-          <span style={{ fontSize: 10.5, color: 'var(--s-ink-faint)', marginLeft: 8 }}>
+          <span style={{ fontSize: 11.5, color: 'var(--s-ink-faint)', marginLeft: 8 }}>
             {t('ser_config_soon')}
           </span>
         )}
@@ -118,7 +118,7 @@ export function PannelloConfig({ onChiudi }: { onChiudi: () => void }) {
       <header style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
         <button onClick={onChiudi} style={{
           border: 'none', background: 'none', cursor: 'pointer',
-          fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+          fontFamily: 'var(--s-sans)', fontSize: 13, color: 'var(--s-ink-soft)',
         }}>
           ← {t('ser_back')}
         </button>

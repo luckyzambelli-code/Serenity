@@ -174,6 +174,29 @@ verificato — cerchi e indicatori restano leggibili; le due camere in seduta SO
 "CAMÉRA HORS LIGNE" quando il browser nega il permesso (atteso in sandbox, corretto — non un
 difetto). EQUILIBRIUM 2.0.157, SERENITY 3.0.20.
 
+⚠️ **Segnalato subito dopo (17/08/2026)**: le camere troppo piccole (« l'auditor deve vedere
+il PC correttamente ») e le scritte di connessione/CONFIG poco leggibili (« un'interfaccia
+semplice e serena deve essere però leggibile »). Due correzioni, non un nono passo a parte:
+
+- **Le camere sono uscite dall'intestazione** — 44 px in una riga con tema/lingua erano
+  un'icona, non un volto. Ora galleggiano in un blocco `position:absolute` sopra l'angolo
+  del pannello scuro (non nel flusso della sezione: il quadrante non perde un pixel della sua
+  taglia per farle posto — stessa regola del principio dimensionale qui sotto). CAM 2 (PC),
+  la priorità: 190 px. CAM 1 (auditor), un controllo secondario: 100 px. Una didascalia
+  SEMPRE visibile sotto ogni cerchio (non più solo un `title` al passaggio del mouse).
+- **Il colore è tornato a essere solo l'accento, mai la parola.** `IndicatoreConnessione`
+  metteva anche il TESTO nel colore tenue del segnale — coerente con la dottrina (« i colori
+  dicono, non gridano ») ma illeggibile per « in attesa »/« spento » su fondo perla. Ora il
+  punto resta colorato (7→9 px), la parola è sempre `--s-ink` pieno. Stesso principio in
+  `PannelloConfig.tsx`: le etichette di sezione e i nomi dei moduli erano in `--s-ink-faint`
+  a 10,5 px — troppo piccole E troppo deboli insieme. Bump a `--s-ink-soft`/`--s-ink` e a
+  taglie leggermente maggiori, senza toccare la calma della pagina: nessun colore acceso in
+  più, solo più inchiostro dove c'è testo funzionale da leggere davvero.
+
+Verificato a schermo (tab pulita, tema chiaro e scuro): le due camere si leggono come un volto
+anche a distanza, le didascalie CAM 1/CAM 2 sempre visibili, CONFIG e gli indicatori di
+connessione leggibili senza sforzo in entrambi i temi. EQUILIBRIUM 2.0.158, SERENITY 3.0.21.
+
 ---
 
 ## Il principio dimensionale — regola per le fasi 6, 7, 8

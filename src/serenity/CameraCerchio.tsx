@@ -14,6 +14,13 @@
  * cui un MediaStream finisce in un <video>, si ridisegna solo il contorno: un `Cerchio`, non un
  * riquadro con barra del titolo e badge — la dottrina di questo file (vedi `Cerchio.tsx`).
  *
+ * ── SEGNALATO: TROPPO PICCOLE ────────────────────────────────────────────────────────────────
+ * Prima versione: 44 px nell'intestazione, fra il tema e la lingua — leggibile come icona, non
+ * come volto. « L'auditor deve vedere il PC correttamente » non è un dettaglio estetico: è
+ * l'unico modo di cogliere un'espressione durante la seduta. Ora la dimensione è un parametro
+ * vero (chi chiama decide, non più un default minuscolo), e la didascalia sotto il cerchio è
+ * SEMPRE visibile — non più solo un `title` che si legge al passaggio del mouse.
+ *
  * @see docs/serenity-refonte.md — fase 6.
  */
 
@@ -22,7 +29,7 @@ import { attachAudioBoost } from '../lib/audioBoost';
 import { Cerchio } from './Cerchio';
 
 export function CameraCerchio({
-  dimensione = 64, titolo, externalStream, forceMuted = false, fallbackFrame, offlineLabel, opacita,
+  dimensione = 160, titolo, externalStream, forceMuted = false, fallbackFrame, offlineLabel, opacita,
 }: {
   dimensione?: number;
   titolo: string;
@@ -77,33 +84,41 @@ export function CameraCerchio({
   }, [externalStream, offlineLabel]);
 
   return (
-    <Cerchio dimensione={dimensione} viva={!errore} opacita={opacita}>
-      <div title={titolo} style={{
-        width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', position: 'relative',
+    <div style={{ display: 'grid', justifyItems: 'center', gap: 8 }}>
+      <Cerchio dimensione={dimensione} viva={!errore} opacita={opacita}>
+        <div title={titolo} style={{
+          width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', position: 'relative',
+        }}>
+          {errore ? (
+            <div style={{
+              width: '100%', height: '100%', display: 'grid', placeItems: 'center', textAlign: 'center',
+              fontFamily: 'var(--s-mono)', fontSize: Math.max(9, dimensione * 0.07), color: 'var(--s-ink-soft)', padding: 8,
+            }}>
+              {errore}
+            </div>
+          ) : fallbackFrame ? (
+            <img src={fallbackFrame} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <video ref={attach} autoPlay playsInline muted={!externalStream || forceMuted}
+                   style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          )}
+          {externalStream && (
+            <span style={{
+              position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)',
+              fontSize: 9, letterSpacing: '0.06em', color: 'var(--s-still)',
+              fontFamily: 'var(--s-mono)', fontWeight: 700,
+            }}>
+              ●
+            </span>
+          )}
+        </div>
+      </Cerchio>
+      {/* La didascalia — SEMPRE leggibile, non solo al passaggio del mouse (segnalato). */}
+      <span style={{
+        fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-soft)', letterSpacing: '0.02em',
       }}>
-        {errore ? (
-          <div style={{
-            width: '100%', height: '100%', display: 'grid', placeItems: 'center', textAlign: 'center',
-            fontFamily: 'var(--s-mono)', fontSize: 8, color: 'var(--s-ink-faint)', padding: 4,
-          }}>
-            {errore}
-          </div>
-        ) : fallbackFrame ? (
-          <img src={fallbackFrame} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
-          <video ref={attach} autoPlay playsInline muted={!externalStream || forceMuted}
-                 style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        )}
-        {externalStream && (
-          <span style={{
-            position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)',
-            fontSize: 6, letterSpacing: '0.06em', color: 'var(--s-still)',
-            fontFamily: 'var(--s-mono)', fontWeight: 700,
-          }}>
-            ●
-          </span>
-        )}
-      </div>
-    </Cerchio>
+        {titolo}
+      </span>
+    </div>
   );
 }
