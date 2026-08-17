@@ -37,6 +37,7 @@ import { SET_OFFSET } from '../engine/dialGeometry';
 import { THETA_LABEL_AFTER_MS } from '../engine/tuning';
 import { QuantumSphere } from '../components/QuantumSphere';
 import { useSessionJournal } from '../session/useSessionJournal';
+import { useContactNullCycle } from '../session/useContactNullCycle';
 import { getProfiles, getPcProfiles } from '../lib/storage';
 import { Avvio } from './Avvio';
 import { AVVIO_VUOTO, type Avvio as StatoAvvio } from './flussoAvvio';
@@ -250,15 +251,15 @@ export default function Serenity() {
    *  App.tsx (nessun binding UI neanche là: "1.0 = default"). */
   const sensitivityRef = useRef(1.0);
 
-  /** Nessun ciclo — placeholder onesti (vedi la nota in cima al blocco). */
-  const cycleArmedRef = useRef(false);
-  const trackCycleRef = useRef<(t: never) => void>(() => {});
+  /** Non ancora MIRROR/TONE in SERENITY — placeholder onesti, mai armati. */
   const trackMirrorRef = useRef<(q: number, nowSec: number, pushUi: boolean) => void>(() => {});
   const trackToneRef = useRef<(q: number, nowSec: number) => void>(() => {});
+  /** `useContactNullCycle` (sotto) scrive qui il suo `trackCycle` DOPO essere stato creato —
+   *  il ref esiste già ora perché `useChargeEngine` (anche lui sotto) lo riceve una volta sola. */
+  const trackCycleRef = useRef<(t: never) => void>(() => {});
 
-  /** NUOVO ITEM → l'ago si LIBERA. Stessa funzione di App.tsx (`freeNeedleForNewItem`): serve
-   *  già ora perché il tasto SET (sotto) la chiama, e la chiamerà `armCycle` quando la fase 6
-   *  monterà un ciclo vero. */
+  /** NUOVO ITEM → l'ago si LIBERA. Stessa funzione di App.tsx (`freeNeedleForNewItem`): la
+   *  chiama `armCycle`, sotto, appena l'auditor dà un item. */
   const freeNeedleForNewItem = () => {
     if (kickFlybackRef.current) { clearTimeout(kickFlybackRef.current); kickFlybackRef.current = null; }
     needleEngine.clearMotion();
@@ -282,6 +283,37 @@ export default function Serenity() {
    *  dell'F/N in sospeso, senza scrivere nulla. */
   const flushEegFn = () => { pendingEegFnRef.current = null; };
 
+  /**
+   * ── IL CICLO — CONTACT e NULL, lo stesso motore di App.tsx ─────────────────────────────
+   * `session/useContactNullCycle` è pronto dalla fase 1: qui lo si monta per la prima volta.
+   * Nessuna soglia nuova, nessuna macchina a stati riscritta — solo l'item (un campo di testo)
+   * e i due gesti (ARM, AS-IS) che gliela danno.
+   *
+   * ⚠️ COSA MANCA ANCORA: il ciclo NULL (solo CONTACT armabile da qui, per ora), CORPUS
+   * (`writeCycleCorpus`/`markFnAsIs` sono no-op — `corpusSessionRef` resta sempre vuoto), il
+   * lag di Ron (`onLagMeasured` no-op, nessun readout), e l'assessment automatico da voce
+   * (`ensureAssessmentOn` no-op — l'item si scrive, non si detta ancora).
+   */
+  const [item, setItem] = useState('');
+  const cycles = useContactNullCycle({
+    auditingQuestion: item,
+    setAuditingQuestion: setItem,
+    setItemSpoken: () => {},
+    nowSec: () => sessionClock.now(),
+    logLength: () => journal.logs.length,
+    log: (text, type) => journal.addLog({ speaker: 'SYS', text, time: sessionClock.now(), type }),
+    LC,
+    thetaTa: () => thetaTaRef.current,
+    freeNeedleForNewItem,
+    ensureAssessmentOn: () => {},
+    onItemGiven: sec => { ultimoItemSecRef.current = sec; },
+    writeCycleCorpus: () => {},
+    markFnAsIs: () => flushEegFn(),
+    stopSonification: () => {},
+    onLagMeasured: () => {},
+  });
+  trackCycleRef.current = cycles.trackCycle;
+
   useChargeEngine({
     workerRef, gyroBufferRef: gyroBuffer,
     timeRef, sessionStateRef, viewModeRef, instrumentsRef,
@@ -293,7 +325,7 @@ export default function Serenity() {
     primePhaseRef, mnaSessionRef, primeCaptured,
     needleReactionKeyRef, needleReactionRef, needleVirtualRef,
     shownReadsRef, ultimoItemSecRef,
-    trackCycleRef, trackMirrorRef, trackToneRef, cycleArmedRef,
+    trackCycleRef, trackMirrorRef, trackToneRef, cycleArmedRef: cycles.cycleArmedRef,
     logBufferRef: journal.logBufferRef, pendingEegFnRef,
     epWindowOpenRef, epWindowHasOpenedRef: ep.epWindowHasOpenedRef,
     epWindowTimerRef: ep.epWindowTimerRef,
@@ -537,6 +569,44 @@ export default function Serenity() {
         }}>
           {aperta ? t('ser_close_session') : t('ser_open_session')}
         </button>
+        {/* ── IL CICLO — un item, due gesti ────────────────────────────────────────────────
+            Solo CONTACT per ora (vedi la nota sopra `useContactNullCycle`). Il campo e il
+            bottone stanno sulla STESSA riga, come in App.tsx dopo il segnalato « il campo e il
+            gesto in un posto, il bottone in un altro »: non si separano qui da capo. */}
+        {aperta && !cycles.cycleArmed && (
+          <>
+            <input
+              value={item}
+              onChange={e => setItem(e.target.value)}
+              placeholder={t('ser_item_placeholder') as string}
+              onKeyDown={e => { if (e.key === 'Enter') cycles.armCycle('charge'); }}
+              style={{
+                border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
+                outline: 'none', fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)',
+                padding: '2px 4px', width: 200,
+              }}
+            />
+            <button onClick={() => cycles.armCycle('charge')} style={{
+              border: 'none', cursor: 'pointer', background: 'none',
+              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-soft)',
+            }}>
+              {t('ser_arm_contact')}
+            </button>
+          </>
+        )}
+        {aperta && cycles.cycleArmed && (
+          <>
+            <span style={{ fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)' }}>
+              {item || t('ser_item_placeholder')}
+            </span>
+            <button onClick={() => cycles.validateAsIs()} style={{
+              border: 'none', cursor: 'pointer', background: 'none',
+              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-still)',
+            }}>
+              {t('ser_validate_asis')}
+            </button>
+          </>
+        )}
         {/* Il giornale NON si mostra: scorrere alla periferia tira l'occhio proprio mentre
             l'ago legge. Qui si dice solo che sta scrivendo, e quante righe ha. */}
         <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>

@@ -75,12 +75,22 @@ intestazione; l'ago EEG si muove per davvero (`needleOffsetProp` legge `needleEn
 motore fisico condiviso, invece della costante `SET_OFFSET`); l'AS-IS del quadrante segue lo
 stato vero (`ep.asIsnessState`) invece del `"persist"` fisso di prima.
 
-⚠️ **Cosa c'è e cosa non c'è ancora**: l'ago EEG reagisce (Fall, F/N, Blow Down…), il Tone Arm
-sale, l'EP segue la seduta — ma **nessun ciclo è ancora armabile**: `session/useContactNullCycle`
-(pronto dalla fase 1) non è ancora montato, quindi niente item, niente ARM/AS-IS, niente
-CORPUS, niente pannello MNA, niente assessment con più item. `cycleArmedRef` e i tre
-`track*Ref` sono placeholder onesti — dichiarati per soddisfare `ChargeEngineDeps`, mai armati
-da nessuno. Prossimo passo di questa fase. EQUILIBRIUM 2.0.152, SERENITY 3.0.15.
+⚠️ Cosa mancava a quel punto: l'ago EEG reagiva ma nessun ciclo era armabile.
+
+**Fase 6, quarto passo (17/08/2026) — un ciclo si arma per davvero**: `session/
+useContactNullCycle` (pronto dalla fase 1) montato in `Serenity.tsx`. Un campo item + due gesti
+(« dai l'item » → `cycles.armCycle('charge')`, poi « dichiara AS-IS » → `cycles.validateAsIs()`)
+sostituiscono i placeholder `cycleArmedRef`/`trackCycleRef` con quelli VERI del ciclo.
+`freeNeedleForNewItem` (già scritta al passo precedente per il tasto SET) trova finalmente chi
+la chiama. Verificato A SCHERMO (senza MUSE reale, ma l'intero giro dell'interfaccia): dare
+l'item scrive « ▶ #1 … » nel giornale e fa comparire « dichiara AS-IS »; dichiarare l'AS-IS
+scrive « ✓ #1 … — AS-IS » e torna al campo vuoto, pronto per il prossimo.
+
+⚠️ **Cosa manca ancora**: solo CONTACT (non NULL), nessun CORPUS (`writeCycleCorpus`/
+`markFnAsIs` restano no-op — `corpusSessionRef` resta sempre vuoto), nessun lag di Ron
+(`onLagMeasured` no-op), nessun assessment automatico da voce (`ensureAssessmentOn` no-op —
+l'item si scrive, non si detta ancora), nessun pannello MNA, MIRROR o TONE. Ognuno di questi è
+un passo a parte, quando servirà. EQUILIBRIUM 2.0.153, SERENITY 3.0.16.
 
 Verifica di ogni fase: la stessa seduta, condotta nelle due applicazioni, deve dare lo
 stesso giornale, lo stesso rapporto, gli stessi test verdi.

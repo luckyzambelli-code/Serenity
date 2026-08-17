@@ -67,6 +67,20 @@ da sola senza toccare le altre.
   - [ ] **NESSUN ciclo si arma ancora** — è atteso: manca il tasto, non la carica. Verificare
         solo che l'ago REAGISCE, non che un ciclo si chiuda.
 
+- [ ] **SERENITY arma un ciclo CONTACT (fase 6, quarto passo, 17/08/2026)** — `session/
+      useContactNullCycle` montato. Verificato A SCHERMO senza MUSE reale: dare l'item scrive
+      « ▶ #1 … » nel giornale, « dichiara AS-IS » scrive « ✓ #1 … — AS-IS » e torna al campo
+      vuoto. **Con un MUSE vero, in SERENITY, un ciclo intero**:
+  - [ ] dare l'item libera l'ago (stesso gesto di App.tsx: lo swing precedente si interrompe);
+  - [ ] la fase del ciclo avanza con la carica vera (CONTACT → DISSOLUZIONE → AS-IS) — nessun
+        readout di fase mostrato ancora in SERENITY, ma il TA e le reazioni devono muoversi
+        coerentemente con quello che si vede in una seduta equivalente su EQUILIBRIUM;
+  - [ ] « dichiara AS-IS » chiude il ciclo SOLO quando premuto (nessuna chiusura automatica);
+  - [ ] dare un secondo item dopo aver chiuso il primo arma un ciclo #2 pulito (contatori,
+        stato dell'ago, tutto ripartito) — non un resto del primo che si trascina;
+  - [ ] chiudendo la seduta A METÀ CICLO (bottone FERMER/CLOSE) niente va in errore — il ciclo
+        aperto resta semplicemente non validato, come farebbe EQUILIBRIUM.
+
 - [ ] **La colonna della SCALA DEL TONO** (`components/ToneColumn.tsx`) — verticale, a destra
       dell'arco, in vista TONE. Compare solo con uno strumento collegato, quindi NON si è
       potuta guardare:
