@@ -23,7 +23,9 @@
  * @see docs/serenity-refonte.md
  */
 
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useMetric } from '../store/metricsStore';
+import { chargeStateById } from '../lib/chargeState';
 import { sessionClock } from '../runtime/SessionClock';
 import { needleEngine, virtualNeedle } from '../runtime/NeedleEngine';
 import { useThetaMeter } from '../hooks/useThetaMeter';
@@ -62,6 +64,34 @@ const orologio = (s: number) => {
 const MNA_SESSION_VUOTA: MnaSession = {
   cycles: 0, imHistory: [], imSum: 0, imCount: 0, peakIm: 0, finalZone: 'PRIME', totalCopies: 0, phaseLog: [],
 };
+
+/**
+ * ── LA LETTURA, DETTA A NUMERI ──────────────────────────────────────────────────────────────
+ * Segnalato: « non reagisce nulla ». L'ago SUL quadrante è la lettura vera, ma è l'UNICA — se
+ * si muove poco, o lo si guarda nell'istante sbagliato, sembra fermo anche quando il motore sta
+ * lavorando. App.tsx affianca sempre all'ago un TA in cifre (`ToneArmReadout`) e la fase in
+ * parole: SERENITY non ne aveva NESSUNO — il quadrante era l'unica prova che qualcosa
+ * succedesse. Qui gli stessi due numeri, dalla STESSA fonte (`metricsStore`, quello che
+ * `useChargeEngine` scrive), in due componenti isolati (`React.memo`) così i ~10 Hz del motore
+ * non ridisegnano tutta la schermata — stesso motivo per cui App.tsx li tiene separati.
+ */
+const LetturaTA = React.memo(function LetturaTA() {
+  const toneArm = useMetric(m => m.toneArm);
+  return (
+    <span style={{ fontFamily: 'var(--s-mono)', fontVariantNumeric: 'tabular-nums' }}>
+      TA {Math.min(6.0, Math.max(2.0, toneArm)).toFixed(2)}
+    </span>
+  );
+});
+
+/** La fase della carica in parole — la STESSA mappa di App.tsx (`chargeStateById`), non una
+ *  nuova. Vuota prima di un contatto: non c'è ancora niente da dire, e dirlo lo stesso
+ *  sembrerebbe un dato inventato. */
+const LetturaFase = React.memo(function LetturaFase({ t }: { t: (k: string) => unknown }) {
+  const phase = useMetric(m => m.chargePhase);
+  const cs = chargeStateById(phase);
+  return <>{cs.labelKey ? (t(cs.labelKey) as string) : ''}</>;
+});
 
 export default function Serenity() {
   const { t, lang } = useI18n();
@@ -587,6 +617,20 @@ export default function Serenity() {
         }}>
           {orologio(tempo)}
         </span>
+
+        {/* ── LA LETTURA, DETTA A NUMERI — vedi la nota sopra `LetturaTA`. Solo quando c'è un
+            ago EEG davvero collegato: senza MUSE il TA da EEG non significa niente (resta al
+            suo valore di riposo), e mostrarlo lo stesso sembrerebbe una lettura vera. */}
+        {agoEeg && (
+          <span style={{
+            fontFamily: 'var(--s-mono)', fontSize: 12, letterSpacing: '0.04em',
+            color: 'var(--s-ink-faint)', display: 'flex', gap: 14,
+          }}>
+            <LetturaTA />
+            <LetturaFase t={t} />
+            {museGate.signalQuality > 0 && <span>{museGate.signalQuality}%</span>}
+          </span>
+        )}
 
         {/* ⚠️ I QUATTRO CERCHI SATELLITE (assessment, cycle hint, …) SONO STATI TOLTI DA QUI,
             non solo spenti. Erano posizionati per orbitare un cerchio centrale da 380 px; con
