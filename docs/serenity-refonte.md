@@ -197,6 +197,42 @@ Verificato a schermo (tab pulita, tema chiaro e scuro): le due camere si leggono
 anche a distanza, le didascalie CAM 1/CAM 2 sempre visibili, CONFIG e gli indicatori di
 connessione leggibili senza sforzo in entrambi i temi. EQUILIBRIUM 2.0.158, SERENITY 3.0.21.
 
+⚠️ **Revisione funzionale — non solo grafica (17/08/2026, terza segnalazione)**: due
+regressioni VERE, non d'aspetto — una funzione persa nel passaggio a SERENITY, non solo
+ridisegnata:
+
+- **La CAMM non si può « nascondere e basta »**. `CameraFeed.tsx` di EQUILIBRIUM ha DUE
+  controlli distinti: `isVisible`/`onToggle` la RIMPICCIOLISCE in seduta (stream ancora vivo,
+  attenuato), `onDisable` la TOGLIE dal layout. La prima versione di `CameraCerchio.tsx` aveva
+  SOLO il secondo (via CONFIG → moduli) — il gesto rapido di minimizzare/riespandere era
+  sparito. Tornato: cliccare il cerchio lo collassa (video ancora agganciato, 62% d'opacità,
+  taglia un terzo), ricliccare lo riespande — `collassata`/`onToggleCollasso`, nuovi prop.
+- **L'arco dei cicli non c'era più**. In EQUILIBRIUM il quadrante ha un SECONDO arco,
+  concentrico a quello dell'ago (`components/ClearDial.tsx` — stesso perno, stesso SWEEP):
+  CONTACT · DISSOLUTION · AS-IS (o NULL · RISE · EQUILIBRIUM in ciclo NULL) coi loro colori,
+  le suddivisioni, le etichette curve lungo l'arco, un puntino di avanzamento agganciato alla
+  geometria dell'ago. SERENITY aveva il CICLO (arma/valida già funzionanti dalla fase 6) ma
+  l'arco non lo diceva più — solo bottoni di testo in fondo pagina, l'informazione visiva
+  persa. Montato `ClearDial` TALE E QUALE (stessa logica di `QuantumSphere`: qui i colori SONO
+  l'informazione, non un ornamento da reinterpretare) dentro il pannello dello strumento,
+  subito dopo l'ago. Nello stesso giro si è chiuso anche `onLagMeasured` (era un no-op
+  documentato dalla fase 1 — «il lag di Ron, nessun readout») e si è aggiunta la % di
+  dissoluzione accanto al TA: la stessa `CycleStatusBar` di App.tsx le calcola entrambe, qui
+  in un `LetturaCiclo` a parte (solo a ciclo armato, isolato dal re-render a 10 Hz di `qL`).
+
+Verificato a schermo (tab pulita): armato un ciclo CONTACT, l'arco passa da grigio spento a
+pieno regime e le tre parole CONTACT/DISSOLUTION/AS-IS compaiono lungo la curva (confermato nel
+testo di pagina, non solo a vista); in tema scuro i tre colori di fase sono quelli giusti
+(rosso/blu/grigio spento, gli stessi di `chargeStateById`). Cliccare CAM 1 la rimpicciolisce e
+la sua didascalia resta leggibile; ricliccare la riporta intera. EQUILIBRIUM 2.0.159, SERENITY
+3.0.22.
+
+⚠️ **Non chiuso in questo giro, segnalato per la prossima verifica sistematica**: gli altri
+« secondi archi » di EQUILIBRIUM — `MirrorDial` (ciclo MIRROR) e `ToneDial` (TONE SCALE) — non
+hanno un equivalente perché i cicli MIRROR/TONE non sono ancora montati in SERENITY (gap già
+noto, non nuovo); la `CycleStatusBar` completa ha anche un chip « sembra NULL »
+(`noReadSignal`) non ancora ripreso, solo il lag e la % dissoluzione.
+
 ---
 
 ## Il principio dimensionale — regola per le fasi 6, 7, 8

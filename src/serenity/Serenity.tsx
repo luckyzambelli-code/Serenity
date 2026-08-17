@@ -26,6 +26,7 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useMetric } from '../store/metricsStore';
 import { chargeStateById } from '../lib/chargeState';
+import { useTZone } from '../store/tzoneStore';
 import { sessionClock } from '../runtime/SessionClock';
 import { needleEngine, virtualNeedle } from '../runtime/NeedleEngine';
 import { useThetaMeter } from '../hooks/useThetaMeter';
@@ -38,6 +39,7 @@ import { ITEM_INTERRUPT_MS } from '../engine/tuning';
 import { SET_OFFSET } from '../engine/dialGeometry';
 import { THETA_LABEL_AFTER_MS } from '../engine/tuning';
 import { QuantumSphere } from '../components/QuantumSphere';
+import { ClearDial } from '../components/ClearDial';
 import { useSessionJournal } from '../session/useSessionJournal';
 import { useContactNullCycle } from '../session/useContactNullCycle';
 import { sessionRecord, cycleRecord, fnRecord } from '../engine/corpus';
@@ -99,6 +101,24 @@ const LetturaFase = React.memo(function LetturaFase({ t }: { t: (k: string) => u
   return <>{cs.labelKey ? (t(cs.labelKey) as string) : ''}</>;
 });
 
+/** ── IL LAG DI RON E LA % DI DISSOLUZIONE — segnalato con l'arco dei cicli: erano informazioni
+ *  dinamiche di EQUILIBRIUM (`CycleStatusBar`, riga sotto la domanda), non solo il disegno
+ *  dell'arco. STESSO calcolo di `ClearDial`/`CycleStatusBar` (`cyclePeakQ` da `tzoneStore`,
+ *  `qL` da `metricsStore`) — non un secondo. Isolato in un suo `React.memo`: `qL` cambia a
+ *  ~10 Hz, e non deve far ridisegnare tutta l'intestazione dello strumento. Solo a ciclo
+ *  armato: fuori ciclo il numero non significa niente (stessa regola di `LetturaTA`). */
+const LetturaCiclo = React.memo(function LetturaCiclo({ deltaStar, deltaStarN }: { deltaStar: number; deltaStarN: number }) {
+  const qLNow = useMetric(m => m.qL);
+  const { cyclePeakQ } = useTZone();
+  const pct = cyclePeakQ > 0.001 ? Math.round(Math.max(0, Math.min(1, (cyclePeakQ - Math.max(0, qLNow)) / cyclePeakQ)) * 100) : 0;
+  return (
+    <>
+      <span>{deltaStarN > 0 ? `Δt* ${deltaStar}ms` : '—'}</span>
+      <span>{pct}%</span>
+    </>
+  );
+});
+
 export default function Serenity() {
   const { t, lang } = useI18n();
   /** LC — le stesse cinque lingue di App.tsx, stesso helper (`i18n5`, non un secondo). Serve
@@ -128,6 +148,10 @@ export default function Serenity() {
   const [collegato, setCollegato] = useState(false);
   /** CONFIG — segnalato assente: raggiungibile in ogni momento, come in EQUILIBRIUM. */
   const [configAperto, setConfigAperto] = useState(false);
+  /** Il « minimizza » di ciascuna camera — lo stesso `isVisible` di `CameraFeed.tsx`, un gesto
+   *  in seduta, DIVERSO dallo spegnimento da CONFIG (`moduleVis`): qui lo stream resta vivo. */
+  const [cam1Collassata, setCam1Collassata] = useState(false);
+  const [cam2Collassata, setCam2Collassata] = useState(false);
   const uiAlpha = useUiStore(s => s.uiAlpha);
   const wallpaperUrl = useUiStore(s => s.wallpaperUrl);
   const moduleVis = useSerenityModuleStore(s => s.moduleVis);
@@ -356,11 +380,19 @@ export default function Serenity() {
    * e i due gesti (ARM, AS-IS) che gliela danno. Ogni ciclo, concluso o abbandonato, scrive
    * ora nel CORPUS come farebbe App.tsx (`writeCycleCorpus`) — l'archivio è UNO SOLO.
    *
-   * ⚠️ COSA MANCA ANCORA: il ciclo NULL (solo CONTACT armabile da qui, per ora), il lag di Ron
-   * (`onLagMeasured` no-op, nessun readout), e l'assessment automatico da voce
-   * (`ensureAssessmentOn` no-op — l'item si scrive, non si detta ancora).
+   * ⚠️ COSA MANCA ANCORA: l'assessment automatico da voce (`ensureAssessmentOn` no-op — l'item
+   * si scrive, non si detta ancora). Il ciclo NULL è armabile da qui (vedi il piede di pagina),
+   * e il lag di Ron (`onLagMeasured`) ora scrive `deltaStar`/`deltaStarN` — vedi sopra e
+   * `ClearDial` nel pannello dello strumento, sotto: segnalato che l'arco doveva CONTINUARE a
+   * rappresentare i cicli coi loro colori, non solo i bottoni testuali qui in fondo.
    */
   const [item, setItem] = useState('');
+  /** Il lag di Ron (Δt*) — segnalato assente dalla revisione (« l'arco rappresenta i cicli »):
+   *  serviva anche a QUESTO, non solo a un numero. `onLagMeasured` era un no-op — il motore lo
+   *  calcolava comunque (vive in `lagMeter`, dentro il ciclo), semplicemente nessuno lo leggeva
+   *  da questo lato. Stessa forma di App.tsx (`deltaStar`/`deltaStarN`), non un secondo calcolo. */
+  const [deltaStar, setDeltaStar] = useState(0);
+  const [deltaStarN, setDeltaStarN] = useState(0);
   const cycles = useContactNullCycle({
     auditingQuestion: item,
     setAuditingQuestion: setItem,
@@ -379,7 +411,7 @@ export default function Serenity() {
     },
     markFnAsIs: () => flushEegFn(true),
     stopSonification: () => {},
-    onLagMeasured: () => {},
+    onLagMeasured: m => { setDeltaStar(m.deltaStar); setDeltaStarN(m.n); },
   });
   trackCycleRef.current = cycles.trackCycle;
 
@@ -654,6 +686,8 @@ export default function Serenity() {
               titolo={t('cam1') as string}
               offlineLabel={t('camera_offline') as string}
               opacita={uiAlpha}
+              collassata={cam1Collassata}
+              onToggleCollasso={() => setCam1Collassata(v => !v)}
             />
           )}
           {moduleVis.cam2 && (avvio.distanza || avvio.solo) && (
@@ -663,6 +697,8 @@ export default function Serenity() {
               externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
               offlineLabel={t('camera_offline') as string}
               opacita={uiAlpha}
+              collassata={cam2Collassata}
+              onToggleCollasso={() => setCam2Collassata(v => !v)}
             />
           )}
         </div>
@@ -705,7 +741,7 @@ export default function Serenity() {
         */}
         <div style={{
           width: 'min(100%, 1400px)', aspectRatio: '1600 / 850', maxHeight: 'calc(100% - 44px)',
-          borderRadius: 18, overflow: 'hidden',
+          borderRadius: 18, overflow: 'hidden', position: 'relative',
           background: isLightTheme
             ? 'var(--s-ground)'
             : 'radial-gradient(130% 120% at 50% 22%, #2e2e33 0%, #2a2a2f 55%, #262629 100%)',
@@ -722,6 +758,29 @@ export default function Serenity() {
             onClick={() => { theta.resetToSet(); resetNeedleEeg(); }}
             showTrail
             sessionState={aperta ? 'running' : 'idle'}
+          />
+          {/* ── L'ARCO DEI CICLI — segnalato: « l'arco rappresenta i cicli attraverso i colori,
+              questa informazione deve essere mantenuta ». `ClearDial` è un SECONDO arco,
+              concentrico a quello dell'ago (stesso perno 800,790, stesso SWEEP) — CONTACT ·
+              DISCHARGE · AS-IS (o NULL · RISE · EQUILIBRIUM) coi loro colori, le loro
+              suddivisioni, e un puntino di avanzamento agganciato alla stessa geometria
+              dell'ago. Prima versione di SERENITY: il ciclo esisteva (arma/valida in fondo
+              pagina) ma l'arco non lo diceva più — solo testo. Ripreso TALE E QUALE (stessa
+              logica di `QuantumSphere`: la geometria e i colori sono l'informazione, non
+              un'americano da re-interpretare) — nessun `forceTheme`, legge la stessa
+              preferenza condivisa di `QuantumSphere` accanto. */}
+          <ClearDial
+            armed={cycles.cycleArmed}
+            asIsPending={cycles.asIsPending}
+            manualReady={cycles.manualReady}
+            asIsFalse={cycles.asIsFalse}
+            asIsIO={cycles.asIsIO}
+            onValidate={cycles.validateAsIs}
+            deltaStar={deltaStar}
+            deltaStarN={deltaStarN}
+            isLightTheme={isLightTheme}
+            cycleKind={cycles.cycleKind}
+            nullPhase={cycles.nullPhase}
           />
         </div>
         {/* L'orologio resta sulla superficie di SERENITY, fuori dal pannello scuro: si
@@ -746,6 +805,9 @@ export default function Serenity() {
             <LetturaTA />
             <LetturaFase t={t} />
             {museGate.signalQuality > 0 && <span>{museGate.signalQuality}%</span>}
+            {/* Il lag di Ron e la % di dissoluzione — solo a ciclo armato, come CycleStatusBar
+                in App.tsx (senza ciclo il numero non descrive niente). */}
+            {cycles.cycleArmed && <LetturaCiclo deltaStar={deltaStar} deltaStarN={deltaStarN} />}
           </span>
         )}
 
