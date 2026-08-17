@@ -10,30 +10,45 @@ Il Muse 2 è in sostituzione (partito ~fine luglio 2026, ~2 settimane).
 ## La matrice EQUILIBRIUM → SERENITY (17/08/2026)
 
 Costruita dopo una revisione completa richiesta esplicitamente ("SERENITY non riproduce
-fedelmente le funzionalità di EQUILIBRIUM"). Onesta: 18 funzioni fatte, 2 parziali, 14 assenti.
+fedelmente le funzionalità di EQUILIBRIUM"). Onesta: 21 funzioni fatte, 2 parziali, 12 assenti.
 Ognuna delle assenti è un sottosistema — non una riga da aggiungere, un pezzo a parte.
+Aggiornata il 17/08/2026 dopo camere, CONFIG e indicatori di connessione.
 
 **Fatte** — tema, 5 lingue, auditor (crea/modifica/elimina), preclear (crea/modifica/elimina),
 SOLO/con preclear, qui/a distanza, prova delle lattine, connessione MUSE + ago EEG, Theta-Meter
 + suo ago, apri/chiudi seduta, ciclo CONTACT, ciclo NULL (VGI/senza VGI), giornale (scrittura,
 non mostrato — scelta di design), CORPUS, EP — stato, EP — validazione manuale, seduta a
-distanza (link/QR/stato), trascrizione PC remoto, TA e fase in cifre accanto all'ago.
+distanza (link/QR/stato), trascrizione PC remoto, TA e fase in cifre accanto all'ago, camere
+Auditor/PC (CAM 1/CAM 2), CONFIG (aspetto, moduli, sfondo — raggiungibile dall'avvio e in
+seduta), indicatori di connessione chiari per dispositivo (MUSE, rete PC remoto, MUSE del
+preclear).
 
 **Parziali** — Normale/Esperto (raccolto in avvio, nessun pannello esperto ancora: TRIM,
 calibrazione TA, diagnostica); scelta dell'ago principale con due strumenti (automatica in
 SERENITY, sceglie l'auditor in EQUILIBRIUM).
 
 **Assenti** — ciclo MIRROR, TONE SCALE, modalità APERTO (free), assessment multi-item da voce,
-pannello MNA, lag di Ron, System Health (EEG/GYRO/PPG per elettrodo), camere Auditor/PC, barra
-integrità biometrica, trascrizione vocale (locale), EEG del preclear remoto (RAW_EEG relay),
-rapporto PDF fine seduta, cronologia sedute, Config/calibrazione TA (interfaccia), Guida/
-Assistente AI.
+pannello MNA, lag di Ron, System Health (EEG/GYRO/PPG per elettrodo), barra integrità
+biometrica, trascrizione vocale (locale), EEG del preclear remoto (RAW_EEG relay), rapporto PDF
+fine seduta, cronologia sedute, Guida/Assistente AI. (Config/calibrazione TA come interfaccia
+dedicata resta assente — CONFIG copre solo aspetto/moduli/sfondo, non la taratura dell'ago.)
 
 - [ ] **Con un MUSE vero**: verificare che TA e fase (in cifre, accanto all'ago) seguano la
       carica reale, non solo in apparenza — confrontare col numero che App.tsx mostrerebbe
       nella stessa seduta.
 - [ ] **La validazione EP**: con una F/N vera sull'ago, aprire EP, compilare, validare — la
       riga di giornale deve avere lo stesso formato di quella che scriverebbe App.tsx.
+- [ ] **Le camere con un dispositivo vero** (non in sandbox browser): CAM 1 mostra la webcam
+      dell'auditor, CAM 2 lo stream del preclear a distanza — verificare che l'audio del PC si
+      senta (boost via `attachAudioBoost`, come in EQUILIBRIUM) e che il video non resti nero
+      dopo una riconnessione.
+- [ ] **CONFIG → sfondo**: importare un'immagine vera, verificare che sopravviva al riavvio
+      dell'app (persistita come `data:` in `localStorage`, come in EQUILIBRIUM) e che resti
+      leggibile col velo (`--s-veil`) sopra.
+- [ ] **Indicatori di connessione, seduta a distanza vera**: disconnettere/ricollegare il
+      preclear a metà seduta e verificare che l'indicatore RETE passi correttamente per
+      cercando → errore/connesso, e che l'indicatore MUSE del preclear segua il suo casco
+      indipendentemente dalla rete.
 
 ---
 

@@ -25,7 +25,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { User, Users, Plus, Wifi, Eye, Wrench, CircleUser } from 'lucide-react';
+import { User, Users, Plus, Wifi, Eye, Wrench, CircleUser, Settings } from 'lucide-react';
 import {
   AVVIO_VUOTO, passoCorrente, restano, rispondi, indietro,
   MODO_AUTO, MODO_AUTO_MS, type Avvio as StatoAvvio, type PassoId,
@@ -33,6 +33,7 @@ import {
 import { getProfiles, getPcProfiles, type UserProfile, type PcProfile } from '../lib/storage';
 import { loadHistory, daysSince, testedToday } from '../engine/canTest';
 import { PannelloProfilo, type Tipo } from './PannelloProfilo';
+import { PannelloConfig } from './PannelloConfig';
 import type { DatiProfilo } from '../lib/profiloEdit';
 import { useI18n } from '../i18n';
 import { SelettoreLingua, SelettoreTema, linguaValida } from './Impostazioni';
@@ -143,6 +144,10 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
    * `esistente` assente = si crea; presente = si modifica QUELLO.
    */
   const [pannello, setPannello] = useState<{ tipo: Tipo; esistente?: DatiProfilo } | null>(null);
+  /** CONFIG — segnalato assente: « inserisci CONFIG all'inizio del flusso di SERENITY ». Una
+   *  deviazione come `pannello`, non un passo delle quattro domande: si può aprire da qualunque
+   *  punto dell'avvio e si torna esattamente dov'era. */
+  const [configAperto, setConfigAperto] = useState(false);
 
   const dai = (v: string | boolean) => setStato(s => rispondi(s, passoCorrente(s), v));
 
@@ -275,6 +280,10 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
   //   • MODIFICARE: NON sceglie nessuno. Si può star guardando la lista per scegliere qualcun
   //     altro, e aver toccato « modifica » solo per correggere una foto — scegliere al posto
   //     dell'auditor sarebbe decidere una cosa che lui non ha deciso.
+  if (configAperto) {
+    return <PannelloConfig onChiudi={() => setConfigAperto(false)} />;
+  }
+
   if (pannello) {
     return (
       <PannelloProfilo
@@ -297,9 +306,15 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
       height: '100%', display: 'grid', gridTemplateRows: 'auto auto 1fr auto',
       alignItems: 'center', gap: 28,
     }}>
-      <div style={{ justifySelf: 'end', display: 'flex', gap: 20 }}>
+      <div style={{ justifySelf: 'end', display: 'flex', alignItems: 'center', gap: 20 }}>
         <SelettoreTema />
         <SelettoreLingua />
+        <button onClick={() => setConfigAperto(true)} title={t('config') as string} style={{
+          border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+          display: 'flex', color: 'var(--s-ink-faint)',
+        }}>
+          <Settings size={16} strokeWidth={1.6} />
+        </button>
       </div>
 
       {/* La domanda, e basta. Nessun titolo di sezione, nessun numero di passo: sapere di

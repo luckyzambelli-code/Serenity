@@ -52,6 +52,11 @@ import { SelettoreLingua, SelettoreTema } from './Impostazioni';
 import { useRemoteSession } from '../hooks/useRemoteSession';
 import { Connessione } from './Connessione';
 import { PannelloEp } from './PannelloEp';
+import { PannelloConfig } from './PannelloConfig';
+import { CameraCerchio } from './CameraCerchio';
+import { IndicatoreConnessione } from './IndicatoreConnessione';
+import { useSerenityModuleStore } from './serenityModuleStore';
+import { Settings } from 'lucide-react';
 import type { ReadSrc } from '../engine/instantRead';
 import type { PrimePhase, Zone as PrimeZone } from '../lib/primeFreqEngine';
 import type { MnaSession } from '../hooks/useMnaModule';
@@ -121,6 +126,22 @@ export default function Serenity() {
    *  direttamente: un blip di rete a metà seduta non deve risbattere l'auditor sulla schermata
    *  del link — la connessione può cadere e riprendersi, la seduta resta aperta lo stesso. */
   const [collegato, setCollegato] = useState(false);
+  /** CONFIG — segnalato assente: raggiungibile in ogni momento, come in EQUILIBRIUM. */
+  const [configAperto, setConfigAperto] = useState(false);
+  const uiAlpha = useUiStore(s => s.uiAlpha);
+  const wallpaperUrl = useUiStore(s => s.wallpaperUrl);
+  const moduleVis = useSerenityModuleStore(s => s.moduleVis);
+  // Segnalato: « nessuno sfondo » — la STESSA preferenza di EQUILIBRIUM, applicata alla
+  // superficie di SERENITY con un velo (`--s-veil`) invece del vetro scuro di EQUILIBRIUM:
+  // stessa funzione (« IL TUO fondo »), grafica propria.
+  useEffect(() => {
+    document.body.style.backgroundImage = wallpaperUrl
+      ? `linear-gradient(var(--s-veil), var(--s-veil)), url("${wallpaperUrl}")` : '';
+    document.body.style.backgroundSize = wallpaperUrl ? 'cover' : '';
+    document.body.style.backgroundPosition = wallpaperUrl ? 'center' : '';
+    document.body.style.backgroundAttachment = wallpaperUrl ? 'fixed' : '';
+    return () => { document.body.style.backgroundImage = ''; };
+  }, [wallpaperUrl]);
   const remote = useRemoteSession({
     lang,
     onTrascrizione: testo => journal.addLog({ speaker: 'PC', text: testo, time: sessionClock.now() }),
@@ -507,6 +528,17 @@ export default function Serenity() {
     );
   }
 
+  // ── CONFIG, raggiungibile in ogni momento ─────────────────────────────────────────────────
+  // Segnalato assente: EQUILIBRIUM la tiene in un cassetto apribile sempre, seduta aperta o no.
+  // Qui, a tutta pagina come le altre deviazioni — si torna esattamente dove si era.
+  if (configAperto) {
+    return (
+      <main style={{ height: '100%' }}>
+        <PannelloConfig onChiudi={() => setConfigAperto(false)} />
+      </main>
+    );
+  }
+
   return (
     <main style={{
       height: '100%', display: 'grid', gridTemplateRows: 'auto 1fr auto',
@@ -534,20 +566,26 @@ export default function Serenity() {
           {nomeAuditor}{avvio.solo ? ` · ${t('ser_alone_tag')}` : ` · ${nomePreclear}`}
           {avvio.distanza ? ` · ${t('ser_remote_tag')}` : ''}{avvio.esperto ? ` · ${t('ser_expert_tag')}` : ''}
         </span>
-        {/* Lo stato del MUSE — stesse parole del meter più in basso: si controlla, non si
-            sorveglia. « MUSE ✓ » non tradotto: stesso simbolo universale del badge di App.tsx. */}
-        <button
+        {/* ── LE CONNESSIONI, UN PUNTO E UNA PAROLA PER DISPOSITIVO ──────────────────────────
+            Segnalato: deve capirsi SUBITO quale dispositivo è collegato, quale non lo è, se
+            regge, quale aspetta, se c'è un problema, quando sta cercando — senza diventare un
+            pannello diagnostico. `IndicatoreConnessione` fa questo, e SOLO questo, per ognuno
+            dei dispositivi reali di questa seduta. Vedi la nota in testa a quel file per la
+            scelta dei tre colori. */}
+        <IndicatoreConnessione
           onClick={muse.handleConnectMuse}
-          style={{
-            border: 'none', background: 'none', cursor: 'pointer', padding: 0,
-            fontFamily: 'var(--s-sans)', fontSize: 12,
-            color: muse.museConnection === 'connected' ? 'var(--s-still)' : 'var(--s-ink-faint)',
-          }}>
-          {muse.museConnection === 'connected'
-            ? (museGate.museContact ? 'MUSE ✓' : t('ser_meter_disconnected'))
-            : muse.museConnection === 'searching' ? '…' : t('ser_connect_muse')}
-          {muse.museConnection === 'connected' && batteryLevel !== null && ` · ${batteryLevel}%`}
-        </button>
+          etichetta={
+            muse.museConnection === 'connected'
+              ? (museGate.museContact ? 'MUSE ✓' : t('ser_meter_disconnected') as string)
+              : muse.museConnection === 'searching' ? t('searching') as string ?? '…' : t('ser_connect_muse') as string
+          }
+          dettaglio={muse.museConnection === 'connected' && batteryLevel !== null ? `${batteryLevel}%` : null}
+          stato={
+            muse.museConnection === 'connected'
+              ? (museGate.museContact ? 'connesso' : 'errore')
+              : muse.museConnection === 'searching' ? 'cercando' : 'in-attesa'
+          }
+        />
         {/* Un problema HARDWARE (fascia scollegata a metà lettura, driver che si blocca) si dice
             in ambra — non è un allarme rosso: è un'informazione da controllare, come lo stato
             del MUSE accanto. Sparisce da sé al prossimo dato buono (`useChargeEngine` lo azzera
@@ -555,22 +593,71 @@ export default function Serenity() {
         {hardwareError && (
           <span style={{ fontSize: 12, color: 'var(--s-reserve)' }}>{hardwareError}</span>
         )}
-        {/* Lo stato della RETE, detto a parole — non un badge colorato che chiama l'occhio: un
-            blip di connessione non è un allarme, è un'informazione da controllare se serve. */}
+        {/* La RETE verso il PC a distanza, e il SUO Muse — due dispositivi, due indicatori. Prima
+            erano un'unica riga: « quale dei due non risponde? » si doveva dedurre dal testo. */}
         {avvio.distanza && (
-          <span style={{
-            display: 'flex', alignItems: 'center', gap: 7, fontSize: 12,
-            color: remote.isConnected ? 'var(--s-still)' : 'var(--s-reserve)',
-          }}>
-            <span style={{
-              width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-              background: remote.isConnected ? 'var(--s-still)' : 'var(--s-reserve)',
-            }} />
-            {remote.isConnected ? t('conn_badge_auditor_ok') : t('conn_badge_auditor_waiting')}
-            {remote.isConnected && remote.remoteBatteryLevel !== null && ` · ${remote.remoteBatteryLevel}%`}
-            {remote.isConnected && (remote.remoteMuseConnected ? ' · MUSE ✓' : ` · ${t('conn_muse_preclear_disconnected')}`)}
-          </span>
+          <>
+            <IndicatoreConnessione
+              etichetta={t('drawer_pc') as string}
+              stato={
+                remote.isConnected ? 'connesso'
+                  : remote.errore ? 'errore'
+                  : remote.tunnelLoading ? 'cercando' : 'in-attesa'
+              }
+              dettaglio={
+                remote.isConnected ? (t('conn_badge_auditor_ok') as string)
+                  : remote.errore ? remote.errore
+                  : t(remote.tunnelLoading ? 'conn_internet_loading' : 'conn_badge_auditor_waiting') as string
+              }
+            />
+            <IndicatoreConnessione
+              etichetta="MUSE"
+              stato={
+                !remote.isConnected ? 'in-attesa'
+                  : remote.remoteMuseConnected ? 'connesso' : 'errore'
+              }
+              dettaglio={
+                remote.isConnected
+                  ? (remote.remoteMuseConnected
+                      ? (remote.remoteBatteryLevel !== null ? `${remote.remoteBatteryLevel}%` : '✓')
+                      : t('conn_muse_preclear_disconnected') as string)
+                  : null
+              }
+            />
+          </>
         )}
+        {/* ── LE CAMERE, IN CERCHIO — vedi CameraCerchio.tsx ─────────────────────────────────
+            Segnalato assente dalla revisione: l'auditor non poteva VEDERE il preclear collegato
+            a distanza. CAM 2 (PC): lo stream remoto vero in seduta a distanza; la webcam locale
+            quando l'auditor sta testando da solo (`avvio.solo`) — nessuna delle due quando è
+            co-locato con un preclear reale nella stessa stanza, senza un secondo dispositivo da
+            riprendere. CAM 1 (auditor): sempre la webcam locale, come in EQUILIBRIUM. Solo a
+            seduta aperta: una camera accesa fuori seduta sarebbe una luce accesa per niente.
+            `moduleVis`/CONFIG decide se sono accese; `opacita` legge la stessa trasparenza. */}
+        {aperta && moduleVis.cam2 && (avvio.distanza || avvio.solo) && (
+          <CameraCerchio
+            dimensione={44}
+            titolo={t('cam2') as string}
+            externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
+            offlineLabel={t('camera_offline') as string}
+            opacita={uiAlpha}
+          />
+        )}
+        {aperta && moduleVis.cam1 && (
+          <CameraCerchio
+            dimensione={44}
+            titolo={t('cam1') as string}
+            offlineLabel={t('camera_offline') as string}
+            opacita={uiAlpha}
+          />
+        )}
+        {/* CONFIG — raggiungibile in ogni momento, come il cassetto di EQUILIBRIUM. */}
+        <button onClick={() => setConfigAperto(true)} title={t('config') as string} style={{
+          border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+          display: 'flex', color: 'var(--s-ink-faint)',
+        }}>
+          <Settings size={16} strokeWidth={1.6} />
+        </button>
       </header>
 
       {/* ── IL CAMPO ──────────────────────────────────────────────────────────────────────

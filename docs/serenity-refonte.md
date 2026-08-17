@@ -134,6 +134,46 @@ avanza. EQUILIBRIUM 2.0.156, SERENITY 3.0.19.
 Verifica di ogni fase: la stessa seduta, condotta nelle due applicazioni, deve dare lo
 stesso giornale, lo stesso rapporto, gli stessi test verdi.
 
+**Ottavo passo — le camere** (`serenity/CameraCerchio.tsx`): assente dalla matrice, e grave in
+seduta a distanza — l'auditor riceveva già `remote.remoteStream` (fase 7) ma non lo mostrava
+da NESSUNA parte, quindi non poteva VEDERE il preclear collegato. Stesso aggancio di
+`components/CameraFeed.tsx` (callback ref, retry su `play()`, `attachAudioBoost`), grafica
+propria: un cerchio (`Cerchio.tsx`), non un riquadro con barra del titolo e badge. CAM 2 (PC):
+lo stream remoto a distanza, la webcam locale quando l'auditor testa da solo (`avvio.solo`).
+CAM 1 (auditor): sempre locale, come in EQUILIBRIUM. Solo a seduta aperta.
+
+**Nono passo — CONFIG, all'inizio del flusso**: segnalato assente l'intero cassetto CONFIG di
+EQUILIBRIUM (aspetto, moduli visibili, disposizioni). `serenity/PannelloConfig.tsx`, a tutta
+pagina, raggiungibile da un'icona ingranaggio sull'Avvio E durante la seduta (stessa libertà
+del cassetto di EQUILIBRIUM, non solo un passaggio obbligato). Tema/lingua/trasparenza/sfondo
+sono le STESSE quattro preferenze di `useUiStore`/`useI18n` — cambiarle qui le cambia anche
+per EQUILIBRIUM. La trasparenza (`uiAlpha`) non governa un vetro (SERENITY non ne ha) ma
+l'`opacita` dei cerchi satellite (nuovo prop di `Cerchio.tsx`) — stessa impostazione, grafica
+propria. Lo sfondo usa `--s-veil` (mai usato finora, esisteva già nel token) invece del vetro
+scuro di EQUILIBRIUM. I sette moduli di EQUILIBRIUM restano tutti in lista
+(`serenityModuleStore.ts`, archivio A PARTE da `layoutStore` — altrimenti spegnere una camera
+in SERENITY spegnerebbe quella di EQUILIBRIUM, stesso `localStorage`): solo `cam1`/`cam2` sono
+interruttori veri, gli altri cinque restano spenti e onesti (« in arrivo »), pronti ad
+accendersi quando la loro fase costruisce il pannello. Il salvataggio di più disposizioni non
+ha un equivalente — dichiarato in pannello, non taciuto: SERENITY non sposta i moduli.
+
+**Decimo passo — le connessioni, un punto e una parola per dispositivo**
+(`serenity/IndicatoreConnessione.tsx`): segnalato che lo stato delle connessioni doveva dirsi
+SUBITO — quale dispositivo è collegato, quale non lo è, se regge, quale aspetta, un errore,
+una ricerca in corso — senza diventare un pannello diagnostico. Un solo componente, cinque
+stati (connesso/in-attesa/cercando/errore/spento) sui TRE soli colori di `tokens.css` (mai un
+quarto). In seduta a distanza la rete verso il PC e il SUO Muse sono ora due indicatori
+separati (erano una riga sola, e "quale dei due non risponde" si doveva dedurre dal testo) —
+`remote.tunnelLoading`/`remote.errore` (già esposti dall'hook, mai letti prima in
+`Serenity.tsx`) danno finalmente gli stati "cercando"/"errore" anche DURANTE la seduta, non
+solo nella schermata di connessione iniziale.
+
+Verificato a schermo (tab pulita): CONFIG si apre dall'Avvio e dalla seduta, torna esattamente
+al punto di partenza; il toggle CAM 1/CAM 2 spegne e riaccende i cerchi dal vivo; tema scuro
+verificato — cerchi e indicatori restano leggibili; le due camere in seduta SOLO mostrano
+"CAMÉRA HORS LIGNE" quando il browser nega il permesso (atteso in sandbox, corretto — non un
+difetto). EQUILIBRIUM 2.0.157, SERENITY 3.0.20.
+
 ---
 
 ## Il principio dimensionale — regola per le fasi 6, 7, 8

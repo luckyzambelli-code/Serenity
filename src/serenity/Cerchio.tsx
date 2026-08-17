@@ -36,15 +36,20 @@ export interface CerchioProps {
   /** Sfasa il respiro. Quattro cerchi che pulsano all'unisono diventano un battito, cioè
    *  esattamente l'allarme periferico che si vuole evitare. */
   ritardo?: number;
+  /** La « trasparenza » di CONFIG — in EQUILIBRIUM è il vetro dei pannelli, qui è quanto un
+   *  cerchio si stacca dal fondo: la STESSA impostazione (`uiAlpha`, condivisa), tradotta nella
+   *  lingua del rilievo invece che in quella del vetro. `undefined` = pieno, come sempre. */
+  opacita?: number;
 }
 
-export function Cerchio({ dimensione, children, x = 0, y = 0, viva, spenta, ritardo = 0 }: CerchioProps) {
+export function Cerchio({ dimensione, children, x = 0, y = 0, viva, spenta, ritardo = 0, opacita }: CerchioProps) {
   const stile: CSSProperties = {
     width: dimensione, height: dimensione, borderRadius: '50%',
     display: 'grid', placeItems: 'center',
     background: spenta ? 'var(--s-disc-sunk)' : 'var(--s-disc)',
     boxShadow: spenta ? 'none' : (viva ? 'var(--s-shadow-lift)' : 'var(--s-shadow)'),
-    transition: 'box-shadow var(--s-calm) var(--s-ease), background var(--s-calm) var(--s-ease)',
+    transition: 'box-shadow var(--s-calm) var(--s-ease), background var(--s-calm) var(--s-ease), opacity var(--s-slow) var(--s-ease)',
+    ...(opacita !== undefined ? { opacity: opacita } : {}),
     ...(x || y ? {
       position: 'absolute' as const,
       transform: `translate(${x}px, ${y}px)`,
