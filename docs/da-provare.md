@@ -7,6 +7,36 @@ Il Muse 2 è in sostituzione (partito ~fine luglio 2026, ~2 settimane).
 
 ---
 
+## La matrice EQUILIBRIUM → SERENITY (17/08/2026)
+
+Costruita dopo una revisione completa richiesta esplicitamente ("SERENITY non riproduce
+fedelmente le funzionalità di EQUILIBRIUM"). Onesta: 18 funzioni fatte, 2 parziali, 14 assenti.
+Ognuna delle assenti è un sottosistema — non una riga da aggiungere, un pezzo a parte.
+
+**Fatte** — tema, 5 lingue, auditor (crea/modifica/elimina), preclear (crea/modifica/elimina),
+SOLO/con preclear, qui/a distanza, prova delle lattine, connessione MUSE + ago EEG, Theta-Meter
++ suo ago, apri/chiudi seduta, ciclo CONTACT, ciclo NULL (VGI/senza VGI), giornale (scrittura,
+non mostrato — scelta di design), CORPUS, EP — stato, EP — validazione manuale, seduta a
+distanza (link/QR/stato), trascrizione PC remoto, TA e fase in cifre accanto all'ago.
+
+**Parziali** — Normale/Esperto (raccolto in avvio, nessun pannello esperto ancora: TRIM,
+calibrazione TA, diagnostica); scelta dell'ago principale con due strumenti (automatica in
+SERENITY, sceglie l'auditor in EQUILIBRIUM).
+
+**Assenti** — ciclo MIRROR, TONE SCALE, modalità APERTO (free), assessment multi-item da voce,
+pannello MNA, lag di Ron, System Health (EEG/GYRO/PPG per elettrodo), camere Auditor/PC, barra
+integrità biometrica, trascrizione vocale (locale), EEG del preclear remoto (RAW_EEG relay),
+rapporto PDF fine seduta, cronologia sedute, Config/calibrazione TA (interfaccia), Guida/
+Assistente AI.
+
+- [ ] **Con un MUSE vero**: verificare che TA e fase (in cifre, accanto all'ago) seguano la
+      carica reale, non solo in apparenza — confrontare col numero che App.tsx mostrerebbe
+      nella stessa seduta.
+- [ ] **La validazione EP**: con una F/N vera sull'ago, aprire EP, compilare, validare — la
+      riga di giornale deve avere lo stesso formato di quella che scriverebbe App.tsx.
+
+---
+
 ## Refactor di App.tsx
 
 Il file si valida solo indossando il casco: `tsc`, ESLint e i 109 test coprono la forma, non il

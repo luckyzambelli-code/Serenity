@@ -104,8 +104,32 @@ scrivono ora `cycleRecord`/`fnRecord` per davvero.
 Verificato A SCHERMO: un ciclo NULL armato con « le passé » mostra entrambi i bottoni di
 chiusura; « EQUILIBRIUM · VGI ✓ » chiude il ciclo e il giornale avanza di una riga; nessun
 errore console alla scrittura CORPUS (compreso il percorso "non disponibile in browser").
-Ancora da fare: il lag di Ron, l'assessment da voce, MNA/MIRROR/TONE — un passo a parte per
-ciascuno. EQUILIBRIUM 2.0.154, SERENITY 3.0.17.
+EQUILIBRIUM 2.0.154, SERENITY 3.0.17.
+
+⚠️ **Revisione completa richiesta (17/08/2026)**: segnalato che SERENITY non riproduceva
+fedelmente le funzionalità di EQUILIBRIUM e che qualcosa "non reagiva". Test interattivo
+sistematico di ogni controllo esistente (tema, lingua, profili, avvio, MUSE, seduta, cicli,
+Connessione): un solo apparente guasto, tracciato a un residuo di hot-reload del dev server
+su una tab riusata troppe volte — confermato SENZA difetti in una tab pulita. Costruita la
+matrice completa EQUILIBRIUM → SERENITY (vedi `docs/da-provare.md`): 18 funzioni fatte, 2
+parziali, 14 assenti. Parità totale non raggiungibile in una sola sessione — si chiudono i
+vuoti in ordine di priorità clinica.
+
+**Sesto passo — i numeri accanto all'ago**: SERENITY aveva SOLO il quadrante — nessun TA in
+cifre, nessuna fase in parole, a differenza di App.tsx che li affianca sempre. Un ago che si
+muove poco, guardato nell'istante sbagliato, sembra fermo anche a motore funzionante: `TA` e
+la fase (`LetturaTA`/`LetturaFase`, `React.memo`, dalla stessa `metricsStore`) tolgono
+quell'ambiguità.
+
+**Settimo passo — la validazione manuale dell'EP**: `serenity/PannelloEp.tsx`, a tutta pagina
+come `PannelloProfilo`/`Connessione`. Stesso `hooks/useEpValidation` di EQUILIBRIUM (non un
+secondo stato): reazione dell'ago, realizzazione del PC, VGI/VVGI, nota — e la validazione fa
+le stesse quattro cose di App.tsx (`epValidated`, chiude, `asIsnessState:'ep'`, riga di
+giornale). ⚠️ `EpValidationModal` (la finestra automatica a conto alla rovescia) NON ha un
+equivalente: verificato che in EQUILIBRIUM stesso `setShowEpValidation(true)` non viene mai
+chiamato da nessuna parte del codice — nata morta, niente da riprodurre. Verificato a schermo
+un giro completo: apre, compila, VGI, valida → torna alla seduta con "EP ✓" e il giornale
+avanza. EQUILIBRIUM 2.0.156, SERENITY 3.0.19.
 
 Verifica di ogni fase: la stessa seduta, condotta nelle due applicazioni, deve dare lo
 stesso giornale, lo stesso rapporto, gli stessi test verdi.

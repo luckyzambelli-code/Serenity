@@ -51,6 +51,7 @@ import { useUiStore } from '../store/uiStore';
 import { SelettoreLingua, SelettoreTema } from './Impostazioni';
 import { useRemoteSession } from '../hooks/useRemoteSession';
 import { Connessione } from './Connessione';
+import { PannelloEp } from './PannelloEp';
 import type { ReadSrc } from '../engine/instantRead';
 import type { PrimePhase, Zone as PrimeZone } from '../lib/primeFreqEngine';
 import type { MnaSession } from '../hooks/useMnaModule';
@@ -411,6 +412,7 @@ export default function Serenity() {
   const apri = () => {
     sessionClock.reset(); sessionClock.start();
     journal.resetJournal(t('ser_session_opened'));
+    ep.resetEpState();   // niente "EP ✓" residuo da una seduta precedente
     // ── CORPUS: apertura di seduta — stessa logica di App.tsx ────────────────────────────
     // Va scritta ADESSO, non alla fine: è la configurazione con cui si leggerà tutto il resto,
     // e se la seduta si interrompe le reazioni già scritte devono restare interpretabili.
@@ -481,6 +483,26 @@ export default function Serenity() {
           onAnnulla={ricomincia}
           onPronti={() => setCollegato(true)}
         />
+      </main>
+    );
+  }
+
+  // ── LA VALIDAZIONE MANUALE DELL'EP ────────────────────────────────────────────────────────
+  // L'auditor l'apre da sé (tasto EP nel piede di pagina) — non è una finestra automatica: in
+  // EQUILIBRIUM quella (`EpValidationModal`) non è mai raggiungibile (nessun punto del codice
+  // la apre). A tutta pagina come `Avvio`/`Connessione`: SERENITY non impila pannelli.
+  if (ep.epManualOpen) {
+    return (
+      <main style={{ height: '100%' }}>
+        <PannelloEp ep={ep} onValidato={() => {
+          journal.addLog({
+            speaker: 'SYS', time: sessionClock.now(), type: 'highlight',
+            text: `✦ ${t('ep_validated')} — ${t('ep_reaction_label')}: ${ep.epReactionType}` +
+              (ep.epRealization ? ` — PC: "${ep.epRealization}"` : '') +
+              (ep.epVvgi ? ' — VVGI' : ep.epVgi ? ' — VGI' : '') +
+              (ep.epAuditorNote ? ` — ${t('ep_note_label')}: ${ep.epAuditorNote}` : ''),
+          });
+        }} />
       </main>
     );
   }
@@ -727,6 +749,20 @@ export default function Serenity() {
         <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
           {t(meterC ? 'ser_meter_connected' : theta.unavailable ? 'ser_meter_unavailable' : 'ser_meter_disconnected')}
         </span>
+        {/* EP — l'auditor lo apre da sé quando vuole registrarlo, non un conto alla rovescia
+            automatico (in EQUILIBRIUM quella finestra non è mai raggiungibile). "EP ✓" una
+            volta validato, come in App.tsx. */}
+        {aperta && (
+          <button
+            onClick={() => { if (!ep.epValidated) ep.setEpTimestamp(sessionClock.now()); ep.setEpManualOpen(true); }}
+            style={{
+              border: 'none', cursor: 'pointer', background: 'none',
+              fontFamily: 'var(--s-sans)', fontSize: 12.5,
+              color: ep.epValidated ? 'var(--s-still)' : 'var(--s-ink-faint)',
+            }}>
+            {ep.epValidated ? 'EP ✓' : 'EP'}
+          </button>
+        )}
         <span style={{ flex: 1 }} />
         {!aperta && (
           <button onClick={ricomincia} style={{
