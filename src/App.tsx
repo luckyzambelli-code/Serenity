@@ -3113,6 +3113,11 @@ export default function App() {
     setPrimeIm, setPrimeFd, setPrimePStar, setPrimeDelta, setPrimeZone, setPrimeCaptured,
     setNeedleReactionKey, setNeedleReaction,
     massAccumulatorRef: massAccumulator,
+    // Condivisi con `freeNeedleForNewItem` e col RESET di sessione, poco più sotto — non
+    // duplicarli qui dentro l'avrebbe scollegati da quelle due funzioni (vedi il commento
+    // in cima a `ChargeEngineDeps`).
+    activeKickRef, kickFlybackRef, needleItemInterruptRef, reactionHoldUntilRef,
+    gammaEmaRef, lastFnShownAtRef, lastLoggedChargeRef, chargeLogPendingRef, lastLoggedReactionRef,
     resetNeedle, flushEegFn,
   });
 

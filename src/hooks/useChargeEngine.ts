@@ -168,6 +168,20 @@ export interface ChargeEngineDeps {
   /** L'accumulatore della massa dissolta — un ref, non uno stato: si somma a ogni tick. */
   massAccumulatorRef: MutableRefObject<number>;
 
+  // ── condivisi con `freeNeedleForNewItem` e col RESET di sessione (entrambi in App.tsx) ────
+  // Non privati: due funzioni FUORI da questo motore li toccano — un nuovo item interrompe lo
+  // swing in corso, un nuovo START azzera l'episodio F/N e gli anti-spam del giornale. Owned
+  // da chi li usa in più di un posto, esattamente come `shownReadsRef`/`ultimoItemSecRef` sopra.
+  activeKickRef: MutableRefObject<{ raw: number } | null>;
+  kickFlybackRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  needleItemInterruptRef: MutableRefObject<number>;
+  reactionHoldUntilRef: MutableRefObject<number>;
+  gammaEmaRef: MutableRefObject<number>;
+  lastFnShownAtRef: MutableRefObject<number>;
+  lastLoggedChargeRef: MutableRefObject<string>;
+  chargeLogPendingRef: MutableRefObject<{ candidate: string | null; sinceMs: number }>;
+  lastLoggedReactionRef: MutableRefObject<{ reaction: string; t: number } | null>;
+
   /** L'ago è andato fuori scala sul canale legacy GSR → riportalo a SET.
    *  `useCallback(..., [])` in App.tsx: stabile, sicura da catturare una volta sola. */
   resetNeedle: () => void;
@@ -183,19 +197,19 @@ export interface ChargeEngineDeps {
  * Effetto collaterale puro: non rende nulla, come `useAppInitializer`.
  */
 export function useChargeEngine(d: ChargeEngineDeps): void {
-  // ── stato PRIVATO del motore — mai letto da fuori: bookkeeping fra un tick e l'altro.
-  // `useRef`, non un oggetto letterale: deve sopravvivere ai render, come in App.tsx. ─────────
+  // ── stato PRIVATO del motore — mai letto da fuori: bookkeeping fra un tick e l'altro, che
+  // NESSUN'ALTRA funzione tocca. `useRef`, non un oggetto letterale: deve sopravvivere ai
+  // render, come in App.tsx.
+  //
+  // ⚠️ QUI NON CI SONO PIÙ `activeKickRef`, `kickFlybackRef`, `needleItemInterruptRef`,
+  // `reactionHoldUntilRef`, `gammaEmaRef`, `lastFnShownAtRef`, `lastLoggedChargeRef`,
+  // `chargeLogPendingRef`, `lastLoggedReactionRef` — la prima versione di questo file le
+  // teneva private, ma `freeNeedleForNewItem` e il RESET di sessione (rimasti in App.tsx) li
+  // toccano ANCHE loro: privati qui, sarebbero rimasti due copie — una viva (letta dal motore)
+  // e una morta (quella che quelle funzioni credevano di azzerare). Sono quindi tornati
+  // dipendenza (`d.xxx`), owned da chi li usa in più di un posto — vedi `ChargeEngineDeps`.
   const lastMetricsUiRef = useRef(0);
   const lastHistoryPushRef = useRef(0);
-  const chargeLogPendingRef = useRef<{ candidate: string | null; sinceMs: number }>({ candidate: null, sinceMs: 0 });
-  const lastLoggedChargeRef = useRef('neutral');
-  const lastLoggedReactionRef = useRef<{ reaction: string; t: number } | null>(null);
-  const gammaEmaRef = useRef(0);
-  const lastFnShownAtRef = useRef(-Infinity);
-  const activeKickRef = useRef<{ raw: number } | null>(null);
-  const kickFlybackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const needleItemInterruptRef = useRef(0);
-  const reactionHoldUntilRef = useRef(0);
 
   // Setup Web Worker — identico a com'era in App.tsx: spawn con retry limitati, respawn su
   // errore, terminate allo smontaggio.
@@ -322,8 +336,8 @@ export function useChargeEngine(d: ChargeEngineDeps): void {
 
         // γ baseline (slow EMA) + SPIKE — the earliest leading-edge marker (Pre-Read).
         const _gam = Math.max(0, bands?.gamma || 0);
-        gammaEmaRef.current = gammaEmaRef.current > 0 ? gammaEmaRef.current * 0.98 + _gam * 0.02 : _gam;
-        const _gammaSpike = gammaEmaRef.current > 0 && _gam > gammaEmaRef.current * 1.6;
+        d.gammaEmaRef.current = d.gammaEmaRef.current > 0 ? d.gammaEmaRef.current * 0.98 + _gam * 0.02 : _gam;
+        const _gammaSpike = d.gammaEmaRef.current > 0 && _gam > d.gammaEmaRef.current * 1.6;
 
         // ── ARMED CYCLE: track the furthest phase reached for the current auditing
         // item; when it reaches AS-IS the cycle is COMPLETE → record + auto-disarm.
@@ -341,13 +355,13 @@ export function useChargeEngine(d: ChargeEngineDeps): void {
         if (d.sessionStateRef.current === 'running') {
           const _csNow = chargeStateById(_phase);
           const _nowC = performance.now();
-          const _pend = chargeLogPendingRef.current;
-          if (_csNow.id === lastLoggedChargeRef.current) {
+          const _pend = d.chargeLogPendingRef.current;
+          if (_csNow.id === d.lastLoggedChargeRef.current) {
             _pend.candidate = null; _pend.sinceMs = 0;
           } else if (_pend.candidate !== _csNow.id) {
             _pend.candidate = _csNow.id; _pend.sinceMs = _nowC;
           } else if (_nowC - _pend.sinceMs >= 2500) {
-            lastLoggedChargeRef.current = _csNow.id;
+            d.lastLoggedChargeRef.current = _csNow.id;
             _pend.candidate = null; _pend.sinceMs = 0;
             if (_csNow.labelKey) {
               d.logBufferRef.current.push({ time: d.timeRef.current, speaker: 'NEEDLE',
@@ -475,7 +489,7 @@ export function useChargeEngine(d: ChargeEngineDeps): void {
         // Seulement les réactions visibles (pas tick/none), avec anti-spam :
         // même réaction : pas avant 4 s ; réaction différente : pas avant 1.5 s.
         if (_inSeduta && LOGGABLE_REACTIONS.has(reactionKey)) {
-          const last = lastLoggedReactionRef.current;
+          const last = d.lastLoggedReactionRef.current;
           const sameReaction = last?.reaction === reactionKey;
           // ROGER-FIX (#4, v2): reactions were signaled TOO promptly — a new one
           // appeared while the needle was still completing the PREVIOUS swing+flyback
@@ -483,7 +497,7 @@ export function useChargeEngine(d: ChargeEngineDeps): void {
           // distinct reaction waits until the prior needle motion has settled.
           const minGap = sameReaction ? 4.5 : 2.6;
           if (!last || (d.timeRef.current - last.t) >= minGap) {
-            lastLoggedReactionRef.current = { reaction: reactionKey, t: d.timeRef.current };
+            d.lastLoggedReactionRef.current = { reaction: reactionKey, t: d.timeRef.current };
             // Use a flag in logBufferRef so addLog is called outside the tight loop
             // Integrate the CHARGE STATE with the needle reaction so it appears
             // both on-screen and in the History PDF / end-session summary.
@@ -540,31 +554,31 @@ export function useChargeEngine(d: ChargeEngineDeps): void {
           nowMs,
           timeS: d.timeRef.current,
           shownKey: d.needleReactionKeyRef.current || '',
-          holdUntilMs: reactionHoldUntilRef.current,
-          activeKickRaw: activeKickRef.current ? activeKickRef.current.raw : null,
+          holdUntilMs: d.reactionHoldUntilRef.current,
+          activeKickRaw: d.activeKickRef.current ? d.activeKickRef.current.raw : null,
           needleInMotion: needleEngine.isInMotion,
           needleLocked: needleEngine.isLocked,
-          itemInterruptUntilMs: needleItemInterruptRef.current,
+          itemInterruptUntilMs: d.needleItemInterruptRef.current,
           curVirtualOffset: d.needleVirtualRef.current.length
             ? d.needleVirtualRef.current[d.needleVirtualRef.current.length - 1].offset : NEEDLE_REST_OFFSET,
-          lastFnShownAtS: lastFnShownAtRef.current });
+          lastFnShownAtS: d.lastFnShownAtRef.current });
 
         // 1) OSCILLAZIONE (o riposo/fluttuazione). 'suppress' → non si tocca nulla.
         if (_dec.startKick) {
           if (_dec.interruptPrevious) {
             // nuovo item: si taglia netto il swing precedente e si riparte su QUESTA lettura
-            if (kickFlybackRef.current) { clearTimeout(kickFlybackRef.current); kickFlybackRef.current = null; }
+            if (d.kickFlybackRef.current) { clearTimeout(d.kickFlybackRef.current); d.kickFlybackRef.current = null; }
             needleEngine.clearMotion();
-            activeKickRef.current = null;
-            needleItemInterruptRef.current = 0;   // consumata: una sola interruzione per item
+            d.activeKickRef.current = null;
+            d.needleItemInterruptRef.current = 0;   // consumata: una sola interruzione per item
           }
           needleEngine.setTarget(targetOffset);
           needleEngine.beginMotion(_dec.kickMs + KICK_FLYBACK_MS);   // swing + rientro = un solo blocco
-          activeKickRef.current = { raw: _rawTarget };
-          if (kickFlybackRef.current) clearTimeout(kickFlybackRef.current);
-          kickFlybackRef.current = setTimeout(() => {
+          d.activeKickRef.current = { raw: _rawTarget };
+          if (d.kickFlybackRef.current) clearTimeout(d.kickFlybackRef.current);
+          d.kickFlybackRef.current = setTimeout(() => {
             needleEngine.setTarget(NEEDLE_REST_OFFSET);
-            activeKickRef.current = null;
+            d.activeKickRef.current = null;
           }, _dec.kickMs);
         } else if (_dec.idleTarget) {
           needleEngine.setTarget(_dec.idleTarget === 'float' ? qlToNeedlePos(qL) : NEEDLE_REST_OFFSET);
@@ -601,22 +615,22 @@ export function useChargeEngine(d: ChargeEngineDeps): void {
           if (reactionKey === 'reaction_fn') {
             // CORPUS: fronte di salita dell'F/N EEG. Un F/N è una CONDIZIONE che dura: si apre
             // una riga sola e le ripetizioni entro la finestra non ne aprono altre.
-            if (d.timeRef.current - lastFnShownAtRef.current > THETA_FN_EXPIRE_S) {
+            if (d.timeRef.current - d.lastFnShownAtRef.current > THETA_FN_EXPIRE_S) {
               d.flushEegFn(false);
               d.pendingEegFnRef.current = { tSec: d.timeRef.current,
                 ta: d.thetaTaRef.current ?? metricsStore.get().toneArm };
             }
-            lastFnShownAtRef.current = d.timeRef.current;
+            d.lastFnShownAtRef.current = d.timeRef.current;
           }
           d.setNeedleReactionKey(reactionKey);
           d.setNeedleReaction(reactionLabel);
           d.needleReactionRef.current = reactionLabel;
-          reactionHoldUntilRef.current = _dec.holdUntilMs;
+          d.reactionHoldUntilRef.current = _dec.holdUntilMs;
         }
 
         // 3) EPISODIO F/N: finché una F/N è A SCHERMO l'episodio continua → una F/N che persiste
         //    non sarà mai contata come nuova reazione (per l'item è AGO NULLO).
-        if (d.needleReactionKeyRef.current === 'reaction_fn') lastFnShownAtRef.current = d.timeRef.current;
+        if (d.needleReactionKeyRef.current === 'reaction_fn') d.lastFnShownAtRef.current = d.timeRef.current;
 
         // ── PRIME FREQ (MNA) — engine/PrimeFreqTracker (SessionEngine slice 2).
         // I_m AND the detected frequency FREEZE the moment the auditor presses
