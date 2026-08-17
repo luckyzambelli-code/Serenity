@@ -49,6 +49,22 @@ aggancia. ⚠️ Estrazione grossa e sensibile (rilevamento di carica/AS-IS usat
 verificata con typecheck, lint, i 639 test e una build completa, ma il collaudo vero resta con
 un MUSE appaiato — questa macchina non può provarlo da sé.
 
+⚠️ **Correzione lo stesso giorno**: la prima versione di `useChargeEngine` teneva private nove
+ref (`activeKickRef`, `kickFlybackRef`, `needleItemInterruptRef`, `reactionHoldUntilRef`,
+`gammaEmaRef`, `lastFnShownAtRef`, `lastLoggedChargeRef`, `chargeLogPendingRef`,
+`lastLoggedReactionRef`) che invece `freeNeedleForNewItem` e il RESET di sessione — rimasti in
+`App.tsx` — toccano anche loro: erano diventate due copie scollegate, una viva e una orfana.
+Tornate dipendenza. Trovato PRIMA del collaudo hardware, rileggendo il codice — non durante una
+seduta. EQUILIBRIUM 2.0.150 corregge.
+
+**Fase 6, secondo passo (17/08/2026)**: `hooks/useMuseContactGate` — lo stesso gate di
+« contatto vero » (RMS per elettrodo, railing sull'AC, isteresi) che `useChargeEngine` legge
+via `museContactRef`, spostato fuori da `App.tsx` con lo stesso principio: codice invariato,
+dipendenze esplicite. Prerequisito scoperto strada facendo: **SERENITY non aveva ancora nessuna
+connessione MUSE** — `Serenity.tsx` chiamava solo `useThetaMeter` (l'e-meter USB), mai
+`useMuseConnection`. Senza cuffia appaiata il motore della carica non ha campioni EEG da
+leggere: montare i cicli richiede prima questo. EQUILIBRIUM 2.0.151.
+
 Verifica di ogni fase: la stessa seduta, condotta nelle due applicazioni, deve dare lo
 stesso giornale, lo stesso rapporto, gli stessi test verdi.
 

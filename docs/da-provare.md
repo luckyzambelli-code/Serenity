@@ -30,6 +30,19 @@ da sola senza toccare le altre.
   - [ ] il pannello MNA (SONIFY/CLEAN/HARMONICS) cattura I_m e frequenza come prima;
   - [ ] una seduta condotta uguale in EQUILIBRIUM e (quando la fase 6 monterà i cicli) in
         SERENITY dà lo stesso giornale — è la verifica scritta per ogni fase di questo piano.
+      **Nota**: la 2.0.149 aveva un bug reale (nove ref di `freeNeedleForNewItem`/RESET rimaste
+      scollegate dal motore) — corretto in 2.0.150, PRIMA del collaudo. Se qualcosa nella lista
+      sopra non torna sulla 2.0.150+, è un problema diverso: dirlo aiuta a isolarlo.
+
+- [ ] **`hooks/useMuseContactGate` (SERENITY fase 6, secondo passo, 17/08/2026)** — il gate di
+      « contatto vero » (RMS per elettrodo, railing sull'AC, isteresi) spostato fuori da
+      `App.tsx`, stesso principio della voce sopra. Meno rischioso: alimenta solo
+      `museContactRef`/`signalQuality`, non tocca cicli o giornale. Con un MUSE appaiato:
+  - [ ] indossando la fascia, « MUSE ✓ » compare come prima (non « non indossato »);
+  - [ ] togliendo la fascia, dopo ~4 secondi torna « non indossato » (isteresi di 4 letture);
+  - [ ] la qualità del segnale (puntini di `SYSTEM HEALTH`) si muove come prima;
+  - [ ] con la fascia rimossa e RIMESSA a metà seduta, il log SYS "MUSE contact: [...]" compare
+        una sola volta per episodio, non ripetuto ogni secondo.
 
 - [ ] **La colonna della SCALA DEL TONO** (`components/ToneColumn.tsx`) — verticale, a destra
       dell'arco, in vista TONE. Compare solo con uno strumento collegato, quindi NON si è

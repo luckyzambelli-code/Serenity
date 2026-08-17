@@ -15,6 +15,7 @@ import { useAppInitializer } from './hooks/useAppInitializer';
 import { useEpValidation } from './hooks/useEpValidation';
 import { useMnaModule } from './hooks/useMnaModule';
 import { useChargeEngine } from './hooks/useChargeEngine';
+import { useMuseContactGate } from './hooks/useMuseContactGate';
 import { useMediaRelayFallback } from './hooks/useMediaRelayFallback';
 import { useThetaMeter } from './hooks/useThetaMeter';
 import { effectiveModules, eegModulesHidden, noInstruments } from './engine/instrumentModules';
@@ -643,12 +644,10 @@ export default function App() {
 
   // Metrics state
   const [displayMass, setDisplayMass] = useState(0); // Mental Mass (SOL-km) displayed
-  const [signalQuality, setSignalQuality] = useState(0);
-  // REAL contact (HSI-like): true = la fascia sta facendo contatto EEG plausibile su
-  // abbastanza elettrodi. muse-js NON espone l'HSI del device, quindi lo deriviamo dai
-  // caratteri del segnale (banda fisiologica + assenza di railing/saturazione da elettrodi
-  // flottanti). È il gate "vero": senza contatto NON c'è attività EEG reale.
-  const [museContact, setMuseContact] = useState(false);
+  // REAL contact (HSI-like) — la fascia fa contatto EEG plausibile? Deriva dal segnale
+  // (banda fisiologica + assenza di railing/saturazione da elettrodi flottanti), perché
+  // muse-js non espone l'HSI del device. `signalQuality`/`museContact` vengono ora da
+  // `hooks/useMuseContactGate` (fase 6) — dichiarati più sotto, dopo `eegBuffer`.
 
 
   // FIX MUSE-REMOTE (auditor): the preclear's MUSE is only "streaming into this session"
@@ -916,12 +915,10 @@ export default function App() {
   const ppgAmpRef = useRef<number | null>(null);
   const ppgPiRef  = useRef<number | null>(null);
   const signalQualityRef = useRef(0);               // live contact mirror for the readiness feed
-  const museContactRef = useRef(false);             // REAL contact gate (HSI-like) for the closures
-  const contactBadStreakRef = useRef(0);            // secondes consécutives sans contact (hystérésis)
-  const contactDiagRef = useRef(false);             // diag « pas de contact » journalisé 1× par épisode
+  // `museContactRef`, `contactBadStreakRef`, `contactDiagRef` vivono ora dentro
+  // `hooks/useMuseContactGate` (fase 6) — la mirror-effect di `signalQualityRef` li segue,
+  // più sotto, dopo la chiamata al hook (legge `signalQuality`, che da lì viene).
   useEffect(() => { realBpmRef.current = realBpm; }, [realBpm]);
-  useEffect(() => { signalQualityRef.current = signalQuality; }, [signalQuality]);
-  useEffect(() => { museContactRef.current = museContact; }, [museContact]);
   // Gamma baseline (slow EMA) → a γ SPIKE is the earliest leading-edge marker (the
   // "Pre-Read": γ precedes the needle ~420–500 ms, measured in the Jan 2026 tests).
   const gammaEmaRef = useRef(0);
@@ -1908,89 +1905,25 @@ export default function App() {
   // (Satellite transcript separation is now handled by PUSH-TO-TALK on the
   // auditor + the phone relaying PC text only — no audio dedup detector needed.)
 
-  // ── FIX B-03: real signal quality derived from EEG buffer RMS ─────────────
-  // Previously this state was a Math.random() in [80,100] that was ALSO sent
-  // over the network to the auditor as "preclear EEG quality" — pure fiction.
-  // Now we compute the RMS of the last ~64 samples per electrode (same logic
-  // used inside HealthPanel's per-electrode meter) and average across the
-  // 4 channels. The value is clamped to [0,100].
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | undefined;
+  /**
+   * ── IL CONTATTO VERO, FUORI DA QUI ───────────────────────────────────────────────────────
+   * Fase 6. RMS per elettrodo, railing sull'AC, isteresi sul « contatto perso »: tutto in
+   * `hooks/useMuseContactGate`, lo stesso calcolo che stava qui — `useChargeEngine` ne legge
+   * `museContactRef` per sapere se l'EEG di questo istante è un segnale vero o rumore da
+   * elettrodi flottanti. Montarlo in SERENITY (fase 6, prossimo passo) richiede lo stesso gate.
+   */
+  const museGate = useMuseContactGate({
+    eegBuffer,
+    museConnection,
     // FIX MUSE-REMOTE : côté AUDITEUR à distance, le MUSE local est toujours 'disconnected'
     // (c'est le préclair qui le porte). Mais l'EEG du préclair est mirroré dans eegBuffer, donc
     // on DOIT calculer le contact/qualité ici aussi quand le MUSE distant streame — sinon
     // museContact reste false → aucune charge → l'aiguille ne réagit pas (seul le gyro bougeait).
-    const remoteLive = appMode === 'auditor' && remoteMuseStreaming;
-    if (museConnection === 'connected' || remoteLive) {
-      interval = setInterval(() => {
-        let sum = 0; let n = 0; let goodCount = 0;
-        const diag: string[] = [];
-        // REAL contact (HSI-like), per electrode: a LIVE, non-railed, non-flat EEG.
-        // Discriminant FIABLE d'un électrode DÉTACHÉ = RAILING (samples collés au bord de l'ADC),
-        // PAS un plafond d'amplitude. MAIS le railing DOIT se mesurer sur la composante AC (après
-        // retrait de la moyenne) : un MUSE BIEN PORTÉ a un OFFSET DC de plusieurs centaines de µV,
-        // donc le brut |v| dépasse 700 en PERMANENCE → l'ancien test `|v|>700` déclarait « railé »
-        // (satFrac ~1) et donc « pas de contact » À TORT, même casque bien posé. On teste donc
-        // l'ÉCART À LA MOYENNE |v-mean| : seul un vrai flottement fait osciller l'AC jusqu'au rail.
-        const FLAT_RMS = 2;      // AC-RMS < this → dead/shorted electrode
-        const SAT_UV = 700;      // |v-mean| beyond this ≈ swing jusqu'au rail (floating)
-        for (let i = 0; i < 4; i++) {
-          const s = eegBuffer.current[i] || [];
-          if (!s.length) { diag.push(`e${i}:vide`); continue; }
-          const win = s.slice(-128);
-          let mean = 0; for (let k = 0; k < win.length; k++) mean += win[k]; mean /= win.length;
-          let acc = 0, accAc = 0, sat = 0;
-          for (let k = 0; k < win.length; k++) {
-            const v = win[k], d = v - mean;
-            acc += v * v; accAc += d * d;
-            if (Math.abs(d) > SAT_UV) sat++;   // railing sur l'AC, pas sur le brut (offset DC)
-          }
-          const rms = Math.sqrt(acc / win.length);       // BRUT — qualité + réseau
-          const rmsAc = Math.sqrt(accAc / win.length);   // AC-COUPLÉ — contact
-          const satFrac = win.length ? sat / win.length : 1;
-          const ok = rmsAc >= FLAT_RMS && satFrac < 0.15;
-          if (ok) goodCount++;
-          diag.push(`e${i}:ac${Math.round(rmsAc)} sat${Math.round(satFrac * 100)}%${ok ? '✓' : ''}`);
-          // Same mapping as HealthPanel: RMS<5 → 0, RMS>500 → 20, else linear 0..100
-          const q = rms < 5 ? 0 : rms > 500 ? 20 : Math.min(100, (rms / 200) * 100);
-          sum += q; n++;
-        }
-        const avg = n > 0 ? Math.round(sum / n) : 0;
-        setSignalQuality(prev => Math.abs(prev - avg) >= 1 ? avg : prev);
-        // Contact = MAJORITÉ d'électrodes plausibles (≥ 2 sur 4). Une fascie portée en fait
-        // contact sur plusieurs électrodes ; une fascie RETIRÉE en perd la plupart (flottement) →
-        // ce seuil détecte enfin le retrait, là où « ≥ 1 » laissait passer le bruit d'une seule
-        // électrode. HYSTÉRÉSIS : "contact" immédiat (réactif à la pose), "pas de contact" après
-        // 3 s mauvaises d'affilée (évite les faux négatifs sur un bref artefact).
-        // Assoupli : 1 électrode plausible suffit pour « contact » (évite les faux « pas de
-        // contact » quand la fascie est portée). Le retrait reste détecté via le heartbeat/downgrade
-        // participant + l'absence prolongée de flux.
-        if (goodCount >= 1) { contactBadStreakRef.current = 0; contactDiagRef.current = false; setMuseContact(true); }
-        else {
-          contactBadStreakRef.current += 1;
-          if (contactBadStreakRef.current >= 4) {
-            setMuseContact(false);
-            // DIAGNOSTIC (1× par épisode « pas de contact ») : par électrode, AC-RMS + % de railing
-            // (vide = aucun flux EEG). Dit tout de suite POURQUOI : buffers vides vs signal hors seuil.
-            if (!contactDiagRef.current) {
-              contactDiagRef.current = true;
-              addLog({ time: timeRef.current, speaker: 'SYS', text: `MUSE contact: [${diag.join('  ')}]`, type: 'normal' });
-            }
-          }
-        }
-      }, 1000);
-    } else if (museConnection === 'searching') {
-      // Keep the cosmetic "searching" jitter so the UI shows activity.
-      interval = setInterval(() => {
-        setSignalQuality(Math.round(Math.random() * 30));
-      }, 500);
-      setMuseContact(false);
-    } else {
-      setSignalQuality(0);
-      setMuseContact(false);
-    }
-    return () => { if (interval) clearInterval(interval); };
-  }, [museConnection, appMode, remoteMuseStreaming]);
+    remoteLive: appMode === 'auditor' && remoteMuseStreaming,
+    timeRef, addLog,
+  });
+  const { signalQuality, setSignalQuality, museContact, museContactRef } = museGate;
+  useEffect(() => { signalQualityRef.current = signalQuality; }, [signalQuality]);
 
   useEffect(() => {
     if (sessionState === 'running') {
