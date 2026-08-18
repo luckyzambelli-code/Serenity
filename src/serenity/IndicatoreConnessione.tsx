@@ -62,7 +62,7 @@ export function IndicatoreConnessione({ stato, etichetta, dettaglio, onClick, ti
       onClick={onClick}
       title={title}
       style={{
-        display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--s-ink)',
+        display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--s-ink)',
         border: 'none', background: 'none', padding: 0, margin: 0,
         fontFamily: 'var(--s-sans)', fontWeight: 500, cursor: onClick ? 'pointer' : 'default',
       }}

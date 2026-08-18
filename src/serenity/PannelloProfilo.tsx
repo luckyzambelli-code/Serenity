@@ -118,7 +118,7 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
   };
   const pillola = (attiva: boolean): React.CSSProperties => ({
     border: 'none', cursor: 'pointer', borderRadius: 999, padding: '8px 20px',
-    fontFamily: 'var(--s-sans)', fontSize: 12.5, letterSpacing: '0.06em',
+    fontFamily: 'var(--s-sans)', fontSize: 13.5, letterSpacing: '0.06em',
     background: attiva ? 'var(--s-ink)' : 'var(--s-disc)',
     color: attiva ? 'var(--s-ground-warm)' : 'var(--s-ink-soft)',
     boxShadow: attiva ? 'none' : 'var(--s-shadow)',
@@ -181,7 +181,7 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
             <button onClick={() => setSesso('m')} style={pillola(sesso === 'm')}>{t('ser_man')}</button>
             <button onClick={() => setSesso('f')} style={pillola(sesso === 'f')}>{t('ser_woman')}</button>
           </div>
-          <span style={{ fontSize: 11.5, color: 'var(--s-ink-faint)' }}>
+          <span style={{ fontSize: 12.5, color: 'var(--s-ink-faint)' }}>
             {sesso === 'm' ? t('ser_clear_male')
               : sesso === 'f' ? t('ser_clear_female')
               : t('ser_clear_undecided')}
@@ -192,7 +192,7 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
       <div style={{ display: 'flex', alignItems: 'center', gap: 18, minHeight: 40 }}>
         <button onClick={onAnnulla} style={{
           border: 'none', background: 'none', cursor: 'pointer',
-          fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+          fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-ink-faint)',
         }}>← {t('ser_back')}</button>
         <button onClick={salva} style={pillola(true)}>{t('ser_save')}</button>
         {/* ⚠️ ELIMINARE SOLO SU UN PROFILO ESISTENTE, e con la conferma DENTRO il bottone
@@ -202,7 +202,7 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
         {modifica && (
           <button onClick={elimina} style={{
             border: 'none', cursor: 'pointer', borderRadius: 999, padding: '8px 20px',
-            fontFamily: 'var(--s-sans)', fontSize: 12.5, letterSpacing: '0.06em',
+            fontFamily: 'var(--s-sans)', fontSize: 13.5, letterSpacing: '0.06em',
             background: confermaElimina ? 'var(--s-reserve)' : 'none',
             color: confermaElimina ? 'var(--s-ground-warm)' : 'var(--s-ink-faint)',
             transition: 'background var(--s-slow) var(--s-ease), color var(--s-slow) var(--s-ease)',
@@ -210,7 +210,7 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
             {confermaElimina ? t('ser_confirm_delete') : t('ser_delete')}
           </button>
         )}
-        {errore && <span style={{ fontSize: 12, color: 'var(--s-reserve)' }}>{errore}</span>}
+        {errore && <span style={{ fontSize: 13, color: 'var(--s-reserve)' }}>{errore}</span>}
       </div>
     </section>
   );

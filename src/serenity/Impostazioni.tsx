@@ -39,7 +39,7 @@ export const linguaValida = (l: string | undefined): Language | null =>
 
 const bottone = (attivo: boolean): React.CSSProperties => ({
   border: 'none', background: 'none', cursor: 'pointer', padding: 2,
-  fontFamily: 'var(--s-mono)', fontSize: 11, letterSpacing: '0.04em',
+  fontFamily: 'var(--s-mono)', fontSize: 12, letterSpacing: '0.04em',
   color: attivo ? 'var(--s-ink)' : 'var(--s-ink-ghost)',
   fontWeight: attivo ? 600 : 400,
   display: 'flex', alignItems: 'center', gap: 5,

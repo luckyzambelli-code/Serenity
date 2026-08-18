@@ -51,7 +51,7 @@ import type { useThetaMeter } from '../hooks/useThetaMeter';
 
 const pillola = (piena: boolean): React.CSSProperties => ({
   border: 'none', cursor: 'pointer', borderRadius: 999, padding: '7px 16px',
-  fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.04em',
+  fontFamily: 'var(--s-sans)', fontSize: 13, letterSpacing: '0.04em',
   background: piena ? 'var(--s-disc)' : 'var(--s-disc-sunk)',
   color: 'var(--s-ink)', boxShadow: piena ? 'var(--s-shadow)' : 'none',
   transition: 'background var(--s-slow) var(--s-ease), box-shadow var(--s-slow) var(--s-ease)',
@@ -81,7 +81,7 @@ export function PannelloMeter({ theta, provaTa }: {
       {/* ── IL TITOLO — segnalato: « on ne sait pas les réglages à quoi correspondent, sur
           quel instrument ». Questo pannello parla SOLO del Theta-Meter (le lattine) — mai del
           MUSE, che non ha impostazioni proprie oltre a connettersi. */}
-      <div style={{ fontFamily: 'var(--s-sans)', fontSize: 10.5, letterSpacing: '0.12em',
+      <div style={{ fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.12em',
                     textTransform: 'uppercase', color: 'var(--s-ink-soft)' }}>
         {LC('il theta-meter — le lattine', 'le theta-meter — les boîtes', 'the theta-meter — the cans',
           'el theta-meter — las latas', 'theta-metern — burkarna')}
@@ -99,7 +99,7 @@ export function PannelloMeter({ theta, provaTa }: {
             {t('theta_solo_can')}
           </button>
         </div>
-        <div style={{ fontSize: 11, lineHeight: 1.5, color: 'var(--s-ink-faint)', marginTop: 6 }}>
+        <div style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--s-ink-faint)', marginTop: 6 }}>
           {LC('quante lattine impugna il preclear in mano — cambia come l\'ago legge la resistenza.',
             'combien de boîtes le préclair tient en main — change la façon dont l\'aiguille lit la résistance.',
             'how many cans the preclear holds — changes how the needle reads the resistance.',
@@ -118,7 +118,7 @@ export function PannelloMeter({ theta, provaTa }: {
           padding: '10px 12px', borderRadius: 10, background: 'var(--s-disc-sunk)',
           border: '1px solid var(--s-reserve)',
         }}>
-          <div style={{ fontSize: 11.5, lineHeight: 1.5, color: 'var(--s-reserve)' }}>
+          <div style={{ fontSize: 12.5, lineHeight: 1.5, color: 'var(--s-reserve)' }}>
             {LC(
               'per misurare il TA come si deve, fai la stretta con DUE lattine — è il riferimento. Poi torna a una sola e ripeti: la differenza fra le due letture corregge tutta la seduta.',
               'pour mesurer le TA correctement, fais la pression avec DEUX boîtes — c\'est la référence. Reviens ensuite à une seule et répète : la différence entre les deux lectures corrige toute la séance.',
@@ -145,14 +145,14 @@ export function PannelloMeter({ theta, provaTa }: {
           padding: '10px 12px', borderRadius: 10, background: 'var(--s-disc-sunk)',
           border: `1px solid ${scarto === null ? 'var(--s-reserve)' : 'var(--s-still)'}`,
         }}>
-          <div style={{ display: 'flex', gap: 16, alignItems: 'baseline', fontFamily: 'var(--s-mono)', fontSize: 13, color: 'var(--s-ink)' }}>
-            <span><span style={{ fontSize: 10, opacity: 0.6 }}>2 · </span>{provaTa.two!.toFixed(2)}</span>
-            <span><span style={{ fontSize: 10, opacity: 0.6 }}>1 · </span>{provaTa.solo!.toFixed(2)}</span>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'baseline', fontFamily: 'var(--s-mono)', fontSize: 14, color: 'var(--s-ink)' }}>
+            <span><span style={{ fontSize: 11, opacity: 0.6 }}>2 · </span>{provaTa.two!.toFixed(2)}</span>
+            <span><span style={{ fontSize: 11, opacity: 0.6 }}>1 · </span>{provaTa.solo!.toFixed(2)}</span>
             <span style={{ color: scarto === null ? 'var(--s-reserve)' : 'var(--s-still)', fontWeight: 700 }}>
               {scarto === null ? '—' : `${scarto > 0 ? '+' : ''}${scarto.toFixed(2)}`}
             </span>
           </div>
-          <div style={{ fontSize: 11, lineHeight: 1.5, marginTop: 6, color: 'var(--s-ink-faint)' }}>
+          <div style={{ fontSize: 12, lineHeight: 1.5, marginTop: 6, color: 'var(--s-ink-faint)' }}>
             {scarto === null
               ? LC('lo scarto è troppo grande per essere una configurazione — è una lettura presa male. Rifai le due prove.',
                   'l\'écart est trop grand pour être une configuration — c\'est une lecture mal prise. Refais les deux tests.',
@@ -171,7 +171,7 @@ export function PannelloMeter({ theta, provaTa }: {
             </button>
           )}
           {scartoMisurato && (
-            <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: 'var(--s-still)' }}>
+            <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: 'var(--s-still)' }}>
               ✓ {LC('applicata', 'appliqué', 'applied', 'aplicada', 'tillämpad')}
             </div>
           )}
@@ -186,7 +186,7 @@ export function PannelloMeter({ theta, provaTa }: {
             {t('theta_squeeze')}
           </button>
           {theta.squeezeOk !== null && (
-            <span style={{ fontSize: 12, color: theta.squeezeOk ? 'var(--s-still)' : 'var(--s-reserve)' }}>
+            <span style={{ fontSize: 13, color: theta.squeezeOk ? 'var(--s-still)' : 'var(--s-reserve)' }}>
               {theta.squeezeOk ? '✓' : '⚠'}
             </span>
           )}
@@ -195,14 +195,14 @@ export function PannelloMeter({ theta, provaTa }: {
             {t('theta_breath')}
           </button>
           {theta.breathOk !== null && (
-            <span style={{ fontSize: 12, color: theta.breathOk ? 'var(--s-still)' : 'var(--s-reserve)' }}>
+            <span style={{ fontSize: 13, color: theta.breathOk ? 'var(--s-still)' : 'var(--s-reserve)' }}>
               {theta.breathOk ? '✓' : '⚠'}
             </span>
           )}
         </div>
         {/* ── LA SPIEGAZIONE, SEMPRE VISIBILE — non più solo al passaggio del mouse. Cambia
             secondo quale prova è (o non è) in corso, così dice sempre la cosa giusta. */}
-        <div style={{ fontSize: 11, lineHeight: 1.5, color: 'var(--s-ink-faint)', marginTop: 6 }}>
+        <div style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--s-ink-faint)', marginTop: 6 }}>
           {theta.testing === 'squeeze' ? t('theta_squeeze_hint')
             : theta.testing === 'breath' ? t('theta_breath_hint')
             : LC('la stretta fissa la sensibilità dell\'ago; il respiro la verifica soltanto — fai prima la stretta.',
@@ -216,10 +216,10 @@ export function PannelloMeter({ theta, provaTa }: {
             senza scrivere un esito, positivo o negativo che sia — annullare non è fallire. */}
         {theta.testing && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-            <span style={{ fontSize: 12, color: 'var(--s-alive)' }}>{t('theta_test_running')}</span>
+            <span style={{ fontSize: 13, color: 'var(--s-alive)' }}>{t('theta_test_running')}</span>
             <button onClick={() => theta.cancelTest()} style={{
               border: 'none', background: 'none', cursor: 'pointer',
-              fontFamily: 'var(--s-sans)', fontSize: 11.5, color: 'var(--s-ink-faint)',
+              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
             }}>
               {LC('annulla', 'annuler', 'cancel', 'cancelar', 'avbryt')}
             </button>
@@ -233,14 +233,14 @@ export function PannelloMeter({ theta, provaTa }: {
           livelli diversi bastano. */}
       <div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>{t('theta_ref_label')}</span>
-          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 13 }}>{theta.rawSmooth.toFixed(0)}</span>
+          <span style={{ fontSize: 13, color: 'var(--s-ink-faint)' }}>{t('theta_ref_label')}</span>
+          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 14 }}>{theta.rawSmooth.toFixed(0)}</span>
           <input
             type="number" step="0.1" value={riferimento}
             onChange={e => setRiferimento(e.target.value)}
             style={{
               width: 56, border: 'none', borderBottom: '1px solid var(--s-ink-ghost)',
-              background: 'none', outline: 'none', fontFamily: 'var(--s-mono)', fontSize: 13,
+              background: 'none', outline: 'none', fontFamily: 'var(--s-mono)', fontSize: 14,
               color: 'var(--s-ink)', padding: '2px 4px',
             }}
           />
@@ -250,19 +250,19 @@ export function PannelloMeter({ theta, provaTa }: {
           }} style={pillola(false)}>
             {t('theta_cal_record')}
           </button>
-          <span style={{ fontSize: 11.5, color: 'var(--s-ink-faint)' }}>
+          <span style={{ fontSize: 12.5, color: 'var(--s-ink-faint)' }}>
             {theta.taScale ? `${theta.taScale.points.length} · ${theta.taScale.madeAt === 0 ? t('theta_scale_factory') : t('theta_scale_own')}` : ''}
           </span>
           {theta.taScale && theta.taScale.madeAt !== 0 && (
             <button onClick={() => theta.clearTaCalibration()} style={{
               border: 'none', background: 'none', cursor: 'pointer',
-              fontFamily: 'var(--s-sans)', fontSize: 11.5, color: 'var(--s-ink-faint)',
+              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
             }}>
               {t('theta_cal_clear')}
             </button>
           )}
         </div>
-        <div style={{ fontSize: 11, lineHeight: 1.5, color: 'var(--s-ink-faint)', marginTop: 6 }}>
+        <div style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--s-ink-faint)', marginTop: 6 }}>
           {t('theta_ref_hint')}
         </div>
       </div>

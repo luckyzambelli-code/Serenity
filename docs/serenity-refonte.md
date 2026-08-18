@@ -462,6 +462,25 @@ Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori, `vitest run` 639/639
 pulita, EN) tutte le icone rendono correttamente accanto alle rispettive parole.
 EQUILIBRIUM 2.0.170, SERENITY 3.0.33.
 
+⚠️ **Segnalato di nuovo (18/08/2026, quinto giro)**: « le scritte più in grande e più scure,
+per più visibilità ». Due interventi, entrambi GLOBALI invece che pannello per pannello:
+
+- **Le taglie**: ogni `fontSize` funzionale in `src/serenity/*.tsx` da 9 a 13 px alzata di un
+  passo (9→10, 9.5→10.5, … 12.5→13.5, 13→14) — una sostituzione script su tutti gli undici file,
+  non a mano pannello per pannello (125 punti). I titoli grandi (14 px in su, il testo
+  dell'item, "SERENITY", le domande dell'avvio) restano com'erano: la gerarchia fra "titolo" e
+  "testo funzionale" si conserva, si sposta insieme.
+- **Il colore**: `--s-ink-soft`/`--s-ink-faint` in `tokens.css`, scuriti di un passo in tema
+  chiaro e SCHIARITI di un passo in tema scuro (la stessa richiesta, applicata nel verso giusto
+  per ciascun fondo — scurire il testo chiaro su fondo scuro lo renderebbe MENO leggibile, non
+  di più). `--s-ink-ghost` (il punto "nessun segnale" degli indicatori) resta invariato: non è
+  testo da leggere.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori, `vitest run` 639/639, a schermo (tab
+pulita, tema scuro): testo visibilmente più grande e più contrastato ovunque, nessun
+troncamento/sovrapposizione nei pannelli più stretti (piè di pagina, camere, meter).
+EQUILIBRIUM 2.0.171, SERENITY 3.0.34.
+
 ⚠️ **Revisione funzionale — non solo grafica (17/08/2026, terza segnalazione)**: due
 regressioni VERE, non d'aspetto — una funzione persa nel passaggio a SERENITY, non solo
 ridisegnata:

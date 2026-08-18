@@ -45,8 +45,11 @@
      Nessun nero: il massimo contrasto è riservato all'UNICA cosa che deve essere letta
      davvero, cioè il numero della lettura. Tutto il resto sta sotto. */
   --s-ink:       #2c2f33;
-  --s-ink-soft:  #6b7076;
-  --s-ink-faint: #a3a8ad;
+  /* Segnalato: « le scritte più in grande e più scure, per più visibilità » — `soft`/`faint`
+     scurite di un passo ciascuna. `ghost` resta com'era: è il punto "nessun segnale" degli
+     indicatori di connessione, non testo da leggere. */
+  --s-ink-soft:  #54585d;
+  --s-ink-faint: #84898e;
   --s-ink-ghost: #cfd2d5;
 
   /* ── I CERCHI ────────────────────────────────────────────────────────────────────────────
@@ -104,8 +107,11 @@
   --s-veil:        rgba(0, 0, 0, 0.45);
 
   --s-ink:       #e8e6e1;
-  --s-ink-soft:  #a6a9ac;
-  --s-ink-faint: #74787a;
+  /* Stessa richiesta, direzione opposta: su fondo scuro "più contrasto" vuol dire più CHIARO,
+     non più scuro alla lettera — la stessa regola (avvicinarsi all'inchiostro pieno), applicata
+     al verso giusto per questo fondo. */
+  --s-ink-soft:  #bcbec0;
+  --s-ink-faint: #8b8e90;
   --s-ink-ghost: #45484a;
 
   --s-disc:        #232427;

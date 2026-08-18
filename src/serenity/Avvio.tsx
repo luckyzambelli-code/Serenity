@@ -112,13 +112,13 @@ function Scelta({ etichetta, sotto, foto, persona, icona, onClick, onModifica, d
         </div>
         <div style={{ display: 'grid', justifyItems: 'center', gap: 2 }}>
           <span style={{ fontSize: 14, color: 'var(--s-ink)' }}>{etichetta}</span>
-          {sotto && <span style={{ fontSize: 11.5, color: 'var(--s-ink-faint)' }}>{sotto}</span>}
+          {sotto && <span style={{ fontSize: 12.5, color: 'var(--s-ink-faint)' }}>{sotto}</span>}
         </div>
       </button>
       {onModifica && (
         <button onClick={onModifica} style={{
           border: 'none', background: 'none', cursor: 'pointer', padding: '2px 4px',
-          fontFamily: 'var(--s-sans)', fontSize: 10.5, letterSpacing: '0.04em',
+          fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.04em',
           color: 'var(--s-ink-faint)',
         }}>
           {t('ser_modify')}
@@ -343,7 +343,7 @@ export function Avvio({ onPronto, onRichiama }: {
           esiste una scorciatoia in fondo. */}
       {passo === 'auditor' && configurazioni.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
+          <span style={{ fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
             {LC('configurazioni salvate', 'configurations enregistrées', 'saved configurations', 'configuraciones guardadas', 'sparade konfigurationer')}
           </span>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 560 }}>
@@ -363,15 +363,15 @@ export function Avvio({ onPronto, onRichiama }: {
                     border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left',
                     fontFamily: 'var(--s-sans)', color: 'var(--s-ink)',
                   }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 600 }}>{cfg.nome}</span>
-                    <span style={{ fontSize: 11, color: 'var(--s-ink-faint)', marginLeft: 6 }}>
+                    <span style={{ fontSize: 13.5, fontWeight: 600 }}>{cfg.nome}</span>
+                    <span style={{ fontSize: 12, color: 'var(--s-ink-faint)', marginLeft: 6 }}>
                       {nomeProfilo(liste.a, cfg.avvio.auditorId)}{chi ? ` · ${chi}` : ''}{strumento ? ` · ${strumento}` : ''}
                     </span>
                   </button>
                   <button onClick={() => { eliminaConfigurazione(cfg.id); setConfigurazioni(leggiConfigurazioni()); }}
                     title={t('ser_delete') as string} style={{
                     border: 'none', background: 'none', cursor: 'pointer', padding: '2px 6px',
-                    fontSize: 13, color: 'var(--s-ink-ghost)', lineHeight: 1,
+                    fontSize: 14, color: 'var(--s-ink-ghost)', lineHeight: 1,
                   }}>
                     ×
                   </button>
@@ -392,7 +392,7 @@ export function Avvio({ onPronto, onRichiama }: {
           {DOMANDA[passo]}
         </h1>
         {/* Quante ne restano, detto a parole. Una barra di avanzamento sarebbe un pannello. */}
-        <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
+        <span style={{ fontSize: 13, color: 'var(--s-ink-faint)' }}>
           {quante > 1 ? t('ser_questions_left').replace('{n}', String(quante))
             : quante === 1 ? t('ser_last_question') : ''}
         </span>
@@ -409,7 +409,7 @@ export function Avvio({ onPronto, onRichiama }: {
         {passo !== 'auditor' && (
           <button onClick={() => setStato(indietro)} style={{
             border: 'none', background: 'none', cursor: 'pointer',
-            fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+            fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-ink-faint)',
           }}>
             ← {t('ser_back')}
           </button>
@@ -417,7 +417,7 @@ export function Avvio({ onPronto, onRichiama }: {
         {passo === 'modo' && (
           // Il tempo che passa si vede, così la scelta automatica non arriva a sorpresa —
           // ma si dice a parole, non con una barra che si riempie alla periferia dell'occhio.
-          <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
+          <span style={{ fontSize: 13, color: 'var(--s-ink-faint)' }}>
             {t('ser_auto_normal').replace('{n}', String(Math.ceil(rimasti / 1000)))}
           </span>
         )}

@@ -43,7 +43,7 @@ export function PannelloEp({ ep, onValidato }: {
 
   const pillola = (attiva: boolean): React.CSSProperties => ({
     border: 'none', cursor: 'pointer', borderRadius: 999, padding: '8px 20px',
-    fontFamily: 'var(--s-sans)', fontSize: 12.5, letterSpacing: '0.06em',
+    fontFamily: 'var(--s-sans)', fontSize: 13.5, letterSpacing: '0.06em',
     background: attiva ? 'var(--s-ink)' : 'var(--s-disc)',
     color: attiva ? 'var(--s-ground-warm)' : 'var(--s-ink-soft)',
     boxShadow: attiva ? 'none' : 'var(--s-shadow)',
@@ -55,7 +55,7 @@ export function PannelloEp({ ep, onValidato }: {
     padding: '6px 4px', width: '100%',
   };
   const etichetta: React.CSSProperties = {
-    fontFamily: 'var(--s-sans)', fontSize: 10.5, letterSpacing: '0.08em', textTransform: 'uppercase',
+    fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.08em', textTransform: 'uppercase',
     color: 'var(--s-ink-faint)', marginBottom: 6, display: 'block',
   };
 
@@ -109,7 +109,7 @@ export function PannelloEp({ ep, onValidato }: {
       <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
         <button onClick={() => ep.setEpManualOpen(false)} style={{
           border: 'none', background: 'none', cursor: 'pointer',
-          fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+          fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-ink-faint)',
         }}>
           ← {t('cancel')}
         </button>

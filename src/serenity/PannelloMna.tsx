@@ -98,7 +98,7 @@ export function PannelloMna({
 
   const campo = (etichetta: string, valore: string, visibile = true) => (
     <div style={{ display: 'grid', gap: 2, opacity: visibile ? 1 : 0, transition: 'opacity var(--s-slow) var(--s-ease)', minWidth: 56 }}>
-      <span style={{ fontFamily: 'var(--s-sans)', fontSize: 9.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
+      <span style={{ fontFamily: 'var(--s-sans)', fontSize: 10.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
         {etichetta}
       </span>
       <span style={{ fontFamily: 'var(--s-mono)', fontSize: 17, fontWeight: 600, color: 'var(--s-ink)', fontVariantNumeric: 'tabular-nums' }}>
@@ -116,19 +116,19 @@ export function PannelloMna({
       padding: '12px 18px', pointerEvents: 'auto',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <span style={{ fontFamily: 'var(--s-sans)', fontSize: 11, letterSpacing: '0.14em', color: 'var(--s-ink-soft)' }}>
+        <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.14em', color: 'var(--s-ink-soft)' }}>
           {t('mna_title')}
         </span>
         {primePhase === 'CAPTURE' && (primeZone === 'COMPOSITE' || primeZone === 'MASSIVE') && (
-          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 10, color: 'var(--s-reserve)' }}>⚡ {t('mna_mass_detected')}</span>
+          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11, color: 'var(--s-reserve)' }}>⚡ {t('mna_mass_detected')}</span>
         )}
         {primePhase === 'CLEAN' && primeZone === 'PRIME' && (
-          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 10, color: 'var(--s-still)' }}>✦ {t('mna_prime_zone')}</span>
+          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11, color: 'var(--s-still)' }}>✦ {t('mna_prime_zone')}</span>
         )}
         <span style={{ flex: 1 }} />
         <button onClick={onChiudi} style={{
           border: 'none', background: 'none', cursor: 'pointer',
-          fontFamily: 'var(--s-sans)', fontSize: 11.5, color: 'var(--s-ink-faint)',
+          fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
         }}>
           ✕
         </button>
@@ -147,7 +147,7 @@ export function PannelloMna({
         {(primePhase === 'SONIFY' || primePhase === 'CLEAN' || primePhase === 'HARMONICS') && (
           <button onClick={handleStop} style={{
             border: 'none', cursor: 'pointer', background: 'none',
-            fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.08em', color: 'var(--s-reserve)',
+            fontFamily: 'var(--s-sans)', fontSize: 12.5, letterSpacing: '0.08em', color: 'var(--s-reserve)',
           }}>
             {t('mna_btn_stop')}
           </button>
@@ -159,7 +159,7 @@ export function PannelloMna({
             style={{
               border: 'none', cursor: canAdvance ? 'pointer' : 'default', borderRadius: 999,
               padding: '9px 20px', minWidth: 160,
-              fontFamily: 'var(--s-sans)', fontSize: 12.5, letterSpacing: '0.04em',
+              fontFamily: 'var(--s-sans)', fontSize: 13.5, letterSpacing: '0.04em',
               background: canAdvance ? 'var(--s-ink)' : 'var(--s-disc-sunk)',
               color: canAdvance ? 'var(--s-ground-warm)' : 'var(--s-ink-soft)',
               opacity: canAdvance || primePhase === 'HARMONICS' ? 1 : 0.6,
@@ -172,7 +172,7 @@ export function PannelloMna({
 
       {(primePhase === 'SONIFY' || primePhase === 'CLEAN' || primePhase === 'HARMONICS') && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
-          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 9.5, letterSpacing: '0.08em', color: 'var(--s-ink-faint)', textTransform: 'uppercase' }}>
+          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 10.5, letterSpacing: '0.08em', color: 'var(--s-ink-faint)', textTransform: 'uppercase' }}>
             → PRIME {primePStar}
           </span>
           <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--s-disc-sunk)', overflow: 'hidden' }}>
@@ -181,7 +181,7 @@ export function PannelloMna({
               background: 'var(--s-ink)', transition: 'width var(--s-slow) var(--s-ease)',
             }} />
           </div>
-          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 10.5, color: 'var(--s-ink-soft)', fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11.5, color: 'var(--s-ink-soft)', fontVariantNumeric: 'tabular-nums' }}>
             Δ {primeDelta.toFixed(2)} · {Math.round(avvicinamento * 100)}%
           </span>
         </div>

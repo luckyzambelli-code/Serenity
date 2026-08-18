@@ -52,7 +52,7 @@ const MODULI_IN_ARRIVO = ['config_mod_journal', 'config_mod_health', 'config_mod
   'config_mod_biometric'];
 
 const etichetta: React.CSSProperties = {
-  fontFamily: 'var(--s-sans)', fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase',
+  fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.14em', textTransform: 'uppercase',
   color: 'var(--s-ink-soft)', marginBottom: 10, display: 'block',
 };
 
@@ -90,7 +90,7 @@ export function PannelloConfig({ onChiudi }: { onChiudi: () => void }) {
       }}>
         {testo}
         {disabilitata && (
-          <span style={{ fontSize: 11.5, color: 'var(--s-ink-faint)', marginLeft: 8 }}>
+          <span style={{ fontSize: 12.5, color: 'var(--s-ink-faint)', marginLeft: 8 }}>
             {t('ser_config_soon')}
           </span>
         )}
@@ -119,7 +119,7 @@ export function PannelloConfig({ onChiudi }: { onChiudi: () => void }) {
       <header style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
         <button onClick={onChiudi} style={{
           border: 'none', background: 'none', cursor: 'pointer',
-          fontFamily: 'var(--s-sans)', fontSize: 13, color: 'var(--s-ink-soft)',
+          fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-soft)',
         }}>
           ← {t('ser_back')}
         </button>
@@ -139,7 +139,7 @@ export function PannelloConfig({ onChiudi }: { onChiudi: () => void }) {
             </div>
 
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--s-ink-soft)', marginBottom: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, color: 'var(--s-ink-soft)', marginBottom: 4 }}>
                 <span>{t('config_transparency')}</span>
                 <span style={{ fontFamily: 'var(--s-mono)' }}>{Math.round(uiAlpha * 100)}%</span>
               </div>
@@ -152,7 +152,7 @@ export function PannelloConfig({ onChiudi }: { onChiudi: () => void }) {
             </div>
 
             <div>
-              <div style={{ fontSize: 12.5, color: 'var(--s-ink-soft)', marginBottom: 8 }}>{t('wallpaper')}</div>
+              <div style={{ fontSize: 13.5, color: 'var(--s-ink-soft)', marginBottom: 8 }}>{t('wallpaper')}</div>
               <input
                 id={inputId} type="file" accept="image/*" style={{ display: 'none' }}
                 onChange={async e => {
@@ -173,7 +173,7 @@ export function PannelloConfig({ onChiudi }: { onChiudi: () => void }) {
                   background: 'var(--s-disc-sunk)',
                   boxShadow: !wallpaperUrl ? 'var(--s-shadow-lift)' : 'none',
                   display: 'grid', placeItems: 'center',
-                  fontSize: 10, fontFamily: 'var(--s-mono)', color: 'var(--s-ink-faint)',
+                  fontSize: 11, fontFamily: 'var(--s-mono)', color: 'var(--s-ink-faint)',
                   letterSpacing: '0.06em',
                 }}>
                   DEFAULT
@@ -183,7 +183,7 @@ export function PannelloConfig({ onChiudi }: { onChiudi: () => void }) {
                   background: 'var(--s-disc)',
                   boxShadow: wallpaperUrl ? 'var(--s-shadow-lift)' : 'var(--s-shadow)',
                   display: 'grid', placeItems: 'center',
-                  fontSize: 10, fontFamily: 'var(--s-mono)', color: 'var(--s-ink-faint)',
+                  fontSize: 11, fontFamily: 'var(--s-mono)', color: 'var(--s-ink-faint)',
                 }}>
                   {wallpaperUrl
                     ? <img src={wallpaperUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -191,7 +191,7 @@ export function PannelloConfig({ onChiudi }: { onChiudi: () => void }) {
                 </label>
               </div>
               {(wpInCorso || wpErrore) && (
-                <div style={{ marginTop: 6, fontSize: 11, color: wpErrore ? 'var(--s-reserve)' : 'var(--s-ink-faint)' }}>
+                <div style={{ marginTop: 6, fontSize: 12, color: wpErrore ? 'var(--s-reserve)' : 'var(--s-ink-faint)' }}>
                   {wpInCorso ? '…' : wpErrore === 'troppo-grande' ? t('wallpaper_too_big') : t('wallpaper_unreadable')}
                 </div>
               )}
@@ -210,13 +210,13 @@ export function PannelloConfig({ onChiudi }: { onChiudi: () => void }) {
           <div style={{ display: 'flex', gap: 16, marginTop: 10 }}>
             <button onClick={() => setModuleVis({ cam1: true, cam2: true, mna: true })} style={{
               border: 'none', background: 'none', cursor: 'pointer',
-              fontFamily: 'var(--s-sans)', fontSize: 11, letterSpacing: '0.08em', color: 'var(--s-ink-faint)',
+              fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.08em', color: 'var(--s-ink-faint)',
             }}>
               {t('config_all_on')}
             </button>
             <button onClick={() => setModuleVis({ cam1: false, cam2: false, mna: false })} style={{
               border: 'none', background: 'none', cursor: 'pointer',
-              fontFamily: 'var(--s-sans)', fontSize: 11, letterSpacing: '0.08em', color: 'var(--s-ink-faint)',
+              fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.08em', color: 'var(--s-ink-faint)',
             }}>
               {t('config_all_off')}
             </button>
@@ -224,7 +224,7 @@ export function PannelloConfig({ onChiudi }: { onChiudi: () => void }) {
         </div>
 
         {/* ── DISPOSIZIONI — perché non c'è, detto chiaro invece che taciuto ───────────────── */}
-        <div style={{ fontSize: 11.5, color: 'var(--s-ink-faint)', lineHeight: 1.6 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--s-ink-faint)', lineHeight: 1.6 }}>
           {t('config_save_layout')}: {t('ser_config_no_layouts')}.
         </div>
       </div>

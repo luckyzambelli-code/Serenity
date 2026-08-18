@@ -150,7 +150,7 @@ export function CameraCerchio({
               {externalStream && (
                 <span style={{
                   position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)',
-                  fontSize: 9, letterSpacing: '0.06em', color: 'var(--s-still)',
+                  fontSize: 10, letterSpacing: '0.06em', color: 'var(--s-still)',
                   fontFamily: 'var(--s-mono)', fontWeight: 700,
                 }}>
                   ●
