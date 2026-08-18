@@ -280,6 +280,34 @@ dopo "cambia auditor o preclear", richiamata con un click → dritti alla scherm
 con auditor/modo già impostati, APRI UNA SEDUTA apre la seduta SENZA mostrare di nuovo il
 pannello strumenti. EQUILIBRIUM 2.0.164, SERENITY 3.0.27.
 
+⚠️ **Segnalato di nuovo (18/08/2026, stesso giorno)**: « comment peux-tu mettre la connexion
+METER EN BAS, le MUSE en haut... il faut que SERENITY soit un CHEMIN DE FACILITÉ et de
+COMPRÉHENSION ». Aveva ragione: la prima versione di `PannelloMeter` portava con sé un
+SECONDO bottone « Collega il meter » piantato in fondo alla pagina, mentre MUSE si connette da
+UN punto solo, in intestazione — due strumenti, due abitudini diverse. Riorganizzato:
+
+- **La connessione vive SOLO in intestazione** (l'indicatore già esistente, identico a quello
+  del MUSE). `PannelloMeter` non ha più un bottone di connessione proprio — è montato SOLO a
+  meter già connesso.
+- **La sua configurazione (due lattine/lattina sola, le due prove, la taratura TA) è
+  un'ESPANSIONE ancorata sotto quello stesso indicatore** — una freccia "▾ configurazione"
+  accanto al punto, non un secondo pannello lontano da scoprire. Si chiude da sé se il meter si
+  disconnette.
+
+Insieme, chiesto (« le réglage est incompréhensible, fonctionne seulement les deux boîtes »):
+« lattina sola » non era rotta — mancava il modo di misurare la correzione che richiede
+(`theta.setSoloOffset` esisteva, nessun bottone lo chiamava, a differenza di App.tsx e del suo
+`ThetaReadyCheck.tsx`). Portata la STESSA prova doppia (`provaTa`, `engine/canTest.ts`'s
+`compareReady`/`soloTaOffset`, già condivisi): un avviso quando si sceglie "lattina sola" senza
+scarto misurato, il confronto dei due TA (due lattine · una lattina · differenza) appena
+entrambe le prove sono fatte, e "usa questa differenza" per applicarla — zero calcolo nuovo,
+le stesse funzioni pure di App.tsx.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori, `vitest run` 639/639. A schermo (tab
+pulita): il piè di pagina non porta più alcun controllo del meter — CONTACT/NULL/MIRROR/TONE e
+basta; l'intestazione resta l'unico punto per MUSE e METER, uno accanto all'altro.
+EQUILIBRIUM 2.0.166, SERENITY 3.0.29.
+
 ⚠️ **Revisione funzionale — non solo grafica (17/08/2026, terza segnalazione)**: due
 regressioni VERE, non d'aspetto — una funzione persa nel passaggio a SERENITY, non solo
 ridisegnata:

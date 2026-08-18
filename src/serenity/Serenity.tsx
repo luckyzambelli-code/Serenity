@@ -168,6 +168,15 @@ export default function Serenity() {
   /** CONFIG — segnalato assente: raggiungibile in ogni momento, come in EQUILIBRIUM. */
   const [configAperto, setConfigAperto] = useState(false);
   /**
+   * ── LA CONFIGURAZIONE DEL METER — ANCORATA al suo stesso indicatore, non altrove ──────────
+   * Segnalato: « comment peux-tu mettre la connexion METER EN BAS, le MUSE en haut... il faut
+   * que SERENITY soit un CHEMIN DE FACILITÉ ». La connessione vive SOLO nell'indicatore
+   * d'intestazione (vedi sotto) — questo stato apre/chiude solo la sua ESPANSIONE (due
+   * lattine/lattina sola, le due prove, la taratura TA), ancorata proprio lì, non un secondo
+   * posto in fondo alla pagina da dover imparare a parte.
+   */
+  const [meterSetupAperto, setMeterSetupAperto] = useState(false);
+  /**
    * ── METER / MUSE / NESSUNO STRUMENTO — segnalato: « la logica... non sembra ancora
    * implementata ». Vero: `App.tsx` chiede SEMPRE, al primo APRI UNA SEDUTA senza niente di già
    * collegato, quale configurazione usare — anche "senza strumenti" È una scelta (il gruppo di
@@ -244,6 +253,8 @@ export default function Serenity() {
   });
   useEffect(() => () => { if (spegniRef.current) clearTimeout(spegniRef.current); }, []);
   const meterC = theta.status === 'connected';
+  // Il cassetto del meter non deve restare aperto su un meter che non c'è più.
+  useEffect(() => { if (!meterC) setMeterSetupAperto(false); }, [meterC]);
   const thetaTaRef = useRef<number | null>(null);
   useEffect(() => { thetaTaRef.current = theta.ta; }, [theta.ta]);
 
@@ -566,6 +577,18 @@ export default function Serenity() {
   const nomeProvaLattine = avvio?.solo ? nomeAuditor : nomePreclear;
   const [canHistory, setCanHistory] = useState<PcCanHistory>(() => loadCanTests(''));
   useEffect(() => { setCanHistory(loadCanTests(nomeProvaLattine || '')); }, [nomeProvaLattine]);
+  /**
+   * ── LA PROVA DOPPIA — i due TA letti, uno per configurazione ────────────────────────────
+   * Segnalato: « le réglage est incompréhensible, fonctionne seulement les deux boîtes ». Vero
+   * — non era rotto, era INCOMPLETO: `PannelloMeter` lasciava scegliere « lattina sola » ma non
+   * dava MAI il modo di misurare lo scarto che quella scelta richiede (`theta.setSoloOffset`
+   * esisteva, nessun bottone lo chiamava). Senza lo scarto, in solo il TA resta sistematicamente
+   * spostato — sembra un'altra cosa, non un'altra configurazione. Stessa logica di App.tsx
+   * (`provaTa`): si fa la stretta con due lattine (il riferimento), poi con una sola, e la
+   * differenza fra le due letture è la correzione — non persistita qui (è la differenza, in
+   * `ThetaSetup.offsets`, a persistere), quindi si azzera a ogni apertura di seduta.
+   */
+  const [provaTa, setProvaTa] = useState<{ two: number | null; solo: number | null }>({ two: null, solo: null });
   const ultimaProvaRef = useRef(0);
   useEffect(() => {
     if (theta.squeezeOk !== true || theta.testing) return;
@@ -579,7 +602,14 @@ export default function Serenity() {
       saveCanTests(h);
       return h;
     });
-  }, [theta.squeezeOk, theta.testing, theta.setup.needleScale, theta.setup.config]);
+    // Il TA di QUESTA configurazione, per il confronto — si prende quello del braccio
+    // (`theta.ta`, la media lenta): la stretta appena finita non l'ha spostato, ed è quindi la
+    // lettura di riposo, quella che si vuole confrontare.
+    if (theta.ta !== null) {
+      const valore = theta.ta;
+      setProvaTa(p => theta.setup.config === 'two-cans' ? { ...p, two: valore } : { ...p, solo: valore });
+    }
+  }, [theta.squeezeOk, theta.testing, theta.setup.needleScale, theta.setup.config, theta.ta]);
 
   // ── IL CICLO TONE SCALE — segnalato assente insieme al suo arco (`ToneDial`) ────────────────
   // `trackToneRef` esisteva già (l'ago EEG lo alimenta a ogni campione), il locatore anche
@@ -725,6 +755,7 @@ export default function Serenity() {
     ep.resetEpState();   // niente "EP ✓" residuo da una seduta precedente
     mirror.resetMirror();   // niente ciclo MIRROR residuo da una seduta precedente
     tone.resetTone(); setToneAttivo(false);   // niente TONE residuo da una seduta precedente
+    setProvaTa({ two: null, solo: null });   // niente prova doppia residua da un'altra persona
     // ── MNA — « entra in CAPTURE » all'apertura, come App.tsx ────────────────────────────
     // Non IDLE: l'attrezzo è PRONTO a catturare fin dal primo secondo, non spento. E
     // `onHarmonicCopy` va agganciato QUI (una volta per seduta, come in App.tsx) — è
@@ -1068,6 +1099,20 @@ export default function Serenity() {
               : theta.status === 'connecting' ? 'cercando' : 'in-attesa'
           }
         />
+        {/* ── LA SUA ESPANSIONE — due lattine/lattina sola, le due prove, la taratura TA ──────
+            Segnalato: la stessa connessione non deve avere due abitudini diverse (una in alto,
+            una in fondo alla pagina) da imparare. Qui, SOLO a meter connesso, una freccia
+            accanto al suo stesso indicatore apre `PannelloMeter` come un cassetto ancorato
+            proprio lì (`position:absolute`, sotto l'intestazione) — la stessa idea del cassetto
+            di CONFIG, non un secondo luogo. */}
+        {meterC && (
+          <button onClick={() => setMeterSetupAperto(v => !v)} style={{
+            border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+            fontFamily: 'var(--s-sans)', fontSize: 11.5, color: 'var(--s-ink-faint)',
+          }}>
+            {meterSetupAperto ? '▴' : '▾'} {t('theta_setup')}
+          </button>
+        )}
         {/* Un problema HARDWARE (fascia scollegata a metà lettura, driver che si blocca) si dice
             in ambra — non è un allarme rosso: è un'informazione da controllare, come lo stato
             del MUSE accanto. Sparisce da sé al prossimo dato buono (`useChargeEngine` lo azzera
@@ -1116,6 +1161,17 @@ export default function Serenity() {
           <Settings size={16} strokeWidth={1.6} />
         </button>
       </header>
+
+      {/* ── IL CASSETTO DEL METER — ancorato SOTTO l'intestazione, dove sta il suo indicatore ──
+          Non nel flusso della pagina (galleggia, `position:absolute`, come le camere qui sotto e
+          il pannello MNA più giù): aprirlo non deve spingere in basso tutto il resto — la stessa
+          ragione per cui era sbagliato tenerlo fisso in fondo alla pagina. Si chiude da sé se il
+          meter si disconnette (vedi l'`useEffect` accanto a `meterSetupAperto`). */}
+      {meterSetupAperto && meterC && (
+        <div style={{ position: 'absolute', top: 76, right: 44, zIndex: 30 }}>
+          <PannelloMeter theta={theta} provaTa={provaTa} />
+        </div>
+      )}
 
       {/* ── LE CAMERE, GRANDI, FUORI DALL'INTESTAZIONE ─────────────────────────────────────────
           Segnalato: « troppo piccole, l'auditor deve vedere il PC correttamente » — 44 px
@@ -1694,13 +1750,10 @@ export default function Serenity() {
         <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
           {t('ser_journal')} · {journal.logs.length} {t(journal.logs.length === 1 ? 'ser_line' : 'ser_lines')}
         </span>
-        {/* ── IL METER, CONFIGURAZIONE E PROVE ────────────────────────────────────────────────
-            Segnalato: « non vedo... i test meter e muse, il TA doppia lattina e solo ». Il punto
-            in intestazione dice SE è connesso; qui, a fianco del giornale, la stessa presa che
-            App.tsx offre nel cassetto Theta-Meter — due lattine/lattina sola, prova della
-            stretta, prova del respiro, taratura TA a due punti — senza lasciare la seduta.
-            Vedi `PannelloMeter.tsx`: zero logica propria, solo `useThetaMeter` già esposto. */}
-        <PannelloMeter theta={theta} />
+        {/* ── IL METER — segnalato: « comment peux-tu mettre la connexion METER EN BAS, le MUSE
+            en haut ». La sua connessione e la sua configurazione stanno ORA solo in
+            intestazione (l'indicatore + la freccia accanto, vedi sopra) — niente più un secondo
+            pannello quaggiù da imparare a parte. */}
         {/* MNA — segnalato assente: un ATTREZZO, non un modo. Si apre SENZA lasciare il ciclo
             in corso (`PannelloMna` galleggia sul quadrante, la seduta resta sotto) — stesso
             principio del tasto MNA nella barra dei comandi di App.tsx. */}
