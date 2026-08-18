@@ -319,6 +319,53 @@ EQUILIBRIUM 2.0.162, SERENITY 3.0.25.
 
 ⚠️ Resta assente: TONE SCALE (e il suo `ToneDial`) — stesso pattern, prossimo candidato.
 
+**Tredicesimo passo — TONE SCALE, il terzo e ultimo sottosistema-ciclo assente a diventare
+reale** (`session/useToneCycle`, 326 righe, già estratto e mai montato): il più grande dei tre,
+perché a differenza di CONTACT/NULL/MIRROR TONE dipende da infrastruttura che SERENITY non
+aveva ancora — non solo il motore del ciclo:
+
+- **La prova delle lattine per persona** (`engine/canTest.ts` — `canHistory`/`provaTa`): da lì
+  esce il margine sul tono (« senza prova, una divisione in meno ») e lo scarto del SOLO.
+  Stessa logica di App.tsx, riletta quando cambia il nome (« l'archivio è per persona, non per
+  strumento »). In SOLO il « preclear » di questa prova È l'auditor — stessa regola del sesso.
+- **Il sesso del preclear** (`pcSex`): decide il TA di clear (tono 40 di QUESTA persona — 3.0
+  uomo, 2.0 donna). App.tsx lo tiene in un suo store globale (`useProfileStore`), popolato dal
+  SUO flusso di selezione profilo — SERENITY non ha quello store: qui si legge direttamente dal
+  profilo scelto in `Avvio` (`PcProfile`/`UserProfile.sex`, lo stesso campo che serve già a
+  EQUILIBRIUM per la stessa ragione in modalità SOLO).
+- **La configurazione elettrodi** (`theta.setup.config`/`offsets`): già interamente disponibile
+  — `useThetaMeter` è montato in SERENITY dalla fase 5, semplicemente nessun ciclo ne aveva
+  ancora avuto bisogno.
+
+Diverso dagli altri tre metodi anche nell'interazione: TONE non si "arma" per un item — è un
+METODO in cui si LAVORA per più resistenze di fila (locate → raise → done → locate…), come il
+tab di App.tsx che resta su TONE finché l'auditor non lo cambia. Qui un gesto diretto
+(`toneAttivo`) fa la stessa cosa, esclusivo con CONTACT/NULL/MIRROR come gli altri tre fra
+loro. `ToneDial` prende il posto degli altri archi quando attivo (stessa geometria condivisa).
+Il menù a tendina dei livelli nominati di Ron (Serenity of Beingness, Postulates… fino a Total
+Failure) compare quando non c'è un meter — le STESSE 13 tappe di `TONE_LABELS`, non
+un'invenzione.
+
+⚠️ **Un bug reale trovato dalla verifica interattiva stessa** (non dal tsc, non dai test): il
+bottone "tono quaranta raggiunto" chiamava solo `chiudiTone(true)` — in App.tsx quel gesto fa
+DUE cose insieme (`chiudiTone(true); setTonePhase('done');`), la seconda delle quali avanza la
+fase mostrata a schermo. Senza, il ciclo si registrava correttamente nel giornale ma il piede
+di pagina restava bloccato sulla fase 'raise' — invisibile a tsc/lint/test, visibile solo
+premendo il bottone davvero. Corretto nello stesso giro: prova viva di perché il mandato
+insiste sul test interattivo, non solo sulla compilazione.
+
+Verificato a schermo (tab pulita, un profilo "uomo"): localizzato un tono a −20 col menù dei
+livelli nominati, l'arco mostra "−20 → +40"; "portalo a tono 40" incrementa il contatore
+(«×2»); "tono quaranta raggiunto" porta l'arco a "AS-IS" e il piede a "altra resistenza"; quel
+bottone riparte in locate SENZA uscire da TONE (stesso item svuotato, stessa select tornata a
+0); CANCEL esce del tutto e riporta l'arco a ClearDial coi quattro bottoni. Verificato anche in
+tema scuro. EQUILIBRIUM 2.0.163, SERENITY 3.0.26.
+
+⚠️ **Non ripreso in questo giro, dichiarato non taciuto**: `ToneColumn` — la scala verticale
+coi nomi dei livelli accanto all'ago (« due mestieri: l'arco è la reazione, la colonna è la
+posizione »). Il menù a tendina della fase 'locate' copre la stessa lista di nomi quando non
+c'è meter; la lettura verticale continua durante 'raise' resta assente.
+
 ---
 
 ## Il principio dimensionale — regola per le fasi 6, 7, 8

@@ -44,6 +44,13 @@ import { useSessionJournal } from '../session/useSessionJournal';
 import { useContactNullCycle } from '../session/useContactNullCycle';
 import { useMirrorCycle } from '../session/useMirrorCycle';
 import { MirrorDial } from '../components/MirrorDial';
+import { useToneCycle } from '../session/useToneCycle';
+import { ToneDial } from '../components/ToneDial';
+import { TONE_LABELS, exactLevelName, levelName } from '../engine/toneLevels';
+import {
+  loadHistory as loadCanTests, saveHistory as saveCanTests, addTest as addCanTest,
+  type PcCanHistory,
+} from '../engine/canTest';
 import { sessionRecord, cycleRecord, fnRecord } from '../engine/corpus';
 import { corpusWrite, corpusAvailable } from '../lib/corpusWriter';
 import { getProfiles, getPcProfiles } from '../lib/storage';
@@ -509,12 +516,73 @@ export default function Serenity() {
     (() => { try { return getProfiles(); } catch { return []; } })(), avvio?.auditorId);
   const nomePreclear = nome(
     (() => { try { return getPcProfiles(); } catch { return []; } })(), avvio?.pcId);
+  /** IL SESSO DEL PRECLEAR — decide il TA di clear (tono 40 di QUESTA persona), come in
+   *  App.tsx (`useProfileStore.pcSex`). In SOLO l'auditor È il preclear: il campo vive sul
+   *  suo stesso profilo (`PcProfile`/`UserProfile` condividono `sex?: 'm'|'f'` apposta). */
+  const pcSex: 'm' | 'f' | undefined = avvio?.solo
+    ? (() => { try { return getProfiles().find(p => p.id === avvio.auditorId)?.sex; } catch { return undefined; } })()
+    : (() => { try { return getPcProfiles().find(p => p.id === avvio?.pcId)?.sex; } catch { return undefined; } })();
+
+  /**
+   * ── LA PROVA DELLE LATTINE DI QUESTO PRECLEAR — segnalata assente insieme a TONE SCALE ────
+   * Stessa logica di App.tsx (`canHistory`/`provaTa`): da qui escono il margine sul tono
+   * (« senza prova, una divisione in meno ») e lo scarto del SOLO. Si rilegge quando cambia il
+   * nome — l'archivio è per persona, non per strumento. In SOLO il « preclear » è l'auditor
+   * stesso (stessa regola di `pcSex` sopra).
+   */
+  const nomeProvaLattine = avvio?.solo ? nomeAuditor : nomePreclear;
+  const [canHistory, setCanHistory] = useState<PcCanHistory>(() => loadCanTests(''));
+  useEffect(() => { setCanHistory(loadCanTests(nomeProvaLattine || '')); }, [nomeProvaLattine]);
+  const ultimaProvaRef = useRef(0);
+  useEffect(() => {
+    if (theta.squeezeOk !== true || theta.testing) return;
+    const scala = theta.setup.needleScale;
+    if (!(scala > 0)) return;
+    const ora = Date.now();
+    if (ora - ultimaProvaRef.current < 5000) return;   // la stessa prova, riletta
+    ultimaProvaRef.current = ora;
+    setCanHistory(prev => {
+      const h = addCanTest(prev, { t: ora, scale: scala, config: theta.setup.config });
+      saveCanTests(h);
+      return h;
+    });
+  }, [theta.squeezeOk, theta.testing, theta.setup.needleScale, theta.setup.config]);
+
+  // ── IL CICLO TONE SCALE — segnalato assente insieme al suo arco (`ToneDial`) ────────────────
+  // `trackToneRef` esisteva già (l'ago EEG lo alimenta a ogni campione), il locatore anche
+  // (`ToneLocator`, dentro `useToneCycle`): mancava solo il montaggio. Diverso da CONTACT/NULL/
+  // MIRROR: TONE non si "arma" — è un METODO in cui si lavora finché non lo si lascia
+  // (`toneAttivo`, sotto), con le sue fasi locate→raise→done che si ripetono per ogni
+  // resistenza. `qLnow`/`asIsSignature` sono lo stesso sguardo di App.tsx sulla carica EEG.
+  const qLnow = useMetric(m => m.qL);
+  const asIsSignatureNow = useMetric(m => m.asIsSignature);
+  const toneFnNow = !agoEeg ? !!theta.fn.fn : (needleReactionKey || '').includes('reaction_fn');
+  const tone = useToneCycle({
+    ta: theta.ta, taNow: theta.taNow,
+    config: theta.setup.config, soloOffset: theta.setup.offsets?.['solo-can'] ?? 0,
+    hasTheta: meterC, hasMuse: muse.museConnection === 'connected',
+    pcSex, canHistory, qL: qLnow,
+    fnNow: toneFnNow, asIsSignature: asIsSignatureNow,
+    auditingQuestion: item, setAuditingQuestion: setItem,
+    nowSec: () => sessionClock.now(),
+    logLength: () => journal.logs.length,
+    log: (text, type) => journal.addLog({ speaker: 'SYS', text, time: sessionClock.now(), type }),
+    setItemSpoken: () => {},
+    ensureAssessmentOn: () => {},
+    LC,
+  });
+  trackToneRef.current = tone.trackTone;
+  /** SERENITY non ha un selettore di modo persistente come App.tsx (`mode`): qui il TONE si
+   *  "attiva" con un gesto diretto, esclusivo con CONTACT/NULL/MIRROR — stessa esclusività di
+   *  `viewMode`, un controllo in meno da costruire. */
+  const [toneAttivo, setToneAttivo] = useState(false);
 
   const apri = () => {
     sessionClock.reset(); sessionClock.start();
     journal.resetJournal(t('ser_session_opened'));
     ep.resetEpState();   // niente "EP ✓" residuo da una seduta precedente
     mirror.resetMirror();   // niente ciclo MIRROR residuo da una seduta precedente
+    tone.resetTone(); setToneAttivo(false);   // niente TONE residuo da una seduta precedente
     // ── MNA — « entra in CAPTURE » all'apertura, come App.tsx ────────────────────────────
     // Non IDLE: l'attrezzo è PRONTO a catturare fin dal primo secondo, non spento. E
     // `onHarmonicCopy` va agganciato QUI (una volta per seduta, come in App.tsx) — è
@@ -858,6 +926,16 @@ export default function Serenity() {
               isLightTheme={isLightTheme}
               lang={lang}
             />
+          ) : toneAttivo ? (
+            <ToneDial
+              tone={tone.toneOra ?? 0}
+              hasMeter={tone.toneHasMeter}
+              approx
+              located={tone.toneAtStart}
+              phase={tone.tonePhase}
+              toneAtStart={tone.toneAtStart}
+              isLightTheme={isLightTheme}
+            />
           ) : (
             <ClearDial
               armed={cycles.cycleArmed}
@@ -965,7 +1043,7 @@ export default function Serenity() {
             campo item — sono due strade sullo stesso motore, non due cicli diversi da
             scrivere. Il campo e i bottoni stanno sulla STESSA riga, come in App.tsx dopo il
             segnalato « il campo e il gesto in un posto, il bottone in un altro ». */}
-        {aperta && !cycles.cycleArmed && !mirror.mirrorArmed && (
+        {aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && (
           <>
             <input
               value={item}
@@ -999,6 +1077,94 @@ export default function Serenity() {
               fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
             }}>
               {LC('dai il MIRROR', 'donne le MIRROR', 'give the MIRROR', 'da el MIRROR', 'ge MIRROR')}
+            </button>
+            {/* ── TONE SCALE — il quarto metodo, escluso a vicenda con gli altri tre ──────────
+                Segnalato assente insieme al suo arco. A differenza degli altri tre, TONE non
+                si "arma" per un solo item: si ENTRA nel metodo (`toneAttivo`) e ci si lavora
+                per più resistenze di fila (locate → raise → done → locate…), come in App.tsx
+                dove il tab resta su TONE finché l'auditor non cambia modo. */}
+            <button onClick={() => setToneAttivo(true)} style={{
+              border: 'none', cursor: 'pointer', background: 'none',
+              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+            }}>
+              {LC('lavora in TONE', 'travaille en TONE', 'work in TONE', 'trabaja en TONE', 'arbeta i TONE')}
+            </button>
+          </>
+        )}
+        {/* ── TONE SCALE, ATTIVO — locate → raise → done, si ripete per ogni resistenza ────────
+            (a) LOCALIZZA: da dove si parte (misurato col meter, o dichiarato dall'auditor senza
+            strumenti); (b) RAISE: il comando "portalo a tono 40" ripetuto finché non c'è più
+            reazione, poi dichiarato raggiunto; (c) DONE: si riparte con un'altra resistenza, o
+            si esce del tutto. Stesse chiamate al motore di App.tsx (`localizzaTone`/
+            `chiudiTone`/`resetTone`), stesso testo dei tre tempi. */}
+        {aperta && toneAttivo && (
+          <>
+            <span style={{ fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)' }}>
+              {item || t('ser_item_placeholder')}
+            </span>
+            {tone.tonePhase === 'locate' && (
+              <>
+                {!tone.toneHasMeter && (
+                  <select value={tone.toneAssessed} onChange={e => tone.setToneAssessed(Number(e.target.value))}
+                    style={{
+                      border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
+                      outline: 'none', fontFamily: 'var(--s-mono)', fontSize: 12, color: 'var(--s-ink)',
+                      cursor: 'pointer', padding: '2px 4px',
+                    }}>
+                    {TONE_LABELS.map(v => (
+                      <option key={v} value={v}>
+                        {v > 0 ? `+${v}` : v} · {levelName(exactLevelName(v) ?? '', lang)}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <button onClick={() => tone.localizzaTone()} style={{
+                  border: 'none', cursor: 'pointer', background: 'none',
+                  fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-soft)',
+                }}>
+                  {t('ser_arm_contact') /* stesso gesto/testo di App.tsx: "DAI L'ITEM" */}
+                </button>
+              </>
+            )}
+            {(tone.tonePhase === 'raise' || tone.tonePhase === 'done') && (
+              <span style={{ fontFamily: 'var(--s-mono)', fontSize: 12, color: 'var(--s-ink-faint)' }}>
+                {tone.toneAtStart !== null ? `${tone.toneAtStart > 0 ? '+' : ''}${tone.toneAtStart.toFixed(0)} → ` : ''}
+                <b style={{ color: 'var(--s-reserve)' }}>+40</b>
+              </span>
+            )}
+            {tone.tonePhase === 'raise' && (
+              <>
+                <button onClick={() => tone.setToneRipetizioni(v => v + 1)} style={{
+                  border: 'none', cursor: 'pointer', background: 'none',
+                  fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-soft)',
+                }}>
+                  {LC('portalo a tono 40', 'mène-le au ton 40', 'raise it to tone 40', 'llévalo al tono 40', 'för det till ton 40')}
+                  {tone.toneRipetizioni > 0 ? ` ×${tone.toneRipetizioni}` : ''}
+                </button>
+                <button onClick={() => { tone.chiudiTone(true); tone.setTonePhase('done'); }} style={{
+                  border: 'none', cursor: 'pointer', background: 'none',
+                  fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-still)',
+                }}>
+                  {LC('tono quaranta raggiunto', 'ton quarante atteint', 'tone forty reached', 'tono cuarenta alcanzado', 'ton fyrtio nådd')}
+                </button>
+              </>
+            )}
+            {tone.tonePhase === 'done' && (
+              <button onClick={() => tone.resetTone()} style={{
+                border: 'none', cursor: 'pointer', background: 'none',
+                fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-still)',
+              }}>
+                {LC('altra resistenza', 'autre résistance', 'another resistance', 'otra resistencia', 'annat motstånd')}
+              </button>
+            )}
+            <button onClick={() => {
+              if (tone.tonePhase === 'raise') tone.chiudiTone(false);
+              tone.resetTone(); setToneAttivo(false);
+            }} style={{
+              border: 'none', cursor: 'pointer', background: 'none',
+              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-ghost)',
+            }}>
+              {t('cancel')}
             </button>
           </>
         )}
