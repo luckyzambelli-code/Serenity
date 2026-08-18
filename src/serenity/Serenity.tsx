@@ -67,6 +67,7 @@ import { PannelloConfig } from './PannelloConfig';
 import { PannelloMna } from './PannelloMna';
 import { CameraCerchio } from './CameraCerchio';
 import { IndicatoreConnessione } from './IndicatoreConnessione';
+import { PannelloMeter } from './PannelloMeter';
 import { useSerenityModuleStore } from './serenityModuleStore';
 import { Settings } from 'lucide-react';
 import type { ReadSrc } from '../engine/instantRead';
@@ -758,6 +759,25 @@ export default function Serenity() {
               : muse.museConnection === 'searching' ? 'cercando' : 'in-attesa'
           }
         />
+        {/* ── IL METER, LO STESSO PUNTO-E-PAROLA DEL MUSE ─────────────────────────────────────
+            Segnalato: « non vedo dove posso connettere il METER ». `theta.connect()` esisteva
+            già (fase 5, l'ago si disegna) ma nessun elemento dell'interfaccia lo chiamava mai —
+            qui, esattamente come per MUSE accanto, un click sul punto avvia (o chiude) la
+            connessione WebHID. Il "senza driver" del browser (`theta.unavailable`) resta
+            distinguibile da "non ancora connesso": due stati diversi, non uno solo. */}
+        <IndicatoreConnessione
+          onClick={theta.unavailable ? undefined : (meterC ? theta.disconnect : theta.connect)}
+          etichetta={
+            theta.unavailable ? t('theta_uncalibrated') as string
+              : meterC ? 'METER ✓'
+              : theta.status === 'connecting' ? '…' : t('theta_connect') as string
+          }
+          stato={
+            theta.unavailable ? 'spento'
+              : meterC ? 'connesso'
+              : theta.status === 'connecting' ? 'cercando' : 'in-attesa'
+          }
+        />
         {/* Un problema HARDWARE (fascia scollegata a metà lettura, driver che si blocca) si dice
             in ambra — non è un allarme rosso: è un'informazione da controllare, come lo stato
             del MUSE accanto. Sparisce da sé al prossimo dato buono (`useChargeEngine` lo azzera
@@ -1301,11 +1321,13 @@ export default function Serenity() {
         <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
           {t('ser_journal')} · {journal.logs.length} {t(journal.logs.length === 1 ? 'ser_line' : 'ser_lines')}
         </span>
-        {/* Lo stato del meter si dice a parole e in grigio: è una cosa che si controlla
-            all'inizio, non che si sorveglia in seduta. */}
-        <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
-          {t(meterC ? 'ser_meter_connected' : theta.unavailable ? 'ser_meter_unavailable' : 'ser_meter_disconnected')}
-        </span>
+        {/* ── IL METER, CONFIGURAZIONE E PROVE ────────────────────────────────────────────────
+            Segnalato: « non vedo... i test meter e muse, il TA doppia lattina e solo ». Il punto
+            in intestazione dice SE è connesso; qui, a fianco del giornale, la stessa presa che
+            App.tsx offre nel cassetto Theta-Meter — due lattine/lattina sola, prova della
+            stretta, prova del respiro, taratura TA a due punti — senza lasciare la seduta.
+            Vedi `PannelloMeter.tsx`: zero logica propria, solo `useThetaMeter` già esposto. */}
+        <PannelloMeter theta={theta} />
         {/* MNA — segnalato assente: un ATTREZZO, non un modo. Si apre SENZA lasciare il ciclo
             in corso (`PannelloMna` galleggia sul quadrante, la seduta resta sotto) — stesso
             principio del tasto MNA nella barra dei comandi di App.tsx. */}

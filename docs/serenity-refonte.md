@@ -197,6 +197,31 @@ Verificato a schermo (tab pulita, tema chiaro e scuro): le due camere si leggono
 anche a distanza, le didascalie CAM 1/CAM 2 sempre visibili, CONFIG e gli indicatori di
 connessione leggibili senza sforzo in entrambi i temi. EQUILIBRIUM 2.0.158, SERENITY 3.0.21.
 
+⚠️ **Segnalato di nuovo (18/08/2026)**: « non vedo dove posso connettere il METER, e non vedo
+i test meter e muse, il TA doppia lattina e solo ». Vero — `Serenity.tsx` chiamava già
+`useThetaMeter` (fase 5, l'ago si disegna) ma NESSUN elemento dell'interfaccia chiamava mai
+`theta.connect()`, `theta.startSqueezeTest()`/`startBreathTest()` o
+`theta.addPointFromReference()`: il footer diceva solo, in grigio, se era connesso — un testo,
+non un bottone. `serenity/PannelloMeter.tsx` (scritto in una sessione precedente, mai collegato)
+colma il vuoto con le STESSE funzioni di `useThetaMeter`, zero logica propria:
+
+- **Intestazione** — un `IndicatoreConnessione` in più, accanto a quello del MUSE: click per
+  connettere/disconnettere, `theta.unavailable` (niente WebHID nel browser) distinto da
+  "non ancora connesso", esattamente come già distinto per MUSE.
+- **Piè di pagina** — `PannelloMeter` sostituisce lo span di solo testo: bottone di stato,
+  e a connessione avvenuta un pannello a comparsa con due-lattine/lattina-sola
+  (`theta.setConfig`), la prova della stretta e la prova del respiro (con l'esito ✓/⚠), e la
+  taratura TA a due punti (`theta.addPointFromReference`, contatore punti, fabbrica/propria,
+  `theta.clearTaCalibration`) — le stesse funzioni del cassetto Theta-Meter di EQUILIBRIUM.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori (solo gli avvisi preesistenti),
+`vitest run` 639/639. A schermo (tab pulita, seduta aperta): il punto "Collega il meter"
+compare in intestazione E in piè di pagina, il ciclo CONTACT si arma e mostra il contatore
+"CONTACT 1 · 0 AS-IS" e l'arco colorato che avanza — i cicli, oggetto del secondo segnalato di
+questa stessa giornata, erano già visibili (MIRROR/TONE/terzo esito NULL/contatore/ANNULLA
+tutti presenti, opera di lavoro precedente in questa sessione): mancava solo l'aggancio del
+meter. EQUILIBRIUM 2.0.163, SERENITY 3.0.26.
+
 ⚠️ **Revisione funzionale — non solo grafica (17/08/2026, terza segnalazione)**: due
 regressioni VERE, non d'aspetto — una funzione persa nel passaggio a SERENITY, non solo
 ridisegnata:
