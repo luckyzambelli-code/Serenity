@@ -233,6 +233,35 @@ hanno un equivalente perché i cicli MIRROR/TONE non sono ancora montati in SERE
 noto, non nuovo); la `CycleStatusBar` completa ha anche un chip « sembra NULL »
 (`noReadSignal`) non ancora ripreso, solo il lag e la % dissoluzione.
 
+⚠️ **Continuando la stessa verifica (17/08/2026, quarto giro), tre CONTROLLI mancanti nel
+piede di pagina del ciclo** — non l'arco stavolta, i bottoni stessi:
+
+- **Il terzo esito del NULL, « NON RICARICA ».** App.tsx dice, testuale, che è « il risultato
+  diagnostico più prezioso del ciclo NULL »: senza dichiararlo il ciclo resta indistinguibile
+  da uno abbandonato, e quel ramo del rapporto/CORPUS resta irraggiungibile. SERENITY aveva
+  SOLO i due esiti VGI/senza VGI — un bottone intero perso, non uno stile. Aggiunto
+  `ser_no_recharging` (le 5 lingue, stesso testo di App.tsx) e il bottone, che chiama
+  `cycles.declareNoRecharging()` — GIÀ nella `useContactNullCycle` montata dalla fase 6,
+  semplicemente non richiamata da nessun controllo.
+- **ANNULLA.** In App.tsx chiudere un ciclo armato ha due strade — validare, o ANNULLA
+  (`finalizeCycle(false)`), che lo lascia « non validato » nel rapporto invece di forzare un
+  esito che non è successo. SERENITY non aveva modo di uscire da un ciclo armato per errore
+  senza scegliere comunque un esito.
+- **Il contatore del ciclo in corso.** Un chip di App.tsx dice, per il SOLO metodo in corso
+  (CONTACT con CONTACT, NULL con NULL — due contatori insieme confondono, scelta utente),
+  quanti cicli sono stati armati e quanti portati a compimento in questa seduta.
+  `cycles.cycleStats` arrivava già dalla stessa `useContactNullCycle` — solo non era letto.
+
+Tutti e tre i valori/azioni esistevano già nel motore condiviso (`useContactNullCycle`,
+montato dalla fase 6): mancavano SOLO i controlli che li richiamano — lo stesso pattern
+dell'arco e della CAMM: la logica c'era, l'interfaccia non la esponeva più.
+
+Verificato a schermo (tab pulita): armato un ciclo NULL, il piede di pagina mostra ora
+« NULL 1 · 0 CLEAR » (contatore), CANCEL, EQUILIBRIUM · VGI ✓, EQUILIBRIUM · no VGI, NO
+RECHARGING nello stesso sguardo; premuto NO RECHARGING il ciclo si chiude (torna ai due
+bottoni d'armamento), esattamente come `finalizeCycle(false)` fa in App.tsx. EQUILIBRIUM
+2.0.160, SERENITY 3.0.23.
+
 ---
 
 ## Il principio dimensionale — regola per le fasi 6, 7, 8

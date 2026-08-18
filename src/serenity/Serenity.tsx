@@ -871,6 +871,28 @@ export default function Serenity() {
             <span style={{ fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)' }}>
               {item || t('ser_item_placeholder')}
             </span>
+            {/* ── IL CONTATORE DEL CICLO IN CORSO — mancante ─────────────────────────────
+                In App.tsx un chip dice, per il SOLO metodo in corso (CONTACT con CONTACT,
+                NULL con NULL — « due contatori confondono », scelta utente), quanti cicli
+                sono stati armati e quanti portati a compimento questa seduta. `cycleStats`
+                arriva già dallo stesso `useContactNullCycle` — solo non era letto qui. */}
+            <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11.5, color: 'var(--s-ink-faint)' }}>
+              {cycles.cycleKind === 'null'
+                ? `NULL ${cycles.cycleStats.nStarted} · ${cycles.cycleStats.nDone} CLEAR`
+                : `CONTACT ${cycles.cycleStats.cStarted} · ${cycles.cycleStats.cDone} AS-IS`}
+            </span>
+            {/* ── ANNULLA — l'uscita SENZA validare, mancante ────────────────────────────
+                Segnalato nella revisione funzionale: in App.tsx chiudere un ciclo armato ha
+                DUE strade — validare (uno degli esiti a destra) o ANNULLA, che chiude il
+                ciclo e lo lascia « non validato » nel rapporto (`finalizeCycle(false)`,
+                distinto da ogni esito). SERENITY aveva solo la prima: niente modo di uscire
+                da un ciclo armato per errore senza forzare un esito che non è successo. */}
+            <button onClick={() => cycles.finalizeCycle(false)} style={{
+              border: 'none', cursor: 'pointer', background: 'none',
+              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-ghost)',
+            }}>
+              {t('cancel')}
+            </button>
             {cycles.cycleKind === 'null' ? (
               <>
                 <button onClick={() => cycles.validateClearRead(true)} style={{
@@ -884,6 +906,19 @@ export default function Serenity() {
                   fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
                 }}>
                   {t('ser_validate_equilibrium_novgi')}
+                </button>
+                {/* ── IL TERZO ESITO, MANCANTE ────────────────────────────────────────────
+                    Segnalato nella revisione funzionale: il ciclo NULL in App.tsx ha TRE
+                    esiti pari (VGI · senza VGI · NON RICARICA), non due — « non ricarica » è,
+                    testuale App.tsx, « il risultato diagnostico più prezioso del ciclo NULL »:
+                    senza dichiararlo, il ciclo resta indistinguibile da uno abbandonato, e
+                    quel ramo del rapporto/CORPUS resta irraggiungibile. SERENITY aveva SOLO i
+                    primi due — un bottone intero perso, non solo uno stile. */}
+                <button onClick={() => cycles.declareNoRecharging()} style={{
+                  border: 'none', cursor: 'pointer', background: 'none',
+                  fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-reserve)',
+                }}>
+                  {t('ser_no_recharging')}
                 </button>
               </>
             ) : (

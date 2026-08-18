@@ -10,21 +10,21 @@ Il Muse 2 è in sostituzione (partito ~fine luglio 2026, ~2 settimane).
 ## La matrice EQUILIBRIUM → SERENITY (17/08/2026)
 
 Costruita dopo una revisione completa richiesta esplicitamente ("SERENITY non riproduce
-fedelmente le funzionalità di EQUILIBRIUM"). Onesta: 23 funzioni fatte, 2 parziali, 11 assenti.
+fedelmente le funzionalità di EQUILIBRIUM"). Onesta: 24 funzioni fatte, 2 parziali, 11 assenti.
 Ognuna delle assenti è un sottosistema — non una riga da aggiungere, un pezzo a parte.
-Aggiornata il 17/08/2026 (terzo giro): l'arco dei cicli (`ClearDial`) e il minimizza-camera
-erano regressioni FUNZIONALI vere, non solo grafiche — vedi `docs/serenity-refonte.md`.
+Aggiornata il 17/08/2026 (quarto giro): oltre all'arco e alla CAMM, tre CONTROLLI del ciclo
+mancavano dal piede di pagina (NO RECHARGING, ANNULLA, contatore) — vedi `docs/serenity-refonte.md`.
 
 **Fatte** — tema, 5 lingue, auditor (crea/modifica/elimina), preclear (crea/modifica/elimina),
 SOLO/con preclear, qui/a distanza, prova delle lattine, connessione MUSE + ago EEG, Theta-Meter
-+ suo ago, apri/chiudi seduta, ciclo CONTACT, ciclo NULL (VGI/senza VGI), giornale (scrittura,
-non mostrato — scelta di design), CORPUS, EP — stato, EP — validazione manuale, seduta a
-distanza (link/QR/stato), trascrizione PC remoto, TA e fase in cifre accanto all'ago, camere
-Auditor/PC (CAM 1/CAM 2, con minimizza/riespandi come in EQUILIBRIUM), CONFIG (aspetto, moduli,
-sfondo — raggiungibile dall'avvio e in seduta), indicatori di connessione chiari per dispositivo
-(MUSE, rete PC remoto, MUSE del preclear), l'arco dei cicli (`ClearDial` — CONTACT/DISSOLUTION/
-AS-IS o NULL/RISE/EQUILIBRIUM, coi colori e le suddivisioni), lag di Ron + % dissoluzione in
-cifre.
++ suo ago, apri/chiudi seduta, ciclo CONTACT, ciclo NULL (VGI/senza VGI/NO RECHARGING, ANNULLA,
+contatore cicli), giornale (scrittura, non mostrato — scelta di design), CORPUS, EP — stato, EP
+— validazione manuale, seduta a distanza (link/QR/stato), trascrizione PC remoto, TA e fase in
+cifre accanto all'ago, camere Auditor/PC (CAM 1/CAM 2, con minimizza/riespandi come in
+EQUILIBRIUM), CONFIG (aspetto, moduli, sfondo — raggiungibile dall'avvio e in seduta),
+indicatori di connessione chiari per dispositivo (MUSE, rete PC remoto, MUSE del preclear),
+l'arco dei cicli (`ClearDial` — CONTACT/DISSOLUTION/AS-IS o NULL/RISE/EQUILIBRIUM, coi colori e
+le suddivisioni), lag di Ron + % dissoluzione in cifre.
 
 **Parziali** — Normale/Esperto (raccolto in avvio, nessun pannello esperto ancora: TRIM,
 calibrazione TA, diagnostica); scelta dell'ago principale con due strumenti (automatica in
