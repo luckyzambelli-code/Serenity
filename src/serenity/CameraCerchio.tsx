@@ -27,9 +27,17 @@
  * gira di lato) — un gesto rapido, reversibile, che l'auditor fa IN SEDUTA; `onDisable` la
  * TOGLIE dal layout — quello che qui fa CONFIG → moduli (`moduleVis`). La prima versione di
  * questo file aveva SOLO il secondo: spegnere da CONFIG o niente, il gesto rapido spariva. Qui
- * torna: cliccare il cerchio lo COLLASSA a una taglia minore (video ancora vivo, attenuato),
- * ricliccare lo riporta alla taglia intera — stessa funzione di `isVisible`, stesso stato che
- * NON ferma lo stream (a differenza di CONFIG, che lo chiude per davvero).
+ * torna: cliccare il cerchio lo COLLASSA — ricliccare lo riporta alla taglia intera — stesso
+ * stato di `isVisible`, che NON ferma lo stream (a differenza di CONFIG, che lo chiude davvero).
+ *
+ * ── SEGNALATO DI NUOVO: « quand on cache la camm il faut que apparaisse un cercle vide » ──────
+ * Prima versione: collassata mostrava lo STESSO video, solo più piccolo e attenuato — un
+ * quadratino con dentro ancora un volto in movimento, che a quella taglia si legge più come un
+ * difetto (« perché è diventato minuscolo e sfocato? ») che come un gesto voluto. Un cerchio
+ * VUOTO — affondato, lo stesso linguaggio di `Cerchio.tsx`'s `spenta` già usato altrove per
+ * "previsto ma spento" — dice SUBITO "nascosta apposta", senza lasciar intuire un guasto. Lo
+ * stream resta agganciato e vivo (si rimette a vedersi appena si riclicca): a sparire è solo
+ * il disegno, non il collegamento.
  *
  * @see docs/serenity-refonte.md — fase 6.
  */
@@ -100,7 +108,6 @@ export function CameraCerchio({
   }, [externalStream, offlineLabel]);
 
   const dimEffettiva = collassata ? Math.max(48, Math.round(dimensione * 0.35)) : dimensione;
-  const opacitaEffettiva = (opacita ?? 1) * (collassata ? 0.62 : 1);
 
   return (
     <div style={{ display: 'grid', justifyItems: 'center', gap: 8 }}>
@@ -109,32 +116,47 @@ export function CameraCerchio({
         title={onToggleCollasso ? (collassata ? titolo : titolo) : undefined}
         style={{ cursor: onToggleCollasso ? 'pointer' : 'default', transition: 'width var(--s-slow) var(--s-ease), height var(--s-slow) var(--s-ease)' }}
       >
-        <Cerchio dimensione={dimEffettiva} viva={!errore} opacita={opacitaEffettiva}>
+        {/* `spenta` quando collassata: lo stesso disco affondato, senza rilievo, che altrove in
+            SERENITY dice "previsto ma spento" — qui dice "nascosta apposta", non "guasta". */}
+        <Cerchio dimensione={dimEffettiva} viva={!errore && !collassata} spenta={collassata} opacita={opacita}>
           <div title={titolo} style={{
             width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', position: 'relative',
           }}>
-            {errore ? (
-              <div style={{
-                width: '100%', height: '100%', display: 'grid', placeItems: 'center', textAlign: 'center',
-                fontFamily: 'var(--s-mono)', fontSize: Math.max(9, dimEffettiva * 0.07), color: 'var(--s-ink-soft)', padding: 8,
-              }}>
-                {collassata ? '' : errore}
-              </div>
-            ) : fallbackFrame ? (
-              <img src={fallbackFrame} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <video ref={attach} autoPlay playsInline muted={!externalStream || forceMuted}
-                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            )}
-            {externalStream && !collassata && (
-              <span style={{
-                position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)',
-                fontSize: 9, letterSpacing: '0.06em', color: 'var(--s-still)',
-                fontFamily: 'var(--s-mono)', fontWeight: 700,
-              }}>
-                ●
-              </span>
-            )}
+            {/* ── IL VIDEO RESTA MONTATO, SOLO INVISIBILE ─────────────────────────────────────
+                Segnalato: collassata mostrava lo STESSO video rimpicciolito — un volto ancora in
+                movimento a una taglia che si legge come un difetto, non come un gesto voluto. Qui
+                l'elemento `<video>` non si smonta mai (lo stream resterebbe scollegato e andrebbe
+                riagganciato da capo alla riespansione): sparisce solo alla vista
+                (`opacity`), il disco affondato di `Cerchio` sopra descritto prende il suo posto
+                agli occhi. */}
+            <div style={{
+              width: '100%', height: '100%', opacity: collassata ? 0 : 1,
+              transition: 'opacity var(--s-slow) var(--s-ease)',
+              pointerEvents: collassata ? 'none' : undefined,
+            }}>
+              {errore ? (
+                <div style={{
+                  width: '100%', height: '100%', display: 'grid', placeItems: 'center', textAlign: 'center',
+                  fontFamily: 'var(--s-mono)', fontSize: Math.max(9, dimEffettiva * 0.07), color: 'var(--s-ink-soft)', padding: 8,
+                }}>
+                  {errore}
+                </div>
+              ) : fallbackFrame ? (
+                <img src={fallbackFrame} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <video ref={attach} autoPlay playsInline muted={!externalStream || forceMuted}
+                       style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              )}
+              {externalStream && (
+                <span style={{
+                  position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)',
+                  fontSize: 9, letterSpacing: '0.06em', color: 'var(--s-still)',
+                  fontFamily: 'var(--s-mono)', fontWeight: 700,
+                }}>
+                  ●
+                </span>
+              )}
+            </div>
           </div>
         </Cerchio>
       </div>

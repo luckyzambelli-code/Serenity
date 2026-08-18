@@ -210,6 +210,18 @@ export default function Serenity() {
    *  configurazione registrata — vuoto finché l'auditor non apre quel campo. */
   const [nomeConfigDaSalvare, setNomeConfigDaSalvare] = useState('');
   const [configSalvata, setConfigSalvata] = useState(false);
+  /**
+   * ── SALVA LA CONFIGURAZIONE, ANCHE DA QUI ─────────────────────────────────────────────────
+   * Segnalato: « la configuration de séance... elle est où ? ». Il campo per salvarla c'era
+   * già — ma vive DENTRO il pannello "con che cosa si audita?", che si apre SOLO se nessuno
+   * strumento è ancora connesso (`apri()`, sotto). Chi connette il MUSE o il METER dall'
+   * indicatore d'intestazione PRIMA di aprire la seduta — un gesto naturale, anzi il primo che
+   * l'intestazione stessa invita a fare — quel pannello non lo vede MAI, e con lui nemmeno il
+   * modo di salvare. Questo bottone, sempre accanto al nome dell'auditor, non dipende da
+   * nessun pannello: legge la combinazione COM'È ORA (strumenti già connessi compresi) e la
+   * offre di salvare in ogni momento — non solo nell'unico istante in cui il pannello capita di
+   * essere aperto. */
+  const [salvaConfigAperto, setSalvaConfigAperto] = useState(false);
   /** Il « minimizza » di ciascuna camera — lo stesso `isVisible` di `CameraFeed.tsx`, un gesto
    *  in seduta, DIVERSO dallo spegnimento da CONFIG (`moduleVis`): qui lo stream resta vivo. */
   const [cam1Collassata, setCam1Collassata] = useState(false);
@@ -357,8 +369,44 @@ export default function Serenity() {
   /** L'identificativo della seduta nel CORPUS — l'ora d'apertura, come in App.tsx. Vuoto fuori
    *  seduta: senza seduta non c'è configurazione con cui interpretare una riga. */
   const corpusSessionRef = useRef('');
-  /** Nessun assessment multi-item da voce ancora — sempre spento. */
+  /**
+   * ── ASSESSMENT — segnalato: « l'assessment ne marche pas et n'apparaît pas ». Vero: i tre
+   * motori dei cicli chiamavano già `ensureAssessmentOn()` (dando l'item a voce, come in
+   * App.tsx) ma qui era un no-op — nessuno stato si accendeva, nessuna lista compariva da
+   * nessuna parte.
+   *
+   * ⚠️ QUESTA NON È la sofisticazione intera di `AssessmentPanel.tsx` (App.tsx): quella calcola
+   * una LETTURA ISTANTANEA per ogni item (`computeInstantRead`, la finestra di comm-lag,
+   * l'accorpamento per gruppo ripetuto) — ~300 righe accoppiate a refs locali di App.tsx, non
+   * un modulo condiviso portabile qui in un passo solo. Questa è la METÀ onesta: la lista degli
+   * item dati a voce durante l'assessment, con l'ora — SENZA una lettura calcolata accanto a
+   * ciascuno (sarebbe un numero inventato). La lettura per-item resta un passo successivo,
+   * dichiarato, non taciuto.
+   */
+  const [assessAttivo, setAssessAttivo] = useState(false);
   const assessActiveRef = useRef(false);
+  useEffect(() => { assessActiveRef.current = assessAttivo; }, [assessAttivo]);
+  const attivaAssessment = () => setAssessAttivo(true);
+  const [assessItems, setAssessItems] = useState<Array<{ id: string; time: number; item: string }>>([]);
+  const assessIdRef = useRef(0);
+  const assessLogCursorRef = useRef(0);
+  /** Stesso filtro (`isAssessableItem`) e stesso principio cursore-su-`journal.logs` dei tre
+   *  effetti "item dettato" qui sotto: si guarda solo quel che arriva DOPO che l'assessment si è
+   *  acceso, non l'intero giornale da capo. */
+  useEffect(() => {
+    if (!assessAttivo) return;
+    const cursore = assessLogCursorRef.current;
+    if (journal.logs.length <= cursore) return;
+    const nuovi: Array<{ id: string; time: number; item: string }> = [];
+    for (let i = cursore; i < journal.logs.length; i++) {
+      const riga = journal.logs[i];
+      if (riga.speaker === 'Aud' && isAssessableItem(riga.text)) {
+        nuovi.push({ id: `as-${++assessIdRef.current}`, time: riga.time, item: riga.text.trim() });
+      }
+    }
+    if (nuovi.length) setAssessItems(prev => [...prev, ...nuovi]);
+    assessLogCursorRef.current = journal.logs.length;
+  }, [journal.logs, assessAttivo]);
 
   const release = useStableReleaseState({ needleReactionKeyRef });
 
@@ -497,7 +545,7 @@ export default function Serenity() {
     LC,
     thetaTa: () => thetaTaRef.current,
     freeNeedleForNewItem,
-    ensureAssessmentOn: () => {},
+    ensureAssessmentOn: attivaAssessment,
     onItemGiven: sec => { ultimoItemSecRef.current = sec; },
     writeCycleCorpus: row => {
       if (!corpusSessionRef.current) return;   // fuori seduta non si archivia
@@ -536,7 +584,7 @@ export default function Serenity() {
     nowSec: () => sessionClock.now(),
     logLength: () => journal.logs.length,
     log: (text, type) => journal.addLog({ speaker: 'SYS', text, time: sessionClock.now(), type }),
-    ensureAssessmentOn: () => {},
+    ensureAssessmentOn: attivaAssessment,
     LC,
   });
   trackMirrorRef.current = mirror.trackMirror;
@@ -675,7 +723,7 @@ export default function Serenity() {
     logLength: () => journal.logs.length,
     log: (text, type) => journal.addLog({ speaker: 'SYS', text, time: sessionClock.now(), type }),
     setItemSpoken,
-    ensureAssessmentOn: () => {},
+    ensureAssessmentOn: attivaAssessment,
     LC,
   });
   trackToneRef.current = tone.trackTone;
@@ -801,6 +849,7 @@ export default function Serenity() {
     mirror.resetMirror();   // niente ciclo MIRROR residuo da una seduta precedente
     tone.resetTone(); setToneAttivo(false);   // niente TONE residuo da una seduta precedente
     setProvaTa({ two: null, solo: null });   // niente prova doppia residua da un'altra persona
+    setAssessAttivo(false); setAssessItems([]); assessLogCursorRef.current = 0;   // idem, ASSESSMENT
     // ── MNA — « entra in CAPTURE » all'apertura, come App.tsx ────────────────────────────
     // Non IDLE: l'attrezzo è PRONTO a catturare fin dal primo secondo, non spento. E
     // `onHarmonicCopy` va agganciato QUI (una volta per seduta, come in App.tsx) — è
@@ -1093,18 +1142,93 @@ export default function Serenity() {
             `Impostazioni.tsx`: qui restano visibili per tutta la seduta, non solo prima. */}
         <SelettoreTema />
         <SelettoreLingua />
+        {/* ── DA QUI IN POI, ZONE SEPARATE E NOMINATE ─────────────────────────────────────────
+            Segnalato: « en haut tu dois expliciter les écrits pour comprendre de quoi il
+            s'agit, pas seulement les séparer. Il faut qu'on comprenne que ce sont des choses
+            différentes ». Vero: tema/lingua, chi audita, gli strumenti, la rete a distanza e
+            CONFIG stavano tutti sulla stessa riga, nello stesso grigio, senza una sola linea a
+            dire dove finisce l'uno e comincia l'altro. Un separatore verticale sottile fra
+            ogni zona (`divisore`, sotto) — MAI un'etichetta su ognuna, quello tornerebbe a
+            gridare — e le sole DUE zone davvero ambigue (STRUMENTI/A DISTANZA, più avanti:
+            stessa parola "MUSE" poteva dire due dispositivi diversi) hanno anche il nome. */}
+        <span style={{ width: 1, height: 16, background: 'var(--s-ink-ghost)', flexShrink: 0 }} />
         {/* Chi audita, chi si audita, e dove — detto in una riga sola e in grigio: sono cose
             che si controllano una volta all'inizio, non che si guardano in seduta. */}
         <span style={{ fontSize: 12.5, color: 'var(--s-ink-soft)' }}>
           {nomeAuditor}{avvio.solo ? ` · ${t('ser_alone_tag')}` : ` · ${nomePreclear}`}
           {avvio.distanza ? ` · ${t('ser_remote_tag')}` : ''}{avvio.esperto ? ` · ${t('ser_expert_tag')}` : ''}
         </span>
+        {/* ── SALVA QUESTA CONFIGURAZIONE — vedi la nota su `salvaConfigAperto`. Sempre
+            raggiungibile da qui, qualunque sia lo stato degli strumenti in questo momento. */}
+        {!aperta && (
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => { setSalvaConfigAperto(v => !v); setConfigSalvata(false); }} style={{
+              border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+              fontFamily: 'var(--s-sans)', fontSize: 11.5, color: 'var(--s-ink-faint)',
+            }}>
+              {LC('salva questa configurazione', 'sauvegarder cette configuration',
+                'save this configuration', 'guardar esta configuración', 'spara denna konfiguration')}
+            </button>
+            {salvaConfigAperto && (
+              <div style={{
+                position: 'absolute', top: '100%', right: 0, marginTop: 8, zIndex: 40,
+                display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 14px',
+                borderRadius: 12, background: 'var(--s-disc)', boxShadow: 'var(--s-shadow-lift)',
+                minWidth: 260,
+              }}>
+                <span style={{ fontSize: 11, lineHeight: 1.5, color: 'var(--s-ink-faint)' }}>
+                  {LC('auditor, preclear, locale/distanza, e gli strumenti connessi in questo momento — tutto insieme.',
+                    'auditeur, préclair, local/distance, et les instruments connectés en ce moment — le tout ensemble.',
+                    'auditor, preclear, local/distance, and the instruments connected right now — all together.',
+                    'auditor, preclear, local/distancia, y los instrumentos conectados ahora mismo — todo junto.',
+                    'auditor, preclear, lokal/distans, och instrumenten som är anslutna just nu — allt tillsammans.')}
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    value={nomeConfigDaSalvare}
+                    onChange={e => { setNomeConfigDaSalvare(e.target.value); setConfigSalvata(false); }}
+                    placeholder={LC('nome di questa configurazione…', 'nom de cette configuration…',
+                      'name for this configuration…', 'nombre de esta configuración…', 'namn för denna konfiguration…') as string}
+                    style={{
+                      flex: 1, border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
+                      outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 12, color: 'var(--s-ink)',
+                      padding: '2px 4px',
+                    }}
+                  />
+                  <button
+                    disabled={!nomeConfigDaSalvare.trim()}
+                    onClick={() => {
+                      salvaConfigurazione(nomeConfigDaSalvare, avvio,
+                        { muse: museOk, theta: meterC, none: senzaStrumenti || (!museOk && !meterC) });
+                      setConfigSalvata(true);
+                    }}
+                    style={{
+                      border: 'none', background: 'none', cursor: nomeConfigDaSalvare.trim() ? 'pointer' : 'default',
+                      opacity: nomeConfigDaSalvare.trim() ? 1 : 0.4,
+                      fontFamily: 'var(--s-sans)', fontSize: 11.5, color: 'var(--s-ink-soft)', whiteSpace: 'nowrap',
+                    }}>
+                    {configSalvata
+                      ? LC('salvata ✓', 'enregistrée ✓', 'saved ✓', 'guardada ✓', 'sparad ✓')
+                      : LC('salva', 'enregistrer', 'save', 'guardar', 'spara')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        <span style={{ width: 1, height: 16, background: 'var(--s-ink-ghost)', flexShrink: 0 }} />
         {/* ── LE CONNESSIONI, UN PUNTO E UNA PAROLA PER DISPOSITIVO ──────────────────────────
             Segnalato: deve capirsi SUBITO quale dispositivo è collegato, quale non lo è, se
             regge, quale aspetta, se c'è un problema, quando sta cercando — senza diventare un
             pannello diagnostico. `IndicatoreConnessione` fa questo, e SOLO questo, per ognuno
             dei dispositivi reali di questa seduta. Vedi la nota in testa a quel file per la
-            scelta dei tre colori. */}
+            scelta dei tre colori.
+            L'etichetta "STRUMENTI" qui davanti: la sola zona dove due parole simili (MUSE
+            locale qui, MUSE del preclear più avanti se a distanza) potevano confondersi. */}
+        <span style={{ fontFamily: 'var(--s-sans)', fontSize: 9.5, letterSpacing: '0.12em',
+                      textTransform: 'uppercase', color: 'var(--s-ink-ghost)' }}>
+          {LC('strumenti', 'instruments', 'instruments', 'instrumentos', 'instrument')}
+        </span>
         <IndicatoreConnessione
           onClick={muse.handleConnectMuse}
           etichetta={
@@ -1171,9 +1295,19 @@ export default function Serenity() {
           <span style={{ fontSize: 12, color: 'var(--s-reserve)' }}>{hardwareError}</span>
         )}
         {/* La RETE verso il PC a distanza, e il SUO Muse — due dispositivi, due indicatori. Prima
-            erano un'unica riga: « quale dei due non risponde? » si doveva dedurre dal testo. */}
+            erano un'unica riga: « quale dei due non risponde? » si doveva dedurre dal testo.
+            ⚠️ Segnalato: « bisogna capire che sono cose diverse ». Il divisore + l'etichetta
+            "A DISTANZA" dicono che questa zona parla del PRECLEAR, non dell'auditor — e "MUSE"
+            qui diventa "MUSE (preclear)": la stessa parola di STRUMENTI qui sopra, senza dire
+            DI CHI, avrebbe potuto leggersi come una ripetizione invece che come un dispositivo
+            diverso, su una persona diversa, in un luogo diverso. */}
         {avvio.distanza && (
           <>
+            <span style={{ width: 1, height: 16, background: 'var(--s-ink-ghost)', flexShrink: 0 }} />
+            <span style={{ fontFamily: 'var(--s-sans)', fontSize: 9.5, letterSpacing: '0.12em',
+                          textTransform: 'uppercase', color: 'var(--s-ink-ghost)' }}>
+              {LC('a distanza', 'à distance', 'remote', 'a distancia', 'på distans')}
+            </span>
             <IndicatoreConnessione
               etichetta={t('drawer_pc') as string}
               stato={
@@ -1188,7 +1322,7 @@ export default function Serenity() {
               }
             />
             <IndicatoreConnessione
-              etichetta="MUSE"
+              etichetta={LC('MUSE (preclear)', 'MUSE (préclair)', 'MUSE (preclear)', 'MUSE (preclear)', 'MUSE (preclear)') as string}
               stato={
                 !remote.isConnected ? 'in-attesa'
                   : remote.remoteMuseConnected ? 'connesso' : 'errore'
@@ -1203,6 +1337,7 @@ export default function Serenity() {
             />
           </>
         )}
+        <span style={{ width: 1, height: 16, background: 'var(--s-ink-ghost)', flexShrink: 0 }} />
         {/* CONFIG — raggiungibile in ogni momento, come il cassetto di EQUILIBRIUM. */}
         <button onClick={() => setConfigAperto(true)} title={t('config') as string} style={{
           border: 'none', background: 'none', cursor: 'pointer', padding: 0,
@@ -1230,7 +1365,11 @@ export default function Serenity() {
           strumento al centro NON perde un pixel della sua taglia per fare posto alle camere —
           la stessa regola per cui il quadrante è `w-full h-full` e non un cerchio fra i moduli.
           CAM 2 (PC), la priorità: molto più grande. CAM 1 (auditor), un controllo secondario:
-          più piccola. `moduleVis`/CONFIG decide se sono accese; `opacita` legge la trasparenza. */}
+          più piccola. `moduleVis`/CONFIG decide se sono accese; `opacita` legge la trasparenza.
+          ⚠️ Segnalato DI NUOVO (stessa giornata): 190 px restavano piccoli — « l'auditeur doit
+          voir le PC correctement » non era ancora vero. Portata a 260 (CAM 1 a 130, la stessa
+          proporzione fra le due): la priorità dichiarata nel testo qui sopra ora si vede anche
+          nei numeri. */}
       {aperta && (moduleVis.cam1 || (moduleVis.cam2 && (avvio.distanza || avvio.solo))) && (
         <div style={{
           position: 'absolute', top: 76, right: 44, zIndex: 5,
@@ -1238,7 +1377,7 @@ export default function Serenity() {
         }}>
           {moduleVis.cam1 && (
             <CameraCerchio
-              dimensione={100}
+              dimensione={130}
               titolo={t('cam1') as string}
               offlineLabel={t('camera_offline') as string}
               opacita={uiAlpha}
@@ -1248,7 +1387,7 @@ export default function Serenity() {
           )}
           {moduleVis.cam2 && (avvio.distanza || avvio.solo) && (
             <CameraCerchio
-              dimensione={190}
+              dimensione={260}
               titolo={t('cam2') as string}
               externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
               offlineLabel={t('camera_offline') as string}
@@ -1840,6 +1979,52 @@ export default function Serenity() {
             en haut ». La sua connessione e la sua configurazione stanno ORA solo in
             intestazione (l'indicatore + la freccia accanto, vedi sopra) — niente più un secondo
             pannello quaggiù da imparare a parte. */}
+        {/* ── ASSESSMENT — segnalato: « ne marche pas et n'apparaît pas ». Un bottone acceso
+            (come MNA/EP accanto) che avvia/ferma la cattura; gli item dati a voce (o dai
+            cicli, che lo accendono da sé — `attivaAssessment`) compaiono nel cassetto qui
+            sotto, ancorato al bottone come quello del meter in intestazione — non un pannello
+            lontano da scoprire. */}
+        {aperta && (
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setAssessAttivo(v => !v)}
+              style={{
+                border: 'none', cursor: 'pointer', background: 'none',
+                fontFamily: 'var(--s-sans)', fontSize: 12.5,
+                color: assessAttivo ? 'var(--s-still)' : 'var(--s-ink-faint)',
+              }}>
+              {LC('assessment', 'assessment', 'assessment', 'assessment', 'assessment')}
+              {assessItems.length > 0 ? ` · ${assessItems.length}` : ''}
+            </button>
+            {assessAttivo && (
+              <div style={{
+                position: 'absolute', bottom: '100%', left: 0, marginBottom: 8, zIndex: 40,
+                display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 14px',
+                borderRadius: 12, background: 'var(--s-disc)', boxShadow: 'var(--s-shadow-lift)',
+                minWidth: 220, maxWidth: 320, maxHeight: 220, overflowY: 'auto',
+              }}>
+                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 10.5, letterSpacing: '0.1em',
+                              textTransform: 'uppercase', color: 'var(--s-ink-soft)' }}>
+                  {LC('item dati a voce', 'items donnés à voix', 'items given aloud', 'ítems dados en voz', 'items givna högt')}
+                </span>
+                {assessItems.length === 0 ? (
+                  <span className="ser-pulse" style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
+                    {LC('in ascolto…', 'à l\'écoute…', 'listening…', 'escuchando…', 'lyssnar…')}
+                  </span>
+                ) : assessItems.slice().reverse().map(it => (
+                  <div key={it.id} style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
+                    <span style={{ fontFamily: 'var(--s-mono)', fontSize: 10.5, color: 'var(--s-ink-faint)', flexShrink: 0 }}>
+                      {orologio(it.time)}
+                    </span>
+                    <span style={{ fontFamily: 'var(--s-serif)', fontSize: 13, color: 'var(--s-ink)' }}>
+                      {it.item}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {/* MNA — segnalato assente: un ATTREZZO, non un modo. Si apre SENZA lasciare il ciclo
             in corso (`PannelloMna` galleggia sul quadrante, la seduta resta sotto) — stesso
             principio del tasto MNA nella barra dei comandi di App.tsx. */}

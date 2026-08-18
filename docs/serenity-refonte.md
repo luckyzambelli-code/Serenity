@@ -393,6 +393,49 @@ pulita, FR) il flusso "Séance sans instruments" completo — dalla scelta all'a
 seduta, cicli visibili, nessun errore in console oltre a quelli pre-esistenti e noti (P2P/
 Whisper, non legati a questa modifica). EQUILIBRIUM 2.0.168, SERENITY 3.0.31.
 
+⚠️ **Segnalato di nuovo (18/08/2026, terzo giro della stessa giornata)**: sei punti.
+
+1. **« quand on cache la cam il faut que apparaisse un cercle vide »** — `collassata` mostrava
+   lo STESSO video rimpicciolito e attenuato: a quella taglia un volto ancora in movimento si
+   legge come un difetto, non come un gesto voluto. Ora il video resta montato (lo stream non
+   si stacca) ma invisibile, e sopra compare un disco VUOTO e affondato — `Cerchio`'s `spenta`,
+   lo stesso linguaggio già usato altrove per "previsto ma spento".
+2. **« la cam du PC doit être bien plus grande »** — 190 px restavano piccoli. Portata a 260
+   (CAM 1 a 130, stessa proporzione).
+3. **« séparer et rendre explicites les questions des cicles »** — verificato di nuovo a
+   schermo: i quattro cicli sono già pillole nominate (CONTACT/NULL/MIRROR/TONE) e, armato un
+   ciclo, un badge pieno dello stesso colore dice quale — presente da `e623018`. Nessun nuovo
+   difetto trovato in questa zona (probabile DMG non aggiornato).
+4. **« l'assessement ne marche pas et n'apparaît pas »** — vero, mancava per davvero: i tre
+   motori dei cicli chiamavano già `ensureAssessmentOn()` ma qui era un no-op. Aggiunta una
+   versione MINIMA e onesta (non la sofisticazione intera di `AssessmentPanel.tsx`/App.tsx, che
+   calcola una lettura istantanea per item — ~300 righe accoppiate a refs locali, non un modulo
+   portabile in un passo solo): un bottone "ASSESSMENT" in piè di pagina, e gli item dati a
+   voce (stesso filtro `isAssessableItem`, stesso principio cursore-su-log dei tre effetti
+   "item dettato") compaiono in un cassetto ancorato lì, con l'ora — senza una lettura calcolata
+   accanto a ciascuno, dichiarato non taciuto.
+5. **« le point de sauvegarde de la configuration... il est où ? »** — il campo esisteva già,
+   ma SOLO dentro il pannello "con che cosa si audita?", che si apre SOLO se nessuno strumento è
+   ancora connesso. Chi connette MUSE/METER dall'indicatore d'intestazione PRIMA di aprire la
+   seduta — il gesto più naturale, quello che l'intestazione stessa invita a fare — quel
+   pannello non lo vede mai. Aggiunto un bottone "salva questa configurazione" SEMPRE
+   raggiungibile accanto al nome dell'auditor, che legge la combinazione COM'È ORA (strumenti
+   già connessi compresi).
+6. **« en haut... il faut expliciter, pas seulement séparer »** — l'intestazione aveva tema/
+   lingua, chi audita, gli strumenti, la rete a distanza e CONFIG tutti sulla stessa riga, nello
+   stesso grigio. Un separatore verticale sottile fra ogni zona, e le due sole zone davvero
+   ambigue (STRUMENTI, A DISTANZA) hanno anche il nome — mai un'etichetta su OGNI zona, quello
+   tornerebbe a gridare. Corretta anche un'ambiguità vera trovata cercando: l'indicatore MUSE
+   del preclear a distanza si chiamava "MUSE", la stessa parola dell'indicatore MUSE
+   dell'auditor poco prima — ora "MUSE (preclear)".
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori (320, nessuno nuovo), `vitest run`
+639/639. A schermo (tab pulita): CAM 2 visibilmente più grande, CAM 1 collassata → disco vuoto
+scuro, il pannello ASSESSMENT si apre e ascolta, il popover "salva questa configurazione" in
+intestazione funziona senza aprire prima il pannello strumenti, l'intestazione mostra
+"STRUMENTI" e "A DISTANZA" come zone separate. Nessun errore in console oltre a quelli
+pre-esistenti (P2P/Whisper). EQUILIBRIUM 2.0.169, SERENITY 3.0.32.
+
 ⚠️ **Revisione funzionale — non solo grafica (17/08/2026, terza segnalazione)**: due
 regressioni VERE, non d'aspetto — una funzione persa nel passaggio a SERENITY, non solo
 ridisegnata:
