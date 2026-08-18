@@ -222,6 +222,64 @@ questa stessa giornata, erano già visibili (MIRROR/TONE/terzo esito NULL/contat
 tutti presenti, opera di lavoro precedente in questa sessione): mancava solo l'aggancio del
 meter. EQUILIBRIUM 2.0.163, SERENITY 3.0.26.
 
+⚠️ **Segnalato ancora (18/08/2026, subito dopo)**: cinque punti distinti, tutti veri.
+
+1. **« la connessione METER non la vedo, vedo invece connessione MUSE »** — bug vero, non
+   percezione: l'etichetta del punto in caso `theta.unavailable` usava `theta_uncalibrated`
+   ("non tarato") invece di `ser_meter_unavailable` ("meter non disponibile qui") — una parola
+   che non nomina nemmeno il meter. Corretto in due punti (l'indicatore d'intestazione e
+   `PannelloMeter.tsx`).
+2. **« la logica METER/MUSE/NESSUN STRUMENTO non è implementata »** — vero: App.tsx chiede
+   SEMPRE, al primo avvio senza nulla di già collegato, quale configurazione usare ("senza
+   strumenti" è il gruppo di controllo, una scelta, non un difetto). SERENITY apriva la seduta
+   comunque. Aggiunto un pannello identico nella funzione (`connSel` — MUSE e METER selezionabili
+   insieme, "nessuno" esclusivo con loro, come `scegliConn` di App.tsx), grafica di SERENITY,
+   davanti ad ogni apertura di seduta finché non c'è né uno strumento connesso né la scelta
+   "senza strumenti" già fatta.
+3. **« il CICLO CONTACT non è specificato in basso »** e **4. « visibilità dei CICLI non
+   ottimale... bottoni più visibili, uno accanto all'altro come in EQUILIBRIUM »** — le quattro
+   strade (CONTACT/NULL/MIRROR/TONE) erano link fantasma senza bordo, indistinguibili a colpo
+   d'occhio. Ora quattro pillole bordate, ciascuna col nome per intero e uno dei tre colori di
+   `tokens.css` (TONE resta neutro — mai un quarto colore nuovo). A ciclo armato un badge PIENO
+   dello stesso colore («CONTACT»/«NULL»/«MIRROR»/«TONE») sta prima dell'item, non dopo un
+   contatore in grigio che bisognava leggere per capire quale dei quattro stesse girando.
+4. **« dare l'ITEM a voce... non è implementata »** — I tre motori dei cicli (`useContactNullCycle`/
+   `useMirrorCycle`/`useToneCycle`, portati da App.tsx in una sessione precedente) sapevano già
+   riempire l'item da soli (`cycleAwaitItemRef`/`itemDettato` e le sue due sorelle) — mancava la
+   SORGENTE. `hooks/useVoiceItem.ts` (nuovo) avvia lo stesso riconoscitore di App.tsx (nativo
+   macOS, poi Whisper offline), e ogni frase finale entra nel giornale come farebbe l'auditor
+   scrivendola — tre `useEffect` (uno per motore) la smistano verso l'item in attesa, filtrata da
+   `engine/assessItemFilter.ts` (isAssessableItem, già condiviso, non duplicato). Aggiunto anche
+   il pulsante di ripiego « l'item è stato detto » (`dichiaraItemDetto`, come App.tsx) per quando
+   la trascrizione non c'è, e l'indicatore pulsante « dì l'item… » (`.ser-pulse`, nuovo in
+   `tokens.css` — il "respiro" esistente è troppo lento per un'attesa attiva) durante le fasi
+   `*.say_item` di `engine/sessionPhase.ts` (`deriveCyclePhase`, mai importato in SERENITY prima
+   d'ora — stessa derivazione pura di App.tsx, zero soglie riscritte).
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori, `vitest run` 639/639. A schermo (tab
+pulita): il pannello "con che cosa si audita?" compare al primo APRI UNA SEDUTA con MUSE/LATTINE/
+"seduta senza strumenti" selezionabili; le quattro pillole CONTACT/NULL/MIRROR/TONE si vedono
+distintamente nel piè di pagina; armato CONTACT compare il badge verde pieno "CONTACT" e, prima
+che l'item sia dato, "dì l'item…" pulsante con il bottone di ripiego — cliccato, spegne
+l'avviso e lascia il ciclo proseguire. EQUILIBRIUM 2.0.164, SERENITY 3.0.27.
+
+⚠️ **Chiesto nello stesso momento**: « un sistema di configurazioni registrate che memorizzi
+le scelte iniziali... alla sessione successiva l'Auditor deve poter richiamare una
+configurazione salvata... evitando di ripetere ogni passaggio iniziale ». Nuovo
+`serenity/configurazioniStore.ts` (localStorage, come `serenityModuleStore.ts` — preferenze di
+macchina, non dati di seduta): ogni configurazione è un'istantanea delle quattro domande
+dell'avvio (`flussoAvvio.ts`'s `Avvio`) PIÙ la scelta strumenti (`connSel`), perché sono
+entrambe "le scelte iniziali" e la seconda si fa DOPO la prima, non dentro. Si salva dal
+pannello strumenti (l'unico punto in cui le cinque scelte sono tutte disponibili insieme, con
+un campo nome + "salva"), si richiama dalla primissima schermata dell'avvio (una striscia
+"CONFIGURAZIONI SALVATE" sopra la domanda, solo se ne esiste almeno una) — un click salta le
+quattro domande E avvia in sottofondo la connessione degli strumenti salvati, così quando
+l'auditor preme APRI UNA SEDUTA il gate strumenti trova già la risposta e non si ripresenta.
+Verificato a schermo: salvata "Solo rapido" dal pannello strumenti, ricomparsa nella striscia
+dopo "cambia auditor o preclear", richiamata con un click → dritti alla schermata principale
+con auditor/modo già impostati, APRI UNA SEDUTA apre la seduta SENZA mostrare di nuovo il
+pannello strumenti. EQUILIBRIUM 2.0.164, SERENITY 3.0.27.
+
 ⚠️ **Revisione funzionale — non solo grafica (17/08/2026, terza segnalazione)**: due
 regressioni VERE, non d'aspetto — una funzione persa nel passaggio a SERENITY, non solo
 ridisegnata:

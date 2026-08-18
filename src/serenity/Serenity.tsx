@@ -23,7 +23,7 @@
  * @see docs/serenity-refonte.md
  */
 
-import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useMetric } from '../store/metricsStore';
 import { chargeStateById } from '../lib/chargeState';
 import { useTZone } from '../store/tzoneStore';
@@ -76,6 +76,11 @@ import type { MnaSession } from '../hooks/useMnaModule';
 import { primeFreqTracker } from '../engine/PrimeFreqTracker';
 import { primeFreqAudio } from '../lib/primeFreqAudio';
 import { networkManager } from '../lib/networkManager';
+import { useVoiceItem } from '../hooks/useVoiceItem';
+import { isAssessableItem } from '../engine/assessItemFilter';
+import { deriveCyclePhase } from '../engine/sessionPhase';
+import type { SessionMode } from '../engine/sessionMode';
+import { salvaConfigurazione, type ConfigurazioneSalvata } from './configurazioniStore';
 
 /** mm:ss — l'unico formato di tempo che serve in seduta. */
 const orologio = (s: number) => {
@@ -162,6 +167,26 @@ export default function Serenity() {
   const [collegato, setCollegato] = useState(false);
   /** CONFIG — segnalato assente: raggiungibile in ogni momento, come in EQUILIBRIUM. */
   const [configAperto, setConfigAperto] = useState(false);
+  /**
+   * ── METER / MUSE / NESSUNO STRUMENTO — segnalato: « la logica... non sembra ancora
+   * implementata ». Vero: `App.tsx` chiede SEMPRE, al primo APRI UNA SEDUTA senza niente di già
+   * collegato, quale configurazione usare — anche "senza strumenti" È una scelta (il gruppo di
+   * controllo), non un difetto da correggere in silenzio. SERENITY apriva la seduta comunque,
+   * senza mai fare la domanda: si scopriva "senza ago" solo guardando il quadrante restare
+   * fermo. `connSel` è lo STESSO selettore di App.tsx (`{muse, theta, none}`, "nessuno"
+   * ESCLUSIVO con gli altri due) — vedi `apri()`/`avviaSeduta()` sotto per il gancio.
+   */
+  const [scegliStrumento, setScegliStrumento] = useState(false);
+  const [connSel, setConnSel] = useState({ muse: false, theta: false, none: false });
+  const scegliConn = (k: 'muse' | 'theta' | 'none') => setConnSel(p =>
+    k === 'none' ? { muse: false, theta: false, none: !p.none } : { ...p, none: false, [k]: !p[k] });
+  /** « Senza strumenti » — il gruppo di controllo. STICKY per la seduta (come `senzaStrumenti`
+   *  in App.tsx): scelto una volta, non lo si richiede più finché la seduta resta aperta. */
+  const [senzaStrumenti, setSenzaStrumenti] = useState(false);
+  /** Il nome con cui salvare QUESTA combinazione (auditor/PC/dove/esperto + strumenti) come
+   *  configurazione registrata — vuoto finché l'auditor non apre quel campo. */
+  const [nomeConfigDaSalvare, setNomeConfigDaSalvare] = useState('');
+  const [configSalvata, setConfigSalvata] = useState(false);
   /** Il « minimizza » di ciascuna camera — lo stesso `isVisible` di `CameraFeed.tsx`, un gesto
    *  in seduta, DIVERSO dallo spegnimento da CONFIG (`moduleVis`): qui lo stream resta vivo. */
   const [cam1Collassata, setCam1Collassata] = useState(false);
@@ -411,6 +436,13 @@ export default function Serenity() {
    * rappresentare i cicli coi loro colori, non solo i bottoni testuali qui in fondo.
    */
   const [item, setItem] = useState('');
+  /**
+   * « L'ITEM È STATO DETTO » — l'uscita a mano dalla fase « dì l'item », quando la trascrizione
+   * non c'è (Whisper assente, microfono negato, seduta senza dettatura). Vale come l'item
+   * scritto — `itemNamed` (sotto) è l'uno O l'altro — esattamente come in App.tsx
+   * (`itemSpoken`/`dichiaraItemDetto`), non una variante nuova.
+   */
+  const [itemSpoken, setItemSpoken] = useState(false);
   /** Il lag di Ron (Δt*) — segnalato assente dalla revisione (« l'arco rappresenta i cicli »):
    *  serviva anche a QUESTO, non solo a un numero. `onLagMeasured` era un no-op — il motore lo
    *  calcolava comunque (vive in `lagMeter`, dentro il ciclo), semplicemente nessuno lo leggeva
@@ -420,7 +452,7 @@ export default function Serenity() {
   const cycles = useContactNullCycle({
     auditingQuestion: item,
     setAuditingQuestion: setItem,
-    setItemSpoken: () => {},
+    setItemSpoken,
     nowSec: () => sessionClock.now(),
     logLength: () => journal.logs.length,
     log: (text, type) => journal.addLog({ speaker: 'SYS', text, time: sessionClock.now(), type }),
@@ -462,7 +494,7 @@ export default function Serenity() {
   const mirror = useMirrorCycle({
     auditingQuestion: item,
     setAuditingQuestion: setItem,
-    setItemSpoken: () => {},
+    setItemSpoken,
     nowSec: () => sessionClock.now(),
     logLength: () => journal.logs.length,
     log: (text, type) => journal.addLog({ speaker: 'SYS', text, time: sessionClock.now(), type }),
@@ -568,7 +600,7 @@ export default function Serenity() {
     nowSec: () => sessionClock.now(),
     logLength: () => journal.logs.length,
     log: (text, type) => journal.addLog({ speaker: 'SYS', text, time: sessionClock.now(), type }),
-    setItemSpoken: () => {},
+    setItemSpoken,
     ensureAssessmentOn: () => {},
     LC,
   });
@@ -578,7 +610,116 @@ export default function Serenity() {
    *  `viewMode`, un controllo in meno da costruire. */
   const [toneAttivo, setToneAttivo] = useState(false);
 
-  const apri = () => {
+  /**
+   * ── IL METODO IN CORSO, IN UN VALORE SOLO ────────────────────────────────────────────────
+   * `engine/sessionMode.ts` — lo stesso tipo che App.tsx usa per `mode`. Qui non c'è un
+   * selettore persistente: si RICAVA da quale dei quattro è armato/attivo (la stessa
+   * esclusività reciproca già scritta nei bottoni del piede di pagina), invece di tenerne una
+   * seconda copia in uno state a parte.
+   */
+  const mode: SessionMode = toneAttivo ? 'tone'
+    : mirror.mirrorArmed ? 'mirror'
+    : cycles.cycleArmed ? (cycles.cycleKind === 'null' ? 'null' : 'contact')
+    : 'free';
+
+  /**
+   * ── LA FASE DEL CICLO, LA STESSA SCALA DI App.tsx ────────────────────────────────────────
+   * `engine/sessionPhase.ts` (`deriveCyclePhase`) — puro TS, già condiviso, mai importato qui
+   * prima. Dà per esempio `contact.say_item` (armato ma l'item non è ancora stato dato) da
+   * `null.equilibrium` (traguardo raggiunto): è la base per il badge del ciclo e per l'avviso
+   * « dì l'item… » qui sotto — invece di ricomporre la stessa risposta da quattro booleani.
+   */
+  const faseCiclo = useMemo(() => deriveCyclePhase({
+    splashOpen: false, sessionState: aperta ? 'running' : 'idle',
+    hasInstrument: muse.museConnection === 'connected' || meterC,
+    preflightOpen: false, epWindowOpen: ep.epWindowOpen, reportOpen: false,
+    mode, cycleArmed: cycles.cycleArmed, asIsPending: cycles.asIsPending, nullPhase: cycles.nullPhase,
+    itemNamed: !!item.trim() || itemSpoken,
+    mirrorArmed: mirror.mirrorArmed, mirrorLocked: mirror.mirrorDisp.locked, mirrorReached: mirror.mirrorDisp.reached,
+    tonePhase: tone.tonePhase,
+  }), [aperta, muse.museConnection, meterC, ep.epWindowOpen, mode, cycles.cycleArmed, cycles.asIsPending,
+       cycles.nullPhase, item, itemSpoken, mirror.mirrorArmed, mirror.mirrorDisp.locked, mirror.mirrorDisp.reached,
+       tone.tonePhase]);
+
+  /**
+   * ── L'ITEM A VOCE, LA SORGENTE CHE MANCAVA ───────────────────────────────────────────────
+   * Segnalato: « la logica di dare l'ITEM anche a voce... non è implementata ancora ». I tre
+   * motori sapevano già riempire l'item da soli (`cycleAwaitItemRef`/`itemDettato` e le sue
+   * due sorelle, portati da App.tsx in una sessione precedente) — mancava solo chi parla:
+   * `useVoiceItem` avvia lo STESSO riconoscitore (nativo macOS, poi Whisper offline) di
+   * App.tsx, e ogni frase finale entra nel giornale come farebbe l'auditor scrivendola.
+   */
+  useVoiceItem({
+    active: aperta,
+    lang: lang as string,
+    onTranscript: text => { journal.addLog({ speaker: 'Aud', text, time: sessionClock.now(), type: 'normal' }); },
+  });
+
+  /**
+   * ── L'ITEM DETTATO ARRIVA DAL GIORNALE, PER CIASCUNO DEI TRE CICLI CHE LO ASPETTANO ──────
+   * Le STESSE tre condizioni di App.tsx (righe 2016-2073 lì): premuto il bottone d'armamento
+   * col campo vuoto, `*AwaitItemRef` si accende e un cursore segna da dove leggere — qui si
+   * guarda solo quel che arriva DOPO, filtrato da `isAssessableItem` (un "ok" o un "mh" non è
+   * un item). TONE non ha un `itemDettato` di ciclo (la resistenza non si riancora, si limita a
+   * riempire l'etichetta) — stessa asimmetria di App.tsx, non una dimenticanza qui.
+   */
+  useEffect(() => {
+    if (!cycles.cycleAwaitItemRef.current || !cycles.cycleArmedRef.current) return;
+    const cursore = cycles.cycleLogCursorRef.current;
+    if (journal.logs.length <= cursore) return;
+    for (let i = cursore; i < journal.logs.length; i++) {
+      const riga = journal.logs[i];
+      if (riga.speaker === 'Aud' && isAssessableItem(riga.text)) { cycles.itemDettato(riga.text.trim()); break; }
+    }
+    cycles.cycleLogCursorRef.current = journal.logs.length;
+  }, [journal.logs, cycles]);
+
+  useEffect(() => {
+    if (!mirror.mirrorAwaitItemRef.current || !mirror.mirrorArmedRef.current) return;
+    const cursore = mirror.mirrorLogCursorRef.current;
+    if (journal.logs.length <= cursore) return;
+    for (let i = cursore; i < journal.logs.length; i++) {
+      const riga = journal.logs[i];
+      if (riga.speaker === 'Aud' && isAssessableItem(riga.text)) { mirror.itemDettato(riga.text.trim()); break; }
+    }
+    mirror.mirrorLogCursorRef.current = journal.logs.length;
+  }, [journal.logs, mirror]);
+
+  useEffect(() => {
+    if (!tone.toneAwaitItemRef.current) return;
+    const cursore = tone.toneLogCursorRef.current;
+    if (journal.logs.length <= cursore) return;
+    for (let i = cursore; i < journal.logs.length; i++) {
+      const riga = journal.logs[i];
+      if (riga.speaker === 'Aud' && isAssessableItem(riga.text)) {
+        tone.toneAwaitItemRef.current = false;
+        setItem(riga.text.trim());
+        break;
+      }
+    }
+    tone.toneLogCursorRef.current = journal.logs.length;
+  }, [journal.logs, tone]);
+
+  /**
+   * « L'ITEM È STATO DETTO » — il gesto di ripiego, per tutti e quattro i cicli, quando la
+   * trascrizione non c'è (microfono negato, Whisper assente) o l'auditor preferisce scriverlo
+   * dopo. Stessa forma di App.tsx (`dichiaraItemDetto`): si spengono tutti e tre gli
+   * `*AwaitItemRef` insieme, perché il gesto è uno solo e lo stato del ciclo dice già quale dei
+   * tre sta aspettando.
+   */
+  const dichiaraItemDetto = () => {
+    setItemSpoken(true);
+    cycles.cycleAwaitItemRef.current = false;
+    mirror.mirrorAwaitItemRef.current = false;
+    tone.toneAwaitItemRef.current = false;
+  };
+
+  /**
+   * L'APERTURA VERA — quel che `apri()` faceva per intero prima di questo segnalato. Separata
+   * perché ora ha DUE strade per arrivarci: subito (uno strumento è già collegato, o "senza
+   * strumenti" è già stato scelto in questa seduta) o dopo la scelta nel pannello qui sotto.
+   */
+  const avviaSeduta = () => {
     sessionClock.reset(); sessionClock.start();
     journal.resetJournal(t('ser_session_opened'));
     ep.resetEpState();   // niente "EP ✓" residuo da una seduta precedente
@@ -632,6 +773,39 @@ export default function Serenity() {
     if (avvio?.distanza) remote.impostaStatoSeduta('running');
     setAperta(true);
   };
+  /**
+   * ── APRI UNA SEDUTA — SI CHIEDE PRIMA QUALE STRUMENTO, non si sceglie per l'utente ────────
+   * Segnalato: « la logica, METER/MUSE/NESSUN STRUMENTO non sembra ancora implementata ».
+   * Stessa regola di App.tsx (`handleStart`): con uno dei due già collegato, o con "senza
+   * strumenti" già scelto in questa seduta, non si chiede nulla — è una configurazione scelta,
+   * non una mancanza da rimediare. Altrimenti si apre il pannello qui sotto, e l'apertura vera
+   * (`avviaSeduta`) aspetta la sua risposta.
+   */
+  const apri = () => {
+    if (!senzaStrumenti && muse.museConnection !== 'connected' && !meterC) {
+      setConnSel({ muse: false, theta: false, none: false });
+      setNomeConfigDaSalvare(''); setConfigSalvata(false);
+      setScegliStrumento(true);
+      return;
+    }
+    avviaSeduta();
+  };
+  /**
+   * ── RICHIAMARE UNA CONFIGURAZIONE — le quattro domande dell'avvio NON si fanno, e gli
+   * strumenti scelti l'ultima volta iniziano a collegarsi SUBITO, in sottofondo: quando
+   * l'auditor preme APRI UNA SEDUTA sulla schermata principale, il gate di `apri()` qui sopra
+   * trova già `senzaStrumenti` o un dispositivo connesso, e passa dritto ad `avviaSeduta()`
+   * senza mostrare di nuovo il pannello di scelta. Un solo tocco al posto di sei.
+   */
+  const richiamaConfigurazione = (cfg: ConfigurazioneSalvata) => {
+    setAvvio(cfg.avvio);
+    setConnSel(cfg.strumenti);
+    setSenzaStrumenti(cfg.strumenti.none);
+    if (!cfg.strumenti.none) {
+      if (cfg.strumenti.muse) muse.handleConnectMuse();
+      if (cfg.strumenti.theta) theta.connect();
+    }
+  };
   const chiudi = () => {
     sessionClock.end();
     journal.addLog({ speaker: 'SYS', text: t('ser_session_closed'), time: sessionClock.now() });
@@ -651,6 +825,9 @@ export default function Serenity() {
     if (avvio?.distanza) remote.disconnetti();
     setCollegato(false);
     setAvvio(null);
+    // Un nuovo preclear è una nuova domanda: "senza strumenti" scelto per la seduta precedente
+    // non deve saltare quella successiva senza chiederlo.
+    setSenzaStrumenti(false);
   };
 
   // ── LE QUATTRO DOMANDE, PRIMA DI TUTTO ────────────────────────────────────────────────
@@ -659,7 +836,7 @@ export default function Serenity() {
   if (!avvio) {
     return (
       <main style={{ height: '100%', padding: '38px 44px' }}>
-        <Avvio onPronto={setAvvio} />
+        <Avvio onPronto={setAvvio} onRichiama={richiamaConfigurazione} />
       </main>
     );
   }
@@ -717,6 +894,113 @@ export default function Serenity() {
       height: '100%', display: 'grid', gridTemplateRows: 'auto 1fr auto',
       padding: '38px 44px', gap: 24, position: 'relative',
     }}>
+      {/* ── METER / MUSE / NESSUNO STRUMENTO — si sceglie PRIMA di aprire ──────────────────────
+          Segnalato: « la logica... non sembra ancora implementata ». Le TRE voci sullo stesso
+          piano di App.tsx (`connSel`): MUSE e METER si possono spuntare insieme (chi lavora con
+          entrambi), "nessuno strumento" è la TERZA possibilità — il gruppo di controllo, non
+          l'assenza delle altre due — ed è ESCLUSIVA con loro (`scegliConn`). Galleggia sopra
+          tutto, come `PannelloMna`: qui non c'è ancora una seduta da coprire. */}
+      {scegliStrumento && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 50, display: 'flex',
+          alignItems: 'center', justifyContent: 'center',
+          background: 'color-mix(in srgb, var(--s-ground) 80%, transparent)',
+        }}>
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: 16, padding: '28px 32px',
+            borderRadius: 16, background: 'var(--s-disc)', boxShadow: 'var(--s-shadow-lift)',
+            minWidth: 320,
+          }}>
+            <span style={{ fontFamily: 'var(--s-serif)', fontSize: 18, color: 'var(--s-ink)' }}>
+              {LC('con che cosa si audita?', 'avec quoi audite-t-on ?', 'what will you audit with?',
+                  '¿con qué se audita?', 'vad ska du auditera med?')}
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {([
+                { k: 'muse' as const, on: connSel.muse, label: 'MUSE', show: true },
+                { k: 'theta' as const, on: connSel.theta, label: t('theta_cans') as string, show: !theta.unavailable },
+                { k: 'none' as const, on: connSel.none, label: t('no_instruments_mode') as string, show: true },
+              ]).filter(o => o.show).map(o => (
+                <button key={o.k} onClick={() => scegliConn(o.k)} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+                  border: 'none', cursor: 'pointer', borderRadius: 10, padding: '10px 14px',
+                  fontFamily: 'var(--s-sans)', fontSize: 13, letterSpacing: '0.02em',
+                  background: o.on ? 'var(--s-disc-sunk)' : 'transparent',
+                  color: 'var(--s-ink)', boxShadow: o.on ? 'var(--s-shadow)' : 'none',
+                }}>
+                  <span style={{ fontFamily: 'var(--s-mono)', width: 14 }}>{o.on ? '✓' : '·'}</span>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            <span style={{ fontSize: 11.5, color: 'var(--s-ink-faint)', maxWidth: 280, lineHeight: 1.5 }}>
+              {connSel.none ? t('no_instruments_hint') as string : t('connect_either_hint') as string}
+            </span>
+            {/* ── SALVA QUESTA COMBINAZIONE — chiesto direttamente: « un sistema di
+                configurazioni registrate... alla sessione successiva l'Auditor deve poter
+                richiamarla ». Qui, non prima: solo ORA le cinque scelte (auditor/PC/dove/
+                esperto, già in `avvio`, più strumenti, appena scelti sopra) sono TUTTE
+                disponibili insieme — è il primo momento in cui c'è una configurazione intera da
+                salvare, non quattro pezzi sparsi lungo l'avvio. */}
+            {(connSel.muse || connSel.theta || connSel.none) && avvio && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  value={nomeConfigDaSalvare}
+                  onChange={e => { setNomeConfigDaSalvare(e.target.value); setConfigSalvata(false); }}
+                  placeholder={LC('nome di questa configurazione…', 'nom de cette configuration…',
+                    'name for this configuration…', 'nombre de esta configuración…', 'namn för denna konfiguration…') as string}
+                  style={{
+                    flex: 1, border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
+                    outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 12, color: 'var(--s-ink)',
+                    padding: '2px 4px',
+                  }}
+                />
+                <button
+                  disabled={!nomeConfigDaSalvare.trim()}
+                  onClick={() => { salvaConfigurazione(nomeConfigDaSalvare, avvio, connSel); setConfigSalvata(true); }}
+                  style={{
+                    border: 'none', background: 'none', cursor: nomeConfigDaSalvare.trim() ? 'pointer' : 'default',
+                    opacity: nomeConfigDaSalvare.trim() ? 1 : 0.4,
+                    fontFamily: 'var(--s-sans)', fontSize: 11.5, color: 'var(--s-ink-soft)', whiteSpace: 'nowrap',
+                  }}>
+                  {configSalvata
+                    ? LC('salvata ✓', 'enregistrée ✓', 'saved ✓', 'guardada ✓', 'sparad ✓')
+                    : LC('salva', 'enregistrer', 'save', 'guardar', 'spara')}
+                </button>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 14, justifyContent: 'flex-end' }}>
+              <button onClick={() => setScegliStrumento(false)} style={{
+                border: 'none', background: 'none', cursor: 'pointer',
+                fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-ghost)',
+              }}>
+                {t('cancel')}
+              </button>
+              <button
+                disabled={!connSel.muse && !connSel.theta && !connSel.none}
+                onClick={async () => {
+                  const nessuno = connSel.none;
+                  setScegliStrumento(false);
+                  setSenzaStrumenti(nessuno);
+                  if (!nessuno) {
+                    if (connSel.muse) await muse.handleConnectMuse();
+                    if (connSel.theta) await theta.connect();
+                  }
+                  avviaSeduta();
+                }}
+                style={{
+                  border: 'none', borderRadius: 999, padding: '9px 22px',
+                  cursor: (connSel.muse || connSel.theta || connSel.none) ? 'pointer' : 'default',
+                  opacity: (connSel.muse || connSel.theta || connSel.none) ? 1 : 0.4,
+                  fontFamily: 'var(--s-sans)', fontSize: 12.5, letterSpacing: '0.06em', textTransform: 'uppercase',
+                  background: 'var(--s-ink)', color: 'var(--s-ground)',
+                }}>
+                {t('ser_open_session')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* ── L'INTESTAZIONE, che non è una barra ───────────────────────────────────────────
           Nessun fondo, nessuna linea di separazione: il nome sta posato sulla stessa
           superficie di tutto il resto. Una barra è già un pannello. */}
@@ -768,7 +1052,13 @@ export default function Serenity() {
         <IndicatoreConnessione
           onClick={theta.unavailable ? undefined : (meterC ? theta.disconnect : theta.connect)}
           etichetta={
-            theta.unavailable ? t('theta_uncalibrated') as string
+            // ⚠️ Segnalato: « la connessione METER non la vedo, vedo invece connessione MUSE ».
+            // La causa vera: questa etichetta usava `theta_uncalibrated` ("non tarato") — una
+            // parola che non nomina il meter, e che l'auditor legge come "MUSE" o comunque
+            // come qualcos'altro, non come lo stato del Theta-Meter. `ser_meter_unavailable`
+            // ("meter non disponibile qui") dice la cosa giusta: È il meter, e non lo si può
+            // usare in questo browser/ambiente.
+            theta.unavailable ? t('ser_meter_unavailable') as string
               : meterC ? 'METER ✓'
               : theta.status === 'connecting' ? '…' : t('theta_connect') as string
           }
@@ -1058,11 +1348,16 @@ export default function Serenity() {
         }}>
           {aperta ? t('ser_close_session') : t('ser_open_session')}
         </button>
-        {/* ── IL CICLO — un item, due strade, due gesti di chiusura ────────────────────────
-            CONTACT (→ AS-IS) e NULL (→ EQUILIBRIUM, con o senza VGI) condividono lo STESSO
-            campo item — sono due strade sullo stesso motore, non due cicli diversi da
-            scrivere. Il campo e i bottoni stanno sulla STESSA riga, come in App.tsx dopo il
-            segnalato « il campo e il gesto in un posto, il bottone in un altro ». */}
+        {/* ── IL CICLO — un item, quattro strade, ciascuna col SUO bottone ──────────────────
+            Segnalato: « la visibilità dei CICLI non è ottimale... devi fare come in EQUILIBRIUM
+            con dei BOTTONI più visibili per ogni ciclo separatamente, uno accanto all'altro ».
+            Erano quattro link fantasma (nessun bordo, nessun fondo, differenti solo per una
+            sfumatura di grigio) — la stessa scelta grafica dell'informazione che qui doveva
+            SPICCARE. Ora sono quattro pillole vere, ciascuna col SUO nome scritto per intero
+            (CONTACT/NULL/MIRROR/TONE, non « dai l'item » che non dice quale dei quattro) e un
+            colore che le distingue — gli stessi tre segnali di `tokens.css` più l'inchiostro
+            neutro per TONE (mai un quarto colore nuovo), non gli hex di App.tsx ridisegnati
+            uguali: stessa struttura, grafica di SERENITY. */}
         {aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && (
           <>
             <input
@@ -1076,39 +1371,27 @@ export default function Serenity() {
                 padding: '2px 4px', width: 200,
               }}
             />
-            <button onClick={() => cycles.armCycle('charge')} style={{
-              border: 'none', cursor: 'pointer', background: 'none',
-              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-soft)',
-            }}>
-              {t('ser_arm_contact')}
-            </button>
-            <button onClick={() => cycles.armCycle('null')} style={{
-              border: 'none', cursor: 'pointer', background: 'none',
-              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
-            }}>
-              {t('ser_arm_null')}
-            </button>
-            {/* ── MIRROR — il terzo metodo, escluso a vicenda con CONTACT/NULL ────────────────
-                Segnalato assente insieme al suo arco. Stesso campo item, stesso gesto
-                d'armamento — `armMirror()` prende quel che c'è scritto (o resta in attesa
-                di un item a voce, come CONTACT/NULL: gap già noto, non nuovo qui). */}
-            <button onClick={() => mirror.armMirror()} style={{
-              border: 'none', cursor: 'pointer', background: 'none',
-              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
-            }}>
-              {LC('dai il MIRROR', 'donne le MIRROR', 'give the MIRROR', 'da el MIRROR', 'ge MIRROR')}
-            </button>
-            {/* ── TONE SCALE — il quarto metodo, escluso a vicenda con gli altri tre ──────────
-                Segnalato assente insieme al suo arco. A differenza degli altri tre, TONE non
-                si "arma" per un solo item: si ENTRA nel metodo (`toneAttivo`) e ci si lavora
-                per più resistenze di fila (locate → raise → done → locate…), come in App.tsx
-                dove il tab resta su TONE finché l'auditor non cambia modo. */}
-            <button onClick={() => setToneAttivo(true)} style={{
-              border: 'none', cursor: 'pointer', background: 'none',
-              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
-            }}>
-              {LC('lavora in TONE', 'travaille en TONE', 'work in TONE', 'trabaja en TONE', 'arbeta i TONE')}
-            </button>
+            {([
+              { k: 'contact', hue: 'var(--s-still)', label: 'CONTACT',
+                onClick: () => cycles.armCycle('charge') },
+              { k: 'null', hue: 'var(--s-alive)', label: 'NULL',
+                onClick: () => cycles.armCycle('null') },
+              // ── MIRROR — il terzo metodo, escluso a vicenda con CONTACT/NULL ────────────
+              { k: 'mirror', hue: 'var(--s-reserve)', label: 'MIRROR', onClick: () => mirror.armMirror() },
+              // ── TONE SCALE — il quarto metodo, escluso a vicenda con gli altri tre. A
+              // differenza degli altri tre non si "arma" per un solo item: si ENTRA nel
+              // metodo (`toneAttivo`) e ci si lavora per più resistenze di fila.
+              { k: 'tone', hue: null, label: 'TONE', onClick: () => setToneAttivo(true) },
+            ]).map(c => (
+              <button key={c.k} onClick={c.onClick} style={{
+                border: `1.5px solid ${c.hue ?? 'var(--s-ink-ghost)'}`, cursor: 'pointer',
+                borderRadius: 999, padding: '6px 14px', background: 'var(--s-disc)',
+                fontFamily: 'var(--s-sans)', fontSize: 12, fontWeight: 700, letterSpacing: '0.05em',
+                color: c.hue ?? 'var(--s-ink-soft)',
+              }}>
+                {c.label}
+              </button>
+            ))}
           </>
         )}
         {/* ── TONE SCALE, ATTIVO — locate → raise → done, si ripete per ogni resistenza ────────
@@ -1119,9 +1402,35 @@ export default function Serenity() {
             `chiudiTone`/`resetTone`), stesso testo dei tre tempi. */}
         {aperta && toneAttivo && (
           <>
+            {/* Stesso badge di CONTACT/NULL, senza colore acceso (TONE non ne ha uno — mai un
+                quarto segnale nuovo): il bordo e il nome per intero bastano a dire quale dei
+                quattro sta girando. */}
+            <span style={{
+              fontFamily: 'var(--s-sans)', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
+              padding: '3px 10px', borderRadius: 999, border: '1px solid var(--s-ink-ghost)',
+              color: 'var(--s-ink-soft)',
+            }}>
+              TONE
+            </span>
             <span style={{ fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)' }}>
               {item || t('ser_item_placeholder')}
             </span>
+            {faseCiclo === 'tone.say_item' && (
+              <>
+                <span className="ser-pulse" style={{
+                  fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.04em',
+                  color: 'var(--s-reserve)',
+                }}>
+                  {LC('dì la resistenza…', 'dis la résistance…', 'say the resistance…', 'di la resistencia…', 'säg motståndet…')}
+                </span>
+                <button onClick={dichiaraItemDetto} style={{
+                  border: 'none', cursor: 'pointer', background: 'none',
+                  fontFamily: 'var(--s-sans)', fontSize: 11.5, color: 'var(--s-ink-faint)',
+                }}>
+                  {LC('l\'ho detta', 'je l\'ai dite', 'said it', 'la he dicho', 'sa det')}
+                </button>
+              </>
+            )}
             {tone.tonePhase === 'locate' && (
               <>
                 {!tone.toneHasMeter && (
@@ -1196,9 +1505,34 @@ export default function Serenity() {
             il valore in mezzo: segnalato in App.tsx stesso come l'errore da NON ripetere). */}
         {aperta && mirror.mirrorArmed && (
           <>
+            {/* Stesso badge di CONTACT/NULL/TONE, colore riserva — lo stesso della pillola che
+                lo arma qui sopra. */}
+            <span style={{
+              fontFamily: 'var(--s-sans)', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
+              padding: '3px 10px', borderRadius: 999,
+              background: 'var(--s-reserve)', color: 'var(--s-ground)',
+            }}>
+              MIRROR
+            </span>
             <span style={{ fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)' }}>
               {item || t('ser_item_placeholder')}
             </span>
+            {faseCiclo === 'mirror.say_item' && (
+              <>
+                <span className="ser-pulse" style={{
+                  fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.04em',
+                  color: 'var(--s-reserve)',
+                }}>
+                  {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
+                </span>
+                <button onClick={dichiaraItemDetto} style={{
+                  border: 'none', cursor: 'pointer', background: 'none',
+                  fontFamily: 'var(--s-sans)', fontSize: 11.5, color: 'var(--s-ink-faint)',
+                }}>
+                  {LC('l\'item è stato detto', 'l\'item a été dit', 'the item has been said', 'el ítem ha sido dicho', 'item har sagts')}
+                </button>
+              </>
+            )}
             {!mirror.mirrorDisp.locked ? (
               <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                 <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12, color: 'var(--s-ink-faint)', marginRight: 6 }}>
@@ -1253,9 +1587,48 @@ export default function Serenity() {
         )}
         {aperta && cycles.cycleArmed && (
           <>
+            {/* ── QUALE CICLO STA GIRANDO — segnalato: « il CICLO CONTACT non è specificato in
+                basso, c'è solo DAI L'ITEM ». Vero: un campo di testo e un contatore in grigio
+                non dicono CONTACT finché non si legge la scritta piccola accanto. Ora un badge
+                pieno, dello STESSO colore della pillola che l'ha armato — si vede prima di
+                leggere, non dopo. */}
+            <span style={{
+              fontFamily: 'var(--s-sans)', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
+              padding: '3px 10px', borderRadius: 999,
+              background: cycles.cycleKind === 'null' ? 'var(--s-alive)' : 'var(--s-still)',
+              color: 'var(--s-ground)',
+            }}>
+              {cycles.cycleKind === 'null' ? 'NULL' : 'CONTACT'}
+            </span>
             <span style={{ fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)' }}>
               {item || t('ser_item_placeholder')}
             </span>
+            {/* ── « DÌ L'ITEM… » — segnalato insieme: la logica di darlo a voce già esiste nel
+                motore (`cycleAwaitItemRef`), ma finché nessuno lo dice a schermo l'auditor non
+                sa che il ciclo sta ASPETTANDO, non è già a mock-up. Pulsa finché la voce (o la
+                dichiarazione a mano qui accanto) non arriva. */}
+            {(faseCiclo === 'contact.say_item' || faseCiclo === 'null.say_item') && (
+              <>
+                <span className="ser-pulse" style={{
+                  fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.04em',
+                  color: 'var(--s-reserve)',
+                }}>
+                  {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
+                </span>
+                <button onClick={dichiaraItemDetto} title={LC(
+                    'la trascrizione non c\'è o non si sente — dichiara che l\'item è stato detto',
+                    'pas de transcription ou pas de son — déclare que l\'item a été dit',
+                    'no transcript or no sound — declare the item has been said',
+                    'sin transcripción o sin sonido — declara que el ítem ha sido dicho',
+                    'ingen transkription eller inget ljud — förklara att item har sagts') as string}
+                  style={{
+                  border: 'none', cursor: 'pointer', background: 'none',
+                  fontFamily: 'var(--s-sans)', fontSize: 11.5, color: 'var(--s-ink-faint)',
+                }}>
+                  {LC('l\'item è stato detto', 'l\'item a été dit', 'the item has been said', 'el ítem ha sido dicho', 'item har sagts')}
+                </button>
+              </>
+            )}
             {/* ── IL CONTATORE DEL CICLO IN CORSO — mancante ─────────────────────────────
                 In App.tsx un chip dice, per il SOLO metodo in corso (CONTACT con CONTACT,
                 NULL con NULL — « due contatori confondono », scelta utente), quanti cicli
@@ -1263,8 +1636,8 @@ export default function Serenity() {
                 arriva già dallo stesso `useContactNullCycle` — solo non era letto qui. */}
             <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11.5, color: 'var(--s-ink-faint)' }}>
               {cycles.cycleKind === 'null'
-                ? `NULL ${cycles.cycleStats.nStarted} · ${cycles.cycleStats.nDone} CLEAR`
-                : `CONTACT ${cycles.cycleStats.cStarted} · ${cycles.cycleStats.cDone} AS-IS`}
+                ? `${cycles.cycleStats.nStarted} · ${cycles.cycleStats.nDone} CLEAR`
+                : `${cycles.cycleStats.cStarted} · ${cycles.cycleStats.cDone} AS-IS`}
             </span>
             {/* ── ANNULLA — l'uscita SENZA validare, mancante ────────────────────────────
                 Segnalato nella revisione funzionale: in App.tsx chiudere un ciclo armato ha

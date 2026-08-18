@@ -36,7 +36,9 @@ import { PannelloProfilo, type Tipo } from './PannelloProfilo';
 import { PannelloConfig } from './PannelloConfig';
 import type { DatiProfilo } from '../lib/profiloEdit';
 import { useI18n } from '../i18n';
+import { pick5 } from '../i18n5';
 import { SelettoreLingua, SelettoreTema, linguaValida } from './Impostazioni';
+import { leggiConfigurazioni, eliminaConfigurazione, type ConfigurazioneSalvata } from './configurazioniStore';
 
 /**
  * Un cerchio che si può toccare.
@@ -127,10 +129,27 @@ function Scelta({ etichetta, sotto, foto, persona, icona, onClick, onModifica, d
 }
 
 
-export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
-  const { t, setLang } = useI18n();
+export function Avvio({ onPronto, onRichiama }: {
+  onPronto: (a: StatoAvvio) => void;
+  /** Richiamata una configurazione salvata: le quattro domande NON si fanno — l'avvio parte già
+   *  risposto, e la scelta strumenti (che qui non vive: è del pannello dopo, in `Serenity.tsx`)
+   *  viaggia insieme nello stesso oggetto. */
+  onRichiama?: (cfg: ConfigurazioneSalvata) => void;
+}) {
+  const { t, lang, setLang } = useI18n();
   const [stato, setStato] = useState<StatoAvvio>(AVVIO_VUOTO);
   const passo = passoCorrente(stato);
+  const LC = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang as string, it, fr, en, es, sv);
+
+  /**
+   * ── LE CONFIGURAZIONI REGISTRATE — segnalato: « alla sessione successiva l'Auditor deve
+   * poter richiamare una configurazione salvata... evitando di ripetere ogni passaggio
+   * iniziale ». Si leggono una volta sola: create qui dentro l'avvio, un `onRichiama` fa
+   * ripartire tutto da zero (nuovo `Avvio` montato) — non serve rileggerle a ogni render.
+   */
+  const [configurazioni, setConfigurazioni] = useState<ConfigurazioneSalvata[]>(() => leggiConfigurazioni());
+  const nomeProfilo = (lista: Array<{ id: string; name: string }>, id: string | null) =>
+    id === null ? '' : (lista.find(p => p.id === id)?.name ?? '—');
 
   // I profili sono quelli di EQUILIBRIUM, dallo stesso armadio. Si rileggono dopo ogni
   // creazione: il profilo appena fatto dev'essere lì fra gli altri, non in un elenco a parte.
@@ -303,7 +322,7 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
 
   return (
     <section style={{
-      height: '100%', display: 'grid', gridTemplateRows: 'auto auto 1fr auto',
+      height: '100%', display: 'grid', gridTemplateRows: 'auto auto auto 1fr auto',
       alignItems: 'center', gap: 28,
     }}>
       <div style={{ justifySelf: 'end', display: 'flex', alignItems: 'center', gap: 20 }}>
@@ -316,6 +335,52 @@ export function Avvio({ onPronto }: { onPronto: (a: StatoAvvio) => void }) {
           <Settings size={16} strokeWidth={1.6} />
         </button>
       </div>
+
+      {/* ── LE CONFIGURAZIONI REGISTRATE — solo alla primissima domanda ──────────────────────
+          Segnalato: richiamarne una deve « evitare di ripetere ogni passaggio iniziale ». Se ce
+          n'è almeno una, questa striscia sta SOPRA la domanda: chi la vede può saltare le
+          quattro domande con un solo tocco, invece di doverle attraversare per scoprire che
+          esiste una scorciatoia in fondo. */}
+      {passo === 'auditor' && configurazioni.length > 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
+            {LC('configurazioni salvate', 'configurations enregistrées', 'saved configurations', 'configuraciones guardadas', 'sparade konfigurationer')}
+          </span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 560 }}>
+            {configurazioni.map(cfg => {
+              const chi = cfg.avvio.solo
+                ? t('ser_solo') as string
+                : nomeProfilo(liste.p, cfg.avvio.pcId);
+              const strumento = cfg.strumenti.none
+                ? (t('no_instruments_mode') as string)
+                : [cfg.strumenti.muse && 'MUSE', cfg.strumenti.theta && (t('theta_cans') as string)].filter(Boolean).join(' + ');
+              return (
+                <span key={cfg.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 8, borderRadius: 999,
+                  padding: '6px 6px 6px 14px', background: 'var(--s-disc)', boxShadow: 'var(--s-shadow)',
+                }}>
+                  <button onClick={() => onRichiama?.(cfg)} style={{
+                    border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left',
+                    fontFamily: 'var(--s-sans)', color: 'var(--s-ink)',
+                  }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 600 }}>{cfg.nome}</span>
+                    <span style={{ fontSize: 11, color: 'var(--s-ink-faint)', marginLeft: 6 }}>
+                      {nomeProfilo(liste.a, cfg.avvio.auditorId)}{chi ? ` · ${chi}` : ''}{strumento ? ` · ${strumento}` : ''}
+                    </span>
+                  </button>
+                  <button onClick={() => { eliminaConfigurazione(cfg.id); setConfigurazioni(leggiConfigurazioni()); }}
+                    title={t('ser_delete') as string} style={{
+                    border: 'none', background: 'none', cursor: 'pointer', padding: '2px 6px',
+                    fontSize: 13, color: 'var(--s-ink-ghost)', lineHeight: 1,
+                  }}>
+                    ×
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      ) : <div />}
 
       {/* La domanda, e basta. Nessun titolo di sezione, nessun numero di passo: sapere di
           essere « al 3 di 4 » non serve a rispondere. */}

@@ -154,6 +154,16 @@ body {
   50%      { transform: scale(1.01); }
 }
 
+/* « DÌ L'ITEM… » — un pulsare vero, non il respiro (quello è per non farsi notare, questo deve
+   farsi notare): il ciclo sta ASPETTANDO una risposta, non semplicemente vivo. Stessa durata
+   dell'`animate-pulse` di Tailwind in App.tsx, ridisegnata qui perché SERENITY non lo carica
+   (vedi la nota sotto). Rispetta `prefers-reduced-motion` insieme a tutto il resto, sopra. */
+@keyframes serVoceAttesa {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+.ser-pulse { animation: serVoceAttesa 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
 /* ═══════════════════════════════════════════════════════════════════════════════════════════
    SEI CLASSI, PER UN COMPONENTE CONDIVISO — fase 5.
    ═══════════════════════════════════════════════════════════════════════════════════════════

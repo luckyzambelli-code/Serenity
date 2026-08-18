@@ -40,7 +40,11 @@ export function PannelloMeter({ theta }: { theta: ReturnType<typeof useThetaMete
   const [aperto, setAperto] = useState(false);
   const [riferimento, setRiferimento] = useState('2.0');
 
-  const stato = theta.unavailable ? t('theta_uncalibrated')
+  // ⚠️ `ser_meter_unavailable` ("meter non disponibile qui"), non `theta_uncalibrated` ("non
+  // tarato") — quella parola non nomina nemmeno il meter, ed era la causa del segnalato « la
+  // connessione METER non la vedo, vedo invece connessione MUSE ». Vedi la stessa nota in
+  // `Serenity.tsx`, sull'indicatore in intestazione.
+  const stato = theta.unavailable ? t('ser_meter_unavailable')
     : theta.status === 'connected' ? t('ser_meter_connected')
     : theta.status === 'connecting' ? '…'
     : t('theta_connect');
