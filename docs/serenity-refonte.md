@@ -308,6 +308,52 @@ pulita): il piè di pagina non porta più alcun controllo del meter — CONTACT/
 basta; l'intestazione resta l'unico punto per MUSE e METER, uno accanto all'altro.
 EQUILIBRIUM 2.0.166, SERENITY 3.0.29.
 
+---
+
+## L'audit comparativo (18/08/2026) — cosa manca ancora, davvero
+
+Chiesta esplicitamente una « transformation complète » con audit preliminare: un'esplorazione
+sistematica ha confrontato `App.tsx` (~7000 righe) con l'intero `src/serenity/` per ogni area
+funzionale (ago, arco, quattro cicli, METER, MUSE, avvio, CONFIG, camere, connessione remota,
+trascrizione vocale, F/N, R&I, EP, MNA, CORPUS, calibrazioni, biometria, traduzioni). Il
+risultato completo (matrice + gap prioritari) è nella cronologia della sessione; qui i punti
+che RESTANO aperti, in ordine di rischio per una seduta reale — e lo stato di ciascuno:
+
+1. ~~**Nessuna pausa su MUSE perso**~~ **RISOLTO** (questa voce) — `pauseOnLoss` era un no-op
+   esplicito; ora la seduta va in pausa vera (`sessionClock.pause()`, badge « in pausa —
+   strumento perso » pulsante accanto all'orologio) e riprende da sé al ritorno del contatto.
+2. **Nessun recupero da crash / bozza automatica** (`lib/storage`'s `saveSessionDraft`/
+   `loadSessionDraftAsync`, `lib/crashGuard`) — non ancora portato.
+3. **Nessun rapporto di fine seduta** (`components/PostSessionReport`) — non ancora portato;
+   chiudere una seduta SERENITY non produce riepilogo, grafico, né esportazione.
+4. **La seduta non entra nella cronologia del profilo** (`saveSession()`) — dipende dal punto 3
+   (i dati del riepilogo li calcola oggi solo `PostSessionReport`): non separabile senza o
+   costruire quel calcolo altrove o inventare numeri non misurati, il che sarebbe peggio di non
+   averli.
+5. **R&I / assessment multi-item** — `ensureAssessmentOn` resta un no-op nei tre cicli; l'intero
+   metodo (liste di item, letture per item, `itemRecord`/`reactionRecord` nel CORPUS) è
+   inaccessibile da SERENITY.
+6. **Nessuna consultazione dell'archivio CORPUS** (`components/HistoryModal`) — non portato.
+7. **Ready-check del Theta-Meter** (`components/ThetaReadyCheck`) — non montato: chi lavora solo
+   col Meter non riceve più l'avviso di prontezza metabolica prima di iniziare.
+8. Nessuna visualizzazione del giornale/transcript durante la seduta (scelta di design
+   dichiarata, non un buco silenzioso — solo un contatore di righe è visibile).
+9. Nessuna scelta dell'ago principale con MUSE e Meter entrambi collegati (regola fissa: il
+   Meter ha sempre la precedenza).
+10. BPM/PPG e pannelli di salute/biometria calcolati dal motore ma mai mostrati.
+11. Nessuna ridondanza satellite/hands-free, e gli errori del riconoscitore vocale restano
+    silenziosi (nessun log di stato come in App.tsx).
+12. Il selettore esperto/normale resta un'etichetta senza effetto (in App.tsx sblocca pannelli).
+13. Nessuna guida passo-passo del ciclo (`CycleHint`/`CycleSteps`).
+
+Punti 2-4 (crash recovery, rapporto, cronologia) sono i più consistenti — richiedono ciascuno
+una sessione di lavoro dedicata, non una riga in coda a questa. Punto 5 (R&I) è un metodo
+intero, non un dettaglio. Si procede in quest'ordine.
+
+Verificato (auto-pausa): `tsc --noEmit` pulito, `npm run lint` 0 errori, `vitest run` 639/639,
+a schermo l'orologio continua a scorrere normalmente in seduta senza strumenti (nessuna falsa
+pausa) — EQUILIBRIUM 2.0.167, SERENITY 3.0.30.
+
 ⚠️ **Revisione funzionale — non solo grafica (17/08/2026, terza segnalazione)**: due
 regressioni VERE, non d'aspetto — una funzione persa nel passaggio a SERENITY, non solo
 ridisegnata:

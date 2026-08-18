@@ -158,6 +158,20 @@ export default function Serenity() {
   }, [isLightTheme]);
   const journal = useSessionJournal('SERENITY');
   const [aperta, setAperta] = useState(false);
+  /**
+   * ── LA PAUSA — segnalato nell'audit comparativo con App.tsx: « la perdita del contatto MUSE
+   * mette automaticamente la seduta in pausa... in SERENITY `pauseOnLoss` è un no-op esplicito ».
+   * Vero, e non innocuo: senza, un ago che smette di leggere a metà seduta lascia l'orologio a
+   * correre e il ciclo armato in attesa di dati che non arrivano più, con l'unico segnale un
+   * puntino che cambia colore in intestazione — facile da non notare mentre si guarda l'ago.
+   *
+   * Non è l'intera macchina a stati di App.tsx (`SessionState` a 4 valori, che governa anche
+   * la sincronizzazione a distanza e il riconoscimento vocale): qui basta un booleano in più,
+   * `aperta` resta la sola sorgente di verità per "seduta in corso o no" — `pausata` dice SOLO
+   * se in questo momento sta leggendo. Vedi l'effetto poco sotto (auto-pausa/auto-ripresa) e il
+   * badge in testata, accanto all'orologio.
+   */
+  const [pausata, setPausata] = useState(false);
   const [tempo, setTempo] = useState(0);
   /** Le quattro risposte dell'avvio. `null` = le domande non sono ancora state fatte. */
   const [avvio, setAvvio] = useState<StatoAvvio | null>(null);
@@ -298,10 +312,23 @@ export default function Serenity() {
     addLog: e => journal.addLog(e as any),
     tr: key => t(key as never) as string,
     setBatteryLevel,
-    // Nessuna pausa automatica su MUSE perso: SERENITY non ha ancora lo stato PAUSED
-    // (solo aperta/chiusa) — la sessione resta aperta, il gate di contatto segnala da sé.
-    pauseOnLoss: () => {},
+    // Segnalato assente: la STESSA regola di App.tsx — il MUSE perso mette la seduta in pausa,
+    // non solo un'icona ambra da notare da sé.
+    pauseOnLoss: () => setPausata(true),
   });
+  // La ripresa è automatica quanto la pausa: appena il MUSE torna a rispondere (o l'auditor
+  // passa al Theta-Meter, che non ha bisogno del contatto EEG) la lettura riprende da sé —
+  // stessa filosofia di "il gate di contatto segnala da sé", applicata anche alla pausa.
+  useEffect(() => {
+    if (pausata && aperta && (muse.museConnection === 'connected' || meterC)) setPausata(false);
+  }, [pausata, aperta, muse.museConnection, meterC]);
+  // L'orologio segue la pausa esattamente come segue apertura/chiusura in App.tsx
+  // (`sessionClock.resume()`/`.pause()`): il tempo di seduta non deve contare i minuti in cui
+  // nessuno strumento stava leggendo.
+  useEffect(() => {
+    if (!aperta) return;
+    if (pausata) sessionClock.pause(); else sessionClock.resume();
+  }, [pausata, aperta]);
 
   const museGate = useMuseContactGate({
     eegBuffer, museConnection: muse.museConnection, remoteLive: false,
@@ -751,6 +778,7 @@ export default function Serenity() {
    */
   const avviaSeduta = () => {
     sessionClock.reset(); sessionClock.start();
+    setPausata(false);   // niente pausa residua da una seduta precedente
     journal.resetJournal(t('ser_session_opened'));
     ep.resetEpState();   // niente "EP ✓" residuo da una seduta precedente
     mirror.resetMirror();   // niente ciclo MIRROR residuo da una seduta precedente
@@ -846,7 +874,7 @@ export default function Serenity() {
     // App.tsx: « seduta finita/in pausa → azzera tutto l'audio »).
     primeFreqAudio.killAll();
     setPrimePhase('IDLE'); setPrimeCopies([]); setPrimeCaptured(false); setMnaAperto(false);
-    setAperta(false);
+    setAperta(false); setPausata(false);
   };
   /** Si ricomincia dalle domande. Solo a seduta chiusa: cambiare preclear a metà seduta
    *  vorrebbe dire attribuire a una persona quel che ha fatto un'altra. Una seduta a distanza
@@ -1363,6 +1391,20 @@ export default function Serenity() {
         }}>
           {orologio(tempo)}
         </span>
+        {/* ── IN PAUSA — segnalato: la perdita del MUSE deve fermare la seduta, non solo
+            cambiare colore a un puntino in intestazione facile da non notare. Un badge PIENO
+            (`.ser-pulse`, lo stesso avviso già usato per « dì l'item… ») proprio accanto
+            all'orologio che ha smesso di correre — i due segnali si leggono insieme. */}
+        {aperta && pausata && (
+          <span className="ser-pulse" style={{
+            fontFamily: 'var(--s-sans)', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
+            padding: '3px 10px', borderRadius: 999,
+            background: 'var(--s-reserve)', color: 'var(--s-ground)',
+          }}>
+            {LC('in pausa — strumento perso', 'en pause — instrument perdu', 'paused — instrument lost',
+              'en pausa — instrumento perdido', 'pausad — instrument förlorat')}
+          </span>
+        )}
 
         {/* ── LA LETTURA, DETTA A NUMERI — vedi la nota sopra `LetturaTA`. Solo quando c'è un
             ago EEG davvero collegato: senza MUSE il TA da EEG non significa niente (resta al
