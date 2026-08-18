@@ -291,6 +291,34 @@ corretta, non un difetto); la ✕ lo richiude senza toccare la seduta sotto; CON
 « Modulazione Neuro-Acustica » come interruttore vero, non più « in arrivo ». EQUILIBRIUM
 2.0.161, SERENITY 3.0.24.
 
+**Dodicesimo passo — il ciclo MIRROR, il secondo sottosistema assente a diventare reale**
+(`session/useMirrorCycle`, già estratto e condiviso con App.tsx, mai montato qui): come per
+CONTACT/NULL, `trackMirrorRef` esisteva già in `Serenity.tsx` — l'ago EEG lo alimentava a ogni
+campione — ma restava un no-op: il metodo del raddoppio di Ron era TOTALMENTE inaccessibile,
+non solo privo d'arco. Montato lo stesso motore, e l'arco che gli appartiene (`MirrorDial`,
+identica geometria di `ClearDial`) **prende il suo posto** quando MIRROR è armato — in App.tsx
+i due archi sono ESCLUSIVI a vicenda (`viewMode`); qui la stessa esclusività senza un
+selettore di modo a parte: i bottoni d'armamento dei tre metodi si escludono da soli (armare
+uno nasconde gli altri due), quindi i due cicli non possono mai essere armati insieme.
+
+Ripresa la sequenza a TRE tempi di App.tsx (non due — l'errore che il codice originale stesso
+segnala di NON ripetere): (a) il VALORE 1–10 dell'item, dieci bottoni; (b) il DOPPIO da
+raggiungere, dichiarato a mano; (c) OTTENUTO → valida. Le chiamate al motore
+(`mirrorCycle.setManualValue`/`declareReached`/`stopMirror`) sono le STESSE di App.tsx, non
+reinterpretate. Un bottone ANNULLA copre l'uscita anticipata (in App.tsx quel gesto passa dal
+cambio di modo, che SERENITY non ha — stessa funzione, `stopMirror()`, raggiunta da un
+controllo diretto invece che da un selettore).
+
+Verificato a schermo (tab pulita): armato MIRROR, l'arco cambia da CONTACT/DISSOLUTION/AS-IS
+alla scala 1–10 con i doppi fra parentesi; bloccato il valore a 6 il piede di pagina mostra
+« 6 → 12 » e l'arco « 6.0 → ×2 12.0 »; dichiarato raggiunto compare « OBTENU » pulsante
+sull'arco e « obtenu — valider » in fondo; validato, il giornale avanza di due righe (la
+diagnostica di taratura + l'esito) e si torna ai tre bottoni d'armamento con l'arco tornato a
+ClearDial; armando CONTACT durante il test, il bottone MIRROR spariva (esclusività confermata).
+EQUILIBRIUM 2.0.162, SERENITY 3.0.25.
+
+⚠️ Resta assente: TONE SCALE (e il suo `ToneDial`) — stesso pattern, prossimo candidato.
+
 ---
 
 ## Il principio dimensionale — regola per le fasi 6, 7, 8

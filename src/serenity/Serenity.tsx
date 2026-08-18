@@ -42,6 +42,8 @@ import { QuantumSphere } from '../components/QuantumSphere';
 import { ClearDial } from '../components/ClearDial';
 import { useSessionJournal } from '../session/useSessionJournal';
 import { useContactNullCycle } from '../session/useContactNullCycle';
+import { useMirrorCycle } from '../session/useMirrorCycle';
+import { MirrorDial } from '../components/MirrorDial';
 import { sessionRecord, cycleRecord, fnRecord } from '../engine/corpus';
 import { corpusWrite, corpusAvailable } from '../lib/corpusWriter';
 import { getProfiles, getPcProfiles } from '../lib/storage';
@@ -441,6 +443,26 @@ export default function Serenity() {
   });
   trackCycleRef.current = cycles.trackCycle;
 
+  // ── IL CICLO MIRROR — segnalato assente insieme al suo arco (`MirrorDial`) ─────────────────
+  // Stesso motore condiviso di App.tsx (`session/useMirrorCycle`, mai montato qui prima):
+  // `trackMirrorRef` esisteva già (l'ago EEG lo alimenta a ogni campione, vedi
+  // `useChargeEngine` sotto) ma restava un no-op — il metodo del raddoppio di Ron era
+  // TOTALMENTE inaccessibile in SERENITY, non solo privo d'arco. MIRROR e CONTACT/NULL sono
+  // ESCLUSIVI a vicenda (come lo sono in App.tsx via `mode`): qui non con un selettore di
+  // modo — con la SEMPLICE assenza reciproca dei bottoni d'armamento, stessa esclusività,
+  // niente selettore in più da costruire.
+  const mirror = useMirrorCycle({
+    auditingQuestion: item,
+    setAuditingQuestion: setItem,
+    setItemSpoken: () => {},
+    nowSec: () => sessionClock.now(),
+    logLength: () => journal.logs.length,
+    log: (text, type) => journal.addLog({ speaker: 'SYS', text, time: sessionClock.now(), type }),
+    ensureAssessmentOn: () => {},
+    LC,
+  });
+  trackMirrorRef.current = mirror.trackMirror;
+
   useChargeEngine({
     workerRef, gyroBufferRef: gyroBuffer,
     timeRef, sessionStateRef, viewModeRef, instrumentsRef,
@@ -492,6 +514,7 @@ export default function Serenity() {
     sessionClock.reset(); sessionClock.start();
     journal.resetJournal(t('ser_session_opened'));
     ep.resetEpState();   // niente "EP ✓" residuo da una seduta precedente
+    mirror.resetMirror();   // niente ciclo MIRROR residuo da una seduta precedente
     // ── MNA — « entra in CAPTURE » all'apertura, come App.tsx ────────────────────────────
     // Non IDLE: l'attrezzo è PRONTO a catturare fin dal primo secondo, non spento. E
     // `onHarmonicCopy` va agganciato QUI (una volta per seduta, come in App.tsx) — è
@@ -818,19 +841,38 @@ export default function Serenity() {
               logica di `QuantumSphere`: la geometria e i colori sono l'informazione, non
               un'americano da re-interpretare) — nessun `forceTheme`, legge la stessa
               preferenza condivisa di `QuantumSphere` accanto. */}
-          <ClearDial
-            armed={cycles.cycleArmed}
-            asIsPending={cycles.asIsPending}
-            manualReady={cycles.manualReady}
-            asIsFalse={cycles.asIsFalse}
-            asIsIO={cycles.asIsIO}
-            onValidate={cycles.validateAsIs}
-            deltaStar={deltaStar}
-            deltaStarN={deltaStarN}
-            isLightTheme={isLightTheme}
-            cycleKind={cycles.cycleKind}
-            nullPhase={cycles.nullPhase}
-          />
+          {/* ── L'ARCO CAMBIA CON IL METODO, MAI CONTEMPORANEO ────────────────────────────────
+              In App.tsx `viewMode` mostra UN arco alla volta — MirrorDial PRENDE IL POSTO di
+              ClearDial in MIRROR, non gli sta accanto (« l'aiguille + » resta la stessa, solo
+              l'arco concentrico cambia). Qui la stessa esclusività senza un `viewMode` a
+              parte: basta guardare `mirror.mirrorArmed` — i bottoni d'armamento sotto sono già
+              reciprocamente esclusi, quindi i due cicli non possono essere armati insieme. */}
+          {mirror.mirrorArmed ? (
+            <MirrorDial
+              armed={mirror.mirrorArmed}
+              valueR={mirror.mirrorDisp.valueR}
+              contactQ={mirror.mirrorDisp.contactQ}
+              dischargeQ={mirror.mirrorDisp.dischargeQ}
+              locked={mirror.mirrorDisp.locked}
+              reached={mirror.mirrorDisp.reached}
+              isLightTheme={isLightTheme}
+              lang={lang}
+            />
+          ) : (
+            <ClearDial
+              armed={cycles.cycleArmed}
+              asIsPending={cycles.asIsPending}
+              manualReady={cycles.manualReady}
+              asIsFalse={cycles.asIsFalse}
+              asIsIO={cycles.asIsIO}
+              onValidate={cycles.validateAsIs}
+              deltaStar={deltaStar}
+              deltaStarN={deltaStarN}
+              isLightTheme={isLightTheme}
+              cycleKind={cycles.cycleKind}
+              nullPhase={cycles.nullPhase}
+            />
+          )}
           {/* ── MNA — galleggia SUL quadrante, non lo sostituisce ────────────────────────────
               « Si apre senza lasciare il ciclo »: la seduta resta visibile sotto, com'è in
               App.tsx (ancorato in fondo al pannello dello strumento, non a tutta pagina). */}
@@ -923,7 +965,7 @@ export default function Serenity() {
             campo item — sono due strade sullo stesso motore, non due cicli diversi da
             scrivere. Il campo e i bottoni stanno sulla STESSA riga, come in App.tsx dopo il
             segnalato « il campo e il gesto in un posto, il bottone in un altro ». */}
-        {aperta && !cycles.cycleArmed && (
+        {aperta && !cycles.cycleArmed && !mirror.mirrorArmed && (
           <>
             <input
               value={item}
@@ -947,6 +989,79 @@ export default function Serenity() {
               fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
             }}>
               {t('ser_arm_null')}
+            </button>
+            {/* ── MIRROR — il terzo metodo, escluso a vicenda con CONTACT/NULL ────────────────
+                Segnalato assente insieme al suo arco. Stesso campo item, stesso gesto
+                d'armamento — `armMirror()` prende quel che c'è scritto (o resta in attesa
+                di un item a voce, come CONTACT/NULL: gap già noto, non nuovo qui). */}
+            <button onClick={() => mirror.armMirror()} style={{
+              border: 'none', cursor: 'pointer', background: 'none',
+              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+            }}>
+              {LC('dai il MIRROR', 'donne le MIRROR', 'give the MIRROR', 'da el MIRROR', 'ge MIRROR')}
+            </button>
+          </>
+        )}
+        {/* ── MIRROR, ARMATO — tre tempi, non due ──────────────────────────────────────────
+            (a) il VALORE 1–10 dell'item — dieci bottoni, la quantità di carica; (b) il
+            DOPPIO da raggiungere, con la sua dichiarazione; (c) OTTENUTO → valida. Stessa
+            sequenza di App.tsx (`bottoneCiclo`, ramo 'mirror'), stessi tre passi — non due,
+            come una prima lettura avrebbe fatto (« dai l'item » dritto a « ottenuto », senza
+            il valore in mezzo: segnalato in App.tsx stesso come l'errore da NON ripetere). */}
+        {aperta && mirror.mirrorArmed && (
+          <>
+            <span style={{ fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)' }}>
+              {item || t('ser_item_placeholder')}
+            </span>
+            {!mirror.mirrorDisp.locked ? (
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12, color: 'var(--s-ink-faint)', marginRight: 6 }}>
+                  {LC('quanta carica?', 'combien de charge ?', 'how much charge?', '¿cuánta carga?', 'hur mycket laddning?')}
+                </span>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => (
+                  <button key={v} onClick={() => {
+                    mirror.mirrorCycle.setManualValue(v);
+                    mirror.setMirrorDisp({ contactQ: mirror.mirrorCycle.contactQ, dischargeQ: 0,
+                      locked: true, reached: false, valueR: mirror.mirrorCycle.valueR });
+                  }} style={{
+                    border: 'none', cursor: 'pointer', borderRadius: 999, width: 26, height: 26,
+                    fontFamily: 'var(--s-mono)', fontSize: 11.5, fontWeight: 700,
+                    background: 'var(--s-disc-sunk)', color: 'var(--s-ink)',
+                  }}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+            ) : !mirror.mirrorDisp.reached ? (
+              <>
+                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12, color: 'var(--s-ink-faint)' }}>
+                  {LC('portalo al doppio', 'mène-le au double', 'take it to the double', 'llévalo al doble', 'för det till dubbeln')}
+                  {' — '}{mirror.mirrorDisp.valueR.toFixed(0)} → {(2 * mirror.mirrorDisp.valueR).toFixed(0)}
+                </span>
+                <button onClick={() => {
+                  mirror.mirrorCycle.declareReached();
+                  mirror.setMirrorDisp({ contactQ: mirror.mirrorCycle.contactQ, dischargeQ: mirror.mirrorCycle.dischargeQ,
+                    locked: true, reached: true, valueR: mirror.mirrorCycle.valueR });
+                }} style={{
+                  border: 'none', cursor: 'pointer', background: 'none',
+                  fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-still)',
+                }}>
+                  {LC('doppio raggiunto', 'double atteint', 'double reached', 'doble alcanzado', 'dubbeln nådd')}
+                </button>
+              </>
+            ) : (
+              <button onClick={() => mirror.stopMirror()} style={{
+                border: 'none', cursor: 'pointer', background: 'none',
+                fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-still)',
+              }}>
+                {LC('ottenuto — valida', 'obtenu — valider', 'obtained — validate', 'obtenido — validar', 'uppnått — validera')}
+              </button>
+            )}
+            <button onClick={() => mirror.stopMirror()} style={{
+              border: 'none', cursor: 'pointer', background: 'none',
+              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-ghost)',
+            }}>
+              {t('cancel')}
             </button>
           </>
         )}
