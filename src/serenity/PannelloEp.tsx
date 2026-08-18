@@ -41,12 +41,15 @@ export function PannelloEp({ ep, onValidato }: {
     onValidato();
   };
 
+  /** ⚠️ Né `border` né `boxShadow` qui — segnalato: « je ne vois pas de GLASS FORM ». Uno
+   *  stile inline vince sempre su una classe CSS per la stessa proprietà: dichiararli qui
+   *  cancellava in silenzio il bordo e il riflesso di `.s-glass`/`.s-glass-btn` (aggiunti via
+   *  `className` nei punti d'uso). */
   const pillola = (attiva: boolean): React.CSSProperties => ({
-    border: 'none', cursor: 'pointer', borderRadius: 999, padding: '8px 20px',
+    cursor: 'pointer', borderRadius: 999, padding: '8px 20px',
     fontFamily: 'var(--s-sans)', fontSize: 13.5, letterSpacing: '0.06em',
     background: attiva ? 'var(--s-ink)' : 'var(--s-disc)',
     color: attiva ? 'var(--s-ground-warm)' : 'var(--s-ink-soft)',
-    boxShadow: attiva ? 'none' : 'var(--s-shadow)',
     transition: 'background var(--s-slow) var(--s-ease), color var(--s-slow) var(--s-ease)',
   });
   const campo: React.CSSProperties = {

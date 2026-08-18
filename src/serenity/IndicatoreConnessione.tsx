@@ -31,6 +31,13 @@
  * (`aria-hidden`): tolta, l'indicatore si legge esattamente come prima — la parola resta la
  * fonte vera dell'informazione, l'icona la anticipa.
  *
+ * ── SEGNALATO: « le même style pour les cycles doit être utilisé pour les inscriptions en
+ * haut » ──────────────────────────────────────────────────────────────────────────────────
+ * Erano parole nude sulla superficie. Ora ogni indicatore è una PILLOLA di vetro — lo stesso
+ * `.s-glass`/`.s-glass-btn` dei bottoni di ciclo in fondo pagina: stesso materiale, stesso
+ * linguaggio, non due stili per due famiglie di controlli che fanno la stessa cosa (dire uno
+ * stato, offrire un gesto).
+ *
  * @see docs/serenity-refonte.md — fase 6.
  */
 
@@ -61,9 +68,10 @@ export function IndicatoreConnessione({ stato, etichetta, dettaglio, onClick, ti
     <Elemento
       onClick={onClick}
       title={title}
+      className={onClick ? 's-glass s-glass-btn' : 's-glass'}
       style={{
         display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--s-ink)',
-        border: 'none', background: 'none', padding: 0, margin: 0,
+        background: 'var(--s-disc)', padding: '5px 12px', borderRadius: 999, margin: 0,
         fontFamily: 'var(--s-sans)', fontWeight: 500, cursor: onClick ? 'pointer' : 'default',
       }}
     >

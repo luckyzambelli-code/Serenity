@@ -49,12 +49,18 @@ import { pick5 } from '../i18n5';
 import { compareReady, soloTaOffset } from '../engine/canTest';
 import type { useThetaMeter } from '../hooks/useThetaMeter';
 
+/**
+ * ⚠️ NÉ `border` NÉ `boxShadow` qui dentro — segnalato: « je ne vois pas de GLASS FORM ». La
+ * causa vera: questa funzione dichiarava `border: 'none'` e un `boxShadow` PROPRIO, e uno
+ * stile inline VINCE SEMPRE su una classe CSS per la STESSA proprietà — il bordo e il riflesso
+ * di `.s-glass`/`.s-glass-btn` (aggiunti via `className`, vedi i punti d'uso) non arrivavano
+ * mai a schermo, cancellati in silenzio da queste due righe. Il vetro ora viene SOLO dalla
+ * classe; qui resta solo ciò che la classe non decide (sfondo, colore, misura). */
 const pillola = (piena: boolean): React.CSSProperties => ({
-  border: 'none', cursor: 'pointer', borderRadius: 999, padding: '7px 16px',
+  cursor: 'pointer', borderRadius: 999, padding: '7px 16px',
   fontFamily: 'var(--s-sans)', fontSize: 13, letterSpacing: '0.04em',
   background: piena ? 'var(--s-disc)' : 'var(--s-disc-sunk)',
-  color: 'var(--s-ink)', boxShadow: piena ? 'var(--s-shadow)' : 'none',
-  transition: 'background var(--s-slow) var(--s-ease), box-shadow var(--s-slow) var(--s-ease)',
+  color: 'var(--s-ink)',
 });
 
 /** Chi monta questo pannello (`Serenity.tsx`) lo fa SOLO a meter connesso — niente stato di

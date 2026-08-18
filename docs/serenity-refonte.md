@@ -520,6 +520,33 @@ pulita, tema chiaro E scuro): il riflesso si vede su cerchi e pulsanti, i pannel
 sfocano il quadrante dietro di loro, nessun bottone ha perso la sua funzione o il suo colore di
 stato. EQUILIBRIUM 2.0.172, SERENITY 3.0.35.
 
+⚠️ **Segnalato subito dopo, con un nuovo riferimento visivo**: « je ne vois pas de GLASS FORM » +
+« le bouton FERMER — on ne sait pas s'il correspond à la séance ou au cycle » + « le même style
+[dei cicli] doit être utilisé pour les inscriptions en haut ».
+
+**La causa vera del "non vedo il vetro"**: un bug, non un'impressione. `pillola()` in
+`PannelloMeter.tsx`/`PannelloEp.tsx`/`PannelloProfilo.tsx`, e lo stile inline del bottone
+APRI/CHIUDI seduta, dichiaravano ANCORA `border: 'none'` e un `boxShadow` proprio — e uno stile
+inline VINCE SEMPRE su una classe CSS per la stessa proprietà. Il bordo e il riflesso di
+`.s-glass`/`.s-glass-btn` (aggiunti via `className` nel giro precedente) non arrivavano mai a
+schermo: cancellati in silenzio dalle due righe rimaste indietro in ognuno di questi file. Tolte
+ovunque — il vetro ora si vede davvero (verificato a schermo, chiaro e scuro).
+
+**Il bottone FERMER, disambiguato**: diceva solo "chiudi"/"fermer" — la stessa parola che,
+armato un ciclo, un ANNULLA vicino avrebbe potuto sembrare dire. Ora dice per esteso "chiudi LA
+SEDUTA"/"fermer LA SÉANCE" — l'unico bottone che la governa, mai confondibile con un gesto di
+ciclo.
+
+**Le "inscriptions" in alto, ora pillole di vetro**: `IndicatoreConnessione` (MUSE, METER, PC,
+MUSE del preclear) e la riga "chi audita" prendono la STESSA `.s-glass`/`.s-glass-btn` dei
+bottoni di ciclo — non un secondo linguaggio per dire cose simili. Insieme: "salva questa
+configurazione", la freccia "configura il meter", l'ingranaggio CONFIG, ASSESSMENT, MNA, EP —
+ogni controllo reale dell'intestazione e del piè di pagina.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori, `vitest run` 639/639, a schermo
+(tema chiaro E scuro) il bordo/riflesso si vede chiaramente su ogni pillola, "chiudi la seduta"
+si legge per esteso. EQUILIBRIUM 2.0.173, SERENITY 3.0.36.
+
 ⚠️ **Revisione funzionale — non solo grafica (17/08/2026, terza segnalazione)**: due
 regressioni VERE, non d'aspetto — una funzione persa nel passaggio a SERENITY, non solo
 ridisegnata:

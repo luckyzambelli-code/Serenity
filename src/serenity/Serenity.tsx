@@ -1113,8 +1113,9 @@ export default function Serenity() {
                   }
                   avviaSeduta();
                 }}
+                className="s-glass s-glass-btn"
                 style={{
-                  border: 'none', borderRadius: 999, padding: '9px 22px',
+                  borderRadius: 999, padding: '9px 22px',
                   cursor: (connSel.muse || connSel.theta || connSel.none) ? 'pointer' : 'default',
                   opacity: (connSel.muse || connSel.theta || connSel.none) ? 1 : 0.4,
                   fontFamily: 'var(--s-sans)', fontSize: 13.5, letterSpacing: '0.06em', textTransform: 'uppercase',
@@ -1157,7 +1158,15 @@ export default function Serenity() {
             ⚠️ Segnalato: « met un icone... pour l'auditeur (SOLO, Expert, etc.) ». Le STESSE
             icone di `Avvio.tsx` per queste stesse scelte (User/Users per solo/con preclear,
             Wrench per esperto, Wifi per a distanza) — non un secondo set da imparare. */}
-        <span style={{ fontSize: 13.5, color: 'var(--s-ink-soft)', display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* ── STESSA PILLOLA DI VETRO DEGLI INDICATORI DI CONNESSIONE — segnalato: « le même
+            style pour les cycles doit être utilisé pour les inscriptions en haut ». Non più
+            parole nude: un'unica pillola `.s-glass`, come `IndicatoreConnessione` qui accanto —
+            stesso materiale per la stessa famiglia di informazioni (chi/come/dove di questa
+            seduta), non un secondo linguaggio visivo per dire cose simili. */}
+        <span className="s-glass" style={{
+          fontSize: 13.5, color: 'var(--s-ink-soft)', display: 'flex', alignItems: 'center', gap: 10,
+          background: 'var(--s-disc)', padding: '5px 12px', borderRadius: 999,
+        }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             {avvio.solo
               ? <User size={12} strokeWidth={1.8} aria-hidden="true" />
@@ -1181,8 +1190,9 @@ export default function Serenity() {
             raggiungibile da qui, qualunque sia lo stato degli strumenti in questo momento. */}
         {!aperta && (
           <div style={{ position: 'relative' }}>
-            <button onClick={() => { setSalvaConfigAperto(v => !v); setConfigSalvata(false); }} style={{
-              border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+            <button className="s-glass s-glass-btn" onClick={() => { setSalvaConfigAperto(v => !v); setConfigSalvata(false); }} style={{
+              cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
+              background: 'var(--s-disc)',
               fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
             }}>
               {LC('salva questa configurazione', 'sauvegarder cette configuration',
@@ -1296,8 +1306,9 @@ export default function Serenity() {
             proprio lì (`position:absolute`, sotto l'intestazione) — la stessa idea del cassetto
             di CONFIG, non un secondo luogo. */}
         {meterC && (
-          <button onClick={() => setMeterSetupAperto(v => !v)} style={{
-            border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+          <button className="s-glass s-glass-btn" onClick={() => setMeterSetupAperto(v => !v)} style={{
+            cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
+            background: 'var(--s-disc)',
             fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
           }}>
             {/* ⚠️ Non `theta_setup` ("Assetto") — segnalato: « on ne sait pas les réglages à
@@ -1362,9 +1373,9 @@ export default function Serenity() {
         )}
         <span style={{ width: 1, height: 16, background: 'var(--s-ink-ghost)', flexShrink: 0 }} />
         {/* CONFIG — raggiungibile in ogni momento, come il cassetto di EQUILIBRIUM. */}
-        <button onClick={() => setConfigAperto(true)} title={t('config') as string} style={{
-          border: 'none', background: 'none', cursor: 'pointer', padding: 0,
-          display: 'flex', color: 'var(--s-ink-soft)',
+        <button className="s-glass s-glass-btn" onClick={() => setConfigAperto(true)} title={t('config') as string} style={{
+          cursor: 'pointer', padding: 8, borderRadius: 999,
+          background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
         }}>
           <Settings size={16} strokeWidth={1.6} />
         </button>
@@ -1641,14 +1652,24 @@ export default function Serenity() {
           Uno solo. Il guscio sa fare una cosa: aprire e chiudere una seduta sull'orologio
           vero. Tutto il resto delle fasi si appende a questo. */}
       <footer style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+        {/* ⚠️ Niente `border: 'none'` qui — segnalato: « je ne vois pas de GLASS FORM ». Uno
+            stile inline vince sempre su una classe CSS per la stessa proprietà: dichiararlo qui
+            cancellava in silenzio il bordo di `.s-glass`. */}
         <button className="s-glass s-glass-btn" onClick={aperta ? chiudi : apri} style={{
-          border: 'none', cursor: 'pointer',
+          cursor: 'pointer',
           background: 'var(--s-disc)', color: 'var(--s-ink)',
           borderRadius: 999, padding: '11px 28px',
           fontSize: 14, letterSpacing: '0.1em', textTransform: 'uppercase',
           fontFamily: 'var(--s-sans)',
         }}>
-          {aperta ? t('ser_close_session') : t('ser_open_session')}
+          {/* ── SEGNALATO: « le bouton FERMER — on ne sait pas s'il correspond à la séance ou
+              au cycle ». App.tsx distingue ESPLICITAMENTE i due gesti nel testo (« ferma la
+              seduta » contro « chiudi/annulla il ciclo »): qui la parola sola "CHIUDI" non lo
+              diceva, e un ANNULLA di ciclo poteva sembrare lo stesso gesto. Ora dice sempre
+              "LA SEDUTA" per esteso — l'unico bottone che la governa. */}
+          {aperta
+            ? LC('chiudi la seduta', 'fermer la séance', 'close the session', 'cerrar la sesión', 'stäng sessionen')
+            : LC('apri una seduta', 'ouvrir une séance', 'open a session', 'abrir una sesión', 'öppna en session')}
         </button>
         {/* ── IL CICLO — un item, quattro strade, ciascuna col SUO bottone ──────────────────
             Segnalato: « la visibilità dei CICLI non è ottimale... devi fare come in EQUILIBRIUM
@@ -2008,9 +2029,11 @@ export default function Serenity() {
         {aperta && (
           <div style={{ position: 'relative' }}>
             <button
+              className="s-glass s-glass-btn"
               onClick={() => setAssessAttivo(v => !v)}
               style={{
-                border: 'none', cursor: 'pointer', background: 'none',
+                cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
+                background: 'var(--s-disc)',
                 fontFamily: 'var(--s-sans)', fontSize: 13.5,
                 color: assessAttivo ? 'var(--s-still)' : 'var(--s-ink-faint)',
               }}>
@@ -2051,9 +2074,11 @@ export default function Serenity() {
             principio del tasto MNA nella barra dei comandi di App.tsx. */}
         {aperta && moduleVis.mna && (
           <button
+            className="s-glass s-glass-btn"
             onClick={() => setMnaAperto(v => !v)}
             style={{
-              border: 'none', cursor: 'pointer', background: 'none',
+              cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
+              background: 'var(--s-disc)',
               fontFamily: 'var(--s-sans)', fontSize: 13.5,
               color: mnaAperto || primePhase !== 'CAPTURE' && primePhase !== 'IDLE' ? 'var(--s-still)' : 'var(--s-ink-faint)',
             }}>
@@ -2065,9 +2090,11 @@ export default function Serenity() {
             volta validato, come in App.tsx. */}
         {aperta && (
           <button
+            className="s-glass s-glass-btn"
             onClick={() => { if (!ep.epValidated) ep.setEpTimestamp(sessionClock.now()); ep.setEpManualOpen(true); }}
             style={{
-              border: 'none', cursor: 'pointer', background: 'none',
+              cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
+              background: 'var(--s-disc)',
               fontFamily: 'var(--s-sans)', fontSize: 13.5,
               color: ep.epValidated ? 'var(--s-still)' : 'var(--s-ink-faint)',
             }}>
