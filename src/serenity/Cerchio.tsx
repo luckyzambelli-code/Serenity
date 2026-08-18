@@ -8,9 +8,15 @@
  * SERENITY in una forma.
  *
  * ── COME SI VEDE ────────────────────────────────────────────────────────────────────────────
- * Non ha bordo. Ha una superficie appena diversa dal fondo e un'ombra bassa: si vede per
- * RILIEVO, come si vede un oggetto vero posato su un tavolo. Un bordo sarebbe di nuovo una
- * cornice, cioè di nuovo un pannello.
+ * Ha una superficie appena diversa dal fondo e un'ombra bassa: si vede per RILIEVO, come si
+ * vede un oggetto vero posato su un tavolo.
+ *
+ * ── SEGNALATO: IL VETRO DI EQUILIBRIUM ──────────────────────────────────────────────────────
+ * « Les boutons de EQUILIBRIUM... bien plus jolis » + « reconstruit en liquid glass ». Un bordo
+ * TORNA — non la cornice che questo file rifiutava (un contorno pieno da leggere), ma il
+ * riflesso chiarissimo di un vetro vero (`.s-glass`, `tokens.css`), insieme alla sfocatura di
+ * quel che sta dietro (`backdrop-filter`). Il rilievo (l'ombra, sotto) resta la stessa: il
+ * vetro si aggiunge, non sostituisce la dottrina del cerchio.
  *
  * ── IL RESPIRO ──────────────────────────────────────────────────────────────────────────────
  * Quando è vivo il cerchio respira: dodici secondi per ciclo, un'ampiezza dell'un per cento.
@@ -56,5 +62,8 @@ export function Cerchio({ dimensione, children, x = 0, y = 0, viva, spenta, rita
     } : {}),
     ...(viva ? { animation: `respiro 12s ${ritardo}ms var(--s-ease) infinite` } : {}),
   };
-  return <div style={stile}>{children}</div>;
+  // `spenta` non prende il vetro: un disco "previsto ma spento" deve leggersi affondato e
+  // opaco, non luccicare come se fosse acceso — il riflesso apparterrebbe a un'informazione
+  // che qui è deliberatamente assente.
+  return <div className={spenta ? undefined : 's-glass'} style={stile}>{children}</div>;
 }

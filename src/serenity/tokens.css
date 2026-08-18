@@ -14,6 +14,17 @@
  *     che galleggia si coglie di sbieco, per posizione e dimensione, senza leggere.
  *   • MOVIMENTI LENTI. Tutto ciò che si muove in fretta alla periferia è un allarme per l'occhio.
  *
+ * ── SEGNALATO: « les boutons de EQUILIBRIUM... bien plus jolis » + « reconstruit SERENITY en
+ * liquid glass » ───────────────────────────────────────────────────────────────────────────
+ * Richiesta esplicita, e cambia la regola qui sopra: « niente bordi » restava valido finché il
+ * rilievo bastava a dire "questo è un oggetto" — ora si chiede il MATERIALE di EQUILIBRIUM
+ * stesso (il vetro smerigliato dei suoi pannelli/pulsanti), non solo la sua taglia. `.s-glass`/
+ * `.s-glass-btn` sotto sono quel materiale: superficie TRASLUCIDA (si vede, sfocato, quel che
+ * sta dietro — `backdrop-filter`), un bordo chiarissimo che imita il riflesso sul vetro vero, e
+ * un'ombra a due strati (una sotto che stacca dal fondo, una dentro che dà spessore). Restano
+ * FUORI da questo materiale i tre segnali e l'inchiostro — quelli restano tenui per la stessa
+ * ragione di sempre (l'ansia periferica), il vetro è un fatto di FORMA, non di colore.
+ *
  * ── PERCHÉ NON RIUSA I COLORI DI EQUILIBRIUM ────────────────────────────────────────────────
  * `ui/tokens.ts` è la tavolozza dell'interfaccia scura, tarata su un fondo nero. Prenderla e
  * schiarirla darebbe un'applicazione che sembra EQUILIBRIUM malriuscito. SERENITY è un'altra
@@ -52,13 +63,18 @@
   --s-ink-faint: #84898e;
   --s-ink-ghost: #cfd2d5;
 
-  /* ── I CERCHI ────────────────────────────────────────────────────────────────────────────
-     Non hanno bordo: hanno una superficie appena più chiara o appena più scura del fondo, e
-     un'ombra bassissima. Si vedono per RILIEVO, che è come si vede un oggetto vero. */
-  --s-disc:        #ffffff;
-  --s-disc-sunk:   #eceae6;
+  /* ── I CERCHI, ORA IN VETRO ─────────────────────────────────────────────────────────────
+     Segnalato: il materiale di EQUILIBRIUM, non solo la sua taglia. `--s-disc`/`--s-disc-sunk`
+     diventano TRASLUCIDI (perché `.s-glass` possa sfocare quel che sta sotto) — il rilievo
+     resta (un'ombra bassa li stacca dal fondo), il vetro ci si aggiunge sopra. */
+  --s-disc:        rgba(255, 255, 255, 0.62);
+  --s-disc-sunk:   rgba(236, 234, 230, 0.55);
   --s-shadow:      0 1px 2px rgba(44, 47, 51, 0.04), 0 8px 24px rgba(44, 47, 51, 0.06);
   --s-shadow-lift: 0 2px 4px rgba(44, 47, 51, 0.05), 0 16px 44px rgba(44, 47, 51, 0.09);
+  /* Il riflesso sul vetro — un bordo chiarissimo, mai colorato, mai "un contorno da leggere". */
+  --s-glass-edge:      rgba(255, 255, 255, 0.75);
+  --s-glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  --s-glass-blur:      blur(20px) saturate(160%);
 
   /* ── I TRE SEGNALI, E BASTA ──────────────────────────────────────────────────────────────
      Tre e non dieci: un linguaggio di colore che l'auditor deve ricordare è un linguaggio che
@@ -114,10 +130,15 @@
   --s-ink-faint: #8b8e90;
   --s-ink-ghost: #45484a;
 
-  --s-disc:        #232427;
-  --s-disc-sunk:   #1c1d1f;
+  --s-disc:        rgba(52, 53, 57, 0.55);
+  --s-disc-sunk:   rgba(28, 29, 31, 0.55);
   --s-shadow:      0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.45);
   --s-shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.40), 0 16px 44px rgba(0, 0, 0, 0.55);
+  /* Sullo scuro il riflesso è più tenue (il vetro vero riflette meno su un fondo scuro) — e
+     l'highlight interno resta chiaro: è la luce che entra dal bordo, non il colore del fondo. */
+  --s-glass-edge:      rgba(255, 255, 255, 0.14);
+  --s-glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  --s-glass-blur:      blur(20px) saturate(160%);
 
   /* Stessa tinta dei tre segnali, luminosità alzata — sennò su un fondo scuro si spengono
      invece di restare « qui », non « ADESSO » (vedi la regola dei tre segnali sopra). */
@@ -192,3 +213,70 @@ body {
 .justify-center { justify-content: center; }
 .relative { position: relative; }
 .rounded-xl { border-radius: 0.75rem; }
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   IL VETRO — segnalato: « les boutons de EQUILIBRIUM... bien plus jolis » + « reconstruit
+   SERENITY en liquid glass ».
+   ═══════════════════════════════════════════════════════════════════════════════════════════
+   Aggiunte CLASSI, non uno stile inline da ripetere in ogni pannello: chi ha già
+   `background: var(--s-disc)` nel proprio `style` inline (25 punti, sparsi in una dozzina di
+   file) ottiene il vetro aggiungendo solo `className="s-glass"` — lo stile inline resta per
+   padding/gap/borderRadius, che restano SUOI; qui arrivano SOLO le proprietà che l'inline non
+   dichiara già (`backdrop-filter`, il bordo, l'highlight), quindi niente conflitto di cascata.
+   `-webkit-backdrop-filter` per Safari/WebKit (Electron è Chromium, ma un binario futuro su
+   WebKit non deve riscoprire perché il vetro sparisce). */
+.s-glass {
+  position: relative;
+  backdrop-filter: var(--s-glass-blur);
+  -webkit-backdrop-filter: var(--s-glass-blur);
+  border: 1px solid var(--s-glass-edge);
+  box-shadow: var(--s-glass-highlight);
+  isolation: isolate;
+}
+/* IL LUCIDO — segnalato con esempi: il vetro vero prende più luce in ALTO che in basso, un
+   velo che sfuma via, non un bordo. Uno pseudo-elemento (mai contenuto, mai un colore proprio)
+   sovrapposto per ultimo — `isolation:isolate` sul contenitore lo tiene dentro i bordi
+   arrotondati senza aggiungere un `overflow:hidden` che taglierebbe altro (i cerchi delle
+   camere, per esempio, hanno già il loro `overflow:hidden` interno per il video). */
+.s-glass::before {
+  content: '';
+  position: absolute; inset: 0; border-radius: inherit;
+  background: linear-gradient(165deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0) 38%);
+  pointer-events: none;
+  z-index: 0;
+}
+:root[data-tema='scuro'] .s-glass::before {
+  background: linear-gradient(165deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 42%);
+}
+.s-glass > * { position: relative; z-index: 1; }
+
+/* ── I MODIFICATORI — SI COMBINANO CON `.s-glass`, non lo sostituiscono ─────────────────────
+   `className="s-glass s-glass-lift"` o `"s-glass s-glass-btn"`: la ricetta di base (sfocatura,
+   bordo, lucido) si scrive UNA sola volta sopra; qui solo la DIFFERENZA. Scritti come classi
+   separate invece che duplicati dentro `.s-glass-lift`/`.s-glass-btn` perché un pannello con
+   ombra di rilievo E interazione (un pulsante che galleggia) può volerle entrambe insieme
+   senza una terza classe apposta. */
+
+/* Sui pannelli con anche un'ombra ESTERNA (`--s-shadow-lift`, per staccarsi dal fondo) le due
+   ombre si sommano in un solo `box-shadow` — dichiararle una sull'altra nello style inline le
+   SOSTITUIREBBE invece di sommarle. Da usare al posto di un `boxShadow` inline quando il
+   pannello galleggia sopra il resto (i cassetti, i popover, l'MNA). */
+.s-glass-lift { box-shadow: var(--s-glass-highlight), var(--s-shadow-lift); }
+
+/* ── IL PULSANTE DI VETRO ────────────────────────────────────────────────────────────────
+   Segnalato esplicitamente: « les boutons de EQUILIBRIUM ». La differenza fra un pannello e un
+   pulsante di vetro è SOLO l'interazione — stessa sfocatura, stesso bordo, ma qui una
+   transizione al passaggio del mouse (il vetro "risponde") e il cursore a dire che si preme. */
+.s-glass-btn {
+  box-shadow: var(--s-glass-highlight), var(--s-shadow);
+  cursor: pointer;
+  transition: box-shadow var(--s-slow) var(--s-ease), border-color var(--s-slow) var(--s-ease),
+              transform 120ms var(--s-ease), background var(--s-slow) var(--s-ease);
+}
+.s-glass-btn:hover:not(:disabled) {
+  box-shadow: var(--s-glass-highlight), var(--s-shadow-lift);
+}
+.s-glass-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.s-glass-btn:disabled { cursor: default; }

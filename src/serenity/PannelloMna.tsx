@@ -110,9 +110,9 @@ export function PannelloMna({
   const avvicinamento = Math.max(0, Math.min(1, 1 - primeDelta / 1.5));
 
   return (
-    <div style={{
+    <div className="s-glass s-glass-lift" style={{
       position: 'absolute', left: 16, right: 16, bottom: 16, zIndex: 6,
-      background: 'var(--s-disc)', borderRadius: 18, boxShadow: 'var(--s-shadow-lift)',
+      background: 'var(--s-disc)', borderRadius: 18,
       padding: '12px 18px', pointerEvents: 'auto',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>

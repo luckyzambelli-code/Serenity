@@ -1031,9 +1031,9 @@ export default function Serenity() {
           alignItems: 'center', justifyContent: 'center',
           background: 'color-mix(in srgb, var(--s-ground) 80%, transparent)',
         }}>
-          <div style={{
+          <div className="s-glass s-glass-lift" style={{
             display: 'flex', flexDirection: 'column', gap: 16, padding: '28px 32px',
-            borderRadius: 16, background: 'var(--s-disc)', boxShadow: 'var(--s-shadow-lift)',
+            borderRadius: 16, background: 'var(--s-disc)',
             minWidth: 320,
           }}>
             <span style={{ fontFamily: 'var(--s-serif)', fontSize: 18, color: 'var(--s-ink)' }}>
@@ -1189,10 +1189,10 @@ export default function Serenity() {
                 'save this configuration', 'guardar esta configuración', 'spara denna konfiguration')}
             </button>
             {salvaConfigAperto && (
-              <div style={{
+              <div className="s-glass s-glass-lift" style={{
                 position: 'absolute', top: '100%', right: 0, marginTop: 8, zIndex: 40,
                 display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 14px',
-                borderRadius: 12, background: 'var(--s-disc)', boxShadow: 'var(--s-shadow-lift)',
+                borderRadius: 12, background: 'var(--s-disc)',
                 minWidth: 260,
               }}>
                 <span style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--s-ink-faint)' }}>
@@ -1641,14 +1641,12 @@ export default function Serenity() {
           Uno solo. Il guscio sa fare una cosa: aprire e chiudere una seduta sull'orologio
           vero. Tutto il resto delle fasi si appende a questo. */}
       <footer style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-        <button onClick={aperta ? chiudi : apri} style={{
+        <button className="s-glass s-glass-btn" onClick={aperta ? chiudi : apri} style={{
           border: 'none', cursor: 'pointer',
           background: 'var(--s-disc)', color: 'var(--s-ink)',
-          boxShadow: 'var(--s-shadow)',
           borderRadius: 999, padding: '11px 28px',
           fontSize: 14, letterSpacing: '0.1em', textTransform: 'uppercase',
           fontFamily: 'var(--s-sans)',
-          transition: `box-shadow var(--s-slow) var(--s-ease)`,
         }}>
           {aperta ? t('ser_close_session') : t('ser_open_session')}
         </button>
@@ -1687,7 +1685,7 @@ export default function Serenity() {
               // metodo (`toneAttivo`) e ci si lavora per più resistenze di fila.
               { k: 'tone', hue: null, label: 'TONE', onClick: () => setToneAttivo(true) },
             ]).map(c => (
-              <button key={c.k} onClick={c.onClick} style={{
+              <button key={c.k} className="s-glass s-glass-btn" onClick={c.onClick} style={{
                 border: `1.5px solid ${c.hue ?? 'var(--s-ink-ghost)'}`, cursor: 'pointer',
                 borderRadius: 999, padding: '6px 14px', background: 'var(--s-disc)',
                 fontFamily: 'var(--s-sans)', fontSize: 13, fontWeight: 700, letterSpacing: '0.05em',
@@ -2020,10 +2018,10 @@ export default function Serenity() {
               {assessItems.length > 0 ? ` · ${assessItems.length}` : ''}
             </button>
             {assessAttivo && (
-              <div style={{
+              <div className="s-glass s-glass-lift" style={{
                 position: 'absolute', bottom: '100%', left: 0, marginBottom: 8, zIndex: 40,
                 display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 14px',
-                borderRadius: 12, background: 'var(--s-disc)', boxShadow: 'var(--s-shadow-lift)',
+                borderRadius: 12, background: 'var(--s-disc)',
                 minWidth: 220, maxWidth: 320, maxHeight: 220, overflowY: 'auto',
               }}>
                 <span style={{ fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.1em',

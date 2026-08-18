@@ -481,6 +481,45 @@ pulita, tema scuro): testo visibilmente più grande e più contrastato ovunque, 
 troncamento/sovrapposizione nei pannelli più stretti (piè di pagina, camere, meter).
 EQUILIBRIUM 2.0.171, SERENITY 3.0.34.
 
+---
+
+## Il vetro (18/08/2026, sesto giro) — « les boutons de EQUILIBRIUM » + « liquid glass »
+
+Chiesto in due tempi, lo stesso desiderio: prima « i bottoni di EQUILIBRIUM, molto più belli »,
+poi — con tre riferimenti visivi (una barra di ricerca "liquid glass", un assistente con pillole
+traslucide su fondo blu, una barra di navigazione con un riflesso curvo sul bordo) —
+« ricostruisci l'interfaccia SERENITY in liquid glass ».
+
+**Cosa NON si è toccato, e perché**: la palette resta quella di `tokens.css` — i tre segnali
+tenui, niente accento saturo. La regola « i colori dicono, non gridano » non è un vezzo
+estetico in questa app: è la ragione per cui uno schermo non deve distrarre l'auditor durante
+una seduta. I riferimenti mostravano anche sfondi sfumati blu/viola molto vivaci — quella parte
+NON è stata portata: il vetro è un fatto di FORMA (sfocatura, bordo, riflesso), non di colore, e
+i due si possono separare.
+
+**Cosa si è aggiunto — un materiale condiviso, non uno stile ripetuto in ogni file**:
+
+- `tokens.css`: `--s-disc`/`--s-disc-sunk` diventano TRASLUCIDI (rgba, non più opachi) — perché
+  `backdrop-filter` abbia qualcosa da sfocare. Due classi CSS, `.s-glass` (sfocatura + bordo
+  chiarissimo che imita il riflesso del vetro vero + un lucido in alto via `::before`, come nei
+  riferimenti) e i suoi modificatori combinabili `.s-glass-lift` (ombra di rilievo) e
+  `.s-glass-btn` (transizione, `:hover`/`:active` che risponde). Chi ha già `background:
+  var(--s-disc)` nel proprio `style` inline ottiene il vetro aggiungendo solo un `className` —
+  niente conflitto di cascata, l'inline resta per le proprietà che già dichiara.
+- `Cerchio.tsx` — il primitivo condiviso da OGNI cerchio di SERENITY (camere, avatar dei
+  profili) — prende il vetro una volta sola, tranne `spenta` (un disco "previsto ma spento" non
+  deve luccicare come se fosse acceso).
+- Bottoni: la seduta APRI/CHIUDI, le quattro pillole dei cicli (CONTACT/NULL/MIRROR/TONE, bordo
+  colorato conservato), tutti i pulsanti `pillola(...)` di `PannelloMeter.tsx`,
+  `PannelloEp.tsx`, `PannelloProfilo.tsx`.
+- Pannelli galleggianti: il cassetto del meter, il popover "salva questa configurazione", il
+  cassetto ASSESSMENT, il modale "con che cosa si audita?", il pannello MNA.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori, `vitest run` 639/639. A schermo (tab
+pulita, tema chiaro E scuro): il riflesso si vede su cerchi e pulsanti, i pannelli galleggianti
+sfocano il quadrante dietro di loro, nessun bottone ha perso la sua funzione o il suo colore di
+stato. EQUILIBRIUM 2.0.172, SERENITY 3.0.35.
+
 ⚠️ **Revisione funzionale — non solo grafica (17/08/2026, terza segnalazione)**: due
 regressioni VERE, non d'aspetto — una funzione persa nel passaggio a SERENITY, non solo
 ridisegnata:

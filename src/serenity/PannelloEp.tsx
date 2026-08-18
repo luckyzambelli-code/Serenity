@@ -90,10 +90,12 @@ export function PannelloEp({ ep, onValidato }: {
             contento, indicatori ancora migliori di VGI. */}
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={() => { ep.setEpVgi(v => !v); ep.setEpVvgi(false); }}
+                  className="s-glass s-glass-btn"
                   style={pillola(ep.epVgi)}>
             {ep.epVgi ? '✓ VGI' : 'VGI'}
           </button>
           <button onClick={() => { ep.setEpVvgi(v => !v); ep.setEpVgi(false); }}
+                  className="s-glass s-glass-btn"
                   style={pillola(ep.epVvgi)}>
             {ep.epVvgi ? '✓ VVGI' : 'VVGI'}
           </button>
@@ -113,7 +115,7 @@ export function PannelloEp({ ep, onValidato }: {
         }}>
           ← {t('cancel')}
         </button>
-        <button onClick={valida} style={pillola(true)}>
+        <button onClick={valida} className="s-glass s-glass-btn" style={pillola(true)}>
           {t('ep_validate_btn')}
         </button>
       </div>

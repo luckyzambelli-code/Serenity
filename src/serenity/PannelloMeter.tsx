@@ -73,9 +73,9 @@ export function PannelloMeter({ theta, provaTa }: {
   const scartoMisurato = (theta.setup.offsets?.['solo-can'] ?? 0) !== 0;
 
   return (
-    <div style={{
+    <div className="s-glass s-glass-lift" style={{
       display: 'flex', flexDirection: 'column', gap: 14, padding: '14px 16px',
-      background: 'var(--s-disc)', borderRadius: 12, boxShadow: 'var(--s-shadow-lift)',
+      background: 'var(--s-disc)', borderRadius: 12,
       maxWidth: 420,
     }}>
       {/* ── IL TITOLO — segnalato: « on ne sait pas les réglages à quoi correspondent, sur
@@ -91,10 +91,12 @@ export function PannelloMeter({ theta, provaTa }: {
       <div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button onClick={() => theta.setConfig('two-cans')}
+            className="s-glass s-glass-btn"
             style={pillola(theta.setup.config === 'two-cans')}>
             {t('theta_two_cans')}
           </button>
           <button onClick={() => theta.setConfig('solo-can')}
+            className="s-glass s-glass-btn"
             style={pillola(theta.setup.config === 'solo-can')}>
             {t('theta_solo_can')}
           </button>
@@ -182,6 +184,7 @@ export function PannelloMeter({ theta, provaTa }: {
       <div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <button onClick={() => theta.startSqueezeTest()} disabled={theta.testing !== null}
+            className="s-glass s-glass-btn"
             style={pillola(false)}>
             {t('theta_squeeze')}
           </button>
@@ -191,6 +194,7 @@ export function PannelloMeter({ theta, provaTa }: {
             </span>
           )}
           <button onClick={() => theta.startBreathTest()} disabled={theta.testing !== null}
+            className="s-glass s-glass-btn"
             style={pillola(false)}>
             {t('theta_breath')}
           </button>
@@ -247,7 +251,7 @@ export function PannelloMeter({ theta, provaTa }: {
           <button onClick={() => {
             const v = parseFloat(riferimento);
             if (Number.isFinite(v)) theta.addPointFromReference(v);
-          }} style={pillola(false)}>
+          }} className="s-glass s-glass-btn" style={pillola(false)}>
             {t('theta_cal_record')}
           </button>
           <span style={{ fontSize: 12.5, color: 'var(--s-ink-faint)' }}>

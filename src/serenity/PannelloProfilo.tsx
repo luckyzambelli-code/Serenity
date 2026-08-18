@@ -152,13 +152,13 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
         <div style={{ display: 'flex', gap: 10 }}>
           {camera
             ? <>
-                <button onClick={scatta} style={pillola(true)}>{t('ser_shoot')}</button>
-                <button onClick={spegniCamera} style={pillola(false)}>{t('ser_cancel')}</button>
+                <button onClick={scatta} className="s-glass s-glass-btn" style={pillola(true)}>{t('ser_shoot')}</button>
+                <button onClick={spegniCamera} className="s-glass s-glass-btn" style={pillola(false)}>{t('ser_cancel')}</button>
               </>
             : <>
-                <button onClick={accendiCamera} style={pillola(false)}>{t('ser_camera')}</button>
-                <button onClick={() => fileRef.current?.click()} style={pillola(false)}>{t('ser_from_file')}</button>
-                {foto && <button onClick={() => setFoto(undefined)} style={pillola(false)}>{t('ser_remove')}</button>}
+                <button onClick={accendiCamera} className="s-glass s-glass-btn" style={pillola(false)}>{t('ser_camera')}</button>
+                <button onClick={() => fileRef.current?.click()} className="s-glass s-glass-btn" style={pillola(false)}>{t('ser_from_file')}</button>
+                {foto && <button onClick={() => setFoto(undefined)} className="s-glass s-glass-btn" style={pillola(false)}>{t('ser_remove')}</button>}
               </>}
           <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
                  onChange={e => {
@@ -178,8 +178,8 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
             l'applicazione ripiega su 2,0, che è la scelta prudente ma non è la sua. */}
         <div style={{ display: 'grid', justifyItems: 'center', gap: 8 }}>
           <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={() => setSesso('m')} style={pillola(sesso === 'm')}>{t('ser_man')}</button>
-            <button onClick={() => setSesso('f')} style={pillola(sesso === 'f')}>{t('ser_woman')}</button>
+            <button onClick={() => setSesso('m')} className="s-glass s-glass-btn" style={pillola(sesso === 'm')}>{t('ser_man')}</button>
+            <button onClick={() => setSesso('f')} className="s-glass s-glass-btn" style={pillola(sesso === 'f')}>{t('ser_woman')}</button>
           </div>
           <span style={{ fontSize: 12.5, color: 'var(--s-ink-faint)' }}>
             {sesso === 'm' ? t('ser_clear_male')
@@ -194,7 +194,7 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
           border: 'none', background: 'none', cursor: 'pointer',
           fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-ink-faint)',
         }}>← {t('ser_back')}</button>
-        <button onClick={salva} style={pillola(true)}>{t('ser_save')}</button>
+        <button onClick={salva} className="s-glass s-glass-btn" style={pillola(true)}>{t('ser_save')}</button>
         {/* ⚠️ ELIMINARE SOLO SU UN PROFILO ESISTENTE, e con la conferma DENTRO il bottone
             stesso — un secondo tocco, non una finestra di sistema che romperebbe la
             superficie. Il colore passa alla riserva (ambra) solo quando chiede conferma:
