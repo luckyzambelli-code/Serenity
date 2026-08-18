@@ -44,11 +44,12 @@ import { importWallpaper } from '../lib/wallpaperImport';
 const MODULI_REALI: Array<{ key: keyof SerenityModuleVis; tKey: string }> = [
   { key: 'cam1', tKey: 'config_mod_cam1' },
   { key: 'cam2', tKey: 'config_mod_cam2' },
+  { key: 'mna', tKey: 'config_mod_mna' },
 ];
-/** Gli altri cinque di EQUILIBRIUM — la STRUTTURA resta, senza fingere un pannello che qui
+/** Gli altri quattro di EQUILIBRIUM — la STRUTTURA resta, senza fingere un pannello che qui
  *  non esiste ancora. Vedi la nota in testa al file. */
 const MODULI_IN_ARRIVO = ['config_mod_journal', 'config_mod_health', 'config_mod_ri',
-  'config_mod_biometric', 'config_mod_mna'];
+  'config_mod_biometric'];
 
 const etichetta: React.CSSProperties = {
   fontFamily: 'var(--s-sans)', fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase',
@@ -207,13 +208,13 @@ export function PannelloConfig({ onChiudi }: { onChiudi: () => void }) {
             {MODULI_IN_ARRIVO.map(tKey => rigaModulo(false, true, undefined, tt(tKey)))}
           </div>
           <div style={{ display: 'flex', gap: 16, marginTop: 10 }}>
-            <button onClick={() => setModuleVis({ cam1: true, cam2: true })} style={{
+            <button onClick={() => setModuleVis({ cam1: true, cam2: true, mna: true })} style={{
               border: 'none', background: 'none', cursor: 'pointer',
               fontFamily: 'var(--s-sans)', fontSize: 11, letterSpacing: '0.08em', color: 'var(--s-ink-faint)',
             }}>
               {t('config_all_on')}
             </button>
-            <button onClick={() => setModuleVis({ cam1: false, cam2: false })} style={{
+            <button onClick={() => setModuleVis({ cam1: false, cam2: false, mna: false })} style={{
               border: 'none', background: 'none', cursor: 'pointer',
               fontFamily: 'var(--s-sans)', fontSize: 11, letterSpacing: '0.08em', color: 'var(--s-ink-faint)',
             }}>

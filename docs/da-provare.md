@@ -10,10 +10,10 @@ Il Muse 2 è in sostituzione (partito ~fine luglio 2026, ~2 settimane).
 ## La matrice EQUILIBRIUM → SERENITY (17/08/2026)
 
 Costruita dopo una revisione completa richiesta esplicitamente ("SERENITY non riproduce
-fedelmente le funzionalità di EQUILIBRIUM"). Onesta: 24 funzioni fatte, 2 parziali, 11 assenti.
+fedelmente le funzionalità di EQUILIBRIUM"). Onesta: 25 funzioni fatte, 2 parziali, 10 assenti.
 Ognuna delle assenti è un sottosistema — non una riga da aggiungere, un pezzo a parte.
-Aggiornata il 17/08/2026 (quarto giro): oltre all'arco e alla CAMM, tre CONTROLLI del ciclo
-mancavano dal piede di pagina (NO RECHARGING, ANNULLA, contatore) — vedi `docs/serenity-refonte.md`.
+Aggiornata il 17/08/2026 (quinto giro): l'MNA (`PannelloMna`) è il primo sottosistema assente a
+diventare reale — vedi `docs/serenity-refonte.md`, undicesimo passo.
 
 **Fatte** — tema, 5 lingue, auditor (crea/modifica/elimina), preclear (crea/modifica/elimina),
 SOLO/con preclear, qui/a distanza, prova delle lattine, connessione MUSE + ago EEG, Theta-Meter
@@ -24,19 +24,23 @@ cifre accanto all'ago, camere Auditor/PC (CAM 1/CAM 2, con minimizza/riespandi c
 EQUILIBRIUM), CONFIG (aspetto, moduli, sfondo — raggiungibile dall'avvio e in seduta),
 indicatori di connessione chiari per dispositivo (MUSE, rete PC remoto, MUSE del preclear),
 l'arco dei cicli (`ClearDial` — CONTACT/DISSOLUTION/AS-IS o NULL/RISE/EQUILIBRIUM, coi colori e
-le suddivisioni), lag di Ron + % dissoluzione in cifre.
+le suddivisioni), lag di Ron + % dissoluzione in cifre, MNA (CAPTURE/SONIFY/CLEAN/HARMONICS,
+galleggiante sul quadrante — non un modo, un attrezzo).
 
 **Parziali** — Normale/Esperto (raccolto in avvio, nessun pannello esperto ancora: TRIM,
 calibrazione TA, diagnostica); scelta dell'ago principale con due strumenti (automatica in
 SERENITY, sceglie l'auditor in EQUILIBRIUM).
 
 **Assenti** — ciclo MIRROR (e il suo `MirrorDial`), TONE SCALE (e il suo `ToneDial`), modalità
-APERTO (free), assessment multi-item da voce, pannello MNA, System Health (EEG/GYRO/PPG per
-elettrodo), barra integrità biometrica, trascrizione vocale (locale), EEG del preclear remoto
-(RAW_EEG relay), rapporto PDF fine seduta, cronologia sedute, Guida/Assistente AI. (Config/
-calibrazione TA come interfaccia dedicata resta assente — CONFIG copre solo aspetto/moduli/
-sfondo, non la taratura dell'ago. Il chip « sembra NULL »/`noReadSignal` di `CycleStatusBar`
-non è ancora ripreso nel `LetturaCiclo` di SERENITY — solo lag e % dissoluzione.)
+APERTO (free), assessment multi-item da voce, System Health (EEG/GYRO/PPG per elettrodo), barra
+integrità biometrica, trascrizione vocale (locale), EEG del preclear remoto (RAW_EEG relay),
+rapporto PDF fine seduta, cronologia sedute, Guida/Assistente AI. (Config/calibrazione TA come
+interfaccia dedicata resta assente — CONFIG copre solo aspetto/moduli/sfondo, non la taratura
+dell'ago. Il chip « sembra NULL »/`noReadSignal` di `CycleStatusBar` non è ancora ripreso nel
+`LetturaCiclo` di SERENITY — solo lag e % dissoluzione.)
+- [ ] **L'MNA con un MUSE vero**: CAPTURE deve sbloccarsi solo con un I_m reale (verificato in
+      sandbox: resta bloccato senza segnale, corretto); verificare che SONIFY/CLEAN/HARMONICS
+      producano audio vero e che `MNA_AUDIO` arrivi al PC remoto in una seduta a distanza.
 
 - [ ] **Con un MUSE vero**: verificare che TA e fase (in cifre, accanto all'ago) seguano la
       carica reale, non solo in apparenza — confrontare col numero che App.tsx mostrerebbe

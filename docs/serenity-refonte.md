@@ -262,6 +262,35 @@ RECHARGING nello stesso sguardo; premuto NO RECHARGING il ciclo si chiude (torna
 bottoni d'armamento), esattamente come `finalizeCycle(false)` fa in App.tsx. EQUILIBRIUM
 2.0.160, SERENITY 3.0.23.
 
+**Undicesimo passo — l'MNA, il primo dei sottosistemi assenti a diventare reale**
+(`serenity/PannelloMna.tsx`): `useChargeEngine` scriveva già `primeIm`/`primeFd`/`primeZone`/
+`primeDelta`/`primePStar` da sempre (il worker gira comunque, l'avviso in cima al blocco MNA di
+`Serenity.tsx` lo diceva da fasi) — mancava SOLO l'interfaccia, stesso pattern di CAMM e arco.
+Diverso dagli altri pannelli SERENITY (`PannelloEp`/`PannelloConfig`, a tutta pagina): l'MNA in
+App.tsx « sta qui ma non è un modo — si apre SENZA lasciare il ciclo in corso », quindi qui
+galleggia SUL pannello dello strumento (come le camere), la seduta resta visibile sotto. Stessa
+macchina a quattro fasi di `MnaPanel.tsx` (CAPTURE → SONIFY → CLEAN → HARMONICS, una pressione
+= l'azione della fase corrente, gli stessi guardrail `canAdvance`), `onCapture` blocca sul picco
+di I_m (`engine/PrimeFreqTracker.ts`), `onAudio` inoltra al PC remoto via `networkManager`
+(`MNA_AUDIO`) — nessuno dei due reinventato. `mna` è diventato il terzo modulo REALE di
+`serenityModuleStore.ts` (era fra i cinque « in arrivo » di CONFIG).
+
+Nello stesso giro, chiuse due perdite collegate scoperte costruendolo:
+- `stopSonification` era un no-op — l'AS-IS chiude l'MNA in corso in App.tsx (« la carica non
+  c'è più, il tono primo non ha più niente da trattare »); senza, un tono sarebbe restato
+  acceso oltre la fine del ciclo che lo giustificava.
+- `onHarmonicCopy` (il callback di `primeFreqAudio` che popola le copie durante HARMONICS) non
+  era mai agganciato — il contatore COPIES sarebbe restato a zero per sempre. Agganciato
+  all'apertura della seduta, come in App.tsx, insieme all'ingresso automatico in CAPTURE (non
+  IDLE — l'attrezzo è pronto dal primo secondo) e allo spegnimento alla chiusura della seduta.
+
+Verificato a schermo (tab pulita): il tasto MNA appare nel piede di pagina a seduta aperta, apre
+il pannello galleggiante con I_M/ZONE/F_D/Δ/P*/COPIES e il bottone della fase corrente
+(« CAPTURE »); senza segnale reale il bottone non avanza (`primeCaptured` resta falso — guardia
+corretta, non un difetto); la ✕ lo richiude senza toccare la seduta sotto; CONFIG mostra ora
+« Modulazione Neuro-Acustica » come interruttore vero, non più « in arrivo ». EQUILIBRIUM
+2.0.161, SERENITY 3.0.24.
+
 ---
 
 ## Il principio dimensionale — regola per le fasi 6, 7, 8

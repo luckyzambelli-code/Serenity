@@ -10,12 +10,13 @@
  * (`ser_module_vis`) evita l'accoppiamento senza duplicare NESSUNA logica: è lo stesso identico
  * schema di stato, solo un'istanza propria.
  *
- * ── PERCHÉ SOLO DUE CHIAVI REALI ─────────────────────────────────────────────────────────────
- * `journal`, `health`, `ri`, `biometric`, `mna` non hanno ancora un pannello in SERENITY (fase 6
- * in corso — vedi le note "NON C'È ANCORA" in `Serenity.tsx`). Un interruttore che non accende
+ * ── PERCHÉ SOLO TRE CHIAVI REALI ─────────────────────────────────────────────────────────────
+ * `journal`, `health`, `ri`, `biometric` non hanno ancora un pannello in SERENITY (fase 6 in
+ * corso — vedi le note "NON C'È ANCORA" in `Serenity.tsx`). Un interruttore che non accende
  * niente sarebbe un controllo bugiardo. `PannelloConfig.tsx` li mostra comunque, spenti e non
  * toccabili — la STRUTTURA dei sette moduli di EQUILIBRIUM resta leggibile, e ognuno prende vita
- * qui il giorno in cui il suo pannello esiste, senza dover ridisegnare la lista.
+ * qui il giorno in cui il suo pannello esiste, senza dover ridisegnare la lista. `mna` è il
+ * primo dei cinque a diventare reale — `PannelloMna.tsx`.
  *
  * @see docs/serenity-refonte.md — fase 6.
  */
@@ -26,9 +27,10 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 export interface SerenityModuleVis {
   cam1: boolean;
   cam2: boolean;
+  mna: boolean;
 }
 
-export const SERENITY_MODULES_DEFAULT: SerenityModuleVis = { cam1: true, cam2: true };
+export const SERENITY_MODULES_DEFAULT: SerenityModuleVis = { cam1: true, cam2: true, mna: true };
 
 type SetStateAction<T> = T | ((prev: T) => T);
 function applica<T>(azione: SetStateAction<T>, attuale: T): T {

@@ -55,6 +55,7 @@ import { useRemoteSession } from '../hooks/useRemoteSession';
 import { Connessione } from './Connessione';
 import { PannelloEp } from './PannelloEp';
 import { PannelloConfig } from './PannelloConfig';
+import { PannelloMna } from './PannelloMna';
 import { CameraCerchio } from './CameraCerchio';
 import { IndicatoreConnessione } from './IndicatoreConnessione';
 import { useSerenityModuleStore } from './serenityModuleStore';
@@ -62,6 +63,9 @@ import { Settings } from 'lucide-react';
 import type { ReadSrc } from '../engine/instantRead';
 import type { PrimePhase, Zone as PrimeZone } from '../lib/primeFreqEngine';
 import type { MnaSession } from '../hooks/useMnaModule';
+import { primeFreqTracker } from '../engine/PrimeFreqTracker';
+import { primeFreqAudio } from '../lib/primeFreqAudio';
+import { networkManager } from '../lib/networkManager';
 
 /** mm:ss — l'unico formato di tempo che serve in seduta. */
 const orologio = (s: number) => {
@@ -298,15 +302,25 @@ export default function Serenity() {
   const [displayMass, setDisplayMass] = useState(0);
   const massAccumulatorRef = useRef(0);
 
-  // MNA (SONIFY/CLEAN/HARMONICS) — nessun pannello ancora in SERENITY: i campi esistono
-  // solo perché `useChargeEngine` li aggiorna comunque (il worker non sa che nessuno guarda).
+  // ── MNA (SONIFY/CLEAN/HARMONICS) — segnalato assente: il motore scriveva già questi campi
+  // (`useChargeEngine` li aggiorna comunque, il worker non sa che nessuno guarda) — mancava
+  // SOLO `PannelloMna.tsx` e lo stato di RENDER della fase (`primePhaseRef` bastava al motore,
+  // non a un bottone che deve *ridisegnarsi* quando la fase avanza).
   const [primeIm, setPrimeIm] = useState(0);
   const [primeFd, setPrimeFd] = useState(0);
   const [primePStar, setPrimePStar] = useState(2);
   const [primeDelta, setPrimeDelta] = useState(0);
   const [primeZone, setPrimeZone] = useState<PrimeZone>('PRIME');
+  const [primeCopies, setPrimeCopies] = useState<Array<{ p: number; freq: number }>>([]);
   const [primeCaptured, setPrimeCaptured] = useState(false);
+  const [primePhase, setPrimePhaseState] = useState<PrimePhase>('IDLE');
   const primePhaseRef = useRef<PrimePhase>('IDLE');
+  /** Aggiorna INSIEME lo stato (per il render di `PannelloMna`) e il ref (che il motore legge
+   *  senza aspettare un render) — stessa doppia scrittura di App.tsx (`setPrimePhase(...);
+   *  primePhaseRef.current = ...`), qui raccolta in una funzione sola per non poterle scordare
+   *  disaccoppiate. */
+  const setPrimePhase = (p: PrimePhase) => { setPrimePhaseState(p); primePhaseRef.current = p; };
+  const [mnaAperto, setMnaAperto] = useState(false);
   const mnaSessionRef = useRef<MnaSession>({ ...MNA_SESSION_VUOTA });
   const metabolicPhaseRef = useRef<'idle' | 'baseline' | 'breath' | 'result'>('idle');
 
@@ -410,7 +424,19 @@ export default function Serenity() {
       corpusWrite(cycleRecord(corpusSessionRef.current, new Date().toISOString(), row));
     },
     markFnAsIs: () => flushEegFn(true),
-    stopSonification: () => {},
+    // ── L'AS-IS chiude anche l'MNA in corso — segnalato assente insieme al resto dell'MNA:
+    // `finalizeCycle` la chiama da sé quando un ciclo CONTACT raggiunge l'AS-IS (« la carica
+    // non c'è più, il tono primo non ha più niente da trattare »). Era un no-op: il tono
+    // sarebbe restato acceso oltre la fine del ciclo che lo giustificava. Stessa sequenza di
+    // App.tsx, non una nuova.
+    stopSonification: () => {
+      if (primePhaseRef.current === 'SONIFY' || primePhaseRef.current === 'CLEAN' || primePhaseRef.current === 'HARMONICS') {
+        try { primeFreqAudio.killAll(); } catch { /* noop */ }
+        try { networkManager.send({ type: 'MNA_AUDIO', action: 'stop' }, true); } catch { /* noop */ }
+        setPrimePhase('CAPTURE');
+        setPrimeCopies([]);
+      }
+    },
     onLagMeasured: m => { setDeltaStar(m.deltaStar); setDeltaStarN(m.n); },
   });
   trackCycleRef.current = cycles.trackCycle;
@@ -466,6 +492,25 @@ export default function Serenity() {
     sessionClock.reset(); sessionClock.start();
     journal.resetJournal(t('ser_session_opened'));
     ep.resetEpState();   // niente "EP ✓" residuo da una seduta precedente
+    // ── MNA — « entra in CAPTURE » all'apertura, come App.tsx ────────────────────────────
+    // Non IDLE: l'attrezzo è PRONTO a catturare fin dal primo secondo, non spento. E
+    // `onHarmonicCopy` va agganciato QUI (una volta per seduta, come in App.tsx) — è
+    // `primeFreqAudio` che lo richiama a ogni copia armonica generata durante HARMONICS;
+    // senza, il contatore COPIES di `PannelloMna` resterebbe fermo a zero per sempre.
+    primeFreqAudio.init();
+    primeFreqAudio.onHarmonicCopy = (p, freq) => {
+      setPrimeCopies(prev => {
+        const next = [...prev, { p, freq }];
+        mnaSessionRef.current.totalCopies = next.length;
+        return next;
+      });
+    };
+    setPrimeIm(0); setPrimeFd(0); setPrimeZone('PRIME'); setPrimeDelta(0); setPrimePStar(2);
+    setPrimeCopies([]); setPrimeCaptured(false);
+    mnaSessionRef.current = { ...MNA_SESSION_VUOTA };
+    setPrimePhase('CAPTURE');
+    mnaSessionRef.current.phaseLog.push({ phase: 'CAPTURE', t: Date.now() });
+    setMnaAperto(false);
     // ── CORPUS: apertura di seduta — stessa logica di App.tsx ────────────────────────────
     // Va scritta ADESSO, non alla fine: è la configurazione con cui si leggerà tutto il resto,
     // e se la seduta si interrompe le reazioni già scritte devono restare interpretabili.
@@ -500,6 +545,10 @@ export default function Serenity() {
     journal.addLog({ speaker: 'SYS', text: t('ser_session_closed'), time: sessionClock.now() });
     corpusSessionRef.current = '';
     if (avvio?.distanza) remote.impostaStatoSeduta('ended');
+    // MNA — la seduta finisce, un tono acceso non deve sopravviverle (stessa regola di
+    // App.tsx: « seduta finita/in pausa → azzera tutto l'audio »).
+    primeFreqAudio.killAll();
+    setPrimePhase('IDLE'); setPrimeCopies([]); setPrimeCaptured(false); setMnaAperto(false);
     setAperta(false);
   };
   /** Si ricomincia dalle domande. Solo a seduta chiusa: cambiare preclear a metà seduta
@@ -782,6 +831,41 @@ export default function Serenity() {
             cycleKind={cycles.cycleKind}
             nullPhase={cycles.nullPhase}
           />
+          {/* ── MNA — galleggia SUL quadrante, non lo sostituisce ────────────────────────────
+              « Si apre senza lasciare il ciclo »: la seduta resta visibile sotto, com'è in
+              App.tsx (ancorato in fondo al pannello dello strumento, non a tutta pagina). */}
+          {aperta && moduleVis.mna && mnaAperto && (
+            <PannelloMna
+              primePhase={primePhase}
+              setPrimePhase={setPrimePhase}
+              primePhaseRef={primePhaseRef}
+              primeIm={primeIm}
+              primeFd={primeFd}
+              primeZone={primeZone}
+              primeDelta={primeDelta}
+              primePStar={primePStar}
+              primeCopies={primeCopies}
+              setPrimeCopies={setPrimeCopies}
+              primeCaptured={primeCaptured}
+              mnaSessionRef={mnaSessionRef}
+              onCapture={() => {
+                // STESSO blocco sul PICCO di I_m della finestra recente di App.tsx
+                // (`engine/PrimeFreqTracker.ts`) — l'auditor/PC possono reagire in ritardo,
+                // l'istante del clic non è la risposta più forte.
+                const best = primeFreqTracker.peak();
+                if (!best) return;
+                setPrimeIm(best.im); setPrimeFd(best.fd); setPrimePStar(best.ps);
+                setPrimeDelta(best.dv); setPrimeZone(best.zone);
+                mnaSessionRef.current.finalZone = best.zone;
+              }}
+              onAudio={payload => {
+                // Il tono binaurale punta al cervello del PC — l'auditor lo sente solo in
+                // locale per controllo. Stesso inoltro di App.tsx.
+                try { networkManager.send({ type: 'MNA_AUDIO', ...payload }, true); } catch { /* noop */ }
+              }}
+              onChiudi={() => setMnaAperto(false)}
+            />
+          )}
         </div>
         {/* L'orologio resta sulla superficie di SERENITY, fuori dal pannello scuro: si
             guarda una volta ogni tanto, lo strumento in continuazione. */}
@@ -941,6 +1025,20 @@ export default function Serenity() {
         <span style={{ fontSize: 12, color: 'var(--s-ink-faint)' }}>
           {t(meterC ? 'ser_meter_connected' : theta.unavailable ? 'ser_meter_unavailable' : 'ser_meter_disconnected')}
         </span>
+        {/* MNA — segnalato assente: un ATTREZZO, non un modo. Si apre SENZA lasciare il ciclo
+            in corso (`PannelloMna` galleggia sul quadrante, la seduta resta sotto) — stesso
+            principio del tasto MNA nella barra dei comandi di App.tsx. */}
+        {aperta && moduleVis.mna && (
+          <button
+            onClick={() => setMnaAperto(v => !v)}
+            style={{
+              border: 'none', cursor: 'pointer', background: 'none',
+              fontFamily: 'var(--s-sans)', fontSize: 12.5,
+              color: mnaAperto || primePhase !== 'CAPTURE' && primePhase !== 'IDLE' ? 'var(--s-still)' : 'var(--s-ink-faint)',
+            }}>
+            MNA
+          </button>
+        )}
         {/* EP — l'auditor lo apre da sé quando vuole registrarlo, non un conto alla rovescia
             automatico (in EQUILIBRIUM quella finestra non è mai raggiungibile). "EP ✓" una
             volta validato, come in App.tsx. */}
