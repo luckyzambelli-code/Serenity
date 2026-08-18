@@ -354,6 +354,45 @@ Verificato (auto-pausa): `tsc --noEmit` pulito, `npm run lint` 0 errori, `vitest
 a schermo l'orologio continua a scorrere normalmente in seduta senza strumenti (nessuna falsa
 pausa) — EQUILIBRIUM 2.0.167, SERENITY 3.0.30.
 
+⚠️ **Segnalato di nuovo (18/08/2026, stessa giornata)**: « la possibilité de sortir du test des
+boîtes / les inscriptions sont incompréhensibles... sur quel instrument / on n'a toujours pas
+sans instrument / le point de sauvegarde de la configuration... n'est toujours pas implémenté /
+les deux aiguilles ? pas vue ». Cinque punti — due erano REALI, tre erano già risolti da
+`e623018` (commesso PRIMA di questo giro di segnalazioni, nella stessa giornata: probabile DMG
+non ancora aggiornato sulla macchina di prova).
+
+**Verificato di nuovo a schermo (tab pulita, senza saved-config) che SONO già presenti e
+funzionanti**:
+- « Seduta senza strumenti » — terza voce del pannello di scelta strumenti, apre la seduta
+  senza bloccare su nessun collegamento.
+- Il salvataggio della configurazione — lo stesso pannello, spuntata una scelta, offre "nome di
+  questa configurazione…"/"salva"; richiamata dalla striscia in alto salta DRITTO alla seduta,
+  domande d'avvio E scelta strumenti comprese.
+- I bottoni dei quattro cicli, ben visibili come pillole bordate una accanto all'altra
+  (CONTACT/NULL/MIRROR/TONE), non più testo fantasma.
+
+**Corretti per davvero, perché mancavano davvero**:
+- **`theta.cancelTest()`** — aggiunto al motore condiviso `useThetaMeter` (mai toccato prima da
+  SERENITY): la prova della stretta/del respiro chiudeva SOLO da sé al proprio timer (4 s · 9 s),
+  senza modo di uscirne prima. Bottone "annulla" in `PannelloMeter`, visibile solo a prova in
+  corso — annullare non scrive né un esito positivo né uno negativo.
+- **Le etichette del pannello Meter erano tecniche senza contesto** — un titolo in cima
+  («IL THETA-METER — LE LATTINE») nomina lo strumento due volte (nel titolo E nel testo), e ogni
+  sezione (config due/una lattina, le due prove, la taratura TA) ha ora una riga di spiegazione
+  SEMPRE visibile, non solo un `title` al passaggio del mouse. Anche la freccia d'apertura in
+  intestazione: "▾ Assetto" → "▾ configura il meter".
+- **Un solo ago alla volta, ma la scelta non esisteva** — App.tsx stesso disegna un ago SOLO con
+  entrambi gli strumenti collegati (commento esplicito: mostrarli insieme fu un difetto corretto
+  apposta), lasciando all'auditor la scelta (`agoPrincipale`). SERENITY aveva la regola fissa
+  «il Meter vince sempre», muta. Ora una coppia di pillole MUSE/METER — SOLO quando entrambi
+  sono connessi — sceglie quale ago guardare, con la STESSA preferenza persistita di App.tsx
+  (stessa chiave `localStorage`).
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori, `vitest run` 639/639, a schermo (tab
+pulita, FR) il flusso "Séance sans instruments" completo — dalla scelta all'apertura della
+seduta, cicli visibili, nessun errore in console oltre a quelli pre-esistenti e noti (P2P/
+Whisper, non legati a questa modifica). EQUILIBRIUM 2.0.168, SERENITY 3.0.31.
+
 ⚠️ **Revisione funzionale — non solo grafica (17/08/2026, terza segnalazione)**: due
 regressioni VERE, non d'aspetto — una funzione persa nel passaggio a SERENITY, non solo
 ridisegnata:

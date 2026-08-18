@@ -574,11 +574,28 @@ export default function Serenity() {
   // singleton che App.tsx legge), qui sottoscritto con lo stesso `useSyncExternalStore`.
   const needleOffsetEeg = useSyncExternalStore(needleEngine.subscribe, needleEngine.getPos);
 
-  // ── QUALE AGO SI VEDE ────────────────────────────────────────────────────────────────────
-  // Con due strumenti collegati EQUILIBRIUM lascia scegliere l'auditor (`agoPrincipale`,
-  // App.tsx) — quella scelta non c'è ancora qui. Finché non arriva: il Theta-Meter (misurato,
-  // non ricostruito) ha la precedenza se collegato, altrimenti l'EEG se il MUSE lo è.
-  const agoEeg = !meterC && muse.museConnection === 'connected';
+  // ── QUALE AGO SI VEDE — segnalato nell'audit comparativo, e poi di nuovo: « les deux
+  // aiguilles ? pas vue ». App.tsx stesso, per un motivo preciso (`agoPrincipale`, commento
+  // «UN AGO SOLO — senza questo, scegliendo il MUSE restavano di nuovo due aghi sul quadrante»,
+  // corretto apposta perché DUE aghi insieme confondevano), mostra un ago alla volta e lascia
+  // all'auditor la scelta quando entrambi gli strumenti sono collegati — non li disegna
+  // insieme. La confusione qui non era "manca un secondo ago": era che la scelta non esisteva
+  // affatto, la regola era fissa e muta (« il Meter vince sempre »), e con un solo strumento
+  // collegato non c'era comunque modo di sapere se quello che si vedeva era davvero l'unico
+  // possibile o una preferenza taciuta. Stessa preferenza persistita di App.tsx (STESSA chiave
+  // `localStorage`, coerente con l'archivio unico) — cambiare l'ago in EQUILIBRIUM lo cambia
+  // anche qui, e viceversa.
+  const [agoScelto, setAgoScelto] = useState<'eeg' | 'theta'>(() => {
+    try {
+      const v = localStorage.getItem('equilibrium_ago');
+      return v === 'eeg' || v === 'theta' ? v : 'theta';
+    } catch { return 'theta'; }
+  });
+  useEffect(() => { try { localStorage.setItem('equilibrium_ago', agoScelto); } catch { /* noop */ } }, [agoScelto]);
+  const museOk = muse.museConnection === 'connected';
+  /** Con UN solo strumento non c'è scelta: vince quello che c'è — la preferenza conta solo
+   *  quando ci sarebbe davvero da scegliere. */
+  const agoEeg = museOk && meterC ? agoScelto === 'eeg' : museOk;
 
   // I profili vengono dallo stesso armadio di EQUILIBRIUM — è la verifica di questa fase.
   const nome = (lista: Array<{ id: string; name: string }>, id: string | null | undefined) =>
@@ -1138,7 +1155,12 @@ export default function Serenity() {
             border: 'none', background: 'none', cursor: 'pointer', padding: 0,
             fontFamily: 'var(--s-sans)', fontSize: 11.5, color: 'var(--s-ink-faint)',
           }}>
-            {meterSetupAperto ? '▴' : '▾'} {t('theta_setup')}
+            {/* ⚠️ Non `theta_setup` ("Assetto") — segnalato: « on ne sait pas les réglages à
+                quoi correspondent ». "Assetto" non dice nemmeno che è il METER a essere in
+                gioco; questa parola lo dice due volte (il nome dello strumento, e "configura"
+                invece di un termine tecnico). */}
+            {meterSetupAperto ? '▴' : '▾'} {LC('configura il meter', 'configurer le meter',
+              'configure the meter', 'configurar el meter', 'konfigurera metern')}
           </button>
         )}
         {/* Un problema HARDWARE (fascia scollegata a metà lettura, driver che si blocca) si dice
@@ -1381,6 +1403,28 @@ export default function Serenity() {
             />
           )}
         </div>
+        {/* ── QUALE AGO GUARDARE — SOLO quando c'è davvero una scelta ─────────────────────────
+            Segnalato: « les deux aiguilles ? pas vue ». Non è un secondo ago da disegnare
+            accanto al primo (App.tsx li disegna insieme apposta MAI — vedi la nota su
+            `agoEeg`, sopra): è la scelta stessa che mancava, muta e fissa sul Meter. Due
+            pillole, come in App.tsx (qui senza "DUE" — quella terza voce aggiunge anche le
+            reazioni dell'altro strumento etichettate, un raffinamento che aspetta il resto
+            dell'assessment prima di avere senso). */}
+        {museOk && meterC && (
+          <div style={{ display: 'flex', gap: 4, padding: 2, borderRadius: 999, background: 'var(--s-disc-sunk)' }}>
+            {([{ k: 'eeg' as const, lbl: 'MUSE' }, { k: 'theta' as const, lbl: 'METER' }]).map(o => (
+              <button key={o.k} onClick={() => setAgoScelto(o.k)} style={{
+                border: 'none', cursor: 'pointer', borderRadius: 999, padding: '4px 12px',
+                fontFamily: 'var(--s-sans)', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+                background: agoScelto === o.k ? 'var(--s-disc)' : 'none',
+                boxShadow: agoScelto === o.k ? 'var(--s-shadow)' : 'none',
+                color: agoScelto === o.k ? 'var(--s-ink)' : 'var(--s-ink-faint)',
+              }}>
+                {o.lbl}
+              </button>
+            ))}
+          </div>
+        )}
         {/* L'orologio resta sulla superficie di SERENITY, fuori dal pannello scuro: si
             guarda una volta ogni tanto, lo strumento in continuazione. */}
         <span style={{

@@ -139,6 +139,10 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
                           congelato: false,
                           /** Campione precedente, per calcolare la VELOCITÀ dell'ago. */
                           preOffset: 0, preSec: 0 });
+  /** Il timer che chiude la prova da sé, a `SQUEEZE_TEST_MS`/`BREATH_TEST_MS` — serve per
+   *  poterlo SPEGNERE da `cancelTest`, se no annullare a metà lascerebbe il verdetto arrivare
+   *  comunque un istante dopo, su una prova che l'auditor ha già dichiarato chiusa. */
+  const testTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRef = useRef<{ offset: number; arm: number; raw: number; totalTa: number;
                               offScale: boolean; bodyMotion: boolean } | null>(null);
 
@@ -418,7 +422,8 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
                         preOffset: needleRef.current.offset,
                         preSec: optsRef.current.nowSec?.() ?? 0 };
     setState(p => ({ ...p, testing: 'squeeze', testPeak: 0, squeezeOk: null }));
-    setTimeout(() => {
+    testTimerRef.current = setTimeout(() => {
+      testTimerRef.current = null;
       testRef.current.on = false;
       const picco = testRef.current.peak;
       setState(p => {
@@ -451,7 +456,8 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
                         preOffset: needleRef.current.offset,
                         preSec: optsRef.current.nowSec?.() ?? 0 };
     setState(p => ({ ...p, testing: 'breath', testPeak: 0, breathOk: null }));
-    setTimeout(() => {
+    testTimerRef.current = setTimeout(() => {
+      testTimerRef.current = null;
       testRef.current.on = false;
       setState(p => ({
         ...p, testing: null, testPeak: testRef.current.peak,
@@ -464,9 +470,25 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
     }, BREATH_TEST_MS);
   }, []);
 
+  /**
+   * ANNULLA LA PROVA IN CORSO — l'uscita che mancava.
+   *
+   * Segnalato: « la possibilité de sortir du test des boîtes ». Vero: `startSqueezeTest`/
+   * `startBreathTest` chiudevano SOLO da sé, al proprio timer (4 s · 9 s) — premuti per errore,
+   * o iniziati senza le lattine davvero impugnate, non c'era modo di uscirne prima che il tempo
+   * scadesse da solo. Qui si spegne il timer (se no il verdetto arriverebbe comunque un istante
+   * dopo, su una prova già dichiarata chiusa) e si torna a "nessuna prova", senza scrivere né
+   * un esito positivo né uno negativo — annullare non è FALLIRE la prova, è non averla fatta.
+   */
+  const cancelTest = useCallback(() => {
+    if (testTimerRef.current) { clearTimeout(testTimerRef.current); testTimerRef.current = null; }
+    testRef.current.on = false;
+    setState(p => ({ ...p, testing: null }));
+  }, []);
+
   return {
     ...state, connect, disconnect, resetTotal, captureRaw, applyTaPoints, clearTaCalibration,
-    setConfig, setSoloOffset, addPointFromReference, startSqueezeTest, startBreathTest, setSensTrim, resetToSet,
+    setConfig, setSoloOffset, addPointFromReference, startSqueezeTest, startBreathTest, cancelTest, setSensTrim, resetToSet,
     /** Diagnosi: quanto si è mosso l'ago fra due istanti, e se c'era agitazione. */
     escursione: (daSec: number, aSec: number) => {
       // SPAN = massimo − minimo: è QUANTO l'ago si è mosso. La sola distanza da SET non lo dice
