@@ -24,8 +24,17 @@
  * inchiostro pieno di tutto il resto del testo funzionale. « I colori dicono, non gridano » non
  * voleva dire « le parole si vedono a fatica »: un'interfaccia serena dev'essere leggibile.
  *
+ * ── SEGNALATO: UN'ICONA PER LO STRUMENTO ────────────────────────────────────────────────────
+ * « Met un icone... pour le connecteur MUSE et Meter ». Il punto dice LO STATO; la parola dice
+ * QUALE dispositivo — ma prima solo la parola lo diceva, ed è quel che un'icona coglie ancora
+ * più in fretta, di sbieco, come vuole `Cerchio.tsx`. `icona` è OPZIONALE e SOLO decorativa
+ * (`aria-hidden`): tolta, l'indicatore si legge esattamente come prima — la parola resta la
+ * fonte vera dell'informazione, l'icona la anticipa.
+ *
  * @see docs/serenity-refonte.md — fase 6.
  */
+
+import type { ReactNode } from 'react';
 
 export type StatoConnessione = 'connesso' | 'in-attesa' | 'cercando' | 'errore' | 'spento';
 
@@ -37,12 +46,14 @@ const COLORE_PUNTO: Record<StatoConnessione, string> = {
   spento:    'var(--s-ink-ghost)',
 };
 
-export function IndicatoreConnessione({ stato, etichetta, dettaglio, onClick, title }: {
+export function IndicatoreConnessione({ stato, etichetta, dettaglio, onClick, title, icona }: {
   stato: StatoConnessione;
   etichetta: string;
   dettaglio?: string | null;
   onClick?: () => void;
   title?: string;
+  /** L'icona dello STRUMENTO (non dello stato — quello resta il punto colorato). Decorativa. */
+  icona?: ReactNode;
 }) {
   const puntino = COLORE_PUNTO[stato];
   const Elemento = onClick ? 'button' : 'span';
@@ -61,6 +72,11 @@ export function IndicatoreConnessione({ stato, etichetta, dettaglio, onClick, ti
         boxShadow: stato === 'connesso' || stato === 'errore' ? `0 0 0 3px color-mix(in srgb, ${puntino} 20%, transparent)` : 'none',
         transition: 'background var(--s-slow) var(--s-ease), box-shadow var(--s-slow) var(--s-ease)',
       }} />
+      {icona && (
+        <span aria-hidden="true" style={{ display: 'flex', color: 'var(--s-ink-soft)', flexShrink: 0 }}>
+          {icona}
+        </span>
+      )}
       <span>
         {etichetta}
         {dettaglio && <span style={{ color: 'var(--s-ink-soft)', fontWeight: 400 }}> · {dettaglio}</span>}

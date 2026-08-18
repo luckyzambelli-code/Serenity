@@ -436,6 +436,32 @@ intestazione funziona senza aprire prima il pannello strumenti, l'intestazione m
 "STRUMENTI" e "A DISTANZA" come zone separate. Nessun errore in console oltre a quelli
 pre-esistenti (P2P/Whisper). EQUILIBRIUM 2.0.169, SERENITY 3.0.32.
 
+⚠️ **Segnalato di nuovo (18/08/2026, quarto giro)**: « "Alone" tradotto in SOLO in tutte le
+lingue » + « metti un'icona per chiaro/scuro, per l'auditor (SOLO/Expert/ecc.), e per i
+connettori MUSE e Meter ».
+
+**Sulla traduzione**: cercato a fondo (`ser_alone_tag`, `ser_solo`, la striscia configurazioni
+salvate, la domanda "da solo o con un preclear?", l'etichetta in seduta) — tutti e quattro i
+punti sono CORRETTAMENTE tradotti nelle cinque lingue, verificato di nuovo a schermo in
+francese ("Seul" ovunque, mai "SOLO"). Esiste un'ALTRA chiave, `solo` (minuscolo, di App.tsx),
+che vale letteralmente `"SOLO"` in tutte le lingue — ma non è usata da nessuna parte in
+`src/serenity/`. Nessun difetto trovato: probabile, ancora, DMG non aggiornato.
+
+**Sulle icone — fatto**, tre punti:
+- `SelettoreTema` (chiaro/scuro): sole/luna (`lucide-react`, `Sun`/`Moon`) accanto alla parola —
+  la parola resta la fonte vera, l'icona la anticipa (una precedente nota di design diceva
+  esplicitamente "due parole, non sole/luna": la richiesta esplicita di oggi la sostituisce).
+- La riga "chi audita" in intestazione: le STESSE icone di `Avvio.tsx` per le stesse scelte —
+  `User`/`Users` per solo/con preclear, `Wrench` per esperto, `Wifi` per a distanza — non un
+  secondo set da imparare.
+- `IndicatoreConnessione` — nuovo prop opzionale `icona`: `Headphones` per ogni indicatore MUSE
+  (locale E del preclear a distanza), `Gauge` per il METER, `Wifi` per la connessione PC —
+  ancora le stesse icone che App.tsx usa nel suo pannello di scelta strumenti.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori, `vitest run` 639/639, a schermo (tab
+pulita, EN) tutte le icone rendono correttamente accanto alle rispettive parole.
+EQUILIBRIUM 2.0.170, SERENITY 3.0.33.
+
 ⚠️ **Revisione funzionale — non solo grafica (17/08/2026, terza segnalazione)**: due
 regressioni VERE, non d'aspetto — una funzione persa nel passaggio a SERENITY, non solo
 ridisegnata:

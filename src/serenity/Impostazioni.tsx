@@ -17,14 +17,17 @@
  * momento — cambiarla in SERENITY la cambia anche per la prossima apertura di EQUILIBRIUM, e
  * viceversa. Coerente con l'archivio unico, i profili unici, la lingua per-profilo.
  *
- * ⚠️ La VESTE resta di SERENITY — due parole, non la pillola di vetro con sole/luna di
- * EQUILIBRIUM: stessa funzione, stessa preferenza, grafica propria.
+ * ⚠️ SEGNALATO: « met un icone pour clair/dark ». La parola restava la sola fonte
+ * dell'informazione (dottrina di SERENITY: « i colori dicono, non gridano », e vale anche per
+ * le icone) — qui un piccolo sole/luna la ANTICIPA, di sbieco, senza sostituirla: tolto il testo
+ * l'icona da sola non basterebbe a dire "chiaro" da "scuro" con la stessa certezza.
  *
  * @see docs/serenity-refonte.md
  */
 
 import { useI18n, type Language } from '../i18n';
 import { useUiStore } from '../store/uiStore';
+import { Sun, Moon } from 'lucide-react';
 
 const LINGUE: Language[] = ['en', 'fr', 'it', 'es', 'sv'];
 
@@ -39,6 +42,7 @@ const bottone = (attivo: boolean): React.CSSProperties => ({
   fontFamily: 'var(--s-mono)', fontSize: 11, letterSpacing: '0.04em',
   color: attivo ? 'var(--s-ink)' : 'var(--s-ink-ghost)',
   fontWeight: attivo ? 600 : 400,
+  display: 'flex', alignItems: 'center', gap: 5,
 });
 
 /**
@@ -77,9 +81,11 @@ export function SelettoreTema() {
   return (
     <div style={{ display: 'flex', gap: 10 }}>
       <button onClick={() => setLightTheme(true)} style={bottone(isLightTheme)}>
+        <Sun size={12} strokeWidth={1.8} aria-hidden="true" />
         {t('ser_theme_light')}
       </button>
       <button onClick={() => setLightTheme(false)} style={bottone(!isLightTheme)}>
+        <Moon size={12} strokeWidth={1.8} aria-hidden="true" />
         {t('ser_theme_dark')}
       </button>
     </div>

@@ -69,7 +69,7 @@ import { CameraCerchio } from './CameraCerchio';
 import { IndicatoreConnessione } from './IndicatoreConnessione';
 import { PannelloMeter } from './PannelloMeter';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi } from 'lucide-react';
 import type { ReadSrc } from '../engine/instantRead';
 import type { PrimePhase, Zone as PrimeZone } from '../lib/primeFreqEngine';
 import type { MnaSession } from '../hooks/useMnaModule';
@@ -1153,10 +1153,29 @@ export default function Serenity() {
             stessa parola "MUSE" poteva dire due dispositivi diversi) hanno anche il nome. */}
         <span style={{ width: 1, height: 16, background: 'var(--s-ink-ghost)', flexShrink: 0 }} />
         {/* Chi audita, chi si audita, e dove — detto in una riga sola e in grigio: sono cose
-            che si controllano una volta all'inizio, non che si guardano in seduta. */}
-        <span style={{ fontSize: 12.5, color: 'var(--s-ink-soft)' }}>
-          {nomeAuditor}{avvio.solo ? ` · ${t('ser_alone_tag')}` : ` · ${nomePreclear}`}
-          {avvio.distanza ? ` · ${t('ser_remote_tag')}` : ''}{avvio.esperto ? ` · ${t('ser_expert_tag')}` : ''}
+            che si controllano una volta all'inizio, non che si guardano in seduta.
+            ⚠️ Segnalato: « met un icone... pour l'auditeur (SOLO, Expert, etc.) ». Le STESSE
+            icone di `Avvio.tsx` per queste stesse scelte (User/Users per solo/con preclear,
+            Wrench per esperto, Wifi per a distanza) — non un secondo set da imparare. */}
+        <span style={{ fontSize: 12.5, color: 'var(--s-ink-soft)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            {avvio.solo
+              ? <User size={12} strokeWidth={1.8} aria-hidden="true" />
+              : <Users size={12} strokeWidth={1.8} aria-hidden="true" />}
+            {nomeAuditor}{avvio.solo ? ` · ${t('ser_alone_tag')}` : ` · ${nomePreclear}`}
+          </span>
+          {avvio.distanza && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Wifi size={12} strokeWidth={1.8} aria-hidden="true" />
+              {t('ser_remote_tag')}
+            </span>
+          )}
+          {avvio.esperto && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Wrench size={12} strokeWidth={1.8} aria-hidden="true" />
+              {t('ser_expert_tag')}
+            </span>
+          )}
         </span>
         {/* ── SALVA QUESTA CONFIGURAZIONE — vedi la nota su `salvaConfigAperto`. Sempre
             raggiungibile da qui, qualunque sia lo stato degli strumenti in questo momento. */}
@@ -1231,6 +1250,7 @@ export default function Serenity() {
         </span>
         <IndicatoreConnessione
           onClick={muse.handleConnectMuse}
+          icona={<Headphones size={13} strokeWidth={1.8} />}
           etichetta={
             muse.museConnection === 'connected'
               ? (museGate.museContact ? 'MUSE ✓' : t('ser_meter_disconnected') as string)
@@ -1251,6 +1271,7 @@ export default function Serenity() {
             distinguibile da "non ancora connesso": due stati diversi, non uno solo. */}
         <IndicatoreConnessione
           onClick={theta.unavailable ? undefined : (meterC ? theta.disconnect : theta.connect)}
+          icona={<Gauge size={13} strokeWidth={1.8} />}
           etichetta={
             // ⚠️ Segnalato: « la connessione METER non la vedo, vedo invece connessione MUSE ».
             // La causa vera: questa etichetta usava `theta_uncalibrated` ("non tarato") — una
@@ -1309,6 +1330,7 @@ export default function Serenity() {
               {LC('a distanza', 'à distance', 'remote', 'a distancia', 'på distans')}
             </span>
             <IndicatoreConnessione
+              icona={<Wifi size={13} strokeWidth={1.8} />}
               etichetta={t('drawer_pc') as string}
               stato={
                 remote.isConnected ? 'connesso'
@@ -1322,6 +1344,7 @@ export default function Serenity() {
               }
             />
             <IndicatoreConnessione
+              icona={<Headphones size={13} strokeWidth={1.8} />}
               etichetta={LC('MUSE (preclear)', 'MUSE (préclair)', 'MUSE (preclear)', 'MUSE (preclear)', 'MUSE (preclear)') as string}
               stato={
                 !remote.isConnected ? 'in-attesa'
