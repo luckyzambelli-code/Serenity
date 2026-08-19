@@ -63,18 +63,20 @@
   --s-ink-faint: #84898e;
   --s-ink-ghost: #cfd2d5;
 
-  /* ── I CERCHI, ORA IN VETRO ─────────────────────────────────────────────────────────────
-     Segnalato: il materiale di EQUILIBRIUM, non solo la sua taglia. `--s-disc`/`--s-disc-sunk`
-     diventano TRASLUCIDI (perché `.s-glass` possa sfocare quel che sta sotto) — il rilievo
-     resta (un'ombra bassa li stacca dal fondo), il vetro ci si aggiunge sopra. */
-  --s-disc:        rgba(255, 255, 255, 0.62);
-  --s-disc-sunk:   rgba(236, 234, 230, 0.55);
+  /* ── I CERCHI, ORA IN VETRO LIQUIDO ──────────────────────────────────────────────────────
+     Segnalato tre volte: il materiale di EQUILIBRIUM, non solo la sua taglia — poi « più
+     trasparenze liquide, i bottoni fossero VERAMENTE glass form ». `--s-disc`/`--s-disc-sunk`
+     più TRASLUCIDI di prima (0,62→0,42: si vede più chiaramente quel che sta sotto, sfocato) e
+     la sfocatura più forte (20px→30px, saturazione più alta) — il rilievo resta (un'ombra bassa
+     li stacca dal fondo), il vetro ora si vede come vetro, non solo si intuisce. */
+  --s-disc:        rgba(255, 255, 255, 0.42);
+  --s-disc-sunk:   rgba(236, 234, 230, 0.34);
   --s-shadow:      0 1px 2px rgba(44, 47, 51, 0.04), 0 8px 24px rgba(44, 47, 51, 0.06);
   --s-shadow-lift: 0 2px 4px rgba(44, 47, 51, 0.05), 0 16px 44px rgba(44, 47, 51, 0.09);
   /* Il riflesso sul vetro — un bordo chiarissimo, mai colorato, mai "un contorno da leggere". */
-  --s-glass-edge:      rgba(255, 255, 255, 0.75);
-  --s-glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.55);
-  --s-glass-blur:      blur(20px) saturate(160%);
+  --s-glass-edge:      rgba(255, 255, 255, 0.85);
+  --s-glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  --s-glass-blur:      blur(30px) saturate(200%);
 
   /* ── I TRE SEGNALI, E BASTA ──────────────────────────────────────────────────────────────
      Tre e non dieci: un linguaggio di colore che l'auditor deve ricordare è un linguaggio che
@@ -130,15 +132,16 @@
   --s-ink-faint: #8b8e90;
   --s-ink-ghost: #45484a;
 
-  --s-disc:        rgba(52, 53, 57, 0.55);
-  --s-disc-sunk:   rgba(28, 29, 31, 0.55);
+  --s-disc:        rgba(52, 53, 57, 0.36);
+  --s-disc-sunk:   rgba(28, 29, 31, 0.36);
   --s-shadow:      0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.45);
   --s-shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.40), 0 16px 44px rgba(0, 0, 0, 0.55);
   /* Sullo scuro il riflesso è più tenue (il vetro vero riflette meno su un fondo scuro) — e
-     l'highlight interno resta chiaro: è la luce che entra dal bordo, non il colore del fondo. */
-  --s-glass-edge:      rgba(255, 255, 255, 0.14);
-  --s-glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.10);
-  --s-glass-blur:      blur(20px) saturate(160%);
+     l'highlight interno resta chiaro: è la luce che entra dal bordo, non il colore del fondo.
+     Segnalato: « più trasparenze liquide » — sfocatura più forte, come in tema chiaro. */
+  --s-glass-edge:      rgba(255, 255, 255, 0.22);
+  --s-glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  --s-glass-blur:      blur(30px) saturate(200%);
 
   /* Stessa tinta dei tre segnali, luminosità alzata — sennò su un fondo scuro si spengono
      invece di restare « qui », non « ADESSO » (vedi la regola dei tre segnali sopra). */
@@ -241,12 +244,13 @@ body {
 .s-glass::before {
   content: '';
   position: absolute; inset: 0; border-radius: inherit;
-  background: linear-gradient(165deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0) 38%);
+  background: linear-gradient(165deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 46%);
   pointer-events: none;
   z-index: 0;
 }
+/* Segnalato: « più trasparenze liquide » — lucido più ampio e più intenso in entrambi i temi. */
 :root[data-tema='scuro'] .s-glass::before {
-  background: linear-gradient(165deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 42%);
+  background: linear-gradient(165deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 50%);
 }
 .s-glass > * { position: relative; z-index: 1; }
 

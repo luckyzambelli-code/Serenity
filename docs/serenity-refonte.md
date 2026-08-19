@@ -585,6 +585,53 @@ i cinque codici, "Session without instruments" apre la seduta SENZA il modale di
 (verificato via click programmato + lettura dei bottoni a schermo), l'intestazione va a capo
 senza perdere alcun indicatore. EQUILIBRIUM 2.0.174, SERENITY 3.0.37.
 
+---
+
+## Sesto giro (19/08/2026) — vetro più liquido, passi dei cicli, assessment reale, ago corretto
+
+Sei punti in un solo messaggio, con un promemoria in cima e uno in fondo: « devi solo cambiare
+l'interfaccia, in nessun modo le logiche... NON CAMBIARE PROPRIO NULLA AL MOTORE ». Verificato
+con `git status` dopo ogni modifica: **solo file di `src/serenity/` toccati**, mai `App.tsx` né
+un modulo di `engine/`/`hooks/`/`session/` condiviso.
+
+1. **« Più trasparenze liquide, i bottoni fossero VERAMENTE glass form »** — `--s-disc`/
+   `--s-disc-sunk` più traslucidi (0,62→0,42 chiaro, 0,55→0,36 scuro), sfocatura più forte
+   (20px→30px, saturazione 160%→200%), lucido (`::before`) più ampio e più intenso.
+2. **« Il cerchio delle camm è troppo piccolo »** (terza volta) — 260/130 px → 340/160 px.
+3. **« Le scritte dei cicli sono confuse... evidenziate le steps, a prova di stupido »** —
+   `PassiCiclo.tsx`, nuovo: uno stepper vero (passo fatto ✓, passo in corso acceso, passi futuri
+   spenti), per tutti e quattro i metodi. ZERO logica propria — legge `faseCiclo`
+   (`engine/sessionPhase.ts`, già condiviso) e mostra solo dove si è.
+4. **« L'assessment non funziona ancora... è solo un cambio grafico, non devi riscrivere le
+   funzioni »** — aveva ragione più di quanto pensassi io stesso: `computeInstantRead`/
+   `readWindow`/`readWaitSeconds` (`engine/instantRead.ts`) e `chiaveItem` (`engine/corpus.ts`)
+   erano GIÀ funzioni pure condivise — la versione precedente le aveva scartate per prudenza,
+   credendole accoppiate a refs locali di App.tsx che in realtà non lo sono. L'UNICA cosa
+   mancante per davvero: `shownReadsRef` (la fonte di `computeInstantRead`) riceveva SOLO le
+   reazioni EEG — mai quelle del Meter, wiring mai fatto qui. Aggiunta la STESSA logica di
+   App.tsx (episodio aggiornato per id, `REACTION_LABELS`) nel callback `onReaction` di
+   `useThetaMeter`, già mount. Ora ogni item dato a voce durante l'ASSESSMENT riceve, dopo
+   `readWaitSeconds`, una lettura vera: la reazione, lo scarto in ms, l'ago che l'ha letta,
+   NON MISURATO se nessuno strumento guardava, il gruppo di ripetizione se l'item è già stato
+   detto. Un calcolo solo per item (non la ripetizione progressiva a 200ms di App.tsx) — stessa
+   funzione pura, un giro invece di N.
+5. **« Per la logica ago METER/MUSE, non funziona allo stesso modo che su Equilibrium »** —
+   vero, mancavano due livelli di `agoPrincipale` (App.tsx): TONE impone SEMPRE il Meter (mai la
+   preferenza generale — prima l'ago EEG restava a schermo anche in TONE se la preferenza era
+   MUSE), e un ciclo CONTACT/NULL/MIRROR in corso impone SEMPRE l'EEG (quei tre vivono solo di
+   carica EEG, il Meter non vi partecipa — prima la preferenza generale poteva mostrare il Meter
+   a un ciclo già armato che stava producendo dati sul MUSE). Aggiunti entrambi.
+6. **« Mancano ancora dei moduli »** — confermato, restano aperti (non toccati in questo giro,
+   ciascuno una sessione a parte): crash recovery/bozza automatica, rapporto di fine seduta,
+   cronologia del profilo, R&I via CORPUS `itemRecord`, archivio CORPUS consultabile,
+   ready-check del Theta-Meter. Vedi l'audit comparativo più sopra nel documento.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori (320, nessuno nuovo), `vitest run`
+639/639, a schermo (chiaro): il vetro visibilmente più trasparente, le camere molto più grandi,
+lo stepper del ciclo CONTACT segna "✓ item — ● dissoluzione — 3 AS-IS" armando e validando,
+l'ASSESSMENT si apre senza errori, nessun file fuori da `src/serenity/` toccato.
+EQUILIBRIUM 2.0.175, SERENITY 3.0.38.
+
 ⚠️ **Revisione funzionale — non solo grafica (17/08/2026, terza segnalazione)**: due
 regressioni VERE, non d'aspetto — una funzione persa nel passaggio a SERENITY, non solo
 ridisegnata:

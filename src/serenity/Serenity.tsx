@@ -51,7 +51,7 @@ import {
   loadHistory as loadCanTests, saveHistory as saveCanTests, addTest as addCanTest,
   type PcCanHistory,
 } from '../engine/canTest';
-import { sessionRecord, cycleRecord, fnRecord } from '../engine/corpus';
+import { sessionRecord, cycleRecord, fnRecord, chiaveItem } from '../engine/corpus';
 import { corpusWrite, corpusAvailable } from '../lib/corpusWriter';
 import { getProfiles, getPcProfiles } from '../lib/storage';
 import { Avvio } from './Avvio';
@@ -68,10 +68,12 @@ import { PannelloMna } from './PannelloMna';
 import { CameraCerchio } from './CameraCerchio';
 import { IndicatoreConnessione } from './IndicatoreConnessione';
 import { SegmentoVetro } from './SegmentoVetro';
+import { PassiCiclo } from './PassiCiclo';
 import { PannelloMeter } from './PannelloMeter';
 import { useSerenityModuleStore } from './serenityModuleStore';
 import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff } from 'lucide-react';
-import type { ReadSrc } from '../engine/instantRead';
+import { computeInstantRead, readWaitSeconds, READ_NON_MISURATO, type ReadSrc } from '../engine/instantRead';
+import { REACTION_LABELS } from '../engine/ReactionClassifier';
 import type { PrimePhase, Zone as PrimeZone } from '../lib/primeFreqEngine';
 import type { MnaSession } from '../hooks/useMnaModule';
 import { primeFreqTracker } from '../engine/PrimeFreqTracker';
@@ -270,12 +272,30 @@ export default function Serenity() {
    */
   const [thetaReactionKey, setThetaReactionKey] = useState('');
   const spegniRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Le reazioni MOSTRATE (ago EEG + ago Meter), con l'ora — la fonte VERA di
+   *  `computeInstantRead` (mai il flusso grezzo del classificatore: conterrebbe reazioni mai
+   *  viste dall'auditor). Dichiarato QUI, prima di `theta`, perché il suo `onReaction` (sotto)
+   *  ci scrive dentro. */
+  const shownReadsRef = useRef<Array<{ time: number; reaction: string; src?: ReadSrc; episodeId?: number }>>([]);
   const theta = useThetaMeter({
     nowSec: () => sessionClock.now(),
     onReaction: r => {
       setThetaReactionKey(r.key);
       if (spegniRef.current) { clearTimeout(spegniRef.current); spegniRef.current = null; }
       if (r.final) spegniRef.current = setTimeout(() => setThetaReactionKey(''), THETA_LABEL_AFTER_MS);
+      // ── LE LETTURE DELLE LATTINE ENTRANO DOVE ENTRANO QUELLE DELL'EEG — segnalato: «per la
+      // logica ago METER/MUSE non funziona allo stesso modo che su Equilibrium», e serve anche
+      // qui: senza questo `shownReadsRef` conteneva SOLO reazioni EEG, e l'ASSESSMENT col Meter
+      // da solo avrebbe segnato NULL su ogni item mentre l'ago si muoveva davvero. STESSA
+      // logica di App.tsx (episodio aggiornato per id, non accodato — un F/N che scende SF →
+      // FALL → LONG FALL è UN movimento, non tre).
+      if (!aperta) return;
+      const label = REACTION_LABELS[r.key] || '';
+      const sr = shownReadsRef.current;
+      let i = sr.length - 1;
+      while (i >= 0 && sr[i].episodeId !== r.id) i--;
+      if (i >= 0) sr[i].reaction = label;
+      else sr.push({ time: r.startedAtSec, reaction: label, src: 'theta', episodeId: r.id });
     },
   });
   useEffect(() => () => { if (spegniRef.current) clearTimeout(spegniRef.current); }, []);
@@ -355,7 +375,6 @@ export default function Serenity() {
   const needleReactionKeyRef = useRef('reaction_none');
   const needleReactionRef = useRef('Set');
   const needleVirtualRef = useRef<{ time: number; offset: number }[]>([]);
-  const shownReadsRef = useRef<Array<{ time: number; reaction: string; src?: ReadSrc; episodeId?: number }>>([]);
   const ultimoItemSecRef = useRef<number | null>(null);
   const pendingEegFnRef = useRef<{ tSec: number; ta: number } | null>(null);
   const activeKickRef = useRef<{ raw: number } | null>(null);
@@ -371,26 +390,48 @@ export default function Serenity() {
    *  seduta: senza seduta non c'è configurazione con cui interpretare una riga. */
   const corpusSessionRef = useRef('');
   /**
-   * ── ASSESSMENT — segnalato: « l'assessment ne marche pas et n'apparaît pas ». Vero: i tre
-   * motori dei cicli chiamavano già `ensureAssessmentOn()` (dando l'item a voce, come in
-   * App.tsx) ma qui era un no-op — nessuno stato si accendeva, nessuna lista compariva da
-   * nessuna parte.
+   * ── ASSESSMENT — segnalato: « l'assessment ne marche pas et n'apparaît pas », poi di nuovo
+   * « implementa tutti gli elementi, è solo un cambio grafico, non devi riscrivere le funzioni ».
+   * Aveva ragione: `computeInstantRead`/`readWindow`/`readWaitSeconds` (`engine/instantRead.ts`)
+   * e `chiaveItem` (`engine/corpus.ts`) erano GIÀ funzioni pure condivise, non codice locale di
+   * App.tsx — la prima versione qui le aveva scartate per prudenza, credendole accoppiate a
+   * refs locali che in realtà non lo sono. La sola cosa mancante per davvero era
+   * `shownReadsRef` che ricevesse ANCHE le reazioni del Meter (vedi la nota sopra `theta`) — coi
+   * soli dati EEG, l'assessment col Meter da solo avrebbe segnato NULL su ogni item mentre l'ago
+   * si muoveva davvero.
    *
-   * ⚠️ QUESTA NON È la sofisticazione intera di `AssessmentPanel.tsx` (App.tsx): quella calcola
-   * una LETTURA ISTANTANEA per ogni item (`computeInstantRead`, la finestra di comm-lag,
-   * l'accorpamento per gruppo ripetuto) — ~300 righe accoppiate a refs locali di App.tsx, non
-   * un modulo condiviso portabile qui in un passo solo. Questa è la METÀ onesta: la lista degli
-   * item dati a voce durante l'assessment, con l'ora — SENZA una lettura calcolata accanto a
-   * ciascuno (sarebbe un numero inventato). La lettura per-item resta un passo successivo,
-   * dichiarato, non taciuto.
+   * Qui la STESSA lettura istantanea di App.tsx: si aspetta `readWaitSeconds` (la latenza
+   * elettrodermica, la stessa costante), poi si chiede a `computeInstantRead` — con la finestra
+   * delimitata dall'item PRIMA e da quello DOPO (se già arrivato), e SOLO dall'ago che l'auditor
+   * sta guardando (`agoEegRef`, mai l'altro: leggere dall'ago non guardato racconterebbe un
+   * movimento che nessuno ha visto). Non è la ripetizione PROGRESSIVA di App.tsx (che aggiorna
+   * la scritta più volte mentre l'ago scende, con un timer a 200ms): un calcolo solo, al termine
+   * dell'attesa — la stessa funzione pura, un solo giro invece di N.
    */
   const [assessAttivo, setAssessAttivo] = useState(false);
   const assessActiveRef = useRef(false);
   useEffect(() => { assessActiveRef.current = assessAttivo; }, [assessAttivo]);
   const attivaAssessment = () => setAssessAttivo(true);
-  const [assessItems, setAssessItems] = useState<Array<{ id: string; time: number; item: string }>>([]);
+  const [assessItems, setAssessItems] = useState<Array<{
+    id: string; time: number; item: string; gruppo: number;
+    /** `null` = in attesa della decisione (la latenza elettrodermica non è ancora passata). */
+    reaction: string | null; beforeMs: number; afterMs: number; readSrc?: ReadSrc;
+  }>>([]);
   const assessIdRef = useRef(0);
   const assessLogCursorRef = useRef(0);
+  /** Gli istanti di TUTTI gli item dati finora — serve solo a delimitare la finestra di lettura
+   *  di ciascuno (mai oltre l'item precedente o quello seguente). Stessa forma di App.tsx
+   *  (`assessTimesRef`). */
+  const assessTimesRef = useRef<number[]>([]);
+  const assessPrevAtRef = useRef(-Infinity);
+  /** Il gruppo di RIPETIZIONE di ogni item — stesso item detto più volte (a meno di maiuscole,
+   *  accenti, punteggiatura: `chiaveItem`) riceve lo stesso numero. */
+  const gruppiItemRef = useRef<Map<string, number>>(new Map());
+  /** L'ago che l'auditor sta guardando ADESSO — uno specchio in ref di `agoEeg` (dichiarato più
+   *  sotto: la logica dell'ago vive vicino a dove serve al quadrante) perché la lettura si
+   *  decide dentro un `setTimeout`, e un ref non ha bisogno di essere nell'elenco delle
+   *  dipendenze per restare aggiornato. */
+  const agoEegRef = useRef(false);
   /** Stesso filtro (`isAssessableItem`) e stesso principio cursore-su-`journal.logs` dei tre
    *  effetti "item dettato" qui sotto: si guarda solo quel che arriva DOPO che l'assessment si è
    *  acceso, non l'intero giornale da capo. */
@@ -398,16 +439,37 @@ export default function Serenity() {
     if (!assessAttivo) return;
     const cursore = assessLogCursorRef.current;
     if (journal.logs.length <= cursore) return;
-    const nuovi: Array<{ id: string; time: number; item: string }> = [];
     for (let i = cursore; i < journal.logs.length; i++) {
       const riga = journal.logs[i];
-      if (riga.speaker === 'Aud' && isAssessableItem(riga.text)) {
-        nuovi.push({ id: `as-${++assessIdRef.current}`, time: riga.time, item: riga.text.trim() });
-      }
+      if (riga.speaker !== 'Aud' || !isAssessableItem(riga.text)) continue;
+      const tSpeak = riga.time;
+      const testo = riga.text.trim();
+      const id = `as-${++assessIdRef.current}`;
+      const chiave = chiaveItem(testo);
+      let gruppo = gruppiItemRef.current.get(chiave);
+      if (gruppo === undefined) { gruppo = gruppiItemRef.current.size + 1; gruppiItemRef.current.set(chiave, gruppo); }
+      // MAI risalire oltre l'item PRECEDENTE — senza questo limite, in assessment (item ogni
+      // 1-2 s) un item ruberebbe la lettura di quello prima (stessa regola di App.tsx).
+      const notBefore = assessPrevAtRef.current + 0.05;
+      assessPrevAtRef.current = tSpeak;
+      assessTimesRef.current.push(tSpeak);
+      setAssessItems(prev => [...prev, { id, time: tSpeak, item: testo, gruppo, reaction: null, beforeMs: 0, afterMs: 0 }]);
+      const attesaS = readWaitSeconds(meterC);
+      window.setTimeout(() => {
+        // Limite in AVANTI = l'item SEGUENTE, se nel frattempo ne è arrivato uno — si conosce
+        // solo ORA, non quando l'item è stato dato (stessa regola di App.tsx).
+        const successivo = assessTimesRef.current.find(x => x > tSpeak + 0.05);
+        const notAfter = successivo !== undefined ? successivo - 0.05 : Infinity;
+        const soloSrc: ReadSrc = agoEegRef.current ? 'eeg' : 'theta';
+        const r = senzaStrumenti
+          ? { read: READ_NON_MISURATO, beforeMs: 0, afterMs: 0 }
+          : computeInstantRead(shownReadsRef.current, tSpeak, notBefore, notAfter, soloSrc);
+        setAssessItems(prev => prev.map(a => a.id === id
+          ? { ...a, reaction: r.read, beforeMs: r.beforeMs, afterMs: r.afterMs, readSrc: soloSrc } : a));
+      }, Math.max(200, attesaS * 1000));
     }
-    if (nuovi.length) setAssessItems(prev => [...prev, ...nuovi]);
     assessLogCursorRef.current = journal.logs.length;
-  }, [journal.logs, assessAttivo]);
+  }, [journal.logs, assessAttivo, meterC, senzaStrumenti]);
 
   const release = useStableReleaseState({ needleReactionKeyRef });
 
@@ -642,9 +704,32 @@ export default function Serenity() {
   });
   useEffect(() => { try { localStorage.setItem('equilibrium_ago', agoScelto); } catch { /* noop */ } }, [agoScelto]);
   const museOk = muse.museConnection === 'connected';
-  /** Con UN solo strumento non c'è scelta: vince quello che c'è — la preferenza conta solo
-   *  quando ci sarebbe davvero da scegliere. */
-  const agoEeg = museOk && meterC ? agoScelto === 'eeg' : museOk;
+  /** SERENITY non ha un selettore di modo persistente come App.tsx (`mode`): qui il TONE si
+   *  "attiva" con un gesto diretto, esclusivo con CONTACT/NULL/MIRROR. Dichiarato QUI (non più
+   *  giù, dove viveva prima) perché la logica dell'ago qui sotto ne ha bisogno. */
+  const [toneAttivo, setToneAttivo] = useState(false);
+  /**
+   * ⚠️ SEGNALATO: « per la logica ago METER/MUSE, non funziona allo stesso modo che su
+   * Equilibrium ». Vero — mancavano DUE dei livelli di `agoPrincipale` (App.tsx):
+   *   1. TONE impone SEMPRE il Meter (`MODE_SPEC.tone.needle === 'theta'`) — mai la preferenza
+   *      generale dell'auditor. Con METER e MUSE entrambi connessi e la preferenza su MUSE, la
+   *      versione precedente mostrava l'ago EEG anche mentre si lavora in TONE, che è lo
+   *      strumento SBAGLIATO per quel metodo.
+   *   2. Un ciclo CONTACT/NULL/MIRROR in corso impone SEMPRE l'EEG (`cicloInCorso ? 'eeg'` in
+   *      App.tsx) — quei tre cicli vivono SOLO di carica EEG, il Theta-Meter non vi partecipa:
+   *      a ciclo armato la preferenza generale non conta più, serve vedere l'ago che sta
+   *      davvero facendo il ciclo.
+   * Fuori da questi due casi (nessun ciclo in corso, TONE spento) resta la regola precedente:
+   * con un solo strumento vince quello che c'è, con entrambi vince la preferenza `agoScelto`.
+   */
+  const cicloEegInCorso = cycles.cycleArmed || mirror.mirrorArmed;
+  const agoEeg = toneAttivo ? false
+    : cicloEegInCorso ? museOk
+    : museOk && meterC ? agoScelto === 'eeg'
+    : museOk;
+  // Lo specchio in ref per l'ASSESSMENT (sopra) — legge questo valore dentro un `setTimeout`,
+  // dove un ref (sempre aggiornato) è corretto, uno stato catturato al momento dell'item no.
+  useEffect(() => { agoEegRef.current = agoEeg; }, [agoEeg]);
 
   // I profili vengono dallo stesso armadio di EQUILIBRIUM — è la verifica di questa fase.
   const nome = (lista: Array<{ id: string; name: string }>, id: string | null | undefined) =>
@@ -728,10 +813,6 @@ export default function Serenity() {
     LC,
   });
   trackToneRef.current = tone.trackTone;
-  /** SERENITY non ha un selettore di modo persistente come App.tsx (`mode`): qui il TONE si
-   *  "attiva" con un gesto diretto, esclusivo con CONTACT/NULL/MIRROR — stessa esclusività di
-   *  `viewMode`, un controllo in meno da costruire. */
-  const [toneAttivo, setToneAttivo] = useState(false);
 
   /**
    * ── IL METODO IN CORSO, IN UN VALORE SOLO ────────────────────────────────────────────────
@@ -851,6 +932,8 @@ export default function Serenity() {
     tone.resetTone(); setToneAttivo(false);   // niente TONE residuo da una seduta precedente
     setProvaTa({ two: null, solo: null });   // niente prova doppia residua da un'altra persona
     setAssessAttivo(false); setAssessItems([]); assessLogCursorRef.current = 0;   // idem, ASSESSMENT
+    assessTimesRef.current = []; assessPrevAtRef.current = -Infinity; gruppiItemRef.current = new Map();
+    shownReadsRef.current = [];   // niente reazioni di una seduta precedente nella finestra del primo item
     // ── MNA — « entra in CAPTURE » all'apertura, come App.tsx ────────────────────────────
     // Non IDLE: l'attrezzo è PRONTO a catturare fin dal primo secondo, non spento. E
     // `onHarmonicCopy` va agganciato QUI (una volta per seduta, come in App.tsx) — è
@@ -1424,10 +1507,9 @@ export default function Serenity() {
           la stessa regola per cui il quadrante è `w-full h-full` e non un cerchio fra i moduli.
           CAM 2 (PC), la priorità: molto più grande. CAM 1 (auditor), un controllo secondario:
           più piccola. `moduleVis`/CONFIG decide se sono accese; `opacita` legge la trasparenza.
-          ⚠️ Segnalato DI NUOVO (stessa giornata): 190 px restavano piccoli — « l'auditeur doit
-          voir le PC correctement » non era ancora vero. Portata a 260 (CAM 1 a 130, la stessa
-          proporzione fra le due): la priorità dichiarata nel testo qui sopra ora si vede anche
-          nei numeri. */}
+          ⚠️ Segnalato una TERZA volta: « il cerchio delle camm è troppo piccolo ». 260 px
+          restavano piccoli. Portata a 340 (CAM 1 a 160, la stessa proporzione fra le due) — un
+          volto a quella taglia si legge davvero, non si intuisce. */}
       {aperta && (moduleVis.cam1 || (moduleVis.cam2 && (avvio.distanza || avvio.solo))) && (
         <div style={{
           position: 'absolute', top: 76, right: 44, zIndex: 5,
@@ -1435,7 +1517,7 @@ export default function Serenity() {
         }}>
           {moduleVis.cam1 && (
             <CameraCerchio
-              dimensione={130}
+              dimensione={160}
               titolo={t('cam1') as string}
               offlineLabel={t('camera_offline') as string}
               opacita={uiAlpha}
@@ -1445,7 +1527,7 @@ export default function Serenity() {
           )}
           {moduleVis.cam2 && (avvio.distanza || avvio.solo) && (
             <CameraCerchio
-              dimensione={260}
+              dimensione={340}
               titolo={t('cam2') as string}
               externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
               offlineLabel={t('camera_offline') as string}
@@ -1669,7 +1751,10 @@ export default function Serenity() {
       {/* ── IL GESTO ──────────────────────────────────────────────────────────────────────
           Uno solo. Il guscio sa fare una cosa: aprire e chiudere una seduta sull'orologio
           vero. Tutto il resto delle fasi si appende a questo. */}
-      <footer style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+      {/* `flexWrap` — la fila dei passi (`PassiCiclo`, sotto) vuole una riga per sé: senza,
+          affiancata ai comandi si accorcerebbe fino a diventare illeggibile invece di andare a
+          capo. Stessa ragione già applicata all'intestazione. */}
+      <footer style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 18, rowGap: 10 }}>
         {/* ⚠️ Niente `border: 'none'` qui — segnalato: « je ne vois pas de GLASS FORM ». Uno
             stile inline vince sempre su una classe CSS per la stessa proprietà: dichiararlo qui
             cancellava in silenzio il bordo di `.s-glass`. */}
@@ -1756,6 +1841,18 @@ export default function Serenity() {
             <span style={{ fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)' }}>
               {item || t('ser_item_placeholder')}
             </span>
+            {/* I passi del tono, tutti insieme — vedi la nota su `PassiCiclo` in CONTACT/NULL. */}
+            <div style={{ flexBasis: '100%' }}>
+              <PassiCiclo
+                hue="var(--s-ink-soft)"
+                passi={[
+                  { chiave: 'resistenza', etichetta: LC('resistenza', 'résistance', 'resistance', 'resistencia', 'motstånd') },
+                  { chiave: 'tono40', etichetta: LC('tono 40', 'ton 40', 'tone 40', 'tono 40', 'ton 40') },
+                  { chiave: 'fatto', etichetta: LC('fatto', 'fait', 'done', 'hecho', 'klart') },
+                ]}
+                indiceAttuale={tone.tonePhase === 'done' ? 2 : tone.tonePhase === 'raise' ? 1 : 0}
+              />
+            </div>
             {faseCiclo === 'tone.say_item' && (
               <>
                 <span className="ser-pulse" style={{
@@ -1858,6 +1955,21 @@ export default function Serenity() {
             <span style={{ fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)' }}>
               {item || t('ser_item_placeholder')}
             </span>
+            {/* I passi del raddoppio, tutti insieme — vedi la nota su `PassiCiclo` in CONTACT/NULL. */}
+            <div style={{ flexBasis: '100%' }}>
+              <PassiCiclo
+                hue="var(--s-reserve)"
+                passi={[
+                  { chiave: 'item', etichetta: LC('item', 'item', 'item', 'ítem', 'item') },
+                  { chiave: 'valore', etichetta: LC('valore', 'valeur', 'value', 'valor', 'värde') },
+                  { chiave: 'doppio', etichetta: LC('doppio', 'double', 'double', 'doble', 'dubbel') },
+                  { chiave: 'ottenuto', etichetta: LC('ottenuto', 'obtenu', 'obtained', 'obtenido', 'uppnått') },
+                ]}
+                indiceAttuale={
+                  mirror.mirrorDisp.reached ? 3 : mirror.mirrorDisp.locked ? 2 : faseCiclo === 'mirror.contact' ? 1 : 0
+                }
+              />
+            </div>
             {faseCiclo === 'mirror.say_item' && (
               <>
                 <span className="ser-pulse" style={{
@@ -1944,6 +2056,30 @@ export default function Serenity() {
             <span style={{ fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)' }}>
               {item || t('ser_item_placeholder')}
             </span>
+            {/* ── I PASSI, TUTTI INSIEME — segnalato: « le scritte dei cicli sono confuse...
+                evidenziate le steps, a prova di stupido ». `PassiCiclo` legge la STESSA
+                `faseCiclo` (già calcolata da `engine/sessionPhase.ts`, non riletta qui): non
+                decide nulla, mostra solo dove si è dentro la sequenza del metodo in corso. Riga
+                a sé (`flexBasis:'100%'`) per restare leggibile invece di accorciarsi. */}
+            <div style={{ flexBasis: '100%' }}>
+              <PassiCiclo
+                hue={cycles.cycleKind === 'null' ? 'var(--s-alive)' : 'var(--s-still)'}
+                passi={cycles.cycleKind === 'null' ? [
+                  { chiave: 'item', etichetta: LC('item', 'item', 'item', 'ítem', 'item') },
+                  { chiave: 'mockup', etichetta: LC('mock-up', 'mock-up', 'mock-up', 'mock-up', 'mock-up') },
+                  { chiave: 'equilibrium', etichetta: 'EQUILIBRIUM' },
+                ] : [
+                  { chiave: 'item', etichetta: LC('item', 'item', 'item', 'ítem', 'item') },
+                  { chiave: 'mockup', etichetta: LC('dissoluzione', 'dissolution', 'dissolution', 'disolución', 'upplösning') },
+                  { chiave: 'asis', etichetta: 'AS-IS' },
+                ]}
+                indiceAttuale={
+                  cycles.cycleKind === 'null'
+                    ? (faseCiclo === 'null.equilibrium' ? 2 : (faseCiclo === 'null.mockup' || faseCiclo === 'null.rise') ? 1 : 0)
+                    : (faseCiclo === 'contact.asis' ? 2 : faseCiclo === 'contact.mockup' ? 1 : 0)
+                }
+              />
+            </div>
             {/* ── « DÌ L'ITEM… » — segnalato insieme: la logica di darlo a voce già esiste nel
                 motore (`cycleAwaitItemRef`), ma finché nessuno lo dice a schermo l'auditor non
                 sa che il ciclo sta ASPETTANDO, non è già a mock-up. Pulsa finché la voce (o la
@@ -2061,9 +2197,9 @@ export default function Serenity() {
             {assessAttivo && (
               <div className="s-glass s-glass-lift" style={{
                 position: 'absolute', bottom: '100%', left: 0, marginBottom: 8, zIndex: 40,
-                display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 14px',
-                borderRadius: 12, background: 'var(--s-disc)',
-                minWidth: 220, maxWidth: 320, maxHeight: 220, overflowY: 'auto',
+                display: 'flex', flexDirection: 'column', gap: 8, padding: '14px 16px',
+                borderRadius: 14, background: 'var(--s-disc)',
+                minWidth: 300, maxWidth: 420, maxHeight: 320, overflowY: 'auto',
               }}>
                 <span style={{ fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.1em',
                               textTransform: 'uppercase', color: 'var(--s-ink-soft)' }}>
@@ -2073,16 +2209,49 @@ export default function Serenity() {
                   <span className="ser-pulse" style={{ fontSize: 13, color: 'var(--s-ink-faint)' }}>
                     {LC('in ascolto…', 'à l\'écoute…', 'listening…', 'escuchando…', 'lyssnar…')}
                   </span>
-                ) : assessItems.slice().reverse().map(it => (
-                  <div key={it.id} style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
-                    <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11.5, color: 'var(--s-ink-faint)', flexShrink: 0 }}>
-                      {orologio(it.time)}
-                    </span>
-                    <span style={{ fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)' }}>
-                      {it.item}
-                    </span>
-                  </div>
-                ))}
+                ) : assessItems.slice().reverse().map(it => {
+                  // ── LA LETTURA — segnalato: « implementa tutti gli elementi ». Stessi tre
+                  // esiti di App.tsx: NULL (nessuna reazione), NON MISURATO (nessuno strumento
+                  // guardava), o la reazione vera con lo scarto dalla parola.
+                  const inAttesa = it.reaction === null;
+                  const colore = inAttesa ? 'var(--s-ink-faint)'
+                    : it.reaction === 'NULL' ? 'var(--s-ink-faint)'
+                    : it.reaction === READ_NON_MISURATO ? 'var(--s-reserve)'
+                    : 'var(--s-still)';
+                  return (
+                    <div key={it.id} style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
+                        <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11, color: 'var(--s-ink-faint)', flexShrink: 0 }}>
+                          {orologio(it.time)}
+                        </span>
+                        <span style={{ fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)' }}>
+                          {it.item}
+                        </span>
+                        {/* Il gruppo di ripetizione — visibile solo dal SECONDO item dello stesso
+                            gruppo in poi: il primo non è ancora "ripetuto" da nessuno. */}
+                        {assessItems.filter(a => a.gruppo === it.gruppo).length > 1 && (
+                          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 10.5, color: 'var(--s-ink-ghost)' }}>
+                            ×{assessItems.filter(a => a.gruppo === it.gruppo && a.time <= it.time).length}
+                          </span>
+                        )}
+                      </div>
+                      <span className={inAttesa ? 'ser-pulse' : undefined} style={{
+                        fontFamily: 'var(--s-mono)', fontSize: 11.5, color: colore, marginLeft: 62,
+                      }}>
+                        {inAttesa
+                          ? LC('in lettura…', 'en lecture…', 'reading…', 'leyendo…', 'läser…')
+                          : it.reaction === 'NULL'
+                            ? LC('nessuna reazione', 'aucune réaction', 'no reaction', 'sin reacción', 'ingen reaktion')
+                            : it.reaction === READ_NON_MISURATO
+                              ? LC('non misurato — nessuno strumento', 'non mesuré — aucun instrument',
+                                  'not measured — no instrument', 'no medido — ningún instrumento',
+                                  'inte mätt — inget instrument')
+                              : `${it.reaction}${it.beforeMs > 0 ? ` −${it.beforeMs}ms` : it.afterMs > 0 ? ` +${it.afterMs}ms` : ''}`
+                              + (it.readSrc ? ` · ${it.readSrc === 'eeg' ? 'MUSE' : 'METER'}` : '')}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
