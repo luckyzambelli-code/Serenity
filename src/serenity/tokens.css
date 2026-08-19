@@ -194,6 +194,15 @@ body {
 }
 .ser-pulse { animation: serVoceAttesa 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 
+/* IL BOTTONE CHE SI TRASFORMA — `BottoneCiclico.tsx`. Al cambio di stato lo stato NUOVO entra
+   da sotto e si schiarisce, invece di scattare — la stessa idea del cursore che scivola
+   (`SegmentoVetro.tsx`), qui applicata al contenuto di un bottone solo. */
+@keyframes sBottoneMorph {
+  0%   { opacity: 0; transform: translateY(3px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.s-bottone-morph { animation: sBottoneMorph 260ms var(--s-ease); }
+
 /* ═══════════════════════════════════════════════════════════════════════════════════════════
    SEI CLASSI, PER UN COMPONENTE CONDIVISO — fase 5.
    ═══════════════════════════════════════════════════════════════════════════════════════════

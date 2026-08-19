@@ -28,17 +28,18 @@
  *
  * ── SEGNALATO UNA TERZA VOLTA: « les inscriptions sont incompréhensibles... la possibilité de
  * sortir du test des boîtes » ─────────────────────────────────────────────────────────────────
- * Due difetti distinti, corretti insieme:
- *   • Le prove non si potevano ANNULLARE — `startSqueezeTest`/`startBreathTest` chiudevano solo
- *     da sole al proprio timer (4 s · 9 s). Aggiunto `theta.cancelTest()` al motore condiviso
- *     (`useThetaMeter`, mai toccato prima da SERENITY) e un bottone "annulla" qui, visibile
- *     SOLO mentre una prova è in corso.
- *   • Le etichette dicevano SOLO il nome tecnico ("due lattine", "prova della stretta") senza
- *     mai dire A CHE COSA SERVONO — leggibile per chi già sa cos'è un Theta-Meter, oscuro per
- *     chi apre questo pannello per la prima volta. Un titolo in cima nomina lo strumento
- *     (« IL THETA-METER — che cosa collega e regola »), e ogni sezione ha ora una riga di
- *     spiegazione SEMPRE visibile — non più solo un `title` che compare al passaggio del
- *     mouse, facile da non scoprire mai.
+ * Due difetti distinti, corretti insieme: `theta.cancelTest()` aggiunto al motore condiviso
+ * (`useThetaMeter`, mai toccato prima da SERENITY), e ogni sezione ha una spiegazione SEMPRE
+ * visibile — non più solo un `title` al passaggio del mouse.
+ *
+ * ── SEGNALATO UNA QUARTA VOLTA: « la gestione di configurare il METER è troppo complicata.
+ * Bisogna farla come all'inizio della sessione, PASSO A PASSO » ──────────────────────────────
+ * Vero: quattro blocchi (configurazione, stretta, respiro, taratura) stavano tutti insieme
+ * nello stesso pannello — leggibile per chi già sa cosa sta facendo, un muro per chi apre
+ * questo cassetto la prima volta. Ristrutturato come `Avvio.tsx`: UN passo alla volta, un
+ * "avanti"/"indietro" a fondo pagina, un punto per passo in testa. ZERO LOGICA NUOVA — le
+ * stesse quattro sezioni, nello stesso ordine in cui la prova ha senso (config → stretta →
+ * respiro → taratura), solo una alla volta invece che tutte insieme.
  *
  * @see docs/serenity-refonte.md
  */
@@ -49,19 +50,15 @@ import { pick5 } from '../i18n5';
 import { compareReady, soloTaOffset } from '../engine/canTest';
 import type { useThetaMeter } from '../hooks/useThetaMeter';
 
-/**
- * ⚠️ NÉ `border` NÉ `boxShadow` qui dentro — segnalato: « je ne vois pas de GLASS FORM ». La
- * causa vera: questa funzione dichiarava `border: 'none'` e un `boxShadow` PROPRIO, e uno
- * stile inline VINCE SEMPRE su una classe CSS per la STESSA proprietà — il bordo e il riflesso
- * di `.s-glass`/`.s-glass-btn` (aggiunti via `className`, vedi i punti d'uso) non arrivavano
- * mai a schermo, cancellati in silenzio da queste due righe. Il vetro ora viene SOLO dalla
- * classe; qui resta solo ciò che la classe non decide (sfondo, colore, misura). */
 const pillola = (piena: boolean): React.CSSProperties => ({
-  cursor: 'pointer', borderRadius: 999, padding: '7px 16px',
-  fontFamily: 'var(--s-sans)', fontSize: 13, letterSpacing: '0.04em',
+  cursor: 'pointer', borderRadius: 999, padding: '8px 18px',
+  fontFamily: 'var(--s-sans)', fontSize: 13.5, letterSpacing: '0.04em',
   background: piena ? 'var(--s-disc)' : 'var(--s-disc-sunk)',
   color: 'var(--s-ink)',
 });
+
+const PASSI = ['config', 'stretta', 'respiro', 'taratura'] as const;
+type Passo = typeof PASSI[number];
 
 /** Chi monta questo pannello (`Serenity.tsx`) lo fa SOLO a meter connesso — niente stato di
  *  "non connesso" da disegnare qui dentro: quella parola la dice già l'indicatore sopra. */
@@ -73,208 +70,234 @@ export function PannelloMeter({ theta, provaTa }: {
 }) {
   const { t, lang } = useI18n();
   const [riferimento, setRiferimento] = useState('2.0');
+  const [passo, setPasso] = useState<Passo>('config');
+  const idx = PASSI.indexOf(passo);
   const LC = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang as string, it, fr, en, es, sv);
 
   const scarto = soloTaOffset({ taTwo: provaTa.two, taSolo: provaTa.solo });
   const scartoMisurato = (theta.setup.offsets?.['solo-can'] ?? 0) !== 0;
 
+  const TITOLI: Record<Passo, string> = {
+    config: LC('1 · quante lattine', '1 · combien de boîtes', '1 · how many cans', '1 · cuántas latas', '1 · hur många burkar'),
+    stretta: LC('2 · la prova della stretta', '2 · le test de la pression', '2 · the squeeze test', '2 · la prueba de presión', '2 · klämtestet'),
+    respiro: LC('3 · la prova del respiro', '3 · le test de la respiration', '3 · the breath test', '3 · la prueba de respiración', '3 · andningstestet'),
+    taratura: LC('4 · la taratura TA', '4 · l\'étalonnage TA', '4 · TA calibration', '4 · el calibrado TA', '4 · TA-kalibrering'),
+  };
+
   return (
     <div className="s-glass s-glass-lift" style={{
-      display: 'flex', flexDirection: 'column', gap: 14, padding: '14px 16px',
-      background: 'var(--s-disc)', borderRadius: 12,
-      maxWidth: 420,
+      display: 'flex', flexDirection: 'column', gap: 14, padding: '16px 18px',
+      background: 'var(--s-disc)', borderRadius: 14,
+      width: 380,
     }}>
-      {/* ── IL TITOLO — segnalato: « on ne sait pas les réglages à quoi correspondent, sur
-          quel instrument ». Questo pannello parla SOLO del Theta-Meter (le lattine) — mai del
-          MUSE, che non ha impostazioni proprie oltre a connettersi. */}
-      <div style={{ fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.12em',
-                    textTransform: 'uppercase', color: 'var(--s-ink-soft)' }}>
-        {LC('il theta-meter — le lattine', 'le theta-meter — les boîtes', 'the theta-meter — the cans',
-          'el theta-meter — las latas', 'theta-metern — burkarna')}
+      {/* ── I PUNTI DEL PERCORSO — lo stesso principio di `PassiCiclo.tsx`: si vede quanti
+          passi ci sono e a che punto si è, senza doverlo ricordare a memoria. Cliccabili: si
+          torna indietro anche saltando, non solo un passo alla volta. */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        {PASSI.map((p, i) => (
+          <button key={p} onClick={() => setPasso(p)} title={TITOLI[p]} style={{
+            border: 'none', cursor: 'pointer', padding: 4, background: 'none', display: 'flex',
+          }}>
+            <span style={{
+              width: i === idx ? 20 : 7, height: 7, borderRadius: 999,
+              background: i <= idx ? 'var(--s-still)' : 'var(--s-ink-ghost)',
+              transition: 'width var(--s-slow) var(--s-ease), background var(--s-slow) var(--s-ease)',
+            }} />
+          </button>
+        ))}
       </div>
 
-      {/* ── CONFIGURAZIONE — due lattine, o una sola ──────────────────────────────────── */}
-      <div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={() => theta.setConfig('two-cans')}
-            className="s-glass s-glass-btn"
-            style={pillola(theta.setup.config === 'two-cans')}>
-            {t('theta_two_cans')}
-          </button>
-          <button onClick={() => theta.setConfig('solo-can')}
-            className="s-glass s-glass-btn"
-            style={pillola(theta.setup.config === 'solo-can')}>
-            {t('theta_solo_can')}
-          </button>
-        </div>
-        <div style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--s-ink-faint)', marginTop: 6 }}>
-          {LC('quante lattine impugna il preclear in mano — cambia come l\'ago legge la resistenza.',
-            'combien de boîtes le préclair tient en main — change la façon dont l\'aiguille lit la résistance.',
-            'how many cans the preclear holds — changes how the needle reads the resistance.',
-            'cuántas latas sostiene el preclear en la mano — cambia cómo la aguja lee la resistencia.',
-            'hur många burkar preclearen håller — ändrar hur nålen läser motståndet.')}
-        </div>
+      <div style={{ fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.1em',
+                    textTransform: 'uppercase', color: 'var(--s-ink-soft)', textAlign: 'center' }}>
+        {TITOLI[passo]}
       </div>
 
-      {/* ── « LATTINA SOLA » SENZA LO SCARTO — segnalato: « le réglage est incompréhensible,
-          fonctionne seulement les deux boîtes ». Non era rotto: mancava il modo di misurare la
-          correzione che questa scelta richiede. Stesso avviso di `ThetaReadyCheck.tsx`
-          (App.tsx): senza la prova a due lattine come riferimento, il TA in solo resta
-          sistematicamente spostato — sembra un guasto, è solo un dato mancante. */}
-      {theta.setup.config === 'solo-can' && !scartoMisurato && (
-        <div style={{
-          padding: '10px 12px', borderRadius: 10, background: 'var(--s-disc-sunk)',
-          border: '1px solid var(--s-reserve)',
-        }}>
-          <div style={{ fontSize: 12.5, lineHeight: 1.5, color: 'var(--s-reserve)' }}>
-            {LC(
-              'per misurare il TA come si deve, fai la stretta con DUE lattine — è il riferimento. Poi torna a una sola e ripeti: la differenza fra le due letture corregge tutta la seduta.',
-              'pour mesurer le TA correctement, fais la pression avec DEUX boîtes — c\'est la référence. Reviens ensuite à une seule et répète : la différence entre les deux lectures corrige toute la séance.',
-              'to measure the TA properly, do the squeeze with TWO cans — that is the reference. Then go back to one and repeat: the difference between the two readings corrects the whole session.',
-              'para medir el TA correctamente, haz la presión con DOS latas — es la referencia. Luego vuelve a una sola y repite: la diferencia entre las dos lecturas corrige toda la sesión.',
-              'för att mäta TA korrekt, gör trycket med TVÅ burkar — det är referensen. Gå sedan tillbaka till en och upprepa: skillnaden mellan de två avläsningarna korrigerar hela sessionen.',
-            )}
+      {/* ── PASSO 1 — CONFIGURAZIONE ────────────────────────────────────────────────────── */}
+      {passo === 'config' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+          <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
+            {LC('quante lattine impugna il preclear in mano — cambia come l\'ago legge la resistenza.',
+              'combien de boîtes le préclair tient en main — change la façon dont l\'aiguille lit la résistance.',
+              'how many cans the preclear holds — changes how the needle reads the resistance.',
+              'cuántas latas sostiene el preclear en la mano — cambia cómo la aguja lee la resistencia.',
+              'hur många burkar preclearen håller — ändrar hur nålen läser motståndet.')}
           </div>
-          <button onClick={() => theta.setConfig('two-cans')} style={{ ...pillola(false), marginTop: 8 }}>
-            {LC('passa a DUE lattine e fai la prova', 'passe à DEUX boîtes et fais le test',
-              'switch to TWO cans and run the test', 'pasa a DOS latas y haz la prueba',
-              'byt till TVÅ burkar och kör testet')}
-          </button>
-        </div>
-      )}
-
-      {/* ── IL CONFRONTO — fatte tutte e due le strette, qui si vede la differenza ──────────
-          Stessa coppia di funzioni pure di App.tsx (`engine/canTest.ts`'s `compareReady`/
-          `soloTaOffset`), non ricalcolata qui: la prova della stretta tara la SENSIBILITÀ
-          dell'ago, ma la correzione che serve al TA è quanto QUESTO preclear legge diverso con
-          una lattina invece di due — e quella non si deduce da una prova sola. */}
-      {compareReady({ taTwo: provaTa.two, taSolo: provaTa.solo }) && (
-        <div style={{
-          padding: '10px 12px', borderRadius: 10, background: 'var(--s-disc-sunk)',
-          border: `1px solid ${scarto === null ? 'var(--s-reserve)' : 'var(--s-still)'}`,
-        }}>
-          <div style={{ display: 'flex', gap: 16, alignItems: 'baseline', fontFamily: 'var(--s-mono)', fontSize: 14, color: 'var(--s-ink)' }}>
-            <span><span style={{ fontSize: 11, opacity: 0.6 }}>2 · </span>{provaTa.two!.toFixed(2)}</span>
-            <span><span style={{ fontSize: 11, opacity: 0.6 }}>1 · </span>{provaTa.solo!.toFixed(2)}</span>
-            <span style={{ color: scarto === null ? 'var(--s-reserve)' : 'var(--s-still)', fontWeight: 700 }}>
-              {scarto === null ? '—' : `${scarto > 0 ? '+' : ''}${scarto.toFixed(2)}`}
-            </span>
-          </div>
-          <div style={{ fontSize: 12, lineHeight: 1.5, marginTop: 6, color: 'var(--s-ink-faint)' }}>
-            {scarto === null
-              ? LC('lo scarto è troppo grande per essere una configurazione — è una lettura presa male. Rifai le due prove.',
-                  'l\'écart est trop grand pour être une configuration — c\'est une lecture mal prise. Refais les deux tests.',
-                  'the gap is too large to be a configuration — it is a badly taken reading. Redo both tests.',
-                  'la diferencia es demasiado grande para ser de configuración — es una lectura mal tomada. Rehaz las dos pruebas.',
-                  'skillnaden är för stor för att vara en konfiguration — avläsningen är dåligt tagen. Gör om båda testen.')
-              : LC('quanto QUESTO preclear legge diverso con una lattina. Applicandolo, il TA in solo torna alle due lattine.',
-                  'de combien CE préclair lit différemment avec une seule boîte. En l\'appliquant, le TA en solo revient aux deux boîtes.',
-                  'how much THIS preclear reads differently with one can. Applied, the solo TA comes back to two cans.',
-                  'cuánto lee distinto ESTE preclear con una lata. Aplicándolo, el TA en solo vuelve a dos latas.',
-                  'hur mycket DENNA preclear läser annorlunda med en burk. Tillämpat återförs TA i solo till två burkar.')}
-          </div>
-          {scarto !== null && !scartoMisurato && (
-            <button onClick={() => theta.setSoloOffset(scarto)} style={{ ...pillola(false), marginTop: 8 }}>
-              {LC('usa questa differenza', 'utilise cet écart', 'use this offset', 'usa esta diferencia', 'använd denna skillnad')}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={() => theta.setConfig('two-cans')}
+              className="s-glass s-glass-btn" style={pillola(theta.setup.config === 'two-cans')}>
+              {t('theta_two_cans')}
             </button>
-          )}
-          {scartoMisurato && (
-            <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: 'var(--s-still)' }}>
-              ✓ {LC('applicata', 'appliqué', 'applied', 'aplicada', 'tillämpad')}
+            <button onClick={() => theta.setConfig('solo-can')}
+              className="s-glass s-glass-btn" style={pillola(theta.setup.config === 'solo-can')}>
+              {t('theta_solo_can')}
+            </button>
+          </div>
+          {/* ── « LATTINA SOLA » SENZA LO SCARTO — segnalato: senza la prova a due lattine come
+              riferimento, il TA in solo resta sistematicamente spostato — sembra un guasto, è
+              solo un dato mancante (si misura al passo 4). */}
+          {theta.setup.config === 'solo-can' && !scartoMisurato && (
+            <div style={{
+              padding: '10px 12px', borderRadius: 10, background: 'var(--s-disc-sunk)',
+              border: '1px solid var(--s-reserve)', width: '100%',
+            }}>
+              <div style={{ fontSize: 12.5, lineHeight: 1.5, color: 'var(--s-reserve)' }}>
+                {LC('per misurare il TA come si deve, fai la stretta con DUE lattine al passo 2 — è il riferimento. Torna qui per passare a una sola e ripeti: al passo 4 la differenza corregge tutta la seduta.',
+                  'pour mesurer le TA correctement, fais la pression avec DEUX boîtes à l\'étape 2 — c\'est la référence. Reviens ici pour passer à une seule et répète : à l\'étape 4 la différence corrige toute la séance.',
+                  'to measure the TA properly, do the squeeze with TWO cans at step 2 — that is the reference. Come back here to switch to one and repeat: at step 4 the difference corrects the whole session.',
+                  'para medir el TA correctamente, haz la presión con DOS latas en el paso 2 — es la referencia. Vuelve aquí para pasar a una sola y repite: en el paso 4 la diferencia corrige toda la sesión.',
+                  'för att mäta TA korrekt, gör trycket med TVÅ burkar i steg 2 — det är referensen. Kom tillbaka hit för att byta till en och upprepa: i steg 4 korrigerar skillnaden hela sessionen.')}
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {/* ── LE DUE PROVE — stretta (sensibilità) e respiro ────────────────────────────── */}
-      <div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+      {/* ── PASSO 2 — LA PROVA DELLA STRETTA ────────────────────────────────────────────── */}
+      {passo === 'stretta' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+          <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
+            {theta.testing === 'squeeze' ? t('theta_squeeze_hint') : t('theta_squeeze_hint')}
+          </div>
           <button onClick={() => theta.startSqueezeTest()} disabled={theta.testing !== null}
-            className="s-glass s-glass-btn"
-            style={pillola(false)}>
+            className="s-glass s-glass-btn" style={pillola(true)}>
             {t('theta_squeeze')}
           </button>
-          {theta.squeezeOk !== null && (
-            <span style={{ fontSize: 13, color: theta.squeezeOk ? 'var(--s-still)' : 'var(--s-reserve)' }}>
-              {theta.squeezeOk ? '✓' : '⚠'}
+          {theta.testing === 'squeeze' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span className="ser-pulse" style={{ fontSize: 13, color: 'var(--s-alive)' }}>{t('theta_test_running')}</span>
+              <button onClick={() => theta.cancelTest()} style={{
+                border: 'none', background: 'none', cursor: 'pointer',
+                fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+              }}>
+                {LC('annulla', 'annuler', 'cancel', 'cancelar', 'avbryt')}
+              </button>
+            </div>
+          )}
+          {theta.squeezeOk !== null && theta.testing === null && (
+            <span style={{ fontSize: 13, fontWeight: 700, color: theta.squeezeOk ? 'var(--s-still)' : 'var(--s-reserve)' }}>
+              {theta.squeezeOk ? `✓ ${LC('fatta', 'faite', 'done', 'hecha', 'klart')}` : `⚠ ${LC('da rifare', 'à refaire', 'try again', 'a repetir', 'gör om')}`}
             </span>
           )}
+        </div>
+      )}
+
+      {/* ── PASSO 3 — LA PROVA DEL RESPIRO ──────────────────────────────────────────────── */}
+      {passo === 'respiro' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+          <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
+            {t('theta_breath_hint')}
+          </div>
           <button onClick={() => theta.startBreathTest()} disabled={theta.testing !== null}
-            className="s-glass s-glass-btn"
-            style={pillola(false)}>
+            className="s-glass s-glass-btn" style={pillola(true)}>
             {t('theta_breath')}
           </button>
-          {theta.breathOk !== null && (
-            <span style={{ fontSize: 13, color: theta.breathOk ? 'var(--s-still)' : 'var(--s-reserve)' }}>
-              {theta.breathOk ? '✓' : '⚠'}
+          {theta.testing === 'breath' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span className="ser-pulse" style={{ fontSize: 13, color: 'var(--s-alive)' }}>{t('theta_test_running')}</span>
+              <button onClick={() => theta.cancelTest()} style={{
+                border: 'none', background: 'none', cursor: 'pointer',
+                fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+              }}>
+                {LC('annulla', 'annuler', 'cancel', 'cancelar', 'avbryt')}
+              </button>
+            </div>
+          )}
+          {theta.breathOk !== null && theta.testing === null && (
+            <span style={{ fontSize: 13, fontWeight: 700, color: theta.breathOk ? 'var(--s-still)' : 'var(--s-reserve)' }}>
+              {theta.breathOk ? `✓ ${LC('fatta', 'faite', 'done', 'hecha', 'klart')}` : `⚠ ${LC('da rifare', 'à refaire', 'try again', 'a repetir', 'gör om')}`}
             </span>
           )}
         </div>
-        {/* ── LA SPIEGAZIONE, SEMPRE VISIBILE — non più solo al passaggio del mouse. Cambia
-            secondo quale prova è (o non è) in corso, così dice sempre la cosa giusta. */}
-        <div style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--s-ink-faint)', marginTop: 6 }}>
-          {theta.testing === 'squeeze' ? t('theta_squeeze_hint')
-            : theta.testing === 'breath' ? t('theta_breath_hint')
-            : LC('la stretta fissa la sensibilità dell\'ago; il respiro la verifica soltanto — fai prima la stretta.',
-                'la pression fixe la sensibilité de l\'aiguille ; la respiration ne fait que la vérifier — fais d\'abord la pression.',
-                'the squeeze sets the needle sensitivity; the breath only checks it — do the squeeze first.',
-                'la presión fija la sensibilidad de la aguja; la respiración solo la verifica — haz primero la presión.',
-                'trycket ställer nålens känslighet; andningen kontrollerar bara — gör trycket först.')}
-        </div>
-        {/* ── LA PROVA IN CORSO, E L'USCITA — segnalato: « la possibilité de sortir du test des
-            boîtes ». `theta.cancelTest()` spegne il timer del motore e torna a "nessuna prova"
-            senza scrivere un esito, positivo o negativo che sia — annullare non è fallire. */}
-        {theta.testing && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-            <span style={{ fontSize: 13, color: 'var(--s-alive)' }}>{t('theta_test_running')}</span>
-            <button onClick={() => theta.cancelTest()} style={{
-              border: 'none', background: 'none', cursor: 'pointer',
-              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+      )}
+
+      {/* ── PASSO 4 — LA TARATURA TA ────────────────────────────────────────────────────── */}
+      {passo === 'taratura' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
+            {t('theta_ref_hint')}
+          </div>
+          {/* Il confronto — appena entrambe le strette (due lattine e una sola) sono state
+              fatte, qui compare la differenza da applicare. Stesse funzioni pure di App.tsx. */}
+          {compareReady({ taTwo: provaTa.two, taSolo: provaTa.solo }) && (
+            <div style={{
+              padding: '10px 12px', borderRadius: 10, background: 'var(--s-disc-sunk)',
+              border: `1px solid ${scarto === null ? 'var(--s-reserve)' : 'var(--s-still)'}`,
             }}>
-              {LC('annulla', 'annuler', 'cancel', 'cancelar', 'avbryt')}
+              <div style={{ display: 'flex', gap: 16, alignItems: 'baseline', justifyContent: 'center', fontFamily: 'var(--s-mono)', fontSize: 14, color: 'var(--s-ink)' }}>
+                <span><span style={{ fontSize: 11, opacity: 0.6 }}>2 · </span>{provaTa.two!.toFixed(2)}</span>
+                <span><span style={{ fontSize: 11, opacity: 0.6 }}>1 · </span>{provaTa.solo!.toFixed(2)}</span>
+                <span style={{ color: scarto === null ? 'var(--s-reserve)' : 'var(--s-still)', fontWeight: 700 }}>
+                  {scarto === null ? '—' : `${scarto > 0 ? '+' : ''}${scarto.toFixed(2)}`}
+                </span>
+              </div>
+              {scarto !== null && !scartoMisurato && (
+                <div style={{ textAlign: 'center' }}>
+                  <button onClick={() => theta.setSoloOffset(scarto)} style={{ ...pillola(false), marginTop: 8 }}>
+                    {LC('usa questa differenza', 'utilise cet écart', 'use this offset', 'usa esta diferencia', 'använd denna skillnad')}
+                  </button>
+                </div>
+              )}
+              {scartoMisurato && (
+                <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: 'var(--s-still)', textAlign: 'center' }}>
+                  ✓ {LC('applicata', 'appliqué', 'applied', 'aplicada', 'tillämpad')}
+                </div>
+              )}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 13, color: 'var(--s-ink-faint)' }}>{t('theta_ref_label')}</span>
+            <span style={{ fontFamily: 'var(--s-mono)', fontSize: 14 }}>{theta.rawSmooth.toFixed(0)}</span>
+            <input
+              type="number" step="0.1" value={riferimento}
+              onChange={e => setRiferimento(e.target.value)}
+              style={{
+                width: 56, border: 'none', borderBottom: '1px solid var(--s-ink-ghost)',
+                background: 'none', outline: 'none', fontFamily: 'var(--s-mono)', fontSize: 14,
+                color: 'var(--s-ink)', padding: '2px 4px',
+              }}
+            />
+            <button onClick={() => {
+              const v = parseFloat(riferimento);
+              if (Number.isFinite(v)) theta.addPointFromReference(v);
+            }} className="s-glass s-glass-btn" style={pillola(false)}>
+              {t('theta_cal_record')}
             </button>
           </div>
-        )}
-      </div>
-
-      {/* ── TARATURA TA — un punto per volta, con l'artefatto o col programma Theta-Meter.
-          Stesso metodo di App.tsx (`addPointFromReference`): si impugna il riferimento a un
-          TA noto, si lascia stabilizzare la lettura, si registra il punto. Due punti a
-          livelli diversi bastano. */}
-      <div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 13, color: 'var(--s-ink-faint)' }}>{t('theta_ref_label')}</span>
-          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 14 }}>{theta.rawSmooth.toFixed(0)}</span>
-          <input
-            type="number" step="0.1" value={riferimento}
-            onChange={e => setRiferimento(e.target.value)}
-            style={{
-              width: 56, border: 'none', borderBottom: '1px solid var(--s-ink-ghost)',
-              background: 'none', outline: 'none', fontFamily: 'var(--s-mono)', fontSize: 14,
-              color: 'var(--s-ink)', padding: '2px 4px',
-            }}
-          />
-          <button onClick={() => {
-            const v = parseFloat(riferimento);
-            if (Number.isFinite(v)) theta.addPointFromReference(v);
-          }} className="s-glass s-glass-btn" style={pillola(false)}>
-            {t('theta_cal_record')}
-          </button>
-          <span style={{ fontSize: 12.5, color: 'var(--s-ink-faint)' }}>
+          <div style={{ fontSize: 12.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
             {theta.taScale ? `${theta.taScale.points.length} · ${theta.taScale.madeAt === 0 ? t('theta_scale_factory') : t('theta_scale_own')}` : ''}
+            {theta.taScale && theta.taScale.madeAt !== 0 && (
+              <button onClick={() => theta.clearTaCalibration()} style={{
+                border: 'none', background: 'none', cursor: 'pointer', marginLeft: 8,
+                fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+              }}>
+                {t('theta_cal_clear')}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── AVANTI / INDIETRO — lo stesso gesto di `Avvio.tsx` ─────────────────────────────── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+        <button
+          onClick={() => setPasso(PASSI[Math.max(0, idx - 1)])}
+          disabled={idx === 0}
+          style={{
+            border: 'none', background: 'none', cursor: idx === 0 ? 'default' : 'pointer',
+            opacity: idx === 0 ? 0.35 : 1,
+            fontFamily: 'var(--s-sans)', fontSize: 13, color: 'var(--s-ink-soft)',
+          }}>
+          ← {LC('indietro', 'précédent', 'back', 'atrás', 'tillbaka')}
+        </button>
+        {idx < PASSI.length - 1 ? (
+          <button onClick={() => setPasso(PASSI[idx + 1])} className="s-glass s-glass-btn" style={pillola(true)}>
+            {LC('avanti', 'suivant', 'next', 'siguiente', 'nästa')} →
+          </button>
+        ) : (
+          <span style={{ fontSize: 13, color: 'var(--s-still)', fontWeight: 700 }}>
+            ✓ {LC('fatto', 'terminé', 'done', 'hecho', 'klart')}
           </span>
-          {theta.taScale && theta.taScale.madeAt !== 0 && (
-            <button onClick={() => theta.clearTaCalibration()} style={{
-              border: 'none', background: 'none', cursor: 'pointer',
-              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
-            }}>
-              {t('theta_cal_clear')}
-            </button>
-          )}
-        </div>
-        <div style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--s-ink-faint)', marginTop: 6 }}>
-          {t('theta_ref_hint')}
-        </div>
+        )}
       </div>
     </div>
   );

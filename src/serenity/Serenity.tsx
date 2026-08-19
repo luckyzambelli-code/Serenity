@@ -853,7 +853,7 @@ export default function Serenity() {
    * `useVoiceItem` avvia lo STESSO riconoscitore (nativo macOS, poi Whisper offline) di
    * App.tsx, e ogni frase finale entra nel giornale come farebbe l'auditor scrivendola.
    */
-  useVoiceItem({
+  const statoVoce = useVoiceItem({
     active: aperta,
     lang: lang as string,
     onTranscript: text => { journal.addLog({ speaker: 'Aud', text, time: sessionClock.now(), type: 'normal' }); },
@@ -1507,17 +1507,23 @@ export default function Serenity() {
           la stessa regola per cui il quadrante è `w-full h-full` e non un cerchio fra i moduli.
           CAM 2 (PC), la priorità: molto più grande. CAM 1 (auditor), un controllo secondario:
           più piccola. `moduleVis`/CONFIG decide se sono accese; `opacita` legge la trasparenza.
-          ⚠️ Segnalato una TERZA volta: « il cerchio delle camm è troppo piccolo ». 260 px
-          restavano piccoli. Portata a 340 (CAM 1 a 160, la stessa proporzione fra le due) — un
-          volto a quella taglia si legge davvero, non si intuisce. */}
+          ⚠️ Segnalato una QUARTA volta: « deve essere almeno il doppio ». 340 px restavano
+          piccoli. Raddoppiata per davvero: 680 (CAM 1 a 320, la stessa proporzione).
+          ⚠️ A quella taglia il riquadro (rettangolare, anche se i cerchi dentro sono rotondi)
+          arriva a coprire il footer sottostante — segnalato: « l'assessment non funziona ».
+          Non era la logica del bottone, erano gli ANGOLI TRASPARENTI di questo contenitore che
+          rubavano il click prima che arrivasse a lui. `pointer-events:none` qui, riacceso solo
+          dentro ogni `CameraCerchio` (il cerchio vero, non il suo riquadro) — il resto del
+          rettangolo torna trasparente anche ai click, non solo alla vista. */}
       {aperta && (moduleVis.cam1 || (moduleVis.cam2 && (avvio.distanza || avvio.solo))) && (
         <div style={{
           position: 'absolute', top: 76, right: 44, zIndex: 5,
           display: 'flex', alignItems: 'flex-start', gap: 24,
+          pointerEvents: 'none',
         }}>
           {moduleVis.cam1 && (
             <CameraCerchio
-              dimensione={160}
+              dimensione={320}
               titolo={t('cam1') as string}
               offlineLabel={t('camera_offline') as string}
               opacita={uiAlpha}
@@ -1527,7 +1533,7 @@ export default function Serenity() {
           )}
           {moduleVis.cam2 && (avvio.distanza || avvio.solo) && (
             <CameraCerchio
-              dimensione={340}
+              dimensione={680}
               titolo={t('cam2') as string}
               externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
               offlineLabel={t('camera_offline') as string}
@@ -1786,38 +1792,71 @@ export default function Serenity() {
             uguali: stessa struttura, grafica di SERENITY. */}
         {aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && (
           <>
-            <input
-              value={item}
-              onChange={e => setItem(e.target.value)}
-              placeholder={t('ser_item_placeholder') as string}
-              onKeyDown={e => { if (e.key === 'Enter') cycles.armCycle('charge'); }}
-              style={{
-                border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
-                outline: 'none', fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)',
-                padding: '2px 4px', width: 200,
-              }}
-            />
-            {([
-              { k: 'contact', hue: 'var(--s-still)', label: 'CONTACT',
-                onClick: () => cycles.armCycle('charge') },
-              { k: 'null', hue: 'var(--s-alive)', label: 'NULL',
-                onClick: () => cycles.armCycle('null') },
-              // ── MIRROR — il terzo metodo, escluso a vicenda con CONTACT/NULL ────────────
-              { k: 'mirror', hue: 'var(--s-reserve)', label: 'MIRROR', onClick: () => mirror.armMirror() },
-              // ── TONE SCALE — il quarto metodo, escluso a vicenda con gli altri tre. A
-              // differenza degli altri tre non si "arma" per un solo item: si ENTRA nel
-              // metodo (`toneAttivo`) e ci si lavora per più resistenze di fila.
-              { k: 'tone', hue: null, label: 'TONE', onClick: () => setToneAttivo(true) },
-            ]).map(c => (
-              <button key={c.k} className="s-glass s-glass-btn" onClick={c.onClick} style={{
-                border: `1.5px solid ${c.hue ?? 'var(--s-ink-ghost)'}`, cursor: 'pointer',
-                borderRadius: 999, padding: '6px 14px', background: 'var(--s-disc)',
-                fontFamily: 'var(--s-sans)', fontSize: 13, fontWeight: 700, letterSpacing: '0.05em',
-                color: c.hue ?? 'var(--s-ink-soft)',
-              }}>
-                {c.label}
-              </button>
-            ))}
+            {/* ── DOVE SI SCRIVE L'ITEM — segnalato: « non posso scriverlo, non so dove ».
+                Prima un campo nudo, sottolineato, con un placeholder grigio chiaro: facile da
+                non vedere fra le nuove pillole di vetro. Ora un'etichetta SEMPRE visibile sopra
+                il campo, e il campo stesso è un vetro con un bordo — si vede che è un posto
+                dove scrivere, non un tratto decorativo. */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 10, letterSpacing: '0.1em',
+                            textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
+                {LC('scrivi o dì l\'item', 'écris ou dis l\'item', 'type or say the item', 'escribe o di el ítem', 'skriv eller säg item')}
+              </span>
+              <input
+                className="s-glass"
+                value={item}
+                onChange={e => setItem(e.target.value)}
+                placeholder={t('ser_item_placeholder') as string}
+                onKeyDown={e => { if (e.key === 'Enter') cycles.armCycle('charge'); }}
+                style={{
+                  borderRadius: 999, background: 'var(--s-disc)',
+                  outline: 'none', fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)',
+                  padding: '6px 14px', width: 220,
+                }}
+              />
+            </div>
+            {/* ── LO STATO DELLA VOCE — segnalato: « non posso dare l'item verbalmente ».
+                Prima questo restava muto finché non arrivava una parola: se il riconoscitore
+                non parte (permesso negato, nessun motore disponibile) l'auditor aspettava senza
+                sapere se il problema era suo o del programma. */}
+            <span style={{ fontFamily: 'var(--s-sans)', fontSize: 11.5, color: 'var(--s-ink-faint)', alignSelf: 'flex-end' }}>
+              {statoVoce === 'in-ascolto'
+                ? <span className="ser-pulse">🎙 {LC('in ascolto', 'à l\'écoute', 'listening', 'escuchando', 'lyssnar')}</span>
+                : statoVoce === 'assente'
+                  ? LC('🎙 voce non disponibile — scrivi l\'item', 'la voix n\'est pas disponible — écris l\'item',
+                      'voice not available — type the item', 'la voz no está disponible — escribe el ítem',
+                      'rösten är inte tillgänglig — skriv item')
+                  : ''}
+            </span>
+            <div style={{ flexBasis: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 10, letterSpacing: '0.1em',
+                            textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
+                {LC('poi scegli il metodo', 'puis choisis la méthode', 'then choose the method', 'luego elige el método', 'välj sedan metoden')}
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {([
+                  { k: 'contact', hue: 'var(--s-still)', label: 'CONTACT',
+                    onClick: () => cycles.armCycle('charge') },
+                  { k: 'null', hue: 'var(--s-alive)', label: 'NULL',
+                    onClick: () => cycles.armCycle('null') },
+                  // ── MIRROR — il terzo metodo, escluso a vicenda con CONTACT/NULL ────────────
+                  { k: 'mirror', hue: 'var(--s-reserve)', label: 'MIRROR', onClick: () => mirror.armMirror() },
+                  // ── TONE SCALE — il quarto metodo, escluso a vicenda con gli altri tre. A
+                  // differenza degli altri tre non si "arma" per un solo item: si ENTRA nel
+                  // metodo (`toneAttivo`) e ci si lavora per più resistenze di fila.
+                  { k: 'tone', hue: null, label: 'TONE', onClick: () => setToneAttivo(true) },
+                ]).map(c => (
+                  <button key={c.k} className="s-glass s-glass-btn" onClick={c.onClick} style={{
+                    border: `1.5px solid ${c.hue ?? 'var(--s-ink-ghost)'}`, cursor: 'pointer',
+                    borderRadius: 999, padding: '6px 14px', background: 'var(--s-disc)',
+                    fontFamily: 'var(--s-sans)', fontSize: 13, fontWeight: 700, letterSpacing: '0.05em',
+                    color: c.hue ?? 'var(--s-ink-soft)',
+                  }}>
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </>
         )}
         {/* ── TONE SCALE, ATTIVO — locate → raise → done, si ripete per ogni resistenza ────────

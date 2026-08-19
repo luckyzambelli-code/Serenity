@@ -17,11 +17,11 @@
  * momento — cambiarla in SERENITY la cambia anche per la prossima apertura di EQUILIBRIUM, e
  * viceversa. Coerente con l'archivio unico, i profili unici, la lingua per-profilo.
  *
- * ⚠️ SEGNALATO DI NUOVO, con foto e .gif: « la logique est de ne pas avoir deux boutons... mais
- * un bouton qui SLIDE ». Non più due (o cinque) pillole indipendenti che si accendono a turno:
- * un solo cursore di vetro che SCIVOLA da una tappa all'altra della stessa pista —
- * `SegmentoVetro.tsx`, lo stesso componente per tema e lingua (entrambe scelte ESCLUSIVE, una
- * sola vera alla volta — l'identikit esatto di quel pattern).
+ * ⚠️ SEGNALATO UNA TERZA VOLTA, oltre lo scivolo (`SegmentoVetro.tsx`): « i bottoni DARK/LIGHT
+ * devono essere solo UNO, che si trasforma » e « i bottoni delle lingue... deve essere un solo
+ * bottone ». Un passo oltre: non più le tappe visibili fianco a fianco con un cursore che le
+ * attraversa — UN bottone solo, che mostra SEMPRE e SOLO lo stato attuale, e al click si
+ * TRASFORMA nel prossimo (`BottoneCiclico.tsx`).
  *
  * @see docs/serenity-refonte.md
  */
@@ -29,7 +29,7 @@
 import { useI18n, type Language } from '../i18n';
 import { useUiStore } from '../store/uiStore';
 import { Sun, Moon } from 'lucide-react';
-import { SegmentoVetro } from './SegmentoVetro';
+import { BottoneCiclico } from './BottoneCiclico';
 
 const LINGUE: Language[] = ['en', 'fr', 'it', 'es', 'sv'];
 
@@ -40,46 +40,39 @@ export const linguaValida = (l: string | undefined): Language | null =>
   (LINGUE as string[]).includes(l ?? '') ? (l as Language) : null;
 
 /**
- * IL SELETTORE DI LINGUA — cinque codici, non cinque bandiere, su UN cursore che scivola.
- *
- * Una bandiera porta un carico politico che una scelta di lingua non ha bisogno di portare
- * (l'inglese di quale bandiera? lo spagnolo di quale?), ed è comunque un'icona da leggere —
- * contro la dottrina di SERENITY. Il codice a due lettere si legge come si legge un'etichetta:
- * di sbieco, per la sua forma.
+ * IL SELETTORE DI LINGUA — un bottone solo, che mostra il codice attuale e si trasforma nel
+ * prossimo al click (ciclico: EN→FR→IT→ES→SV→EN…). Codici a due lettere, non bandiere — vedi
+ * la nota in testa al file.
  */
 export function SelettoreLingua() {
   const { lang, setLang } = useI18n();
   return (
-    <SegmentoVetro
+    <BottoneCiclico
       opzioni={LINGUE.map(l => ({ k: l, label: l.toUpperCase() }))}
       selezionato={lang}
       onChange={setLang}
-      minLarghezza={30}
+      minLarghezza={40}
     />
   );
 }
 
 /**
- * IL SELETTORE DI TEMA — chiaro o scuro, su un cursore che scivola da uno all'altro.
- *
- * Governa la STESSA preferenza di EQUILIBRIUM (vedi sopra). Nel campo centrale questo decide
- * anche il fondo dietro l'ago: scuro → il pannello scuro autentico di EQUILIBRIUM; chiaro →
- * bianco perla, la superficie di SERENITY stessa — l'ago allora non ha bisogno di un pannello
- * a parte, perché i suoi colori chiari si leggono già sul fondo della pagina.
+ * IL SELETTORE DI TEMA — un bottone solo (sole/luna), che si trasforma nell'altro stato al
+ * click. Governa la STESSA preferenza di EQUILIBRIUM (vedi sopra).
  */
 export function SelettoreTema() {
   const { t } = useI18n();
   const isLightTheme = useUiStore(s => s.isLightTheme);
   const setLightTheme = useUiStore(s => s.setLightTheme);
   return (
-    <SegmentoVetro
+    <BottoneCiclico
       opzioni={[
         { k: 'chiaro' as const, label: t('ser_theme_light'), icona: <Sun size={12} strokeWidth={1.8} aria-hidden="true" /> },
         { k: 'scuro' as const, label: t('ser_theme_dark'), icona: <Moon size={12} strokeWidth={1.8} aria-hidden="true" /> },
       ]}
       selezionato={isLightTheme ? 'chiaro' : 'scuro'}
       onChange={k => setLightTheme(k === 'chiaro')}
-      minLarghezza={70}
+      minLarghezza={80}
     />
   );
 }

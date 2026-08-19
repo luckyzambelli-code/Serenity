@@ -22,10 +22,16 @@
  * ⚠️ ZERO LOGICA DI CICLO QUI DENTRO — solo la trascrizione. Che farne (riempire un item, capire
  * se è "assessabile") resta ai motori dei cicli e a `engine/assessItemFilter`, come in App.tsx.
  *
+ * ── SEGNALATO: « non posso dare l'item verbalmente », e non si capiva perché ──────────────────
+ * Prima l'hook non diceva NULLA di sé: se il riconoscitore nativo non partiva (permesso negato)
+ * e anche Whisper falliva, l'auditor restava semplicemente in attesa, senza sapere se il
+ * problema era la sua voce o il programma. Ora ritorna uno STATO — non una logica nuova, la
+ * stessa sequenza nativo→Whisper di sempre, solo con un valore che dice a che punto è arrivata.
+ *
  * @see docs/serenity-refonte.md
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { nativeSpeechRecognition } from '../lib/nativeSpeechRecognition';
 import { offlineSpeechRecognition } from '../lib/offlineSpeechRecognition';
 
@@ -33,18 +39,22 @@ const LANG_MAP: Record<string, string> = {
   en: 'en-US', fr: 'fr-FR', it: 'it-IT', es: 'es-ES', sv: 'sv-SE',
 };
 
+export type StatoVoce = 'spenta' | 'avvio' | 'in-ascolto' | 'assente';
+
 export function useVoiceItem({ active, lang, onTranscript }: {
   /** Riconosce SOLO a seduta aperta — fuori seduta non c'è item da riempire. */
   active: boolean;
   lang: string;
   onTranscript: (text: string, speechEndMs?: number) => void;
-}) {
+}): StatoVoce {
   const onTranscriptRef = useRef(onTranscript);
   onTranscriptRef.current = onTranscript;
   const inCorsoRef = useRef(false);
+  const [stato, setStato] = useState<StatoVoce>('spenta');
 
   useEffect(() => {
-    if (!active) return;
+    if (!active) { setStato('spenta'); return; }
+    setStato('avvio');
     let annullato = false;
 
     const wireHandlers = (engine: { onresult: any; onerror: any }) => {
@@ -70,6 +80,7 @@ export function useVoiceItem({ active, lang, onTranscript }: {
         if (nativoOk) {
           wireHandlers(nativeSpeechRecognition);
           nativeSpeechRecognition.start();
+          setStato('in-ascolto');
           return;
         }
         // ── RIPIEGO: Whisper offline (WASM) ────────────────────────────────────────────────
@@ -79,11 +90,14 @@ export function useVoiceItem({ active, lang, onTranscript }: {
           wireHandlers(offlineSpeechRecognition);
           offlineSpeechRecognition.lang = LANG_MAP[lang] || 'en-US';
           offlineSpeechRecognition.start();
+          setStato('in-ascolto');
         } else {
           inCorsoRef.current = false;
+          setStato('assente');
         }
       } catch {
         inCorsoRef.current = false;
+        setStato('assente');
       }
     })();
 
@@ -95,4 +109,6 @@ export function useVoiceItem({ active, lang, onTranscript }: {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, lang]);
+
+  return stato;
 }

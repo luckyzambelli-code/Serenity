@@ -803,6 +803,58 @@ c'è meter; la lettura verticale continua durante 'raise' resta assente.
 
 ---
 
+## Settimo giro (19/08/2026) — un bottone solo, il campo item ritrovato, e un falso allarme
+
+Sei punti in un solo messaggio. Verificato con `git status` dopo ogni modifica: solo
+`src/serenity/` e `src/hooks/useVoiceItem.ts` (SERENITY-esclusivo) toccati.
+
+1. **« I bottoni DARK/LIGHT devono essere solo UNO, che si trasforma » + « i bottoni delle
+   lingue UGUALE »** — `BottoneCiclico.tsx`, nuovo: un bottone solo che mostra SEMPRE e SOLO
+   lo stato attuale e si trasforma nel prossimo al click (remount con animazione
+   `sBottoneMorph`, 260ms). Sostituisce lo scivolo a due tappe (`SegmentoVetro`) per
+   `SelettoreTema`/`SelettoreLingua` in `Impostazioni.tsx` — `SegmentoVetro` resta per il
+   selettore MUSE/METER (non segnalato, e vedere entrambe le opzioni lì conta di più).
+2. **« La gestione di configurare il METER è troppo complicata »** — `PannelloMeter.tsx`
+   riscritto come percorso a 4 passi (config → stretta → respiro → taratura), puntini di
+   avanzamento cliccabili, avanti/indietro — stesso schema a una domanda per volta di
+   `Avvio.tsx`. ZERO logica nuova: stesse chiamate a `useThetaMeter`, solo riordinate in passi.
+3. **« Il cerchio della camm è troppo piccolo, deve essere almeno il doppio »** (quarta volta)
+   — 340/160 px → 680/320 px, la stessa proporzione.
+4. **« I cicli non posso dare l'item verbalmente e non posso scriverlo, non sò dove »** +
+   **« l'assessment non funziona »** — la STESSA causa per entrambi, trovata dopo aver
+   raddoppiato le camme al punto 3: il riquadro che le contiene (`position:absolute`,
+   `zIndex:5`) è rettangolare anche se i cerchi dentro sono rotondi — a 680 px il suo angolo
+   invisibile arriva a coprire tutta la riga del campo item e del bottone ASSESSMENT
+   sottostanti, rubando il click prima che li raggiunga. Non era la logica (il campo, il
+   bottone, `useVoiceItem`, il calcolo della lettura erano già a posto dal giro precedente) —
+   era geometria. `pointer-events:none` sul riquadro contenitore, riacceso solo dentro ogni
+   `CameraCerchio` (il cerchio vero) — il resto torna trasparente anche ai click, non solo
+   alla vista. Aggiunte anche due etichette sempre visibili (« SCRIVI O DÌ L'ITEM » / « POI
+   SCEGLI IL METODO ») e lo stato della voce accanto al campo (« in ascolto » / « voce non
+   disponibile — scrivi l'item »), perché il campo restava comunque poco leggibile come un
+   input anonimo senza etichetta.
+5. **Un falso allarme, non un bug**: durante la verifica è comparso un errore React
+   « change in the order of Hooks » al primo montaggio di `Serenity`, ripetibile ad ogni
+   ricarica. Isolato per bisezione fino al commit già spedito (`26ad5c3`, invariato) — quindi
+   non causato da nessuna modifica di questo giro — e assente in EQUILIBRIUM in una tab
+   pulita. Riavviato il server di sviluppo da zero (`staticmeter-dev`, in piedi da ore, dopo
+   moltissime modifiche a caldo in questa sessione): l'errore non si è più ripresentato, in
+   nessuna combinazione di file testata, su più ricariche consecutive. Diagnosi: corruzione
+   dello stato di Hot-Module-Replacement di Vite accumulata durante la sessione, non un difetto
+   del codice — e non poteva mai esistere nel DMG spedito, che è una build statica e non passa
+   mai da Vite/HMR. Nessuna modifica applicata per questo punto: non c'era niente da correggere.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori (320 warning, tutte preesistenti —
+confrontate una per una con lo stesso file a HEAD), `vitest run` 639/639, a schermo (tab
+pulita, server riavviato): i bottoni tema/lingua sono un pezzo solo che si trasforma, il campo
+item si clicca e si scrive direttamente, il bottone ASSESSMENT apre il cassetto (« ITEMS GIVEN
+ALOUD » / « listening… »), le camme occupano davvero il doppio dello spazio. Il percorso a
+passi del METER non è verificabile in questo ambiente (serve un Theta-Meter USB vero via
+WebHID, assente nel browser sandbox) — verificato per lettura del codice e per compilazione/
+lint/test, da confermare nell'app reale.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

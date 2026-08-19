@@ -110,7 +110,7 @@ export function CameraCerchio({
   const dimEffettiva = collassata ? Math.max(48, Math.round(dimensione * 0.35)) : dimensione;
 
   return (
-    <div style={{ display: 'grid', justifyItems: 'center', gap: 8 }}>
+    <div style={{ display: 'grid', justifyItems: 'center', gap: 8, pointerEvents: 'auto' }}>
       <div
         onClick={onToggleCollasso}
         title={onToggleCollasso ? (collassata ? titolo : titolo) : undefined}
