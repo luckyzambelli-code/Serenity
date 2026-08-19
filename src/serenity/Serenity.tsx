@@ -1511,87 +1511,6 @@ export default function Serenity() {
         </button>
       </header>
 
-      {/* ── IL CASSETTO DEL METER — ancorato SOTTO l'intestazione, dove sta il suo indicatore ──
-          Non nel flusso della pagina (galleggia, `position:absolute`, come le camere qui sotto e
-          il pannello MNA più giù): aprirlo non deve spingere in basso tutto il resto — la stessa
-          ragione per cui era sbagliato tenerlo fisso in fondo alla pagina. Si chiude da sé se il
-          meter si disconnette (vedi l'`useEffect` accanto a `meterSetupAperto`). */}
-      {meterSetupAperto && meterC && (
-        <div style={{ position: 'absolute', top: 76, right: 44, zIndex: 30 }}>
-          <PannelloMeter theta={theta} provaTa={provaTa} />
-        </div>
-      )}
-
-      {/* ── LE CAMERE, GRANDI, FUORI DALL'INTESTAZIONE ─────────────────────────────────────────
-          Segnalato: « troppo piccole, l'auditor deve vedere il PC correttamente » — 44 px
-          nell'intestazione erano un'icona, non un volto. Qui galleggiano SOPRA la superficie,
-          ancorate all'angolo (`position:absolute` su `main`, non nel flusso della sezione): lo
-          strumento al centro NON perde un pixel della sua taglia per fare posto alle camere —
-          la stessa regola per cui il quadrante è `w-full h-full` e non un cerchio fra i moduli.
-          CAM 2 (PC), la priorità: molto più grande. CAM 1 (auditor), un controllo secondario:
-          più piccola. `moduleVis`/CONFIG decide se sono accese; `opacita` legge la trasparenza.
-          ⚠️ Segnalato una QUARTA volta: « deve essere almeno il doppio ». 340 px restavano
-          piccoli. Raddoppiata per davvero: 680 (CAM 1 a 320, la stessa proporzione).
-          ⚠️ A quella taglia il riquadro (rettangolare, anche se i cerchi dentro sono rotondi)
-          arriva a coprire il footer sottostante — segnalato: « l'assessment non funziona ».
-          Non era la logica del bottone, erano gli ANGOLI TRASPARENTI di questo contenitore che
-          rubavano il click prima che arrivasse a lui. `pointer-events:none` qui, riacceso solo
-          dentro ogni `CameraCerchio` (il cerchio vero, non il suo riquadro) — il resto del
-          rettangolo torna trasparente anche ai click, non solo alla vista.
-          ⚠️ Segnalato una QUINTA volta, in due parti insieme: « occupa troppo spazio, riduci di
-          un terzo » E « però copre l'arco dell'ago, correggi ». 680/320 → 453/213 (i due terzi
-          di prima, stessa proporzione). E non più UNA FILA orizzontale larga quanto l'arco
-          stesso: ora una COLONNA verticale, stretta e tutta ridossata all'angolo (PC sopra,
-          AUDITOR sotto — lo stesso ordine di App.tsx, « PC cam top, Auditor cam bottom »), così
-          l'ingombro resta nella striscia più a destra, fuori dal semicerchio dell'arco che sta
-          centrato sul quadrante. */}
-      {aperta && (moduleVis.cam1 || (moduleVis.cam2 && (avvio.distanza || avvio.solo))) && (
-        <div style={{
-          position: 'absolute', top: 76, right: 32, zIndex: 5,
-          display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 14,
-          pointerEvents: 'none',
-        }}>
-          {moduleVis.cam2 && (avvio.distanza || avvio.solo) && (
-            <CameraCerchio
-              dimensione={453}
-              titolo={t('cam2') as string}
-              externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
-              offlineLabel={t('camera_offline') as string}
-              opacita={uiAlpha}
-              collassata={cam2Collassata}
-              onToggleCollasso={() => setCam2Collassata(v => !v)}
-              statoTesto={statoCamPc}
-              inDiretta={!!avvio.distanza}
-            />
-          )}
-          {moduleVis.cam1 && (
-            <CameraCerchio
-              dimensione={213}
-              titolo={t('cam1') as string}
-              offlineLabel={t('camera_offline') as string}
-              opacita={uiAlpha}
-              collassata={cam1Collassata}
-              onToggleCollasso={() => setCam1Collassata(v => !v)}
-            />
-          )}
-        </div>
-      )}
-
-      {/* ── L'ASSESSMENT, LA SUA ZONA — segnalato: « deve avere una sua zona, come in
-          equilibrium ». Non più un cassetto appeso al bottone (spariva quando la cattura era
-          spenta, e stava dove il bottone capitava di essere nel footer): una colonna ancorata
-          all'angolo opposto delle camere, sempre presente a seduta aperta, col titolo sempre
-          leggibile. Zero stato nuovo — `assessAttivo`/`assessItems` sono gli stessi di sempre,
-          solo un contenitore vero al posto del cassetto. */}
-      {aperta && (
-        <ZonaAssessment
-          attivo={assessAttivo}
-          onToggle={() => setAssessAttivo(v => !v)}
-          items={assessItems}
-          LC={LC}
-        />
-      )}
-
       {/* ── I COMANDI, IN ALTO — segnalato: « i cicli non sono chiari messi sotto, mettili in
           alto come in equilibrium ». In App.tsx l'item, i quattro metodi, i passi del ciclo in
           corso e i suoi esiti stanno DENTRO il pannello dello strumento, appena sopra l'arco —
@@ -2106,6 +2025,102 @@ export default function Serenity() {
         position: 'relative', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', gap: 16, minHeight: 0,
       }}>
+      {/* ── IL CASSETTO DEL METER — ancorato SOTTO l'intestazione, dove sta il suo indicatore ──
+          Non nel flusso della pagina (galleggia, `position:absolute`, come le camere qui sotto e
+          il pannello MNA più giù): aprirlo non deve spingere in basso tutto il resto — la stessa
+          ragione per cui era sbagliato tenerlo fisso in fondo alla pagina. Si chiude da sé se il
+          meter si disconnette (vedi l'`useEffect` accanto a `meterSetupAperto`). */}
+      {meterSetupAperto && meterC && (
+        <div style={{ position: 'absolute', top: 16, right: 44, zIndex: 30 }}>
+          <PannelloMeter theta={theta} provaTa={provaTa} />
+        </div>
+      )}
+
+      {/* ── LE CAMERE, GRANDI, FUORI DALL'INTESTAZIONE ─────────────────────────────────────────
+          Segnalato: « troppo piccole, l'auditor deve vedere il PC correttamente » — 44 px
+          nell'intestazione erano un'icona, non un volto. Qui galleggiano SOPRA la superficie,
+          ancorate all'angolo (`position:absolute` su `main`, non nel flusso della sezione): lo
+          strumento al centro NON perde un pixel della sua taglia per fare posto alle camere —
+          la stessa regola per cui il quadrante è `w-full h-full` e non un cerchio fra i moduli.
+          CAM 2 (PC), la priorità: molto più grande. CAM 1 (auditor), un controllo secondario:
+          più piccola. `moduleVis`/CONFIG decide se sono accese; `opacita` legge la trasparenza.
+          ⚠️ Segnalato una QUARTA volta: « deve essere almeno il doppio ». 340 px restavano
+          piccoli. Raddoppiata per davvero: 680 (CAM 1 a 320, la stessa proporzione).
+          ⚠️ A quella taglia il riquadro (rettangolare, anche se i cerchi dentro sono rotondi)
+          arriva a coprire il footer sottostante — segnalato: « l'assessment non funziona ».
+          Non era la logica del bottone, erano gli ANGOLI TRASPARENTI di questo contenitore che
+          rubavano il click prima che arrivasse a lui. `pointer-events:none` qui, riacceso solo
+          dentro ogni `CameraCerchio` (il cerchio vero, non il suo riquadro) — il resto del
+          rettangolo torna trasparente anche ai click, non solo alla vista.
+          ⚠️ Segnalato una QUINTA volta, in due parti insieme: « occupa troppo spazio, riduci di
+          un terzo » E « però copre l'arco dell'ago, correggi ». 680/320 → 453/213 (i due terzi
+          di prima, stessa proporzione). E non più UNA FILA orizzontale larga quanto l'arco
+          stesso: ora una COLONNA verticale, stretta e tutta ridossata all'angolo (PC sopra,
+          AUDITOR sotto — lo stesso ordine di App.tsx, « PC cam top, Auditor cam bottom »), così
+          l'ingombro resta nella striscia più a destra, fuori dal semicerchio dell'arco che sta
+          centrato sul quadrante.
+          ⚠️ Segnalato una SESTA volta: « la camm del PC falla più piccola ». 453 → 260 (CAM 1
+          invariata, 213 — solo la CAM 2 era segnalata). E: « quando la chiudi deve essere della
+          stessa dimensione di quella dell'auditor » — prima il collasso era proporzionale alla
+          taglia di ciascuna (35%), quindi due taglie diverse da chiuse. `dimensioneCollassata`
+          fissa la STESSA taglia per entrambe, chiuse.
+          ⚠️ Segnalato: « il bottone assessment copre CLOSE THE SESSION ». Vero — questo blocco
+          (insieme al cassetto del meter e a `ZonaAssessment`, sotto) galleggiava ancorato a
+          `main` con `top:76`: taglia giusta per QUANDO i comandi stavano in fondo pagina, ma da
+          quando (giro precedente) i comandi si sono spostati IN ALTO, quello stesso `top:76`
+          cadeva esattamente sopra "CHIUDI LA SEDUTA". Spostati DENTRO `<section>` (che comincia
+          sempre DOPO i comandi, qualunque sia la loro altezza — un ciclo armato ne occupa di
+          più di uno spento) — `top:16` ora è relativo alla sezione, non più alla pagina
+          intera, e non può più cadere sopra un elemento che sta prima di lei. */}
+      {aperta && (moduleVis.cam1 || (moduleVis.cam2 && (avvio.distanza || avvio.solo))) && (
+        <div style={{
+          position: 'absolute', top: 16, right: 32, zIndex: 5,
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 14,
+          pointerEvents: 'none',
+        }}>
+          {moduleVis.cam2 && (avvio.distanza || avvio.solo) && (
+            <CameraCerchio
+              dimensione={260}
+              dimensioneCollassata={88}
+              titolo={t('cam2') as string}
+              externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
+              offlineLabel={t('camera_offline') as string}
+              opacita={uiAlpha}
+              collassata={cam2Collassata}
+              onToggleCollasso={() => setCam2Collassata(v => !v)}
+              statoTesto={statoCamPc}
+              inDiretta={!!avvio.distanza}
+            />
+          )}
+          {moduleVis.cam1 && (
+            <CameraCerchio
+              dimensione={213}
+              dimensioneCollassata={88}
+              titolo={t('cam1') as string}
+              offlineLabel={t('camera_offline') as string}
+              opacita={uiAlpha}
+              collassata={cam1Collassata}
+              onToggleCollasso={() => setCam1Collassata(v => !v)}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ── L'ASSESSMENT, LA SUA ZONA — segnalato: « deve avere una sua zona, come in
+          equilibrium ». Non più un cassetto appeso al bottone (spariva quando la cattura era
+          spenta, e stava dove il bottone capitava di essere nel footer): una colonna ancorata
+          all'angolo opposto delle camere, sempre presente a seduta aperta, col titolo sempre
+          leggibile. Zero stato nuovo — `assessAttivo`/`assessItems` sono gli stessi di sempre,
+          solo un contenitore vero al posto del cassetto. */}
+      {aperta && (
+        <ZonaAssessment
+          attivo={assessAttivo}
+          onToggle={() => setAssessAttivo(v => !v)}
+          items={assessItems}
+          LC={LC}
+        />
+      )}
+
         {/*
           ── LE STESSE DIMENSIONI, NON SOLO GLI STESSI COLORI ────────────────────────────
           Segnalato più volte di seguito: prima « stesso disegno, stessa grafica » (i colori),
@@ -2168,43 +2183,56 @@ export default function Serenity() {
               ClearDial in MIRROR, non gli sta accanto (« l'aiguille + » resta la stessa, solo
               l'arco concentrico cambia). Qui la stessa esclusività senza un `viewMode` a
               parte: basta guardare `mirror.mirrorArmed` — i bottoni d'armamento sotto sono già
-              reciprocamente esclusi, quindi i due cicli non possono essere armati insieme. */}
-          {mirror.mirrorArmed ? (
-            <MirrorDial
-              armed={mirror.mirrorArmed}
-              valueR={mirror.mirrorDisp.valueR}
-              contactQ={mirror.mirrorDisp.contactQ}
-              dischargeQ={mirror.mirrorDisp.dischargeQ}
-              locked={mirror.mirrorDisp.locked}
-              reached={mirror.mirrorDisp.reached}
-              isLightTheme={isLightTheme}
-              lang={lang}
-            />
-          ) : toneAttivo ? (
-            <ToneDial
-              tone={tone.toneOra ?? 0}
-              hasMeter={tone.toneHasMeter}
-              approx
-              located={tone.toneAtStart}
-              phase={tone.tonePhase}
-              toneAtStart={tone.toneAtStart}
-              isLightTheme={isLightTheme}
-            />
-          ) : (
-            <ClearDial
-              armed={cycles.cycleArmed}
-              asIsPending={cycles.asIsPending}
-              manualReady={cycles.manualReady}
-              asIsFalse={cycles.asIsFalse}
-              asIsIO={cycles.asIsIO}
-              onValidate={cycles.validateAsIs}
-              deltaStar={deltaStar}
-              deltaStarN={deltaStarN}
-              isLightTheme={isLightTheme}
-              cycleKind={cycles.cycleKind}
-              nullPhase={cycles.nullPhase}
-            />
-          )}
+              reciprocamente esclusi, quindi i due cicli non possono essere armati insieme.
+              ⚠️ Segnalato: « la scala del tono non appare, il TA neanche, la diagnostica e
+              tutti gli altri elementi, METTILI ». Il vero motivo: `ToneDial`/`MirrorDial` (a
+              differenza di `ClearDial`, che si avvolge da sé in `position:absolute,inset:0`)
+              disegnano un `<svg>` NUDO — senza un contenitore assoluto restano nel FLUSSO
+              normale della pagina, ATTACCATI SOTTO l'ago invece che sovrapposti (in App.tsx lo
+              stesso contenitore avvolge tutti e tre insieme, `<div className="absolute inset-0
+              z-40 pointer-events-none">`). A schermi piccoli quell'arco finiva fuori dalla
+              vista — c'era, si leggeva persino nel testo della pagina, ma non si vedeva MAI. Lo
+              stesso contenitore qui, per i tre insieme: nessuna riga toccata DENTRO i tre
+              componenti (`ClearDial` si ritrova avvolto due volte, innocuo — due `inset:0`
+              identici occupano lo stesso rettangolo). */}
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+            {mirror.mirrorArmed ? (
+              <MirrorDial
+                armed={mirror.mirrorArmed}
+                valueR={mirror.mirrorDisp.valueR}
+                contactQ={mirror.mirrorDisp.contactQ}
+                dischargeQ={mirror.mirrorDisp.dischargeQ}
+                locked={mirror.mirrorDisp.locked}
+                reached={mirror.mirrorDisp.reached}
+                isLightTheme={isLightTheme}
+                lang={lang}
+              />
+            ) : toneAttivo ? (
+              <ToneDial
+                tone={tone.toneOra ?? 0}
+                hasMeter={tone.toneHasMeter}
+                approx
+                located={tone.toneAtStart}
+                phase={tone.tonePhase}
+                toneAtStart={tone.toneAtStart}
+                isLightTheme={isLightTheme}
+              />
+            ) : (
+              <ClearDial
+                armed={cycles.cycleArmed}
+                asIsPending={cycles.asIsPending}
+                manualReady={cycles.manualReady}
+                asIsFalse={cycles.asIsFalse}
+                asIsIO={cycles.asIsIO}
+                onValidate={cycles.validateAsIs}
+                deltaStar={deltaStar}
+                deltaStarN={deltaStarN}
+                isLightTheme={isLightTheme}
+                cycleKind={cycles.cycleKind}
+                nullPhase={cycles.nullPhase}
+              />
+            )}
+          </div>
           {/* ── MNA — galleggia SUL quadrante, non lo sostituisce ────────────────────────────
               « Si apre senza lasciare il ciclo »: la seduta resta visibile sotto, com'è in
               App.tsx (ancorato in fondo al pannello dello strumento, non a tutta pagina). */}
@@ -2295,6 +2323,30 @@ export default function Serenity() {
             {museGate.signalQuality > 0 && <span>{museGate.signalQuality}%</span>}
             {/* Il lag di Ron e la % di dissoluzione — solo a ciclo armato, come CycleStatusBar
                 in App.tsx (senza ciclo il numero non descrive niente). */}
+            {cycles.cycleArmed && <LetturaCiclo deltaStar={deltaStar} deltaStarN={deltaStarN} />}
+          </span>
+        )}
+        {/* ── LA STESSA LETTURA, DAL METER — segnalato: « la scala del tono non appare, il TA
+            neanche, la diagnostica e tutti gli altri elementi, METTILI ». Il blocco sopra parla
+            SOLO all'ago EEG (`agoEeg`) — con METER/senza strumenti restava muto, anche a
+            strumento vero collegato e a numeri veri disponibili (`theta.ta`/`taNow`, già
+            calcolati da `useThetaMeter`, non riletti qui). Stesso posto, stessa grafica,
+            sorgente diversa: il TA di riposo, quello ISTANTANEO se si scosta, e FN se
+            l'estensimetro fluttua (`theta.fn.fn`, lo stesso segnale che l'arco legge). */}
+        {!agoEeg && meterC && (
+          <span style={{
+            fontFamily: 'var(--s-mono)', fontSize: 14.5, letterSpacing: '0.04em',
+            color: 'var(--s-ink-faint)', display: 'flex', gap: 14,
+          }}>
+            <span>TA {theta.ta !== null ? theta.ta.toFixed(2) : '—'}</span>
+            {theta.taNow !== null && Math.abs(theta.taNow - (theta.ta ?? theta.taNow)) > 0.01 && (
+              <span>→ {theta.taNow.toFixed(2)}</span>
+            )}
+            {theta.fn.fn && (
+              <span style={{ color: 'var(--s-reserve)' }}>
+                {LC('galleggia', 'flotte', 'floating', 'flota', 'flyter')}
+              </span>
+            )}
             {cycles.cycleArmed && <LetturaCiclo deltaStar={deltaStar} deltaStarN={deltaStarN} />}
           </span>
         )}

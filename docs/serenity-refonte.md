@@ -916,6 +916,54 @@ armato mostra ANNULLA/« dichiara AS-IS »/l'item come pillole di vetro coerenti
 
 ---
 
+## Nono giro (19/08/2026) — SOLO ovunque, le zone che non si sovrappongono più, l'arco del TONO ritrovato
+
+Cinque segnalazioni, l'ultima delle quali era un bug vero trovato solo verificando dal vivo.
+
+1. **« ALONE deve essere tradotto in SOLO, uguale in tutte le lingue. Ed anche sotto l'icona
+   deve essere scritto SOLO »** — `ser_solo`/`ser_solo_sub` (`src/i18n.tsx`, l'unico posto dove
+   sono lette: `Avvio.tsx`, mai da App.tsx) erano tradotte diversamente per lingua (« Alone » /
+   « Seul » / « Da solo » / « Ensam »...) più un sottotitolo descrittivo (« auditing myself » /
+   « je m'audite moi-même »...). Ora entrambe dicono, testuale e identico, « SOLO » nelle
+   cinque lingue — deliberatamente NON tradotto.
+2. **« La camm del PC falla più piccola e quando la chiudi deve essere della stessa dimensione
+   di quella dell'auditor »** — CAM 2 453 → 260px. E: `CameraCerchio` riceve
+   `dimensioneCollassata`, un numero ESPLICITO invece del 35% calcolato sulla taglia propria di
+   ciascuna camera — prima due taglie diverse da chiuse (camere di taglia diversa), ora la
+   STESSA (88px) per entrambe.
+3. **« Il bottone assessment copre CLOSE THE SESSION » + « devi stare attento a non sovrapporre
+   gli elementi »** — causa reale: il cassetto del meter, la colonna delle camere e
+   `ZonaAssessment` galleggiavano ancorati a `top:76` relativo a TUTTA la pagina (`main`) — taglia
+   giusta per QUANDO i comandi stavano in fondo (giro precedente), sbagliata da quando i
+   comandi si sono spostati IN ALTO: quello stesso `top:76` cadeva esattamente sopra "CHIUDI LA
+   SEDUTA". Spostati tutti e tre DENTRO `<section>` (che comincia sempre DOPO i comandi,
+   qualunque sia la loro altezza — un ciclo armato ne occupa di più di uno spento):
+   `top:16`, ora relativo alla sezione e non più all'intera pagina.
+4. **« La scala del tono non appare, il TA neanche, la diagnostica e tutti gli altri elementi,
+   METTILI »** — un bug vero, trovato ispezionando il DOM dopo che il testo dei numeri (« -40 »
+   … « +40 ») risultava presente nella pagina ma INVISIBILE a schermo: `ToneDial`/`MirrorDial`
+   disegnano un `<svg>` nudo, senza il contenitore `position:absolute,inset:0` che `ClearDial`
+   invece si dà da sé (e che in App.tsx avvolge tutti e tre insieme). Senza, restavano nel
+   FLUSSO normale della pagina — attaccati SOTTO l'ago invece che sovrapposti, letteralmente
+   fuori dalla vista su uno schermo di taglia normale. Lo stesso contenitore aggiunto qui,
+   attorno a tutti e tre insieme (nessuna riga toccata DENTRO i tre componenti). Probabilmente
+   presente fin dal montaggio di MIRROR/TONE in un giro precedente — la verifica di allora
+   aveva letto le etichette nel TESTO della pagina senza controllare la loro posizione VERA.
+   Aggiunto anche il TA in cifre lato METER (`theta.ta`/`taNow`, già calcolati da
+   `useThetaMeter`): il readout esisteva ma parlava SOLO all'ago EEG (`agoEeg`) — con
+   METER/senza strumenti restava muto anche a numeri veri disponibili.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori (320 warning, tutte preesistenti),
+`vitest run` 639/639. A schermo (tab pulita, scuro e francese): la domanda SOLO/con preclear
+mostra « SOLO » due volte, identico; TONE armato senza strumenti mostra l'arco −40…+40
+sovrapposto all'ago con la fascia rossa che segue la resistenza (confermato via ispezione del
+DOM: gli elementi `<text>` del quadrante ora ricadono nel rettangolo visibile, non più 360px
+sotto); « CHIUDI LA SEDUTA » resta leggibile con l'assessment aperto. `git status`: solo
+`src/serenity/*` + le due chiavi `ser_solo*` in `src/i18n.tsx`. EQUILIBRIUM invariato,
+SERENITY 3.0.41.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

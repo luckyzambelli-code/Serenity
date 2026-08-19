@@ -55,10 +55,16 @@ import { attachAudioBoost } from '../lib/audioBoost';
 import { Cerchio } from './Cerchio';
 
 export function CameraCerchio({
-  dimensione = 160, titolo, externalStream, forceMuted = false, fallbackFrame, offlineLabel, opacita,
+  dimensione = 160, dimensioneCollassata, titolo, externalStream, forceMuted = false, fallbackFrame, offlineLabel, opacita,
   collassata = false, onToggleCollasso, statoTesto, inDiretta = false,
 }: {
   dimensione?: number;
+  /** ⚠️ Segnalato: « quando la chiudi [CAM 2] deve essere della stessa dimensione di quella
+   *  dell'auditor ». Di default il collasso era proporzionale a `dimensione` (35%) — due
+   *  camere di taglia diversa collassavano a taglie diverse. Chi monta ENTRAMBE le camere
+   *  passa qui lo STESSO numero per le due, e il collasso smette di "ricordare" quanto erano
+   *  grandi prima. */
+  dimensioneCollassata?: number;
   titolo: string;
   /** Uno stream remoto (seduta a distanza) — `undefined` = camera locale del dispositivo. */
   externalStream?: MediaStream | null;
@@ -122,7 +128,9 @@ export function CameraCerchio({
     return () => { attivo?.getTracks().forEach(tr => tr.stop()); };
   }, [externalStream, offlineLabel]);
 
-  const dimEffettiva = collassata ? Math.max(48, Math.round(dimensione * 0.35)) : dimensione;
+  const dimEffettiva = collassata
+    ? (dimensioneCollassata ?? Math.max(48, Math.round(dimensione * 0.35)))
+    : dimensione;
 
   return (
     <div style={{ display: 'grid', justifyItems: 'center', gap: 8, pointerEvents: 'auto' }}>

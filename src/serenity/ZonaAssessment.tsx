@@ -41,7 +41,7 @@ export function ZonaAssessment({ attivo, onToggle, items, LC }: {
 }) {
   return (
     <div className="s-glass s-glass-lift" style={{
-      position: 'absolute', top: 76, left: 32, zIndex: 5,
+      position: 'absolute', top: 16, left: 32, zIndex: 5,
       display: 'flex', flexDirection: 'column', gap: 8,
       width: 300, maxHeight: attivo ? 420 : 'auto',
       borderRadius: 16, background: 'var(--s-disc)', padding: '12px 14px',
