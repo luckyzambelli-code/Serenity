@@ -98,6 +98,19 @@
   --s-serif: "Iowan Old Style", Charter, Palatino, Georgia, serif;
   --s-sans:  ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
   --s-mono:  ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  /* ── I TRE TOKEN DI `components/CycleStatusBar.tsx` ─────────────────────────────────────
+     Segnalato: « i cicli devono essere disposti esattamente come in equilibrium, stessi
+     campi, stessa logica » — risposto montando lì `CycleStatusBar` STESSO (non una sua
+     imitazione, vedi `Serenity.tsx`). Quel componente legge `--sm-chip-bg`/`--sm-chip-edge`/
+     `--sm-accent-ink`, definite in `index.css` — il foglio di stile di EQUILIBRIUM, che
+     SERENITY non importa (vedi la nota in cima al file: « perché non riusa i colori di
+     EQUILIBRIUM »). Senza queste tre, i suoi chip resterebbero senza fondo né bordo. Non i
+     valori di EQUILIBRIUM (ciano acceso, tarato su un fondo nero): la STESSA idea —
+     fondo/bordo/inchiostro di un chip — nella lingua di questa tavolozza. */
+  --sm-chip-bg:    var(--s-disc-sunk);
+  --sm-chip-edge:  rgba(44, 47, 51, 0.12);
+  --sm-accent-ink: var(--s-ink-soft);
 }
 
 /*
@@ -148,6 +161,11 @@
   --s-alive:   #8fa0ba;
   --s-still:   #9db9a7;
   --s-reserve: #c9ac7c;
+
+  /* Vedi la nota su `--sm-chip-bg` in `:root` — stessa idea, verso scuro. */
+  --sm-chip-bg:    var(--s-disc-sunk);
+  --sm-chip-edge:  rgba(255, 255, 255, 0.14);
+  --sm-accent-ink: var(--s-ink-soft);
 }
 
 * { box-sizing: border-box; }

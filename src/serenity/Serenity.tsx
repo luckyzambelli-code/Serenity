@@ -26,7 +26,6 @@
 import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useMetric } from '../store/metricsStore';
 import { chargeStateById } from '../lib/chargeState';
-import { useTZone } from '../store/tzoneStore';
 import { sessionClock } from '../runtime/SessionClock';
 import { needleEngine, virtualNeedle } from '../runtime/NeedleEngine';
 import { useThetaMeter } from '../hooks/useThetaMeter';
@@ -40,6 +39,8 @@ import { SET_OFFSET } from '../engine/dialGeometry';
 import { THETA_LABEL_AFTER_MS } from '../engine/tuning';
 import { QuantumSphere } from '../components/QuantumSphere';
 import { ClearDial } from '../components/ClearDial';
+import { CycleStatusBar } from '../components/CycleStatusBar';
+import { CycleSteps } from '../components/CycleSteps';
 import { useSessionJournal } from '../session/useSessionJournal';
 import { useContactNullCycle } from '../session/useContactNullCycle';
 import { useMirrorCycle } from '../session/useMirrorCycle';
@@ -68,7 +69,6 @@ import { PannelloMna } from './PannelloMna';
 import { CameraCerchio } from './CameraCerchio';
 import { IndicatoreConnessione } from './IndicatoreConnessione';
 import { SegmentoVetro } from './SegmentoVetro';
-import { PassiCiclo } from './PassiCiclo';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
@@ -124,23 +124,13 @@ const LetturaFase = React.memo(function LetturaFase({ t }: { t: (k: string) => u
   return <>{cs.labelKey ? (t(cs.labelKey) as string) : ''}</>;
 });
 
-/** ── IL LAG DI RON E LA % DI DISSOLUZIONE — segnalato con l'arco dei cicli: erano informazioni
- *  dinamiche di EQUILIBRIUM (`CycleStatusBar`, riga sotto la domanda), non solo il disegno
- *  dell'arco. STESSO calcolo di `ClearDial`/`CycleStatusBar` (`cyclePeakQ` da `tzoneStore`,
- *  `qL` da `metricsStore`) — non un secondo. Isolato in un suo `React.memo`: `qL` cambia a
- *  ~10 Hz, e non deve far ridisegnare tutta l'intestazione dello strumento. Solo a ciclo
- *  armato: fuori ciclo il numero non significa niente (stessa regola di `LetturaTA`). */
-const LetturaCiclo = React.memo(function LetturaCiclo({ deltaStar, deltaStarN }: { deltaStar: number; deltaStarN: number }) {
-  const qLNow = useMetric(m => m.qL);
-  const { cyclePeakQ } = useTZone();
-  const pct = cyclePeakQ > 0.001 ? Math.round(Math.max(0, Math.min(1, (cyclePeakQ - Math.max(0, qLNow)) / cyclePeakQ)) * 100) : 0;
-  return (
-    <>
-      <span>{deltaStarN > 0 ? `Δt* ${deltaStar}ms` : '—'}</span>
-      <span>{pct}%</span>
-    </>
-  );
-});
+/** ── IL LAG DI RON E LA % DI DISSOLUZIONE, E TUTTO IL RESTO CHE VA COL CICLO — erano
+ *  informazioni dinamiche di EQUILIBRIUM (`CycleStatusBar`, riga sotto la domanda), non solo
+ *  il disegno dell'arco. Segnalato di nuovo: « i cicli devono essere disposti esattamente
+ *  come in equilibrium, stessi campi » — qui sotto non si reimplementa più a mano un
+ *  sottoinsieme (`LetturaCiclo`, tolta: mostrava solo comm-lag e %): si monta `CycleStatusBar`
+ *  STESSO, lo stesso componente condiviso che App.tsx usa, coi campi che gli mancavano
+ *  (`noReadSignal`, il chip « recharging » del NULL). */
 
 export default function Serenity() {
   const { t, lang } = useI18n();
@@ -1637,17 +1627,15 @@ export default function Serenity() {
             <span style={{ fontFamily: 'var(--s-serif)', fontSize: 15.5, color: 'var(--s-ink)' }}>
               {item || t('ser_item_placeholder')}
             </span>
-            {/* I passi del tono, tutti insieme — vedi la nota su `PassiCiclo` in CONTACT/NULL. */}
+            {/* ── LA PISTA — segnalato: « i cicli devono essere disposti esattamente come in
+                equilibrium, stessi campi, stessa logica ». `PassiCiclo` (tolta) era una pista
+                scritta a mano, con le sue etichette e il suo `indiceAttuale` ricalcolati qui —
+                un doppione di `components/CycleSteps.tsx`, lo STESSO componente che App.tsx
+                monta (3 volte, una per metodo, identico a qui): legge `mode`/`faseCiclo`, già
+                calcolati sopra, e ne ricava da sé quanti tempi ci sono e a quale si è
+                (`engine/cycleSteps.ts`, provato da solo) — non li decide, li mostra. */}
             <div style={{ flexBasis: '100%' }}>
-              <PassiCiclo
-                hue="var(--s-ink-soft)"
-                passi={[
-                  { chiave: 'resistenza', etichetta: LC('resistenza', 'résistance', 'resistance', 'resistencia', 'motstånd') },
-                  { chiave: 'tono40', etichetta: LC('tono 40', 'ton 40', 'tone 40', 'tono 40', 'ton 40') },
-                  { chiave: 'fatto', etichetta: LC('fatto', 'fait', 'done', 'hecho', 'klart') },
-                ]}
-                indiceAttuale={tone.tonePhase === 'done' ? 2 : tone.tonePhase === 'raise' ? 1 : 0}
-              />
+              <CycleSteps mode={mode} phase={faseCiclo} lang={lang} />
             </div>
             {faseCiclo === 'tone.say_item' && (
               <>
@@ -1751,20 +1739,9 @@ export default function Serenity() {
             <span style={{ fontFamily: 'var(--s-serif)', fontSize: 15.5, color: 'var(--s-ink)' }}>
               {item || t('ser_item_placeholder')}
             </span>
-            {/* I passi del raddoppio, tutti insieme — vedi la nota su `PassiCiclo` in CONTACT/NULL. */}
+            {/* La pista — vedi la nota su `CycleSteps` nel blocco TONE. */}
             <div style={{ flexBasis: '100%' }}>
-              <PassiCiclo
-                hue="var(--s-reserve)"
-                passi={[
-                  { chiave: 'item', etichetta: LC('item', 'item', 'item', 'ítem', 'item') },
-                  { chiave: 'valore', etichetta: LC('valore', 'valeur', 'value', 'valor', 'värde') },
-                  { chiave: 'doppio', etichetta: LC('doppio', 'double', 'double', 'doble', 'dubbel') },
-                  { chiave: 'ottenuto', etichetta: LC('ottenuto', 'obtenu', 'obtained', 'obtenido', 'uppnått') },
-                ]}
-                indiceAttuale={
-                  mirror.mirrorDisp.reached ? 3 : mirror.mirrorDisp.locked ? 2 : faseCiclo === 'mirror.contact' ? 1 : 0
-                }
-              />
+              <CycleSteps mode={mode} phase={faseCiclo} lang={lang} />
             </div>
             {faseCiclo === 'mirror.say_item' && (
               <>
@@ -1853,28 +1830,13 @@ export default function Serenity() {
               {item || t('ser_item_placeholder')}
             </span>
             {/* ── I PASSI, TUTTI INSIEME — segnalato: « le scritte dei cicli sono confuse...
-                evidenziate le steps, a prova di stupido ». `PassiCiclo` legge la STESSA
-                `faseCiclo` (già calcolata da `engine/sessionPhase.ts`, non riletta qui): non
-                decide nulla, mostra solo dove si è dentro la sequenza del metodo in corso. Riga
-                a sé (`flexBasis:'100%'`) per restare leggibile invece di accorciarsi. */}
+                evidenziate le steps, a prova di stupido »; poi di nuovo: « i cicli devono
+                essere disposti esattamente come in equilibrium, stessi campi, stessa logica ».
+                `CycleSteps` — vedi la nota nel blocco TONE — non decide nulla, mostra solo
+                dove si è dentro la sequenza del metodo in corso. Riga a sé (`flexBasis:'100%'`)
+                per restare leggibile invece di accorciarsi. */}
             <div style={{ flexBasis: '100%' }}>
-              <PassiCiclo
-                hue={cycles.cycleKind === 'null' ? 'var(--s-alive)' : 'var(--s-still)'}
-                passi={cycles.cycleKind === 'null' ? [
-                  { chiave: 'item', etichetta: LC('item', 'item', 'item', 'ítem', 'item') },
-                  { chiave: 'mockup', etichetta: LC('mock-up', 'mock-up', 'mock-up', 'mock-up', 'mock-up') },
-                  { chiave: 'equilibrium', etichetta: 'EQUILIBRIUM' },
-                ] : [
-                  { chiave: 'item', etichetta: LC('item', 'item', 'item', 'ítem', 'item') },
-                  { chiave: 'mockup', etichetta: LC('dissoluzione', 'dissolution', 'dissolution', 'disolución', 'upplösning') },
-                  { chiave: 'asis', etichetta: 'AS-IS' },
-                ]}
-                indiceAttuale={
-                  cycles.cycleKind === 'null'
-                    ? (faseCiclo === 'null.equilibrium' ? 2 : (faseCiclo === 'null.mockup' || faseCiclo === 'null.rise') ? 1 : 0)
-                    : (faseCiclo === 'contact.asis' ? 2 : faseCiclo === 'contact.mockup' ? 1 : 0)
-                }
-              />
+              <CycleSteps mode={mode} phase={faseCiclo} lang={lang} />
             </div>
             {/* ── « DÌ L'ITEM… » — segnalato insieme: la logica di darlo a voce già esiste nel
                 motore (`cycleAwaitItemRef`), ma finché nessuno lo dice a schermo l'auditor non
@@ -2032,7 +1994,7 @@ export default function Serenity() {
           meter si disconnette (vedi l'`useEffect` accanto a `meterSetupAperto`). */}
       {meterSetupAperto && meterC && (
         <div style={{ position: 'absolute', top: 16, right: 44, zIndex: 30 }}>
-          <PannelloMeter theta={theta} provaTa={provaTa} />
+          <PannelloMeter theta={theta} provaTa={provaTa} onFatto={() => setMeterSetupAperto(false)} />
         </div>
       )}
 
@@ -2321,9 +2283,6 @@ export default function Serenity() {
             <LetturaTA />
             <LetturaFase t={t} />
             {museGate.signalQuality > 0 && <span>{museGate.signalQuality}%</span>}
-            {/* Il lag di Ron e la % di dissoluzione — solo a ciclo armato, come CycleStatusBar
-                in App.tsx (senza ciclo il numero non descrive niente). */}
-            {cycles.cycleArmed && <LetturaCiclo deltaStar={deltaStar} deltaStarN={deltaStarN} />}
           </span>
         )}
         {/* ── LA STESSA LETTURA, DAL METER — segnalato: « la scala del tono non appare, il TA
@@ -2347,8 +2306,32 @@ export default function Serenity() {
                 {LC('galleggia', 'flotte', 'floating', 'flota', 'flyter')}
               </span>
             )}
-            {cycles.cycleArmed && <LetturaCiclo deltaStar={deltaStar} deltaStarN={deltaStarN} />}
           </span>
+        )}
+        {/* ── LO STESSO `CycleStatusBar` DI APP.TSX, NON UNA COPIA — segnalato: « i cicli
+            devono essere disposti esattamente come in equilibrium, stessi campi, stessa
+            logica ». `LetturaCiclo` (sopra, ora tolta da qui) mostrava SOLO comm-lag e %
+            dissoluzione — un sottoinsieme scritto a mano. Mancavano il chip « nessuna lettura »
+            (`noReadSignal` — il ciclo CONTACT non ha visto nulla nella finestra del comm-lag,
+            un'indicazione che potrebbe essere un NULL) e il chip del ciclo NULL (« recharging »,
+            lo scarto di TA dal suo inizio + i secondi). Nessuno dei due era calcolato da capo:
+            `useContactNullCycle` (già montato) li espone già (`noReadSignal`, `nullSinceMock`,
+            `taAtNullStart`), semplicemente non erano letti qui. Il componente STESSO — non una
+            sua imitazione — si occupa del resto (colori, soglie, le 5 lingue del chip). */}
+        {cycles.cycleArmed && (
+          <CycleStatusBar
+            armed={cycles.cycleArmed}
+            manualReady={cycles.manualReady}
+            asIsFalse={cycles.asIsFalse}
+            deltaStar={deltaStar}
+            deltaStarN={deltaStarN}
+            isLightTheme={isLightTheme}
+            signalOk={museGate.museContact}
+            cycleKind={cycles.cycleKind}
+            nullSinceMock={cycles.nullSinceMock}
+            noReadSignal={cycles.noReadSignal}
+            taAtNullStart={cycles.taAtNullStart}
+          />
         )}
 
         {/* ⚠️ I QUATTRO CERCHI SATELLITE (assessment, cycle hint, …) SONO STATI TOLTI DA QUI,

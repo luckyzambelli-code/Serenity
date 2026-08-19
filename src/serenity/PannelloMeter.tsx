@@ -62,11 +62,15 @@ type Passo = typeof PASSI[number];
 
 /** Chi monta questo pannello (`Serenity.tsx`) lo fa SOLO a meter connesso — niente stato di
  *  "non connesso" da disegnare qui dentro: quella parola la dice già l'indicatore sopra. */
-export function PannelloMeter({ theta, provaTa }: {
+export function PannelloMeter({ theta, provaTa, onFatto }: {
   theta: ReturnType<typeof useThetaMeter>;
   /** I due TA della prova doppia (uno per configurazione) — vive in `Serenity.tsx`, non qui:
    *  è la stessa seduta a doverli azzerare quando cambia persona, non questo pannello. */
   provaTa: { two: number | null; solo: number | null };
+  /** ── Segnalato: « il test des boîtes... ne disparaît pas ». Chi monta il pannello decide
+   *  cosa vuol dire "fatto, chiudi" (qui: `setMeterSetupAperto(false)`) — senza questo prop il
+   *  bottone dell'ultimo passo resta testo statico, come App.tsx quando manca `onProceed`. */
+  onFatto?: () => void;
 }) {
   const { t, lang } = useI18n();
   const [riferimento, setRiferimento] = useState('2.0');
@@ -90,8 +94,9 @@ export function PannelloMeter({ theta, provaTa }: {
       background: 'var(--s-disc)', borderRadius: 14,
       width: 380,
     }}>
-      {/* ── I PUNTI DEL PERCORSO — lo stesso principio di `PassiCiclo.tsx`: si vede quanti
-          passi ci sono e a che punto si è, senza doverlo ricordare a memoria. Cliccabili: si
+      {/* ── I PUNTI DEL PERCORSO — lo stesso principio di `CycleSteps` (i passi del ciclo, sopra
+          nel quadrante): si vede quanti passi ci sono e a che punto si è, senza doverlo
+          ricordare a memoria. Cliccabili: si
           torna indietro anche saltando, non solo un passo alla volta. */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
         {PASSI.map((p, i) => (
@@ -293,6 +298,16 @@ export function PannelloMeter({ theta, provaTa }: {
         {idx < PASSI.length - 1 ? (
           <button onClick={() => setPasso(PASSI[idx + 1])} className="s-glass s-glass-btn" style={pillola(true)}>
             {LC('avanti', 'suivant', 'next', 'siguiente', 'nästa')} →
+          </button>
+        ) : onFatto ? (
+          /* ── SEGNALATO: « le test des boîtes est bien fait, mais il ne disparaît pas ».
+              In App.tsx questo stesso percorso (`ThetaReadyCheck`) è una schermata che SPARISCE
+              da sé quando l'auditor preme "prosegui" (`onProceed`) — qui restava un cassetto
+              aperto per sempre, senza un gesto che lo chiuda: fatte le prove, il "✓ fatto" era
+              muto, non un bottone. Stesso gesto di App.tsx, un bottone vero al posto del testo
+              statico: chiude il cassetto (`meterSetupAperto`, in `Serenity.tsx`). */
+          <button onClick={onFatto} className="s-glass s-glass-btn" style={{ ...pillola(true), color: 'var(--s-still)' }}>
+            ✓ {LC('fatto — chiudi', 'terminé — fermer', 'done — close', 'hecho — cerrar', 'klart — stäng')}
           </button>
         ) : (
           <span style={{ fontSize: 14.5, color: 'var(--s-still)', fontWeight: 700 }}>

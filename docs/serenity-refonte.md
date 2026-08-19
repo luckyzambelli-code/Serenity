@@ -964,6 +964,54 @@ SERENITY 3.0.41.
 
 ---
 
+## Decimo giro (19/08/2026) — gli stessi componenti di EQUILIBRIUM, non le loro imitazioni
+
+Tre segnalazioni, la prima delle quali cambia l'approccio dei giri precedenti.
+
+1. **« Il faut que les CYCLES soient exactement disposés comme dans EQUILIBRIUM, même champs,
+   même logique »** — fin qui, ogni pezzo del ciclo era stato RISCRITTO a mano nella grafica di
+   SERENITY (`PassiCiclo.tsx`, `LetturaCiclo`): stessa INFORMAZIONE, componenti PROPRI. Preso
+   alla lettera: dove EQUILIBRIUM usa un componente CONDIVISO (già in `src/components/`, mai
+   importato qui prima), SERENITY ora monta QUELLO, non una sua imitazione.
+   - **`CycleSteps`** (`components/CycleSteps.tsx`) sostituisce `PassiCiclo.tsx` (rimossa): la
+     stessa pista che App.tsx monta tre volte (una per CONTACT/NULL, una per MIRROR, una per
+     TONE) — legge `mode`/`faseCiclo` (già calcolati qui) e ricava da sé passi ed etichette
+     (`engine/cycleSteps.ts`, provato da solo). Prima SERENITY ricalcolava a mano l'indice e le
+     etichette in tre punti diversi — tre occasioni di disallinearsi da EQUILIBRIUM.
+   - **`CycleStatusBar`** (`components/CycleStatusBar.tsx`) sostituisce `LetturaCiclo`: quella
+     mostrava SOLO comm-lag e % dissoluzione, un sottoinsieme scritto a mano. Il componente
+     vero aggiunge i due campi mancanti — il chip « nessuna lettura » (`noReadSignal`: il ciclo
+     CONTACT non ha visto nulla nella finestra del comm-lag) e il chip del ciclo NULL
+     (« recharging », lo scarto di TA dal suo inizio + i secondi) — NESSUNO dei due ricalcolato:
+     `useContactNullCycle` (già montato) li espone già (`noReadSignal`, `nullSinceMock`,
+     `taAtNullStart`), semplicemente non erano letti. `CycleStatusBar` legge tre variabili CSS
+     proprie di EQUILIBRIUM (`--sm-chip-bg`/`--sm-chip-edge`/`--sm-accent-ink`, da
+     `index.css`, mai importato da SERENITY) — definite ora anche in `tokens.css`, nella lingua
+     di questa tavolozza (non i colori di EQUILIBRIUM: la stessa idea di fondo/bordo/inchiostro
+     di un chip).
+2. **« Tous les elements de EQUILIBRIUM doivent apparaitre dans SERENITY »** — il punto 1 è la
+   risposta concreta di questo giro (due componenti condivisi in più, con tutti i loro campi).
+   Restano dichiarati, non taciuti, i gap già scritti nei giri precedenti: `ToneColumn` (la
+   scala verticale accanto all'ago), la vista INDICAZIONE dell'assessment (le due letture
+   separate MUSE/METER), i bottoni non ancora vetrati di
+   `Connessione`/`PannelloConfig`/`PannelloEp`/`PannelloProfilo`.
+3. **« ATTENTION, les tests des boîtes est bien fait, mais il ne disparaît pas »** — in App.tsx
+   questo stesso percorso (`ThetaReadyCheck`) è una SCHERMATA che sparisce da sé quando
+   l'auditor preme « prosegui » (`onProceed`). Il percorso a passi di SERENITY
+   (`PannelloMeter`) restava un cassetto aperto per sempre: fatte le due prove, l'ultimo passo
+   diceva solo « ✓ fatto » — un testo, non un gesto. Aggiunto `onFatto`: sull'ultimo passo, un
+   bottone vero (« ✓ fatto — chiudi ») che chiude il cassetto (`meterSetupAperto` in
+   `Serenity.tsx`) — stesso gesto di App.tsx, non la stessa schermata bloccante (che avrebbe
+   richiesto rifare l'intero flusso d'ingresso, fuori scopo di questo giro).
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori (320 warning, tutte preesistenti),
+`vitest run` 639/639. A schermo (tab pulita, scuro e francese): armato CONTACT senza
+strumenti, la pista mostra « ① ITEM — ② MOCK-UP — ③ AS-IS » (le etichette esatte di
+`CycleSteps`, non una parafrasi). `git status`: solo `src/serenity/*`. EQUILIBRIUM invariato,
+SERENITY 3.0.42.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
