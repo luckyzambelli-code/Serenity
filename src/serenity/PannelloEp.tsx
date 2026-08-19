@@ -112,8 +112,8 @@ export function PannelloEp({ ep, onValidato }: {
       </div>
 
       <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
-        <button onClick={() => ep.setEpManualOpen(false)} style={{
-          border: 'none', background: 'none', cursor: 'pointer',
+        <button className="s-glass s-glass-btn" onClick={() => ep.setEpManualOpen(false)} style={{
+          cursor: 'pointer', borderRadius: 999, padding: '6px 14px', background: 'var(--s-disc)',
           fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-faint)',
         }}>
           ← {t('cancel')}

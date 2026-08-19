@@ -51,6 +51,7 @@ import { useMirrorCycle } from '../session/useMirrorCycle';
 import { MirrorDial } from '../components/MirrorDial';
 import { useToneCycle } from '../session/useToneCycle';
 import { ToneDial } from '../components/ToneDial';
+import { ToneColumn } from '../components/ToneColumn';
 import { TONE_LABELS, exactLevelName, levelName } from '../engine/toneLevels';
 import {
   loadHistory as loadCanTests, saveHistory as saveCanTests, addTest as addCanTest,
@@ -2356,15 +2357,41 @@ export default function Serenity() {
                 lang={lang}
               />
             ) : toneAttivo ? (
-              <ToneDial
-                tone={tone.toneOra ?? 0}
-                hasMeter={tone.toneHasMeter}
-                approx
-                located={tone.toneAtStart}
-                phase={tone.tonePhase}
-                toneAtStart={tone.toneAtStart}
-                isLightTheme={isLightTheme}
-              />
+              <>
+                <ToneDial
+                  tone={tone.toneOra ?? 0}
+                  hasMeter={tone.toneHasMeter}
+                  approx
+                  located={tone.toneAtStart}
+                  phase={tone.tonePhase}
+                  toneAtStart={tone.toneAtStart}
+                  isLightTheme={isLightTheme}
+                />
+                {/* ── LA SCALA DEL TONO IN VERTICALE — segnalata assente nell'audit funzionale:
+                    « la scala del tono non appare... METTILI ». `ToneColumn` è puro
+                    (« nessuno stato, nessuna decisione ») e prende TUTTO quel che gli serve
+                    da `tone` (`useToneCycle`, già montato) — `toneOraEeg`/`margineTono` erano
+                    già nel suo ritorno, semplicemente non ancora letti qui.
+                    ⚠️ App.tsx la ancora a DESTRA — qui a SINISTRA invece: a destra c'è la
+                    colonna delle camere (zIndex più alto, la copriva del tutto — verificato
+                    nel DOM, presente ma invisibile). SERENITY non ha un secondo posto libero
+                    a destra come App.tsx; a sinistra resta solo `ZonaAssessment`, che di
+                    norma sta chiusa (solo l'intestazione) e non la incontra. */}
+                <div style={{
+                  position: 'absolute', left: 12, top: '38%', bottom: '14%', width: 260,
+                  pointerEvents: 'none',
+                }}>
+                  <ToneColumn
+                    tone={tone.toneOra ?? 0}
+                    toneEeg={tone.toneOraEeg}
+                    margin={tone.margineTono}
+                    hasMeter={tone.toneHasMeter}
+                    lang={lang}
+                    charge={museOk ? Math.max(0, Math.min(1, qLnow)) : null}
+                    chargeFrom={tone.toneAtStart}
+                  />
+                </div>
+              </>
             ) : (
               <ClearDial
                 armed={cycles.cycleArmed}

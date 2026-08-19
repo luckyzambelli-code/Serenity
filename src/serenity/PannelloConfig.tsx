@@ -134,8 +134,8 @@ export function PannelloConfig({ onChiudi, needleTrim = 0, setNeedleTrim = () =>
       gridTemplateRows: 'auto 1fr', padding: '38px 44px', gap: 20,
     }}>
       <header style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
-        <button onClick={onChiudi} style={{
-          border: 'none', background: 'none', cursor: 'pointer',
+        <button className="s-glass s-glass-btn" onClick={onChiudi} style={{
+          cursor: 'pointer', borderRadius: 999, padding: '6px 14px', background: 'var(--s-disc)',
           fontFamily: 'var(--s-sans)', fontSize: 15.5, color: 'var(--s-ink-soft)',
         }}>
           ← {t('ser_back')}
@@ -225,14 +225,14 @@ export function PannelloConfig({ onChiudi, needleTrim = 0, setNeedleTrim = () =>
             {MODULI_IN_ARRIVO.map(tKey => rigaModulo(false, true, undefined, tt(tKey)))}
           </div>
           <div style={{ display: 'flex', gap: 16, marginTop: 10 }}>
-            <button onClick={() => setModuleVis({ cam1: true, cam2: true, mna: true })} style={{
-              border: 'none', background: 'none', cursor: 'pointer',
+            <button className="s-glass s-glass-btn" onClick={() => setModuleVis({ cam1: true, cam2: true, mna: true })} style={{
+              cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
               fontFamily: 'var(--s-sans)', fontSize: 13.5, letterSpacing: '0.08em', color: 'var(--s-ink-faint)',
             }}>
               {t('config_all_on')}
             </button>
-            <button onClick={() => setModuleVis({ cam1: false, cam2: false, mna: false })} style={{
-              border: 'none', background: 'none', cursor: 'pointer',
+            <button className="s-glass s-glass-btn" onClick={() => setModuleVis({ cam1: false, cam2: false, mna: false })} style={{
+              cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
               fontFamily: 'var(--s-sans)', fontSize: 13.5, letterSpacing: '0.08em', color: 'var(--s-ink-faint)',
             }}>
               {t('config_all_off')}

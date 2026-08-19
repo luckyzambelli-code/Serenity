@@ -193,8 +193,8 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 18, minHeight: 40 }}>
-        <button onClick={onAnnulla} style={{
-          border: 'none', background: 'none', cursor: 'pointer',
+        <button className="s-glass s-glass-btn" onClick={onAnnulla} style={{
+          cursor: 'pointer', borderRadius: 999, padding: '6px 14px', background: 'var(--s-disc)',
           fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-faint)',
         }}>← {t('ser_back')}</button>
         <button onClick={salva} className="s-glass s-glass-btn" style={pillola(true)}>{t('ser_save')}</button>
@@ -203,10 +203,10 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
             superficie. Il colore passa alla riserva (ambra) solo quando chiede conferma:
             non è un rosso d'allarme, è « stai per fare una cosa che non si disfa ». */}
         {modifica && (
-          <button onClick={elimina} style={{
-            border: 'none', cursor: 'pointer', borderRadius: 999, padding: '8px 20px',
+          <button className="s-glass s-glass-btn" onClick={elimina} style={{
+            cursor: 'pointer', borderRadius: 999, padding: '8px 20px',
             fontFamily: 'var(--s-sans)', fontSize: 15, letterSpacing: '0.06em',
-            background: confermaElimina ? 'var(--s-reserve)' : 'none',
+            background: confermaElimina ? 'var(--s-reserve)' : 'var(--s-disc)',
             color: confermaElimina ? 'var(--s-ground-warm)' : 'var(--s-ink-faint)',
             transition: 'background var(--s-slow) var(--s-ease), color var(--s-slow) var(--s-ease)',
           }}>

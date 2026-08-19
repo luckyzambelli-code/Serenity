@@ -1140,6 +1140,43 @@ invariato, SERENITY 3.0.44.
 
 ---
 
+## Tredicesimo giro (19/08/2026) — la scala del tono, e i bottoni vetrati fino in fondo
+
+« oui » — continuato l'audit dei punti dichiarati nel giro precedente.
+
+**`ToneColumn` — chiusa**, stesso metodo: componente puro (« nessuno stato, nessuna
+decisione »), tutto quel che gli serve arriva già da `tone` (`useToneCycle`, montato da
+sempre) — `toneOraEeg`/`margineTono` erano già nel suo ritorno, semplicemente non ancora
+letti. Montata accanto a `ToneDial`.
+
+⚠️ **Un secondo bug trovato SOLO verificando dal vivo**: montata a destra come in App.tsx, la
+colonna risultava PRESENTE nel DOM (confermato via ispezione — il suo `<svg>` c'era, col
+`viewBox` giusto) ma INVISIBILE — coperta dalla colonna delle camere, che occupa la stessa
+zona con uno z-index più alto. App.tsx non ha questo conflitto (le sue camere stanno in una
+colonna fissa a parte, non galleggiano sul quadrante come qui). Spostata a sinistra, dove non
+incontra le camere.
+
+**I bottoni vetrati, fino in fondo** — gli ultimi rimasti nudi (`border:'none',
+background:'none'`, segnalati ma non ancora chiusi nel decimo giro) in `Connessione.tsx`
+(copia link, riprova connessione, indietro, entra in seduta — più un `boxShadow` inline che
+cancellava in silenzio quello di `.s-glass-btn`, lo stesso bug già visto altrove),
+`PannelloConfig.tsx` (indietro, tutti on/tutti off), `PannelloEp.tsx` (annulla),
+`PannelloProfilo.tsx` (indietro, elimina profilo) — tutti diventati pillole di vetro vere.
+
+**Dichiarato ancora, non chiuso** (l'audit resta onesto): il rapporto di fine seduta (fase 8),
+la vista INDICAZIONE dell'assessment (App.tsx la calcola con funzioni SUE — `aggiungiItemManuale`/
+`cercaLetturaPerParola`/`segnaIndicazione` — non funzioni condivise: da PORTARE, non da
+collegare), `HealthPanel`/`BiometricPanel` (le forme d'onda EEG/gyro grezze — il loro buffer
+si popola dentro App.tsx stesso, non in un hook condiviso: stessa natura della vista
+INDICAZIONE), `AIAssistant`, `useMediaRelayFallback`.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori (320 warning, tutte preesistenti),
+`vitest run` 639/639, verifica dal vivo (TONE armato: la colonna del tono appare a sinistra,
+leggibile, senza sovrapposizioni). `git status`: solo `src/serenity/*`. EQUILIBRIUM invariato,
+SERENITY 3.0.45.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

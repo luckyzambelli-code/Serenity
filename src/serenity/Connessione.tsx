@@ -26,10 +26,14 @@ import QRCode from 'qrcode';
 import { useI18n } from '../i18n';
 import type { useRemoteSession } from '../hooks/useRemoteSession';
 
+// ⚠️ Niente `boxShadow` qui — segnalato nell'audit funzionale: « i bottoni non ancora
+// vetrati di Connessione ». Uno stile inline vince sempre su una classe CSS per la stessa
+// proprietà: un `boxShadow` qui cancellerebbe in silenzio quello di `.s-glass-btn` (lo
+// stesso bug già trovato e corretto altrove in questo file all'inizio della refonte).
 const bottone = (pieno: boolean): React.CSSProperties => ({
-  border: 'none', cursor: 'pointer',
+  cursor: 'pointer',
   background: pieno ? 'var(--s-disc)' : 'var(--s-disc-sunk)',
-  color: 'var(--s-ink)', boxShadow: 'var(--s-shadow)',
+  color: 'var(--s-ink)',
   borderRadius: 999, padding: '10px 24px',
   fontSize: 15, letterSpacing: '0.08em', textTransform: 'uppercase',
   fontFamily: 'var(--s-sans)',
@@ -111,17 +115,18 @@ export function Connessione({ remote, onAnnulla, onPronti }: {
               }} />
             )}
             <div
+              className="s-glass"
               onClick={copia}
               title={t('tip_copy') as string}
               style={{
                 cursor: 'pointer', padding: '12px 16px', borderRadius: 10,
-                background: 'var(--s-disc)', boxShadow: 'var(--s-shadow)',
+                background: 'var(--s-disc)',
                 fontFamily: 'var(--s-mono)', fontSize: 15, color: 'var(--s-ink-soft)',
                 wordBreak: 'break-all', userSelect: 'all', maxWidth: 420,
               }}>
               {remote.connectionLink}
             </div>
-            <button onClick={copia} style={bottone(false)}>
+            <button className="s-glass s-glass-btn" onClick={copia} style={bottone(false)}>
               {t(copiato ? 'conn_copied' : 'conn_copy')}
             </button>
           </div>
@@ -131,7 +136,7 @@ export function Connessione({ remote, onAnnulla, onPronti }: {
               {remote.errore ? `⚠ ${remote.errore}` : t(remote.tunnelLoading ? 'conn_internet_loading' : 'conn_generating')}
             </span>
             {remote.errore && (
-              <button onClick={() => remote.avvia()} style={bottone(false)}>
+              <button className="s-glass s-glass-btn" onClick={() => remote.avvia()} style={bottone(false)}>
                 {t('conn_internet_btn')}
               </button>
             )}
@@ -150,14 +155,14 @@ export function Connessione({ remote, onAnnulla, onPronti }: {
         </div>
 
         <div style={{ display: 'flex', gap: 22, alignItems: 'center' }}>
-          <button onClick={onAnnulla} style={{
-            border: 'none', background: 'none', cursor: 'pointer',
+          <button className="s-glass s-glass-btn" onClick={onAnnulla} style={{
+            cursor: 'pointer', borderRadius: 999, padding: '6px 14px', background: 'var(--s-disc)',
             fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-faint)',
           }}>
             ← {t('ser_back')}
           </button>
           {remote.isConnected && (
-            <button onClick={onPronti} style={bottone(true)}>
+            <button className="s-glass s-glass-btn" onClick={onPronti} style={bottone(true)}>
               {t('conn_go_session')}
             </button>
           )}
