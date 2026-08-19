@@ -463,6 +463,18 @@ export default function Serenity() {
     id: string; time: number; item: string; gruppo: number;
     /** `null` = in attesa della decisione (la latenza elettrodermica non è ancora passata). */
     reaction: string | null; beforeMs: number; afterMs: number; readSrc?: ReadSrc;
+    /** ── LA VISTA INDICAZIONE — segnalata nell'audit funzionale completo: « toutes les
+     *  fonctions... » includeva anche l'R&I di App.tsx (`AssessmentPanel`'s vista `ri`), non
+     *  solo l'ASSESSMENT a voce. `kind` distingue le due provenienze — `undefined`/`'item'` =
+     *  detto a voce durante un assessment (il ramo qui sopra, invariato); `'manual'` = trovato
+     *  in un ALTRO modo e scritto dall'auditor (sotto). `indica` è la risposta del preclear,
+     *  `readMuse`/`readMeter` le DUE letture separate quando ci sono entrambi gli strumenti —
+     *  App.tsx non le fonde mai (misurato: κ di Cohen −0,09 fra i due, vedi
+     *  `equilibrium_can_meter` in memoria), e questa vista esiste apposta per confrontarle. */
+    kind?: 'item' | 'manual';
+    indica?: boolean;
+    readMuse?: string;
+    readMeter?: string;
   }>>([]);
   const assessIdRef = useRef(0);
   const assessLogCursorRef = useRef(0);
@@ -919,13 +931,25 @@ export default function Serenity() {
    * Segnalato: « la logica di dare l'ITEM anche a voce... non è implementata ancora ». I tre
    * motori sapevano già riempire l'item da soli (`cycleAwaitItemRef`/`itemDettato` e le sue
    * due sorelle, portati da App.tsx in una sessione precedente) — mancava solo chi parla:
-   * `useVoiceItem` avvia lo STESSO riconoscitore (nativo macOS, poi Whisper offline) di
-   * App.tsx, e ogni frase finale entra nel giornale come farebbe l'auditor scrivendola.
-   */
+   * `useVoiceItem` avvia lo STESSO riconoscitore (nativo macOS/Web Speech del browser, poi
+   * Whisper offline come ripiego) di App.tsx, e ogni frase finale entra nel giornale come
+   * farebbe l'auditor scrivendola.
+   *
+   * ⚠️ `speechEndMs` era ricevuto e IGNORATO — l'item si datava sempre all'ISTANTE DI ARRIVO
+   * della trascrizione (`sessionClock.now()`), che il riconoscitore dichiara fino a ~900ms
+   * DOPO che si è smesso di parlare (aspetta il silenzio). L'instant read dell'ago — che
+   * avviene ALLA FINE DELLA PAROLA — cadeva fuori dalla sua finestra. Stessa formula di
+   * App.tsx: si retrodata di quanto tempo è passato da `speechEndMs` (in `performance.now()`,
+   * lo stesso orologio usato per calcolarlo), non oltre 3s (un valore fuori scala è un errore
+   * di misura, non tre secondi di silenzio veri). */
   const statoVoce = useVoiceItem({
     active: aperta,
     lang: lang as string,
-    onTranscript: text => { journal.addLog({ speaker: 'Aud', text, time: sessionClock.now(), type: 'normal' }); },
+    onTranscript: (text, speechEndMs) => {
+      const ritardoS = speechEndMs
+        ? Math.min(3, Math.max(0, (performance.now() - speechEndMs) / 1000)) : 0;
+      journal.addLog({ speaker: 'Aud', text, time: Math.max(0, sessionClock.now() - ritardoS), type: 'normal' });
+    },
   });
 
   /**

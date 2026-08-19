@@ -1177,6 +1177,49 @@ SERENITY 3.0.45.
 
 ---
 
+## Quattordicesimo giro (19/08/2026) — il terzo motore vocale, quello che mancava davvero
+
+Segnalato con una prova precisa: « in EQUILIBRIUM con CHROME funziona, ed anche in Electron ».
+Prima ipotesi (sbagliata, controllata e scartata): che l'assessment funzionasse solo a voce
+vera e in questo ambiente di test non ci fosse microfono — vero in generale, ma non spiegava
+perché EQUILIBRIUM ripiegasse su QUALCOSA che funzionava e SERENITY no.
+
+**La causa vera, trovata leggendo App.tsx riga per riga**: App.tsx ha TRE motori vocali, non
+due. `useVoiceItem.ts` (fase precedente della refonte) ne conosceva solo due — il riconoscitore
+nativo macOS (via il sidecar Electron) e Whisper offline (WASM) come ripiego — perché la nota
+in cima al file diceva esplicitamente « gli STESSI due motori di App.tsx », ed era la premessa
+sbagliata: App.tsx ne ha un terzo, `window.SpeechRecognition`/`webkitSpeechRecognition` — il
+riconoscitore NATIVO DEL BROWSER — e FUORI DA ELECTRON è quello che prova PER PRIMO (in
+Electron lo salta del tutto, commento CONN-61 nel suo stesso codice: fallisce sempre lì).
+Risultato: in Chrome, EQUILIBRIUM parla con Web Speech; SERENITY provava solo Whisper, e se
+Whisper non si carica (visto succedere in ambienti sandboxed — errore ONNX runtime
+`registerBackend`) non restava più nulla.
+
+**Corretto**: `useVoiceItem.ts` riscritto con la STESSA precedenza di App.tsx — Electron:
+nativo → Whisper; browser: Web Speech → Whisper solo se Web Speech stesso fallisce (non per un
+« nessun discorso », benigno e frequentissimo, dove si riprova e basta — stessa regola CONN-81
+di App.tsx). Aggiunto anche il riavvio automatico di Web Speech a ogni interruzione (Chrome
+ferma il riconoscitore dopo ogni frase: senza riavvio si sentirebbe una frase sola e poi
+silenzio).
+
+**Trovato nello stesso giro**: il parametro `speechEndMs` (quando la parola è FINITA, non
+quando il riconoscitore la dichiara — fino a 900ms dopo) arrivava già dai due motori esistenti
+ma `Serenity.tsx` lo IGNORAVA, datando sempre l'item all'istante di arrivo della trascrizione.
+L'instant read dell'ago, che avviene alla fine della parola, poteva cadere fuori dalla sua
+finestra. Aggiunta la STESSA retrodatazione di App.tsx (fino a 3s, la stessa formula).
+
+⚠️ **Non verificabile fino in fondo in questo ambiente**: il browser di test blocca sia il
+microfono di Web Speech sia il caricamento di Whisper — confermato che il codice ORA prova
+Web Speech per primo (la richiesta di permesso microfono compare, cosa che prima non
+succedeva mai), ma la conferma che funzioni DAVVERO in Chrome vero, con un microfono vero,
+resta da fare da chi l'ha segnalato.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori nuovi, `vitest run` 639/639. `git
+status`: solo `src/hooks/useVoiceItem.ts` (esclusivo SERENITY) + `src/serenity/Serenity.tsx`.
+EQUILIBRIUM invariato, SERENITY 3.0.46.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
