@@ -161,7 +161,10 @@ body {
   background: var(--s-ground);
   color: var(--s-ink);
   font-family: var(--s-sans);
-  font-size: 15px;
+  /* ⚠️ Segnalato: « aumenta i caratteri, che siano più grandi ». 15 → 16px di base — ogni
+     scritta in `px` fissi qui sotto è già stata rialzata caso per caso; questa è la base su
+     cui tutto il resto (em/rem, se mai comparisse) si appoggerebbe. */
+  font-size: 16px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   /* La seduta non si trascina: non c'è niente sotto il bordo dello schermo da andare a cercare. */

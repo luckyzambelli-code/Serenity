@@ -31,7 +31,7 @@ const bottone = (pieno: boolean): React.CSSProperties => ({
   background: pieno ? 'var(--s-disc)' : 'var(--s-disc-sunk)',
   color: 'var(--s-ink)', boxShadow: 'var(--s-shadow)',
   borderRadius: 999, padding: '10px 24px',
-  fontSize: 13.5, letterSpacing: '0.08em', textTransform: 'uppercase',
+  fontSize: 15, letterSpacing: '0.08em', textTransform: 'uppercase',
   fontFamily: 'var(--s-sans)',
 });
 
@@ -99,7 +99,7 @@ export function Connessione({ remote, onAnnulla, onPronti }: {
         }}>
           {t('conn_auditor_title')}
         </h1>
-        <p style={{ margin: '-10px 0 0', fontSize: 14, color: 'var(--s-ink-soft)', lineHeight: 1.6 }}>
+        <p style={{ margin: '-10px 0 0', fontSize: 15.5, color: 'var(--s-ink-soft)', lineHeight: 1.6 }}>
           {t('conn_auditor_subtitle')}
         </p>
 
@@ -116,7 +116,7 @@ export function Connessione({ remote, onAnnulla, onPronti }: {
               style={{
                 cursor: 'pointer', padding: '12px 16px', borderRadius: 10,
                 background: 'var(--s-disc)', boxShadow: 'var(--s-shadow)',
-                fontFamily: 'var(--s-mono)', fontSize: 13.5, color: 'var(--s-ink-soft)',
+                fontFamily: 'var(--s-mono)', fontSize: 15, color: 'var(--s-ink-soft)',
                 wordBreak: 'break-all', userSelect: 'all', maxWidth: 420,
               }}>
               {remote.connectionLink}
@@ -127,7 +127,7 @@ export function Connessione({ remote, onAnnulla, onPronti }: {
           </div>
         ) : (
           <div style={{ display: 'grid', justifyItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 14, color: remote.errore ? 'var(--s-reserve)' : 'var(--s-ink-faint)' }}>
+            <span style={{ fontSize: 15.5, color: remote.errore ? 'var(--s-reserve)' : 'var(--s-ink-faint)' }}>
               {remote.errore ? `⚠ ${remote.errore}` : t(remote.tunnelLoading ? 'conn_internet_loading' : 'conn_generating')}
             </span>
             {remote.errore && (
@@ -139,7 +139,7 @@ export function Connessione({ remote, onAnnulla, onPronti }: {
         )}
 
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 9, fontSize: 14,
+          display: 'flex', alignItems: 'center', gap: 9, fontSize: 15.5,
           color: remote.isConnected ? 'var(--s-still)' : 'var(--s-ink-faint)',
         }}>
           <span style={{
@@ -152,7 +152,7 @@ export function Connessione({ remote, onAnnulla, onPronti }: {
         <div style={{ display: 'flex', gap: 22, alignItems: 'center' }}>
           <button onClick={onAnnulla} style={{
             border: 'none', background: 'none', cursor: 'pointer',
-            fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-ink-faint)',
+            fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-faint)',
           }}>
             ← {t('ser_back')}
           </button>

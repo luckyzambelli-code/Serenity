@@ -855,6 +855,67 @@ lint/test, da confermare nell'app reale.
 
 ---
 
+## Ottavo giro (19/08/2026) — i comandi in alto, le camm senza coprire l'arco, il vetro ovunque
+
+Otto punti in un solo messaggio.
+
+1. **« La video camm occupa troppo spazio, riduci di un terzo. Però copre l'arco dell'ago,
+   correggi »** — due segnalazioni insieme, stessa causa. 680/320 px → 453/213 (i due terzi di
+   prima, stessa proporzione), e non più una FILA orizzontale larga quanto l'arco: una COLONNA
+   verticale, PC sopra e AUDITOR sotto (lo stesso ordine di App.tsx, « PC cam top, Auditor cam
+   bottom »), ridossata tutta all'angolo — l'ingombro resta nella striscia più a destra, fuori
+   dal semicerchio centrato sul quadrante.
+2. **« Aumenta i caratteri, che siano più grandi »** — spazzata sistematica di ogni `fontSize`
+   fisso in `src/serenity/*.tsx` (10→11,5 px fino a 14→15,5 px, +1,5 px su tutta la fascia
+   piccola) più la base di `body` (15→16px in `tokens.css`).
+3. **« L'assessment deve avere una sua zona, come in equilibrium »** — `ZonaAssessment.tsx`,
+   nuovo: non più un cassetto appeso al bottone (`position:absolute, bottom:'100%'`, spariva
+   con la cattura spenta), una colonna ancorata all'angolo opposto delle camere, sempre
+   presente a seduta aperta, titolo sempre leggibile anche chiusa. Zero stato nuovo —
+   `assessAttivo`/`assessItems` sono gli stessi di sempre, solo un contenitore vero.
+4. **« Quando si schiaccia sulla lingua fai apparire sotto tutte le lingue »** — `BottoneCiclico`
+   riceve `elencoCompleto`: con due sole tappe (tema) ciclare resta la scelta giusta (la
+   prossima è sempre l'unica altra); con cinque (lingua) il click apre un cassetto con TUTTE le
+   tappe sotto il bottone. Il bottone in sé resta identico — mostra solo lo stato attuale.
+5. **« Nella cam PC devi mettere le indicazioni che hai già in equilibrium »** — `CameraCerchio`
+   riceve `statoTesto`/`inDiretta`: lo stesso badge LIVE e lo stesso testo di stato
+   (`massStatus`) di `CameraFeed.tsx`, sullo stesso cerchio invece che su un riquadro. Stessa
+   fonte di App.tsx — le tre parole già condivise (`status_waiting`/`status_searching_mass`/
+   `status_asisness_reached`) più lo stato del MUSE del preclear a distanza — un gradino più
+   semplice (manca l'intermedio `isFnActive`, mai portato qui: tre stati onesti battono un
+   quarto inventato).
+6. **« VOGLIO ASSOLUTAMENTE CHE TU CREI i bottoni liquid glass »** — un giro di bonifica: 16
+   bottoni-link nudi (`border:'none', background:'none'`) nel blocco dei cicli di
+   `Serenity.tsx`, più altri in `PannelloMna.tsx`, `PannelloMeter.tsx` (i due ANNULLA delle
+   prove, « usa questa differenza », « azzera taratura », INDIETRO) e `Avvio.tsx` (l'ingranaggio
+   CONFIG, il richiamo di una configurazione salvata, la sua ×, INDIETRO) sono diventati pillole
+   di vetro vere (`s-glass s-glass-btn`, sfondo `--s-disc`, bordo arrotondato). Non esaustivo:
+   `Connessione.tsx`/`PannelloConfig.tsx`/`PannelloEp.tsx`/`PannelloProfilo.tsx` restano con
+   bottoni non ancora vetrati — dichiarato, non taciuto, prossimo giro.
+7. **« Le camm se nascoste devono apparire come un bottone liquid glass anche lui »** —
+   `Cerchio.tsx`'s `spenta` di proposito non prende il vetro (giusto per un modulo non ancora
+   montato): aggiunto `vetroDaSpenta`, l'eccezione esplicita che `CameraCerchio` chiede per sé.
+   L'albero resta UNO SOLO (il `<video>` non si smonta mai, altrimenti lo stream si
+   scollegherebbe a ogni collasso/riespansione — lo stesso bug già risolto in un giro
+   precedente): cambia solo la classe, non la struttura.
+8. **« I cicli non sono chiari messi sotto. Mettili in alto come in equilibrium »** — il blocco
+   comandi (era `<footer>`, l'ultimo figlio della pagina: sessione, item, i quattro metodi, i
+   loro passi ed esiti, giornale, MNA, EP) si è spostato SOPRA il quadrante, appena sotto
+   l'intestazione — in App.tsx questi stessi controlli stanno dentro il pannello dello
+   strumento, non in fondo pagina. Mossa meccanica (un blocco JSX spostato di peso, tag
+   rinominato da `footer` a `div`): zero righe di logica toccate, solo l'ordine in cui
+   compaiono.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori (320 warning, tutte preesistenti),
+`vitest run` 639/639. A schermo (tab pulita, chiaro e scuro): i comandi del ciclo sono la prima
+cosa sotto l'intestazione, l'arco resta libero con le camm ridotte e in colonna, l'assessment
+si apre nella sua colonna a sinistra mostrando « in ascolto… », il bottone lingua apre il
+cassetto con le cinque tappe, la camm collassata mostra il bordo di vetro, un ciclo CONTACT
+armato mostra ANNULLA/« dichiara AS-IS »/l'item come pillole di vetro coerenti col resto.
+`git status` conferma: solo `src/serenity/*` toccati. EQUILIBRIUM invariato, SERENITY 3.0.40.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

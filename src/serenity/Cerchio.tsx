@@ -46,9 +46,17 @@ export interface CerchioProps {
    *  cerchio si stacca dal fondo: la STESSA impostazione (`uiAlpha`, condivisa), tradotta nella
    *  lingua del rilievo invece che in quella del vetro. `undefined` = pieno, come sempre. */
   opacita?: number;
+  /** ⚠️ Eccezione a `spenta` NON prende il vetro (sotto): un cerchio spento che resta comunque
+   *  un BOTTONE (si riclicca, non solo "previsto") — segnalato per la camm nascosta: « deve
+   *  apparire come un bottone liquid glass anche lui ». Il default resta il comportamento di
+   *  sempre (nessun vetro da spento): questo prop lo tiene per chi lo chiede esplicitamente. */
+  vetroDaSpenta?: boolean;
+  /** Classi in più, appese a quella del vetro (es. `s-glass-btn` quando il cerchio è anche un
+   *  bottone cliccabile — cursore/hover/active dello stesso vetro di ogni altro bottone). */
+  className?: string;
 }
 
-export function Cerchio({ dimensione, children, x = 0, y = 0, viva, spenta, ritardo = 0, opacita }: CerchioProps) {
+export function Cerchio({ dimensione, children, x = 0, y = 0, viva, spenta, ritardo = 0, opacita, vetroDaSpenta = false, className }: CerchioProps) {
   const stile: CSSProperties = {
     width: dimensione, height: dimensione, borderRadius: '50%',
     display: 'grid', placeItems: 'center',
@@ -64,6 +72,8 @@ export function Cerchio({ dimensione, children, x = 0, y = 0, viva, spenta, rita
   };
   // `spenta` non prende il vetro: un disco "previsto ma spento" deve leggersi affondato e
   // opaco, non luccicare come se fosse acceso — il riflesso apparterrebbe a un'informazione
-  // che qui è deliberatamente assente.
-  return <div className={spenta ? undefined : 's-glass'} style={stile}>{children}</div>;
+  // che qui è deliberatamente assente. `vetroDaSpenta` è l'eccezione esplicita, sopra.
+  const vetro = !spenta || vetroDaSpenta;
+  const classi = [vetro ? 's-glass' : null, vetro ? className : null].filter(Boolean).join(' ') || undefined;
+  return <div className={classi} style={stile}>{children}</div>;
 }

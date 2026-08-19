@@ -70,6 +70,7 @@ import { IndicatoreConnessione } from './IndicatoreConnessione';
 import { SegmentoVetro } from './SegmentoVetro';
 import { PassiCiclo } from './PassiCiclo';
 import { PannelloMeter } from './PannelloMeter';
+import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
 import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff } from 'lucide-react';
 import { computeInstantRead, readWaitSeconds, READ_NON_MISURATO, type ReadSrc } from '../engine/instantRead';
@@ -797,6 +798,28 @@ export default function Serenity() {
   // resistenza. `qLnow`/`asIsSignature` sono lo stesso sguardo di App.tsx sulla carica EEG.
   const qLnow = useMetric(m => m.qL);
   const asIsSignatureNow = useMetric(m => m.asIsSignature);
+  /** ── LO STATO SOTTO LA CAM 2 — segnalato: « nella cam PC devi mettere le indicazioni che
+   *  hai già in equilibrium ». In App.tsx (`CameraFeed`'s `massStatus`) quel testo dice, a
+   *  distanza, se il MUSE del preclear è collegato (con la batteria); in locale, a che punto
+   *  è la carica. STESSE tre parole (`status_waiting`/`status_searching_mass`/
+   *  `status_asisness_reached`, già nelle 5 lingue condivise) e stessa fonte
+   *  (`ep.asIsnessState`, `metricsStore.vProc` — letto sopra insieme a `qLnow`), solo un
+   *  gradino più semplice: manca l'intermedio "massa agganciata" (`isFnActive` di App.tsx,
+   *  mai portato qui) — tre stati onesti restano meglio di un quarto inventato. */
+  const vProcNow = useMetric(m => m.vProc);
+  // ⚠️ `avvio?.` — questo calcolo sta PRIMA del guard `if (!avvio)` più sotto (che decide se
+  // mostrare l'avvio o la seduta): come gli altri letti qui sopra nel file (`pcSex`,
+  // `nomeProvaLattine`), non può dare per scontato che `avvio` esista già.
+  const statoCamPc: string = avvio?.distanza
+    ? (remote.isConnected
+        ? (remote.remoteMuseConnected
+            ? `🧠 MUSE ✓  🔋${remote.remoteBatteryLevel?.toFixed(0) ?? '--'}%`
+            : t('conn_muse_preclear_disconnected') as string)
+        : t('conn_auditor_preclear_waiting') as string)
+    : (!aperta ? t('status_waiting') as string
+        : ep.asIsnessState === 'ep' ? t('status_asisness_reached') as string
+        : vProcNow > 0 ? t('status_processing_mass') as string
+        : t('status_searching_mass') as string);
   const toneFnNow = !agoEeg ? !!theta.fn.fn : (needleReactionKey || '').includes('reaction_fn');
   const tone = useToneCycle({
     ta: theta.ta, taNow: theta.taNow,
@@ -1133,7 +1156,7 @@ export default function Serenity() {
                 <button key={o.k} onClick={() => scegliConn(o.k)} style={{
                   display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
                   border: 'none', cursor: 'pointer', borderRadius: 10, padding: '10px 14px',
-                  fontFamily: 'var(--s-sans)', fontSize: 14, letterSpacing: '0.02em',
+                  fontFamily: 'var(--s-sans)', fontSize: 15.5, letterSpacing: '0.02em',
                   background: o.on ? 'var(--s-disc-sunk)' : 'transparent',
                   color: 'var(--s-ink)', boxShadow: o.on ? 'var(--s-shadow)' : 'none',
                 }}>
@@ -1142,7 +1165,7 @@ export default function Serenity() {
                 </button>
               ))}
             </div>
-            <span style={{ fontSize: 12.5, color: 'var(--s-ink-faint)', maxWidth: 280, lineHeight: 1.5 }}>
+            <span style={{ fontSize: 14, color: 'var(--s-ink-faint)', maxWidth: 280, lineHeight: 1.5 }}>
               {connSel.none ? t('no_instruments_hint') as string : t('connect_either_hint') as string}
             </span>
             {/* ── SALVA QUESTA COMBINAZIONE — chiesto direttamente: « un sistema di
@@ -1160,7 +1183,7 @@ export default function Serenity() {
                     'name for this configuration…', 'nombre de esta configuración…', 'namn för denna konfiguration…') as string}
                   style={{
                     flex: 1, border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
-                    outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 13, color: 'var(--s-ink)',
+                    outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink)',
                     padding: '2px 4px',
                   }}
                 />
@@ -1170,7 +1193,7 @@ export default function Serenity() {
                   style={{
                     border: 'none', background: 'none', cursor: nomeConfigDaSalvare.trim() ? 'pointer' : 'default',
                     opacity: nomeConfigDaSalvare.trim() ? 1 : 0.4,
-                    fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-soft)', whiteSpace: 'nowrap',
+                    fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-soft)', whiteSpace: 'nowrap',
                   }}>
                   {configSalvata
                     ? LC('salvata ✓', 'enregistrée ✓', 'saved ✓', 'guardada ✓', 'sparad ✓')
@@ -1181,7 +1204,7 @@ export default function Serenity() {
             <div style={{ display: 'flex', gap: 14, justifyContent: 'flex-end' }}>
               <button onClick={() => setScegliStrumento(false)} style={{
                 border: 'none', background: 'none', cursor: 'pointer',
-                fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-ink-ghost)',
+                fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-ghost)',
               }}>
                 {t('cancel')}
               </button>
@@ -1202,7 +1225,7 @@ export default function Serenity() {
                   borderRadius: 999, padding: '9px 22px',
                   cursor: (connSel.muse || connSel.theta || connSel.none) ? 'pointer' : 'default',
                   opacity: (connSel.muse || connSel.theta || connSel.none) ? 1 : 0.4,
-                  fontFamily: 'var(--s-sans)', fontSize: 13.5, letterSpacing: '0.06em', textTransform: 'uppercase',
+                  fontFamily: 'var(--s-sans)', fontSize: 15, letterSpacing: '0.06em', textTransform: 'uppercase',
                   background: 'var(--s-ink)', color: 'var(--s-ground)',
                 }}>
                 {t('ser_open_session')}
@@ -1221,7 +1244,7 @@ export default function Serenity() {
         <span style={{ fontFamily: 'var(--s-serif)', fontSize: 21, letterSpacing: '0.14em' }}>
           SERENITY
         </span>
-        <span style={{ fontFamily: 'var(--s-mono)', fontSize: 12, color: 'var(--s-ink-faint)' }}>
+        <span style={{ fontFamily: 'var(--s-mono)', fontSize: 13.5, color: 'var(--s-ink-faint)' }}>
           {__SERENITY_VERSION__}
         </span>
         <span style={{ flex: 1 }} />
@@ -1251,7 +1274,7 @@ export default function Serenity() {
             stesso materiale per la stessa famiglia di informazioni (chi/come/dove di questa
             seduta), non un secondo linguaggio visivo per dire cose simili. */}
         <span className="s-glass" style={{
-          fontSize: 13.5, color: 'var(--s-ink-soft)', display: 'flex', alignItems: 'center', gap: 10,
+          fontSize: 15, color: 'var(--s-ink-soft)', display: 'flex', alignItems: 'center', gap: 10,
           background: 'var(--s-disc)', padding: '5px 12px', borderRadius: 999,
         }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -1280,7 +1303,7 @@ export default function Serenity() {
             <button className="s-glass s-glass-btn" onClick={() => { setSalvaConfigAperto(v => !v); setConfigSalvata(false); }} style={{
               cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
               background: 'var(--s-disc)',
-              fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+              fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-faint)',
             }}>
               {LC('salva questa configurazione', 'sauvegarder cette configuration',
                 'save this configuration', 'guardar esta configuración', 'spara denna konfiguration')}
@@ -1292,7 +1315,7 @@ export default function Serenity() {
                 borderRadius: 12, background: 'var(--s-disc)',
                 minWidth: 260,
               }}>
-                <span style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--s-ink-faint)' }}>
+                <span style={{ fontSize: 13.5, lineHeight: 1.5, color: 'var(--s-ink-faint)' }}>
                   {LC('auditor, preclear, locale/distanza, e gli strumenti connessi in questo momento — tutto insieme.',
                     'auditeur, préclair, local/distance, et les instruments connectés en ce moment — le tout ensemble.',
                     'auditor, preclear, local/distance, and the instruments connected right now — all together.',
@@ -1307,7 +1330,7 @@ export default function Serenity() {
                       'name for this configuration…', 'nombre de esta configuración…', 'namn för denna konfiguration…') as string}
                     style={{
                       flex: 1, border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
-                      outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 13, color: 'var(--s-ink)',
+                      outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink)',
                       padding: '2px 4px',
                     }}
                   />
@@ -1321,7 +1344,7 @@ export default function Serenity() {
                     style={{
                       border: 'none', background: 'none', cursor: nomeConfigDaSalvare.trim() ? 'pointer' : 'default',
                       opacity: nomeConfigDaSalvare.trim() ? 1 : 0.4,
-                      fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-soft)', whiteSpace: 'nowrap',
+                      fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-soft)', whiteSpace: 'nowrap',
                     }}>
                     {configSalvata
                       ? LC('salvata ✓', 'enregistrée ✓', 'saved ✓', 'guardada ✓', 'sparad ✓')
@@ -1341,7 +1364,7 @@ export default function Serenity() {
             scelta dei tre colori.
             L'etichetta "STRUMENTI" qui davanti: la sola zona dove due parole simili (MUSE
             locale qui, MUSE del preclear più avanti se a distanza) potevano confondersi. */}
-        <span style={{ fontFamily: 'var(--s-sans)', fontSize: 10.5, letterSpacing: '0.12em',
+        <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.12em',
                       textTransform: 'uppercase', color: 'var(--s-ink-ghost)' }}>
           {LC('strumenti', 'instruments', 'instruments', 'instrumentos', 'instrument')}
         </span>
@@ -1416,7 +1439,7 @@ export default function Serenity() {
           <button className="s-glass s-glass-btn" onClick={() => setMeterSetupAperto(v => !v)} style={{
             cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
             background: 'var(--s-disc)',
-            fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+            fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-faint)',
           }}>
             {/* ⚠️ Non `theta_setup` ("Assetto") — segnalato: « on ne sait pas les réglages à
                 quoi correspondent ». "Assetto" non dice nemmeno che è il METER a essere in
@@ -1431,7 +1454,7 @@ export default function Serenity() {
             del MUSE accanto. Sparisce da sé al prossimo dato buono (`useChargeEngine` lo azzera
             al primo METRICS_UPDATE valido). */}
         {hardwareError && (
-          <span style={{ fontSize: 13, color: 'var(--s-reserve)' }}>{hardwareError}</span>
+          <span style={{ fontSize: 14.5, color: 'var(--s-reserve)' }}>{hardwareError}</span>
         )}
         {/* La RETE verso il PC a distanza, e il SUO Muse — due dispositivi, due indicatori. Prima
             erano un'unica riga: « quale dei due non risponde? » si doveva dedurre dal testo.
@@ -1443,7 +1466,7 @@ export default function Serenity() {
         {avvio.distanza && (
           <>
             <span style={{ width: 1, height: 16, background: 'var(--s-ink-ghost)', flexShrink: 0 }} />
-            <span style={{ fontFamily: 'var(--s-sans)', fontSize: 10.5, letterSpacing: '0.12em',
+            <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.12em',
                           textTransform: 'uppercase', color: 'var(--s-ink-ghost)' }}>
               {LC('a distanza', 'à distance', 'remote', 'a distancia', 'på distans')}
             </span>
@@ -1514,16 +1537,36 @@ export default function Serenity() {
           Non era la logica del bottone, erano gli ANGOLI TRASPARENTI di questo contenitore che
           rubavano il click prima che arrivasse a lui. `pointer-events:none` qui, riacceso solo
           dentro ogni `CameraCerchio` (il cerchio vero, non il suo riquadro) — il resto del
-          rettangolo torna trasparente anche ai click, non solo alla vista. */}
+          rettangolo torna trasparente anche ai click, non solo alla vista.
+          ⚠️ Segnalato una QUINTA volta, in due parti insieme: « occupa troppo spazio, riduci di
+          un terzo » E « però copre l'arco dell'ago, correggi ». 680/320 → 453/213 (i due terzi
+          di prima, stessa proporzione). E non più UNA FILA orizzontale larga quanto l'arco
+          stesso: ora una COLONNA verticale, stretta e tutta ridossata all'angolo (PC sopra,
+          AUDITOR sotto — lo stesso ordine di App.tsx, « PC cam top, Auditor cam bottom »), così
+          l'ingombro resta nella striscia più a destra, fuori dal semicerchio dell'arco che sta
+          centrato sul quadrante. */}
       {aperta && (moduleVis.cam1 || (moduleVis.cam2 && (avvio.distanza || avvio.solo))) && (
         <div style={{
-          position: 'absolute', top: 76, right: 44, zIndex: 5,
-          display: 'flex', alignItems: 'flex-start', gap: 24,
+          position: 'absolute', top: 76, right: 32, zIndex: 5,
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 14,
           pointerEvents: 'none',
         }}>
+          {moduleVis.cam2 && (avvio.distanza || avvio.solo) && (
+            <CameraCerchio
+              dimensione={453}
+              titolo={t('cam2') as string}
+              externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
+              offlineLabel={t('camera_offline') as string}
+              opacita={uiAlpha}
+              collassata={cam2Collassata}
+              onToggleCollasso={() => setCam2Collassata(v => !v)}
+              statoTesto={statoCamPc}
+              inDiretta={!!avvio.distanza}
+            />
+          )}
           {moduleVis.cam1 && (
             <CameraCerchio
-              dimensione={320}
+              dimensione={213}
               titolo={t('cam1') as string}
               offlineLabel={t('camera_offline') as string}
               opacita={uiAlpha}
@@ -1531,19 +1574,529 @@ export default function Serenity() {
               onToggleCollasso={() => setCam1Collassata(v => !v)}
             />
           )}
-          {moduleVis.cam2 && (avvio.distanza || avvio.solo) && (
-            <CameraCerchio
-              dimensione={680}
-              titolo={t('cam2') as string}
-              externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
-              offlineLabel={t('camera_offline') as string}
-              opacita={uiAlpha}
-              collassata={cam2Collassata}
-              onToggleCollasso={() => setCam2Collassata(v => !v)}
-            />
-          )}
         </div>
       )}
+
+      {/* ── L'ASSESSMENT, LA SUA ZONA — segnalato: « deve avere una sua zona, come in
+          equilibrium ». Non più un cassetto appeso al bottone (spariva quando la cattura era
+          spenta, e stava dove il bottone capitava di essere nel footer): una colonna ancorata
+          all'angolo opposto delle camere, sempre presente a seduta aperta, col titolo sempre
+          leggibile. Zero stato nuovo — `assessAttivo`/`assessItems` sono gli stessi di sempre,
+          solo un contenitore vero al posto del cassetto. */}
+      {aperta && (
+        <ZonaAssessment
+          attivo={assessAttivo}
+          onToggle={() => setAssessAttivo(v => !v)}
+          items={assessItems}
+          LC={LC}
+        />
+      )}
+
+      {/* ── I COMANDI, IN ALTO — segnalato: « i cicli non sono chiari messi sotto, mettili in
+          alto come in equilibrium ». In App.tsx l'item, i quattro metodi, i passi del ciclo in
+          corso e i suoi esiti stanno DENTRO il pannello dello strumento, appena sopra l'arco —
+          non in un piede di pagina lontano da dove l'occhio già guarda. Questo blocco (era
+          `<footer>`, l'ultimo figlio della pagina) è lo STESSO, spostato qui sopra il
+          quadrante: nessuna riga di logica toccata, solo l'ordine in cui compaiono. */}
+      <div className="ser-comandi" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 18, rowGap: 10 }}>
+        {/* ⚠️ Niente `border: 'none'` qui — segnalato: « je ne vois pas de GLASS FORM ». Uno
+            stile inline vince sempre su una classe CSS per la stessa proprietà: dichiararlo qui
+            cancellava in silenzio il bordo di `.s-glass`. */}
+        <button className="s-glass s-glass-btn" onClick={aperta ? chiudi : apri} style={{
+          cursor: 'pointer',
+          background: 'var(--s-disc)', color: 'var(--s-ink)',
+          borderRadius: 999, padding: '11px 28px',
+          fontSize: 15.5, letterSpacing: '0.1em', textTransform: 'uppercase',
+          fontFamily: 'var(--s-sans)',
+        }}>
+          {/* ── SEGNALATO: « le bouton FERMER — on ne sait pas s'il correspond à la séance ou
+              au cycle ». App.tsx distingue ESPLICITAMENTE i due gesti nel testo (« ferma la
+              seduta » contro « chiudi/annulla il ciclo »): qui la parola sola "CHIUDI" non lo
+              diceva, e un ANNULLA di ciclo poteva sembrare lo stesso gesto. Ora dice sempre
+              "LA SEDUTA" per esteso — l'unico bottone che la governa. */}
+          {aperta
+            ? LC('chiudi la seduta', 'fermer la séance', 'close the session', 'cerrar la sesión', 'stäng sessionen')
+            : LC('apri una seduta', 'ouvrir une séance', 'open a session', 'abrir una sesión', 'öppna en session')}
+        </button>
+        {/* ── IL CICLO — un item, quattro strade, ciascuna col SUO bottone ──────────────────
+            Segnalato: « la visibilità dei CICLI non è ottimale... devi fare come in EQUILIBRIUM
+            con dei BOTTONI più visibili per ogni ciclo separatamente, uno accanto all'altro ».
+            Erano quattro link fantasma (nessun bordo, nessun fondo, differenti solo per una
+            sfumatura di grigio) — la stessa scelta grafica dell'informazione che qui doveva
+            SPICCARE. Ora sono quattro pillole vere, ciascuna col SUO nome scritto per intero
+            (CONTACT/NULL/MIRROR/TONE, non « dai l'item » che non dice quale dei quattro) e un
+            colore che le distingue — gli stessi tre segnali di `tokens.css` più l'inchiostro
+            neutro per TONE (mai un quarto colore nuovo), non gli hex di App.tsx ridisegnati
+            uguali: stessa struttura, grafica di SERENITY. */}
+        {aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && (
+          <>
+            {/* ── DOVE SI SCRIVE L'ITEM — segnalato: « non posso scriverlo, non so dove ».
+                Prima un campo nudo, sottolineato, con un placeholder grigio chiaro: facile da
+                non vedere fra le nuove pillole di vetro. Ora un'etichetta SEMPRE visibile sopra
+                il campo, e il campo stesso è un vetro con un bordo — si vede che è un posto
+                dove scrivere, non un tratto decorativo. */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.1em',
+                            textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
+                {LC('scrivi o dì l\'item', 'écris ou dis l\'item', 'type or say the item', 'escribe o di el ítem', 'skriv eller säg item')}
+              </span>
+              <input
+                className="s-glass"
+                value={item}
+                onChange={e => setItem(e.target.value)}
+                placeholder={t('ser_item_placeholder') as string}
+                onKeyDown={e => { if (e.key === 'Enter') cycles.armCycle('charge'); }}
+                style={{
+                  borderRadius: 999, background: 'var(--s-disc)',
+                  outline: 'none', fontFamily: 'var(--s-serif)', fontSize: 15.5, color: 'var(--s-ink)',
+                  padding: '6px 14px', width: 220,
+                }}
+              />
+            </div>
+            {/* ── LO STATO DELLA VOCE — segnalato: « non posso dare l'item verbalmente ».
+                Prima questo restava muto finché non arrivava una parola: se il riconoscitore
+                non parte (permesso negato, nessun motore disponibile) l'auditor aspettava senza
+                sapere se il problema era suo o del programma. */}
+            <span style={{ fontFamily: 'var(--s-sans)', fontSize: 13, color: 'var(--s-ink-faint)', alignSelf: 'flex-end' }}>
+              {statoVoce === 'in-ascolto'
+                ? <span className="ser-pulse">🎙 {LC('in ascolto', 'à l\'écoute', 'listening', 'escuchando', 'lyssnar')}</span>
+                : statoVoce === 'assente'
+                  ? LC('🎙 voce non disponibile — scrivi l\'item', 'la voix n\'est pas disponible — écris l\'item',
+                      'voice not available — type the item', 'la voz no está disponible — escribe el ítem',
+                      'rösten är inte tillgänglig — skriv item')
+                  : ''}
+            </span>
+            <div style={{ flexBasis: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.1em',
+                            textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
+                {LC('poi scegli il metodo', 'puis choisis la méthode', 'then choose the method', 'luego elige el método', 'välj sedan metoden')}
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {([
+                  { k: 'contact', hue: 'var(--s-still)', label: 'CONTACT',
+                    onClick: () => cycles.armCycle('charge') },
+                  { k: 'null', hue: 'var(--s-alive)', label: 'NULL',
+                    onClick: () => cycles.armCycle('null') },
+                  // ── MIRROR — il terzo metodo, escluso a vicenda con CONTACT/NULL ────────────
+                  { k: 'mirror', hue: 'var(--s-reserve)', label: 'MIRROR', onClick: () => mirror.armMirror() },
+                  // ── TONE SCALE — il quarto metodo, escluso a vicenda con gli altri tre. A
+                  // differenza degli altri tre non si "arma" per un solo item: si ENTRA nel
+                  // metodo (`toneAttivo`) e ci si lavora per più resistenze di fila.
+                  { k: 'tone', hue: null, label: 'TONE', onClick: () => setToneAttivo(true) },
+                ]).map(c => (
+                  <button key={c.k} className="s-glass s-glass-btn" onClick={c.onClick} style={{
+                    border: `1.5px solid ${c.hue ?? 'var(--s-ink-ghost)'}`, cursor: 'pointer',
+                    borderRadius: 999, padding: '6px 14px', background: 'var(--s-disc)',
+                    fontFamily: 'var(--s-sans)', fontSize: 14.5, fontWeight: 700, letterSpacing: '0.05em',
+                    color: c.hue ?? 'var(--s-ink-soft)',
+                  }}>
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+        {/* ── TONE SCALE, ATTIVO — locate → raise → done, si ripete per ogni resistenza ────────
+            (a) LOCALIZZA: da dove si parte (misurato col meter, o dichiarato dall'auditor senza
+            strumenti); (b) RAISE: il comando "portalo a tono 40" ripetuto finché non c'è più
+            reazione, poi dichiarato raggiunto; (c) DONE: si riparte con un'altra resistenza, o
+            si esce del tutto. Stesse chiamate al motore di App.tsx (`localizzaTone`/
+            `chiudiTone`/`resetTone`), stesso testo dei tre tempi. */}
+        {aperta && toneAttivo && (
+          <>
+            {/* Stesso badge di CONTACT/NULL, senza colore acceso (TONE non ne ha uno — mai un
+                quarto segnale nuovo): il bordo e il nome per intero bastano a dire quale dei
+                quattro sta girando. */}
+            <span style={{
+              fontFamily: 'var(--s-sans)', fontSize: 13.5, fontWeight: 700, letterSpacing: '0.06em',
+              padding: '3px 10px', borderRadius: 999, border: '1px solid var(--s-ink-ghost)',
+              color: 'var(--s-ink-soft)',
+            }}>
+              TONE
+            </span>
+            <span style={{ fontFamily: 'var(--s-serif)', fontSize: 15.5, color: 'var(--s-ink)' }}>
+              {item || t('ser_item_placeholder')}
+            </span>
+            {/* I passi del tono, tutti insieme — vedi la nota su `PassiCiclo` in CONTACT/NULL. */}
+            <div style={{ flexBasis: '100%' }}>
+              <PassiCiclo
+                hue="var(--s-ink-soft)"
+                passi={[
+                  { chiave: 'resistenza', etichetta: LC('resistenza', 'résistance', 'resistance', 'resistencia', 'motstånd') },
+                  { chiave: 'tono40', etichetta: LC('tono 40', 'ton 40', 'tone 40', 'tono 40', 'ton 40') },
+                  { chiave: 'fatto', etichetta: LC('fatto', 'fait', 'done', 'hecho', 'klart') },
+                ]}
+                indiceAttuale={tone.tonePhase === 'done' ? 2 : tone.tonePhase === 'raise' ? 1 : 0}
+              />
+            </div>
+            {faseCiclo === 'tone.say_item' && (
+              <>
+                <span className="ser-pulse" style={{
+                  fontFamily: 'var(--s-sans)', fontSize: 14, letterSpacing: '0.04em',
+                  color: 'var(--s-reserve)',
+                }}>
+                  {LC('dì la resistenza…', 'dis la résistance…', 'say the resistance…', 'di la resistencia…', 'säg motståndet…')}
+                </span>
+                <button className="s-glass s-glass-btn" onClick={dichiaraItemDetto} style={{
+                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                  fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-faint)',
+                }}>
+                  {LC('l\'ho detta', 'je l\'ai dite', 'said it', 'la he dicho', 'sa det')}
+                </button>
+              </>
+            )}
+            {tone.tonePhase === 'locate' && (
+              <>
+                {!tone.toneHasMeter && (
+                  <select value={tone.toneAssessed} onChange={e => tone.setToneAssessed(Number(e.target.value))}
+                    style={{
+                      border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
+                      outline: 'none', fontFamily: 'var(--s-mono)', fontSize: 14.5, color: 'var(--s-ink)',
+                      cursor: 'pointer', padding: '2px 4px',
+                    }}>
+                    {TONE_LABELS.map(v => (
+                      <option key={v} value={v}>
+                        {v > 0 ? `+${v}` : v} · {levelName(exactLevelName(v) ?? '', lang)}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <button className="s-glass s-glass-btn" onClick={() => tone.localizzaTone()} style={{
+                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                  fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-soft)',
+                }}>
+                  {t('ser_arm_contact') /* stesso gesto/testo di App.tsx: "DAI L'ITEM" */}
+                </button>
+              </>
+            )}
+            {(tone.tonePhase === 'raise' || tone.tonePhase === 'done') && (
+              <span style={{ fontFamily: 'var(--s-mono)', fontSize: 14.5, color: 'var(--s-ink-faint)' }}>
+                {tone.toneAtStart !== null ? `${tone.toneAtStart > 0 ? '+' : ''}${tone.toneAtStart.toFixed(0)} → ` : ''}
+                <b style={{ color: 'var(--s-reserve)' }}>+40</b>
+              </span>
+            )}
+            {tone.tonePhase === 'raise' && (
+              <>
+                <button className="s-glass s-glass-btn" onClick={() => tone.setToneRipetizioni(v => v + 1)} style={{
+                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                  fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-soft)',
+                }}>
+                  {LC('portalo a tono 40', 'mène-le au ton 40', 'raise it to tone 40', 'llévalo al tono 40', 'för det till ton 40')}
+                  {tone.toneRipetizioni > 0 ? ` ×${tone.toneRipetizioni}` : ''}
+                </button>
+                <button className="s-glass s-glass-btn" onClick={() => { tone.chiudiTone(true); tone.setTonePhase('done'); }} style={{
+                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                  fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-still)',
+                }}>
+                  {LC('tono quaranta raggiunto', 'ton quarante atteint', 'tone forty reached', 'tono cuarenta alcanzado', 'ton fyrtio nådd')}
+                </button>
+              </>
+            )}
+            {tone.tonePhase === 'done' && (
+              <button className="s-glass s-glass-btn" onClick={() => tone.resetTone()} style={{
+                cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-still)',
+              }}>
+                {LC('altra resistenza', 'autre résistance', 'another resistance', 'otra resistencia', 'annat motstånd')}
+              </button>
+            )}
+            <button className="s-glass s-glass-btn" onClick={() => {
+              if (tone.tonePhase === 'raise') tone.chiudiTone(false);
+              tone.resetTone(); setToneAttivo(false);
+            }} style={{
+              cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+              fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-ghost)',
+            }}>
+              {t('cancel')}
+            </button>
+          </>
+        )}
+        {/* ── MIRROR, ARMATO — tre tempi, non due ──────────────────────────────────────────
+            (a) il VALORE 1–10 dell'item — dieci bottoni, la quantità di carica; (b) il
+            DOPPIO da raggiungere, con la sua dichiarazione; (c) OTTENUTO → valida. Stessa
+            sequenza di App.tsx (`bottoneCiclo`, ramo 'mirror'), stessi tre passi — non due,
+            come una prima lettura avrebbe fatto (« dai l'item » dritto a « ottenuto », senza
+            il valore in mezzo: segnalato in App.tsx stesso come l'errore da NON ripetere). */}
+        {aperta && mirror.mirrorArmed && (
+          <>
+            {/* Stesso badge di CONTACT/NULL/TONE, colore riserva — lo stesso della pillola che
+                lo arma qui sopra. */}
+            <span style={{
+              fontFamily: 'var(--s-sans)', fontSize: 13.5, fontWeight: 700, letterSpacing: '0.06em',
+              padding: '3px 10px', borderRadius: 999,
+              background: 'var(--s-reserve)', color: 'var(--s-ground)',
+            }}>
+              MIRROR
+            </span>
+            <span style={{ fontFamily: 'var(--s-serif)', fontSize: 15.5, color: 'var(--s-ink)' }}>
+              {item || t('ser_item_placeholder')}
+            </span>
+            {/* I passi del raddoppio, tutti insieme — vedi la nota su `PassiCiclo` in CONTACT/NULL. */}
+            <div style={{ flexBasis: '100%' }}>
+              <PassiCiclo
+                hue="var(--s-reserve)"
+                passi={[
+                  { chiave: 'item', etichetta: LC('item', 'item', 'item', 'ítem', 'item') },
+                  { chiave: 'valore', etichetta: LC('valore', 'valeur', 'value', 'valor', 'värde') },
+                  { chiave: 'doppio', etichetta: LC('doppio', 'double', 'double', 'doble', 'dubbel') },
+                  { chiave: 'ottenuto', etichetta: LC('ottenuto', 'obtenu', 'obtained', 'obtenido', 'uppnått') },
+                ]}
+                indiceAttuale={
+                  mirror.mirrorDisp.reached ? 3 : mirror.mirrorDisp.locked ? 2 : faseCiclo === 'mirror.contact' ? 1 : 0
+                }
+              />
+            </div>
+            {faseCiclo === 'mirror.say_item' && (
+              <>
+                <span className="ser-pulse" style={{
+                  fontFamily: 'var(--s-sans)', fontSize: 14, letterSpacing: '0.04em',
+                  color: 'var(--s-reserve)',
+                }}>
+                  {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
+                </span>
+                <button className="s-glass s-glass-btn" onClick={dichiaraItemDetto} style={{
+                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                  fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-faint)',
+                }}>
+                  {LC('l\'item è stato detto', 'l\'item a été dit', 'the item has been said', 'el ítem ha sido dicho', 'item har sagts')}
+                </button>
+              </>
+            )}
+            {!mirror.mirrorDisp.locked ? (
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink-faint)', marginRight: 6 }}>
+                  {LC('quanta carica?', 'combien de charge ?', 'how much charge?', '¿cuánta carga?', 'hur mycket laddning?')}
+                </span>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => (
+                  <button key={v} onClick={() => {
+                    mirror.mirrorCycle.setManualValue(v);
+                    mirror.setMirrorDisp({ contactQ: mirror.mirrorCycle.contactQ, dischargeQ: 0,
+                      locked: true, reached: false, valueR: mirror.mirrorCycle.valueR });
+                  }} style={{
+                    border: 'none', cursor: 'pointer', borderRadius: 999, width: 26, height: 26,
+                    fontFamily: 'var(--s-mono)', fontSize: 14, fontWeight: 700,
+                    background: 'var(--s-disc-sunk)', color: 'var(--s-ink)',
+                  }}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+            ) : !mirror.mirrorDisp.reached ? (
+              <>
+                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink-faint)' }}>
+                  {LC('portalo al doppio', 'mène-le au double', 'take it to the double', 'llévalo al doble', 'för det till dubbeln')}
+                  {' — '}{mirror.mirrorDisp.valueR.toFixed(0)} → {(2 * mirror.mirrorDisp.valueR).toFixed(0)}
+                </span>
+                <button className="s-glass s-glass-btn" onClick={() => {
+                  mirror.mirrorCycle.declareReached();
+                  mirror.setMirrorDisp({ contactQ: mirror.mirrorCycle.contactQ, dischargeQ: mirror.mirrorCycle.dischargeQ,
+                    locked: true, reached: true, valueR: mirror.mirrorCycle.valueR });
+                }} style={{
+                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                  fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-still)',
+                }}>
+                  {LC('doppio raggiunto', 'double atteint', 'double reached', 'doble alcanzado', 'dubbeln nådd')}
+                </button>
+              </>
+            ) : (
+              <button className="s-glass s-glass-btn" onClick={() => mirror.stopMirror()} style={{
+                cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-still)',
+              }}>
+                {LC('ottenuto — valida', 'obtenu — valider', 'obtained — validate', 'obtenido — validar', 'uppnått — validera')}
+              </button>
+            )}
+            <button className="s-glass s-glass-btn" onClick={() => mirror.stopMirror()} style={{
+              cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+              fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-ghost)',
+            }}>
+              {t('cancel')}
+            </button>
+          </>
+        )}
+        {aperta && cycles.cycleArmed && (
+          <>
+            {/* ── QUALE CICLO STA GIRANDO — segnalato: « il CICLO CONTACT non è specificato in
+                basso, c'è solo DAI L'ITEM ». Vero: un campo di testo e un contatore in grigio
+                non dicono CONTACT finché non si legge la scritta piccola accanto. Ora un badge
+                pieno, dello STESSO colore della pillola che l'ha armato — si vede prima di
+                leggere, non dopo. */}
+            <span style={{
+              fontFamily: 'var(--s-sans)', fontSize: 13.5, fontWeight: 700, letterSpacing: '0.06em',
+              padding: '3px 10px', borderRadius: 999,
+              background: cycles.cycleKind === 'null' ? 'var(--s-alive)' : 'var(--s-still)',
+              color: 'var(--s-ground)',
+            }}>
+              {cycles.cycleKind === 'null' ? 'NULL' : 'CONTACT'}
+            </span>
+            <span style={{ fontFamily: 'var(--s-serif)', fontSize: 15.5, color: 'var(--s-ink)' }}>
+              {item || t('ser_item_placeholder')}
+            </span>
+            {/* ── I PASSI, TUTTI INSIEME — segnalato: « le scritte dei cicli sono confuse...
+                evidenziate le steps, a prova di stupido ». `PassiCiclo` legge la STESSA
+                `faseCiclo` (già calcolata da `engine/sessionPhase.ts`, non riletta qui): non
+                decide nulla, mostra solo dove si è dentro la sequenza del metodo in corso. Riga
+                a sé (`flexBasis:'100%'`) per restare leggibile invece di accorciarsi. */}
+            <div style={{ flexBasis: '100%' }}>
+              <PassiCiclo
+                hue={cycles.cycleKind === 'null' ? 'var(--s-alive)' : 'var(--s-still)'}
+                passi={cycles.cycleKind === 'null' ? [
+                  { chiave: 'item', etichetta: LC('item', 'item', 'item', 'ítem', 'item') },
+                  { chiave: 'mockup', etichetta: LC('mock-up', 'mock-up', 'mock-up', 'mock-up', 'mock-up') },
+                  { chiave: 'equilibrium', etichetta: 'EQUILIBRIUM' },
+                ] : [
+                  { chiave: 'item', etichetta: LC('item', 'item', 'item', 'ítem', 'item') },
+                  { chiave: 'mockup', etichetta: LC('dissoluzione', 'dissolution', 'dissolution', 'disolución', 'upplösning') },
+                  { chiave: 'asis', etichetta: 'AS-IS' },
+                ]}
+                indiceAttuale={
+                  cycles.cycleKind === 'null'
+                    ? (faseCiclo === 'null.equilibrium' ? 2 : (faseCiclo === 'null.mockup' || faseCiclo === 'null.rise') ? 1 : 0)
+                    : (faseCiclo === 'contact.asis' ? 2 : faseCiclo === 'contact.mockup' ? 1 : 0)
+                }
+              />
+            </div>
+            {/* ── « DÌ L'ITEM… » — segnalato insieme: la logica di darlo a voce già esiste nel
+                motore (`cycleAwaitItemRef`), ma finché nessuno lo dice a schermo l'auditor non
+                sa che il ciclo sta ASPETTANDO, non è già a mock-up. Pulsa finché la voce (o la
+                dichiarazione a mano qui accanto) non arriva. */}
+            {(faseCiclo === 'contact.say_item' || faseCiclo === 'null.say_item') && (
+              <>
+                <span className="ser-pulse" style={{
+                  fontFamily: 'var(--s-sans)', fontSize: 14, letterSpacing: '0.04em',
+                  color: 'var(--s-reserve)',
+                }}>
+                  {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
+                </span>
+                <button className="s-glass s-glass-btn" onClick={dichiaraItemDetto} title={LC(
+                    'la trascrizione non c\'è o non si sente — dichiara che l\'item è stato detto',
+                    'pas de transcription ou pas de son — déclare que l\'item a été dit',
+                    'no transcript or no sound — declare the item has been said',
+                    'sin transcripción o sin sonido — declara que el ítem ha sido dicho',
+                    'ingen transkription eller inget ljud — förklara att item har sagts') as string}
+                  style={{
+                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                  fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-faint)',
+                }}>
+                  {LC('l\'item è stato detto', 'l\'item a été dit', 'the item has been said', 'el ítem ha sido dicho', 'item har sagts')}
+                </button>
+              </>
+            )}
+            {/* ── IL CONTATORE DEL CICLO IN CORSO — mancante ─────────────────────────────
+                In App.tsx un chip dice, per il SOLO metodo in corso (CONTACT con CONTACT,
+                NULL con NULL — « due contatori confondono », scelta utente), quanti cicli
+                sono stati armati e quanti portati a compimento questa seduta. `cycleStats`
+                arriva già dallo stesso `useContactNullCycle` — solo non era letto qui. */}
+            <span style={{ fontFamily: 'var(--s-mono)', fontSize: 14, color: 'var(--s-ink-faint)' }}>
+              {cycles.cycleKind === 'null'
+                ? `${cycles.cycleStats.nStarted} · ${cycles.cycleStats.nDone} CLEAR`
+                : `${cycles.cycleStats.cStarted} · ${cycles.cycleStats.cDone} AS-IS`}
+            </span>
+            {/* ── ANNULLA — l'uscita SENZA validare, mancante ────────────────────────────
+                Segnalato nella revisione funzionale: in App.tsx chiudere un ciclo armato ha
+                DUE strade — validare (uno degli esiti a destra) o ANNULLA, che chiude il
+                ciclo e lo lascia « non validato » nel rapporto (`finalizeCycle(false)`,
+                distinto da ogni esito). SERENITY aveva solo la prima: niente modo di uscire
+                da un ciclo armato per errore senza forzare un esito che non è successo. */}
+            <button className="s-glass s-glass-btn" onClick={() => cycles.finalizeCycle(false)} style={{
+              cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+              fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-ghost)',
+            }}>
+              {t('cancel')}
+            </button>
+            {cycles.cycleKind === 'null' ? (
+              <>
+                <button className="s-glass s-glass-btn" onClick={() => cycles.validateClearRead(true)} style={{
+                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                  fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-still)',
+                }}>
+                  {t('ser_validate_equilibrium_vgi')}
+                </button>
+                <button className="s-glass s-glass-btn" onClick={() => cycles.validateClearRead(false)} style={{
+                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                  fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-faint)',
+                }}>
+                  {t('ser_validate_equilibrium_novgi')}
+                </button>
+                {/* ── IL TERZO ESITO, MANCANTE ────────────────────────────────────────────
+                    Segnalato nella revisione funzionale: il ciclo NULL in App.tsx ha TRE
+                    esiti pari (VGI · senza VGI · NON RICARICA), non due — « non ricarica » è,
+                    testuale App.tsx, « il risultato diagnostico più prezioso del ciclo NULL »:
+                    senza dichiararlo, il ciclo resta indistinguibile da uno abbandonato, e
+                    quel ramo del rapporto/CORPUS resta irraggiungibile. SERENITY aveva SOLO i
+                    primi due — un bottone intero perso, non solo uno stile. */}
+                <button className="s-glass s-glass-btn" onClick={() => cycles.declareNoRecharging()} style={{
+                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                  fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-reserve)',
+                }}>
+                  {t('ser_no_recharging')}
+                </button>
+              </>
+            ) : (
+              <button className="s-glass s-glass-btn" onClick={() => cycles.validateAsIs()} style={{
+                cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-still)',
+              }}>
+                {t('ser_validate_asis')}
+              </button>
+            )}
+          </>
+        )}
+        {/* Il giornale NON si mostra: scorrere alla periferia tira l'occhio proprio mentre
+            l'ago legge. Qui si dice solo che sta scrivendo, e quante righe ha. */}
+        <span style={{ fontSize: 14.5, color: 'var(--s-ink-faint)' }}>
+          {t('ser_journal')} · {journal.logs.length} {t(journal.logs.length === 1 ? 'ser_line' : 'ser_lines')}
+        </span>
+        {/* ── IL METER — segnalato: « comment peux-tu mettre la connexion METER EN BAS, le MUSE
+            en haut ». La sua connessione e la sua configurazione stanno ORA solo in
+            intestazione (l'indicatore + la freccia accanto, vedi sopra) — niente più un secondo
+            pannello quaggiù da imparare a parte. */}
+        {/* ── ASSESSMENT — spostato nella sua ZONA (`ZonaAssessment`, ancorata in alto a
+            sinistra, accanto al quadrante) — segnalato: « deve avere una sua zona, come in
+            equilibrium ». Non più qui: vedi il commento sopra `<section>`. */}
+        {/* MNA — segnalato assente: un ATTREZZO, non un modo. Si apre SENZA lasciare il ciclo
+            in corso (`PannelloMna` galleggia sul quadrante, la seduta resta sotto) — stesso
+            principio del tasto MNA nella barra dei comandi di App.tsx. */}
+        {aperta && moduleVis.mna && (
+          <button
+            className="s-glass s-glass-btn"
+            onClick={() => setMnaAperto(v => !v)}
+            style={{
+              cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
+              background: 'var(--s-disc)',
+              fontFamily: 'var(--s-sans)', fontSize: 15,
+              color: mnaAperto || primePhase !== 'CAPTURE' && primePhase !== 'IDLE' ? 'var(--s-still)' : 'var(--s-ink-faint)',
+            }}>
+            MNA
+          </button>
+        )}
+        {/* EP — l'auditor lo apre da sé quando vuole registrarlo, non un conto alla rovescia
+            automatico (in EQUILIBRIUM quella finestra non è mai raggiungibile). "EP ✓" una
+            volta validato, come in App.tsx. */}
+        {aperta && (
+          <button
+            className="s-glass s-glass-btn"
+            onClick={() => { if (!ep.epValidated) ep.setEpTimestamp(sessionClock.now()); ep.setEpManualOpen(true); }}
+            style={{
+              cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
+              background: 'var(--s-disc)',
+              fontFamily: 'var(--s-sans)', fontSize: 15,
+              color: ep.epValidated ? 'var(--s-still)' : 'var(--s-ink-faint)',
+            }}>
+            {ep.epValidated ? 'EP ✓' : 'EP'}
+          </button>
+        )}
+        <span style={{ flex: 1 }} />
+        {!aperta && (
+          <button onClick={ricomincia} style={{
+            border: 'none', background: 'none', cursor: 'pointer',
+            fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-faint)',
+          }}>
+            ← {t('ser_change_people')}
+          </button>
+        )}
+      </div>
 
       {/* ── IL CAMPO ──────────────────────────────────────────────────────────────────────
           Lo strumento occupa lo spazio, come in EQUILIBRIUM — non è un modulo fra gli altri,
@@ -1707,7 +2260,7 @@ export default function Serenity() {
         {/* L'orologio resta sulla superficie di SERENITY, fuori dal pannello scuro: si
             guarda una volta ogni tanto, lo strumento in continuazione. */}
         <span style={{
-          fontFamily: 'var(--s-mono)', fontSize: 14, letterSpacing: '0.06em',
+          fontFamily: 'var(--s-mono)', fontSize: 15.5, letterSpacing: '0.06em',
           color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-ghost)',
           transition: 'color var(--s-slow) var(--s-ease)',
           fontVariantNumeric: 'tabular-nums',
@@ -1720,7 +2273,7 @@ export default function Serenity() {
             all'orologio che ha smesso di correre — i due segnali si leggono insieme. */}
         {aperta && pausata && (
           <span className="ser-pulse" style={{
-            fontFamily: 'var(--s-sans)', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
+            fontFamily: 'var(--s-sans)', fontSize: 13.5, fontWeight: 700, letterSpacing: '0.06em',
             padding: '3px 10px', borderRadius: 999,
             background: 'var(--s-reserve)', color: 'var(--s-ground)',
           }}>
@@ -1734,7 +2287,7 @@ export default function Serenity() {
             suo valore di riposo), e mostrarlo lo stesso sembrerebbe una lettura vera. */}
         {agoEeg && (
           <span style={{
-            fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.04em',
+            fontFamily: 'var(--s-mono)', fontSize: 14.5, letterSpacing: '0.04em',
             color: 'var(--s-ink-faint)', display: 'flex', gap: 14,
           }}>
             <LetturaTA />
@@ -1753,590 +2306,6 @@ export default function Serenity() {
             quando la fase 6 monterà un ciclo vero — accanto a un ingombro reale, non a una
             stima. */}
       </section>
-
-      {/* ── IL GESTO ──────────────────────────────────────────────────────────────────────
-          Uno solo. Il guscio sa fare una cosa: aprire e chiudere una seduta sull'orologio
-          vero. Tutto il resto delle fasi si appende a questo. */}
-      {/* `flexWrap` — la fila dei passi (`PassiCiclo`, sotto) vuole una riga per sé: senza,
-          affiancata ai comandi si accorcerebbe fino a diventare illeggibile invece di andare a
-          capo. Stessa ragione già applicata all'intestazione. */}
-      <footer style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 18, rowGap: 10 }}>
-        {/* ⚠️ Niente `border: 'none'` qui — segnalato: « je ne vois pas de GLASS FORM ». Uno
-            stile inline vince sempre su una classe CSS per la stessa proprietà: dichiararlo qui
-            cancellava in silenzio il bordo di `.s-glass`. */}
-        <button className="s-glass s-glass-btn" onClick={aperta ? chiudi : apri} style={{
-          cursor: 'pointer',
-          background: 'var(--s-disc)', color: 'var(--s-ink)',
-          borderRadius: 999, padding: '11px 28px',
-          fontSize: 14, letterSpacing: '0.1em', textTransform: 'uppercase',
-          fontFamily: 'var(--s-sans)',
-        }}>
-          {/* ── SEGNALATO: « le bouton FERMER — on ne sait pas s'il correspond à la séance ou
-              au cycle ». App.tsx distingue ESPLICITAMENTE i due gesti nel testo (« ferma la
-              seduta » contro « chiudi/annulla il ciclo »): qui la parola sola "CHIUDI" non lo
-              diceva, e un ANNULLA di ciclo poteva sembrare lo stesso gesto. Ora dice sempre
-              "LA SEDUTA" per esteso — l'unico bottone che la governa. */}
-          {aperta
-            ? LC('chiudi la seduta', 'fermer la séance', 'close the session', 'cerrar la sesión', 'stäng sessionen')
-            : LC('apri una seduta', 'ouvrir une séance', 'open a session', 'abrir una sesión', 'öppna en session')}
-        </button>
-        {/* ── IL CICLO — un item, quattro strade, ciascuna col SUO bottone ──────────────────
-            Segnalato: « la visibilità dei CICLI non è ottimale... devi fare come in EQUILIBRIUM
-            con dei BOTTONI più visibili per ogni ciclo separatamente, uno accanto all'altro ».
-            Erano quattro link fantasma (nessun bordo, nessun fondo, differenti solo per una
-            sfumatura di grigio) — la stessa scelta grafica dell'informazione che qui doveva
-            SPICCARE. Ora sono quattro pillole vere, ciascuna col SUO nome scritto per intero
-            (CONTACT/NULL/MIRROR/TONE, non « dai l'item » che non dice quale dei quattro) e un
-            colore che le distingue — gli stessi tre segnali di `tokens.css` più l'inchiostro
-            neutro per TONE (mai un quarto colore nuovo), non gli hex di App.tsx ridisegnati
-            uguali: stessa struttura, grafica di SERENITY. */}
-        {aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && (
-          <>
-            {/* ── DOVE SI SCRIVE L'ITEM — segnalato: « non posso scriverlo, non so dove ».
-                Prima un campo nudo, sottolineato, con un placeholder grigio chiaro: facile da
-                non vedere fra le nuove pillole di vetro. Ora un'etichetta SEMPRE visibile sopra
-                il campo, e il campo stesso è un vetro con un bordo — si vede che è un posto
-                dove scrivere, non un tratto decorativo. */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 10, letterSpacing: '0.1em',
-                            textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
-                {LC('scrivi o dì l\'item', 'écris ou dis l\'item', 'type or say the item', 'escribe o di el ítem', 'skriv eller säg item')}
-              </span>
-              <input
-                className="s-glass"
-                value={item}
-                onChange={e => setItem(e.target.value)}
-                placeholder={t('ser_item_placeholder') as string}
-                onKeyDown={e => { if (e.key === 'Enter') cycles.armCycle('charge'); }}
-                style={{
-                  borderRadius: 999, background: 'var(--s-disc)',
-                  outline: 'none', fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)',
-                  padding: '6px 14px', width: 220,
-                }}
-              />
-            </div>
-            {/* ── LO STATO DELLA VOCE — segnalato: « non posso dare l'item verbalmente ».
-                Prima questo restava muto finché non arrivava una parola: se il riconoscitore
-                non parte (permesso negato, nessun motore disponibile) l'auditor aspettava senza
-                sapere se il problema era suo o del programma. */}
-            <span style={{ fontFamily: 'var(--s-sans)', fontSize: 11.5, color: 'var(--s-ink-faint)', alignSelf: 'flex-end' }}>
-              {statoVoce === 'in-ascolto'
-                ? <span className="ser-pulse">🎙 {LC('in ascolto', 'à l\'écoute', 'listening', 'escuchando', 'lyssnar')}</span>
-                : statoVoce === 'assente'
-                  ? LC('🎙 voce non disponibile — scrivi l\'item', 'la voix n\'est pas disponible — écris l\'item',
-                      'voice not available — type the item', 'la voz no está disponible — escribe el ítem',
-                      'rösten är inte tillgänglig — skriv item')
-                  : ''}
-            </span>
-            <div style={{ flexBasis: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 10, letterSpacing: '0.1em',
-                            textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
-                {LC('poi scegli il metodo', 'puis choisis la méthode', 'then choose the method', 'luego elige el método', 'välj sedan metoden')}
-              </span>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {([
-                  { k: 'contact', hue: 'var(--s-still)', label: 'CONTACT',
-                    onClick: () => cycles.armCycle('charge') },
-                  { k: 'null', hue: 'var(--s-alive)', label: 'NULL',
-                    onClick: () => cycles.armCycle('null') },
-                  // ── MIRROR — il terzo metodo, escluso a vicenda con CONTACT/NULL ────────────
-                  { k: 'mirror', hue: 'var(--s-reserve)', label: 'MIRROR', onClick: () => mirror.armMirror() },
-                  // ── TONE SCALE — il quarto metodo, escluso a vicenda con gli altri tre. A
-                  // differenza degli altri tre non si "arma" per un solo item: si ENTRA nel
-                  // metodo (`toneAttivo`) e ci si lavora per più resistenze di fila.
-                  { k: 'tone', hue: null, label: 'TONE', onClick: () => setToneAttivo(true) },
-                ]).map(c => (
-                  <button key={c.k} className="s-glass s-glass-btn" onClick={c.onClick} style={{
-                    border: `1.5px solid ${c.hue ?? 'var(--s-ink-ghost)'}`, cursor: 'pointer',
-                    borderRadius: 999, padding: '6px 14px', background: 'var(--s-disc)',
-                    fontFamily: 'var(--s-sans)', fontSize: 13, fontWeight: 700, letterSpacing: '0.05em',
-                    color: c.hue ?? 'var(--s-ink-soft)',
-                  }}>
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-        {/* ── TONE SCALE, ATTIVO — locate → raise → done, si ripete per ogni resistenza ────────
-            (a) LOCALIZZA: da dove si parte (misurato col meter, o dichiarato dall'auditor senza
-            strumenti); (b) RAISE: il comando "portalo a tono 40" ripetuto finché non c'è più
-            reazione, poi dichiarato raggiunto; (c) DONE: si riparte con un'altra resistenza, o
-            si esce del tutto. Stesse chiamate al motore di App.tsx (`localizzaTone`/
-            `chiudiTone`/`resetTone`), stesso testo dei tre tempi. */}
-        {aperta && toneAttivo && (
-          <>
-            {/* Stesso badge di CONTACT/NULL, senza colore acceso (TONE non ne ha uno — mai un
-                quarto segnale nuovo): il bordo e il nome per intero bastano a dire quale dei
-                quattro sta girando. */}
-            <span style={{
-              fontFamily: 'var(--s-sans)', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
-              padding: '3px 10px', borderRadius: 999, border: '1px solid var(--s-ink-ghost)',
-              color: 'var(--s-ink-soft)',
-            }}>
-              TONE
-            </span>
-            <span style={{ fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)' }}>
-              {item || t('ser_item_placeholder')}
-            </span>
-            {/* I passi del tono, tutti insieme — vedi la nota su `PassiCiclo` in CONTACT/NULL. */}
-            <div style={{ flexBasis: '100%' }}>
-              <PassiCiclo
-                hue="var(--s-ink-soft)"
-                passi={[
-                  { chiave: 'resistenza', etichetta: LC('resistenza', 'résistance', 'resistance', 'resistencia', 'motstånd') },
-                  { chiave: 'tono40', etichetta: LC('tono 40', 'ton 40', 'tone 40', 'tono 40', 'ton 40') },
-                  { chiave: 'fatto', etichetta: LC('fatto', 'fait', 'done', 'hecho', 'klart') },
-                ]}
-                indiceAttuale={tone.tonePhase === 'done' ? 2 : tone.tonePhase === 'raise' ? 1 : 0}
-              />
-            </div>
-            {faseCiclo === 'tone.say_item' && (
-              <>
-                <span className="ser-pulse" style={{
-                  fontFamily: 'var(--s-sans)', fontSize: 12.5, letterSpacing: '0.04em',
-                  color: 'var(--s-reserve)',
-                }}>
-                  {LC('dì la resistenza…', 'dis la résistance…', 'say the resistance…', 'di la resistencia…', 'säg motståndet…')}
-                </span>
-                <button onClick={dichiaraItemDetto} style={{
-                  border: 'none', cursor: 'pointer', background: 'none',
-                  fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
-                }}>
-                  {LC('l\'ho detta', 'je l\'ai dite', 'said it', 'la he dicho', 'sa det')}
-                </button>
-              </>
-            )}
-            {tone.tonePhase === 'locate' && (
-              <>
-                {!tone.toneHasMeter && (
-                  <select value={tone.toneAssessed} onChange={e => tone.setToneAssessed(Number(e.target.value))}
-                    style={{
-                      border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
-                      outline: 'none', fontFamily: 'var(--s-mono)', fontSize: 13, color: 'var(--s-ink)',
-                      cursor: 'pointer', padding: '2px 4px',
-                    }}>
-                    {TONE_LABELS.map(v => (
-                      <option key={v} value={v}>
-                        {v > 0 ? `+${v}` : v} · {levelName(exactLevelName(v) ?? '', lang)}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <button onClick={() => tone.localizzaTone()} style={{
-                  border: 'none', cursor: 'pointer', background: 'none',
-                  fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-ink-soft)',
-                }}>
-                  {t('ser_arm_contact') /* stesso gesto/testo di App.tsx: "DAI L'ITEM" */}
-                </button>
-              </>
-            )}
-            {(tone.tonePhase === 'raise' || tone.tonePhase === 'done') && (
-              <span style={{ fontFamily: 'var(--s-mono)', fontSize: 13, color: 'var(--s-ink-faint)' }}>
-                {tone.toneAtStart !== null ? `${tone.toneAtStart > 0 ? '+' : ''}${tone.toneAtStart.toFixed(0)} → ` : ''}
-                <b style={{ color: 'var(--s-reserve)' }}>+40</b>
-              </span>
-            )}
-            {tone.tonePhase === 'raise' && (
-              <>
-                <button onClick={() => tone.setToneRipetizioni(v => v + 1)} style={{
-                  border: 'none', cursor: 'pointer', background: 'none',
-                  fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-ink-soft)',
-                }}>
-                  {LC('portalo a tono 40', 'mène-le au ton 40', 'raise it to tone 40', 'llévalo al tono 40', 'för det till ton 40')}
-                  {tone.toneRipetizioni > 0 ? ` ×${tone.toneRipetizioni}` : ''}
-                </button>
-                <button onClick={() => { tone.chiudiTone(true); tone.setTonePhase('done'); }} style={{
-                  border: 'none', cursor: 'pointer', background: 'none',
-                  fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-still)',
-                }}>
-                  {LC('tono quaranta raggiunto', 'ton quarante atteint', 'tone forty reached', 'tono cuarenta alcanzado', 'ton fyrtio nådd')}
-                </button>
-              </>
-            )}
-            {tone.tonePhase === 'done' && (
-              <button onClick={() => tone.resetTone()} style={{
-                border: 'none', cursor: 'pointer', background: 'none',
-                fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-still)',
-              }}>
-                {LC('altra resistenza', 'autre résistance', 'another resistance', 'otra resistencia', 'annat motstånd')}
-              </button>
-            )}
-            <button onClick={() => {
-              if (tone.tonePhase === 'raise') tone.chiudiTone(false);
-              tone.resetTone(); setToneAttivo(false);
-            }} style={{
-              border: 'none', cursor: 'pointer', background: 'none',
-              fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-ink-ghost)',
-            }}>
-              {t('cancel')}
-            </button>
-          </>
-        )}
-        {/* ── MIRROR, ARMATO — tre tempi, non due ──────────────────────────────────────────
-            (a) il VALORE 1–10 dell'item — dieci bottoni, la quantità di carica; (b) il
-            DOPPIO da raggiungere, con la sua dichiarazione; (c) OTTENUTO → valida. Stessa
-            sequenza di App.tsx (`bottoneCiclo`, ramo 'mirror'), stessi tre passi — non due,
-            come una prima lettura avrebbe fatto (« dai l'item » dritto a « ottenuto », senza
-            il valore in mezzo: segnalato in App.tsx stesso come l'errore da NON ripetere). */}
-        {aperta && mirror.mirrorArmed && (
-          <>
-            {/* Stesso badge di CONTACT/NULL/TONE, colore riserva — lo stesso della pillola che
-                lo arma qui sopra. */}
-            <span style={{
-              fontFamily: 'var(--s-sans)', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
-              padding: '3px 10px', borderRadius: 999,
-              background: 'var(--s-reserve)', color: 'var(--s-ground)',
-            }}>
-              MIRROR
-            </span>
-            <span style={{ fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)' }}>
-              {item || t('ser_item_placeholder')}
-            </span>
-            {/* I passi del raddoppio, tutti insieme — vedi la nota su `PassiCiclo` in CONTACT/NULL. */}
-            <div style={{ flexBasis: '100%' }}>
-              <PassiCiclo
-                hue="var(--s-reserve)"
-                passi={[
-                  { chiave: 'item', etichetta: LC('item', 'item', 'item', 'ítem', 'item') },
-                  { chiave: 'valore', etichetta: LC('valore', 'valeur', 'value', 'valor', 'värde') },
-                  { chiave: 'doppio', etichetta: LC('doppio', 'double', 'double', 'doble', 'dubbel') },
-                  { chiave: 'ottenuto', etichetta: LC('ottenuto', 'obtenu', 'obtained', 'obtenido', 'uppnått') },
-                ]}
-                indiceAttuale={
-                  mirror.mirrorDisp.reached ? 3 : mirror.mirrorDisp.locked ? 2 : faseCiclo === 'mirror.contact' ? 1 : 0
-                }
-              />
-            </div>
-            {faseCiclo === 'mirror.say_item' && (
-              <>
-                <span className="ser-pulse" style={{
-                  fontFamily: 'var(--s-sans)', fontSize: 12.5, letterSpacing: '0.04em',
-                  color: 'var(--s-reserve)',
-                }}>
-                  {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
-                </span>
-                <button onClick={dichiaraItemDetto} style={{
-                  border: 'none', cursor: 'pointer', background: 'none',
-                  fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
-                }}>
-                  {LC('l\'item è stato detto', 'l\'item a été dit', 'the item has been said', 'el ítem ha sido dicho', 'item har sagts')}
-                </button>
-              </>
-            )}
-            {!mirror.mirrorDisp.locked ? (
-              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 13, color: 'var(--s-ink-faint)', marginRight: 6 }}>
-                  {LC('quanta carica?', 'combien de charge ?', 'how much charge?', '¿cuánta carga?', 'hur mycket laddning?')}
-                </span>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => (
-                  <button key={v} onClick={() => {
-                    mirror.mirrorCycle.setManualValue(v);
-                    mirror.setMirrorDisp({ contactQ: mirror.mirrorCycle.contactQ, dischargeQ: 0,
-                      locked: true, reached: false, valueR: mirror.mirrorCycle.valueR });
-                  }} style={{
-                    border: 'none', cursor: 'pointer', borderRadius: 999, width: 26, height: 26,
-                    fontFamily: 'var(--s-mono)', fontSize: 12.5, fontWeight: 700,
-                    background: 'var(--s-disc-sunk)', color: 'var(--s-ink)',
-                  }}>
-                    {v}
-                  </button>
-                ))}
-              </div>
-            ) : !mirror.mirrorDisp.reached ? (
-              <>
-                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 13, color: 'var(--s-ink-faint)' }}>
-                  {LC('portalo al doppio', 'mène-le au double', 'take it to the double', 'llévalo al doble', 'för det till dubbeln')}
-                  {' — '}{mirror.mirrorDisp.valueR.toFixed(0)} → {(2 * mirror.mirrorDisp.valueR).toFixed(0)}
-                </span>
-                <button onClick={() => {
-                  mirror.mirrorCycle.declareReached();
-                  mirror.setMirrorDisp({ contactQ: mirror.mirrorCycle.contactQ, dischargeQ: mirror.mirrorCycle.dischargeQ,
-                    locked: true, reached: true, valueR: mirror.mirrorCycle.valueR });
-                }} style={{
-                  border: 'none', cursor: 'pointer', background: 'none',
-                  fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-still)',
-                }}>
-                  {LC('doppio raggiunto', 'double atteint', 'double reached', 'doble alcanzado', 'dubbeln nådd')}
-                </button>
-              </>
-            ) : (
-              <button onClick={() => mirror.stopMirror()} style={{
-                border: 'none', cursor: 'pointer', background: 'none',
-                fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-still)',
-              }}>
-                {LC('ottenuto — valida', 'obtenu — valider', 'obtained — validate', 'obtenido — validar', 'uppnått — validera')}
-              </button>
-            )}
-            <button onClick={() => mirror.stopMirror()} style={{
-              border: 'none', cursor: 'pointer', background: 'none',
-              fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-ink-ghost)',
-            }}>
-              {t('cancel')}
-            </button>
-          </>
-        )}
-        {aperta && cycles.cycleArmed && (
-          <>
-            {/* ── QUALE CICLO STA GIRANDO — segnalato: « il CICLO CONTACT non è specificato in
-                basso, c'è solo DAI L'ITEM ». Vero: un campo di testo e un contatore in grigio
-                non dicono CONTACT finché non si legge la scritta piccola accanto. Ora un badge
-                pieno, dello STESSO colore della pillola che l'ha armato — si vede prima di
-                leggere, non dopo. */}
-            <span style={{
-              fontFamily: 'var(--s-sans)', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
-              padding: '3px 10px', borderRadius: 999,
-              background: cycles.cycleKind === 'null' ? 'var(--s-alive)' : 'var(--s-still)',
-              color: 'var(--s-ground)',
-            }}>
-              {cycles.cycleKind === 'null' ? 'NULL' : 'CONTACT'}
-            </span>
-            <span style={{ fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)' }}>
-              {item || t('ser_item_placeholder')}
-            </span>
-            {/* ── I PASSI, TUTTI INSIEME — segnalato: « le scritte dei cicli sono confuse...
-                evidenziate le steps, a prova di stupido ». `PassiCiclo` legge la STESSA
-                `faseCiclo` (già calcolata da `engine/sessionPhase.ts`, non riletta qui): non
-                decide nulla, mostra solo dove si è dentro la sequenza del metodo in corso. Riga
-                a sé (`flexBasis:'100%'`) per restare leggibile invece di accorciarsi. */}
-            <div style={{ flexBasis: '100%' }}>
-              <PassiCiclo
-                hue={cycles.cycleKind === 'null' ? 'var(--s-alive)' : 'var(--s-still)'}
-                passi={cycles.cycleKind === 'null' ? [
-                  { chiave: 'item', etichetta: LC('item', 'item', 'item', 'ítem', 'item') },
-                  { chiave: 'mockup', etichetta: LC('mock-up', 'mock-up', 'mock-up', 'mock-up', 'mock-up') },
-                  { chiave: 'equilibrium', etichetta: 'EQUILIBRIUM' },
-                ] : [
-                  { chiave: 'item', etichetta: LC('item', 'item', 'item', 'ítem', 'item') },
-                  { chiave: 'mockup', etichetta: LC('dissoluzione', 'dissolution', 'dissolution', 'disolución', 'upplösning') },
-                  { chiave: 'asis', etichetta: 'AS-IS' },
-                ]}
-                indiceAttuale={
-                  cycles.cycleKind === 'null'
-                    ? (faseCiclo === 'null.equilibrium' ? 2 : (faseCiclo === 'null.mockup' || faseCiclo === 'null.rise') ? 1 : 0)
-                    : (faseCiclo === 'contact.asis' ? 2 : faseCiclo === 'contact.mockup' ? 1 : 0)
-                }
-              />
-            </div>
-            {/* ── « DÌ L'ITEM… » — segnalato insieme: la logica di darlo a voce già esiste nel
-                motore (`cycleAwaitItemRef`), ma finché nessuno lo dice a schermo l'auditor non
-                sa che il ciclo sta ASPETTANDO, non è già a mock-up. Pulsa finché la voce (o la
-                dichiarazione a mano qui accanto) non arriva. */}
-            {(faseCiclo === 'contact.say_item' || faseCiclo === 'null.say_item') && (
-              <>
-                <span className="ser-pulse" style={{
-                  fontFamily: 'var(--s-sans)', fontSize: 12.5, letterSpacing: '0.04em',
-                  color: 'var(--s-reserve)',
-                }}>
-                  {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
-                </span>
-                <button onClick={dichiaraItemDetto} title={LC(
-                    'la trascrizione non c\'è o non si sente — dichiara che l\'item è stato detto',
-                    'pas de transcription ou pas de son — déclare que l\'item a été dit',
-                    'no transcript or no sound — declare the item has been said',
-                    'sin transcripción o sin sonido — declara que el ítem ha sido dicho',
-                    'ingen transkription eller inget ljud — förklara att item har sagts') as string}
-                  style={{
-                  border: 'none', cursor: 'pointer', background: 'none',
-                  fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
-                }}>
-                  {LC('l\'item è stato detto', 'l\'item a été dit', 'the item has been said', 'el ítem ha sido dicho', 'item har sagts')}
-                </button>
-              </>
-            )}
-            {/* ── IL CONTATORE DEL CICLO IN CORSO — mancante ─────────────────────────────
-                In App.tsx un chip dice, per il SOLO metodo in corso (CONTACT con CONTACT,
-                NULL con NULL — « due contatori confondono », scelta utente), quanti cicli
-                sono stati armati e quanti portati a compimento questa seduta. `cycleStats`
-                arriva già dallo stesso `useContactNullCycle` — solo non era letto qui. */}
-            <span style={{ fontFamily: 'var(--s-mono)', fontSize: 12.5, color: 'var(--s-ink-faint)' }}>
-              {cycles.cycleKind === 'null'
-                ? `${cycles.cycleStats.nStarted} · ${cycles.cycleStats.nDone} CLEAR`
-                : `${cycles.cycleStats.cStarted} · ${cycles.cycleStats.cDone} AS-IS`}
-            </span>
-            {/* ── ANNULLA — l'uscita SENZA validare, mancante ────────────────────────────
-                Segnalato nella revisione funzionale: in App.tsx chiudere un ciclo armato ha
-                DUE strade — validare (uno degli esiti a destra) o ANNULLA, che chiude il
-                ciclo e lo lascia « non validato » nel rapporto (`finalizeCycle(false)`,
-                distinto da ogni esito). SERENITY aveva solo la prima: niente modo di uscire
-                da un ciclo armato per errore senza forzare un esito che non è successo. */}
-            <button onClick={() => cycles.finalizeCycle(false)} style={{
-              border: 'none', cursor: 'pointer', background: 'none',
-              fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-ink-ghost)',
-            }}>
-              {t('cancel')}
-            </button>
-            {cycles.cycleKind === 'null' ? (
-              <>
-                <button onClick={() => cycles.validateClearRead(true)} style={{
-                  border: 'none', cursor: 'pointer', background: 'none',
-                  fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-still)',
-                }}>
-                  {t('ser_validate_equilibrium_vgi')}
-                </button>
-                <button onClick={() => cycles.validateClearRead(false)} style={{
-                  border: 'none', cursor: 'pointer', background: 'none',
-                  fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-ink-faint)',
-                }}>
-                  {t('ser_validate_equilibrium_novgi')}
-                </button>
-                {/* ── IL TERZO ESITO, MANCANTE ────────────────────────────────────────────
-                    Segnalato nella revisione funzionale: il ciclo NULL in App.tsx ha TRE
-                    esiti pari (VGI · senza VGI · NON RICARICA), non due — « non ricarica » è,
-                    testuale App.tsx, « il risultato diagnostico più prezioso del ciclo NULL »:
-                    senza dichiararlo, il ciclo resta indistinguibile da uno abbandonato, e
-                    quel ramo del rapporto/CORPUS resta irraggiungibile. SERENITY aveva SOLO i
-                    primi due — un bottone intero perso, non solo uno stile. */}
-                <button onClick={() => cycles.declareNoRecharging()} style={{
-                  border: 'none', cursor: 'pointer', background: 'none',
-                  fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-reserve)',
-                }}>
-                  {t('ser_no_recharging')}
-                </button>
-              </>
-            ) : (
-              <button onClick={() => cycles.validateAsIs()} style={{
-                border: 'none', cursor: 'pointer', background: 'none',
-                fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-still)',
-              }}>
-                {t('ser_validate_asis')}
-              </button>
-            )}
-          </>
-        )}
-        {/* Il giornale NON si mostra: scorrere alla periferia tira l'occhio proprio mentre
-            l'ago legge. Qui si dice solo che sta scrivendo, e quante righe ha. */}
-        <span style={{ fontSize: 13, color: 'var(--s-ink-faint)' }}>
-          {t('ser_journal')} · {journal.logs.length} {t(journal.logs.length === 1 ? 'ser_line' : 'ser_lines')}
-        </span>
-        {/* ── IL METER — segnalato: « comment peux-tu mettre la connexion METER EN BAS, le MUSE
-            en haut ». La sua connessione e la sua configurazione stanno ORA solo in
-            intestazione (l'indicatore + la freccia accanto, vedi sopra) — niente più un secondo
-            pannello quaggiù da imparare a parte. */}
-        {/* ── ASSESSMENT — segnalato: « ne marche pas et n'apparaît pas ». Un bottone acceso
-            (come MNA/EP accanto) che avvia/ferma la cattura; gli item dati a voce (o dai
-            cicli, che lo accendono da sé — `attivaAssessment`) compaiono nel cassetto qui
-            sotto, ancorato al bottone come quello del meter in intestazione — non un pannello
-            lontano da scoprire. */}
-        {aperta && (
-          <div style={{ position: 'relative' }}>
-            <button
-              className="s-glass s-glass-btn"
-              onClick={() => setAssessAttivo(v => !v)}
-              style={{
-                cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
-                background: 'var(--s-disc)',
-                fontFamily: 'var(--s-sans)', fontSize: 13.5,
-                color: assessAttivo ? 'var(--s-still)' : 'var(--s-ink-faint)',
-              }}>
-              {LC('assessment', 'assessment', 'assessment', 'assessment', 'assessment')}
-              {assessItems.length > 0 ? ` · ${assessItems.length}` : ''}
-            </button>
-            {assessAttivo && (
-              <div className="s-glass s-glass-lift" style={{
-                position: 'absolute', bottom: '100%', left: 0, marginBottom: 8, zIndex: 40,
-                display: 'flex', flexDirection: 'column', gap: 8, padding: '14px 16px',
-                borderRadius: 14, background: 'var(--s-disc)',
-                minWidth: 300, maxWidth: 420, maxHeight: 320, overflowY: 'auto',
-              }}>
-                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.1em',
-                              textTransform: 'uppercase', color: 'var(--s-ink-soft)' }}>
-                  {LC('item dati a voce', 'items donnés à voix', 'items given aloud', 'ítems dados en voz', 'items givna högt')}
-                </span>
-                {assessItems.length === 0 ? (
-                  <span className="ser-pulse" style={{ fontSize: 13, color: 'var(--s-ink-faint)' }}>
-                    {LC('in ascolto…', 'à l\'écoute…', 'listening…', 'escuchando…', 'lyssnar…')}
-                  </span>
-                ) : assessItems.slice().reverse().map(it => {
-                  // ── LA LETTURA — segnalato: « implementa tutti gli elementi ». Stessi tre
-                  // esiti di App.tsx: NULL (nessuna reazione), NON MISURATO (nessuno strumento
-                  // guardava), o la reazione vera con lo scarto dalla parola.
-                  const inAttesa = it.reaction === null;
-                  const colore = inAttesa ? 'var(--s-ink-faint)'
-                    : it.reaction === 'NULL' ? 'var(--s-ink-faint)'
-                    : it.reaction === READ_NON_MISURATO ? 'var(--s-reserve)'
-                    : 'var(--s-still)';
-                  return (
-                    <div key={it.id} style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
-                        <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11, color: 'var(--s-ink-faint)', flexShrink: 0 }}>
-                          {orologio(it.time)}
-                        </span>
-                        <span style={{ fontFamily: 'var(--s-serif)', fontSize: 14, color: 'var(--s-ink)' }}>
-                          {it.item}
-                        </span>
-                        {/* Il gruppo di ripetizione — visibile solo dal SECONDO item dello stesso
-                            gruppo in poi: il primo non è ancora "ripetuto" da nessuno. */}
-                        {assessItems.filter(a => a.gruppo === it.gruppo).length > 1 && (
-                          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 10.5, color: 'var(--s-ink-ghost)' }}>
-                            ×{assessItems.filter(a => a.gruppo === it.gruppo && a.time <= it.time).length}
-                          </span>
-                        )}
-                      </div>
-                      <span className={inAttesa ? 'ser-pulse' : undefined} style={{
-                        fontFamily: 'var(--s-mono)', fontSize: 11.5, color: colore, marginLeft: 62,
-                      }}>
-                        {inAttesa
-                          ? LC('in lettura…', 'en lecture…', 'reading…', 'leyendo…', 'läser…')
-                          : it.reaction === 'NULL'
-                            ? LC('nessuna reazione', 'aucune réaction', 'no reaction', 'sin reacción', 'ingen reaktion')
-                            : it.reaction === READ_NON_MISURATO
-                              ? LC('non misurato — nessuno strumento', 'non mesuré — aucun instrument',
-                                  'not measured — no instrument', 'no medido — ningún instrumento',
-                                  'inte mätt — inget instrument')
-                              : `${it.reaction}${it.beforeMs > 0 ? ` −${it.beforeMs}ms` : it.afterMs > 0 ? ` +${it.afterMs}ms` : ''}`
-                              + (it.readSrc ? ` · ${it.readSrc === 'eeg' ? 'MUSE' : 'METER'}` : '')}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-        {/* MNA — segnalato assente: un ATTREZZO, non un modo. Si apre SENZA lasciare il ciclo
-            in corso (`PannelloMna` galleggia sul quadrante, la seduta resta sotto) — stesso
-            principio del tasto MNA nella barra dei comandi di App.tsx. */}
-        {aperta && moduleVis.mna && (
-          <button
-            className="s-glass s-glass-btn"
-            onClick={() => setMnaAperto(v => !v)}
-            style={{
-              cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
-              background: 'var(--s-disc)',
-              fontFamily: 'var(--s-sans)', fontSize: 13.5,
-              color: mnaAperto || primePhase !== 'CAPTURE' && primePhase !== 'IDLE' ? 'var(--s-still)' : 'var(--s-ink-faint)',
-            }}>
-            MNA
-          </button>
-        )}
-        {/* EP — l'auditor lo apre da sé quando vuole registrarlo, non un conto alla rovescia
-            automatico (in EQUILIBRIUM quella finestra non è mai raggiungibile). "EP ✓" una
-            volta validato, come in App.tsx. */}
-        {aperta && (
-          <button
-            className="s-glass s-glass-btn"
-            onClick={() => { if (!ep.epValidated) ep.setEpTimestamp(sessionClock.now()); ep.setEpManualOpen(true); }}
-            style={{
-              cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
-              background: 'var(--s-disc)',
-              fontFamily: 'var(--s-sans)', fontSize: 13.5,
-              color: ep.epValidated ? 'var(--s-still)' : 'var(--s-ink-faint)',
-            }}>
-            {ep.epValidated ? 'EP ✓' : 'EP'}
-          </button>
-        )}
-        <span style={{ flex: 1 }} />
-        {!aperta && (
-          <button onClick={ricomincia} style={{
-            border: 'none', background: 'none', cursor: 'pointer',
-            fontFamily: 'var(--s-sans)', fontSize: 13.5, color: 'var(--s-ink-faint)',
-          }}>
-            ← {t('ser_change_people')}
-          </button>
-        )}
-      </footer>
     </main>
   );
 }

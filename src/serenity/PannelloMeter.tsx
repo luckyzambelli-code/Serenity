@@ -52,7 +52,7 @@ import type { useThetaMeter } from '../hooks/useThetaMeter';
 
 const pillola = (piena: boolean): React.CSSProperties => ({
   cursor: 'pointer', borderRadius: 999, padding: '8px 18px',
-  fontFamily: 'var(--s-sans)', fontSize: 13.5, letterSpacing: '0.04em',
+  fontFamily: 'var(--s-sans)', fontSize: 15, letterSpacing: '0.04em',
   background: piena ? 'var(--s-disc)' : 'var(--s-disc-sunk)',
   color: 'var(--s-ink)',
 });
@@ -107,7 +107,7 @@ export function PannelloMeter({ theta, provaTa }: {
         ))}
       </div>
 
-      <div style={{ fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.1em',
+      <div style={{ fontFamily: 'var(--s-sans)', fontSize: 13, letterSpacing: '0.1em',
                     textTransform: 'uppercase', color: 'var(--s-ink-soft)', textAlign: 'center' }}>
         {TITOLI[passo]}
       </div>
@@ -115,7 +115,7 @@ export function PannelloMeter({ theta, provaTa }: {
       {/* ── PASSO 1 — CONFIGURAZIONE ────────────────────────────────────────────────────── */}
       {passo === 'config' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
-          <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
+          <div style={{ fontSize: 14.5, lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
             {LC('quante lattine impugna il preclear in mano — cambia come l\'ago legge la resistenza.',
               'combien de boîtes le préclair tient en main — change la façon dont l\'aiguille lit la résistance.',
               'how many cans the preclear holds — changes how the needle reads the resistance.',
@@ -140,7 +140,7 @@ export function PannelloMeter({ theta, provaTa }: {
               padding: '10px 12px', borderRadius: 10, background: 'var(--s-disc-sunk)',
               border: '1px solid var(--s-reserve)', width: '100%',
             }}>
-              <div style={{ fontSize: 12.5, lineHeight: 1.5, color: 'var(--s-reserve)' }}>
+              <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--s-reserve)' }}>
                 {LC('per misurare il TA come si deve, fai la stretta con DUE lattine al passo 2 — è il riferimento. Torna qui per passare a una sola e ripeti: al passo 4 la differenza corregge tutta la seduta.',
                   'pour mesurer le TA correctement, fais la pression avec DEUX boîtes à l\'étape 2 — c\'est la référence. Reviens ici pour passer à une seule et répète : à l\'étape 4 la différence corrige toute la séance.',
                   'to measure the TA properly, do the squeeze with TWO cans at step 2 — that is the reference. Come back here to switch to one and repeat: at step 4 the difference corrects the whole session.',
@@ -155,7 +155,7 @@ export function PannelloMeter({ theta, provaTa }: {
       {/* ── PASSO 2 — LA PROVA DELLA STRETTA ────────────────────────────────────────────── */}
       {passo === 'stretta' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
-          <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
+          <div style={{ fontSize: 14.5, lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
             {theta.testing === 'squeeze' ? t('theta_squeeze_hint') : t('theta_squeeze_hint')}
           </div>
           <button onClick={() => theta.startSqueezeTest()} disabled={theta.testing !== null}
@@ -164,17 +164,17 @@ export function PannelloMeter({ theta, provaTa }: {
           </button>
           {theta.testing === 'squeeze' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span className="ser-pulse" style={{ fontSize: 13, color: 'var(--s-alive)' }}>{t('theta_test_running')}</span>
-              <button onClick={() => theta.cancelTest()} style={{
-                border: 'none', background: 'none', cursor: 'pointer',
-                fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+              <span className="ser-pulse" style={{ fontSize: 14.5, color: 'var(--s-alive)' }}>{t('theta_test_running')}</span>
+              <button className="s-glass s-glass-btn" onClick={() => theta.cancelTest()} style={{
+                cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-faint)',
               }}>
                 {LC('annulla', 'annuler', 'cancel', 'cancelar', 'avbryt')}
               </button>
             </div>
           )}
           {theta.squeezeOk !== null && theta.testing === null && (
-            <span style={{ fontSize: 13, fontWeight: 700, color: theta.squeezeOk ? 'var(--s-still)' : 'var(--s-reserve)' }}>
+            <span style={{ fontSize: 14.5, fontWeight: 700, color: theta.squeezeOk ? 'var(--s-still)' : 'var(--s-reserve)' }}>
               {theta.squeezeOk ? `✓ ${LC('fatta', 'faite', 'done', 'hecha', 'klart')}` : `⚠ ${LC('da rifare', 'à refaire', 'try again', 'a repetir', 'gör om')}`}
             </span>
           )}
@@ -184,7 +184,7 @@ export function PannelloMeter({ theta, provaTa }: {
       {/* ── PASSO 3 — LA PROVA DEL RESPIRO ──────────────────────────────────────────────── */}
       {passo === 'respiro' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
-          <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
+          <div style={{ fontSize: 14.5, lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
             {t('theta_breath_hint')}
           </div>
           <button onClick={() => theta.startBreathTest()} disabled={theta.testing !== null}
@@ -193,17 +193,17 @@ export function PannelloMeter({ theta, provaTa }: {
           </button>
           {theta.testing === 'breath' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span className="ser-pulse" style={{ fontSize: 13, color: 'var(--s-alive)' }}>{t('theta_test_running')}</span>
-              <button onClick={() => theta.cancelTest()} style={{
-                border: 'none', background: 'none', cursor: 'pointer',
-                fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+              <span className="ser-pulse" style={{ fontSize: 14.5, color: 'var(--s-alive)' }}>{t('theta_test_running')}</span>
+              <button className="s-glass s-glass-btn" onClick={() => theta.cancelTest()} style={{
+                cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-faint)',
               }}>
                 {LC('annulla', 'annuler', 'cancel', 'cancelar', 'avbryt')}
               </button>
             </div>
           )}
           {theta.breathOk !== null && theta.testing === null && (
-            <span style={{ fontSize: 13, fontWeight: 700, color: theta.breathOk ? 'var(--s-still)' : 'var(--s-reserve)' }}>
+            <span style={{ fontSize: 14.5, fontWeight: 700, color: theta.breathOk ? 'var(--s-still)' : 'var(--s-reserve)' }}>
               {theta.breathOk ? `✓ ${LC('fatta', 'faite', 'done', 'hecha', 'klart')}` : `⚠ ${LC('da rifare', 'à refaire', 'try again', 'a repetir', 'gör om')}`}
             </span>
           )}
@@ -213,7 +213,7 @@ export function PannelloMeter({ theta, provaTa }: {
       {/* ── PASSO 4 — LA TARATURA TA ────────────────────────────────────────────────────── */}
       {passo === 'taratura' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
+          <div style={{ fontSize: 14.5, lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
             {t('theta_ref_hint')}
           </div>
           {/* Il confronto — appena entrambe le strette (due lattine e una sola) sono state
@@ -223,36 +223,36 @@ export function PannelloMeter({ theta, provaTa }: {
               padding: '10px 12px', borderRadius: 10, background: 'var(--s-disc-sunk)',
               border: `1px solid ${scarto === null ? 'var(--s-reserve)' : 'var(--s-still)'}`,
             }}>
-              <div style={{ display: 'flex', gap: 16, alignItems: 'baseline', justifyContent: 'center', fontFamily: 'var(--s-mono)', fontSize: 14, color: 'var(--s-ink)' }}>
-                <span><span style={{ fontSize: 11, opacity: 0.6 }}>2 · </span>{provaTa.two!.toFixed(2)}</span>
-                <span><span style={{ fontSize: 11, opacity: 0.6 }}>1 · </span>{provaTa.solo!.toFixed(2)}</span>
+              <div style={{ display: 'flex', gap: 16, alignItems: 'baseline', justifyContent: 'center', fontFamily: 'var(--s-mono)', fontSize: 15.5, color: 'var(--s-ink)' }}>
+                <span><span style={{ fontSize: 12.5, opacity: 0.6 }}>2 · </span>{provaTa.two!.toFixed(2)}</span>
+                <span><span style={{ fontSize: 12.5, opacity: 0.6 }}>1 · </span>{provaTa.solo!.toFixed(2)}</span>
                 <span style={{ color: scarto === null ? 'var(--s-reserve)' : 'var(--s-still)', fontWeight: 700 }}>
                   {scarto === null ? '—' : `${scarto > 0 ? '+' : ''}${scarto.toFixed(2)}`}
                 </span>
               </div>
               {scarto !== null && !scartoMisurato && (
                 <div style={{ textAlign: 'center' }}>
-                  <button onClick={() => theta.setSoloOffset(scarto)} style={{ ...pillola(false), marginTop: 8 }}>
+                  <button className="s-glass s-glass-btn" onClick={() => theta.setSoloOffset(scarto)} style={{ ...pillola(false), marginTop: 8 }}>
                     {LC('usa questa differenza', 'utilise cet écart', 'use this offset', 'usa esta diferencia', 'använd denna skillnad')}
                   </button>
                 </div>
               )}
               {scartoMisurato && (
-                <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: 'var(--s-still)', textAlign: 'center' }}>
+                <div style={{ marginTop: 6, fontSize: 13.5, fontWeight: 700, color: 'var(--s-still)', textAlign: 'center' }}>
                   ✓ {LC('applicata', 'appliqué', 'applied', 'aplicada', 'tillämpad')}
                 </div>
               )}
             </div>
           )}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13, color: 'var(--s-ink-faint)' }}>{t('theta_ref_label')}</span>
-            <span style={{ fontFamily: 'var(--s-mono)', fontSize: 14 }}>{theta.rawSmooth.toFixed(0)}</span>
+            <span style={{ fontSize: 14.5, color: 'var(--s-ink-faint)' }}>{t('theta_ref_label')}</span>
+            <span style={{ fontFamily: 'var(--s-mono)', fontSize: 15.5 }}>{theta.rawSmooth.toFixed(0)}</span>
             <input
               type="number" step="0.1" value={riferimento}
               onChange={e => setRiferimento(e.target.value)}
               style={{
                 width: 56, border: 'none', borderBottom: '1px solid var(--s-ink-ghost)',
-                background: 'none', outline: 'none', fontFamily: 'var(--s-mono)', fontSize: 14,
+                background: 'none', outline: 'none', fontFamily: 'var(--s-mono)', fontSize: 15.5,
                 color: 'var(--s-ink)', padding: '2px 4px',
               }}
             />
@@ -263,12 +263,12 @@ export function PannelloMeter({ theta, provaTa }: {
               {t('theta_cal_record')}
             </button>
           </div>
-          <div style={{ fontSize: 12.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
+          <div style={{ fontSize: 14, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
             {theta.taScale ? `${theta.taScale.points.length} · ${theta.taScale.madeAt === 0 ? t('theta_scale_factory') : t('theta_scale_own')}` : ''}
             {theta.taScale && theta.taScale.madeAt !== 0 && (
-              <button onClick={() => theta.clearTaCalibration()} style={{
-                border: 'none', background: 'none', cursor: 'pointer', marginLeft: 8,
-                fontFamily: 'var(--s-sans)', fontSize: 12.5, color: 'var(--s-ink-faint)',
+              <button className="s-glass s-glass-btn" onClick={() => theta.clearTaCalibration()} style={{
+                cursor: 'pointer', borderRadius: 999, padding: '4px 12px', marginLeft: 8, background: 'var(--s-disc)',
+                fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-faint)',
               }}>
                 {t('theta_cal_clear')}
               </button>
@@ -280,12 +280,13 @@ export function PannelloMeter({ theta, provaTa }: {
       {/* ── AVANTI / INDIETRO — lo stesso gesto di `Avvio.tsx` ─────────────────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
         <button
+          className="s-glass s-glass-btn"
           onClick={() => setPasso(PASSI[Math.max(0, idx - 1)])}
           disabled={idx === 0}
           style={{
-            border: 'none', background: 'none', cursor: idx === 0 ? 'default' : 'pointer',
-            opacity: idx === 0 ? 0.35 : 1,
-            fontFamily: 'var(--s-sans)', fontSize: 13, color: 'var(--s-ink-soft)',
+            cursor: idx === 0 ? 'default' : 'pointer', borderRadius: 999, padding: '6px 14px',
+            background: 'var(--s-disc)', opacity: idx === 0 ? 0.35 : 1,
+            fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink-soft)',
           }}>
           ← {LC('indietro', 'précédent', 'back', 'atrás', 'tillbaka')}
         </button>
@@ -294,7 +295,7 @@ export function PannelloMeter({ theta, provaTa }: {
             {LC('avanti', 'suivant', 'next', 'siguiente', 'nästa')} →
           </button>
         ) : (
-          <span style={{ fontSize: 13, color: 'var(--s-still)', fontWeight: 700 }}>
+          <span style={{ fontSize: 14.5, color: 'var(--s-still)', fontWeight: 700 }}>
             ✓ {LC('fatto', 'terminé', 'done', 'hecho', 'klart')}
           </span>
         )}

@@ -34,10 +34,18 @@
  * Prima versione: collassata mostrava lo STESSO video, solo più piccolo e attenuato — un
  * quadratino con dentro ancora un volto in movimento, che a quella taglia si legge più come un
  * difetto (« perché è diventato minuscolo e sfocato? ») che come un gesto voluto. Un cerchio
- * VUOTO — affondato, lo stesso linguaggio di `Cerchio.tsx`'s `spenta` già usato altrove per
- * "previsto ma spento" — dice SUBITO "nascosta apposta", senza lasciar intuire un guasto. Lo
- * stream resta agganciato e vivo (si rimette a vedersi appena si riclicca): a sparire è solo
- * il disegno, non il collegamento.
+ * VUOTO — affondato, lo stesso linguaggio di `Cerchio.tsx`'s `spenta` — dice SUBITO "nascosta
+ * apposta", senza lasciar intuire un guasto. Lo stream resta agganciato e vivo (si rimette a
+ * vedersi appena si riclicca): a sparire è solo il disegno, non il collegamento.
+ *
+ * ⚠️ SEGNALATO ANCORA: « le camm se nascoste devono apparire come un bottone liquid glass
+ * anche lui ». `Cerchio`'s `spenta` di proposito NON prende il vetro (la sua stessa nota: « un
+ * disco previsto ma spento non deve luccicare come acceso ») — giusto per un modulo non ancora
+ * montato, sbagliato QUI: una camm nascosta resta un BOTTONE vero (ricliccarlo la riespande),
+ * non un segnaposto muto. Quindi qui non si passa `spenta` a `Cerchio`: da collassata si
+ * disegna il cerchio da sé, sunk come sempre (`--s-disc-sunk`) ma con le classi del vetro
+ * (`s-glass s-glass-btn`) — resta "affondato", ma torna un bottone di vetro come tutti gli
+ * altri, non un'eccezione opaca.
  *
  * @see docs/serenity-refonte.md — fase 6.
  */
@@ -48,7 +56,7 @@ import { Cerchio } from './Cerchio';
 
 export function CameraCerchio({
   dimensione = 160, titolo, externalStream, forceMuted = false, fallbackFrame, offlineLabel, opacita,
-  collassata = false, onToggleCollasso,
+  collassata = false, onToggleCollasso, statoTesto, inDiretta = false,
 }: {
   dimensione?: number;
   titolo: string;
@@ -65,6 +73,13 @@ export function CameraCerchio({
    *  componente montato/smontato). */
   collassata?: boolean;
   onToggleCollasso?: () => void;
+  /** ── LA STESSA INDICAZIONE DI `CameraFeed.tsx`'s `massStatus` — segnalato: « nella cam PC
+   *  devi mettere le indicazioni che hai già in equilibrium ». Un testo scritto da fuori (chi
+   *  chiama sa a che punto è la carica, o se il MUSE del preclear è collegato): questo
+   *  componente lo mostra soltanto, non lo calcola. */
+  statoTesto?: string;
+  /** Lo stesso badge « LIVE » di `CameraFeed.tsx` — solo quando lo stream è remoto davvero. */
+  inDiretta?: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [errore, setErrore] = useState<string | null>(null);
@@ -116,19 +131,21 @@ export function CameraCerchio({
         title={onToggleCollasso ? (collassata ? titolo : titolo) : undefined}
         style={{ cursor: onToggleCollasso ? 'pointer' : 'default', transition: 'width var(--s-slow) var(--s-ease), height var(--s-slow) var(--s-ease)' }}
       >
-        {/* `spenta` quando collassata: lo stesso disco affondato, senza rilievo, che altrove in
-            SERENITY dice "previsto ma spento" — qui dice "nascosta apposta", non "guasta". */}
-        <Cerchio dimensione={dimEffettiva} viva={!errore && !collassata} spenta={collassata} opacita={opacita}>
+        {/* ── UN SOLO ALBERO, SEMPRE ──────────────────────────────────────────────────────
+            Segnalato prima: collassata deve mostrare un cerchio VUOTO, non il video
+            rimpicciolito — risolto tenendo `<video>` montato e solo invisibile (sotto), perché
+            smontarlo lo scollegherebbe e andrebbe riagganciato da capo alla riespansione.
+            Segnalato ORA: quel cerchio vuoto deve apparire come un bottone di vetro, non un
+            segnaposto opaco — `Cerchio`'s `spenta` di proposito non prende il vetro (giusto
+            per un modulo non ancora montato), quindi qui si passa `vetroDaSpenta`: l'eccezione
+            esplicita, resta "affondata" (si legge "nascosta apposta") ma torna un bottone di
+            vetro come tutti gli altri — SENZA biforcare l'albero, che avrebbe rismontato il
+            video. */}
+        <Cerchio dimensione={dimEffettiva} viva={!errore && !collassata} spenta={collassata}
+                 vetroDaSpenta opacita={opacita} className={collassata ? 's-glass-btn' : undefined}>
           <div title={titolo} style={{
             width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', position: 'relative',
           }}>
-            {/* ── IL VIDEO RESTA MONTATO, SOLO INVISIBILE ─────────────────────────────────────
-                Segnalato: collassata mostrava lo STESSO video rimpicciolito — un volto ancora in
-                movimento a una taglia che si legge come un difetto, non come un gesto voluto. Qui
-                l'elemento `<video>` non si smonta mai (lo stream resterebbe scollegato e andrebbe
-                riagganciato da capo alla riespansione): sparisce solo alla vista
-                (`opacity`), il disco affondato di `Cerchio` sopra descritto prende il suo posto
-                agli occhi. */}
             <div style={{
               width: '100%', height: '100%', opacity: collassata ? 0 : 1,
               transition: 'opacity var(--s-slow) var(--s-ease)',
@@ -147,13 +164,31 @@ export function CameraCerchio({
                 <video ref={attach} autoPlay playsInline muted={!externalStream || forceMuted}
                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               )}
-              {externalStream && (
+              {/* ── LIVE + LO STATO — segnalato: « nella cam PC devi mettere le indicazioni
+                  che hai già in equilibrium ». Stesso badge verde e stesso testo di stato di
+                  `CameraFeed.tsx` (`massStatus`), solo su un cerchio invece che su un
+                  riquadro: LIVE in alto, lo stato in una fascia in basso — leggibili senza
+                  coprire il volto al centro. */}
+              {inDiretta && (
                 <span style={{
-                  position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)',
-                  fontSize: 10, letterSpacing: '0.06em', color: 'var(--s-still)',
-                  fontFamily: 'var(--s-mono)', fontWeight: 700,
+                  position: 'absolute', top: '10%', left: '50%', transform: 'translateX(-50%)',
+                  fontSize: Math.max(8, dimEffettiva * 0.045), letterSpacing: '0.08em', fontWeight: 700,
+                  padding: '1px 7px', borderRadius: 999,
+                  background: 'rgba(52,211,153,0.85)', color: '#04140d',
+                  fontFamily: 'var(--s-sans)',
                 }}>
-                  ●
+                  LIVE
+                </span>
+              )}
+              {statoTesto && (
+                <span style={{
+                  position: 'absolute', bottom: '9%', left: '50%', transform: 'translateX(-50%)',
+                  maxWidth: '82%', textAlign: 'center',
+                  fontSize: Math.max(8, dimEffettiva * 0.042), letterSpacing: '0.02em', fontWeight: 700,
+                  color: '#f4f7ff', textShadow: '0 1px 3px rgba(0,0,0,0.65)',
+                  fontFamily: 'var(--s-sans)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>
+                  {statoTesto}
                 </span>
               )}
             </div>
@@ -162,7 +197,7 @@ export function CameraCerchio({
       </div>
       {/* La didascalia — SEMPRE leggibile, non solo al passaggio del mouse (segnalato). */}
       <span style={{
-        fontFamily: 'var(--s-sans)', fontSize: collassata ? 10.5 : 12.5, color: 'var(--s-ink-soft)', letterSpacing: '0.02em',
+        fontFamily: 'var(--s-sans)', fontSize: collassata ? 12 : 14, color: 'var(--s-ink-soft)', letterSpacing: '0.02em',
       }}>
         {titolo}
       </span>

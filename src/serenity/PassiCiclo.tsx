@@ -48,7 +48,7 @@ export function PassiCiclo({ passi, indiceAttuale, hue }: {
                 style={{
                   width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
                   display: 'grid', placeItems: 'center',
-                  fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 700,
+                  fontFamily: 'var(--s-mono)', fontSize: 11.5, fontWeight: 700,
                   background: fatto ? hue : attuale ? 'var(--s-disc)' : 'var(--s-disc-sunk)',
                   color: fatto ? 'var(--s-ground-warm)' : attuale ? 'var(--s-ink)' : 'var(--s-ink-faint)',
                   border: attuale ? `1.5px solid ${hue}` : 'none',
@@ -59,7 +59,7 @@ export function PassiCiclo({ passi, indiceAttuale, hue }: {
                 {fatto ? '✓' : i + 1}
               </span>
               <span style={{
-                fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.02em',
+                fontFamily: 'var(--s-sans)', fontSize: 13.5, letterSpacing: '0.02em',
                 fontWeight: attuale ? 700 : 500, whiteSpace: 'nowrap',
                 color: attuale ? 'var(--s-ink)' : fatto ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
                 transition: 'color var(--s-slow) var(--s-ease)',

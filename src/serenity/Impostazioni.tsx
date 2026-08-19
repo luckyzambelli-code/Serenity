@@ -52,6 +52,7 @@ export function SelettoreLingua() {
       selezionato={lang}
       onChange={setLang}
       minLarghezza={40}
+      elencoCompleto
     />
   );
 }
