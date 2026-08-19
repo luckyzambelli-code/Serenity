@@ -144,6 +144,42 @@ const LetturaIntegrita = React.memo(function LetturaIntegrita() {
   );
 });
 
+/** ── « A CHE PUNTO SONO, E COSA DEVO FARE » — l'equivalente di `components/CycleHint.tsx`,
+ *  non il componente stesso: quel file scrive i suoi colori DIRETTI nello stile inline (mai
+ *  una `var(--sm-x)`, a differenza di `CycleStatusBar`) — presi in prestito così com'è,
+ *  « rgba(240,246,255,0.95) » (quasi bianco) sarebbe leggibile sul fondo scuro di App.tsx e
+ *  quasi INVISIBILE sul bianco perla di SERENITY in tema chiaro. Stessa struttura a quattro
+ *  righe (titolo/comando/come/avviso), stessi dati (`spiegazioneCiclo`, portato fedele più
+ *  sotto) — nella lingua grafica di SERENITY (`var(--s-x)`), non in quella di EQUILIBRIUM. */
+function SuggerimentoCiclo({ titolo, comando, come, avviso, fatto = false }: {
+  titolo: string; comando?: string | null; come: string; avviso?: string | null; fatto?: boolean;
+}) {
+  return (
+    <div style={{ width: '100%', marginTop: 2 }}>
+      <div style={{ fontFamily: 'var(--s-sans)', fontSize: 15, fontWeight: 800, letterSpacing: '0.02em',
+                    color: fatto ? 'var(--s-still)' : 'var(--s-ink)' }}>
+        {titolo}
+      </div>
+      {comando && (
+        <div style={{ fontFamily: 'var(--s-serif)', fontSize: 14.5, lineHeight: 1.4, marginTop: 3,
+                      color: 'var(--s-ink-soft)' }}>
+          {comando}
+        </div>
+      )}
+      <div style={{ fontFamily: 'var(--s-sans)', fontSize: 13.5, lineHeight: 1.45, marginTop: 2,
+                    color: 'var(--s-ink-faint)' }}>
+        {come}
+      </div>
+      {avviso && (
+        <div style={{ fontFamily: 'var(--s-sans)', fontSize: 13.5, fontWeight: 700, marginTop: 3,
+                      color: 'var(--s-reserve)' }}>
+          {avviso}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** ── IL LAG DI RON E LA % DI DISSOLUZIONE, E TUTTO IL RESTO CHE VA COL CICLO — erano
  *  informazioni dinamiche di EQUILIBRIUM (`CycleStatusBar`, riga sotto la domanda), non solo
  *  il disegno dell'arco. Segnalato di nuovo: « i cicli devono essere disposti esattamente
@@ -925,6 +961,115 @@ export default function Serenity() {
   }), [aperta, muse.museConnection, meterC, ep.epWindowOpen, mode, cycles.cycleArmed, cycles.asIsPending,
        cycles.nullPhase, item, itemSpoken, mirror.mirrorArmed, mirror.mirrorDisp.locked, mirror.mirrorDisp.reached,
        tone.tonePhase]);
+
+  const senzaNumero = (t: string) => t.replace(/^\s*\d+\s*·\s*/, '');
+  const chargePhaseNow = useMetric(m => m.chargePhase);
+
+  /**
+   * ── « A CHE PUNTO SONO, E COSA DEVO FARE » — segnalata assente: « riproduci la logica dei
+   * cicli di EQUILIBRIUM, con gli stessi campi, stessi posizionamenti ». App.tsx ha
+   * `spiegazioneCiclo` + `CycleHint`: una riga di titolo, il comando ESATTO da dire al
+   * preclear fra virgolette, che cosa fare, un avviso ambra quando serve — sotto i comandi
+   * del ciclo, sempre nello stesso posto. `CycleSteps` (già montata) dice DOVE si è nella
+   * sequenza; questo dice COSA FARE in quel punto — le due informazioni sono complementari,
+   * non un doppione. Stesso testo di App.tsx, parola per parola: non è calcolo, è la
+   * procedura scritta — portarla qui non tocca il motore, finisce di copiarla.
+   */
+  const spiegazioneCiclo = useMemo((): { titolo: string; comando?: string | null; come: string; avviso?: string | null; fatto?: boolean } => {
+    if (toneAttivo) {
+      if (faseCiclo === 'tone.item') return {
+        titolo: LC('1 · DAI L\'ITEM', '1 · DONNE L\'ITEM', '1 · GIVE THE ITEM', '1 · DA EL ÍTEM', '1 · GE ITEM'),
+        comando: LC('« Localizza sul tuo caso una resistenza che possa essere corsa adesso. »',
+                    '« Localise sur ton cas une résistance qui puisse être courue maintenant. »',
+                    '« Locate resistance on your case that can now be run. »',
+                    '« Localiza en tu caso una resistencia que pueda correrse ahora. »',
+                    '« Lokalisera ett motstånd i ditt fall som kan köras nu. »'),
+        come: LC('Scrivi o dì la resistenza che il preclear trova, poi premi.',
+                 'Écris ou dis la résistance que le préclair trouve, puis appuie.',
+                 'Type or say the resistance the preclear finds, then press.',
+                 'Escribe o di la resistencia que el preclear encuentra, luego pulsa.',
+                 'Skriv eller säg motståndet preclearen hittar, tryck sedan.') };
+      if (faseCiclo === 'tone.say_item') return {
+        titolo: LC('1 · DÌ LA RESISTENZA', '1 · DIS LA RÉSISTANCE', '1 · SAY THE RESISTANCE', '1 · DI LA RESISTENCIA', '1 · SÄG MOTSTÅNDET'),
+        come: LC('La prima parola che dici diventa la resistenza su cui si lavora.',
+                 'Le premier mot que tu dis devient la résistance sur laquelle on travaille.',
+                 'The first word you say becomes the resistance being worked.',
+                 'La primera palabra que digas se vuelve la resistencia sobre la que se trabaja.',
+                 'Det första ordet du säger blir motståndet som körs.') };
+      if (tone.tonePhase === 'raise') return {
+        titolo: `2 · ${LC('PORTALO A TONO 40', 'MÈNE-LE AU TON 40', 'RAISE IT TO TONE 40', 'LLÉVALO AL TONO 40', 'FÖR DET TILL TON 40')}`
+          + (tone.toneRipetizioni > 0 ? ` · ×${tone.toneRipetizioni}` : ''),
+        comando: LC('« Porta questo a tono quaranta sulla scala del tono. »',
+                    '« Mène ceci au ton quarante sur l\'échelle des tons. »',
+                    '« Raise this to tone forty on the tone scale. »',
+                    '« Lleva esto al tono cuarenta en la escala del tono. »',
+                    '« För detta till ton fyrtio på tonskalan. »'),
+        come: LC('Ridallo finché non reagisce più e arriva alla serenità dell\'essere.',
+                 'Redonne-le jusqu\'à ce qu\'il ne réagisse plus et atteigne la sérénité de l\'être.',
+                 'Give it again until there is no reaction and he reaches serenity of beingness.',
+                 'Vuelve a darlo hasta que no reaccione más y alcance la serenidad del ser.',
+                 'Ge det igen tills ingen reaktion finns och han når varandets stillhet.') };
+      return { titolo: LC('TONO QUARANTA RAGGIUNTO', 'TON QUARANTE ATTEINT', 'TONE FORTY REACHED', 'TONO CUARENTA ALCANZADO', 'TON FYRTIO NÅDD'), fatto: true,
+        come: LC('Non reagisce più: serenità dell\'essere. Validato da te.',
+                 'Il ne réagit plus : sérénité de l\'être. Validé par toi.',
+                 'No more reaction: serenity of beingness. Validated by you.',
+                 'Ya no reacciona: serenidad del ser. Validado por ti.',
+                 'Ingen reaktion kvar: varandets stillhet. Validerat av dig.') };
+    }
+    if (mirror.mirrorArmed) {
+      if (faseCiclo === 'mirror.item') return {
+        titolo: LC('1 · DAI L\'ITEM', '1 · DONNE L\'ITEM', '1 · GIVE THE ITEM', '1 · DA EL ÍTEM', '1 · GE ITEM'),
+        come: LC('Scrivilo o dillo a voce, poi premi. Il valore si fissa sulla carica di QUESTO item.', 'Écris-le ou dis-le, puis appuie. La valeur se fige sur la charge de CET item.', 'Type it or say it, then press. The value is fixed on THIS item\'s charge.', 'Escríbelo o dilo, luego pulsa. El valor se fija en la carga de ESTE ítem.', 'Skriv eller säg det, tryck sedan. Värdet fästs på DETTA items laddning.') };
+      if (faseCiclo === 'mirror.say_item') return {
+        titolo: LC('2 · DÌ L\'ITEM', '2 · DIS L\'ITEM', '2 · SAY THE ITEM', '2 · DI EL ÍTEM', '2 · SÄG ITEM'),
+        come: LC('La prima parola che dici diventa l\'item, e la misura riparte da lì.', 'Le premier mot que tu dis devient l\'item, et la mesure repart de là.', 'The first word you say becomes the item, and the measure restarts there.', 'La primera palabra que digas se vuelve el ítem, y la medida reinicia allí.', 'Det första ordet du säger blir item, och mätningen börjar om där.') };
+      if (!mirror.mirrorDisp.locked) return {
+        titolo: LC('3 · CONTATTO DELLA CARICA', '3 · CONTACT DE LA CHARGE', '3 · CONTACTING THE CHARGE', '3 · CONTACTO DE LA CARGA', '3 · KONTAKT MED LADDNINGEN'),
+        come: LC('Aspetta: il valore 1–10 si fissa da sé quando la lettura si è girata.', 'Attends : la valeur 1–10 se fige d\'elle-même quand la lecture s\'est retournée.', 'Wait: the 1–10 value fixes itself once the read has turned over.', 'Espera: el valor 1–10 se fija solo cuando la lectura se ha girado.', 'Vänta: värdet 1–10 fäster av sig självt när avläsningen vänt.') };
+      if (mirror.mirrorDisp.reached) return {
+        titolo: LC('OTTENUTO', 'OBTENU', 'OBTAINED', 'OBTENIDO', 'UPPNÅTT'), fatto: true,
+        come: LC('Lo smaltito ha raggiunto il doppio. Valida e riparti con un altro item.', 'Le déchargé a atteint le double. Valide et repars avec un autre item.', 'The discharged reached the double. Validate and go on with another item.', 'Lo descargado alcanzó el doble. Valida y sigue con otro ítem.', 'Det urladdade nådde dubbeln. Validera och fortsätt med ett annat item.') };
+      return {
+        titolo: `4 · ${LC('PORTA AL DOPPIO', 'MÈNE AU DOUBLE', 'TAKE IT TO THE DOUBLE', 'LLEVA AL DOBLE', 'FÖR TILL DUBBELN')} ${(2 * mirror.mirrorDisp.valueR).toFixed(1)}`,
+        come: LC(`Valore ${mirror.mirrorDisp.valueR.toFixed(1)} — il metodo del doppio di Ron. Non fare altro: si smaltisce da sé.`, `Valeur ${mirror.mirrorDisp.valueR.toFixed(1)} — la méthode du double de Ron. Ne fais rien d'autre : ça se décharge tout seul.`, `Value ${mirror.mirrorDisp.valueR.toFixed(1)} — Ron's doubling method. Do nothing else: it discharges by itself.`, `Valor ${mirror.mirrorDisp.valueR.toFixed(1)} — el método del doble de Ron. No hagas nada más: se descarga solo.`, `Värde ${mirror.mirrorDisp.valueR.toFixed(1)} — Rons dubbelmetod. Gör inget annat: det laddas ur av sig självt.`) };
+    }
+    if (cycles.cycleKind === 'null' && cycles.cycleArmed) {
+      if (faseCiclo === 'null.item') return {
+        titolo: LC('1 · DAI L\'ITEM', '1 · DONNE L\'ITEM', '1 · GIVE THE ITEM', '1 · DA EL ÍTEM', '1 · GE ITEM'),
+        come: LC('Se l\'ago NON legge, premi: è il ciclo speculare, si lavora su ciò che non reagisce.', 'Si l\'aiguille NE lit PAS, appuie : c\'est le cycle miroir, on travaille sur ce qui ne réagit pas.', 'If the needle does NOT read, press: this is the mirror cycle, working on what does not react.', 'Si la aguja NO lee, pulsa: es el ciclo espejo, se trabaja sobre lo que no reacciona.', 'Om nålen INTE läser, tryck: det är spegelcykeln, man arbetar på det som inte reagerar.') };
+      if (faseCiclo === 'null.say_item') return {
+        titolo: LC('DÌ L\'ITEM', 'DIS L\'ITEM', 'SAY THE ITEM', 'DI EL ÍTEM', 'SÄG ITEM'),
+        come: LC('La prima parola che dici diventa l\'item.', 'Le premier mot que tu dis devient l\'item.', 'The first word you say becomes the item.', 'La primera palabra que digas se vuelve el ítem.', 'Det första ordet du säger blir item.') };
+      if (faseCiclo === 'null.rise') return {
+        titolo: LC('3 · LA CARICA SALE', '3 · LA CHARGE MONTE', '3 · THE CHARGE RISES', '3 · LA CARGA SUBE', '3 · LADDNINGEN STIGER'),
+        come: LC('Il mock-up sta creando massa. Aspetta il ritorno alla base: quello è l\'EQUILIBRIUM.', 'Le mock-up crée de la masse. Attends le retour à la base : c\'est ça l\'EQUILIBRIUM.', 'The mock-up is creating mass. Wait for the return to base: that is the EQUILIBRIUM.', 'El mock-up está creando masa. Espera el retorno a la base: eso es el EQUILIBRIUM.', 'Mock-upen skapar massa. Vänta på återgången till basen: det är EQUILIBRIUM.') };
+      if (faseCiclo === 'null.equilibrium') return {
+        titolo: 'EQUILIBRIUM', fatto: true,
+        come: LC('Tornato alla base. Valida inscrivendo i VGI\'s — sì o no, sei tu a dirlo.', 'Revenu à la base. Valide en inscrivant les VGI\'s — oui ou non, c\'est toi qui le dis.', 'Back to base. Validate by recording the VGI\'s — yes or no, you say it.', 'Vuelto a la base. Valida inscribiendo los VGI\'s — sí o no, lo dices tú.', 'Tillbaka till basen. Validera genom att skriva in VGI\'s — ja eller nej, du säger det.') };
+      return {
+        titolo: LC('2 · CHIEDI UN MOCK-UP', '2 · DEMANDE UN MOCK-UP', '2 · ASK FOR A MOCK-UP', '2 · PIDE UN MOCK-UP', '2 · BE OM EN MOCK-UP'),
+        come: LC('Il tempo non è imposto: ogni preclear ha il suo. Il cronometro è solo indicativo.', 'Le temps n\'est pas imposé : chaque préclair a le sien. Le chrono est indicatif.', 'The time is not imposed: each preclear has their own. The clock is only indicative.', 'El tiempo no se impone: cada preclear tiene el suyo. El cronómetro es indicativo.', 'Tiden är inte given: varje preclear har sin. Klockan är bara vägledande.') };
+    }
+    if (faseCiclo === 'contact.item' || mode === 'free') return {
+      titolo: LC('1 · DAI L\'ITEM', '1 · DONNE L\'ITEM', '1 · GIVE THE ITEM', '1 · DA EL ÍTEM', '1 · GE ITEM'),
+      come: LC('L\'ago legge → premi. Puoi scrivere l\'item o dirlo a voce dopo aver premuto.', 'L\'aiguille lit → appuie. Tu peux écrire l\'item ou le dire après avoir appuyé.', 'The needle reads → press. You can type the item or say it after pressing.', 'La aguja lee → pulsa. Puedes escribir el ítem o decirlo tras pulsar.', 'Nålen läser → tryck. Du kan skriva item eller säga det efter tryckningen.') };
+    if (faseCiclo === 'contact.say_item') return {
+      titolo: LC('DÌ L\'ITEM', 'DIS L\'ITEM', 'SAY THE ITEM', 'DI EL ÍTEM', 'SÄG ITEM'),
+      come: LC('La prima parola che dici diventa l\'item.', 'Le premier mot que tu dis devient l\'item.', 'The first word you say becomes the item.', 'La primera palabra que digas se vuelve el ítem.', 'Det första ordet du säger blir item.') };
+    if (faseCiclo === 'contact.asis') return {
+      titolo: '3 · AS-IS', fatto: true,
+      come: LC('La firma della carica è collassata e l\'F/N è arrivato. Proposto: validi tu, mai l\'app.', 'La signature de la charge s\'est effondrée et la F/N est là. Proposé : c\'est toi qui valides, jamais l\'app.', 'The charge signature has collapsed and the F/N is here. Proposed: you validate, never the app.', 'La firma de la carga colapsó y llegó la F/N. Propuesto: validas tú, nunca la app.', 'Laddningens signatur har kollapsat och F/N är här. Föreslaget: du validerar, aldrig appen.') };
+    return {
+      titolo: LC('2 · CHIEDI UN MOCK-UP', '2 · DEMANDE UN MOCK-UP', '2 · ASK FOR A MOCK-UP', '2 · PIDE UN MOCK-UP', '2 · BE OM EN MOCK-UP'),
+      come: LC('Poi non fare altro: il ciclo avanza da sé fino all\'AS-IS.', 'Puis ne fais rien d\'autre : le cycle avance tout seul jusqu\'à l\'AS-IS.', 'Then do nothing else: the cycle advances by itself to the AS-IS.', 'Luego no hagas nada más: el ciclo avanza solo hasta el AS-IS.', 'Gör sedan inget mer: cykeln går själv fram till AS-IS.'),
+      avviso: cycles.noReadSignal
+        ? LC('sembra NULL — nessuna lettura nella finestra', 'semble NULL — aucune lecture dans la fenêtre', 'looks NULL — no read in the window', 'parece NULL — ninguna lectura en la ventana', 'ser NULL ut — ingen avläsning i fönstret')
+        : chargePhaseNow === 'discharge'
+        ? LC('la carica si sta dissolvendo', 'la charge se dissout', 'the charge is dissolving', 'la carga se está disolviendo', 'laddningen löses upp')
+        : null };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [faseCiclo, toneAttivo, tone.tonePhase, tone.toneRipetizioni, mirror.mirrorArmed, mirror.mirrorDisp,
+      cycles.cycleKind, cycles.cycleArmed, cycles.noReadSignal, chargePhaseNow, mode, lang]);
 
   /**
    * ── L'ITEM A VOCE, LA SORGENTE CHE MANCAVA ───────────────────────────────────────────────
@@ -1928,6 +2073,10 @@ export default function Serenity() {
             }}>
               {t('cancel')}
             </button>
+            {/* « A che punto sono, e cosa devo fare » — vedi la nota su `spiegazioneCiclo`. */}
+            <div style={{ flexBasis: '100%' }}>
+              <SuggerimentoCiclo {...spiegazioneCiclo} titolo={senzaNumero(spiegazioneCiclo.titolo)} />
+            </div>
           </>
         )}
         {/* ── MIRROR, ARMATO — tre tempi, non due ──────────────────────────────────────────
@@ -2020,6 +2169,10 @@ export default function Serenity() {
             }}>
               {t('cancel')}
             </button>
+            {/* « A che punto sono, e cosa devo fare » — vedi la nota su `spiegazioneCiclo`. */}
+            <div style={{ flexBasis: '100%' }}>
+              <SuggerimentoCiclo {...spiegazioneCiclo} titolo={senzaNumero(spiegazioneCiclo.titolo)} />
+            </div>
           </>
         )}
         {aperta && cycles.cycleArmed && (
@@ -2133,6 +2286,30 @@ export default function Serenity() {
                 {t('ser_validate_asis')}
               </button>
             )}
+            {/* ── LO STESSO `CycleStatusBar` DI APP.TSX — segnalato: « riproduci la logica dei
+                cicli di equilibrium... stessi posizionamenti ». Stava lontano da qui (in fondo,
+                vicino al quadrante, dietro `agoEeg`): App.tsx lo mette DIRETTAMENTE sotto la
+                domanda/i comandi del ciclo, mai altrove — « riga sotto la domanda », la sua
+                stessa nota. Spostato qui: stesso posto, stesso componente. */}
+            <div style={{ flexBasis: '100%' }}>
+              <CycleStatusBar
+                armed={cycles.cycleArmed}
+                manualReady={cycles.manualReady}
+                asIsFalse={cycles.asIsFalse}
+                deltaStar={deltaStar}
+                deltaStarN={deltaStarN}
+                isLightTheme={isLightTheme}
+                signalOk={museGate.museContact}
+                cycleKind={cycles.cycleKind}
+                nullSinceMock={cycles.nullSinceMock}
+                noReadSignal={cycles.noReadSignal}
+                taAtNullStart={cycles.taAtNullStart}
+              />
+            </div>
+            {/* « A che punto sono, e cosa devo fare » — vedi la nota su `spiegazioneCiclo`. */}
+            <div style={{ flexBasis: '100%' }}>
+              <SuggerimentoCiclo {...spiegazioneCiclo} titolo={senzaNumero(spiegazioneCiclo.titolo)} />
+            </div>
           </>
         )}
         {/* Il giornale NON si mostra: scorrere alla periferia tira l'occhio proprio mentre
@@ -2550,31 +2727,8 @@ export default function Serenity() {
             )}
           </span>
         )}
-        {/* ── LO STESSO `CycleStatusBar` DI APP.TSX, NON UNA COPIA — segnalato: « i cicli
-            devono essere disposti esattamente come in equilibrium, stessi campi, stessa
-            logica ». `LetturaCiclo` (sopra, ora tolta da qui) mostrava SOLO comm-lag e %
-            dissoluzione — un sottoinsieme scritto a mano. Mancavano il chip « nessuna lettura »
-            (`noReadSignal` — il ciclo CONTACT non ha visto nulla nella finestra del comm-lag,
-            un'indicazione che potrebbe essere un NULL) e il chip del ciclo NULL (« recharging »,
-            lo scarto di TA dal suo inizio + i secondi). Nessuno dei due era calcolato da capo:
-            `useContactNullCycle` (già montato) li espone già (`noReadSignal`, `nullSinceMock`,
-            `taAtNullStart`), semplicemente non erano letti qui. Il componente STESSO — non una
-            sua imitazione — si occupa del resto (colori, soglie, le 5 lingue del chip). */}
-        {cycles.cycleArmed && (
-          <CycleStatusBar
-            armed={cycles.cycleArmed}
-            manualReady={cycles.manualReady}
-            asIsFalse={cycles.asIsFalse}
-            deltaStar={deltaStar}
-            deltaStarN={deltaStarN}
-            isLightTheme={isLightTheme}
-            signalOk={museGate.museContact}
-            cycleKind={cycles.cycleKind}
-            nullSinceMock={cycles.nullSinceMock}
-            noReadSignal={cycles.noReadSignal}
-            taAtNullStart={cycles.taAtNullStart}
-          />
-        )}
+        {/* `CycleStatusBar` si è spostato nel blocco dei comandi CONTACT/NULL, sopra: stesso
+            posto di App.tsx (« riga sotto la domanda »), non più qui vicino al quadrante. */}
 
         {/* ⚠️ I QUATTRO CERCHI SATELLITE (assessment, cycle hint, …) SONO STATI TOLTI DA QUI,
             non solo spenti. Erano posizionati per orbitare un cerchio centrale da 380 px; con

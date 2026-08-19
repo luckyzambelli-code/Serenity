@@ -1220,6 +1220,42 @@ EQUILIBRIUM invariato, SERENITY 3.0.46.
 
 ---
 
+## Quindicesimo giro (19/08/2026) — la stessa componente di EQUILIBRIUM, il vetro fino in fondo
+
+« riproda logica dei cicli di equilibrium in SERENITY, con gli stessi campi, stessi
+posizionamenti » — dopo il decimo giro (che aveva già montato `CycleSteps`/`CycleStatusBar`),
+mancavano ancora due pezzi, trovati leggendo App.tsx riga per riga.
+
+1. **`CycleHint` — « a che punto sono, e cosa devo fare » — ASSENTE del tutto.** App.tsx ha
+   `spiegazioneCiclo` (una mappa fase→testo: titolo, il comando ESATTO da dire al preclear fra
+   virgolette, che cosa fare, un avviso ambra) più `CycleHint` che lo disegna, sempre nello
+   stesso posto sotto i comandi del ciclo. `CycleSteps` (già montata) dice DOVE si è nella
+   sequenza; questo dice COSA FARE in quel punto — le due informazioni non si sovrappongono, e
+   SERENITY aveva solo la prima. Portato `spiegazioneCiclo` parola per parola (non è calcolo,
+   è la procedura scritta) per TONE/MIRROR/CONTACT/NULL. `CycleHint` STESSO non si è potuto
+   riusare: scrive i suoi colori DIRETTI nello stile inline (mai una `var(--sm-x)` come
+   `CycleStatusBar`) — `rgba(240,246,255,0.95)`, quasi bianco, tarato sul fondo scuro di
+   App.tsx, sarebbe stato quasi invisibile sul bianco perla di SERENITY in tema chiaro. Stessa
+   struttura a quattro righe, stessi dati, nella lingua grafica di SERENITY:
+   `SuggerimentoCiclo`, nuovo, locale a `Serenity.tsx`.
+
+2. **`CycleStatusBar` era nel posto sbagliato.** Montata nel decimo giro, ma vicino al
+   quadrante (dietro `agoEeg`), lontana dai comandi del ciclo — App.tsx la mette SEMPRE
+   direttamente sotto la domanda/i comandi, mai altrove (la sua stessa nota: « riga sotto la
+   domanda »). Spostata nel blocco CONTACT/NULL, subito dopo gli esiti di validazione: stesso
+   componente, ora anche stesso posto.
+
+Verificato dal vivo: armato CONTACT senza strumenti, la scritta cambia correttamente ad ogni
+fase — « DÌ L'ITEM · Le premier mot que tu dis devient l'item. » in attesa della parola,
+« DEMANDE UN MOCK-UP · Puis ne fais rien d'autre : le cycle avance tout seul jusqu'à l'AS-IS. »
+dopo — parola per parola quanto App.tsx.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori nuovi (317 warning, tutte
+preesistenti), `vitest run` 639/639. `git status`: solo `src/serenity/Serenity.tsx`.
+EQUILIBRIUM invariato, SERENITY 3.0.48.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
