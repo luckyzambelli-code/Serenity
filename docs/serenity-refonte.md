@@ -1091,6 +1091,55 @@ SERENITY 3.0.43.
 
 ---
 
+## Dodicesimo giro (19/08/2026) — continua l'audit: un bug vero trovato verificando dal vivo
+
+« Continue » — proseguito l'audit senza fermarsi, con l'interruzione di un blocco permessi del
+filesystem (Accesso completo al disco) nel mezzo: risolto lato utente, ripreso da dove si era.
+
+**Due funzioni in più, chiuse con lo stesso metodo dell'undicesimo giro** (il motore esiste
+già, mancava solo chi lo guarda/attiva):
+
+1. **L'integrità biometrica** (`runtime/SmoothingEngine`'s `integrityTracker`) — ASSENTE.
+   `hooks/useChargeEngine` già gli scrive `setTarget` a ogni METRICS_UPDATE (montato da
+   sempre): mancava solo chi legge (`useSyncExternalStore`) e chi lo avvia
+   (`integrityTracker.start()/.stop()`, legato al montaggio dell'applicazione come in
+   App.tsx, non a una singola seduta). Aggiunto un readout nella riga diagnostica, accanto a
+   TA/fase/qualità segnale.
+2. **La guida** (`GuideModal`) — ASSENTE. Autosufficiente (un iframe su un file HTML copiato
+   ad ogni build, `scripts/copy-guide.cjs` — gira per entrambe le applicazioni, verificato)
+   — montata tale e quale, un bottone « ? » accanto a CONFIG in intestazione.
+
+**Un bug vero, trovato SOLO verificando dal vivo, non dalla lettura del codice**: aperta una
+seduta scegliendo MUSE, il controllo di prontezza (chiuso l'undicesimo giro) non compariva
+mai — si andava dritti alla seduta, esattamente il difetto che quel giro doveva correggere.
+Causa: `apri()` — il gesto dietro il bottone "APRI UNA SEDUTA" quando uno strumento è GIÀ
+collegato (per esempio dall'intestazione, prima di premere il bottone) — chiamava
+`avviaSeduta()` DIRETTAMENTE, senza mai passare da `setMetabolicOpen(true)`. Il pannello di
+scelta strumento (`scegliStrumento`) era già cablato bene fin dall'undicesimo giro — è
+`apri()`, il SECONDO modo di aprire una seduta, che era rimasto scollegato. Corretto con la
+stessa regola di App.tsx (`proceedStart`): senza strumenti, dritti alla seduta (niente da
+misurare); altrimenti, il controllo prima.
+
+⚠️ **Ancora non verificabile a vista in questo ambiente**: il controllo di prontezza si APRE
+davvero adesso (confermato per lettura del codice — la stessa `useEffect` "caso limite" già
+scritta nell'undicesimo giro lo richiude un istante dopo, perché senza Bluetooth vero la
+connessione MUSE non può mai riuscire in un browser) — la sua schermata VISIBILE resta da
+confermare nell'app reale, con hardware vero, come il percorso del METER già segnalato prima.
+
+**Dichiarato di nuovo, non ancora esaminato riga per riga** (l'audit resta onesto): il
+rapporto di fine seduta (fase 8), `ToneColumn`, la vista INDICAZIONE dell'assessment, i
+bottoni non vetrati di 4 pannelli secondari, `HealthPanel`/`BiometricPanel` (le forme d'onda
+EEG/gyro grezze — richiedono di allacciarsi al flusso grezzo del worker, non ancora
+esaminato), `AIAssistant`, `useMediaRelayFallback`.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori (320 warning, tutte preesistenti),
+`vitest run` 639/639, verifica dal vivo (guida: si apre, mostra il manuale, si chiude; profilo
+"Test" → SOLO → MUSE → apri: nessun crash, la seduta si apre correttamente attraverso il
+percorso corretto di `apri()`). `git status`: solo `src/serenity/Serenity.tsx`. EQUILIBRIUM
+invariato, SERENITY 3.0.44.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

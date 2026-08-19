@@ -28,6 +28,7 @@ import { useMetric } from '../store/metricsStore';
 import { chargeStateById } from '../lib/chargeState';
 import { sessionClock } from '../runtime/SessionClock';
 import { needleEngine, virtualNeedle } from '../runtime/NeedleEngine';
+import { integrityTracker } from '../runtime/SmoothingEngine';
 import { useThetaMeter } from '../hooks/useThetaMeter';
 import { useMuseConnection } from '../hooks/useMuseConnection';
 import { useMuseContactGate } from '../hooks/useMuseContactGate';
@@ -75,7 +76,8 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle } from 'lucide-react';
+import { GuideModal } from '../components/GuideModal';
 import { computeInstantRead, readWaitSeconds, READ_NON_MISURATO, type ReadSrc } from '../engine/instantRead';
 import { REACTION_LABELS } from '../engine/ReactionClassifier';
 import type { PrimePhase, Zone as PrimeZone } from '../lib/primeFreqEngine';
@@ -127,6 +129,20 @@ const LetturaFase = React.memo(function LetturaFase({ t }: { t: (k: string) => u
   return <>{cs.labelKey ? (t(cs.labelKey) as string) : ''}</>;
 });
 
+/** ── L'INTEGRITÀ BIOMETRICA — segnalata assente nell'audit funzionale completo: « toutes les
+ *  fonctions... METER/MUSE ». `runtime/SmoothingEngine`'s `integrityTracker` è condiviso e già
+ *  NUTRITO qui (`hooks/useChargeEngine` gli scrive `setTarget` a ogni METRICS_UPDATE, montato
+ *  da sempre) — mancava solo chi lo LEGGE. Isolato in un suo `React.memo` come `LetturaTA`:
+ *  aggiorna spesso, non deve ridisegnare tutta l'intestazione. */
+const LetturaIntegrita = React.memo(function LetturaIntegrita() {
+  const pct = useSyncExternalStore(integrityTracker.subscribe, integrityTracker.getCurrent);
+  return (
+    <span style={{ fontFamily: 'var(--s-mono)', fontVariantNumeric: 'tabular-nums' }}>
+      {Math.round(pct)}%
+    </span>
+  );
+});
+
 /** ── IL LAG DI RON E LA % DI DISSOLUZIONE, E TUTTO IL RESTO CHE VA COL CICLO — erano
  *  informazioni dinamiche di EQUILIBRIUM (`CycleStatusBar`, riga sotto la domanda), non solo
  *  il disegno dell'arco. Segnalato di nuovo: « i cicli devono essere disposti esattamente
@@ -153,6 +169,13 @@ export default function Serenity() {
   useEffect(() => {
     document.documentElement.dataset.tema = isLightTheme ? 'chiaro' : 'scuro';
   }, [isLightTheme]);
+  /** ── L'INTEGRITÀ BIOMETRICA — vedi `LetturaIntegrita` sopra. Stesso ciclo di vita di
+   *  App.tsx: parte al montaggio dell'applicazione, si ferma alla chiusura — non legato
+   *  all'apertura/chiusura di UNA seduta, è un tracciamento continuo. */
+  useEffect(() => {
+    integrityTracker.start();
+    return () => integrityTracker.stop();
+  }, []);
   const journal = useSessionJournal('SERENITY');
   const [aperta, setAperta] = useState(false);
   /**
@@ -178,6 +201,8 @@ export default function Serenity() {
   const [collegato, setCollegato] = useState(false);
   /** CONFIG — segnalato assente: raggiungibile in ogni momento, come in EQUILIBRIUM. */
   const [configAperto, setConfigAperto] = useState(false);
+  /** LA GUIDA — segnalata assente nell'audit funzionale completo. `GuideModal`, autosufficiente. */
+  const [guidaAperta, setGuidaAperta] = useState(false);
   /** ── LA TARATURA DELL'AGO EEG — segnalata assente nell'audit funzionale completo: « toutes
    *  les fonctions... calibrations » — App.tsx la tiene nel cassetto TRIM di `SidebarDrawer`
    *  (`needleTrim`/`needleInertia`, scritte dritte sul motore condiviso `runtime/NeedleEngine`,
@@ -1069,7 +1094,21 @@ export default function Serenity() {
       setScegliStrumento(true);
       return;
     }
-    avviaSeduta();
+    /* ── IL CONTROLLO DI PRONTEZZA — BUG trovato nella verifica dal vivo di questo stesso
+       giro: `metabolicOpen`/`ThetaReadyCheck`/`MetabolicCheck` erano montati (sotto), ma
+       QUESTA funzione — l'unica che li può accendere — chiudeva sempre dritto su
+       `avviaSeduta()`, senza mai passare dal controllo. Uno strumento scelto portava
+       comunque dritti alla seduta, esattamente il difetto segnalato. Stessa regola di
+       App.tsx (`proceedStart`): « senza strumenti non c'è prontezza da verificare » (nulla
+       da misurare) → dritto alla seduta; altrimenti si apre il controllo, e la seduta vera
+       parte da `avviaSedutaConProntezza` quando lui la lascia (o dal `useEffect` qui sopra,
+       se la connessione scelta fallisce nel frattempo). */
+    if (senzaStrumenti) {
+      avviaSeduta();
+      return;
+    }
+    setThetaReadyDone(false);
+    setMetabolicOpen(true);
   };
   /**
    * ── RICHIAMARE UNA CONFIGURAZIONE — le quattro domande dell'avvio NON si fanno, e gli
@@ -1634,7 +1673,19 @@ export default function Serenity() {
         }}>
           <Settings size={16} strokeWidth={1.6} />
         </button>
+        {/* ── LA GUIDA — segnalata assente nell'audit funzionale completo. `GuideModal` è
+            autosufficiente (un iframe su `/guide/EQUILIBRIUM-manuale.html`, copiato a ogni
+            build da `scripts/copy-guide.cjs`) — zero dipendenza dal motore, montata TALE E
+            QUALE. Il manuale spiega il METODO di audit, non la grafica di un'applicazione: lo
+            stesso testo vale per chi lavora da EQUILIBRIUM o da SERENITY. */}
+        <button className="s-glass s-glass-btn" onClick={() => setGuidaAperta(true)} title={t('sidebar_guide') as string} style={{
+          cursor: 'pointer', padding: 8, borderRadius: 999,
+          background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
+        }}>
+          <HelpCircle size={16} strokeWidth={1.6} />
+        </button>
       </header>
+      {guidaAperta && <GuideModal lang={lang} onClose={() => setGuidaAperta(false)} />}
 
       {/* ── I COMANDI, IN ALTO — segnalato: « i cicli non sono chiari messi sotto, mettili in
           alto come in equilibrium ». In App.tsx l'item, i quattro metodi, i passi del ciclo in
@@ -2418,6 +2469,11 @@ export default function Serenity() {
             <LetturaTA />
             <LetturaFase t={t} />
             {museGate.signalQuality > 0 && <span>{museGate.signalQuality}%</span>}
+            {museOk && (
+              <span title={t('biometric_integrity') as string}>
+                <LetturaIntegrita />
+              </span>
+            )}
           </span>
         )}
         {/* ── LA STESSA LETTURA, DAL METER — segnalato: « la scala del tono non appare, il TA
