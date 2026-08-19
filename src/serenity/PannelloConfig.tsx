@@ -56,7 +56,24 @@ const etichetta: React.CSSProperties = {
   color: 'var(--s-ink-soft)', marginBottom: 10, display: 'block',
 };
 
-export function PannelloConfig({ onChiudi }: { onChiudi: () => void }) {
+export function PannelloConfig({ onChiudi, needleTrim = 0, setNeedleTrim = () => {}, needleInertia = 50, setNeedleInertia = () => {}, museOk = false }: {
+  onChiudi: () => void;
+  /** ── LA TARATURA DELL'AGO EEG — segnalata assente nell'audit funzionale completo (« toutes
+   *  les fonctions... calibrations »). Lo stesso `needleTrim`/`needleInertia` del cassetto TRIM
+   *  di App.tsx, scritti sullo stesso `runtime/NeedleEngine` condiviso — vivono in
+   *  `Serenity.tsx` (che possiede l'effetto che li applica al motore), qui solo la manopola.
+   *  Opzionali: `Avvio.tsx` monta lo stesso pannello PRIMA che una seduta esista (nessun ago
+   *  vivo da tarare ancora) — senza queste cinque prop la sezione resta chiusa (`museOk`
+   *  default `false`), non un campo rotto. */
+  needleTrim?: number;
+  setNeedleTrim?: (v: number) => void;
+  needleInertia?: number;
+  setNeedleInertia?: (v: number) => void;
+  /** In App.tsx questa manopola compare SOLO col Muse collegato — è la sensibilità del SUO
+   *  ago, mostrarla senza dire di chi confonderebbe con quella del meter (che ha la sua, nel
+   *  cassetto del meter in intestazione). */
+  museOk?: boolean;
+}) {
   const { t } = useI18n();
   // Le chiavi di `config_mod_*` arrivano da una LISTA (come in `ConfigDrawer` di EQUILIBRIUM),
   // non da un letterale: `t` vuole l'unione stretta, qui basta la stessa forma allentata che
@@ -222,6 +239,48 @@ export function PannelloConfig({ onChiudi }: { onChiudi: () => void }) {
             </button>
           </div>
         </div>
+
+        {/* ── LA TARATURA DELL'AGO EEG — segnalata assente nell'audit funzionale completo:
+            « toutes les fonctions... calibrations » — il cassetto TRIM di App.tsx (sensibilità
+            + inerzia dell'ago MUSE) non aveva NESSUN referente qui: l'ago restava sempre alla
+            taratura di fabbrica. Stesse due manopole, stesso motore condiviso
+            (`runtime/NeedleEngine`, l'effetto che le applica vive in `Serenity.tsx`), stessa
+            gamma (−10…+10 · 0…100) — solo col Muse collegato, come in App.tsx: è la SUA
+            sensibilità, mostrarla senza dire di chi confonderebbe col meter. */}
+        {museOk && (
+          <div>
+            <span style={etichetta}>{tt('drawer_needle_trim')}</span>
+            <div style={{ display: 'grid', gap: 18 }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, color: 'var(--s-ink-soft)', marginBottom: 4 }}>
+                  <span>{tt('trim_sensitivity')}</span>
+                  <span style={{ fontFamily: 'var(--s-mono)' }}>
+                    {needleTrim > 0 ? '+' : ''}{needleTrim} {needleTrim <= -5 ? 'LOW' : needleTrim <= 0 ? 'CENTER' : 'HIGH'}
+                  </span>
+                </div>
+                <input
+                  type="range" min={-10} max={10} step={1} value={needleTrim}
+                  onChange={e => setNeedleTrim(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: 'var(--s-ink)', cursor: 'pointer' }}
+                />
+                <div style={{ fontSize: 13, color: 'var(--s-ink-faint)', lineHeight: 1.5, marginTop: 4 }}>
+                  {tt('trim_centering')}
+                </div>
+              </div>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, color: 'var(--s-ink-soft)', marginBottom: 4 }}>
+                  <span>{tt('trim_inertia')}</span>
+                  <span style={{ fontFamily: 'var(--s-mono)' }}>{needleInertia}</span>
+                </div>
+                <input
+                  type="range" min={0} max={100} step={1} value={needleInertia}
+                  onChange={e => setNeedleInertia(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: 'var(--s-ink)', cursor: 'pointer' }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── DISPOSIZIONI — perché non c'è, detto chiaro invece che taciuto ───────────────── */}
         <div style={{ fontSize: 14, color: 'var(--s-ink-faint)', lineHeight: 1.6 }}>

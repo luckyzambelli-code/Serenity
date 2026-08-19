@@ -1012,6 +1012,85 @@ SERENITY 3.0.42.
 
 ---
 
+## Undicesimo giro (19/08/2026) — l'audit funzionale completo
+
+Mandato esplicito e dettagliato: « SERENITY ne contient pas encore toutes les fonctionnalités
+d'EQUILIBRIUM... fais l'inventaire... identifie toi-même les fonctions manquantes ». Metodo
+seguito alla lettera: confronto riga per riga degli import di `App.tsx` contro quelli di
+`Serenity.tsx`, poi lettura di ogni sospetto per capire se è un vero VUOTO FUNZIONALE (il
+motore c'è, l'interfaccia no) o una differenza di ORGANIZZAZIONE legittima (App.tsx e SERENITY
+dispongono la STESSA funzione in due punti diversi — permesso esplicitamente dal mandato,
+punto 4: « soit comme dans EQUILIBRIUM... soit dans une organisation SERENITY encore plus
+claire »).
+
+### Trovati e chiusi in questo giro
+
+1. **La taratura dell'ago EEG (sensibilità + inerzia) — ASSENTE del tutto.** App.tsx la tiene
+   nel cassetto TRIM di `SidebarDrawer` (`needleTrim`/`needleInertia`, scritte dritte sul
+   motore condiviso `runtime/NeedleEngine` — `needleEngine.setTrim()`/`.k`/`.d`). SERENITY non
+   aveva NESSUN controllo su questi due numeri: l'ago restava sempre alla taratura di fabbrica,
+   senza modo di correggerla. Aggiunta la stessa coppia di manopole in `PannelloConfig.tsx`
+   (sezione nuova, visibile solo col MUSE collegato — come in App.tsx: è la SUA sensibilità),
+   stesse formule, stesso motore, nessuna persistenza fra sedute (App.tsx non lo fa nemmeno).
+2. **Il controllo di prontezza prima della seduta — ASSENTE del tutto.** In App.tsx, collegare
+   uno strumento non porta MAI dritti alla seduta: prima la prova delle boîtes
+   (`ThetaReadyCheck` — stretta e respiro, la STESSA che fissa la sensibilità e verifica la
+   caduta) se il meter è collegato, poi il respiro guidato del MUSE (`MetabolicCheck` — una
+   baseline passiva più un'inspirazione profonda, quattro numeri: contatto, calma, cuore,
+   reattività) se il MUSE è collegato. SERENITY apriva la seduta all'istante — un MUSE appena
+   accoppiato ma non indossato, o un ago mai tarato, entravano in seduta senza che nessuno lo
+   sapesse. Montati gli STESSI due componenti condivisi (zero righe riscritte dentro di loro),
+   sullo STESSO motore che li alimenta (`metabolicBaseline` — già nutrito da
+   `hooks/useChargeEngine`, montato in SERENITY fin dalla fase 6: semplicemente nessuno lo
+   guardava). Resta CONSULTIVO come in App.tsx — ANNULLA apre comunque la seduta, non la
+   blocca — e un caso limite proprio di SERENITY (la connessione scelta fallisce nel mezzo)
+   esce da solo verso la seduta invece di restare bloccato su un pannello vuoto, con un
+   `useEffect` dedicato (mai uno stato scritto DURANTE il render — la stessa impurità che ha
+   già causato un falso allarme dei Hook in un giro precedente).
+
+### Verificati e confermati NON mancanti (differenza di organizzazione, non di funzione)
+
+- **`useMnaModule`** — App.tsx lo usa come hook, SERENITY replica lo STESSO stato a mano
+  (`primePhase`/`primeIm`/…). Stessa forma, stesso reset: non una divergenza di logica, solo
+  del codice duplicato — a rischio zero, non prioritario.
+- **`SidebarDrawer`/`Sidebar`** — la navigazione a cassetti di App.tsx (link/auditor/pc/trim/
+  session/lang/config). SERENITY la sostituisce con le pillole d'intestazione + `PannelloConfig`
+  + `Connessione` — organizzazione diversa, stesse destinazioni raggiungibili (tranne TRIM,
+  chiuso al punto 1 sopra).
+- **`ConnectionModal`/`ConnectionProgress`** — coperti da `Connessione.tsx`.
+- **`EpValidationModal`/`EpManualModal`** — coperti da `PannelloEp.tsx`.
+
+### Trovati, dichiarati, NON ancora chiusi (l'inventario resta onesto)
+
+- **`PostSessionReport`** (~1.500 righe, esporta PDF) — SERENITY non ha ALCUN rapporto di fine
+  seduta (`reportOpen` è cablato a `false`). Già segnato « da fare » nella tabella delle fasi
+  in cima a questo documento (fase 8) — confermato dall'audit, non una sorpresa, ma resta il
+  vuoto funzionale più grande rimasto.
+- **`ToneColumn`** — la scala verticale del tono accanto all'ago (segnalata assente da almeno
+  due giri).
+- **La vista INDICAZIONE dell'assessment** (`AssessmentPanel`'s seconda vista: le due letture
+  MUSE/METER separate, la domanda « indica al preclear? »). `ZonaAssessment` copre solo la
+  vista ASSESSMENT.
+- **`useMediaRelayFallback`** (CONN-33, fallback JPEG quando il WebRTC video fallisce) — il
+  PROP esiste già su `CameraCerchio` (`fallbackFrame`), il hook che lo alimenta non è montato.
+- **`HealthPanel`** (322 righe), **`BiometricPanel`** (100 righe), **`AIAssistant`** (444
+  righe), **`GuideModal`** (147 righe), **`CreditsModal`**, **`SplashScreen`** — non ancora
+  esaminati riga per riga in questo giro (tempo del giro esaurito prima di arrivarci): la loro
+  reale necessità (funzione operativa vs. contenuto informativo) resta da stabilire nel
+  prossimo.
+- I bottoni non ancora vetrati di `Connessione`/`PannelloConfig`/`PannelloEp`/
+  `PannelloProfilo` (già dichiarato nel decimo giro).
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori (320 warning, tutte preesistenti),
+`vitest run` 639/639. A schermo (tab pulita, scuro): « sans instruments » apre la seduta
+all'istante (nessuna regressione); scelto MUSE, il controllo di prontezza si apre e — la
+connessione MUSE non potendo riuscire in un browser senza Bluetooth vero — esce da solo verso
+la seduta pochi istanti dopo, confermando il caso limite. `git status`: solo
+`src/serenity/PannelloConfig.tsx` + `src/serenity/Serenity.tsx`. EQUILIBRIUM invariato,
+SERENITY 3.0.43.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

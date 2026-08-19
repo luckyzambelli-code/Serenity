@@ -41,6 +41,9 @@ import { QuantumSphere } from '../components/QuantumSphere';
 import { ClearDial } from '../components/ClearDial';
 import { CycleStatusBar } from '../components/CycleStatusBar';
 import { CycleSteps } from '../components/CycleSteps';
+import { ThetaReadyCheck } from '../components/ThetaReadyCheck';
+import { MetabolicCheck } from '../components/MetabolicCheck';
+import { metabolicBaseline, type MetabAssessment } from '../engine/MetabolicBaseline';
 import { useSessionJournal } from '../session/useSessionJournal';
 import { useContactNullCycle } from '../session/useContactNullCycle';
 import { useMirrorCycle } from '../session/useMirrorCycle';
@@ -175,6 +178,21 @@ export default function Serenity() {
   const [collegato, setCollegato] = useState(false);
   /** CONFIG — segnalato assente: raggiungibile in ogni momento, come in EQUILIBRIUM. */
   const [configAperto, setConfigAperto] = useState(false);
+  /** ── LA TARATURA DELL'AGO EEG — segnalata assente nell'audit funzionale completo: « toutes
+   *  les fonctions... calibrations » — App.tsx la tiene nel cassetto TRIM di `SidebarDrawer`
+   *  (`needleTrim`/`needleInertia`, scritte dritte sul motore condiviso `runtime/NeedleEngine`,
+   *  `needleEngine.setTrim`/`.k`/`.d`). SERENITY non aveva NESSUN controllo su questi due
+   *  numeri — l'ago EEG restava sempre alla sensibilità/inerzia di fabbrica. Stesso stato,
+   *  stesse formule, stesso motore: qui cambia solo dove si gira la manopola (dentro
+   *  `PannelloConfig`, non un cassetto a parte). Non persistito fra le sedute — App.tsx non lo
+   *  fa nemmeno (parte da 0/50 a ogni avvio). */
+  const [needleTrim, setNeedleTrim] = useState(0);
+  const [needleInertia, setNeedleInertia] = useState(50);
+  useEffect(() => { needleEngine.setTrim(needleTrim + 5); }, [needleTrim]);
+  useEffect(() => {
+    needleEngine.k = 42 - 0.2 * needleInertia;
+    needleEngine.d = 4 + 0.2 * needleInertia;
+  }, [needleInertia]);
   /**
    * ── LA CONFIGURAZIONE DEL METER — ANCORATA al suo stesso indicatore, non altrove ──────────
    * Segnalato: « comment peux-tu mettre la connexion METER EN BAS, le MUSE en haut... il faut
@@ -197,6 +215,18 @@ export default function Serenity() {
   const [connSel, setConnSel] = useState({ muse: false, theta: false, none: false });
   const scegliConn = (k: 'muse' | 'theta' | 'none') => setConnSel(p =>
     k === 'none' ? { muse: false, theta: false, none: !p.none } : { ...p, none: false, [k]: !p[k] });
+  /** ── IL CONTROLLO DI PRONTEZZA — segnalato assente nell'audit funzionale completo: « toutes
+   *  les fonctions... METER/MUSE... outils de session ». In App.tsx (`metabolicOpen`/
+   *  `thetaReadyDone`) uno strumento collegato non porta DRITTI alla seduta: prima la prova
+   *  delle boîtes (`ThetaReadyCheck`, se c'è il meter) e poi il respiro guidato del MUSE
+   *  (`MetabolicCheck`, se c'è il MUSE) — le boîtes per prime perché sono un gesto solo. Qui
+   *  mancava del tutto: uno strumento collegato apriva la seduta senza NESSUNA verifica, anche
+   *  con l'ago di fabbrica mai tarato. Stessi due componenti condivisi (zero riscrittura),
+   *  stesso motore che li alimenta (`metabolicBaseline`, già nutrito da `useChargeEngine` —
+   *  montato qui da sempre, semplicemente nessuno lo guardava). Resta CONSULTIVO come in
+   *  App.tsx: ANNULLA apre comunque la seduta, non la blocca. */
+  const [metabolicOpen, setMetabolicOpen] = useState(false);
+  const [thetaReadyDone, setThetaReadyDone] = useState(false);
   /** « Senza strumenti » — il gruppo di controllo. STICKY per la seduta (come `senzaStrumenti`
    *  in App.tsx): scelto una volta, non lo si richiede più finché la seduta resta aperta. */
   const [senzaStrumenti, setSenzaStrumenti] = useState(false);
@@ -995,6 +1025,35 @@ export default function Serenity() {
     if (avvio?.distanza) remote.impostaStatoSeduta('running');
     setAperta(true);
   };
+  /** ── APRE DAVVERO, DOPO IL RESPIRO — `avviaSeduta()` chiama `journal.resetJournal(...)`:
+   *  una riga scritta PRIMA andrebbe persa. Qui l'ordine giusto: si apre, POI si scrive
+   *  l'esito del respiro guidato (se c'è stato — può essere `null`, annullato a metà) nel
+   *  giornale appena azzerato — non ancora in un rapporto (SERENITY non ne ha uno, fase 8),
+   *  ma non silenzioso: si legge nel giornale come tutto il resto di questa apertura. */
+  const avviaSedutaConProntezza = (a: MetabAssessment | null) => {
+    setMetabolicOpen(false);
+    avviaSeduta();
+    if (a) {
+      journal.addLog({ speaker: 'SYS', time: 0, type: 'normal', text:
+        LC(`respiro — prontezza: ${a.level} (contatto ${a.contact} · calma ${a.calm} · cuore ${a.heart} · reattività ${a.reactivity})`,
+           `souffle — préparation : ${a.level} (contact ${a.contact} · calme ${a.calm} · cœur ${a.heart} · réactivité ${a.reactivity})`,
+           `breath — readiness: ${a.level} (contact ${a.contact} · calm ${a.calm} · heart ${a.heart} · reactivity ${a.reactivity})`,
+           `respiración — preparación: ${a.level} (contacto ${a.contact} · calma ${a.calm} · corazón ${a.heart} · reactividad ${a.reactivity})`,
+           `andning — beredskap: ${a.level} (kontakt ${a.contact} · lugn ${a.calm} · hjärta ${a.heart} · reaktivitet ${a.reactivity})`) });
+    }
+  };
+  /** ── L'USCITA DEL CASO LIMITE — la connessione scelta è FALLITA fra "apri una seduta" e
+   *  qui: né meter da provare né MUSE da ascoltare, il controllo di prontezza resterebbe aperto
+   *  su un pannello vuoto. Un EFFETTO, non uno stato scritto durante il render (vedi la nota
+   *  sopra il ramo `return null` del controllo): si accorge dopo il render, come deve. */
+  useEffect(() => {
+    if (!metabolicOpen) return;
+    const readinessMuseOk = avvio?.distanza ? remote.remoteMuseConnected : museOk;
+    if (meterC || readinessMuseOk) return;
+    setMetabolicOpen(false);
+    avviaSeduta();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metabolicOpen, meterC, museOk, avvio?.distanza, remote.remoteMuseConnected]);
   /**
    * ── APRI UNA SEDUTA — SI CHIEDE PRIMA QUALE STRUMENTO, non si sceglie per l'utente ────────
    * Segnalato: « la logica, METER/MUSE/NESSUN STRUMENTO non sembra ancora implementata ».
@@ -1106,7 +1165,10 @@ export default function Serenity() {
   if (configAperto) {
     return (
       <main style={{ height: '100%' }}>
-        <PannelloConfig onChiudi={() => setConfigAperto(false)} />
+        <PannelloConfig onChiudi={() => setConfigAperto(false)}
+          needleTrim={needleTrim} setNeedleTrim={setNeedleTrim}
+          needleInertia={needleInertia} setNeedleInertia={setNeedleInertia}
+          museOk={museOk} />
       </main>
     );
   }
@@ -1204,11 +1266,17 @@ export default function Serenity() {
                   const nessuno = connSel.none;
                   setScegliStrumento(false);
                   setSenzaStrumenti(nessuno);
-                  if (!nessuno) {
-                    if (connSel.muse) await muse.handleConnectMuse();
-                    if (connSel.theta) await theta.connect();
+                  if (nessuno) {
+                    // ── SENZA STRUMENTI NON C'È PRONTEZZA DA VERIFICARE — stessa regola di
+                    // App.tsx: niente da misurare, dritti alla seduta.
+                    avviaSeduta();
+                    return;
                   }
-                  avviaSeduta();
+                  if (connSel.muse) await muse.handleConnectMuse();
+                  if (connSel.theta) await theta.connect();
+                  metabolicBaseline.reset();
+                  setThetaReadyDone(false);
+                  setMetabolicOpen(true);
                 }}
                 className="s-glass s-glass-btn"
                 style={{
@@ -1224,6 +1292,73 @@ export default function Serenity() {
           </div>
         </div>
       )}
+      {/* ── IL CONTROLLO DI PRONTEZZA — vedi la nota su `metabolicOpen`, sopra. Stessa
+          sequenza di App.tsx: prima le boîtes (`ThetaReadyCheck`, se il meter è collegato e non
+          ancora fatto in questa apertura), poi il respiro del MUSE (`MetabolicCheck`, se il
+          MUSE è collegato — a distanza si guarda il SUO MUSE, non uno locale che qui non
+          esiste). Nessuno dei due blocca per davvero: ANNULLA su entrambi apre la seduta lo
+          stesso — è consultivo, la decisione resta dell'auditor. */}
+      {metabolicOpen && (() => {
+        const readinessMuseOk = avvio?.distanza ? remote.remoteMuseConnected : museOk;
+        if (meterC && !thetaReadyDone) {
+          return (
+            <ThetaReadyCheck
+              scaleMeasured={theta.setup.scaleMeasured}
+              breathOk={theta.breathOk}
+              squeezeOk={theta.squeezeOk}
+              testing={theta.testing}
+              peakOffset={theta.testPeakOffset}
+              startSqueezeTest={() => {
+                // ⚠️ IL TA SI PRENDE QUI, prima che la stretta lo muova — stessa ragione di
+                // App.tsx: è il riposo IN QUESTA configurazione, e la coppia dei due riposi è
+                // lo scarto che si cerca al passo 4 della taratura.
+                const ta = theta.ta;
+                if (ta !== null) {
+                  setProvaTa(p => theta.setup.config === 'two-cans' ? { ...p, two: ta } : { ...p, solo: ta });
+                }
+                theta.startSqueezeTest();
+              }}
+              startBreathTest={theta.startBreathTest}
+              sensTrim={theta.setup.sensTrim}
+              setSensTrim={theta.setSensTrim}
+              config={theta.setup.config}
+              setConfig={theta.setConfig}
+              soloOffsetMisurato={(theta.setup.offsets?.['solo-can'] ?? 0) !== 0}
+              taTwo={provaTa.two}
+              taSolo={provaTa.solo}
+              onApplySoloOffset={off => theta.setSoloOffset(off)}
+              unknownFormat={theta.unknownFormat}
+              rawSamples={theta.rawSamples}
+              onProceed={() => {
+                setThetaReadyDone(true);
+                // Nessun MUSE da controllare dopo: si apre la seduta subito, come App.tsx.
+                if (!readinessMuseOk) { setMetabolicOpen(false); avviaSeduta(); }
+              }}
+              onCancel={() => { setMetabolicOpen(false); avviaSeduta(); }}
+            />
+          );
+        }
+        if (readinessMuseOk) {
+          return (
+            <MetabolicCheck
+              lang={lang}
+              meterAlreadyCalibrated={meterC && theta.setup.scaleMeasured}
+              museConnected={readinessMuseOk}
+              museWorn={museGate.museContact}
+              museConnecting={!avvio?.distanza && muse.museConnection === 'searching'}
+              onProceed={a => avviaSedutaConProntezza(a)}
+              onCancel={a => avviaSedutaConProntezza(a)}
+              onPhase={() => {}}
+            />
+          );
+        }
+        // Né meter da provare né MUSE da ascoltare (la connessione scelta è FALLITA nel
+        // frattempo) — l'uscita vera è nell'effetto qui sotto, non qui: uno stato scritto
+        // DURANTE il render (invece che dopo, in un effetto) è esattamente l'impurità che ha
+        // già causato un falso allarme dei Hook in un giro precedente di questa stessa
+        // sessione — non si ripete l'errore.
+        return null;
+      })()}
       {/* ── L'INTESTAZIONE, che non è una barra ───────────────────────────────────────────
           Nessun fondo, nessuna linea di separazione: il nome sta posato sulla stessa
           superficie di tutto il resto. Una barra è già un pannello. */}
