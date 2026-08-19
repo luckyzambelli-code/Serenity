@@ -17,10 +17,11 @@
  * momento — cambiarla in SERENITY la cambia anche per la prossima apertura di EQUILIBRIUM, e
  * viceversa. Coerente con l'archivio unico, i profili unici, la lingua per-profilo.
  *
- * ⚠️ SEGNALATO: « met un icone pour clair/dark ». La parola restava la sola fonte
- * dell'informazione (dottrina di SERENITY: « i colori dicono, non gridano », e vale anche per
- * le icone) — qui un piccolo sole/luna la ANTICIPA, di sbieco, senza sostituirla: tolto il testo
- * l'icona da sola non basterebbe a dire "chiaro" da "scuro" con la stessa certezza.
+ * ⚠️ SEGNALATO DI NUOVO, con foto e .gif: « la logique est de ne pas avoir deux boutons... mais
+ * un bouton qui SLIDE ». Non più due (o cinque) pillole indipendenti che si accendono a turno:
+ * un solo cursore di vetro che SCIVOLA da una tappa all'altra della stessa pista —
+ * `SegmentoVetro.tsx`, lo stesso componente per tema e lingua (entrambe scelte ESCLUSIVE, una
+ * sola vera alla volta — l'identikit esatto di quel pattern).
  *
  * @see docs/serenity-refonte.md
  */
@@ -28,6 +29,7 @@
 import { useI18n, type Language } from '../i18n';
 import { useUiStore } from '../store/uiStore';
 import { Sun, Moon } from 'lucide-react';
+import { SegmentoVetro } from './SegmentoVetro';
 
 const LINGUE: Language[] = ['en', 'fr', 'it', 'es', 'sv'];
 
@@ -37,16 +39,8 @@ const LINGUE: Language[] = ['en', 'fr', 'it', 'es', 'sv'];
 export const linguaValida = (l: string | undefined): Language | null =>
   (LINGUE as string[]).includes(l ?? '') ? (l as Language) : null;
 
-const bottone = (attivo: boolean): React.CSSProperties => ({
-  border: 'none', background: 'none', cursor: 'pointer', padding: 2,
-  fontFamily: 'var(--s-mono)', fontSize: 12, letterSpacing: '0.04em',
-  color: attivo ? 'var(--s-ink)' : 'var(--s-ink-ghost)',
-  fontWeight: attivo ? 600 : 400,
-  display: 'flex', alignItems: 'center', gap: 5,
-});
-
 /**
- * IL SELETTORE DI LINGUA — cinque codici, non cinque bandiere.
+ * IL SELETTORE DI LINGUA — cinque codici, non cinque bandiere, su UN cursore che scivola.
  *
  * Una bandiera porta un carico politico che una scelta di lingua non ha bisogno di portare
  * (l'inglese di quale bandiera? lo spagnolo di quale?), ed è comunque un'icona da leggere —
@@ -56,18 +50,17 @@ const bottone = (attivo: boolean): React.CSSProperties => ({
 export function SelettoreLingua() {
   const { lang, setLang } = useI18n();
   return (
-    <div style={{ display: 'flex', gap: 10 }}>
-      {LINGUE.map(l => (
-        <button key={l} onClick={() => setLang(l)} style={bottone(l === lang)}>
-          {l.toUpperCase()}
-        </button>
-      ))}
-    </div>
+    <SegmentoVetro
+      opzioni={LINGUE.map(l => ({ k: l, label: l.toUpperCase() }))}
+      selezionato={lang}
+      onChange={setLang}
+      minLarghezza={30}
+    />
   );
 }
 
 /**
- * IL SELETTORE DI TEMA — chiaro o scuro, in parole.
+ * IL SELETTORE DI TEMA — chiaro o scuro, su un cursore che scivola da uno all'altro.
  *
  * Governa la STESSA preferenza di EQUILIBRIUM (vedi sopra). Nel campo centrale questo decide
  * anche il fondo dietro l'ago: scuro → il pannello scuro autentico di EQUILIBRIUM; chiaro →
@@ -79,15 +72,14 @@ export function SelettoreTema() {
   const isLightTheme = useUiStore(s => s.isLightTheme);
   const setLightTheme = useUiStore(s => s.setLightTheme);
   return (
-    <div style={{ display: 'flex', gap: 10 }}>
-      <button onClick={() => setLightTheme(true)} style={bottone(isLightTheme)}>
-        <Sun size={12} strokeWidth={1.8} aria-hidden="true" />
-        {t('ser_theme_light')}
-      </button>
-      <button onClick={() => setLightTheme(false)} style={bottone(!isLightTheme)}>
-        <Moon size={12} strokeWidth={1.8} aria-hidden="true" />
-        {t('ser_theme_dark')}
-      </button>
-    </div>
+    <SegmentoVetro
+      opzioni={[
+        { k: 'chiaro' as const, label: t('ser_theme_light'), icona: <Sun size={12} strokeWidth={1.8} aria-hidden="true" /> },
+        { k: 'scuro' as const, label: t('ser_theme_dark'), icona: <Moon size={12} strokeWidth={1.8} aria-hidden="true" /> },
+      ]}
+      selezionato={isLightTheme ? 'chiaro' : 'scuro'}
+      onChange={k => setLightTheme(k === 'chiaro')}
+      minLarghezza={70}
+    />
   );
 }

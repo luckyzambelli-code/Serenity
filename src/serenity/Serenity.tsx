@@ -67,9 +67,10 @@ import { PannelloConfig } from './PannelloConfig';
 import { PannelloMna } from './PannelloMna';
 import { CameraCerchio } from './CameraCerchio';
 import { IndicatoreConnessione } from './IndicatoreConnessione';
+import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff } from 'lucide-react';
 import type { ReadSrc } from '../engine/instantRead';
 import type { PrimePhase, Zone as PrimeZone } from '../lib/primeFreqEngine';
 import type { MnaSession } from '../hooks/useMnaModule';
@@ -1130,7 +1131,10 @@ export default function Serenity() {
       {/* ── L'INTESTAZIONE, che non è una barra ───────────────────────────────────────────
           Nessun fondo, nessuna linea di separazione: il nome sta posato sulla stessa
           superficie di tutto il resto. Una barra è già un pannello. */}
-      <header style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
+      {/* `flexWrap` — segnalato indirettamente: le pillole di vetro e i cursori scorrevoli sono
+          più larghi delle parole nude di prima. Senza, su una finestra stretta gli ultimi
+          indicatori uscivano dal bordo invece di andare a capo — persi, non solo compressi. */}
+      <header style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 14, rowGap: 10 }}>
         <span style={{ fontFamily: 'var(--s-serif)', fontSize: 21, letterSpacing: '0.14em' }}>
           SERENITY
         </span>
@@ -1298,6 +1302,26 @@ export default function Serenity() {
               : meterC ? 'connesso'
               : theta.status === 'connecting' ? 'cercando' : 'in-attesa'
           }
+        />
+        {/* ── SENZA STRUMENTI — segnalato: « manque SANS INSTRUMENTS à côté de MUSE et METER ».
+            Il pannello "con che cosa si audita?" (`scegliStrumento`) offriva già questa terza
+            via, ma solo dentro un modale che appare SOLO se nessuno strumento è già connesso —
+            chi vuole dichiararlo ESPLICITAMENTE, senza passare da quel modale, non aveva dove
+            farlo. Stesso `IndicatoreConnessione`, stessa famiglia di MUSE/METER: attivarla
+            spegne entrambi gli strumenti (« senza strumenti » è ESCLUSIVO con loro, come nel
+            modale — `scegliConn`), disattivarla non fa nulla da sé, si torna a scegliere. */}
+        <IndicatoreConnessione
+          onClick={() => {
+            const nuovo = !senzaStrumenti;
+            setSenzaStrumenti(nuovo);
+            if (nuovo) {
+              if (muse.museConnection !== 'disconnected') muse.handleConnectMuse();
+              if (meterC) theta.disconnect();
+            }
+          }}
+          icona={<MessageSquareOff size={13} strokeWidth={1.8} />}
+          etichetta={t('no_instruments_mode') as string}
+          stato={senzaStrumenti ? 'connesso' : 'in-attesa'}
         />
         {/* ── LA SUA ESPANSIONE — due lattine/lattina sola, le due prove, la taratura TA ──────
             Segnalato: la stessa connessione non deve avere due abitudini diverse (una in alto,
@@ -1582,21 +1606,15 @@ export default function Serenity() {
             `agoEeg`, sopra): è la scelta stessa che mancava, muta e fissa sul Meter. Due
             pillole, come in App.tsx (qui senza "DUE" — quella terza voce aggiunge anche le
             reazioni dell'altro strumento etichettate, un raffinamento che aspetta il resto
-            dell'assessment prima di avere senso). */}
+            dell'assessment prima di avere senso). Segnalato di nuovo: la stessa scelta
+            esclusiva di tema/lingua — un cursore che scivola, non due pillole. */}
         {museOk && meterC && (
-          <div style={{ display: 'flex', gap: 4, padding: 2, borderRadius: 999, background: 'var(--s-disc-sunk)' }}>
-            {([{ k: 'eeg' as const, lbl: 'MUSE' }, { k: 'theta' as const, lbl: 'METER' }]).map(o => (
-              <button key={o.k} onClick={() => setAgoScelto(o.k)} style={{
-                border: 'none', cursor: 'pointer', borderRadius: 999, padding: '4px 12px',
-                fontFamily: 'var(--s-sans)', fontSize: 12, fontWeight: 700, letterSpacing: '0.04em',
-                background: agoScelto === o.k ? 'var(--s-disc)' : 'none',
-                boxShadow: agoScelto === o.k ? 'var(--s-shadow)' : 'none',
-                color: agoScelto === o.k ? 'var(--s-ink)' : 'var(--s-ink-faint)',
-              }}>
-                {o.lbl}
-              </button>
-            ))}
-          </div>
+          <SegmentoVetro<'eeg' | 'theta'>
+            opzioni={[{ k: 'eeg', label: 'MUSE' }, { k: 'theta', label: 'METER' }]}
+            selezionato={agoScelto}
+            onChange={setAgoScelto}
+            minLarghezza={64}
+          />
         )}
         {/* L'orologio resta sulla superficie di SERENITY, fuori dal pannello scuro: si
             guarda una volta ogni tanto, lo strumento in continuazione. */}

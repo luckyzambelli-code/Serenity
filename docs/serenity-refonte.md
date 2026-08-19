@@ -547,6 +547,44 @@ Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori, `vitest run` 639/639
 (tema chiaro E scuro) il bordo/riflesso si vede chiaramente su ogni pillola, "chiudi la seduta"
 si legge per esteso. EQUILIBRIUM 2.0.173, SERENITY 3.0.36.
 
+---
+
+## Il cursore che scivola (19/08/2026) — « un bouton qui SLIDE »
+
+Chiesto con foto e .gif precisi: non due (o cinque) pillole indipendenti che si accendono a
+turno, ma UN cursore di vetro che SCIVOLA da una tappa all'altra della stessa pista — l'esempio
+dato è CLAIR/DARK, con « la logique » dichiarata generalizzabile.
+
+**`SegmentoVetro.tsx`, nuovo** — un cursore `.s-glass` vero (stessa sfocatura/bordo/lucido dei
+bottoni) che scivola in `transform: translateX(...)` (mai `left`, che ricalcolerebbe il layout
+a ogni fotogramma) con una curva che RIMBALZA leggermente (`cubic-bezier(0.34, 1.56, 0.64, 1)`)
+— lo stesso effetto "vetro vero" del .gif, non una traslazione meccanica. Applicato a:
+
+- **`SelettoreTema`** (chiaro/scuro) — l'esempio letterale del segnalato.
+- **`SelettoreLingua`** (EN/FR/IT/ES/SV) — stessa famiglia di scelta (una sola vera alla volta).
+- **`agoScelto`** (MUSE/METER, quando entrambi connessi) — già due pillole separate dal giro
+  precedente, la stessa identica forma di scelta.
+
+**Cosa NON è diventato uno scivolo, e perché**: le quattro pillole dei cicli (CONTACT/NULL/
+MIRROR/TONE) restano bottoni veri — ogni click lì ARMA SUBITO un ciclo, un'azione e non una
+preferenza; uno scivolo implicherebbe "scegli, poi conferma", cambiando il gesto stesso.
+
+**« Manque SANS INSTRUMENTS à côté de MUSE et METER »** — vero: quella terza via esisteva solo
+dentro il modale "con che cosa si audita?", raggiungibile SOLO se nessuno strumento era ancora
+connesso. Aggiunto un terzo `IndicatoreConnessione` in intestazione, stessa famiglia di MUSE/
+METER: attivarlo disconnette entrambi gli strumenti (esclusività identica al modale).
+
+**Effetto collaterale corretto**: le pillole di vetro e i cursori scorrevoli sono più larghi
+delle parole nude di prima — l'intestazione, senza `flexWrap`, perdeva gli ultimi indicatori
+fuori dal bordo su una finestra non larghissima. Aggiunto `flexWrap: 'wrap'` — va a capo,
+niente più sparisce.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori, `vitest run` 639/639. A schermo (tab
+pulita, chiaro): il cursore tema scivola cliccando "light"/"dark", il cursore lingua scivola fra
+i cinque codici, "Session without instruments" apre la seduta SENZA il modale di scelta
+(verificato via click programmato + lettura dei bottoni a schermo), l'intestazione va a capo
+senza perdere alcun indicatore. EQUILIBRIUM 2.0.174, SERENITY 3.0.37.
+
 ⚠️ **Revisione funzionale — non solo grafica (17/08/2026, terza segnalazione)**: due
 regressioni VERE, non d'aspetto — una funzione persa nel passaggio a SERENITY, non solo
 ridisegnata:
