@@ -1650,6 +1650,65 @@ l'arco). La correzione delle condizioni non è verificabile dal vivo in questo a
 
 ---
 
+## Ventitreesimo giro (20/08/2026) — SERENITY non caricava Tailwind: la causa vera dietro History rotto
+
+Tre segnalazioni: « Fermer la séance et pause doivent être après Historique » (riordino),
+« manquent PROCESSUS et les autres modules » (di nuovo), e soprattutto « quand on clique sur
+Historique rien apparaît et on ne peut pas sortir » — un bug bloccante.
+
+**La scoperta.** `HistoryModal` (App.tsx) è scritto in classi Tailwind
+(`absolute inset-0 z-50 flex items-center …`). `serenity/main.tsx` importa SOLO `tokens.css` —
+non ha MAI caricato Tailwind. Ogni classe Tailwind su un componente condiviso era quindi un
+nome senza NESSUNA regola CSS dietro: `absolute` non posizionava nulla, `flex`/`items-center`
+non allineava nulla, `z-50` non impilava nulla. Il pannello non "spariva" — si disegnava come
+testo semplice impilato, senza struttura, col bottone "Fermer" (che FUNZIONAVA — non era mai
+lui il guasto) perso nel disordine, sembrando irraggiungibile. La stessa causa minacciava
+OGNI componente condiviso scritto in Tailwind già montato in SERENITY — `HealthPanel`,
+`AIAssistant` — anche se non ancora segnalati per loro (il secondo aveva già un sintomo
+latente: `TOKEN.warn`/`.sep`, usati per il suo banner di avviso, leggevano variabili mai
+definite in `tokens.css`).
+
+**La correzione, in tre pezzi:**
+1. `serenity/tailwind-compat.css`, nuovo — SOLO `theme` + `utilities` di Tailwind
+   (`@import "tailwindcss/theme.css" layer(theme); @import "tailwindcss/utilities.css"
+   layer(utilities);`), MAI `preflight` (l'azzeramento globale di margini/`button`/`input` —
+   si applicherebbe a OGNI elemento della pagina, non solo a quelli con classi Tailwind,
+   rimettendo le mani sui controlli che SERENITY già stila a modo suo). MAI `import
+   '../index.css'` intero — porterebbe anche le variabili di tema di EQUILIBRIUM, il doppio
+   sistema di colori che questo progetto evita da sempre.
+2. `--sm-warn`/`--sm-warn-bg`/`--sm-warn-edge`/`--sm-sep` aggiunte a `tokens.css`, derivate da
+   `--s-reserve`/`--s-ink-ghost` con `color-mix` (stessa idea dei quattro token aggiunti nei
+   giri precedenti per `CycleStatusBar`/`HealthPanel`).
+3. `HistoryModal` e `ProcessusModal` (vedi sotto) disegnano sé stessi con `absolute inset-0` —
+   relativo all'ANTENATO posizionato più vicino, che in App.tsx è già grande quanto lo
+   schermo. In SERENITY quell'antenato era `<main>` (col suo `padding`), quindi restavano
+   chiusi in quella cornice piccola. Un involucro `position:'fixed', inset:0` attorno a
+   entrambi, allo stesso punto di montaggio, risolve senza toccare i componenti condivisi.
+
+**Riordino**: il bottone Historique era nell'intestazione, lontano dai comandi di seduta —
+spostato PRIMO elemento della barra comandi, prima di "chiudi la seduta"/pausa (« Fermer la
+séance et pause doivent être après Historique »).
+
+**PROCESSUS, implementato.** Restava dichiarato aperto (12° giro) perché la sua sorgente in
+App.tsx (`useAppInitializer`) governa anche il profilo attivo unico — incompatibile col
+flusso a quattro domande di SERENITY. Scritto un caricatore SOLO per i PDF di processo
+(server poi IndexedDB, stessa sequenza di `useAppInitializer` senza gli effetti collaterali
+sul profilo); `ProcessusModal` stesso montato TALE E QUALE (autosufficiente — salva/tagga/
+filtra da sé). Il visore resta un raffinamento dichiarato aperto: un PDF alla volta in una
+finestra fissa, non le finestre multiple trascinabili/ridimensionabili di App.tsx
+(`activeProcessus`) — una macchina a parte, per un giro futuro se richiesta.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, verifica dal vivo estesa — History ora si apre a schermo intero, ben formattato,
+"Fermer" trovato e funzionante; Processus si apre/chiude correttamente, stato vuoto
+leggibile; l'assistente IA ora visibilmente stilizzato (badge d'avviso leggibile, prova che
+il fix Tailwind + i nuovi token hanno risolto anche il suo sintomo latente). `git status`:
+`src/serenity/Serenity.tsx`, `src/serenity/main.tsx`, `src/serenity/tokens.css`, e il nuovo
+`src/serenity/tailwind-compat.css`. EQUILIBRIUM invariato (nessun file fuori da
+`src/serenity/` toccato).
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

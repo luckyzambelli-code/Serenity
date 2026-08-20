@@ -119,6 +119,16 @@
      l'ago o la videocamera: uno strumento resta uno strumento a prescindere dal tema
      dell'app attorno), solo piatto. */
   --sm-panel-shadow: 0 16px 34px rgba(38, 40, 48, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  /* ── IL QUINTO/SESTO TOKEN, PER `components/AIAssistant.tsx` — montato TALE E QUALE per
+     l'assistente IA: legge `TOKEN.warn`/`.warnBg`/`.warnEdge` (il banner « configura la
+     chiave API ») e `TOKEN.sep` (i separatori). Derivati da `--s-reserve`, lo stesso segnale
+     d'ambra già usato ovunque in SERENITY per « attenzione » — non l'ambra di EQUILIBRIUM
+     ridisegnata uguale, la STESSA idea nella tavolozza di qui. `color-mix` invece di tre hex
+     fissi: seguono `--s-reserve` da soli quando il tema cambia, senza una seconda riga. */
+  --sm-warn:      var(--s-reserve);
+  --sm-warn-bg:   color-mix(in srgb, var(--s-reserve) 18%, transparent);
+  --sm-warn-edge: color-mix(in srgb, var(--s-reserve) 55%, transparent);
+  --sm-sep:       var(--s-ink-ghost);
 }
 
 /*

@@ -1,0 +1,33 @@
+/**
+ * tailwind-compat.css — SOLO per i componenti condivisi che App.tsx scrive in Tailwind.
+ *
+ * ── PERCHÉ ESISTE ───────────────────────────────────────────────────────────────────────────
+ * Bug trovato: « quand on clique sur Historique rien apparaît et on ne peut pas sortir ».
+ * `HistoryModal` (come `HealthPanel`, `AIAssistant` — riusati TALI E QUALI, non riscritti) è
+ * scritto in classi Tailwind (`absolute inset-0 z-50 flex items-center …`). `serenity/main.tsx`
+ * non ha MAI importato Tailwind — solo `tokens.css`, il foglio di SERENITY — quindi ogni classe
+ * Tailwind su quei componenti era un nome senza nessuna regola CSS dietro: `absolute` non
+ * posizionava nulla, `flex`/`items-center` non allineavano nulla, `z-50` non impilava nulla. Il
+ * componente non "spariva": si disegnava come testo semplice, uno sopra l'altro, senza struttura
+ * — esattamente il pannello illeggibile segnalato, col bottone "Fermer" perso nel disordine.
+ *
+ * ── PERCHÉ UN FILE A PARTE, NON `import '../index.css'` ────────────────────────────────────
+ * `index.css` è il foglio di EQUILIBRIUM: oltre a Tailwind porta le SUE variabili di tema
+ * (`:root`, `[data-theme]`) e le sue regole globali. Importarlo qui rimetterebbe in gioco
+ * esattamente il doppio sistema di colori che questo progetto evita apposta (vedi la nota in
+ * testa a `tokens.css`, « perché non riusa i colori di EQUILIBRIUM »). Questo file porta SOLO
+ * il generatore di utility di Tailwind — la struttura (posizione, flex, z-index, arrotondi,
+ * sfocatura) — mai un colore.
+ *
+ * ── SENZA PREFLIGHT ─────────────────────────────────────────────────────────────────────────
+ * `@import "tailwindcss"` porta con sé anche `preflight` — l'azzeramento globale di Tailwind
+ * (margini, `box-sizing`, stile di default di `button`/`input`…), che si applica a OGNI
+ * elemento della pagina, non solo a quelli con classi Tailwind: rimetterebbe le mani sui
+ * pulsanti e i campi che SERENITY già stila a modo suo. Import mirato: solo `utilities` (le
+ * classi vere e proprie) — niente reset globale.
+ *
+ * @see docs/serenity-refonte.md
+ */
+@layer theme, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);

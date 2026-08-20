@@ -61,7 +61,9 @@ import { SQUEEZE_TARGET_OFFSET } from '../engine/thetaSetup';
 import { sessionRecorder } from '../engine/SessionRecorder';
 import { sessionRecord, cycleRecord, fnRecord, itemRecord, chiaveItem } from '../engine/corpus';
 import { corpusWrite, corpusAvailable } from '../lib/corpusWriter';
-import { getProfiles, getPcProfiles, saveSession, saveSessionPdf, saveSessionPdfAsync } from '../lib/storage';
+import { getProfiles, getPcProfiles, saveSession, saveSessionPdf, saveSessionPdfAsync, getAllProcessusFiles } from '../lib/storage';
+import { isServerAvailable, serverGetProcessusList, serverProcessusUrl } from '../lib/serverStorage';
+import { ProcessusModal, type ProcessusEntry } from '../components/ProcessusModal';
 import { costruisciRiepilogo, generaPdf, type SerenityReportInput } from './sessionReport';
 import { Avvio } from './Avvio';
 import { AVVIO_VUOTO, type Avvio as StatoAvvio } from './flussoAvvio';
@@ -80,7 +82,7 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
@@ -299,6 +301,44 @@ export default function Serenity() {
    *  in History ». `HistoryModal`, autosufficiente, TALE E QUALE — vedi la nota sopra al suo
    *  `lazy import`. */
   const [historyAperto, setHistoryAperto] = useState(false);
+  /** ── PROCESSUS — segnalato due volte: « manquent PROCESSUS et les autres modules ». Restava
+   *  dichiarato aperto (12° giro) perché la sua sorgente in App.tsx (`useAppInitializer`)
+   *  governa ANCHE il profilo attivo unico — un meccanismo che il flusso a quattro domande di
+   *  SERENITY esiste apposta per non avere. Qui SOLO il caricamento dei PDF di processo
+   *  (server poi IndexedDB, stessa sequenza di `useAppInitializer` righe 104-133), senza
+   *  toccare `useProfileStore`/lingua/sessione in solitaria. `ProcessusModal` stesso resta
+   *  TALE E QUALE — autosufficiente, salva/tagga/filtra da sé (`commitPendingFiles` al suo
+   *  interno). Il visore però è più semplice del "popup trascinabile" di App.tsx (`activeProcessus`,
+   *  finestre multiple ridimensionabili): un solo PDF alla volta, in una finestra fissa — un
+   *  raffinamento dichiarato ancora aperto, non l'intera macchina delle finestre mobili. */
+  const [processusAperto, setProcessusAperto] = useState(false);
+  const [processusPdfs, setProcessusPdfs] = useState<ProcessusEntry[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<{ name: string; url: string }[]>([]);
+  const [pendingTagInput, setPendingTagInput] = useState('');
+  const [processusTagFilter, setProcessusTagFilter] = useState('all');
+  const [editingTag, setEditingTag] = useState<string | null>(null);
+  const [editingTagValue, setEditingTagValue] = useState('');
+  const [processusVisualizzato, setProcessusVisualizzato] = useState<{ name: string; url: string } | null>(null);
+  useEffect(() => {
+    (async () => {
+      const serverUp = await isServerAvailable();
+      if (serverUp) {
+        try {
+          const list = await serverGetProcessusList();
+          if (list.length > 0) {
+            setProcessusPdfs(list.map(f => ({ name: f.name, tag: f.tag, url: serverProcessusUrl(f.id), _id: f.id })));
+          }
+        } catch { /* noop — resta la lista vuota, l'auditor può comunque caricarne */ }
+      } else {
+        try {
+          const stored = await getAllProcessusFiles();
+          if (stored.length > 0) {
+            setProcessusPdfs(stored.map(f => ({ name: f.name, url: f.url, tag: f.tag, _id: f.id })));
+          }
+        } catch { /* noop */ }
+      }
+    })();
+  }, []);
   /** ── LA TARATURA DELL'AGO EEG — segnalata assente nell'audit funzionale completo: « toutes
    *  les fonctions... calibrations » — App.tsx la tiene nel cassetto TRIM di `SidebarDrawer`
    *  (`needleTrim`/`needleInertia`, scritte dritte sul motore condiviso `runtime/NeedleEngine`,
@@ -2161,30 +2201,82 @@ export default function Serenity() {
         }}>
           <HelpCircle size={32} strokeWidth={1.6} />
         </button>
-        {/* ── LO STORICO — segnalato: « il Report post session non ci sia più in Serenity,
-            solo il PDF in History ». La seduta chiusa (`chiudi()`, sopra) si salva ora da sé,
-            senza mai passare da uno schermo di rapporto — questo bottone è dove si va a
-            RITROVARLA, col suo PDF. Stesso posto di App.tsx (raggiungibile sempre, non solo a
-            seduta chiusa: si può rivedere una seduta passata mentre se ne prepara una nuova). */}
-        <button className="s-glass s-glass-btn" onClick={() => setHistoryAperto(true)} title={t('sidebar_history') as string} style={{
-          cursor: 'pointer', padding: 8, borderRadius: 999,
-          background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
-        }}>
-          <HistoryIcon size={32} strokeWidth={1.6} />
-        </button>
       </header>
       {guidaAperta && <GuideModal lang={lang} onClose={() => setGuidaAperta(false)} />}
       {creditiAperti && <CreditsModal onClose={() => setCreditiAperti(false)} />}
+      {/* ⚠️ BUG TROVATO — segnalato: « quand on clique sur Historique rien apparaît et on ne
+          peut pas sortir ». `HistoryModal` (App.tsx) disegna sé stesso con `absolute inset-0`
+          (una classe Tailwind: relativo all'ANTENATO posizionato più vicino), non `fixed`
+          come `GuideModal`/`CreditsModal` (`position:'fixed', inset:0`, relativo alla
+          FINESTRA). In App.tsx quell'antenato più vicino è già grande quanto lo schermo; qui
+          era `<main>`, che ha il suo `padding: '38px 44px'` — il pannello restava chiuso in
+          quella cornice piccola, il testo si accavallava, e il bottone "Fermer" (che
+          FUNZIONA — non era lui il guasto) si perdeva dentro il disordine, sembrando
+          irraggiungibile. Non si può cambiare `HistoryModal` stesso (è condiviso, cambierebbe
+          anche EQUILIBRIUM): un involucro `fixed` qui gli dà l'antenato che si aspetta. */}
       {historyAperto && (
-        <Suspense fallback={null}>
-          <HistoryModal
-            activeProfile={(() => {
-              try { return getProfiles().find(p => p.id === avvio?.auditorId) ?? null; } catch { return null; }
-            })()}
-            onClose={() => setHistoryAperto(false)}
-            lang={lang as never}
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
+          <Suspense fallback={null}>
+            <HistoryModal
+              activeProfile={(() => {
+                try { return getProfiles().find(p => p.id === avvio?.auditorId) ?? null; } catch { return null; }
+              })()}
+              onClose={() => setHistoryAperto(false)}
+              lang={lang as never}
+            />
+          </Suspense>
+        </div>
+      )}
+      {/* ── PROCESSUS — stesso involucro `fixed`, stessa ragione di `HistoryModal` sopra:
+          `ProcessusModal` disegna sé stesso con `absolute inset-0`, e senza un antenato
+          grande quanto lo schermo resterebbe chiuso nella cornice piccola di `<main>`. */}
+      {processusAperto && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
+          <ProcessusModal
+            processusPdfs={processusPdfs}
+            setProcessusPdfs={setProcessusPdfs}
+            pendingFiles={pendingFiles}
+            setPendingFiles={setPendingFiles}
+            pendingTagInput={pendingTagInput}
+            setPendingTagInput={setPendingTagInput}
+            processusTagFilter={processusTagFilter}
+            setProcessusTagFilter={setProcessusTagFilter}
+            editingTag={editingTag}
+            setEditingTag={setEditingTag}
+            editingTagValue={editingTagValue}
+            setEditingTagValue={setEditingTagValue}
+            onSelectProcessus={entry => { setProcessusVisualizzato({ name: entry.name, url: entry.url }); setProcessusAperto(false); }}
+            onClose={() => setProcessusAperto(false)}
+            t={k => t(k as never) as string}
           />
-        </Suspense>
+        </div>
+      )}
+      {/* ── IL VISORE — un PDF alla volta, non le finestre multiple trascinabili di App.tsx
+          (`activeProcessus`, dichiarato un raffinamento ancora aperto). Un `<iframe>` sul PDF
+          scelto, chiudibile: quel che serve per LEGGERE il processo durante la seduta. */}
+      {processusVisualizzato && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 200, display: 'flex', flexDirection: 'column',
+          background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)', padding: 24,
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: 10, flexShrink: 0,
+          }}>
+            <span style={{ fontFamily: 'var(--s-sans)', fontSize: 14.5, color: '#fff' }}>
+              {processusVisualizzato.name}
+            </span>
+            <button onClick={() => setProcessusVisualizzato(null)} style={{
+              border: 'none', background: 'rgba(255,255,255,0.12)', color: '#fff',
+              borderRadius: 999, padding: '6px 16px', cursor: 'pointer',
+              fontFamily: 'var(--s-sans)', fontSize: 14,
+            }}>
+              {LC('chiudi', 'fermer', 'close', 'cerrar', 'stäng')}
+            </button>
+          </div>
+          <iframe src={processusVisualizzato.url} title={processusVisualizzato.name}
+            style={{ flex: 1, border: 'none', borderRadius: 12, background: '#fff' }} />
+        </div>
       )}
 
       {/* ── I COMANDI, IN ALTO — segnalato: « i cicli non sono chiari messi sotto, mettili in
@@ -2194,6 +2286,29 @@ export default function Serenity() {
           `<footer>`, l'ultimo figlio della pagina) è lo STESSO, spostato qui sopra il
           quadrante: nessuna riga di logica toccata, solo l'ordine in cui compaiono. */}
       <div className="ser-comandi" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 18, rowGap: 10 }}>
+        {/* ── LO STORICO, ORA PRIMA — segnalato: « Fermer la séance et pause doivent être
+            après Historique ». Era nell'intestazione, dopo CONFIG/Guide, ben lontano dal
+            bottone che chiude la seduta; spostato qui, primo elemento della barra comandi,
+            così chi vuole ritrovare una seduta passata lo trova PRIMA di chiudere o mettere
+            in pausa quella in corso, non dopo. La seduta chiusa (`chiudi()`, sotto) si salva
+            ora da sé, senza mai passare da uno schermo di rapporto — questo bottone è dove si
+            va a RITROVARLA, col suo PDF. Raggiungibile sempre, non solo a seduta chiusa. */}
+        <button className="s-glass s-glass-btn" onClick={() => setHistoryAperto(true)} title={t('sidebar_history') as string} style={{
+          cursor: 'pointer', padding: 10, borderRadius: 999,
+          background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
+        }}>
+          <HistoryIcon size={26} strokeWidth={1.8} />
+        </button>
+        {/* ── PROCESSUS — segnalato due volte: « manquent PROCESSUS et les autres modules ».
+            Stesso posto di History, appena accanto: la biblioteca dei PDF di processo, sempre
+            raggiungibile. Vedi la nota sopra a `processusPdfs` per cosa resta un raffinamento
+            (il visore a più finestre trascinabili di App.tsx). */}
+        <button className="s-glass s-glass-btn" onClick={() => setProcessusAperto(true)} title={t('processus_modal_title') as string} style={{
+          cursor: 'pointer', padding: 10, borderRadius: 999,
+          background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
+        }}>
+          <BookOpen size={26} strokeWidth={1.8} />
+        </button>
         {/* ⚠️ Niente `border: 'none'` qui — segnalato: « je ne vois pas de GLASS FORM ». Uno
             stile inline vince sempre su una classe CSS per la stessa proprietà: dichiararlo qui
             cancellava in silenzio il bordo di `.s-glass`. */}
