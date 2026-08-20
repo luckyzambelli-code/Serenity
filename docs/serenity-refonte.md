@@ -1577,6 +1577,50 @@ precedente — `displayMass` non è più "assegnato e mai letto", ora `chiudi()`
 
 ---
 
+## Ventunesimo giro (20/08/2026) — l'assistente IA, la parità EP verificata, due lacune dichiarate con motivo
+
+« Poi continua con l'integrazione degli altri moduli » — proseguito l'inventario di
+`App.tsx` (import per import) rimasto dal 18° giro.
+
+1. **`AIAssistant` — ASSENTE, ORA MONTATO TALE E QUALE.** Legge già `useUiStore` da sé
+   (si adatta al tema di SERENITY senza bisogno di passarglielo, come `HealthPanel`): niente
+   porting, solo il `sessionContext` costruito con dati che SERENITY ha già (nomi, tempo,
+   TA, `metricsStore`, ultima reazione, ultime righe del giornale). La chiave Gemini resta
+   dell'auditor, in `localStorage`, mai inviata a SERENITY/EQUILIBRIUM (nota già scritta nel
+   componente stesso). Accanto al bottone EP nella barra dei comandi, solo a seduta aperta.
+
+2. **`EpManualModal`/`EpValidationModal` — VERIFICATI, NON MANCANTI.** Controllo dell'audit:
+   `PannelloEp.tsx` (montato da fasi) riprende GIÀ `EpManualModal` per intero — stesso hook
+   `useEpValidation`, stessi campi (reazione, realizzazione del PC, VGI/VVGI, nota), stessa
+   sequenza di validazione. `EpValidationModal` non ha un equivalente DI PROPOSITO: è codice
+   morto anche in App.tsx (`setShowEpValidation(true)` non viene mai chiamato da nessuna
+   parte) — non si riproduce un pezzo che l'originale stesso non usa, nota già scritta in
+   testa a `PannelloEp.tsx` da un giro precedente.
+
+3. **`ProcessusModal` — dichiarato aperto, CON IL MOTIVO PRECISO.** Non è un componente
+   isolato: la sua sorgente dati (`useAppInitializer`) governa ANCHE `useProfileStore`
+   (profilo attivo unico, `isSoloSession`, lingua da preferenza di profilo) — lo STESSO
+   meccanismo che il flusso a quattro domande di SERENITY (`avvio.auditorId`/`avvio.pcId`,
+   nessun "profilo attivo" singolo) esiste apposta per non avere. Montare
+   `useAppInitializer` tale e quale griderebbe sopra `Avvio.tsx` invece di conviverci —
+   serve un caricatore SOLO dei PDF di processo (`getAllProcessusFiles`/
+   `serverGetProcessusList`, senza gli effetti collaterali sul profilo), non ancora scritto.
+   Resta il gap più grande dell'inventario.
+
+4. **La taratura della scala TA con l'artefatto fisico — parità PARZIALE, dichiarata.**
+   `ThetaTaCalibration.tsx` (App.tsx) offre un pulsante per ciascun valore inciso
+   sull'artefatto (4 pressioni, 4 punti insieme); il blocco B del passo 4 di
+   `PannelloMeter.tsx` (17° giro) offre lo STESSO risultato — la stessa `theta.taScale`,
+   lo stesso `theta.addPointFromReference` — ma un valore alla volta, scritto a mano. Una
+   differenza di COMODITÀ, non di funzione: la taratura si ottiene lo stesso, in più passi.
+   Non urgente quanto `ProcessusModal`.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, verifica dal vivo (l'assistente appare nella barra comandi a seduta aperta, nessun
+errore in console). `git status`: solo `src/serenity/Serenity.tsx`. EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

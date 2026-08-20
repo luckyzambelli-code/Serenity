@@ -82,6 +82,7 @@ import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
 import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
+import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
 import { HealthPanel } from '../components/HealthPanel';
 /** ── HISTORY, CARICATA A RICHIESTA — segnalato: « il Report post session non ci sia più in
@@ -2749,6 +2750,27 @@ export default function Serenity() {
             }}>
             {ep.epValidated ? 'EP ✓' : 'EP'}
           </button>
+        )}
+        {/* ── L'ASSISTENTE IA — segnalato assente insieme al resto dei moduli. Stesso
+            componente di App.tsx, montato TALE E QUALE (legge già `useUiStore` da sé, si
+            adatta al tema di SERENITY senza bisogno di passarglielo): una chiave Gemini
+            propria dell'auditor (mai inviata a SERENITY/EQUILIBRIUM), lo stesso contesto di
+            seduta che App.tsx gli passa — nome/i, tempo, TA, carica, ultima reazione, le
+            ultime righe del giornale. */}
+        {aperta && (
+          <AIAssistant
+            lang={lang as string}
+            sessionContext={{
+              pcName: avvio?.solo ? nomeAuditor : nomePreclear,
+              auditorName: nomeAuditor,
+              sessionTime: tempo,
+              totalTa: meterC ? theta.totalTa : metricsStore.get().totalTa,
+              qL: metricsStore.get().qL,
+              eta: metricsStore.get().eta,
+              needleReaction,
+              recentLogs: journal.logs.slice(-15).map(l => ({ time: l.time, speaker: l.speaker ?? '', text: l.text })),
+            }}
+          />
         )}
         <span style={{ flex: 1 }} />
         {!aperta && (
