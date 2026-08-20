@@ -55,7 +55,7 @@ import { ToneColumn } from '../components/ToneColumn';
 import { TONE_LABELS, exactLevelName, levelName } from '../engine/toneLevels';
 import {
   loadHistory as loadCanTests, saveHistory as saveCanTests, addTest as addCanTest,
-  type PcCanHistory,
+  testedToday, type PcCanHistory,
 } from '../engine/canTest';
 import { SQUEEZE_TARGET_OFFSET } from '../engine/thetaSetup';
 import { sessionRecorder } from '../engine/SessionRecorder';
@@ -925,6 +925,12 @@ export default function Serenity() {
    *  da questo lato. Stessa forma di App.tsx (`deltaStar`/`deltaStarN`), non un secondo calcolo. */
   const [deltaStar, setDeltaStar] = useState(0);
   const [deltaStarN, setDeltaStarN] = useState(0);
+  /** ── I TRE, PER IL PDF DI HISTORY — segnalato: « ed i moduli restanti, li fai? ». Erano già
+   *  nel callback (`onLagMeasured` li porta tutti e tre, la STESSA misura di App.tsx), solo
+   *  non ancora letti da questo lato — come `deltaStar`/`deltaStarN` prima di loro. */
+  const [deltaTrend, setDeltaTrend] = useState(0);
+  const [deltaBaseline, setDeltaBaseline] = useState(0);
+  const [deltaAdaptive, setDeltaAdaptive] = useState(0);
   const cycles = useContactNullCycle({
     auditingQuestion: item,
     setAuditingQuestion: setItem,
@@ -955,7 +961,10 @@ export default function Serenity() {
         setPrimeCopies([]);
       }
     },
-    onLagMeasured: m => { setDeltaStar(m.deltaStar); setDeltaStarN(m.n); },
+    onLagMeasured: m => {
+      setDeltaStar(m.deltaStar); setDeltaStarN(m.n);
+      setDeltaTrend(m.trend); setDeltaBaseline(m.baseline); setDeltaAdaptive(m.adaptive);
+    },
   });
   trackCycleRef.current = cycles.trackCycle;
 
@@ -1551,6 +1560,15 @@ export default function Serenity() {
   const chiudi = () => {
     sessionClock.end();
     journal.addLog({ speaker: 'SYS', text: t('ser_session_closed'), time: sessionClock.now() });
+    /* ⚠️ BUG TROVATO verificando dal vivo, in questo stesso giro: chiudere la seduta con un
+       ciclo CONTACT/NULL ancora armato non lo registrava MAI in `auditingCyclesRef` — quel
+       ciclo spariva dal PDF, non « incompleto », proprio ASSENTE. `closeOpenCycleAtEnd()`
+       (dentro `useContactNullCycle`, condiviso) esiste apposta per questo — App.tsx la chiama
+       in `handleEnd()`, qui non veniva mai chiamata. Stessa cosa per un MIRROR ancora armato
+       (`stopMirror()`). Vanno chiamate PRIMA di leggere i due `*CyclesRef` per il PDF, sotto —
+       altrimenti il ciclo in corso non è ancora nell'elenco quando lo si legge. */
+    cycles.closeOpenCycleAtEnd();
+    if (mirror.mirrorArmedRef.current && mirror.mirrorCurRef.current) mirror.stopMirror();
     /* ── LA SEDUTA FINISCE DIRETTA IN HISTORY, MAI SU UNO SCHERMO DI RAPPORTO — segnalato:
        « vorrei che il Report post session non ci sia più in Serenity, solo il PDF in
        History ». Vedi `sessionReport.ts` per il perché non è un porting di
@@ -1585,7 +1603,35 @@ export default function Serenity() {
         epAuditorNote: ep.epAuditorNote || undefined,
         epVgi: ep.epVgi, epVvgi: ep.epVvgi,
         epDurationMin: ep.epDurationMin || undefined,
-        deltaStar, deltaStarN,
+        deltaStar, deltaStarN, deltaTrend, deltaBaseline, deltaAdaptive,
+        // ── LE TABELLE PER-CICLO — vedi la nota in testa a `sessionReport.ts`: i tre elenchi
+        // qui sotto erano già dentro i motori condivisi (`cycles`/`mirror`/`tone`), solo mai
+        // letti da questo lato. Solo ASSESSMENT è una vera trasformazione: `assessItems`
+        // raggruppati per `gruppo` (lo stesso numero che `ZonaAssessment` usa per « ×N »)
+        // producono la STESSA forma di `assessCyclesRef` in App.tsx.
+        auditingCycles: cycles.auditingCyclesRef.current,
+        mirrorCycles: mirror.mirrorCyclesRef.current,
+        toneCycles: tone.toneCyclesRef.current,
+        assessCycles: (() => {
+          const perGruppo = new Map<number, typeof assessItems>();
+          for (const it of assessItems) {
+            const g = perGruppo.get(it.gruppo) ?? [];
+            g.push(it); perGruppo.set(it.gruppo, g);
+          }
+          return Array.from(perGruppo.entries()).map(([n, righe]) => ({
+            n,
+            tStartSec: Math.min(...righe.map(r => r.time)),
+            tEndSec: Math.max(...righe.map(r => r.time)),
+            items: righe.map(r => ({ item: r.item, reaction: r.reaction ?? 'NULL', time: r.time, beforeMs: r.beforeMs })),
+          }));
+        })(),
+        cansTest: {
+          hasMeter: meterC,
+          done: testedToday(canHistory, Date.now()),
+          config: theta.setup.config,
+          soloOffset: theta.setup.offsets?.['solo-can'] ?? 0,
+          taMargin: 0,
+        },
       };
       const riepilogo = costruisciRiepilogo(input);
       saveSession(riepilogo);

@@ -1729,6 +1729,50 @@ la webcam al browser — il ramo di codice corretto è raggiunto). `git status`:
 
 ---
 
+## Venticinquesimo giro (20/08/2026) — le tabelle per-ciclo nel PDF, dichiarate aperte due giri fa
+
+Chiesto di nuovo: « ed i moduli restanti, li fai? ». Il pezzo dichiarato aperto più grande —
+le tabelle CONTACT/NULL/TONE SCALE/MIRROR/ASSESSMENT nel PDF di History — si è rivelato un
+wiring, non un porting, rileggendo i motori condivisi.
+
+**La scoperta.** `auditingCyclesRef`/`mirrorCyclesRef`/`toneCyclesRef` (l'elenco DI OGNI
+ciclo, non solo l'ultimo) non sono logica di App.tsx: sono dichiarati DENTRO
+`useContactNullCycle`/`useMirrorCycle`/`useToneCycle` stessi — gli STESSI motori condivisi
+che SERENITY monta da sempre — e restituiti dal hook. `cycles.auditingCyclesRef`,
+`mirror.mirrorCyclesRef`, `tone.toneCyclesRef` erano già lì, raggiungibili, semplicemente
+mai letti da questo lato. Solo ASSESSMENT resta una vera trasformazione: App.tsx tiene
+`assessCyclesRef` nel proprio corpo (non in un hook condiviso) — qui si ottiene la stessa
+forma raggruppando `assessItems` per `gruppo` (lo stesso numero che `ZonaAssessment` usa già
+per « ×N »).
+
+**`sessionReport.ts`** esteso con le cinque sezioni (stessi colori, stessa selezione di
+campi di `generateTextPdf`), più la prova delle lattine e il lag di Ron completo
+(`deltaTrend`/`deltaBaseline`/`deltaAdaptive` — anche questi già nel callback
+`onLagMeasured`, come `deltaStar`/`deltaStarN` prima di loro, mai letti).
+
+**⚠️ Bug trovato verificando dal vivo, non leggendo il codice**: chiudere la seduta con un
+ciclo CONTACT/NULL o MIRROR ancora ARMATO non lo registrava mai nell'elenco — spariva dal
+PDF, non "incompleto", proprio ASSENTE. `closeOpenCycleAtEnd()` (dentro
+`useContactNullCycle`, condiviso) esiste apposta per questo caso — App.tsx la chiama in
+`handleEnd()`, `chiudi()` qui non la chiamava mai. Aggiunta insieme alla chiusura di un
+MIRROR ancora armato (`stopMirror()`), PRIMA di leggere i due elenchi per il PDF — altrimenti
+il ciclo in corso non è ancora nell'elenco quando lo si legge.
+
+**Quel che resta fuori, dichiarato**: il grafico Q_L (un `<AreaChart>` catturato come
+immagine) e il pannello MNA — due pezzi visivi che richiedono la loro stessa macchina di
+cattura, non tabellari come il resto. Restano nel PDF stesso come nota, non finti con un
+disegno inventato.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, verifica dal vivo end-to-end — armato un ciclo CONTACT, chiusa la seduta col ciclo
+ancora aperto, letto il PDF risultante DIRETTAMENTE da IndexedDB (decodificato da base64,
+cercato il testo nei suoi stessi operatori `Tj`): `(cycles d'audition - contact) Tj` seguito
+da `(0/1 AS-IS) Tj` — la tabella c'è, il ciclo forzatamente chiuso è registrato come non
+completato, esattamente come App.tsx. `git status`: `src/serenity/Serenity.tsx` e
+`src/serenity/sessionReport.ts`. EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
