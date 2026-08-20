@@ -1538,6 +1538,45 @@ e il suo PDF). `git status`: solo `src/serenity/*`. EQUILIBRIUM invariato.
 
 ---
 
+## Ventesimo giro (20/08/2026) — due bug veri sull'ago, trovati leggendo il codice riga per riga
+
+Quattro segnalazioni insieme: « quand on choisit MUSE, apparaît toujours l'aiguille des
+boîtes », « l'aiguille du MUSE ne bouge pas », « les indications des réactions ne marchent
+pas », « les couleurs traînées des réactions pas visibles ». Le prime due erano la STESSA
+causa; le ultime due un'altra, più profonda.
+
+1. **L'ago del Meter, disegnato SEMPRE col meter connesso.** `QuantumSphere` disegna il suo
+   ago ogni volta che `thetaOffset` non è `null` (nessun'altra guardia, riga 644 del
+   componente) — qui era `meterC ? theta.offset : null`, senza condizione sull'ago SCELTO.
+   Risultato: scegliendo MUSE con anche il Meter connesso, l'ago del Meter restava disegnato
+   lo stesso, fermo (a riposo, nessuna stretta in corso) proprio sopra quello EEG che invece
+   si muoveva — sembrava che l'ago del MUSE non si muovesse: era l'ago del Meter, immobile,
+   sopra il suo. App.tsx lo mostra SOLO quando è lui il principale (`agoPrincipale ===
+   'theta'`, la sua nota: « un ago solo »): `thetaOffset={meterC && !agoEeg ? theta.offset :
+   null}`, stessa esclusività.
+
+2. **Le reazioni non venivano MAI classificate — non un'etichetta mancante, il
+   riconoscimento intero spento.** `needleVirtualRef` esisteva già (dichiarato, azzerato a
+   ogni apertura, LETTO da `useChargeEngine` come `offH` — la storia che il classificatore
+   delle reazioni confronta per riconoscere un colpo) ma nessuno ci scriveva MAI dentro: la
+   storia restava sempre vuota. In App.tsx quella scrittura vive nello stesso
+   `sessionClock.subscribe` che già alimentava `sessionRecorder.pushNeedleOffset` (aggiunto
+   al giro scorso) — mancava solo lei, un campionamento della molla "virtuale" nascosta
+   (`virtualNeedle.pos`, il segnale liscio su cui il classificatore è tarato), tenuta agli
+   ultimi 3 secondi. Spiega insieme « le indicazioni non funzionano » E « le scie colorate
+   non si vedono »: senza una reazione classificata, non c'è né l'una né l'altra.
+
+Non riproducibili dal vivo in questo ambiente (nessun MUSE/Meter vero disponibile qui) —
+corrette leggendo `QuantumSphere.tsx`/`useChargeEngine.ts` riga per riga dopo le
+segnalazioni, non per tentativi. Verifica dal vivo possibile solo sulla macchina dell'utente,
+con lo strumento vero collegato.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (uno IN MENO del giro
+precedente — `displayMass` non è più "assegnato e mai letto", ora `chiudi()` lo usa),
+`vitest run` 639/639. `git status`: solo `src/serenity/Serenity.tsx`. EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

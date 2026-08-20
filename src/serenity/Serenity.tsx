@@ -403,6 +403,20 @@ export default function Serenity() {
     // scritture vivono in `useChargeEngine`/`useMuseConnection`, condivisi — montati anche
     // qui). Mancava solo QUESTA, che in App.tsx vive nello stesso `sessionClock.subscribe`.
     sessionRecorder.pushNeedleOffset({ time: s, offset: needleEngine.pos });
+    // ⚠️ BUG TROVATO — segnalato: « les indications des réactions ne marchent pas » e « les
+    // couleurs traînées des réactions pas visibles ». `needleVirtualRef` esisteva già
+    // (dichiarato, azzerato a ogni apertura, LETTO da `useChargeEngine` come `offH` — la
+    // storia che il classificatore delle reazioni confronta per riconoscere un colpo) ma
+    // nessuno ci scriveva MAI dentro: la storia restava sempre vuota, quindi NESSUNA
+    // reazione veniva mai classificata — non un'etichetta mancante, l'intero riconoscimento
+    // spento. Stessa scrittura di App.tsx, nello stesso `sessionClock.subscribe`: la molla
+    // "virtuale" nascosta (`virtualNeedle`, il segnale liscio su cui il classificatore è
+    // tarato) campionata qui, tenuta agli ultimi 3 secondi.
+    {
+      const vb = needleVirtualRef.current;
+      vb.push({ time: s, offset: virtualNeedle.pos });
+      while (vb.length > 1 && vb[0].time < s - 3) vb.shift();
+    }
   }), []);
 
   /**
@@ -2897,7 +2911,18 @@ export default function Serenity() {
         }}>
           <QuantumSphere
             needleOffsetProp={agoEeg ? needleOffsetEeg : SET_OFFSET}
-            thetaOffset={meterC ? theta.offset : null}
+            /* ⚠️ BUG TROVATO — segnalato: « quand on choisit MUSE, apparaît toujours
+               l'aiguille des boîtes » e « l'aiguille du MUSE ne bouge pas ». La stessa causa
+               per entrambi: `QuantumSphere` disegna l'ago del Meter ogni volta che
+               `thetaOffset` non è `null` (riga 644 del componente, nessun'altra guardia) —
+               qui era `meterC ? theta.offset : null`, SENZA CONDIZIONE sull'ago scelto:
+               col meter connesso, il suo ago restava sempre disegnato ANCHE scegliendo MUSE,
+               fermo (a riposo, nessuna stretta in corso) proprio sopra quello EEG che invece
+               si muoveva — sembrava che l'ago del MUSE non si muovesse, era l'ago del Meter,
+               immobile, disegnato sopra il suo. App.tsx lo mostra SOLO quando è lui il
+               principale (`agoPrincipale === 'theta'`, la sua nota: « un ago solo »): stessa
+               esclusività qui, con `agoEeg` al posto di `agoPrincipale`. */
+            thetaOffset={meterC && !agoEeg ? theta.offset : null}
             showEegNeedle={agoEeg}
             /* ── IL BERSAGLIO DELLA PROVA, SULL'ARCO — segnalato: « lors du test de pression
                et souffle, tu dois mettre la ligne pour le tir de l'arc comme dans equilibrium ».
