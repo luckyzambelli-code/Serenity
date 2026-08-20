@@ -2953,13 +2953,21 @@ export default function Serenity() {
           sempre DOPO i comandi, qualunque sia la loro altezza — un ciclo armato ne occupa di
           più di uno spento) — `top:16` ora è relativo alla sezione, non più alla pagina
           intera, e non può più cadere sopra un elemento che sta prima di lei. */}
-      {aperta && (moduleVis.cam1 || (moduleVis.cam2 && (avvio.distanza || avvio.solo))) && (
+      {/* ⚠️ BUG TROVATO — segnalato: « non trovo più la camm PC ». CAM 2 era ristretta a
+          `avvio.distanza || avvio.solo` — spariva del tutto nel caso più comune, una seduta
+          LOCALE con un preclear vero. App.tsx non ha QUESTA condizione: mostra CAM 2 ogni
+          volta che `moduleVis.cam2` è acceso, punto — la webcam locale generica quando non
+          c'è un flusso remoto (`CameraCerchio` chiama `getUserMedia` da sé), lo stream vero
+          solo quando `avvio.distanza` lo fornisce. La restrizione qui era un'invenzione, non
+          una scelta di EQUILIBRIUM: tolta, per la stessa regola di sempre — riprodurre la
+          stessa logica, non una più prudente inventata qui. */}
+      {aperta && (moduleVis.cam1 || moduleVis.cam2) && (
         <div style={{
           position: 'absolute', top: 16, right: 32, zIndex: 5,
           display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 14,
           pointerEvents: 'none',
         }}>
-          {moduleVis.cam2 && (avvio.distanza || avvio.solo) && (
+          {moduleVis.cam2 && (
             <CameraCerchio
               /* ⚠️ Segnalato di nuovo: « la camm PC doit être plus grande ». Era 260 (dopo un
                  giro precedente che l'aveva ridotta di un terzo per non coprire l'arco — la

@@ -1709,6 +1709,26 @@ il fix Tailwind + i nuovi token hanno risolto anche il suo sintomo latente). `gi
 
 ---
 
+## Ventiquattresimo giro (20/08/2026) — CAM 2 (PC) spariva nel caso più comune
+
+Segnalato: « non trovo più la camm PC ». CAM 2 era ristretta a `moduleVis.cam2 &&
+(avvio.distanza || avvio.solo)` — spariva del tutto in una seduta LOCALE con un preclear
+vero, il caso più frequente di tutti. App.tsx non ha questa condizione: mostra CAM 2 ogni
+volta che `moduleVis.cam2` è acceso — la webcam locale generica quando non c'è un flusso
+remoto (`CameraCerchio` chiama `getUserMedia` da sé, senza bisogno di uno stream esterno), lo
+stream vero solo quando `avvio.distanza` lo fornisce. La restrizione era un'invenzione
+introdotta qui in un giro precedente, non una scelta di EQUILIBRIUM — tolta, per la stessa
+regola di sempre: riprodurre la logica di EQUILIBRIUM, non una versione più prudente
+inventata da zero.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, verifica dal vivo — seduta LOCALE con un PC vero (né SOLO né a distanza), CAM 2 ora
+appare correttamente (« caméra hors ligne / refusée » nell'ambiente di test, che non concede
+la webcam al browser — il ramo di codice corretto è raggiunto). `git status`: solo
+`src/serenity/Serenity.tsx`. EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
