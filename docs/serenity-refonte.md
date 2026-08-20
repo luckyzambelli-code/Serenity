@@ -1621,6 +1621,35 @@ errore in console). `git status`: solo `src/serenity/Serenity.tsx`. EQUILIBRIUM 
 
 ---
 
+## Ventiduesimo giro (20/08/2026) — la camera PC più grande, e un vero bug nelle condizioni dei moduli
+
+Due segnalazioni: « la camm PC doit être plus grande » (semplice), e « je ne vois pas les
+modules JOURNAL DE SESSION etc. manquants » — che sembrava un dubbio sulla visibilità e si è
+rivelato un bug vero, trovato rileggendo le condizioni introdotte al 16° giro.
+
+1. **CAM 2 (PC)**: 260 → 340. CAM 1 (auditor) invariata (213) — solo la PC era segnalata,
+   come nei giri precedenti su questa stessa camera.
+
+2. **Bug trovato: « Santé Système » e l'integrità biometrica sparivano col MUSE connesso ma
+   NON scelto come ago attivo.** Le condizioni erano `agoEeg || meterC` per Santé Système e
+   l'integrità annidata dentro `agoEeg &&` (il blocco delle letture EEG) — `agoEeg` dice
+   QUALE ago si sta GUARDANDO in questo momento, non se il MUSE è connesso: con meter
+   connesso e scelto come ago primario, `agoEeg` è `false` anche se il MUSE resta perfettamente
+   attivo — e i due moduli sparivano, anche se il modulo in CONFIG restava acceso. Non un
+   dubbio di visibilità: le condizioni leggevano la cosa sbagliata. Corrette in `museOk ||
+   meterC` (Santé Système, in entrambi i punti dov'è gated) e `museOk` da solo per l'integrità
+   e la % di qualità segnale, portate FUORI dal blocco `agoEeg` in un blocco proprio — la
+   stessa distinzione che serviva già esisteva altrove (Santé Système la faceva quasi giusta),
+   mancava solo applicarla ovunque.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, verifica dal vivo della camera (visibilmente più grande, nessun overflow sopra
+l'arco). La correzione delle condizioni non è verificabile dal vivo in questo ambiente
+(nessun MUSE vero) — letta e riletta contro `agoEeg`/`museOk`/`meterC` riga per riga.
+`git status`: solo `src/serenity/Serenity.tsx`. EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

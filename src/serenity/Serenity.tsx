@@ -2704,7 +2704,7 @@ export default function Serenity() {
             `HealthPanel` di App.tsx (EEG/GYRO/PPG/elettrodi), montato TALE E QUALE — la sua
             sorgente (`eegBuffer`/`gyroBuffer`, poco più in alto) è la STESSA di App.tsx: era
             già qui, senza uno strumento per leggerla. */}
-        {aperta && moduleVis.health && (agoEeg || meterC) && (
+        {aperta && moduleVis.health && (museOk || meterC) && (
           <button
             className="s-glass s-glass-btn"
             onClick={apriSalute}
@@ -2846,7 +2846,12 @@ export default function Serenity() {
         }}>
           {moduleVis.cam2 && (avvio.distanza || avvio.solo) && (
             <CameraCerchio
-              dimensione={260}
+              /* ⚠️ Segnalato di nuovo: « la camm PC doit être plus grande ». Era 260 (dopo un
+                 giro precedente che l'aveva ridotta di un terzo per non coprire l'arco — la
+                 riduzione resta comunque valida, l'arco ora ha molto più spazio suo, vedi il
+                 19° giro). Portata a 340: più grande, senza tornare ai 453/680 che coprivano
+                 il quadrante. */
+              dimensione={340}
               dimensioneCollassata={88}
               titolo={t('cam2') as string}
               externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
@@ -3130,7 +3135,7 @@ export default function Serenity() {
               prescindere dal tema di SERENITY attorno (vedi `--sm-panel-shadow` in
               `tokens.css`); solo l'intestazione (l'etichetta, non lo schermo) segue il tema,
               perché legge la STESSA `useUiStore().isLightTheme` di SERENITY. */}
-          {aperta && moduleVis.health && saluteAperto && (agoEeg || meterC) && (
+          {aperta && moduleVis.health && saluteAperto && (museOk || meterC) && (
             <div style={{
               position: 'absolute', left: 16, right: 16, bottom: 16, zIndex: 6,
               maxHeight: '78%', overflowY: 'auto', borderRadius: 18,
@@ -3267,6 +3272,28 @@ export default function Serenity() {
                       'en pausa — instrumento perdido', 'pausad — instrument förlorat')}
               </span>
             )}
+            {/* ── SEGNALE E INTEGRITÀ DEL MUSE — segnalato: « je ne vois pas les modules
+                journal de session etc. manquants » — l'integrità biometrica era ANNIDATA
+                dentro `agoEeg &&` (il blocco del TA da EEG, sotto): con METER connesso e
+                l'ago scelto su Meter (`agoEeg=false`), spariva anche se il MUSE restava
+                connesso e leggeva — non era il modulo a mancare, era la condizione sbagliata.
+                La qualità del segnale/l'integrità dipendono dal MUSE essere connesso
+                (`museOk`), non da quale dei due aghi si sta guardando in questo momento —
+                stessa distinzione già fatta per « Santé Système » (`agoEeg || meterC`,
+                un OR, non l'uno o l'altro). */}
+            {museOk && (
+              <span style={{
+                fontFamily: 'var(--s-mono)', fontSize: 14.5, letterSpacing: '0.04em',
+                color: 'var(--s-ink-faint)', display: 'flex', gap: 14,
+              }}>
+                {museGate.signalQuality > 0 && <span>{museGate.signalQuality}%</span>}
+                {moduleVis.biometric && (
+                  <span title={t('biometric_integrity') as string}>
+                    <LetturaIntegrita />
+                  </span>
+                )}
+              </span>
+            )}
             {/* ── LA LETTURA, DETTA A NUMERI — solo quando c'è un ago EEG davvero collegato:
                 senza MUSE il TA da EEG non significa niente (resta al suo valore di riposo), e
                 mostrarlo lo stesso sembrerebbe una lettura vera. */}
@@ -3277,12 +3304,6 @@ export default function Serenity() {
               }}>
                 <LetturaTA />
                 <LetturaFase t={t} />
-                {museGate.signalQuality > 0 && <span>{museGate.signalQuality}%</span>}
-                {museOk && moduleVis.biometric && (
-                  <span title={t('biometric_integrity') as string}>
-                    <LetturaIntegrita />
-                  </span>
-                )}
                 <span title={t('total_ta') as string}>
                   <LetturaTotalTa override={meterC ? theta.totalTa : null} bodyMotion={theta.bodyMotion} />
                 </span>
