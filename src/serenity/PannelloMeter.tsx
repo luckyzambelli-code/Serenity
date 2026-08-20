@@ -183,6 +183,33 @@ export function PannelloMeter({ theta, provaTa, onFatto }: {
               {theta.squeezeOk ? `✓ ${LC('fatta', 'faite', 'done', 'hecha', 'klart')}` : `⚠ ${LC('da rifare', 'à refaire', 'try again', 'a repetir', 'gör om')}`}
             </span>
           )}
+          {/* ── LA MANOPOLA DELLA SENSIBILITÀ — segnalato: « le test du meter lors de la
+              connexion ne présente pas la possibilité de gérer la sensibilité ». Mancava del
+              tutto — eppure `theta.setup.sensTrim`/`theta.setSensTrim` esistevano già nel
+              motore condiviso (li usa `ThetaReadyCheck`, App.tsx). STESSO controllo di lì,
+              stesso posto (sotto la stretta: è la prova che TARA la sensibilità, quindi se la
+              caduta non arriva a un terzo di quadrante si corregge qui, guardando l'ago) —
+              non una manopola inventata per SERENITY. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+            <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.1em',
+                          textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
+              {t('theta_sensitivity')}
+            </span>
+            {([-1, 1] as const).map(v => (
+              <button key={v} type="button" onClick={() => theta.setSensTrim(theta.setup.sensTrim + v)}
+                className="s-glass s-glass-btn" style={{
+                  width: 42, height: 36, borderRadius: 10, cursor: 'pointer',
+                  fontFamily: 'var(--s-mono)', fontSize: 20, fontWeight: 700, lineHeight: 1,
+                  background: 'var(--s-disc)', color: 'var(--s-ink-soft)',
+                }}>
+                {v > 0 ? '+' : '−'}
+              </button>
+            ))}
+            <span style={{ fontFamily: 'var(--s-mono)', fontSize: 15, fontWeight: 700,
+                          color: 'var(--s-ink)', minWidth: 28, textAlign: 'right' }}>
+              {theta.setup.sensTrim > 0 ? '+' : ''}{theta.setup.sensTrim}
+            </span>
+          </div>
         </div>
       )}
 

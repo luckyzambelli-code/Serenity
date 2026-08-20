@@ -1337,6 +1337,51 @@ EQUILIBRIUM invariato.
 
 ---
 
+## Diciassettesimo giro (20/08/2026) — la manopola di sensibilità, il test che non si ripete, l'icona START sul quadrante
+
+Tre segnalazioni, e una REGOLA dettata per intero insieme: **« Reproduit les mêmes logique
+que dans equilibrium, sauf si expressément demandé diversement »** — vedi la memoria
+`serenity-reproduce-equilibrium-logic`. Il filo comune dei tre punti: `PannelloMeter.tsx`
+(il wizard di connessione del meter, una schermata che SERENITY ha e EQUILIBRIUM no) non
+riprendeva fedelmente ciò che App.tsx offre per lo stesso strumento, e un'icona con un posto
+preciso in EQUILIBRIUM mancava del tutto in SERENITY.
+
+1. **La sensibilità del meter — ASSENTE nel test di connessione.** `theta.setup.sensTrim`/
+   `theta.setSensTrim` esistono da sempre nel motore condiviso (li usa `ThetaReadyCheck`,
+   App.tsx) — mancava solo il controllo in `PannelloMeter.tsx`. Aggiunto lo STESSO gesto di
+   `ThetaReadyCheck`: due bottoni grandi ±1, sotto la prova della stretta (passo 2) — non un
+   cursore trascinabile come nel drawer TRIM di App.tsx, perché questo pannello è a passi
+   come `ThetaReadyCheck`, non un cassetto sempre aperto come il TRIM: stesso principio,
+   forma presa dal parente più vicino, non dai due insieme a caso.
+
+2. **Il test si ripeteva due volte.** Se l'auditor aveva già fatto stretta + respiro nel
+   pannello di connessione (passi 2 e 3 di `PannelloMeter`), aprendo la seduta
+   `ThetaReadyCheck` chiedeva di rifarli — `apri()` resettava sempre `thetaReadyDone` a
+   `false`. Corretto: se il meter è collegato E `theta.setup.scaleMeasured` E
+   `theta.breathOk !== null` (il test è stato fatto, indipendentemente dall'esito — la nota
+   di `ThetaReadyCheck` stessa dice che si può procedere comunque), `thetaReadyDone` parte
+   già `true` e il controllo delle boîtes si salta, passando dritto al respiro guidato del
+   MUSE se c'è, o alla seduta.
+
+3. **L'icona START sul quadrante — ASSENTE.** App.tsx ne ha una seconda, oltre al bottone
+   della sidebar: un `Play` pieno, centrato SUL quadrante, dentro un anello che respira
+   (`smStartPulse`), quando uno strumento è pronto e la seduta non è aperta — « la zone
+   aiguille ». SERENITY aveva solo il bottone di testo in barra comandi. Aggiunta la STESSA
+   icona, nello stesso punto, con la stessa animazione — ridisegnata con `currentColor` e
+   `color-mix` invece del ciano fisso di EQUILIBRIUM (due nuovi `@keyframes` in
+   `tokens.css`, `sStartPulse`/`sStartFade`), per restare nella tavolozza di SERENITY senza
+   toccare né condizione né posizione. Non sostituisce il bottone di testo, lo affianca —
+   esattamente come in App.tsx i due convivono.
+
+Verificato dal vivo: senza strumenti, l'icona Play appare centrata sul quadrante insieme al
+bottone "OUVRIR UNE SÉANCE"; click sull'icona apre la seduta; icona sparisce a seduta aperta
+e riappare dopo averla chiusa.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori nuovi, `vitest run` 639/639.
+`git status`: solo `src/serenity/*`. EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

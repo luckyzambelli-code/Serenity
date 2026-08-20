@@ -77,7 +77,7 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { CreditsModal } from '../components/CreditsModal';
 import { HealthPanel } from '../components/HealthPanel';
@@ -1289,7 +1289,16 @@ export default function Serenity() {
       avviaSeduta();
       return;
     }
-    setThetaReadyDone(false);
+    /* ── SEGNALATO: « si le test est fait, lors du démarrage de séance n'est pas utile de
+       représenter le test ». Vero — se le boîtes sono già state provate nel pannello di
+       connessione (`PannelloMeter`, aperto dalla freccia accanto all'indicatore METER, PRIMA
+       di aprire la seduta), `ThetaReadyCheck` qui sotto non deve chiedere di rifarle: la
+       stretta e il respiro sono GIÀ fatti (`theta.setup.scaleMeasured`/`theta.breathOk`), e
+       App.tsx stesso non obbliga mai a rifare una prova già riuscita — « si può procedere lo
+       stesso, la decisione resta dell'auditor » è la nota di quello stesso componente.
+       Senza meter (`!meterC`) la domanda non si pone nemmeno: si passa comunque al respiro
+       guidato del MUSE, se c'è, esattamente come prima. */
+    setThetaReadyDone(meterC && theta.setup.scaleMeasured && theta.breathOk !== null);
     setMetabolicOpen(true);
   };
   /**
@@ -2618,6 +2627,41 @@ export default function Serenity() {
             showTrail
             sessionState={aperta ? 'running' : 'idle'}
           />
+          {/* ── « PREMI START », SUL QUADRANTE — segnalato: « pour démarrer la séance, je veux
+              le même icône que dans equilibrium dans la zone aiguille ». App.tsx la mette
+              centrata SUL quadrante, non solo nella barra comandi — stesso `Play` pieno,
+              stesso anello che respira, STESSA condizione (uno strumento è pronto, o si audita
+              senza strumenti — e la seduta non è ancora aperta): non sostituisce il bottone
+              "OUVRIR UNE SÉANCE" della barra sopra, lo affianca, esattamente come in App.tsx
+              (sidebar START + questa stessa icona coesistono lì). */}
+          {!aperta && (senzaStrumenti || museOk || meterC) && (
+            <button
+              onClick={apri}
+              title={t('hint_press_start') as string}
+              style={{
+                position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)',
+                zIndex: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                color: isLightTheme ? 'var(--s-ink)' : '#ffffff',
+                animation: 'sStartFade 0.5s ease-out',
+              }}>
+              <span style={{
+                position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 104, height: 104, borderRadius: '50%',
+                background: `radial-gradient(circle at 50% 40%, color-mix(in srgb, currentColor 16%, transparent), color-mix(in srgb, currentColor 4%, transparent) 70%, transparent)`,
+                border: '2px solid color-mix(in srgb, currentColor 55%, transparent)',
+                animation: 'sStartPulse 1.8s ease-in-out infinite',
+              }}>
+                <Play size={46} strokeWidth={1.6} fill="currentColor" style={{ marginLeft: 6 }} />
+              </span>
+              <span style={{
+                fontFamily: 'var(--s-sans)', fontSize: 14, fontWeight: 800, letterSpacing: '0.22em',
+                textTransform: 'uppercase',
+              }}>
+                {t('hint_press_start')}
+              </span>
+            </button>
+          )}
           {/* ── L'ARCO DEI CICLI — segnalato: « l'arco rappresenta i cicli attraverso i colori,
               questa informazione deve essere mantenuta ». `ClearDial` è un SECONDO arco,
               concentrico a quello dell'ago (stesso perno 800,790, stesso SWEEP) — CONTACT ·

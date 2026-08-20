@@ -234,6 +234,21 @@ body {
 }
 .s-bottone-morph { animation: sBottoneMorph 260ms var(--s-ease); }
 
+/* ── « PREMI START », L'ICONA SUL QUADRANTE — segnalato: « je veux le même icône que dans
+   equilibrium dans la zone aiguille ». Stesse due animazioni di App.tsx (`smStartPulse`/
+   `smStartFade`, `index.css`), ridisegnate qui perché SERENITY non lo carica — vedi la nota
+   sopra `.ser-pulse`. Il colore non è quello: qui l'anello respira nel bianco/nero
+   dell'inchiostro di SERENITY (`currentColor`), non nel ciano di EQUILIBRIUM — stessa icona,
+   stesso gesto, tavolozza di questa pagina (« cambia il design, non la logica »). */
+@keyframes sStartPulse {
+  0%, 100% { box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 6%, transparent), inset 0 0 14px color-mix(in srgb, currentColor 8%, transparent); transform: scale(1); }
+  50%      { box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 10%, transparent), inset 0 0 16px color-mix(in srgb, currentColor 12%, transparent); transform: scale(1.03); }
+}
+@keyframes sStartFade {
+  from { opacity: 0; transform: translate(-50%,-50%) scale(0.9); }
+  to   { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════════════════
    SEI CLASSI, PER UN COMPONENTE CONDIVISO — fase 5.
    ═══════════════════════════════════════════════════════════════════════════════════════════
