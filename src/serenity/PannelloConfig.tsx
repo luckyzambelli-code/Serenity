@@ -18,11 +18,11 @@
  *     SERENITY invece che in quella di EQUILIBRIUM (mandato: « cambia il design, non la
  *     logica »).
  *   • I moduli — la STESSA lista di sette che in EQUILIBRIUM (`layoutStore.ts`'s
- *     `ModuleVisibility`), non un sottoinsieme scelto qui. Solo `cam1`/`cam2` sono interruttori
- *     VERI (`serenityModuleStore.ts`) perché solo loro hanno un pannello costruito in questa
- *     fase; gli altri cinque restano nella lista — spenti, non toccabili, con la parola « in
- *     arrivo » — così la struttura resta leggibile senza fingere un controllo che non farebbe
- *     niente. Si accendono da soli, qui, quando la loro fase li costruisce.
+ *     `ModuleVisibility`). Segnalato di nuovo: « integra anche il journal de session, Santé
+ *     Système, Assessement, integrità biometrica » — i quattro che mancavano hanno ORA il
+ *     proprio cassetto/zona in `Serenity.tsx` (vedi `apriSalute`/`apriGiornale`,
+ *     `ZonaAssessment`, `LetturaIntegrita`): tutti e sette sono interruttori VERI
+ *     (`serenityModuleStore.ts`), nessuno resta più « in arrivo ».
  *
  * ── COSA NON C'È, E PERCHÉ ────────────────────────────────────────────────────────────────────
  * Il salvataggio di più disposizioni (`config_save_layout`) presuppone moduli che l'auditor
@@ -38,18 +38,25 @@ import { useRef, useState } from 'react';
 import { useI18n } from '../i18n';
 import { useUiStore } from '../store/uiStore';
 import { SelettoreLingua, SelettoreTema } from './Impostazioni';
-import { useSerenityModuleStore, type SerenityModuleVis } from './serenityModuleStore';
+import { useSerenityModuleStore, SERENITY_MODULES_DEFAULT, type SerenityModuleVis } from './serenityModuleStore';
 import { importWallpaper } from '../lib/wallpaperImport';
 
 const MODULI_REALI: Array<{ key: keyof SerenityModuleVis; tKey: string }> = [
   { key: 'cam1', tKey: 'config_mod_cam1' },
   { key: 'cam2', tKey: 'config_mod_cam2' },
   { key: 'mna', tKey: 'config_mod_mna' },
+  { key: 'journal', tKey: 'config_mod_journal' },
+  { key: 'health', tKey: 'config_mod_health' },
+  { key: 'ri', tKey: 'config_mod_ri' },
+  { key: 'biometric', tKey: 'config_mod_biometric' },
 ];
-/** Gli altri quattro di EQUILIBRIUM — la STRUTTURA resta, senza fingere un pannello che qui
- *  non esiste ancora. Vedi la nota in testa al file. */
-const MODULI_IN_ARRIVO = ['config_mod_journal', 'config_mod_health', 'config_mod_ri',
-  'config_mod_biometric'];
+
+/** « ACCENDI TUTTO »/« SPEGNI TUTTO » — tutti i sette, non più solo i primi tre di prima
+ *  (`SERENITY_MODULES_DEFAULT` è già la lista intera, vedi `serenityModuleStore.ts`). */
+const TUTTI_ACCESI: SerenityModuleVis = SERENITY_MODULES_DEFAULT;
+const TUTTI_SPENTI: SerenityModuleVis = {
+  cam1: false, cam2: false, mna: false, journal: false, health: false, ri: false, biometric: false,
+};
 
 const etichetta: React.CSSProperties = {
   fontFamily: 'var(--s-sans)', fontSize: 13, letterSpacing: '0.14em', textTransform: 'uppercase',
@@ -222,16 +229,15 @@ export function PannelloConfig({ onChiudi, needleTrim = 0, setNeedleTrim = () =>
           <div>
             {MODULI_REALI.map(({ key, tKey }) =>
               rigaModulo(moduleVis[key], false, () => setModuleVis(v => ({ ...v, [key]: !v[key] })), tt(tKey)))}
-            {MODULI_IN_ARRIVO.map(tKey => rigaModulo(false, true, undefined, tt(tKey)))}
           </div>
           <div style={{ display: 'flex', gap: 16, marginTop: 10 }}>
-            <button className="s-glass s-glass-btn" onClick={() => setModuleVis({ cam1: true, cam2: true, mna: true })} style={{
+            <button className="s-glass s-glass-btn" onClick={() => setModuleVis(TUTTI_ACCESI)} style={{
               cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
               fontFamily: 'var(--s-sans)', fontSize: 13.5, letterSpacing: '0.08em', color: 'var(--s-ink-faint)',
             }}>
               {t('config_all_on')}
             </button>
-            <button className="s-glass s-glass-btn" onClick={() => setModuleVis({ cam1: false, cam2: false, mna: false })} style={{
+            <button className="s-glass s-glass-btn" onClick={() => setModuleVis(TUTTI_SPENTI)} style={{
               cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
               fontFamily: 'var(--s-sans)', fontSize: 13.5, letterSpacing: '0.08em', color: 'var(--s-ink-faint)',
             }}>

@@ -148,8 +148,8 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
                  l'auditor (chi osserva), `UserRound` per il preclear (la persona) — non
                  un'icona generica ripetuta identica per i due ruoli. */
               : (tipo === 'auditor'
-                  ? <Eye strokeWidth={1.4} size={48} style={{ color: 'var(--s-ink-faint)' }} />
-                  : <UserRound strokeWidth={1.4} size={48} style={{ color: 'var(--s-ink-faint)' }} />)}
+                  ? <Eye strokeWidth={1.4} size={96} style={{ color: 'var(--s-ink-faint)' }} />
+                  : <UserRound strokeWidth={1.4} size={96} style={{ color: 'var(--s-ink-faint)' }} />)}
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>

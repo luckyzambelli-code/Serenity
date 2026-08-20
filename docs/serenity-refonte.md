@@ -1256,6 +1256,87 @@ EQUILIBRIUM invariato, SERENITY 3.0.48.
 
 ---
 
+## Sedicesimo giro (20/08/2026) — il logo, il bottone dentro il campo, le icone raddoppiate, i quattro moduli che mancavano
+
+Cinque richieste in un solo messaggio, tutte sull'intestazione e sui moduli « in arrivo ».
+
+1. **Il logo Alternative Scientology — ASSENTE.** App.tsx lo mette in alto a sinistra,
+   sempre, con lo stesso trattamento a due temi (pillola scura in tema chiaro, perché il PNG
+   ha la scritta bianca incisa dentro, pensata per un fondo scuro). Portato tale e quale,
+   `setCreditiAperti(true)` al click — monta `CreditsModal`, riusato COSÌ COM'È come già
+   `GuideModal`: un velo scuro a sé, non parte della superficie chiara/scura di SERENITY.
+
+2. **« SAUVEGARDE CETTE CONFIGURATION », ORA DENTRO il campo Auditeur/PC · Expert/Normal.**
+   Era una pillola a parte, accanto. Segnalato: deve essere UN'ICONA, dentro lo stesso campo —
+   perché salvare la configurazione è salvare esattamente quel che quel campo racconta (chi
+   audita, con chi, quanto esperto), non un'azione indipendente. Un'icona `Save` sola, stesso
+   cassetto a scomparsa di prima (nome + bottone salva/salvata ✓), solo spostata dentro.
+
+3. **Tutte le icone, raddoppiate.** Sweep su ogni `size={…}` di `lucide-react` in
+   `src/serenity/*.tsx` — 12→24, 13→26, 16→32, 48→96 (l'icona segnaposto del ritratto in
+   `PannelloProfilo`, il disco che la contiene è 132px: 96 ci sta comodo). Verificato dal vivo,
+   nessun contenitore va in overflow.
+
+4. **MUSE / METER / SANS INSTRUMENTS — dalla frase intera alla parola sola.** Prima la parola
+   PORTAVA lo stato (« connecter muse » / « meter déconnecté » / …), diversa ogni volta — ora
+   la parola è SEMPRE il nome corto e invariante del dispositivo, lo stato si legge dal punto
+   colorato (`IndicatoreConnessione`, invariata) e da un `dettaglio` corto (%, "…", "⚠", "✓").
+   La frase intera non è sparita: è diventata il `title` (tooltip / lettore di schermo) —
+   niente tolto, solo spostato da « sempre visibile » a « a richiesta ».
+
+5. **I quattro moduli « in arrivo » — journal, Santé Système, Assessement, integrità
+   biometrica — ORA REALI.** Erano nella lista di CONFIG da fasi, spenti e non toccabili,
+   perché senza un pannello vero un interruttore sarebbe stato un controllo bugiardo.
+   Verificato COSA mancava DAVVERO, leggendo il codice invece di supporre:
+   - **Assessment e integrità biometrica esistevano già** (`ZonaAssessment`,
+     `LetturaIntegrita`, montate in un giro precedente) — mancava solo il loro interruttore in
+     CONFIG. Ora gated su `moduleVis.ri`/`moduleVis.biometric`.
+   - **Il giornale mostrava solo un conteggio.** Un bottone lo apre ora in un cassetto
+     ancorato al quadrante (stesso posto di `PannelloMna`, un cassetto alla volta):
+     stessa lista di `components/TranscriptLog.tsx` — ordine per TEMPO non per arrivo, righe
+     RITIRATE in ambra, righe METER nel colore dell'ago, `hideSpeech` nelle sedute SOLO —
+     riscritta con i token `var(--s-*)` di SERENITY invece delle sue classi `text-white/…`
+     fisse (stessa ragione per cui `CycleHint` non si è potuto riusare tale e quale, giro 15).
+     ⚠️ **Trovato verificando dal vivo, non leggendo il codice**: la prima versione usava
+     `--s-ink-ghost` per le righe SYS e il titolo — leggibilissimo sulla superficie chiara di
+     SERENITY, quasi invisibile qui perché questo cassetto galleggia sullo SCHERMO scuro fisso
+     del quadrante (non sul fondo dell'app). Corretto a `--s-ink-faint`, la stessa convenzione
+     già usata da `PannelloMna` sullo stesso fondo — non l'ho inventata, l'ho letta lì.
+   - **Santé Système era del tutto assente — e NON era il porting pesante temuto.** Un giro
+     precedente (13°) aveva già portato `eegBuffer`/`gyroBuffer` in `Serenity.tsx` per
+     `ToneColumn`: la STESSA coppia di ref che `HealthPanel` (App.tsx) legge, riempita dallo
+     STESSO `useMuseConnection` condiviso. `displayBpm` (`realBpm`), `signalQuality`
+     (`museGate.signalQuality`), `museConnection`, `batteryLevel` c'erano già tutti come
+     variabili locali. Montato `HealthPanel` TALE E QUALE (non una sua imitazione), in un
+     bottone + cassetto nuovi (« salute sistema »), visibile solo a strumento connesso
+     (`agoEeg || meterC` — niente bottone che apre il nulla). Le sue zone interne (onda EEG,
+     radar del giroscopio, quadrante BPM) restano il proprio SCHERMO scuro fisso apposta — uno
+     strumento resta uno strumento a prescindere dal tema di SERENITY attorno, la STESSA scelta
+     già fatta per il quadrante principale in tema scuro. Serviva solo un token mancante,
+     `--sm-panel-shadow` (letto da `TOKEN.panelShadow`, definito solo in `index.css` di
+     EQUILIBRIUM) — aggiunto a `tokens.css` con gli stessi valori, chiaro e scuro, seguendo la
+     nota già scritta lì per `--sm-chip-bg`/`--sm-chip-edge`/`--sm-accent-ink`.
+   - `serenityModuleStore.ts`: le sette chiavi ora sono tutte reali
+     (`SERENITY_MODULES_DEFAULT` le accende tutte); `PannelloConfig.tsx`: `MODULI_IN_ARRIVO`
+     sparita, i quattro spostati in `MODULI_REALI`; « ACCENDI TUTTO »/« SPEGNI TUTTO » ora
+     coprono tutti e sette, non più solo i primi tre.
+
+Verificato dal vivo (server Vite locale, `.claude/launch.json` aggiornato con una voce
+`serenity-dev`): logo cliccabile (apre i crediti), pillola con l'icona salva funzionante nel
+posto giusto, icone raddoppiate senza overflow, MUSE/METER/SANS INSTRUMENTS corti e leggibili,
+CONFIG con sette moduli tutti accesi e tutti spegnibili singolarmente (provato spegnere e
+riaccendere « journal de session »: il bottone sparisce e torna, il conteggio muto lo
+sostituisce quando spento), giornale apribile con righe leggibili dopo la correzione del
+colore, ASSESSMENT visibile in seduta, Santé Système correttamente assente senza strumento
+connesso (niente da mostrare, niente bottone).
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori nuovi (317 warning, tutte
+preesistenti — nessuna nuova rispetto al giro 15), `vitest run` 639/639. `git status`: solo
+`src/serenity/*` + `.claude/launch.json` (voce di sviluppo, nessuna logica applicativa).
+EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

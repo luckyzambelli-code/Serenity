@@ -77,8 +77,10 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
+import { CreditsModal } from '../components/CreditsModal';
+import { HealthPanel } from '../components/HealthPanel';
 import { computeInstantRead, readWaitSeconds, READ_NON_MISURATO, type ReadSrc } from '../engine/instantRead';
 import { REACTION_LABELS } from '../engine/ReactionClassifier';
 import type { PrimePhase, Zone as PrimeZone } from '../lib/primeFreqEngine';
@@ -240,6 +242,8 @@ export default function Serenity() {
   const [configAperto, setConfigAperto] = useState(false);
   /** LA GUIDA — segnalata assente nell'audit funzionale completo. `GuideModal`, autosufficiente. */
   const [guidaAperta, setGuidaAperta] = useState(false);
+  /** I CREDITI — si aprono dal logo, come in App.tsx. `CreditsModal`, autosufficiente. */
+  const [creditiAperti, setCreditiAperti] = useState(false);
   /** ── LA TARATURA DELL'AGO EEG — segnalata assente nell'audit funzionale completo: « toutes
    *  les fonctions... calibrations » — App.tsx la tiene nel cassetto TRIM di `SidebarDrawer`
    *  (`needleTrim`/`needleInertia`, scritte dritte sul motore condiviso `runtime/NeedleEngine`,
@@ -601,6 +605,14 @@ export default function Serenity() {
   const setPrimePhase = (p: PrimePhase) => { setPrimePhaseState(p); primePhaseRef.current = p; };
   const [mnaAperto, setMnaAperto] = useState(false);
   const mnaSessionRef = useRef<MnaSession>({ ...MNA_SESSION_VUOTA });
+  /** ── SANTÉ SYSTÈME / GIORNALE — segnalato: « integra anche il journal de session, Santé
+   *  Système ». Stesso cassetto ancorato al quadrante di `PannelloMna` (sopra), UN cassetto
+   *  alla volta: aprirne uno chiude gli altri due, come CONFIG chiude tutto il resto. */
+  const [saluteAperto, setSaluteAperto] = useState(false);
+  const [giornaleAperto, setGiornaleAperto] = useState(false);
+  const apriMna = () => { setMnaAperto(v => { const n = !v; if (n) { setSaluteAperto(false); setGiornaleAperto(false); } return n; }); };
+  const apriSalute = () => { setSaluteAperto(v => { const n = !v; if (n) { setMnaAperto(false); setGiornaleAperto(false); } return n; }); };
+  const apriGiornale = () => { setGiornaleAperto(v => { const n = !v; if (n) { setMnaAperto(false); setSaluteAperto(false); } return n; }); };
   const metabolicPhaseRef = useRef<'idle' | 'baseline' | 'breath' | 'result'>('idle');
 
   /** L'EP a 4 stadi — CONDIVISO con EQUILIBRIUM (`hooks/useEpValidation`), non un secondo
@@ -1575,6 +1587,24 @@ export default function Serenity() {
           più larghi delle parole nude di prima. Senza, su una finestra stretta gli ultimi
           indicatori uscivano dal bordo invece di andare a capo — persi, non solo compressi. */}
       <header style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 14, rowGap: 10 }}>
+        {/* ── IL LOGO — segnalato: « avant tout tu dois mettre le logo... comme pour
+            Equilibrium ». Stessa immagine (`/logo-alt-scientology.png`, nella cartella
+            pubblica condivisa dai due build), stesso gesto (apre i crediti — `CreditsModal`,
+            riusato tale e quale: è un velo scuro a sé, come `GuideModal` — non fa parte della
+            superficie chiara/scura di SERENITY, non c'è nulla da riadattare). In tema chiaro
+            l'immagine (disegnata per un fondo scuro, il testo sparirebbe) prende la stessa
+            pastiglia scura di App.tsx invece di un filtro che ne sporcherebbe il blu. */}
+        <button type="button" onClick={() => setCreditiAperti(true)} title={t('tip_credits') as string} style={{
+          border: 'none', padding: isLightTheme ? '4px 10px' : 0, borderRadius: 10,
+          background: isLightTheme ? '#2a2a2f' : 'transparent',
+          boxShadow: isLightTheme ? '0 2px 8px rgba(38,40,48,0.22)' : 'none',
+          cursor: 'pointer', lineHeight: 0, flexShrink: 0,
+        }}>
+          <img src="/logo-alt-scientology.png" alt="Alt. Scientology" style={{
+            height: isLightTheme ? 36 : 44, width: 'auto',
+            filter: isLightTheme ? 'none' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.45)) brightness(1.05)',
+          }} />
+        </button>
         <span style={{ fontFamily: 'var(--s-serif)', fontSize: 21, letterSpacing: '0.14em' }}>
           SERENITY
         </span>
@@ -1613,82 +1643,89 @@ export default function Serenity() {
         }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             {avvio.solo
-              ? <User size={12} strokeWidth={1.8} aria-hidden="true" />
-              : <Users size={12} strokeWidth={1.8} aria-hidden="true" />}
+              ? <User size={24} strokeWidth={1.8} aria-hidden="true" />
+              : <Users size={24} strokeWidth={1.8} aria-hidden="true" />}
             {nomeAuditor}{avvio.solo ? ` · ${t('ser_alone_tag')}` : ` · ${nomePreclear}`}
           </span>
           {avvio.distanza && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <Wifi size={12} strokeWidth={1.8} aria-hidden="true" />
+              <Wifi size={24} strokeWidth={1.8} aria-hidden="true" />
               {t('ser_remote_tag')}
             </span>
           )}
           {avvio.esperto && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <Wrench size={12} strokeWidth={1.8} aria-hidden="true" />
+              <Wrench size={24} strokeWidth={1.8} aria-hidden="true" />
               {t('ser_expert_tag')}
             </span>
           )}
-        </span>
-        {/* ── SALVA QUESTA CONFIGURAZIONE — vedi la nota su `salvaConfigAperto`. Sempre
-            raggiungibile da qui, qualunque sia lo stato degli strumenti in questo momento. */}
-        {!aperta && (
-          <div style={{ position: 'relative' }}>
-            <button className="s-glass s-glass-btn" onClick={() => { setSalvaConfigAperto(v => !v); setConfigSalvata(false); }} style={{
-              cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
-              background: 'var(--s-disc)',
-              fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-faint)',
-            }}>
-              {LC('salva questa configurazione', 'sauvegarder cette configuration',
-                'save this configuration', 'guardar esta configuración', 'spara denna konfiguration')}
-            </button>
-            {salvaConfigAperto && (
-              <div className="s-glass s-glass-lift" style={{
-                position: 'absolute', top: '100%', right: 0, marginTop: 8, zIndex: 40,
-                display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 14px',
-                borderRadius: 12, background: 'var(--s-disc)',
-                minWidth: 260,
-              }}>
-                <span style={{ fontSize: 13.5, lineHeight: 1.5, color: 'var(--s-ink-faint)' }}>
-                  {LC('auditor, preclear, locale/distanza, e gli strumenti connessi in questo momento — tutto insieme.',
-                    'auditeur, préclair, local/distance, et les instruments connectés en ce moment — le tout ensemble.',
-                    'auditor, preclear, local/distance, and the instruments connected right now — all together.',
-                    'auditor, preclear, local/distancia, y los instrumentos conectados ahora mismo — todo junto.',
-                    'auditor, preclear, lokal/distans, och instrumenten som är anslutna just nu — allt tillsammans.')}
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input
-                    value={nomeConfigDaSalvare}
-                    onChange={e => { setNomeConfigDaSalvare(e.target.value); setConfigSalvata(false); }}
-                    placeholder={LC('nome di questa configurazione…', 'nom de cette configuration…',
-                      'name for this configuration…', 'nombre de esta configuración…', 'namn för denna konfiguration…') as string}
-                    style={{
-                      flex: 1, border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
-                      outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink)',
-                      padding: '2px 4px',
-                    }}
-                  />
-                  <button
-                    disabled={!nomeConfigDaSalvare.trim()}
-                    onClick={() => {
-                      salvaConfigurazione(nomeConfigDaSalvare, avvio,
-                        { muse: museOk, theta: meterC, none: senzaStrumenti || (!museOk && !meterC) });
-                      setConfigSalvata(true);
-                    }}
-                    style={{
-                      border: 'none', background: 'none', cursor: nomeConfigDaSalvare.trim() ? 'pointer' : 'default',
-                      opacity: nomeConfigDaSalvare.trim() ? 1 : 0.4,
-                      fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-soft)', whiteSpace: 'nowrap',
-                    }}>
-                    {configSalvata
-                      ? LC('salvata ✓', 'enregistrée ✓', 'saved ✓', 'guardada ✓', 'sparad ✓')
-                      : LC('salva', 'enregistrer', 'save', 'guardar', 'spara')}
-                  </button>
+          {/* ── SALVA QUESTA CONFIGURAZIONE, ORA QUI DENTRO — segnalato: « le bouton doit être
+              inclus dans le champ avec les indications Auditeur/PC Expert/Normal, sous forme
+              d'icône ». Stessa azione di prima (`salvaConfigAperto`/`salvaConfigurazione`), ma
+              non più una pillola a parte accanto a questa: un'icona sola, dentro la STESSA
+              pillola di chi/come si audita — perché salvare LA CONFIGURAZIONE è salvare
+              esattamente quello che questa pillola racconta, non un'azione indipendente. */}
+          {!aperta && (
+            <div style={{ position: 'relative' }}>
+              <button
+                className="s-glass-btn"
+                onClick={() => { setSalvaConfigAperto(v => !v); setConfigSalvata(false); }}
+                title={LC('salva questa configurazione', 'sauvegarder cette configuration',
+                  'save this configuration', 'guardar esta configuración', 'spara denna konfiguration') as string}
+                style={{
+                  display: 'flex', alignItems: 'center', border: 'none', background: 'none',
+                  cursor: 'pointer', padding: 2, color: 'var(--s-ink-faint)', lineHeight: 0,
+                }}>
+                <Save size={24} strokeWidth={1.8} aria-hidden="true" />
+              </button>
+              {salvaConfigAperto && (
+                <div className="s-glass s-glass-lift" style={{
+                  position: 'absolute', top: '100%', right: 0, marginTop: 8, zIndex: 40,
+                  display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 14px',
+                  borderRadius: 12, background: 'var(--s-disc)',
+                  minWidth: 260,
+                }}>
+                  <span style={{ fontSize: 13.5, lineHeight: 1.5, color: 'var(--s-ink-faint)' }}>
+                    {LC('auditor, preclear, locale/distanza, e gli strumenti connessi in questo momento — tutto insieme.',
+                      'auditeur, préclair, local/distance, et les instruments connectés en ce moment — le tout ensemble.',
+                      'auditor, preclear, local/distance, and the instruments connected right now — all together.',
+                      'auditor, preclear, local/distancia, y los instrumentos conectados ahora mismo — todo junto.',
+                      'auditor, preclear, lokal/distans, och instrumenten som är anslutna just nu — allt tillsammans.')}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                      value={nomeConfigDaSalvare}
+                      onChange={e => { setNomeConfigDaSalvare(e.target.value); setConfigSalvata(false); }}
+                      placeholder={LC('nome di questa configurazione…', 'nom de cette configuration…',
+                        'name for this configuration…', 'nombre de esta configuración…', 'namn för denna konfiguration…') as string}
+                      style={{
+                        flex: 1, border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
+                        outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink)',
+                        padding: '2px 4px',
+                      }}
+                    />
+                    <button
+                      disabled={!nomeConfigDaSalvare.trim()}
+                      onClick={() => {
+                        salvaConfigurazione(nomeConfigDaSalvare, avvio,
+                          { muse: museOk, theta: meterC, none: senzaStrumenti || (!museOk && !meterC) });
+                        setConfigSalvata(true);
+                      }}
+                      style={{
+                        border: 'none', background: 'none', cursor: nomeConfigDaSalvare.trim() ? 'pointer' : 'default',
+                        opacity: nomeConfigDaSalvare.trim() ? 1 : 0.4,
+                        fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-soft)', whiteSpace: 'nowrap',
+                      }}>
+                      {configSalvata
+                        ? LC('salvata ✓', 'enregistrée ✓', 'saved ✓', 'guardada ✓', 'sparad ✓')
+                        : LC('salva', 'enregistrer', 'save', 'guardar', 'spara')}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </span>
         <span style={{ width: 1, height: 16, background: 'var(--s-ink-ghost)', flexShrink: 0 }} />
         {/* ── LE CONNESSIONI, UN PUNTO E UNA PAROLA PER DISPOSITIVO ──────────────────────────
             Segnalato: deve capirsi SUBITO quale dispositivo è collegato, quale non lo è, se
@@ -1702,15 +1739,31 @@ export default function Serenity() {
                       textTransform: 'uppercase', color: 'var(--s-ink-ghost)' }}>
           {LC('strumenti', 'instruments', 'instruments', 'instrumentos', 'instrument')}
         </span>
+        {/* ── ETICHETTE CORTE, ORA — segnalato: « Connecter MUSE, Connecter le Meter, Séance
+            sans instrument doivent être des ICÔNES avec écrit MUSE, METER, Sans Instruments ».
+            Prima la parola PORTAVA lo stato intero ("connetti muse"/"meter scollegato"/…) — una
+            frase diversa ogni volta, da rileggere per capire qual è il dispositivo. Ora la
+            parola è SEMPRE il nome corto del dispositivo (invariante), lo stato si legge dal
+            punto colorato (v. `IndicatoreConnessione`) e, quando serve un dettaglio in più
+            (percentuale, ricerca in corso, un problema), sta in `dettaglio` — corto anch'esso.
+            La frase intera resta, come `title`, per chi passa il mouse o usa un lettore di
+            schermo: NULLA è stato tolto, solo spostato da "sempre visibile" a "a richiesta". */}
         <IndicatoreConnessione
           onClick={muse.handleConnectMuse}
-          icona={<Headphones size={13} strokeWidth={1.8} />}
-          etichetta={
+          icona={<Headphones size={26} strokeWidth={1.8} />}
+          etichetta="MUSE"
+          title={
             muse.museConnection === 'connected'
-              ? (museGate.museContact ? 'MUSE ✓' : t('ser_meter_disconnected') as string)
-              : muse.museConnection === 'searching' ? t('searching') as string ?? '…' : t('ser_connect_muse') as string
+              ? (museGate.museContact ? undefined : t('ser_meter_disconnected') as string)
+              : muse.museConnection === 'searching' ? t('searching') as string : t('ser_connect_muse') as string
           }
-          dettaglio={muse.museConnection === 'connected' && batteryLevel !== null ? `${batteryLevel}%` : null}
+          dettaglio={
+            muse.museConnection === 'connected'
+              ? (museGate.museContact
+                  ? (batteryLevel !== null ? `${batteryLevel}%` : '✓')
+                  : '⚠')
+              : muse.museConnection === 'searching' ? '…' : null
+          }
           stato={
             muse.museConnection === 'connected'
               ? (museGate.museContact ? 'connesso' : 'errore')
@@ -1725,8 +1778,9 @@ export default function Serenity() {
             distinguibile da "non ancora connesso": due stati diversi, non uno solo. */}
         <IndicatoreConnessione
           onClick={theta.unavailable ? undefined : (meterC ? theta.disconnect : theta.connect)}
-          icona={<Gauge size={13} strokeWidth={1.8} />}
-          etichetta={
+          icona={<Gauge size={26} strokeWidth={1.8} />}
+          etichetta="METER"
+          title={
             // ⚠️ Segnalato: « la connessione METER non la vedo, vedo invece connessione MUSE ».
             // La causa vera: questa etichetta usava `theta_uncalibrated` ("non tarato") — una
             // parola che non nomina il meter, e che l'auditor legge come "MUSE" o comunque
@@ -1734,8 +1788,13 @@ export default function Serenity() {
             // ("meter non disponibile qui") dice la cosa giusta: È il meter, e non lo si può
             // usare in questo browser/ambiente.
             theta.unavailable ? t('ser_meter_unavailable') as string
-              : meterC ? 'METER ✓'
-              : theta.status === 'connecting' ? '…' : t('theta_connect') as string
+              : meterC ? undefined
+              : theta.status === 'connecting' ? undefined : t('theta_connect') as string
+          }
+          dettaglio={
+            theta.unavailable ? '—'
+              : meterC ? '✓'
+              : theta.status === 'connecting' ? '…' : null
           }
           stato={
             theta.unavailable ? 'spento'
@@ -1759,8 +1818,9 @@ export default function Serenity() {
               if (meterC) theta.disconnect();
             }
           }}
-          icona={<MessageSquareOff size={13} strokeWidth={1.8} />}
-          etichetta={t('no_instruments_mode') as string}
+          icona={<MessageSquareOff size={26} strokeWidth={1.8} />}
+          etichetta={LC('SENZA STRUMENTI', 'SANS INSTRUMENTS', 'NO INSTRUMENTS', 'SIN INSTRUMENTOS', 'UTAN INSTRUMENT') as string}
+          title={t('no_instruments_mode') as string}
           stato={senzaStrumenti ? 'connesso' : 'in-attesa'}
         />
         {/* ── LA SUA ESPANSIONE — due lattine/lattina sola, le due prove, la taratura TA ──────
@@ -1805,7 +1865,7 @@ export default function Serenity() {
               {LC('a distanza', 'à distance', 'remote', 'a distancia', 'på distans')}
             </span>
             <IndicatoreConnessione
-              icona={<Wifi size={13} strokeWidth={1.8} />}
+              icona={<Wifi size={26} strokeWidth={1.8} />}
               etichetta={t('drawer_pc') as string}
               stato={
                 remote.isConnected ? 'connesso'
@@ -1819,7 +1879,7 @@ export default function Serenity() {
               }
             />
             <IndicatoreConnessione
-              icona={<Headphones size={13} strokeWidth={1.8} />}
+              icona={<Headphones size={26} strokeWidth={1.8} />}
               etichetta={LC('MUSE (preclear)', 'MUSE (préclair)', 'MUSE (preclear)', 'MUSE (preclear)', 'MUSE (preclear)') as string}
               stato={
                 !remote.isConnected ? 'in-attesa'
@@ -1841,7 +1901,7 @@ export default function Serenity() {
           cursor: 'pointer', padding: 8, borderRadius: 999,
           background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
         }}>
-          <Settings size={16} strokeWidth={1.6} />
+          <Settings size={32} strokeWidth={1.6} />
         </button>
         {/* ── LA GUIDA — segnalata assente nell'audit funzionale completo. `GuideModal` è
             autosufficiente (un iframe su `/guide/EQUILIBRIUM-manuale.html`, copiato a ogni
@@ -1852,10 +1912,11 @@ export default function Serenity() {
           cursor: 'pointer', padding: 8, borderRadius: 999,
           background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
         }}>
-          <HelpCircle size={16} strokeWidth={1.6} />
+          <HelpCircle size={32} strokeWidth={1.6} />
         </button>
       </header>
       {guidaAperta && <GuideModal lang={lang} onClose={() => setGuidaAperta(false)} />}
+      {creditiAperti && <CreditsModal onClose={() => setCreditiAperti(false)} />}
 
       {/* ── I COMANDI, IN ALTO — segnalato: « i cicli non sono chiari messi sotto, mettili in
           alto come in equilibrium ». In App.tsx l'item, i quattro metodi, i passi del ciclo in
@@ -2312,11 +2373,15 @@ export default function Serenity() {
             </div>
           </>
         )}
-        {/* Il giornale NON si mostra: scorrere alla periferia tira l'occhio proprio mentre
-            l'ago legge. Qui si dice solo che sta scrivendo, e quante righe ha. */}
-        <span style={{ fontSize: 14.5, color: 'var(--s-ink-faint)' }}>
-          {t('ser_journal')} · {journal.logs.length} {t(journal.logs.length === 1 ? 'ser_line' : 'ser_lines')}
-        </span>
+        {/* Il giornale NON si mostra da sé: scorrere alla periferia tira l'occhio proprio
+            mentre l'ago legge. Il conteggio (sotto, ORA cliccabile — vedi la nota più giù su
+            `apriGiornale`) resta muto finché l'auditor non lo chiede lui stesso. Qui solo il
+            caso a righe zero, dove un bottone che apre il nulla sarebbe un controllo bugiardo. */}
+        {(!moduleVis.journal || journal.logs.length === 0) && (
+          <span style={{ fontSize: 14.5, color: 'var(--s-ink-faint)' }}>
+            {t('ser_journal')} · {journal.logs.length} {t(journal.logs.length === 1 ? 'ser_line' : 'ser_lines')}
+          </span>
+        )}
         {/* ── IL METER — segnalato: « comment peux-tu mettre la connexion METER EN BAS, le MUSE
             en haut ». La sua connessione e la sua configurazione stanno ORA solo in
             intestazione (l'indicatore + la freccia accanto, vedi sopra) — niente più un secondo
@@ -2330,7 +2395,7 @@ export default function Serenity() {
         {aperta && moduleVis.mna && (
           <button
             className="s-glass s-glass-btn"
-            onClick={() => setMnaAperto(v => !v)}
+            onClick={apriMna}
             style={{
               cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
               background: 'var(--s-disc)',
@@ -2338,6 +2403,41 @@ export default function Serenity() {
               color: mnaAperto || primePhase !== 'CAPTURE' && primePhase !== 'IDLE' ? 'var(--s-still)' : 'var(--s-ink-faint)',
             }}>
             MNA
+          </button>
+        )}
+        {/* ── SANTÉ SYSTÈME — segnalato: « integra anche Santé Système ». Lo stesso
+            `HealthPanel` di App.tsx (EEG/GYRO/PPG/elettrodi), montato TALE E QUALE — la sua
+            sorgente (`eegBuffer`/`gyroBuffer`, poco più in alto) è la STESSA di App.tsx: era
+            già qui, senza uno strumento per leggerla. */}
+        {aperta && moduleVis.health && (agoEeg || meterC) && (
+          <button
+            className="s-glass s-glass-btn"
+            onClick={apriSalute}
+            style={{
+              cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
+              background: 'var(--s-disc)',
+              fontFamily: 'var(--s-sans)', fontSize: 15,
+              color: saluteAperto ? 'var(--s-still)' : 'var(--s-ink-faint)',
+            }}>
+            {LC('salute sistema', 'santé système', 'system health', 'salud del sistema', 'systemhälsa')}
+          </button>
+        )}
+        {/* ── IL GIORNALE, ORA LEGGIBILE — segnalato: « integra anche il journal de session ».
+            Prima si vedeva solo il conteggio (rimasto qui accanto, invariato): un clic apre
+            ora la STESSA lista, ordinata e colorata come `components/TranscriptLog.tsx`, nella
+            lingua visiva di SERENITY (quel componente resta bianco-su-scuro fisso: qui serve
+            leggibile anche in tema chiaro, vedi `RigaGiornale` sotto). */}
+        {moduleVis.journal && journal.logs.length > 0 && (
+          <button
+            className="s-glass s-glass-btn"
+            onClick={apriGiornale}
+            style={{
+              cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
+              background: 'var(--s-disc)',
+              fontFamily: 'var(--s-sans)', fontSize: 14.5,
+              color: giornaleAperto ? 'var(--s-still)' : 'var(--s-ink-faint)',
+            }}>
+            {t('ser_journal')} · {journal.logs.length} {t(journal.logs.length === 1 ? 'ser_line' : 'ser_lines')}
           </button>
         )}
         {/* EP — l'auditor lo apre da sé quando vuole registrarlo, non un conto alla rovescia
@@ -2462,7 +2562,7 @@ export default function Serenity() {
           all'angolo opposto delle camere, sempre presente a seduta aperta, col titolo sempre
           leggibile. Zero stato nuovo — `assessAttivo`/`assessItems` sono gli stessi di sempre,
           solo un contenitore vero al posto del cassetto. */}
-      {aperta && (
+      {aperta && moduleVis.ri && (
         <ZonaAssessment
           attivo={assessAttivo}
           onToggle={() => setAssessAttivo(v => !v)}
@@ -2644,6 +2744,93 @@ export default function Serenity() {
               onChiudi={() => setMnaAperto(false)}
             />
           )}
+          {/* ── SANTÉ SYSTÈME, LO STESSO `HealthPanel` DI APP.TSX — segnalato: « integra anche
+              Santé Système ». `eegBuffer`/`gyroBuffer` sono la STESSA coppia di ref che
+              `useMuseConnection` (condiviso) riempie in App.tsx: qui esistevano già, per
+              `ToneColumn` — mancava solo lo strumento per LEGGERLI. Montato TALE E QUALE:
+              le sue zone interne (onda EEG, radar giroscopio, quadrante BPM) restano il
+              proprio SCHERMO scuro apposta — uno strumento resta uno strumento, a
+              prescindere dal tema di SERENITY attorno (vedi `--sm-panel-shadow` in
+              `tokens.css`); solo l'intestazione (l'etichetta, non lo schermo) segue il tema,
+              perché legge la STESSA `useUiStore().isLightTheme` di SERENITY. */}
+          {aperta && moduleVis.health && saluteAperto && (agoEeg || meterC) && (
+            <div style={{
+              position: 'absolute', left: 16, right: 16, bottom: 16, zIndex: 6,
+              maxHeight: '78%', overflowY: 'auto', borderRadius: 18,
+            }}>
+              <HealthPanel
+                eegBuffer={eegBuffer}
+                gyroBuffer={gyroBuffer}
+                displayBpm={realBpm}
+                signalQuality={museGate.signalQuality}
+                museConnection={muse.museConnection}
+                batteryLevel={batteryLevel}
+                sessionState={aperta ? 'running' : 'idle'}
+                onHide={() => setSaluteAperto(false)}
+                t={k => t(k as Parameters<typeof t>[0]) as string}
+                panelStyle={extra => ({
+                  background: 'var(--s-disc)',
+                  border: isLightTheme ? '1px solid rgba(60,64,72,0.16)' : '1px solid rgba(255,255,255,0.08)',
+                  ...extra,
+                })}
+              />
+            </div>
+          )}
+          {/* ── IL GIORNALE, LO STESSO CASSETTO — segnalato: « integra anche il journal de
+              session ». Stessa lista di `components/TranscriptLog.tsx` (ordine per TEMPO non
+              per arrivo, righe RITIRATE in ambra, righe METER nel colore dell'ago, `hideSpeech`
+              per le sedute SOLO), riscritta con i token `var(--s-*)` di SERENITY invece delle
+              classi `text-white/…` fisse di quel componente — la stessa ragione per cui
+              `CycleHint` non è stato riusato TALE E QUALE, vedi `SuggerimentoCiclo`. */}
+          {giornaleAperto && (
+            <div className="s-glass s-glass-lift" style={{
+              position: 'absolute', left: 16, right: 16, bottom: 16, zIndex: 6,
+              maxHeight: '70%', display: 'flex', flexDirection: 'column',
+              background: 'var(--s-disc)', borderRadius: 18, padding: '10px 16px 14px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexShrink: 0 }}>
+                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.12em',
+                              textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
+                  {t('ser_journal')}
+                </span>
+                <button onClick={() => setGiornaleAperto(false)} style={{
+                  border: 'none', background: 'none', cursor: 'pointer',
+                  color: 'var(--s-ink-faint)', fontSize: 18, lineHeight: 1, padding: 2,
+                }}>×</button>
+              </div>
+              <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {[...journal.logs]
+                  .filter(l => !(avvio.solo && (l.speaker === 'Aud' || l.speaker === 'PC')))
+                  .sort((a, b) => (a.time ?? 0) - (b.time ?? 0))
+                  .reverse()
+                  .map((log, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 8, fontFamily: 'var(--s-mono)', fontSize: 12.5, lineHeight: 1.4 }}>
+                      {/* ⚠️ `--s-ink-faint`, NON `--s-ink-ghost` — segnalato via test dal vivo:
+                          questo pannello galleggia sullo SCHERMO scuro dell'ago (vedi la nota
+                          sopra `HealthPanel`), non sulla superficie chiara di SERENITY dove
+                          `--s-ink-ghost` resta leggibile. Scuro su scuro con quel token
+                          diventava illeggibile — la stessa famiglia di difetto di `CycleHint`,
+                          qui risolta seguendo la convenzione già usata da `PannelloMna` sullo
+                          stesso fondo (le sue etichette usano `--s-ink-faint`, mai `-ghost`). */}
+                      <span style={{ color: 'var(--s-ink-faint)', width: 38, flexShrink: 0 }}>
+                        {(log.time || 0).toFixed(1)}s
+                      </span>
+                      <span style={{
+                        color: log.type === 'retracted' ? 'var(--s-reserve)'
+                          : log.type === 'meter' ? 'var(--s-reserve)'
+                          : log.speaker === 'SYS' ? 'var(--s-ink-faint)' : 'var(--s-ink)',
+                        fontWeight: (log.type === 'highlight' || log.type === 'success') ? 700 : 400,
+                      }}>
+                        {log.speaker && log.speaker !== 'NEEDLE' && (
+                          <b>{log.speaker === 'Aud' ? 'AUD' : log.speaker === 'PC' ? 'PC' : log.speaker}: </b>
+                        )}
+                        {log.text}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
         {/* ── QUALE AGO GUARDARE — SOLO quando c'è davvero una scelta ─────────────────────────
             Segnalato: « les deux aiguilles ? pas vue ». Non è un secondo ago da disegnare
@@ -2697,7 +2884,7 @@ export default function Serenity() {
             <LetturaTA />
             <LetturaFase t={t} />
             {museGate.signalQuality > 0 && <span>{museGate.signalQuality}%</span>}
-            {museOk && (
+            {museOk && moduleVis.biometric && (
               <span title={t('biometric_integrity') as string}>
                 <LetturaIntegrita />
               </span>

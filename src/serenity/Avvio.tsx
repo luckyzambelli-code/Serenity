@@ -332,7 +332,7 @@ export function Avvio({ onPronto, onRichiama }: {
           cursor: 'pointer', padding: 8, borderRadius: 999, background: 'var(--s-disc)',
           display: 'flex', color: 'var(--s-ink-soft)',
         }}>
-          <Settings size={16} strokeWidth={1.6} />
+          <Settings size={32} strokeWidth={1.6} />
         </button>
       </div>
 

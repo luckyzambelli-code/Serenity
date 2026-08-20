@@ -24,6 +24,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["vite", "--port", "3002", "--strictPort"],
       "port": 3002
+    },
+    {
+      "name": "serenity-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--port", "3005", "--strictPort"],
+      "port": 3005
     }
   ]
 }

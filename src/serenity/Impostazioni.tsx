@@ -68,8 +68,8 @@ export function SelettoreTema() {
   return (
     <BottoneCiclico
       opzioni={[
-        { k: 'chiaro' as const, label: t('ser_theme_light'), icona: <Sun size={12} strokeWidth={1.8} aria-hidden="true" /> },
-        { k: 'scuro' as const, label: t('ser_theme_dark'), icona: <Moon size={12} strokeWidth={1.8} aria-hidden="true" /> },
+        { k: 'chiaro' as const, label: t('ser_theme_light'), icona: <Sun size={24} strokeWidth={1.8} aria-hidden="true" /> },
+        { k: 'scuro' as const, label: t('ser_theme_dark'), icona: <Moon size={24} strokeWidth={1.8} aria-hidden="true" /> },
       ]}
       selezionato={isLightTheme ? 'chiaro' : 'scuro'}
       onChange={k => setLightTheme(k === 'chiaro')}
