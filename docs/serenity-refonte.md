@@ -1382,6 +1382,72 @@ Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori nuovi, `vitest run` 6
 
 ---
 
+## Diciottesimo giro (20/08/2026) — la linea del bersaglio sull'arco, R&I, pausa manuale, e l'inventario onesto di ciò che resta
+
+Due richieste nello stesso messaggio: una precisa (la linea del bersaglio durante la prova
+delle boîtes), una larga e imperativa (« MAINTENANT IMPLEMENTE LES MODULS MANQUANTS »). Per la
+seconda, audit vero — non supposizioni — confrontando gli import di `App.tsx` con quelli di
+`src/serenity/*`, per trovare cosa manca DAVVERO e non ciò che sembra mancare a naso.
+
+1. **La linea del bersaglio sull'arco, durante stretta/respiro — ASSENTE.** `QuantumSphere`
+   sa già disegnarla (`targetOffset`, la linea tratteggiata verde a un terzo di quadrante) —
+   qui restava sempre `null`. Ora `theta.testing ? theta.testBaseOffset + SQUEEZE_TARGET_OFFSET
+   : null`, la STESSA espressione di App.tsx.
+
+2. **R&I / INDICAZIONE — la vista che l'audit funzionale aveva dichiarato aperta da tre giri.**
+   `AssessmentPanel.tsx` (App.tsx) non era, come temuto in un giro precedente, un caso di
+   "logica sepolta nel corpo di App.tsx" — le tre funzioni che la fanno funzionare
+   (`aggiungiItemManuale`/`cercaLetturaPerParola`/`segnaIndicazione`) usano SOLO primitive già
+   pure e già presenti in `Serenity.tsx` (`computeInstantRead`, `chiaveItem`, `corpusWrite`,
+   `shownReadsRef`) — un wiring, non un porting. Portate parola per parola, e `ZonaAssessment`
+   (la "sua zona" di un giro precedente) si è presa il selettore ASSESSMENT/INDICAZIONE, il
+   campo per scrivere un item trovato in un altro modo con la proposta di quando è stato detto,
+   i bottoni Sì/No per la conferma del preclear, le due colonne separate MUSE/METER quando
+   entrambi gli strumenti sono connessi (mai un verdetto unico — misurato: κ di Cohen −0,09 fra
+   i due), e il conteggio finale. Stessa grafica di `ZonaAssessment`, non le classi Tailwind
+   di `AssessmentPanel`.
+
+3. **La pausa che sceglie l'auditor — mancava, c'era solo quella automatica.** SERENITY aveva
+   già `pauseOnLoss` (strumento perso → pausa, portato in un giro precedente) ma non il bottone
+   Play/Pause che App.tsx offre SEMPRE in seduta, per una pausa VOLUTA (una conversazione fuori
+   verbale, per dire). Le due pause non potevano condividere lo stesso interruttore senza
+   conflitto: l'effetto di auto-ripresa avrebbe cancellato una pausa manuale nell'istante stesso
+   in cui la si premeva, perché lo strumento resta connesso. Un `pausaMotivoRef` (`'strumento'`
+   `| 'manuale'`) distingue le due; l'auto-ripresa agisce SOLO sulla prima. La voce si ferma da
+   sé (`useVoiceItem`'s `active` ora `aperta && !pausata`), come `handlePause` in App.tsx.
+   ⚠️ Trovato verificando dal vivo: il badge "in pausa" diceva SEMPRE « strumento perso », anche
+   per una pausa manuale con nessuno strumento mai perso — corretto a leggere `pausaMotivoRef`.
+
+4. **Total TA e velocità di rilascio — assenti insieme al TA istantaneo.** App.tsx li affianca
+   sempre (`TotalTaReadout`/`SpeedReadout`), qui c'era solo `LetturaTA`. Stessa fonte
+   (`metricsStore`, o `theta.totalTa` quando il meter è connesso — la resistenza MISURATA
+   prevale sempre su quella ricostruita dall'EEG), stesso `React.memo` isolato per non
+   ridisegnare tutta l'intestazione a ~10 Hz.
+
+### L'inventario, onesto: cosa manca ANCORA
+
+L'audit (confronto import `App.tsx` ↔ `src/serenity/*`) ha trovato tre feature INTERE, non
+piccoli dettagli, che restano assenti — dichiarate qui invece di lasciarle scoperte in
+silenzio:
+
+- **`PostSessionReport`** (fine seduta, rapporto/PDF — fase 8 del piano) — mai iniziata.
+- **`HistoryModal`** (le sedute passate, riapertura dei rapporti) — dipende dal punto sopra.
+- **`ProcessusModal`** (la libreria dei processi di auditing) — mai iniziata.
+
+Più piccoli, non ancora guardati: `AIAssistant`, `ThetaTaCalibration` (il "tester" completo
+dell'artefatto — la taratura di base c'è già in `PannelloMeter`, passo 4), parità completa fra
+`PannelloEp` e `EpValidationModal`/`EpManualModal` di App.tsx. Non un'omissione — le prime tre
+sono, da sole, ciascuna un giro a parte per la stessa cura che ha avuto ogni altro pezzo di
+questa refonte (lettura completa, porting fedele, verifica dal vivo, test).
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori nuovi, `vitest run` 639/639,
+verifica dal vivo (pausa manuale, badge corretto dopo la correzione, vista R&I: item scritto,
+proposta, conferma Sì, conteggio 0/0 corretto per "non misurato" — tutto senza strumenti,
+quindi la linea del bersaglio e i readout TA/velocità restano da verificare con un meter/MUSE
+vero). `git status`: solo `src/serenity/*`. EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

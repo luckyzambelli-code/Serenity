@@ -16,34 +16,88 @@
  * e COME si vedono — una colonna ancorata all'angolo, sempre presente a seduta aperta (non
  * solo quando la cattura è accesa), col suo titolo sempre leggibile anche chiusa.
  *
+ * ── LA VISTA INDICAZIONE — segnalata assente nell'audit dei « moduli mancanti »: App.tsx
+ * (`AssessmentPanel.tsx`) ha DUE viste — ASSESSMENT (gli item dati a voce) e INDICAZIONE
+ * (« questa reazione INDICA al preclear? », l'R&I di sempre — l'unico criterio ESTERNO ai due
+ * aghi, che su 89 item misurati non si sono trovati d'accordo che una volta, κ di Cohen −0,09).
+ * Qui c'era SOLO la prima. Portata la seconda, STESSA logica (le tre funzioni vivono in
+ * `Serenity.tsx`: `aggiungiItemManuale`/`cercaLetturaPerParola`/`segnaIndicazione`, ricopiate
+ * parola per parola da App.tsx), grafica di SERENITY invece delle classi Tailwind di
+ * `AssessmentPanel`.
+ *
  * @see docs/serenity-refonte.md
  */
 
+import { useState } from 'react';
+import { useI18n } from '../i18n';
 import { READ_NON_MISURATO } from '../engine/instantRead';
 
 export interface AssessItemSerenity {
   id: string; time: number; item: string; gruppo: number;
   reaction: string | null; beforeMs: number; afterMs: number; readSrc?: 'eeg' | 'theta';
+  /** `undefined`/`'item'` = detto a voce durante un ASSESSMENT. `'manual'` = trovato in un
+   *  ALTRO modo e scritto dall'auditor (vista INDICAZIONE). */
+  kind?: 'item' | 'manual';
+  /** Il preclear ha confermato che la reazione lo riguarda? `undefined` = non ancora chiesto. */
+  indica?: boolean;
+  /** Le due letture prese SEPARATAMENTE, quando ci sono entrambi gli strumenti. */
+  readMuse?: string;
+  readMeter?: string;
 }
+
+type Vista = 'assess' | 'ri';
 
 const orologio = (s: number) => {
   const m = Math.floor(s / 60), r = Math.floor(s % 60);
   return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
 };
 
-export function ZonaAssessment({ attivo, onToggle, items, LC }: {
+/** Quante volte la lettura di UN ago ha indicato al preclear. Il denominatore conta solo le
+ *  righe in cui quell'ago aveva letto qualcosa: un ago che tace non sbaglia — e nemmeno un ago
+ *  che non poteva nemmeno guardare (`READ_NON_MISURATO`, niente strumento). */
+const resa = (items: AssessItemSerenity[], leggi: (a: AssessItemSerenity) => string | undefined) => {
+  const validati = items.filter(a => a.indica !== undefined);
+  const con = validati.filter(a => {
+    const l = leggi(a);
+    return l && l !== 'NULL' && l !== READ_NON_MISURATO;
+  });
+  return { si: con.filter(a => a.indica).length, tot: con.length };
+};
+
+export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
+                                 onIndica, onAggiungiItem, cercaLettura }: {
   /** La cattura è accesa? Stesso `assessAttivo` di `Serenity.tsx` — anche il toggle qui è
    *  quello stesso, non un secondo interruttore. */
   attivo: boolean;
   onToggle: () => void;
   items: AssessItemSerenity[];
   LC: (it: string, fr: string, en: string, es: string, sv: string) => string;
+  /** Entrambi gli strumenti connessi — solo allora ha senso mostrare due colonne di lettura. */
+  dueAghi?: boolean;
+  onIndica?: (id: string, indica: boolean) => void;
+  onAggiungiItem?: (testo: string, quandoSec?: number) => void;
+  cercaLettura?: (testo: string) => { tSec: number; frase: string; read?: string; readMuse?: string; readMeter?: string } | null;
 }) {
+  const { t } = useI18n();
+  const [vista, setVista] = useState<Vista>('assess');
+  const [bozza, setBozza] = useState('');
+
+  const righe = vista === 'assess'
+    ? items.filter(a => a.kind === undefined || a.kind === 'item')
+    : items.filter(a => a.kind === 'manual');
+  const proposta = vista === 'ri' && bozza.trim().length >= 2 ? cercaLettura?.(bozza.trim()) ?? null : null;
+  const aggiungi = () => {
+    const w = bozza.trim();
+    if (!w) return;
+    onAggiungiItem?.(w, proposta?.tSec);
+    setBozza('');
+  };
+
   return (
     <div className="s-glass s-glass-lift" style={{
       position: 'absolute', top: 16, left: 32, zIndex: 5,
       display: 'flex', flexDirection: 'column', gap: 8,
-      width: 300, maxHeight: attivo ? 420 : 'auto',
+      width: 320, maxHeight: attivo ? 460 : 'auto',
       borderRadius: 16, background: 'var(--s-disc)', padding: '12px 14px',
       pointerEvents: 'auto',
     }}>
@@ -61,56 +115,192 @@ export function ZonaAssessment({ attivo, onToggle, items, LC }: {
           fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700,
           color: attivo ? 'var(--s-still)' : 'var(--s-ink-faint)',
         }}>
-          {LC('assessment', 'assessment', 'assessment', 'assessment', 'assessment')}
-          {items.length > 0 ? ` · ${items.length}` : ''}
+          {vista === 'assess' ? LC('assessment', 'assessment', 'assessment', 'assessment', 'assessment') : t('ri_title_manual')}
+          {righe.length > 0 ? ` · ${righe.length}` : ''}
         </span>
         <span style={{ fontSize: 12, color: 'var(--s-ink-ghost)' }}>{attivo ? '▾' : '▸'}</span>
       </button>
       {attivo && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', minHeight: 0 }}>
-          {items.length === 0 ? (
-            <span className="ser-pulse" style={{ fontSize: 14.5, color: 'var(--s-ink-faint)' }}>
-              {LC('in ascolto…', 'à l\'écoute…', 'listening…', 'escuchando…', 'lyssnar…')}
-            </span>
-          ) : items.slice().reverse().map(it => {
-            const inAttesa = it.reaction === null;
-            const colore = inAttesa ? 'var(--s-ink-faint)'
-              : it.reaction === 'NULL' ? 'var(--s-ink-faint)'
-              : it.reaction === READ_NON_MISURATO ? 'var(--s-reserve)'
-              : 'var(--s-still)';
-            return (
-              <div key={it.id} style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
-                  <span style={{ fontFamily: 'var(--s-mono)', fontSize: 12.5, color: 'var(--s-ink-faint)', flexShrink: 0 }}>
-                    {orologio(it.time)}
-                  </span>
-                  <span style={{ fontFamily: 'var(--s-serif)', fontSize: 15.5, color: 'var(--s-ink)' }}>
-                    {it.item}
-                  </span>
-                  {items.filter(a => a.gruppo === it.gruppo).length > 1 && (
-                    <span style={{ fontFamily: 'var(--s-mono)', fontSize: 12, color: 'var(--s-ink-ghost)' }}>
-                      ×{items.filter(a => a.gruppo === it.gruppo && a.time <= it.time).length}
-                    </span>
-                  )}
-                </div>
-                <span className={inAttesa ? 'ser-pulse' : undefined} style={{
-                  fontFamily: 'var(--s-mono)', fontSize: 13, color: colore, marginLeft: 62,
+        <>
+          {/* ── IL SELETTORE DI VISTA — solo se `onIndica` è stato dato: senza (assessment
+              ancora non collegato all'R&I) la seconda vista non avrebbe niente da fare. */}
+          {onIndica && (
+            <div style={{ display: 'flex', gap: 3, borderRadius: 8, padding: 2, background: 'var(--s-disc-sunk)', alignSelf: 'flex-start' }}>
+              {(['assess', 'ri'] as const).map(v => (
+                <button key={v} onClick={() => setVista(v)} style={{
+                  border: 'none', cursor: 'pointer', borderRadius: 6, padding: '3px 10px',
+                  fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.04em',
+                  textTransform: 'uppercase', fontWeight: 700,
+                  background: vista === v ? 'var(--s-disc)' : 'transparent',
+                  color: vista === v ? 'var(--s-still)' : 'var(--s-ink-faint)',
                 }}>
-                  {inAttesa
-                    ? LC('in lettura…', 'en lecture…', 'reading…', 'leyendo…', 'läser…')
-                    : it.reaction === 'NULL'
-                      ? LC('nessuna reazione', 'aucune réaction', 'no reaction', 'sin reacción', 'ingen reaktion')
-                      : it.reaction === READ_NON_MISURATO
-                        ? LC('non misurato — nessuno strumento', 'non mesuré — aucun instrument',
-                            'not measured — no instrument', 'no medido — ningún instrumento',
-                            'inte mätt — inget instrument')
-                        : `${it.reaction}${it.beforeMs > 0 ? ` −${it.beforeMs}ms` : it.afterMs > 0 ? ` +${it.afterMs}ms` : ''}`
-                        + (it.readSrc ? ` · ${it.readSrc === 'eeg' ? 'MUSE' : 'METER'}` : '')}
-                </span>
+                  {v === 'assess' ? t('ri_view_assess') : t('ri_view_indication')}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* ── SCRIVERE UN ITEM TROVATO IN UN ALTRO MODO — solo in vista INDICAZIONE. */}
+          {vista === 'ri' && onAggiungiItem && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  value={bozza}
+                  onChange={e => setBozza(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') aggiungi(); }}
+                  placeholder={t('ri_write_item') as string}
+                  style={{
+                    flex: 1, minWidth: 0, border: '1px solid var(--s-ink-ghost)', borderRadius: 8,
+                    background: 'var(--s-disc-sunk)', outline: 'none', padding: '5px 8px',
+                    fontFamily: 'var(--s-mono)', fontSize: 13, color: 'var(--s-ink)',
+                  }}
+                />
+                <button onClick={aggiungi} disabled={!bozza.trim()} className="s-glass-btn" style={{
+                  border: 'none', borderRadius: 8, padding: '0 12px', flexShrink: 0,
+                  cursor: bozza.trim() ? 'pointer' : 'default', opacity: bozza.trim() ? 1 : 0.4,
+                  background: 'var(--s-disc)', color: 'var(--s-ink)', fontSize: 16,
+                }}>+</button>
               </div>
-            );
-          })}
-        </div>
+              {/* LA PROPOSTA — quella parola è già stata detta in seduta: eccola, con la lettura
+                  di quel momento. Cliccarla accetta l'istante vero invece di ADESSO. */}
+              {proposta && (
+                <button onClick={aggiungi} style={{
+                  textAlign: 'left', border: '1px solid var(--s-reserve)', borderRadius: 8,
+                  background: 'var(--s-disc-sunk)', cursor: 'pointer', padding: '6px 8px',
+                }}>
+                  <span style={{ fontSize: 11.5, color: 'var(--s-reserve)' }}>
+                    {t('ri_said_at')} {proposta.tSec.toFixed(0)}s · <b>{proposta.read === 'NULL' ? t('ri_no_read') : proposta.read}</b>
+                  </span>
+                  <span style={{ display: 'block', marginTop: 2, fontFamily: 'var(--s-mono)', fontSize: 11.5, color: 'var(--s-ink-faint)' }}>
+                    « {proposta.frase} »
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', minHeight: 0 }}>
+            {righe.length === 0 ? (
+              vista === 'assess' ? (
+                <span className="ser-pulse" style={{ fontSize: 14.5, color: 'var(--s-ink-faint)' }}>
+                  {LC('in ascolto…', 'à l\'écoute…', 'listening…', 'escuchando…', 'lyssnar…')}
+                </span>
+              ) : (
+                <span style={{ fontSize: 13.5, fontStyle: 'italic', color: 'var(--s-ink-faint)' }}>
+                  {t('ri_empty')}
+                </span>
+              )
+            ) : righe.slice().reverse().map(it => {
+              const inAttesa = it.reaction === null;
+              const colore = inAttesa ? 'var(--s-ink-faint)'
+                : it.reaction === 'NULL' ? 'var(--s-ink-faint)'
+                : it.reaction === READ_NON_MISURATO ? 'var(--s-reserve)'
+                : 'var(--s-still)';
+              return (
+                <div key={it.id} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
+                    <span style={{ fontFamily: 'var(--s-mono)', fontSize: 12.5, color: 'var(--s-ink-faint)', flexShrink: 0 }}>
+                      {orologio(it.time)}
+                    </span>
+                    <span style={{ fontFamily: 'var(--s-serif)', fontSize: 15.5, color: 'var(--s-ink)' }}>
+                      {it.item}
+                    </span>
+                    {righe.filter(a => a.gruppo === it.gruppo).length > 1 && (
+                      <span style={{ fontFamily: 'var(--s-mono)', fontSize: 12, color: 'var(--s-ink-ghost)' }}>
+                        ×{righe.filter(a => a.gruppo === it.gruppo && a.time <= it.time).length}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginLeft: 62 }}>
+                    {/* La lettura — un verdetto unico (ASSESSMENT) o due colonne separate
+                        (INDICAZIONE con entrambi gli strumenti: leggono item diversi, un
+                        verdetto solo nasconderebbe proprio il dato che si cerca). */}
+                    {vista === 'assess' || !dueAghi ? (
+                      <span className={inAttesa ? 'ser-pulse' : undefined} style={{
+                        fontFamily: 'var(--s-mono)', fontSize: 13, color: colore, display: 'flex', gap: 6, alignItems: 'baseline',
+                      }}>
+                        {dueAghi && it.readSrc && (
+                          <span style={{ fontSize: 10.5, color: 'var(--s-ink-ghost)' }}>
+                            {it.readSrc === 'eeg' ? 'MUSE' : 'METER'}
+                          </span>
+                        )}
+                        {inAttesa
+                          ? LC('in lettura…', 'en lecture…', 'reading…', 'leyendo…', 'läser…')
+                          : it.reaction === 'NULL'
+                            ? LC('nessuna reazione', 'aucune réaction', 'no reaction', 'sin reacción', 'ingen reaktion')
+                            : it.reaction === READ_NON_MISURATO
+                              ? LC('non misurato', 'non mesuré', 'not measured', 'no medido', 'inte mätt')
+                              : `${it.reaction}${it.beforeMs > 0 ? ` −${it.beforeMs}ms` : it.afterMs > 0 ? ` +${it.afterMs}ms` : ''}`}
+                      </span>
+                    ) : (
+                      <span style={{ display: 'flex', gap: 10, fontFamily: 'var(--s-mono)', fontSize: 12.5 }}>
+                        <span style={{ color: it.readMuse && it.readMuse !== 'NULL' ? 'var(--s-still)' : 'var(--s-ink-ghost)' }}>
+                          M {it.readMuse && it.readMuse !== 'NULL' ? it.readMuse : '—'}
+                        </span>
+                        <span style={{ color: it.readMeter && it.readMeter !== 'NULL' ? 'var(--s-reserve)' : 'var(--s-ink-ghost)' }}>
+                          T {it.readMeter && it.readMeter !== 'NULL' ? it.readMeter : '—'}
+                        </span>
+                      </span>
+                    )}
+
+                    {/* ── L'INDICAZIONE — sulla riga dell'item, in ENTRAMBE le viste (App.tsx:
+                        « è lì che l'auditor la dà »). La lettura non ancora decisa non si può
+                        indicare: niente ancora da confermare. */}
+                    {onIndica && !inAttesa && (
+                      it.indica === undefined ? (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <button onClick={() => onIndica(it.id, true)} title={t('ri_indicates') as string} style={{
+                            border: '1px solid var(--s-still)', borderRadius: 999, padding: '2px 9px',
+                            background: 'transparent', cursor: 'pointer', fontSize: 11.5,
+                            color: 'var(--s-still)', fontFamily: 'var(--s-sans)',
+                          }}>
+                            {t('ri_yes')}
+                          </button>
+                          <button onClick={() => onIndica(it.id, false)} title={t('ri_does_not_indicate') as string} style={{
+                            border: '1px solid var(--s-ink-ghost)', borderRadius: 999, padding: '2px 9px',
+                            background: 'transparent', cursor: 'pointer', fontSize: 11.5,
+                            color: 'var(--s-ink-faint)', fontFamily: 'var(--s-sans)',
+                          }}>
+                            {t('ri_no')}
+                          </button>
+                        </span>
+                      ) : (
+                        <button onClick={() => onIndica(it.id, !it.indica)} style={{
+                          border: 'none', background: 'transparent', cursor: 'pointer',
+                          fontSize: 11.5, fontFamily: 'var(--s-sans)',
+                          color: it.indica ? 'var(--s-still)' : 'var(--s-ink-faint)',
+                        }}>
+                          {it.indica ? `✓ ${t('ri_indicates')}` : `✗ ${t('ri_does_not_indicate')}`}
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ── IL CONTO — quante volte la lettura di ciascun ago ha indicato al preclear. La
+              sola forma in cui « quale dei due segue la carica » ha una risposta, perché il
+              criterio non viene da nessuno dei due strumenti. Compare solo a validazioni
+              presenti. */}
+          {onIndica && items.some(a => a.indica !== undefined) && (
+            <div style={{ display: 'flex', gap: 14, paddingTop: 6, borderTop: '1px solid var(--s-ink-ghost)' }}>
+              {dueAghi ? (
+                <>
+                  {(() => { const r = resa(items, a => a.readMuse); return (
+                    <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11.5, color: 'var(--s-still)' }}>MUSE {r.si}/{r.tot}</span>
+                  ); })()}
+                  {(() => { const r = resa(items, a => a.readMeter); return (
+                    <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11.5, color: 'var(--s-reserve)' }}>METER {r.si}/{r.tot}</span>
+                  ); })()}
+                </>
+              ) : (() => { const r = resa(items, a => a.reaction ?? undefined); return (
+                <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11.5, color: 'var(--s-still)' }}>{t('ri_indicates')} {r.si}/{r.tot}</span>
+              ); })()}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

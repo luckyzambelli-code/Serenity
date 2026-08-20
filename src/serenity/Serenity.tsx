@@ -57,7 +57,8 @@ import {
   loadHistory as loadCanTests, saveHistory as saveCanTests, addTest as addCanTest,
   type PcCanHistory,
 } from '../engine/canTest';
-import { sessionRecord, cycleRecord, fnRecord, chiaveItem } from '../engine/corpus';
+import { SQUEEZE_TARGET_OFFSET } from '../engine/thetaSetup';
+import { sessionRecord, cycleRecord, fnRecord, itemRecord, chiaveItem } from '../engine/corpus';
 import { corpusWrite, corpusAvailable } from '../lib/corpusWriter';
 import { getProfiles, getPcProfiles } from '../lib/storage';
 import { Avvio } from './Avvio';
@@ -77,7 +78,7 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { CreditsModal } from '../components/CreditsModal';
 import { HealthPanel } from '../components/HealthPanel';
@@ -130,6 +131,40 @@ const LetturaFase = React.memo(function LetturaFase({ t }: { t: (k: string) => u
   const phase = useMetric(m => m.chargePhase);
   const cs = chargeStateById(phase);
   return <>{cs.labelKey ? (t(cs.labelKey) as string) : ''}</>;
+});
+
+/** ── TOTAL TA — segnalato assente nell'audit dei moduli mancanti: App.tsx lo affianca
+ *  SEMPRE al TA istantaneo (`TotalTaReadout`), qui mancava del tutto. STESSA fonte, STESSA
+ *  regola di precedenza: col meter collegato è una resistenza MISURATA (`theta.totalTa`) e
+ *  prevale su quella ricostruita dall'EEG (`metricsStore`) — mostrarne una quando l'altra è
+ *  vera darebbe un numero che non corrisponde allo strumento in mano. */
+const LetturaTotalTa = React.memo(function LetturaTotalTa({ override, bodyMotion = false }: {
+  override: number | null; bodyMotion?: boolean;
+}) {
+  const eeg = useMetric(m => m.totalTa);
+  const totalTa = override ?? eeg;
+  return (
+    <span style={{ fontFamily: 'var(--s-mono)', fontVariantNumeric: 'tabular-nums' }}>
+      Σ {totalTa.toFixed(2)}
+      {bodyMotion && <span style={{ color: 'var(--s-reserve)' }}> · motion</span>}
+    </span>
+  );
+});
+
+/** ── VELOCITÀ DI RILASCIO — segnalata assente insieme al Total TA. `velRatio` viene dalla
+ *  velocità di elaborazione mentale, cioè dall'EEG: senza MUSE non ha sorgente, mostrata lo
+ *  stesso sembrerebbe una misura vera (stessa condizione di App.tsx, `!eegModulesHidden`, qui
+ *  `agoEeg` al punto in cui si monta). */
+const LetturaVelocita = React.memo(function LetturaVelocita({ t }: { t: (k: string) => unknown }) {
+  const velRatio = useMetric(m => m.velRatio);
+  const st = velRatio >= 1.15 ? 'fast' : velRatio < 0.85 ? 'slow' : 'norm';
+  const parola = t(st === 'fast' ? 'rel_fast' : st === 'slow' ? 'rel_slow' : 'rel_norm') as string;
+  const freccia = st === 'fast' ? '↑' : st === 'slow' ? '↓' : '';
+  return (
+    <span style={{ fontFamily: 'var(--s-mono)', fontVariantNumeric: 'tabular-nums' }}>
+      {velRatio.toFixed(2)}× {parola}{freccia}
+    </span>
+  );
 });
 
 /** ── L'INTEGRITÀ BIOMETRICA — segnalata assente nell'audit funzionale completo: « toutes les
@@ -231,6 +266,13 @@ export default function Serenity() {
    * badge in testata, accanto all'orologio.
    */
   const [pausata, setPausata] = useState(false);
+  /** ── PERCHÉ È IN PAUSA — segnalato: « implementa i moduli mancanti ». Mancava la pausa CHE
+   *  L'AUDITOR SCEGLIE (App.tsx: `handlePause`/`handleResume`, un bottone in barra), distinta
+   *  da quella automatica sopra (strumento perso). Senza distinguerle, l'effetto di
+   *  auto-ripresa qui sotto avrebbe cancellato una pausa manuale nell'istante stesso in cui la
+   *  si premeva — lo strumento resta connesso, quindi la condizione di ripresa sarebbe stata
+   *  vera subito. Un ref, non uno stato: non deve ridisegnare nulla da solo. */
+  const pausaMotivoRef = useRef<'strumento' | 'manuale' | null>(null);
   const [tempo, setTempo] = useState(0);
   /** Le quattro risposte dell'avvio. `null` = le domande non sono ancora state fatte. */
   const [avvio, setAvvio] = useState<StatoAvvio | null>(null);
@@ -434,14 +476,39 @@ export default function Serenity() {
     setBatteryLevel,
     // Segnalato assente: la STESSA regola di App.tsx — il MUSE perso mette la seduta in pausa,
     // non solo un'icona ambra da notare da sé.
-    pauseOnLoss: () => setPausata(true),
+    pauseOnLoss: () => { pausaMotivoRef.current = 'strumento'; setPausata(true); },
   });
-  // La ripresa è automatica quanto la pausa: appena il MUSE torna a rispondere (o l'auditor
-  // passa al Theta-Meter, che non ha bisogno del contatto EEG) la lettura riprende da sé —
-  // stessa filosofia di "il gate di contatto segnala da sé", applicata anche alla pausa.
+  // La ripresa è automatica quanto la pausa AUTOMATICA: appena il MUSE torna a rispondere (o
+  // l'auditor passa al Theta-Meter, che non ha bisogno del contatto EEG) la lettura riprende da
+  // sé — stessa filosofia di "il gate di contatto segnala da sé", applicata anche alla pausa.
+  // ⚠️ SOLO se il motivo era lo strumento: una pausa MANUALE (`pausaManuale`, sotto) non deve
+  // sparire da sola solo perché lo strumento è rimasto connesso — è l'auditor a deciderla e a
+  // riprenderla, esattamente come il bottone Pause/Resume di App.tsx.
   useEffect(() => {
-    if (pausata && aperta && (muse.museConnection === 'connected' || meterC)) setPausata(false);
+    if (pausata && pausaMotivoRef.current === 'strumento' && aperta
+        && (muse.museConnection === 'connected' || meterC)) {
+      setPausata(false);
+      pausaMotivoRef.current = null;
+    }
   }, [pausata, aperta, muse.museConnection, meterC]);
+  /** ── LA PAUSA CHE SCEGLIE L'AUDITOR — segnalata assente: App.tsx la offre sempre (barra
+   *  laterale, Play/Pause/Square), qui c'era solo quella automatica. Stesso gesto di
+   *  `handlePause`/`handleResume`: registra nel giornale, ferma/riprende l'orologio (via
+   *  l'effetto qui sopra, che legge `pausata`), la voce si ferma da sé perché `useVoiceItem`
+   *  è attiva solo `aperta && !pausata` (vedi sotto). */
+  const pausaManuale = () => {
+    if (pausata) {
+      setPausata(false);
+      pausaMotivoRef.current = null;
+      journal.addLog({ speaker: 'SYS', time: sessionClock.now(), type: 'normal',
+        text: LC('ripresa', 'reprise', 'resumed', 'reanudada', 'återupptagen') });
+    } else {
+      pausaMotivoRef.current = 'manuale';
+      setPausata(true);
+      journal.addLog({ speaker: 'SYS', time: sessionClock.now(), type: 'normal',
+        text: LC('in pausa', 'en pause', 'paused', 'en pausa', 'pausad') });
+    }
+  };
   // L'orologio segue la pausa esattamente come segue apertura/chiusura in App.tsx
   // (`sessionClock.resume()`/`.pause()`): il tempo di seduta non deve contare i minuti in cui
   // nessuno strumento stava leggendo.
@@ -569,6 +636,84 @@ export default function Serenity() {
     }
     assessLogCursorRef.current = journal.logs.length;
   }, [journal.logs, assessAttivo, meterC, senzaStrumenti]);
+
+  /**
+   * ── LA VISTA INDICAZIONE — LE TRE FUNZIONI DI App.tsx, PORTATE PAROLA PER PAROLA ──────────
+   * Segnalato: « implementa i moduli mancanti » — questo era il più segnalato dei tre, e
+   * dichiarato aperto nel changelog da diversi giri: l'R&I di `AssessmentPanel.tsx` (App.tsx),
+   * « la domanda che l'assessment non pone — questa reazione INDICA al preclear? ». Non un
+   * porting dell'engine: `computeInstantRead`/`chiaveItem`/`corpusWrite` erano già qui (li usa
+   * l'effetto sopra), mancava solo chi li chiama per un item scritto A MANO invece che detto a
+   * voce. Le tre funzioni sono la STESSA logica di App.tsx, adattata ai nomi locali
+   * (`sessionClock.now()` invece di `timeRef.current`, `journal.addLog` invece del buffer).
+   */
+  const riIdRef = useRef(0);
+  /** L'auditor ha trovato un item in un ALTRO modo e lo scrive: il preclear l'ha detto, oppure
+   *  è uscito da una domanda di auditing, oppure non ha fatto reagire l'ago ma gli indica lo
+   *  stesso. `quandoSec` viene dalla proposta di `cercaLetturaPerParola` (l'istante in cui
+   *  quella parola è stata DETTA); senza, la riga si data ad ADESSO. */
+  const aggiungiItemManuale = (testo: string, quandoSec?: number) => {
+    const tSec = quandoSec ?? sessionClock.now();
+    const museRead = museOk
+      ? computeInstantRead(shownReadsRef.current, tSec, -Infinity, Infinity, 'eeg').read : undefined;
+    const meterRead = meterC
+      ? computeInstantRead(shownReadsRef.current, tSec, -Infinity, Infinity, 'theta').read : undefined;
+    const scelta = agoEegRef.current ? museRead : meterRead;
+    const chiave = chiaveItem(testo);
+    let gruppo = gruppiItemRef.current.get(chiave);
+    if (gruppo === undefined) { gruppo = gruppiItemRef.current.size + 1; gruppiItemRef.current.set(chiave, gruppo); }
+    const id = `ri-${++riIdRef.current}`;
+    setAssessItems(prev => [...prev, {
+      id, time: tSec, item: testo, gruppo, reaction: scelta ?? READ_NON_MISURATO, beforeMs: 0, afterMs: 0,
+      readSrc: agoEegRef.current ? 'eeg' : 'theta', kind: 'manual', readMuse: museRead, readMeter: meterRead,
+    }]);
+    journal.addLog({ speaker: 'NEEDLE', time: tSec,
+      text: `◎ R&I · ${testo} → ${!scelta || scelta === 'NULL'
+        ? LC('nessuna reazione (NULL)', 'aucune réaction (NULL)', 'no reaction (NULL)',
+             'sin reacción (NULL)', 'ingen reaktion (NULL)') : scelta}`,
+      type: scelta && scelta !== 'NULL' ? 'success' : 'normal' });
+  };
+  /**
+   * Quella parola è già stata DETTA in seduta? E che cosa fece l'ago in quel momento?
+   * Cerca l'ultima frase del preclear o dell'auditor che la contiene — a meno di maiuscole e
+   * accenti, perché la trascrizione non restituisce mai la stessa stringa due volte. Senza
+   * questa proposta l'item scritto a mano verrebbe datato ADESSO, e gli si attribuirebbe un ago
+   * che in quel momento non stava reagendo a lui.
+   */
+  const cercaLetturaPerParola = (testo: string) => {
+    const ago = chiaveItem(testo);
+    if (!ago) return null;
+    for (let i = journal.logs.length - 1; i >= 0; i--) {
+      const l = journal.logs[i];
+      if (l.speaker !== 'PC' && l.speaker !== 'Aud') continue;
+      if (!chiaveItem(l.text).includes(ago)) continue;
+      const museRead = museOk
+        ? computeInstantRead(shownReadsRef.current, l.time, -Infinity, Infinity, 'eeg').read : undefined;
+      const meterRead = meterC
+        ? computeInstantRead(shownReadsRef.current, l.time, -Infinity, Infinity, 'theta').read : undefined;
+      return { tSec: l.time, frase: l.text, read: agoEegRef.current ? museRead : meterRead,
+                readMuse: museRead, readMeter: meterRead };
+    }
+    return null;
+  };
+  /** L'auditor registra la risposta del preclear. Si può cambiare idea: la riga si riscrive. */
+  const segnaIndicazione = (id: string, indica: boolean) => {
+    setAssessItems(prev => prev.map(a => (a.id === id ? { ...a, indica } : a)));
+    const riga = assessItems.find(a => a.id === id);
+    if (corpusSessionRef.current && riga) {
+      // In archivio è una riga `item` come le altre: porta le due letture e il verdetto del
+      // preclear. Il TESTO non ci entra mai — solo la classificazione.
+      corpusWrite(itemRecord(corpusSessionRef.current, new Date().toISOString(), riga.time,
+        { read: riga.reaction ?? undefined, readMuse: riga.readMuse, readMeter: riga.readMeter, indica }));
+    }
+    journal.addLog({ speaker: 'PC', time: sessionClock.now(),
+      text: indica
+        ? LC('la reazione indica', 'la réaction indique', 'the read indicates',
+             'la reacción indica', 'avläsningen indikerar')
+        : LC('la reazione NON indica', 'la réaction n\'indique PAS', 'the read does NOT indicate',
+             'la reacción NO indica', 'avläsningen indikerar INTE'),
+      type: indica ? 'success' : 'normal' });
+  };
 
   const release = useStableReleaseState({ needleReactionKeyRef });
 
@@ -1100,7 +1245,9 @@ export default function Serenity() {
    * lo stesso orologio usato per calcolarlo), non oltre 3s (un valore fuori scala è un errore
    * di misura, non tre secondi di silenzio veri). */
   const statoVoce = useVoiceItem({
-    active: aperta,
+    // In pausa (automatica O manuale) niente ascolto — stessa regola di App.tsx
+    // (`handlePause` ferma esplicitamente il riconoscimento).
+    active: aperta && !pausata,
     lang: lang as string,
     onTranscript: (text, speechEndMs) => {
       const ritardoS = speechEndMs
@@ -1175,7 +1322,7 @@ export default function Serenity() {
    */
   const avviaSeduta = () => {
     sessionClock.reset(); sessionClock.start();
-    setPausata(false);   // niente pausa residua da una seduta precedente
+    setPausata(false); pausaMotivoRef.current = null;   // niente pausa residua da una seduta precedente
     journal.resetJournal(t('ser_session_opened'));
     ep.resetEpState();   // niente "EP ✓" residuo da una seduta precedente
     mirror.resetMirror();   // niente ciclo MIRROR residuo da una seduta precedente
@@ -1326,7 +1473,7 @@ export default function Serenity() {
     // App.tsx: « seduta finita/in pausa → azzera tutto l'audio »).
     primeFreqAudio.killAll();
     setPrimePhase('IDLE'); setPrimeCopies([]); setPrimeCaptured(false); setMnaAperto(false);
-    setAperta(false); setPausata(false);
+    setAperta(false); setPausata(false); pausaMotivoRef.current = null;
   };
   /** Si ricomincia dalle domande. Solo a seduta chiusa: cambiare preclear a metà seduta
    *  vorrebbe dire attribuire a una persona quel che ha fatto un'altra. Una seduta a distanza
@@ -1953,6 +2100,26 @@ export default function Serenity() {
             ? LC('chiudi la seduta', 'fermer la séance', 'close the session', 'cerrar la sesión', 'stäng sessionen')
             : LC('apri una seduta', 'ouvrir une séance', 'open a session', 'abrir una sesión', 'öppna en session')}
         </button>
+        {/* ── PAUSA/RIPRENDI, LA STESSA SCELTA DELL'AUDITOR — segnalata assente insieme agli
+            altri moduli mancanti: App.tsx la offre sempre in seduta (barra laterale,
+            Play/Pause), non solo come reazione automatica alla perdita dello strumento (quella
+            resta sopra, muta, un badge). Icona sola: lo stato lo dice già il badge "in pausa"
+            accanto all'orologio, più avanti nella stessa barra. */}
+        {aperta && (
+          <button
+            className="s-glass s-glass-btn"
+            onClick={pausaManuale}
+            title={(pausata
+              ? LC('riprendi la seduta', 'reprendre la séance', 'resume the session', 'reanudar la sesión', 'återuppta sessionen')
+              : LC('metti in pausa', 'mettre en pause', 'pause', 'pausar', 'pausa')) as string}
+            style={{
+              cursor: 'pointer', padding: 10, borderRadius: 999,
+              background: 'var(--s-disc)', display: 'flex',
+              color: pausata ? 'var(--s-alive)' : 'var(--s-ink-soft)',
+            }}>
+            {pausata ? <Play size={22} strokeWidth={1.8} fill="currentColor" /> : <Pause size={22} strokeWidth={1.8} />}
+          </button>
+        )}
         {/* ── IL CICLO — un item, quattro strade, ciascuna col SUO bottone ──────────────────
             Segnalato: « la visibilità dei CICLI non è ottimale... devi fare come in EQUILIBRIUM
             con dei BOTTONI più visibili per ogni ciclo separatamente, uno accanto all'altro ».
@@ -2577,6 +2744,10 @@ export default function Serenity() {
           onToggle={() => setAssessAttivo(v => !v)}
           items={assessItems}
           LC={LC}
+          dueAghi={museOk && meterC}
+          onIndica={segnaIndicazione}
+          onAggiungiItem={aggiungiItemManuale}
+          cercaLettura={cercaLetturaPerParola}
         />
       )}
 
@@ -2620,7 +2791,14 @@ export default function Serenity() {
             needleOffsetProp={agoEeg ? needleOffsetEeg : SET_OFFSET}
             thetaOffset={meterC ? theta.offset : null}
             showEegNeedle={agoEeg}
-            targetOffset={null}
+            /* ── IL BERSAGLIO DELLA PROVA, SULL'ARCO — segnalato: « lors du test de pression
+               et souffle, tu dois mettre la ligne pour le tir de l'arc comme dans equilibrium ».
+               `QuantumSphere` sa già disegnarlo (la linea tratteggiata verde a un terzo di
+               quadrante, con l'etichetta "1/3") — App.tsx gli passa `testBaseOffset +
+               SQUEEZE_TARGET_OFFSET` durante la prova; qui restava sempre `null`, quindi
+               durante stretta/respiro (aperti da `PannelloMeter` o da `ThetaReadyCheck`,
+               entrambi già montati) il quadrante non mostrava dove l'ago deve arrivare. */
+            targetOffset={theta.testing ? theta.testBaseOffset + SQUEEZE_TARGET_OFFSET : null}
             needleReactionKey={agoEeg ? needleReactionKey : thetaReactionKey}
             asIsnessState={ep.asIsnessState}
             onClick={() => { theta.resetToSet(); resetNeedleEeg(); }}
@@ -2906,14 +3084,21 @@ export default function Serenity() {
             cambiare colore a un puntino in intestazione facile da non notare. Un badge PIENO
             (`.ser-pulse`, lo stesso avviso già usato per « dì l'item… ») proprio accanto
             all'orologio che ha smesso di correre — i due segnali si leggono insieme. */}
+        {/* ⚠️ Trovato verificando dal vivo questo stesso giro: il testo era fisso su « strumento
+            perso » anche per una pausa VOLUTA dall'auditor (`pausaManuale`) — un badge che
+            mente sul motivo è peggio di nessun badge. `pausaMotivoRef` è un ref, non stato: lo
+            si legge qui in lettura pura, ed è già corretto al momento di questo render perché
+            scritto in modo sincrono PRIMA di `setPausata(true)`, nello stesso giro. */}
         {aperta && pausata && (
           <span className="ser-pulse" style={{
             fontFamily: 'var(--s-sans)', fontSize: 13.5, fontWeight: 700, letterSpacing: '0.06em',
             padding: '3px 10px', borderRadius: 999,
             background: 'var(--s-reserve)', color: 'var(--s-ground)',
           }}>
-            {LC('in pausa — strumento perso', 'en pause — instrument perdu', 'paused — instrument lost',
-              'en pausa — instrumento perdido', 'pausad — instrument förlorat')}
+            {pausaMotivoRef.current === 'manuale'
+              ? LC('in pausa', 'en pause', 'paused', 'en pausa', 'pausad')
+              : LC('in pausa — strumento perso', 'en pause — instrument perdu', 'paused — instrument lost',
+                  'en pausa — instrumento perdido', 'pausad — instrument förlorat')}
           </span>
         )}
 
@@ -2933,6 +3118,12 @@ export default function Serenity() {
                 <LetturaIntegrita />
               </span>
             )}
+            <span title={t('total_ta') as string}>
+              <LetturaTotalTa override={meterC ? theta.totalTa : null} bodyMotion={theta.bodyMotion} />
+            </span>
+            <span title={t('mental_processing_velocity') as string}>
+              <LetturaVelocita t={t} />
+            </span>
           </span>
         )}
         {/* ── LA STESSA LETTURA, DAL METER — segnalato: « la scala del tono non appare, il TA
@@ -2956,6 +3147,9 @@ export default function Serenity() {
                 {LC('galleggia', 'flotte', 'floating', 'flota', 'flyter')}
               </span>
             )}
+            <span title={t('total_ta') as string}>
+              <LetturaTotalTa override={theta.totalTa} bodyMotion={theta.bodyMotion} />
+            </span>
           </span>
         )}
         {/* `CycleStatusBar` si è spostato nel blocco dei comandi CONTACT/NULL, sopra: stesso
