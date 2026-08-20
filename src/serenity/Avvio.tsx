@@ -25,7 +25,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { User, Users, Plus, Wifi, Eye, Wrench, CircleUser, Settings } from 'lucide-react';
+import { User, Users, Plus, Wifi, Eye, Wrench, CircleUser, Settings, Trash2 } from 'lucide-react';
 import {
   AVVIO_VUOTO, passoCorrente, restano, rispondi, indietro,
   MODO_AUTO, MODO_AUTO_MS, type Avvio as StatoAvvio, type PassoId,
@@ -368,12 +368,16 @@ export function Avvio({ onPronto, onRichiama }: {
                       {nomeProfilo(liste.a, cfg.avvio.auditorId)}{chi ? ` · ${chi}` : ''}{strumento ? ` · ${strumento}` : ''}
                     </span>
                   </button>
+                  {/* ⚠️ Segnalato: « vorrei una ICONA accanto a ogni saved per sopprimerla » — la
+                      "×" di testo funzionava già (`eliminaConfigurazione` è collegata da
+                      sempre), ma non era un'icona vera. Stessa icona di `HistoryModal.tsx`
+                      (App.tsx) per lo stesso gesto — eliminare una riga salvata. */}
                   <button className="s-glass-btn" onClick={() => { eliminaConfigurazione(cfg.id); setConfigurazioni(leggiConfigurazioni()); }}
                     title={t('ser_delete') as string} style={{
-                    border: 'none', background: 'none', cursor: 'pointer', padding: '2px 6px', borderRadius: 999,
-                    fontSize: 15.5, color: 'var(--s-ink-ghost)', lineHeight: 1,
+                    border: 'none', background: 'none', cursor: 'pointer', padding: 6, borderRadius: 999,
+                    display: 'flex', color: 'var(--s-ink-ghost)', lineHeight: 1,
                   }}>
-                    ×
+                    <Trash2 size={16} strokeWidth={1.8} />
                   </button>
                 </span>
               );

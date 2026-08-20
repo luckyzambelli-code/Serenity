@@ -244,38 +244,134 @@ export function PannelloMeter({ theta, provaTa, onFatto }: {
 
       {/* ── PASSO 4 — LA TARATURA TA ────────────────────────────────────────────────────── */}
       {passo === 'taratura' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {/* ── BLOCCO A — LO SCARTO DUE LATTINE / LATTINA SOLA — segnalato: « la définition
+              des deux TA n'est pas claire, on ne sait pas s'il faut serrer les boîtes des deux
+              cans ou solo pour avoir la différence de TA ». Vero: prima questo riquadro
+              compariva SOLO quando entrambe le prove erano GIÀ fatte, senza dire come farle —
+              bisognava indovinare che si torna al passo 1 per cambiare configurazione, poi al
+              passo 2 per stringere, due volte. Ora è una sequenza guidata, DENTRO questo
+              stesso passo: cambia la configurazione da qui, stringi da qui, senza uscirne.
+              Zero logica nuova — `theta.setConfig`/`theta.startSqueezeTest`/`provaTa` sono
+              esattamente quelli dei passi 1 e 2, solo richiamati nell'ordine giusto. */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ fontFamily: 'var(--s-sans)', fontSize: 12.5, letterSpacing: '0.1em',
+                          textTransform: 'uppercase', color: 'var(--s-ink-soft)', textAlign: 'center' }}>
+              {LC('lo scarto due lattine / lattina sola', 'l\'écart deux boîtes / une boîte', 'the two-cans / solo-can offset',
+                'la diferencia dos latas / una lata', 'skillnaden två burkar / en burk')}
+            </div>
+            <div style={{ fontSize: 13.5, lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
+              {LC('due lattine e una sola leggono un TA diverso — la geometria delle lattine in mano cambia la resistenza. Stringi prima con due, poi con una sola: la differenza fra le due letture corregge automaticamente tutte le sedute in lattina sola.',
+                'deux boîtes et une seule lisent un TA différent — la géométrie des boîtes en main change la résistance. Serre d\'abord avec deux, puis avec une seule : la différence entre les deux lectures corrige automatiquement toutes les séances en boîte seule.',
+                'two cans and one solo can read a different TA — the geometry of the cans in hand changes the resistance. Squeeze first with two, then with one alone: the difference between the two readings automatically corrects every solo-can session.',
+                'dos latas y una sola leen un TA distinto — la geometría de las latas en la mano cambia la resistencia. Aprieta primero con dos, luego con una sola: la diferencia entre las dos lecturas corrige automáticamente todas las sesiones con una sola lata.',
+                'två burkar och en ensam burk läser olika TA — geometrin på burkarna i handen ändrar motståndet. Kläm först med två, sedan med en ensam: skillnaden mellan de två avläsningarna korrigerar automatiskt alla sessioner med en ensam burk.')}
+            </div>
+            {/* ── SOTTOPASSO 1 · DUE LATTINE ────────────────────────────────────────────── */}
+            <div style={{
+              display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 12px',
+              borderRadius: 10, background: 'var(--s-disc-sunk)',
+              border: `1px solid ${provaTa.two !== null ? 'var(--s-still)' : 'var(--s-ink-ghost)'}`,
+              opacity: provaTa.two !== null ? 0.7 : 1,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--s-ink)' }}>
+                  1 · {LC('con DUE lattine', 'avec DEUX boîtes', 'with TWO cans', 'con DOS latas', 'med TVÅ burkar')}
+                </span>
+                {provaTa.two !== null && (
+                  <span style={{ fontFamily: 'var(--s-mono)', fontSize: 14, fontWeight: 700, color: 'var(--s-still)' }}>
+                    ✓ {provaTa.two.toFixed(2)}
+                  </span>
+                )}
+              </div>
+              {provaTa.two === null && (
+                theta.setup.config !== 'two-cans' ? (
+                  <button className="s-glass s-glass-btn" onClick={() => theta.setConfig('two-cans')} style={pillola(true)}>
+                    {LC('metti due lattine', 'mets deux boîtes', 'set two cans', 'pon dos latas', 'sätt två burkar')}
+                  </button>
+                ) : theta.testing === 'squeeze' ? (
+                  <span className="ser-pulse" style={{ fontSize: 14, color: 'var(--s-alive)' }}>{t('theta_test_running')}</span>
+                ) : (
+                  <button className="s-glass s-glass-btn" onClick={() => theta.startSqueezeTest()} style={pillola(true)}>
+                    {LC('stringi le due lattine', 'serre les deux boîtes', 'squeeze the two cans', 'aprieta las dos latas', 'kläm de två burkarna')}
+                  </button>
+                )
+              )}
+            </div>
+            {/* ── SOTTOPASSO 2 · LATTINA SOLA — sbloccato solo dopo il primo, l'ordine conta:
+                la prima stretta è il RIFERIMENTO, la seconda si confronta con lei. */}
+            <div style={{
+              display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 12px',
+              borderRadius: 10, background: 'var(--s-disc-sunk)',
+              border: `1px solid ${provaTa.solo !== null ? 'var(--s-still)' : 'var(--s-ink-ghost)'}`,
+              opacity: provaTa.two === null ? 0.35 : provaTa.solo !== null ? 0.7 : 1,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--s-ink)' }}>
+                  2 · {LC('con la LATTINA SOLA', 'avec la BOÎTE SEULE', 'with the SOLO can', 'con la LATA SOLA', 'med den ENSAMMA burken')}
+                </span>
+                {provaTa.solo !== null && (
+                  <span style={{ fontFamily: 'var(--s-mono)', fontSize: 14, fontWeight: 700, color: 'var(--s-still)' }}>
+                    ✓ {provaTa.solo.toFixed(2)}
+                  </span>
+                )}
+              </div>
+              {provaTa.two !== null && provaTa.solo === null && (
+                theta.setup.config !== 'solo-can' ? (
+                  <button className="s-glass s-glass-btn" onClick={() => theta.setConfig('solo-can')} style={pillola(true)}>
+                    {LC('passa a lattina sola', 'passe à une boîte', 'switch to solo can', 'pasa a una lata', 'byt till en burk')}
+                  </button>
+                ) : theta.testing === 'squeeze' ? (
+                  <span className="ser-pulse" style={{ fontSize: 14, color: 'var(--s-alive)' }}>{t('theta_test_running')}</span>
+                ) : (
+                  <button className="s-glass s-glass-btn" onClick={() => theta.startSqueezeTest()} style={pillola(true)}>
+                    {LC('stringi la lattina sola', 'serre la boîte seule', 'squeeze the solo can', 'aprieta la lata sola', 'kläm den ensamma burken')}
+                  </button>
+                )
+              )}
+            </div>
+            {/* Il confronto — appena entrambe le strette sono state fatte, qui compare la
+                differenza da applicare. Stesse funzioni pure di App.tsx. */}
+            {compareReady({ taTwo: provaTa.two, taSolo: provaTa.solo }) && (
+              <div style={{
+                padding: '10px 12px', borderRadius: 10, background: 'var(--s-disc-sunk)',
+                border: `1px solid ${scarto === null ? 'var(--s-reserve)' : 'var(--s-still)'}`,
+              }}>
+                <div style={{ display: 'flex', gap: 16, alignItems: 'baseline', justifyContent: 'center', fontFamily: 'var(--s-mono)', fontSize: 15.5, color: 'var(--s-ink)' }}>
+                  <span><span style={{ fontSize: 12.5, opacity: 0.6 }}>2 · </span>{provaTa.two!.toFixed(2)}</span>
+                  <span><span style={{ fontSize: 12.5, opacity: 0.6 }}>1 · </span>{provaTa.solo!.toFixed(2)}</span>
+                  <span style={{ color: scarto === null ? 'var(--s-reserve)' : 'var(--s-still)', fontWeight: 700 }}>
+                    {scarto === null ? '—' : `${scarto > 0 ? '+' : ''}${scarto.toFixed(2)}`}
+                  </span>
+                </div>
+                {scarto !== null && !scartoMisurato && (
+                  <div style={{ textAlign: 'center' }}>
+                    <button className="s-glass s-glass-btn" onClick={() => theta.setSoloOffset(scarto)} style={{ ...pillola(false), marginTop: 8 }}>
+                      {LC('usa questa differenza', 'utilise cet écart', 'use this offset', 'usa esta diferencia', 'använd denna skillnad')}
+                    </button>
+                  </div>
+                )}
+                {scartoMisurato && (
+                  <div style={{ marginTop: 6, fontSize: 13.5, fontWeight: 700, color: 'var(--s-still)', textAlign: 'center' }}>
+                    ✓ {LC('applicata', 'appliqué', 'applied', 'aplicada', 'tillämpad')}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ── BLOCCO B — LA TARATURA DELLA SCALA, CONTRO IL THETA-METER VERO — separata
+              apposta dal blocco sopra: quella corregge lo SCARTO fra due configurazioni con LO
+              STESSO strumento, questa corregge la SCALA dello strumento stesso contro un
+              riferimento esterno. Due tarature diverse, due riquadri diversi. */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 4, borderTop: '1px solid var(--s-ink-ghost)' }}>
+            <div style={{ fontFamily: 'var(--s-sans)', fontSize: 12.5, letterSpacing: '0.1em',
+                          textTransform: 'uppercase', color: 'var(--s-ink-soft)', textAlign: 'center' }}>
+              {LC('la taratura della scala', 'l\'étalonnage de l\'échelle', 'the scale calibration', 'el calibrado de la escala', 'skalkalibreringen')}
+            </div>
           <div style={{ fontSize: 14.5, lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
             {t('theta_ref_hint')}
           </div>
-          {/* Il confronto — appena entrambe le strette (due lattine e una sola) sono state
-              fatte, qui compare la differenza da applicare. Stesse funzioni pure di App.tsx. */}
-          {compareReady({ taTwo: provaTa.two, taSolo: provaTa.solo }) && (
-            <div style={{
-              padding: '10px 12px', borderRadius: 10, background: 'var(--s-disc-sunk)',
-              border: `1px solid ${scarto === null ? 'var(--s-reserve)' : 'var(--s-still)'}`,
-            }}>
-              <div style={{ display: 'flex', gap: 16, alignItems: 'baseline', justifyContent: 'center', fontFamily: 'var(--s-mono)', fontSize: 15.5, color: 'var(--s-ink)' }}>
-                <span><span style={{ fontSize: 12.5, opacity: 0.6 }}>2 · </span>{provaTa.two!.toFixed(2)}</span>
-                <span><span style={{ fontSize: 12.5, opacity: 0.6 }}>1 · </span>{provaTa.solo!.toFixed(2)}</span>
-                <span style={{ color: scarto === null ? 'var(--s-reserve)' : 'var(--s-still)', fontWeight: 700 }}>
-                  {scarto === null ? '—' : `${scarto > 0 ? '+' : ''}${scarto.toFixed(2)}`}
-                </span>
-              </div>
-              {scarto !== null && !scartoMisurato && (
-                <div style={{ textAlign: 'center' }}>
-                  <button className="s-glass s-glass-btn" onClick={() => theta.setSoloOffset(scarto)} style={{ ...pillola(false), marginTop: 8 }}>
-                    {LC('usa questa differenza', 'utilise cet écart', 'use this offset', 'usa esta diferencia', 'använd denna skillnad')}
-                  </button>
-                </div>
-              )}
-              {scartoMisurato && (
-                <div style={{ marginTop: 6, fontSize: 13.5, fontWeight: 700, color: 'var(--s-still)', textAlign: 'center' }}>
-                  ✓ {LC('applicata', 'appliqué', 'applied', 'aplicada', 'tillämpad')}
-                </div>
-              )}
-            </div>
-          )}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontSize: 14.5, color: 'var(--s-ink-faint)' }}>{t('theta_ref_label')}</span>
             <span style={{ fontFamily: 'var(--s-mono)', fontSize: 15.5 }}>{theta.rawSmooth.toFixed(0)}</span>
@@ -305,6 +401,7 @@ export function PannelloMeter({ theta, provaTa, onFatto }: {
                 {t('theta_cal_clear')}
               </button>
             )}
+          </div>
           </div>
         </div>
       )}

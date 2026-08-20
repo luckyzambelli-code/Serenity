@@ -1448,6 +1448,96 @@ vero). `git status`: solo `src/serenity/*`. EQUILIBRIUM invariato.
 
 ---
 
+## Diciannovesimo giro (20/08/2026) — l'arco riprende spazio, la vista DUE, la taratura spiegata, e History al posto del Report
+
+Sei richieste arrivate una dietro l'altra nello stesso messaggio, più due bug segnalati dal
+vivo. Il filo comune di metà di loro: fare più posto all'ARCO, che restava schiacciato da
+elementi che potevano stare altrove.
+
+1. **Icona di eliminazione nelle CONFIGURAZIONI SALVATE.** C'era già (`eliminaConfigurazione`
+   collegata da un giro precedente), ma era la "×" di un carattere, non un'icona vera. Ora
+   `Trash2`, la STESSA di `HistoryModal.tsx` per lo stesso gesto.
+
+2. **I comandi del ciclo, tutti sulla stessa riga.** Il blocco "poi scegli il metodo" (le
+   quattro pillole CONTACT/NULL/MIRROR/TONE) aveva un `flexBasis:'100%'` che lo forzava SEMPRE
+   su una riga sua, anche quando c'era spazio per stare accanto al campo dell'item. Tolto —
+   resta un figlio normale della riga flessibile, va a capo da sé solo se serve davvero.
+   (I `flexBasis:'100%'` di `CycleSteps`/`CycleStatusBar`/`SuggerimentoCiclo` restano: quelli
+   sono la regola "riga sotto la domanda" di un giro precedente, voluta così.)
+
+3. **La striscia delle letture, spostata DENTRO il quadrante.** Orologio, TA, fase, il
+   selettore MUSE/METER, il badge di pausa: stavano FUORI dal contenitore dell'ago, un figlio
+   in più della colonna della sezione — e siccome il quadrante ha un `maxHeight` calcolato
+   sullo spazio che resta, ogni lettura aggiunta ai giri precedenti (TA totale, velocità di
+   rilascio) lo restringeva. In App.tsx queste letture stanno DENTRO il pannello dello
+   strumento (`Panel3D`, laterale), mai fuori. Spostata l'intera striscia dentro il
+   contenitore del quadrante come overlay ancorato al fondo (`position:absolute`, come
+   `ToneColumn`/i cassetti già lì) — il quadrante torna a leggere `maxHeight:'100%'` invece di
+   `calc(100% - 44px)`, uno spazio VERO invece che conteso. Verificato dal vivo: l'arco è
+   visibilmente più grande, l'orologio resta leggibile (`--s-ink-soft`/`-ghost` a seconda di
+   `aperta`, invariato).
+
+4. **La vista DUE (MUSE+METER insieme) — dichiarata aperta da due giri, ora chiusa.** La terza
+   voce del selettore di App.tsx (`reazioniViste`): l'ago resta quello del Meter (misurato),
+   ma le reazioni del MUSE si aggiungono ETICHETTATE accanto — non un secondo ago disegnato
+   (SERENITY ne mostra sempre uno solo, scelta del decimo giro), le sue letture in più.
+   `SegmentoVetro` ora ha tre voci invece di due.
+
+5. **La taratura due-lattine/lattina-sola, resa esplicita.** Segnalato: « on ne sait pas s'il
+   faut serrer les boîtes des deux cans ou solo pour avoir la différence de TA ». Vero — il
+   riquadro del confronto compariva SOLO quando entrambe le prove erano GIÀ fatte, senza dire
+   come farle: bisognava indovinare di tornare al passo 1 per cambiare configurazione, poi al
+   passo 2 per stringere, due volte. Il passo 4 di `PannelloMeter` è ora una sequenza guidata
+   con due sotto-passi propri (« 1 · con DUE lattine » → cambia configurazione e stringi da
+   QUI, senza uscire dal passo; « 2 · con la LATTINA SOLA », sbloccato solo dopo il primo),
+   seguiti dal confronto — e separata con chiarezza dalla taratura della SCALA (contro il
+   Theta-Meter vero), che è un'altra cosa e viveva confusa nello stesso riquadro.
+
+6. **Il Report post-seduta non c'è più — la seduta finisce diretta in History, col suo PDF.**
+   Il cambiamento più grosso del giro. `PostSessionReport.tsx` fa due cose insieme in App.tsx:
+   una schermata interattiva, E (al suo stesso montaggio, non a un clic) il salvataggio della
+   seduta + la generazione del PDF per History. SERENITY voleva SOLO la seconda parte.
+   - **Scoperta chiave**: `sessionRecorder` (il singleton che nutre `history`/`reactions` del
+     rapporto) è GIÀ riempito in SERENITY — le sue scritture vivono in `useChargeEngine`/
+     `useMuseConnection`, condivisi e già montati qui. Mancava solo `pushNeedleOffset`
+     (nello stesso `sessionClock.subscribe` di App.tsx, aggiunto) e `reset()` all'apertura.
+   - **`sessionReport.ts`, nuovo**: `costruisciRiepilogo` (la STESSA forma di `SessionSummary`
+     di App.tsx, coi soli campi che SERENITY misura per intero) e `generaPdf` — un PDF con lo
+     STESSO linguaggio visivo di App.tsx (banner, pannelli con barra d'accento, riquadri-
+     metrica: massa, TA totale, F/N — stessa fusione delle micro-interruzioni sotto 1s —, EP)
+     ma NON un porting riga-per-riga delle ~800 righe di `generateTextPdf`: le tabelle
+     per-ciclo (CONTACT/NULL/MIRROR/TONE/ASSESSMENT, un elenco per ogni ciclo con esito — un
+     ARRAY che SERENITY non tiene ancora) restano un giro a sé, dichiarato anche NEL pdf
+     stesso, non solo qui.
+   - `chiudi()` costruisce il riepilogo, chiama `saveSession`, genera il PDF in background e
+     lo salva (`saveSessionPdfAsync`) — zero schermo in mezzo.
+   - `HistoryModal` montato `lazy` (come App.tsx), un'icona nuova in intestazione
+     (`sidebar_history`), STESSO componente, STESSO archivio unico — una seduta chiusa da
+     SERENITY compare anche aprendo EQUILIBRIUM, e viceversa.
+   - ⚠️ **Bug trovato verificando dal vivo**: la prima versione condizionava il salvataggio a
+     `corpusAvailable()` — che guarda l'archivio CORPUS (JSON Lines per l'IA, richiede
+     Electron/filesystem), un controllo SBAGLIATO qui: bloccava il salvataggio in History
+     anche nel browser, dove l'archivio sessioni (`localStorage`/IndexedDB) funziona da sé.
+     I due archivi sono indipendenti. Tolto il controllo; riverificato dal vivo — la seduta
+     compare in History con il suo PDF (confermato anche leggendo `IndexedDB` a mano: un data
+     URI `application/pdf` da ~20 KB, ben formato).
+
+### Bug segnalato, non riprodotto
+
+« L'aiguille du Muse semble ne pas bouger » — letto `useChargeEngine`/`useMuseContactGate`
+riga per riga (il gate di contatto che decide se l'EEG di un istante conta, la STESSA logica
+per le due applicazioni), nessun difetto trovato nel codice, e senza un MUSE vero in questo
+ambiente non è riproducibile qui. Resta aperto: serve sapere QUANDO (all'apertura seduta? con
+che percentuale di segnale mostrata accanto? l'ago si muove pochissimo o per niente?) per
+continuare a cercarlo con qualcosa di più di una lettura del codice.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 0 errori nuovi, `vitest run` 639/639,
+verifica dal vivo estesa (layout senza strumenti in tutte le fasi, icona elimina, PDF
+generato e letto da IndexedDB, seduta chiusa senza schermo di rapporto, History con la seduta
+e il suo PDF). `git status`: solo `src/serenity/*`. EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

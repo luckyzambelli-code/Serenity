@@ -23,8 +23,8 @@
  * @see docs/serenity-refonte.md
  */
 
-import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { useMetric } from '../store/metricsStore';
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore, lazy, Suspense } from 'react';
+import { useMetric, metricsStore } from '../store/metricsStore';
 import { chargeStateById } from '../lib/chargeState';
 import { sessionClock } from '../runtime/SessionClock';
 import { needleEngine, virtualNeedle } from '../runtime/NeedleEngine';
@@ -58,9 +58,11 @@ import {
   type PcCanHistory,
 } from '../engine/canTest';
 import { SQUEEZE_TARGET_OFFSET } from '../engine/thetaSetup';
+import { sessionRecorder } from '../engine/SessionRecorder';
 import { sessionRecord, cycleRecord, fnRecord, itemRecord, chiaveItem } from '../engine/corpus';
 import { corpusWrite, corpusAvailable } from '../lib/corpusWriter';
-import { getProfiles, getPcProfiles } from '../lib/storage';
+import { getProfiles, getPcProfiles, saveSession, saveSessionPdf, saveSessionPdfAsync } from '../lib/storage';
+import { costruisciRiepilogo, generaPdf, type SerenityReportInput } from './sessionReport';
 import { Avvio } from './Avvio';
 import { AVVIO_VUOTO, type Avvio as StatoAvvio } from './flussoAvvio';
 import { useI18n } from '../i18n';
@@ -78,10 +80,16 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { CreditsModal } from '../components/CreditsModal';
 import { HealthPanel } from '../components/HealthPanel';
+/** ── HISTORY, CARICATA A RICHIESTA — segnalato: « il Report post session non ci sia più in
+ *  Serenity, solo il PDF in History ». Lo stesso `HistoryModal` di App.tsx, TALE E QUALE (i
+ *  suoi `getSessionsByProfile`/`getSessionPdfAsync` leggono l'ARCHIVIO UNICO — le sedute
+ *  chiuse qui compaiono anche dall'altra parte, e viceversa). `lazy`, come App.tsx: legge
+ *  `jspdf`/blob helpers che non servono finché nessuno apre lo storico. */
+const HistoryModal = lazy(() => import('../components/HistoryModal').then(m => ({ default: m.HistoryModal })));
 import { computeInstantRead, readWaitSeconds, READ_NON_MISURATO, type ReadSrc } from '../engine/instantRead';
 import { REACTION_LABELS } from '../engine/ReactionClassifier';
 import type { PrimePhase, Zone as PrimeZone } from '../lib/primeFreqEngine';
@@ -286,6 +294,10 @@ export default function Serenity() {
   const [guidaAperta, setGuidaAperta] = useState(false);
   /** I CREDITI — si aprono dal logo, come in App.tsx. `CreditsModal`, autosufficiente. */
   const [creditiAperti, setCreditiAperti] = useState(false);
+  /** LO STORICO — segnalato: « il Report post session non ci sia più in Serenity, solo il PDF
+   *  in History ». `HistoryModal`, autosufficiente, TALE E QUALE — vedi la nota sopra al suo
+   *  `lazy import`. */
+  const [historyAperto, setHistoryAperto] = useState(false);
   /** ── LA TARATURA DELL'AGO EEG — segnalata assente nell'audit funzionale completo: « toutes
    *  les fonctions... calibrations » — App.tsx la tiene nel cassetto TRIM di `SidebarDrawer`
    *  (`needleTrim`/`needleInertia`, scritte dritte sul motore condiviso `runtime/NeedleEngine`,
@@ -386,6 +398,11 @@ export default function Serenity() {
     const s = sessionClock.now();
     setTempo(s);
     timeRef.current = s;
+    // ── LA TRACCIA DELL'AGO, PER LA STORIA/il PDF — segnalata mancante insieme al resto di
+    // History: `sessionRecorder.chart`/`.reactions`/`.csv` si riempiono già da soli (le
+    // scritture vivono in `useChargeEngine`/`useMuseConnection`, condivisi — montati anche
+    // qui). Mancava solo QUESTA, che in App.tsx vive nello stesso `sessionClock.subscribe`.
+    sessionRecorder.pushNeedleOffset({ time: s, offset: needleEngine.pos });
   }), []);
 
   /**
@@ -543,6 +560,9 @@ export default function Serenity() {
   /** L'identificativo della seduta nel CORPUS — l'ora d'apertura, come in App.tsx. Vuoto fuori
    *  seduta: senza seduta non c'è configurazione con cui interpretare una riga. */
   const corpusSessionRef = useRef('');
+  /** ── L'ISTANTE VERO DI INIZIO SEDUTA, per History/PDF (`sessionReport.ts`) — un ref suo,
+   *  non `corpusSessionRef` (che si azzera all'inizio di `chiudi()`, prima che serva qui). */
+  const sessionStartRef = useRef(0);
   /**
    * ── ASSESSMENT — segnalato: « l'assessment ne marche pas et n'apparaît pas », poi di nuovo
    * « implementa tutti gli elementi, è solo un cambio grafico, non devi riscrivere le funzioni ».
@@ -955,6 +975,13 @@ export default function Serenity() {
     } catch { return 'theta'; }
   });
   useEffect(() => { try { localStorage.setItem('equilibrium_ago', agoScelto); } catch { /* noop */ } }, [agoScelto]);
+  /** ── « DUE » — segnalato: « manca anche la vista in MUSE/METER di ENTRAMBI ». La terza
+   *  voce del selettore di App.tsx (`reazioniViste`): l'ago resta quello del Meter (misurato,
+   *  non ricostruito — `setAgoScelto('theta')` quando si sceglie DUE, stessa regola di
+   *  App.tsx: « DUE → l'ago del METER + le reazioni del MUSE in più »), ma le letture del
+   *  MUSE si aggiungono ETICHETTATE accanto — non un secondo ago disegnato (SERENITY ne mostra
+   *  sempre uno solo, scelta del decimo giro), le sue REAZIONI in più. */
+  const [reazioniViste, setReazioniViste] = useState<'eeg' | 'theta' | 'both'>('eeg');
   const museOk = muse.museConnection === 'connected';
   /** SERENITY non ha un selettore di modo persistente come App.tsx (`mode`): qui il TONE si
    *  "attiva" con un gesto diretto, esclusivo con CONTACT/NULL/MIRROR. Dichiarato QUI (non più
@@ -1322,6 +1349,8 @@ export default function Serenity() {
    */
   const avviaSeduta = () => {
     sessionClock.reset(); sessionClock.start();
+    sessionStartRef.current = Date.now();
+    sessionRecorder.reset();   // niente chart/reazioni/CSV di una seduta precedente — come App.tsx
     setPausata(false); pausaMotivoRef.current = null;   // niente pausa residua da una seduta precedente
     journal.resetJournal(t('ser_session_opened'));
     ep.resetEpState();   // niente "EP ✓" residuo da una seduta precedente
@@ -1467,6 +1496,53 @@ export default function Serenity() {
   const chiudi = () => {
     sessionClock.end();
     journal.addLog({ speaker: 'SYS', text: t('ser_session_closed'), time: sessionClock.now() });
+    /* ── LA SEDUTA FINISCE DIRETTA IN HISTORY, MAI SU UNO SCHERMO DI RAPPORTO — segnalato:
+       « vorrei che il Report post session non ci sia più in Serenity, solo il PDF in
+       History ». Vedi `sessionReport.ts` per il perché non è un porting di
+       `PostSessionReport.tsx` riga per riga: stessa forma di `SessionSummary`, stesso
+       linguaggio visivo del PDF, coi soli dati che SERENITY misura già per intero. */
+    /* ⚠️ Trovato verificando dal vivo, in questo stesso giro: `corpusAvailable()` guarda
+       l'archivio CORPUS (JSON Lines per l'IA, richiede l'app Electron con filesystem) — un
+       controllo SBAGLIATO qui, che bloccava il salvataggio in History anche nel browser, dove
+       `saveSession`/`saveSessionPdfAsync` (localStorage/IndexedDB via `lib/storage.ts`)
+       funzionano benissimo, ed è per questo che `HistoryModal` stesso resta usabile lì. I due
+       archivi sono INDIPENDENTI — l'uno non è una condizione per l'altro. */
+    try {
+      const profileId = avvio?.auditorId && avvio.auditorId !== 'nuovo' ? avvio.auditorId : '_default';
+      const auditorPhoto = (() => { try { return getProfiles().find(p => p.id === avvio?.auditorId)?.photo; } catch { return undefined; } })();
+      const pcPhoto = (() => { try { return getPcProfiles().find(p => p.id === avvio?.pcId)?.photo; } catch { return undefined; } })();
+      const inizio = sessionStartRef.current || Date.now();
+      const input: SerenityReportInput = {
+        id: String(inizio),
+        profileId,
+        date: inizio,
+        duration: Math.max(0, Math.floor((Date.now() - inizio) / 1000)),
+        auditorName: nomeAuditor === '—' ? '' : nomeAuditor,
+        pcName: avvio?.solo ? nomeAuditor : (nomePreclear === '—' ? '' : nomePreclear),
+        auditorPhoto, pcPhoto,
+        isSolo: !!avvio?.solo,
+        noInstruments: senzaStrumenti,
+        mass: displayMass,
+        totalTa: meterC ? theta.totalTa : metricsStore.get().totalTa,
+        epValidated: ep.epValidated,
+        epReactionType: ep.epReactionType || undefined,
+        epRealization: ep.epRealization || undefined,
+        epAuditorNote: ep.epAuditorNote || undefined,
+        epVgi: ep.epVgi, epVvgi: ep.epVvgi,
+        epDurationMin: ep.epDurationMin || undefined,
+        deltaStar, deltaStarN,
+      };
+      const riepilogo = costruisciRiepilogo(input);
+      saveSession(riepilogo);
+      void (async () => {
+        try {
+          const pdf = await generaPdf(input, k => t(k as never) as string, LC);
+          try { await saveSessionPdfAsync(riepilogo.id, pdf); } catch { saveSessionPdf(riepilogo.id, pdf); }
+        } catch (e) { console.error('[SERENITY] generazione PDF fallita', e); }
+      })();
+    } catch (e) {
+      console.error('[SERENITY] salvataggio seduta in History fallito', e);
+    }
     corpusSessionRef.current = '';
     if (avvio?.distanza) remote.impostaStatoSeduta('ended');
     // MNA — la seduta finisce, un tono acceso non deve sopravviverle (stessa regola di
@@ -2070,9 +2146,31 @@ export default function Serenity() {
         }}>
           <HelpCircle size={32} strokeWidth={1.6} />
         </button>
+        {/* ── LO STORICO — segnalato: « il Report post session non ci sia più in Serenity,
+            solo il PDF in History ». La seduta chiusa (`chiudi()`, sopra) si salva ora da sé,
+            senza mai passare da uno schermo di rapporto — questo bottone è dove si va a
+            RITROVARLA, col suo PDF. Stesso posto di App.tsx (raggiungibile sempre, non solo a
+            seduta chiusa: si può rivedere una seduta passata mentre se ne prepara una nuova). */}
+        <button className="s-glass s-glass-btn" onClick={() => setHistoryAperto(true)} title={t('sidebar_history') as string} style={{
+          cursor: 'pointer', padding: 8, borderRadius: 999,
+          background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
+        }}>
+          <HistoryIcon size={32} strokeWidth={1.6} />
+        </button>
       </header>
       {guidaAperta && <GuideModal lang={lang} onClose={() => setGuidaAperta(false)} />}
       {creditiAperti && <CreditsModal onClose={() => setCreditiAperti(false)} />}
+      {historyAperto && (
+        <Suspense fallback={null}>
+          <HistoryModal
+            activeProfile={(() => {
+              try { return getProfiles().find(p => p.id === avvio?.auditorId) ?? null; } catch { return null; }
+            })()}
+            onClose={() => setHistoryAperto(false)}
+            lang={lang as never}
+          />
+        </Suspense>
+      )}
 
       {/* ── I COMANDI, IN ALTO — segnalato: « i cicli non sono chiari messi sotto, mettili in
           alto come in equilibrium ». In App.tsx l'item, i quattro metodi, i passi del ciclo in
@@ -2168,7 +2266,13 @@ export default function Serenity() {
                       'rösten är inte tillgänglig — skriv item')
                   : ''}
             </span>
-            <div style={{ flexBasis: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* ⚠️ Era `flexBasis:'100%'` — segnalato: « écris pour les cycles tout sur la même
+                ligne afin de gagner la place pour l'Arc ». Forzava questo blocco su una riga
+                TUTTA sua, anche quando c'era spazio per stare accanto al campo dell'item — una
+                riga in più, tolta al quadrante sotto. Ora è un figlio normale della riga
+                flessibile: sta a fianco quando c'è posto, va a capo da sé (il genitore ha già
+                `flexWrap:'wrap'`) solo se davvero non ci sta. */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <span style={{ fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.1em',
                             textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
                 {LC('poi scegli il metodo', 'puis choisis la méthode', 'then choose the method', 'luego elige el método', 'välj sedan metoden')}
@@ -2779,7 +2883,11 @@ export default function Serenity() {
           muove per davvero, non solo quello del Theta-Meter.
         */}
         <div style={{
-          width: 'min(100%, 1400px)', aspectRatio: '1600 / 850', maxHeight: 'calc(100% - 44px)',
+          /* ⚠️ Era `calc(100% - 44px)`: quei 44px riservavano lo spazio per l'orologio e le
+             letture che stavano SOTTO questo contenitore, nel flusso di `<section>`. Ora che
+             sono dentro (la striscia in basso, `position:absolute`, vedi sotto), non c'è più
+             nulla dopo il quadrante in quel flusso — gli si può ridare tutta l'altezza vera. */
+          width: 'min(100%, 1400px)', aspectRatio: '1600 / 850', maxHeight: '100%',
           borderRadius: 18, overflow: 'hidden', position: 'relative',
           background: isLightTheme
             ? 'var(--s-ground)'
@@ -3053,105 +3161,129 @@ export default function Serenity() {
               </div>
             </div>
           )}
+          {/* ── LA STRISCIA DELLE LETTURE, IN BASSO SULL'ARCO — segnalata: « les écrits en bas
+              de l'arc (TA, durée, etc) doivent être positionnés exactement comme dans
+              Equilibrium pour avoir plus de place pour l'ARC ». Stava FUORI da questo
+              contenitore, un figlio in più della colonna flessibile della sezione — ogni
+              lettura aggiunta (TA totale, velocità di rilascio, badge di pausa) lo faceva
+              crescere, e siccome il quadrante qui sopra ha un `maxHeight` calcolato SULLO
+              spazio che resta, crescere quella striscia vuol dire restringere l'arco. In
+              App.tsx queste letture stanno DENTRO il pannello dello strumento (`Panel3D`,
+              laterale) — non sotto, non fuori: non contendono mai spazio all'arco perché non
+              sono nel suo stesso flusso. Stessa idea qui: un'unica striscia ancorata al FONDO
+              di QUESTO contenitore (`position:absolute`, come `ToneColumn`/i cassetti sopra),
+              fuori dal flusso della sezione — il quadrante torna a leggere `calc(100% - 44px)`
+              come uno spazio VERO, non conteso. */}
+          <div style={{
+            position: 'absolute', left: 16, right: 16, bottom: 10, zIndex: 3,
+            display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center',
+            gap: 16, rowGap: 4, pointerEvents: 'none',
+          }}>
+            <div style={{ pointerEvents: 'auto' }}>
+              {/* ── QUALE AGO GUARDARE — SOLO quando c'è davvero una scelta ───────────────────
+                  Segnalato: « les deux aiguilles ? pas vue ». Non è un secondo ago da disegnare
+                  accanto al primo (App.tsx li disegna insieme apposta MAI — vedi la nota su
+                  `agoEeg`, sopra): è la scelta stessa che mancava, muta e fissa sul Meter.
+                  Segnalato di nuovo: « manca anche la vista ENTRAMBI » — la terza voce di
+                  App.tsx (`reazioniViste`), che tiene l'ago sul Meter (misurato, non
+                  ricostruito) ma AGGIUNGE le reazioni del MUSE etichettate. */}
+              {museOk && meterC && (
+                <SegmentoVetro<'eeg' | 'theta' | 'both'>
+                  opzioni={[{ k: 'eeg', label: 'MUSE' }, { k: 'theta', label: 'METER' }, { k: 'both', label: LC('DUE', 'DEUX', 'BOTH', 'DOS', 'TVÅ') }]}
+                  selezionato={reazioniViste === 'both' ? 'both' : agoScelto}
+                  onChange={v => { setReazioniViste(v); setAgoScelto(v === 'both' ? 'theta' : v); }}
+                  minLarghezza={64}
+                />
+              )}
+            </div>
+            {/* L'orologio resta sulla superficie di SERENITY, fuori dal pannello scuro: si
+                guarda una volta ogni tanto, lo strumento in continuazione. */}
+            <span style={{
+              fontFamily: 'var(--s-mono)', fontSize: 15.5, letterSpacing: '0.06em',
+              color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-ghost)',
+              transition: 'color var(--s-slow) var(--s-ease)',
+              fontVariantNumeric: 'tabular-nums',
+            }}>
+              {orologio(tempo)}
+            </span>
+            {/* ── IN PAUSA — segnalato: la perdita del MUSE deve fermare la seduta, non solo
+                cambiare colore a un puntino in intestazione facile da non notare. */}
+            {aperta && pausata && (
+              <span className="ser-pulse" style={{
+                fontFamily: 'var(--s-sans)', fontSize: 13.5, fontWeight: 700, letterSpacing: '0.06em',
+                padding: '3px 10px', borderRadius: 999,
+                background: 'var(--s-reserve)', color: 'var(--s-ground)',
+              }}>
+                {pausaMotivoRef.current === 'manuale'
+                  ? LC('in pausa', 'en pause', 'paused', 'en pausa', 'pausad')
+                  : LC('in pausa — strumento perso', 'en pause — instrument perdu', 'paused — instrument lost',
+                      'en pausa — instrumento perdido', 'pausad — instrument förlorat')}
+              </span>
+            )}
+            {/* ── LA LETTURA, DETTA A NUMERI — solo quando c'è un ago EEG davvero collegato:
+                senza MUSE il TA da EEG non significa niente (resta al suo valore di riposo), e
+                mostrarlo lo stesso sembrerebbe una lettura vera. */}
+            {agoEeg && (
+              <span style={{
+                fontFamily: 'var(--s-mono)', fontSize: 14.5, letterSpacing: '0.04em',
+                color: 'var(--s-ink-faint)', display: 'flex', gap: 14,
+              }}>
+                <LetturaTA />
+                <LetturaFase t={t} />
+                {museGate.signalQuality > 0 && <span>{museGate.signalQuality}%</span>}
+                {museOk && moduleVis.biometric && (
+                  <span title={t('biometric_integrity') as string}>
+                    <LetturaIntegrita />
+                  </span>
+                )}
+                <span title={t('total_ta') as string}>
+                  <LetturaTotalTa override={meterC ? theta.totalTa : null} bodyMotion={theta.bodyMotion} />
+                </span>
+                <span title={t('mental_processing_velocity') as string}>
+                  <LetturaVelocita t={t} />
+                </span>
+                {/* ── LE REAZIONI DELL'ALTRO STRUMENTO, ETICHETTATE — la vista « DUE » qui sopra:
+                    con l'ago sul Meter e « DUE » selezionato, la lettura del MUSE (ricostruita)
+                    si aggiunge accanto, sigla compresa — stessa idea di App.tsx (`reazioniViste
+                    === 'both'`), senza il disegno del secondo ago (SERENITY ne mostra sempre
+                    uno solo, la scelta fatta nel decimo giro). */}
+              </span>
+            )}
+            {reazioniViste === 'both' && meterC && agoEeg === false && museOk && (
+              <span style={{
+                fontFamily: 'var(--s-mono)', fontSize: 14.5, letterSpacing: '0.04em',
+                color: 'var(--s-alive)', display: 'flex', gap: 8, alignItems: 'baseline',
+              }}>
+                <span style={{ fontSize: 11, opacity: 0.75 }}>MUSE</span>
+                <LetturaTA />
+              </span>
+            )}
+            {/* ── LA STESSA LETTURA, DAL METER — con METER/senza strumenti restava muto, anche a
+                strumento vero collegato e a numeri veri disponibili (`theta.ta`/`taNow`, già
+                calcolati da `useThetaMeter`). Il TA di riposo, quello ISTANTANEO se si scosta,
+                e FN se l'estensimetro fluttua (`theta.fn.fn`, lo stesso segnale che l'arco
+                legge). */}
+            {!agoEeg && meterC && (
+              <span style={{
+                fontFamily: 'var(--s-mono)', fontSize: 14.5, letterSpacing: '0.04em',
+                color: 'var(--s-ink-faint)', display: 'flex', gap: 14,
+              }}>
+                <span>TA {theta.ta !== null ? theta.ta.toFixed(2) : '—'}</span>
+                {theta.taNow !== null && Math.abs(theta.taNow - (theta.ta ?? theta.taNow)) > 0.01 && (
+                  <span>→ {theta.taNow.toFixed(2)}</span>
+                )}
+                {theta.fn.fn && (
+                  <span style={{ color: 'var(--s-reserve)' }}>
+                    {LC('galleggia', 'flotte', 'floating', 'flota', 'flyter')}
+                  </span>
+                )}
+                <span title={t('total_ta') as string}>
+                  <LetturaTotalTa override={theta.totalTa} bodyMotion={theta.bodyMotion} />
+                </span>
+              </span>
+            )}
+          </div>
         </div>
-        {/* ── QUALE AGO GUARDARE — SOLO quando c'è davvero una scelta ─────────────────────────
-            Segnalato: « les deux aiguilles ? pas vue ». Non è un secondo ago da disegnare
-            accanto al primo (App.tsx li disegna insieme apposta MAI — vedi la nota su
-            `agoEeg`, sopra): è la scelta stessa che mancava, muta e fissa sul Meter. Due
-            pillole, come in App.tsx (qui senza "DUE" — quella terza voce aggiunge anche le
-            reazioni dell'altro strumento etichettate, un raffinamento che aspetta il resto
-            dell'assessment prima di avere senso). Segnalato di nuovo: la stessa scelta
-            esclusiva di tema/lingua — un cursore che scivola, non due pillole. */}
-        {museOk && meterC && (
-          <SegmentoVetro<'eeg' | 'theta'>
-            opzioni={[{ k: 'eeg', label: 'MUSE' }, { k: 'theta', label: 'METER' }]}
-            selezionato={agoScelto}
-            onChange={setAgoScelto}
-            minLarghezza={64}
-          />
-        )}
-        {/* L'orologio resta sulla superficie di SERENITY, fuori dal pannello scuro: si
-            guarda una volta ogni tanto, lo strumento in continuazione. */}
-        <span style={{
-          fontFamily: 'var(--s-mono)', fontSize: 15.5, letterSpacing: '0.06em',
-          color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-ghost)',
-          transition: 'color var(--s-slow) var(--s-ease)',
-          fontVariantNumeric: 'tabular-nums',
-        }}>
-          {orologio(tempo)}
-        </span>
-        {/* ── IN PAUSA — segnalato: la perdita del MUSE deve fermare la seduta, non solo
-            cambiare colore a un puntino in intestazione facile da non notare. Un badge PIENO
-            (`.ser-pulse`, lo stesso avviso già usato per « dì l'item… ») proprio accanto
-            all'orologio che ha smesso di correre — i due segnali si leggono insieme. */}
-        {/* ⚠️ Trovato verificando dal vivo questo stesso giro: il testo era fisso su « strumento
-            perso » anche per una pausa VOLUTA dall'auditor (`pausaManuale`) — un badge che
-            mente sul motivo è peggio di nessun badge. `pausaMotivoRef` è un ref, non stato: lo
-            si legge qui in lettura pura, ed è già corretto al momento di questo render perché
-            scritto in modo sincrono PRIMA di `setPausata(true)`, nello stesso giro. */}
-        {aperta && pausata && (
-          <span className="ser-pulse" style={{
-            fontFamily: 'var(--s-sans)', fontSize: 13.5, fontWeight: 700, letterSpacing: '0.06em',
-            padding: '3px 10px', borderRadius: 999,
-            background: 'var(--s-reserve)', color: 'var(--s-ground)',
-          }}>
-            {pausaMotivoRef.current === 'manuale'
-              ? LC('in pausa', 'en pause', 'paused', 'en pausa', 'pausad')
-              : LC('in pausa — strumento perso', 'en pause — instrument perdu', 'paused — instrument lost',
-                  'en pausa — instrumento perdido', 'pausad — instrument förlorat')}
-          </span>
-        )}
-
-        {/* ── LA LETTURA, DETTA A NUMERI — vedi la nota sopra `LetturaTA`. Solo quando c'è un
-            ago EEG davvero collegato: senza MUSE il TA da EEG non significa niente (resta al
-            suo valore di riposo), e mostrarlo lo stesso sembrerebbe una lettura vera. */}
-        {agoEeg && (
-          <span style={{
-            fontFamily: 'var(--s-mono)', fontSize: 14.5, letterSpacing: '0.04em',
-            color: 'var(--s-ink-faint)', display: 'flex', gap: 14,
-          }}>
-            <LetturaTA />
-            <LetturaFase t={t} />
-            {museGate.signalQuality > 0 && <span>{museGate.signalQuality}%</span>}
-            {museOk && moduleVis.biometric && (
-              <span title={t('biometric_integrity') as string}>
-                <LetturaIntegrita />
-              </span>
-            )}
-            <span title={t('total_ta') as string}>
-              <LetturaTotalTa override={meterC ? theta.totalTa : null} bodyMotion={theta.bodyMotion} />
-            </span>
-            <span title={t('mental_processing_velocity') as string}>
-              <LetturaVelocita t={t} />
-            </span>
-          </span>
-        )}
-        {/* ── LA STESSA LETTURA, DAL METER — segnalato: « la scala del tono non appare, il TA
-            neanche, la diagnostica e tutti gli altri elementi, METTILI ». Il blocco sopra parla
-            SOLO all'ago EEG (`agoEeg`) — con METER/senza strumenti restava muto, anche a
-            strumento vero collegato e a numeri veri disponibili (`theta.ta`/`taNow`, già
-            calcolati da `useThetaMeter`, non riletti qui). Stesso posto, stessa grafica,
-            sorgente diversa: il TA di riposo, quello ISTANTANEO se si scosta, e FN se
-            l'estensimetro fluttua (`theta.fn.fn`, lo stesso segnale che l'arco legge). */}
-        {!agoEeg && meterC && (
-          <span style={{
-            fontFamily: 'var(--s-mono)', fontSize: 14.5, letterSpacing: '0.04em',
-            color: 'var(--s-ink-faint)', display: 'flex', gap: 14,
-          }}>
-            <span>TA {theta.ta !== null ? theta.ta.toFixed(2) : '—'}</span>
-            {theta.taNow !== null && Math.abs(theta.taNow - (theta.ta ?? theta.taNow)) > 0.01 && (
-              <span>→ {theta.taNow.toFixed(2)}</span>
-            )}
-            {theta.fn.fn && (
-              <span style={{ color: 'var(--s-reserve)' }}>
-                {LC('galleggia', 'flotte', 'floating', 'flota', 'flyter')}
-              </span>
-            )}
-            <span title={t('total_ta') as string}>
-              <LetturaTotalTa override={theta.totalTa} bodyMotion={theta.bodyMotion} />
-            </span>
-          </span>
-        )}
         {/* `CycleStatusBar` si è spostato nel blocco dei comandi CONTACT/NULL, sopra: stesso
             posto di App.tsx (« riga sotto la domanda »), non più qui vicino al quadrante. */}
 
