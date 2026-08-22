@@ -2031,11 +2031,16 @@ export default function Serenity() {
         position: 'absolute', left: 20, top: sidebarTop, bottom: 24, zIndex: 8,
         display: 'flex', flexDirection: 'column',
         justifyContent: (aperta && moduleVis.ri) ? 'flex-start' : 'center',
-        /* ⚠️ Segnalato: « assessment deve essere largo quanto i bottoni Contact...ecc ».
-           Era stata allargata (« larga la metà », giro scorso) per farle prendere più spazio —
-           tornata alla STESSA larghezza dei sette bottoni sopra di lei (148px, l'involucro
-           stretto qui sotto non serve più: dentro e fuori sono la stessa misura). */
-        gap: 10, width: 148,
+        /* ⚠️ Segnalato: « assessment deve essere largo quanto i bottoni Contact...ecc » — poi,
+           verificando dal vivo QUESTO stesso giro: « la zona ASSESSMENT non mostra il bottone
+           [INDICAZIONE] ». Vero — a 148px il selettore di vista (ASSESSMENT/INDICAZIONE, due
+           bottoni affiancati) non ci stava: il secondo restava tagliato a una sola lettera. La
+           STESSA larghezza dei bottoni sopra andava bene per LORO (una parola sola, una pillola
+           a testa) ma non per un pannello con righe di testo, letture e bottoni indica/non
+           indica — 272px, la STESSA larghezza già scelta per Santé Système/journal a destra
+           (colonna gemella, stessa logica): l'involucro stretto qui sotto (148px) resta SOLO
+           per i sette bottoni, l'assessment prende tutta questa larghezza più larga. */
+        gap: 10, width: 272,
         /* ⚠️ BUG TROVATO — segnalato: « le module History et Processus ne s'ouvrent pas ».
            Questo contenitore è alto quanto quasi tutta la pagina (`top:118, bottom:24`) per
            poter CENTRARE verticalmente i suoi bottoni — ma uno `<div>` copre l'intero
@@ -2125,6 +2130,31 @@ export default function Serenity() {
                 {c.label}
               </button>
             ))}
+            {/* ── IL QUINTO METODO, « APERTO » — segnalato: « manca la zona LIBRE sotto TONE ».
+                `engine/sessionMode.ts` conta CINQUE metodi, non quattro — CONTACT/NULL/MIRROR/
+                TONE più `free` (« LIBERO »: nessuna sequenza ciclica, solo l'ago — App.tsx lo
+                chiama "APERTO", non "libero": « libero suonava come "senza regole" », la sua
+                stessa nota). SERENITY lo calcola già da sé (`const mode`, sopra: `mode` diventa
+                `'free'` quando nessuno degli altri quattro è armato — esattamente la condizione
+                di questo blocco) ma non lo DICEVA mai: l'auditor vedeva quattro scelte, mai la
+                conferma di essere nella quinta. Qui non un bottone (non c'è nulla da armare, ci
+                si è già), una pillola SEMPRE nello stato "attivo" di App.tsx (fondo chiaro,
+                inchiostro scuro) — la stessa lingua visiva, letta da fuori invece che ricreata a
+                mano. */}
+            <span title={LC(
+              'nessuna sequenza ciclica predefinita — l\'ago, l\'assessment e l\'R&I restano attivi',
+              'aucune séquence cyclique prédéfinie — l\'aiguille, l\'assessment et le R&I restent actifs',
+              'no predefined cyclic sequence — the needle, assessment and R&I stay active',
+              'sin secuencia cíclica predefinida — la aguja, el assessment y el R&I siguen activos',
+              'ingen fördefinierad cyklisk sekvens — nålen, assessment och R&I förblir aktiva') as string}
+              style={{
+                border: '1.5px solid transparent', borderRadius: 16, padding: '10px 10px',
+                background: 'var(--s-ink)', color: 'var(--s-ground)',
+                fontFamily: 'var(--s-sans)', fontSize: 14.5, fontWeight: 800, letterSpacing: '0.05em',
+                textAlign: 'center',
+              }}>
+              {LC('APERTO', 'OUVERT', 'OPEN', 'ABIERTO', 'ÖPPEN')}
+            </span>
           </>
         )}
         {/* ── EP, SOTTO TONE — segnalato: « il bottone EP deve essere posizionato sotto TONE ».
@@ -3093,10 +3123,11 @@ export default function Serenity() {
         alignItems: 'center', justifyContent: 'center', gap: 16, minHeight: 0,
         /* ⚠️ BUG TROVATO verificando dal vivo: la riga dell'arco comincia al bordo sinistro di
            `<section>` — che è anche dove comincia, `position:absolute`, la barra laterale
-           (OPEN/PAUSA/CONTACT/NULL/MIRROR/TONE/EP, poi l'assessment sotto, STESSA larghezza —
-           v. sopra). `paddingLeft` sposta la riga dopo di lei: un numero fisso basta di nuovo,
-           la barra laterale è sempre 148px ora, con o senza assessment aperta. */
-        paddingLeft: 190,
+           (OPEN/PAUSA/CONTACT/NULL/MIRROR/TONE/EP, poi l'assessment sotto). `paddingLeft`
+           sposta la riga dopo di lei: la barra laterale è larga 272px ora (v. sopra, per
+           l'assessment), un numero fisso basta comunque — quella larghezza non cambia più
+           con o senza assessment aperta (solo il CONTENUTO sotto i bottoni compare o no). */
+        paddingLeft: 320,
       }}>
       {/* ── IL CASSETTO DEL METER — ancorato SOTTO l'intestazione, dove sta il suo indicatore ──
           Non nel flusso della pagina (galleggia, `position:absolute`, come le camere qui sotto e
@@ -3339,6 +3370,23 @@ export default function Serenity() {
                 {theta.taNow !== null && Math.abs(theta.taNow - (theta.ta ?? theta.taNow)) > 0.01 && (
                   <span>→ {theta.taNow.toFixed(2)}</span>
                 )}
+                {/* ⚠️ Segnalato: « non vedo scritto la differenza fra TA a due cans ed una ».
+                    App.tsx scrive SEMPRE su quale base poggia il numero — due lattine, una
+                    lattina riportata a due con lo scarto misurato, o una lattina con la
+                    divisione tolta perché lo scarto non è stato misurato: lo stesso TA a
+                    vedersi vuol dire tre cose diverse, e senza questa riga non si distinguono.
+                    `tone.taMostrato` (`useToneCycle`, condiviso — la STESSA funzione
+                    `taToTwoCans`) esisteva già nel ritorno del motore, mai letta qui. */}
+                {tone.taMostrato && (
+                  <span style={{ fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'uppercase',
+                                color: tone.taMostrato.margin > 0 ? 'var(--s-reserve)' : 'var(--s-ink-ghost)' }}>
+                    {tone.taMostrato.basis === 'two-cans'
+                      ? LC('TA · 2 lattine', 'TA · 2 boîtes', 'TA · 2 cans', 'TA · 2 latas', 'TA · 2 burkar')
+                      : tone.taMostrato.basis === 'solo-measured'
+                      ? LC('TA · 1 lattina → 2', 'TA · 1 boîte → 2', 'TA · 1 can → 2', 'TA · 1 lata → 2', 'TA · 1 burk → 2')
+                      : LC('TA · 1 lattina − 1 div.', 'TA · 1 boîte − 1 div.', 'TA · 1 can − 1 div.', 'TA · 1 lata − 1 div.', 'TA · 1 burk − 1 delstreck')}
+                  </span>
+                )}
                 {theta.fn.fn && (
                   <span style={{ color: 'var(--s-reserve)' }}>
                     {LC('galleggia', 'flotte', 'floating', 'flota', 'flyter')}
@@ -3474,8 +3522,15 @@ export default function Serenity() {
                     nel DOM, presente ma invisibile). SERENITY non ha un secondo posto libero
                     a destra come App.tsx; a sinistra resta solo `ZonaAssessment`, che di
                     norma sta chiusa (solo l'intestazione) e non la incontra. */}
+                {/* ⚠️ Segnalato: « in SCALA la parte con la scala del tono deve essere più
+                    larga verso il bordo esterno ». A 260px (la stessa larghezza di App.tsx —
+                    lì però a DESTRA, con più margine libero) i nomi dei livelli, qui a
+                    sinistra vicino al bordo, andavano a capo strettissimi. `ToneColumn` è un
+                    SVG col suo `viewBox` proporzionale (`width="100%"`): allargare QUESTO
+                    involucro lo ridisegna più grande per intero, numeri e nomi compresi — non
+                    tocca il componente condiviso, solo lo spazio che SERENITY gli concede. */}
                 <div style={{
-                  position: 'absolute', left: 12, top: '38%', bottom: '14%', width: 260,
+                  position: 'absolute', left: 12, top: '38%', bottom: '14%', width: 320,
                   pointerEvents: 'none',
                 }}>
                   <ToneColumn

@@ -51,6 +51,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { VideoOff } from 'lucide-react';
 import { attachAudioBoost } from '../lib/audioBoost';
 import { Cerchio } from './Cerchio';
 
@@ -206,14 +207,24 @@ export function CameraCerchio({
                 dal `<div>` che sparisce da collassata (sopra): deve restare leggibile anche a
                 camera nascosta, quando è l'unica cosa scritta su un disco altrimenti vuoto. */}
             {collassata ? (
-              <span style={{
-                position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              // ⚠️ Segnalato: « quando la camm si nasconde, deve esserci l'icona in più della
+              // scritta ». Prima era solo la parola, centrata nel disco vuoto — un'icona sopra
+              // (`VideoOff`, la stessa famiglia grafica delle altre icone di stato di SERENITY)
+              // dice "camera spenta" anche di sfuggita, senza dover leggere la scritta.
+              <div style={{
+                position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 4,
                 textAlign: 'center', padding: '0 12%', pointerEvents: 'none',
-                fontFamily: 'var(--s-sans)', fontSize: Math.max(9, dimEffettiva * 0.13), fontWeight: 700,
-                letterSpacing: '0.02em', color: 'var(--s-ink-soft)',
+                color: 'var(--s-ink-soft)',
               }}>
-                {titolo}
-              </span>
+                <VideoOff size={Math.max(14, dimEffettiva * 0.22)} strokeWidth={1.8} aria-hidden="true" />
+                <span style={{
+                  fontFamily: 'var(--s-sans)', fontSize: Math.max(9, dimEffettiva * 0.13), fontWeight: 700,
+                  letterSpacing: '0.02em',
+                }}>
+                  {titolo}
+                </span>
+              </div>
             ) : (
               <span style={{
                 position: 'absolute', top: '6%', left: '50%', transform: 'translateX(-50%)',

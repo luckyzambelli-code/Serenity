@@ -2177,6 +2177,69 @@ EQUILIBRIUM invariato.
 
 ---
 
+## Trentatreesimo giro (22/08/2026) — il quinto metodo APERTO, il TA a due/una lattina scritto, l'assessment allargata, la camm collassata con un'icona
+
+Otto segnalazioni:
+
+1. **« Non si può scrivere il nome della configurazione della session in alto »** — verificato
+   dal vivo con un click preciso (via `ref`, non coordinate a stima) sul campo: SCRIVE
+   correttamente («abc» digitato, comparso, «enregistrer» si è riattivato). Non un bug di
+   codice — probabile click mancato sul campo piccolo dentro il cassetto, non sull'input.
+   Nessuna modifica: il meccanismo funziona.
+
+2. **« La voce non è disponibile nell'applicazione mac, ma funziona in Chrome? »** —
+   `useVoiceItem.ts` ha già, dal 19/08 (`e5c4b3a`, un giro precedente a questa finestra), la
+   STESSA cascata a tre motori di App.tsx (Electron: nativo macOS → Whisper; browser: Web
+   Speech → Whisper) — non un difetto trovato oggi. Se il sintomo persiste sull'ultima build,
+   serve sapere se: (a) macOS ha davvero concesso i permessi "Riconoscimento vocale" e
+   "Microfono" all'app (Impostazioni di Sistema → Privacy e sicurezza), e (b) lo stesso Chrome
+   ripiega su Web Speech con successo sulla STESSA macchina — senza hardware/microfono reale
+   qui non è verificabile oltre la lettura del codice.
+
+3. **BUG TROVATO — « la zona ASSESSMENT non mostra il bottone »**: a 148px (larga quanto i
+   bottoni CONTACT/…, dal giro precedente) il selettore di vista ASSESSMENT/R&I·MANUALE non
+   ci stava — il secondo bottone restava tagliato a una lettera. Portata a 272px (la stessa
+   larghezza già scelta per Santé Système/journal a destra — colonna gemella): i bottoni
+   sopra restano a 148px nel loro involucro proprio, l'assessment prende la larghezza intera.
+   Verificato dal vivo: entrambi i bottoni ora interi, affiancati.
+
+4. **« Manca la zona LIBRE sotto TONE »** — `engine/sessionMode.ts` conta CINQUE metodi, non
+   quattro: CONTACT/NULL/MIRROR/TONE più `free` (App.tsx lo chiama "APERTO": « libero suonava
+   come "senza regole" », la sua nota — nessuna sequenza ciclica, solo l'ago). SERENITY lo
+   calcolava già (`const mode`, diventa `'free'` quando nessuno degli altri è armato) ma non
+   lo mostrava mai. Aggiunta una quinta pillola, sempre "attiva" (nessun bottone: non c'è
+   nulla da armare, mode è già lì), stessa lingua visiva dell'attivo di App.tsx. Verificato
+   dal vivo: "OUVERT" compare sotto TONE, sempre in evidenza quando nessun ciclo è armato.
+
+5. **« In SCALA la parte con la scala del tono deve essere più larga verso il bordo esterno »**
+   — l'involucro di `ToneColumn` (SERENITY-only, il componente resta condiviso e intatto) era
+   260px come App.tsx — ma lì a destra con più margine, qui a sinistra vicino al bordo, coi
+   nomi dei livelli strettissimi. Portato a 320px. Verificato dal vivo.
+
+6. **« COSA INDICA sotto il TA la freccia con il numero? »** — domanda, non un difetto: `TA
+   X.XX` è la lettura di RIPOSO (il braccio dell'ago, `theta.ta`); la freccia `→ Y.YY`
+   (`theta.taNow`) compare SOLO quando il valore ADESSO è diverso da quello di riposo — dice
+   "l'ago si sta muovendo verso questo numero", non ancora assestato.
+
+7. **BUG TROVATO — « non vedo scritto la differenza fra TA a due cans ed una »**: App.tsx
+   scrive SEMPRE su quale base poggia il TA mostrato — "TA · 2 lattine" / "TA · 1 lattina → 2"
+   (scarto misurato) / "TA · 1 lattina − 1 div." (scarto non misurato, prudenza) — lo stesso
+   numero a vedersi vuol dire tre cose diverse. `tone.taMostrato` (`useToneCycle`, condiviso,
+   la STESSA funzione `taToTwoCans`) esisteva già nel ritorno del motore, mai letto in
+   SERENITY. Aggiunta la stessa didascalia, sotto la lettura TA del Meter.
+
+8. **« Quando la camm si nasconde, deve esserci l'icona in più della scritta »** — `VideoOff`
+   (lucide, la stessa famiglia grafica di SERENITY) sopra la didascalia, nel cerchio
+   collassato. Verificato dal vivo: icona + "CAM 2 (PC)" entrambe leggibili nel disco chiuso.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, verifica dal vivo estesa (profilo TEST) — assessment a due bottoni interi, "OUVERT"
+sotto TONE, scala del tono più larga, camera collassata con icona. Nessun errore in console
+oltre a fallimenti di rete attesi. `git status`: `src/serenity/Serenity.tsx`,
+`src/serenity/CameraCerchio.tsx`. EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
