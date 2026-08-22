@@ -1,0 +1,69 @@
+/**
+ * healthPanelButtons.css — il riduci/espandi di Santé Système, in stile SERENITY.
+ *
+ * ── PERCHÉ ESISTE ───────────────────────────────────────────────────────────────────────────
+ * Segnalato: « hai ancora i bottoni di EQUILIBRIUM in SANTE SYSTEME ». `HealthPanel`
+ * (src/components/, condiviso con EQUILIBRIUM) chiude/riduce sé stesso con lo stesso
+ * `GlassCollapseToggle` già ritinto per History/Processus (v. `modalCloseButtons.css`) — la
+ * levetta a pista+pollice di EQUILIBRIUM, non il cerchio di vetro di SERENITY.
+ *
+ * ── PERCHÉ QUI, NON DENTRO `HealthPanel.tsx` ───────────────────────────────────────────────
+ * Condiviso con EQUILIBRIUM — cambiarlo cambierebbe anche lui. Stessa tecnica di
+ * `modalCloseButtons.css`: un involucro proprio (`.ser-health-wrap`, attorno a `HealthPanel`
+ * in `Serenity.tsx`) più le traduzioni esatte di `tip_collapse`/`tip_expand` (`src/i18n.tsx`) —
+ * l'UNICO bottone dentro questo pannello, verificato (un solo `GlassCollapseToggle`, nessun
+ * `title` proprio passato: usa quello di default del componente condiviso).
+ *
+ * ── DUE STATI, DUE GLIFI ────────────────────────────────────────────────────────────────────
+ * A differenza della chiusura di History/Processus (un solo gesto, una sola ×), questo bottone
+ * ha due stati — RIDOTTO/ESPANSO — con DUE traduzioni diverse (`tip_collapse` quando è
+ * espanso e si può ridurre, `tip_expand` quando è ridotto e si può espandere): il CSS non può
+ * leggere lo stato React, ma può leggere QUALE testo il componente ha scritto in quel momento
+ * — due gruppi di selettori, un glifo diverso ciascuno (− quando si può ridurre, + quando si
+ * può espandere), stesso trucco di riconoscimento di `modalCloseButtons.css`.
+ *
+ * @see docs/serenity-refonte.md
+ */
+
+.ser-health-wrap button:is([title="Collapse"],[title="Réduire"],[title="Riduci"],[title="Contraer"],[title="Fäll ihop"]),
+.ser-health-wrap button:is([title="Expand"],[title="Développer"],[title="Espandi"],[title="Desplegar"],[title="Fäll ut"]) {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 999px !important;
+  background: var(--s-disc) !important;
+  backdrop-filter: var(--s-glass-blur) !important;
+  -webkit-backdrop-filter: var(--s-glass-blur) !important;
+  border: 1px solid var(--s-glass-edge) !important;
+  box-shadow: var(--s-glass-highlight), var(--s-shadow) !important;
+  transition: box-shadow var(--s-slow) var(--s-ease), transform 120ms var(--s-ease) !important;
+}
+.ser-health-wrap button:is([title="Collapse"],[title="Réduire"],[title="Riduci"],[title="Contraer"],[title="Fäll ihop"]):hover,
+.ser-health-wrap button:is([title="Expand"],[title="Développer"],[title="Espandi"],[title="Desplegar"],[title="Fäll ut"]):hover {
+  box-shadow: var(--s-glass-highlight), var(--s-shadow-lift) !important;
+}
+.ser-health-wrap button:is([title="Collapse"],[title="Réduire"],[title="Riduci"],[title="Contraer"],[title="Fäll ihop"]):active,
+.ser-health-wrap button:is([title="Expand"],[title="Développer"],[title="Espandi"],[title="Desplegar"],[title="Fäll ut"]):active {
+  transform: scale(0.97) !important;
+}
+.ser-health-wrap button:is([title="Collapse"],[title="Réduire"],[title="Riduci"],[title="Contraer"],[title="Fäll ihop"]) > div,
+.ser-health-wrap button:is([title="Expand"],[title="Développer"],[title="Espandi"],[title="Desplegar"],[title="Fäll ut"]) > div {
+  display: none !important;
+}
+.ser-health-wrap button:is([title="Collapse"],[title="Réduire"],[title="Riduci"],[title="Contraer"],[title="Fäll ihop"])::after,
+.ser-health-wrap button:is([title="Expand"],[title="Développer"],[title="Espandi"],[title="Desplegar"],[title="Fäll ut"])::after {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  font-family: var(--s-sans, sans-serif);
+  color: var(--s-ink-soft);
+}
+.ser-health-wrap button:is([title="Collapse"],[title="Réduire"],[title="Riduci"],[title="Contraer"],[title="Fäll ihop"])::after {
+  content: '−';
+}
+.ser-health-wrap button:is([title="Expand"],[title="Développer"],[title="Espandi"],[title="Desplegar"],[title="Fäll ut"])::after {
+  content: '+';
+}

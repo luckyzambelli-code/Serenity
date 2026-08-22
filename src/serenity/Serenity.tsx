@@ -2160,6 +2160,27 @@ export default function Serenity() {
             ))}
           </>
         )}
+        {/* ── EP, SOTTO TONE — segnalato: « il bottone EP deve essere posizionato sotto TONE ».
+            Stava nella barra comandi sotto il quadrante, lontano dai quattro metodi. L'auditor
+            lo apre da sé quando vuole registrarlo, non un conto alla rovescia automatico (in
+            EQUILIBRIUM quella finestra non è mai raggiungibile) — "EP ✓" una volta validato,
+            come in App.tsx. A differenza dei quattro metodi sopra resta visibile SEMPRE a
+            seduta aperta, non solo quando nessun ciclo è armato: si registra un EP in
+            qualunque momento della seduta, non solo fra un ciclo e l'altro. */}
+        {aperta && (
+          <button
+            className="s-glass s-glass-btn"
+            onClick={() => { if (!ep.epValidated) ep.setEpTimestamp(sessionClock.now()); ep.setEpManualOpen(true); }}
+            style={{
+              cursor: 'pointer', pointerEvents: 'auto',
+              border: '1.5px solid var(--s-ink-ghost)', borderRadius: 16, padding: '10px 10px',
+              background: 'var(--s-disc)',
+              fontFamily: 'var(--s-sans)', fontSize: 14.5, fontWeight: 700, letterSpacing: '0.05em',
+              color: ep.epValidated ? 'var(--s-still)' : 'var(--s-ink-soft)', textAlign: 'center',
+            }}>
+            {ep.epValidated ? 'EP ✓' : 'EP'}
+          </button>
+        )}
       </div>
       {/* ── L'INTESTAZIONE, che non è una barra ───────────────────────────────────────────
           Nessun fondo, nessuna linea di separazione: il nome sta posato sulla stessa
@@ -3063,22 +3084,7 @@ export default function Serenity() {
             {t('ser_journal')} · {journal.logs.length} {t(journal.logs.length === 1 ? 'ser_line' : 'ser_lines')}
           </span>
         )}
-        {/* EP — l'auditor lo apre da sé quando vuole registrarlo, non un conto alla rovescia
-            automatico (in EQUILIBRIUM quella finestra non è mai raggiungibile). "EP ✓" una
-            volta validato, come in App.tsx. */}
-        {aperta && (
-          <button
-            className="s-glass s-glass-btn"
-            onClick={() => { if (!ep.epValidated) ep.setEpTimestamp(sessionClock.now()); ep.setEpManualOpen(true); }}
-            style={{
-              cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
-              background: 'var(--s-disc)',
-              fontFamily: 'var(--s-sans)', fontSize: 15,
-              color: ep.epValidated ? 'var(--s-still)' : 'var(--s-ink-faint)',
-            }}>
-            {ep.epValidated ? 'EP ✓' : 'EP'}
-          </button>
-        )}
+        {/* EP — spostato sotto TONE, nella barra laterale: v. la nota lì. */}
         {/* Il link « ← changer d'auditeur ou de préclair » è diventato l'icona `UserCog`
             dentro il campo Auditor/PC in alto — segnalato: « CHANGE AUDITOR OR PRECLEAR doit
             être sous forme d'icône... en haut ». Non più qui. */}
@@ -3467,9 +3473,15 @@ export default function Serenity() {
               prescindere dal tema di SERENITY attorno (vedi `--sm-panel-shadow` in
               `tokens.css`); solo l'intestazione (l'etichetta, non lo schermo) segue il tema,
               perché legge la STESSA `useUiStore().isLightTheme` di SERENITY. */}
+          {/* ⚠️ Segnalato: « posiziona Santé Système, Journal de session a destra dell'arco ».
+              Stavano ancorati a TUTTA la larghezza in fondo al quadrante (`left:16, right:16`)
+              — sopra l'arco stesso, nel mezzo di dove l'ago si legge. Ora ancorati SOLO a
+              destra (`right:32`, lo stesso bordo delle camere qui sopra: la colonna destra è
+              già il posto dei pannelli che galleggiano), larghezza fissa invece che a tutto
+              campo — l'arco resta libero sotto di loro. */}
           {aperta && moduleVis.health && (museOk || meterC) && (
-            <div style={{
-              position: 'absolute', left: 16, right: 16, bottom: 16, zIndex: 6,
+            <div className="ser-health-wrap" style={{
+              position: 'absolute', right: 32, bottom: 16, zIndex: 6, width: 380,
               maxHeight: '78%', overflowY: 'auto', borderRadius: 18,
             }}>
               <HealthPanel
@@ -3498,7 +3510,7 @@ export default function Serenity() {
               `CycleHint` non è stato riusato TALE E QUALE, vedi `SuggerimentoCiclo`. */}
           {moduleVis.journal && (
             <div className="s-glass s-glass-lift" style={{
-              position: 'absolute', left: 16, right: 16, bottom: 16, zIndex: 6,
+              position: 'absolute', right: 32, bottom: 16, zIndex: 6, width: 380,
               maxHeight: '70%', display: 'flex', flexDirection: 'column',
               background: 'var(--s-disc)', borderRadius: 18, padding: '10px 16px 14px',
             }}>

@@ -1947,6 +1947,65 @@ server P2P/hardware reale in questo ambiente). `git status`: `src/serenity/Seren
 
 ---
 
+## Ventinovesimo giro (22/08/2026) — il velo di MetabolicCheck ritinto, i cerchi delle camere leggibili in chiaro, EP sotto TONE, Santé/Journal a destra dell'arco
+
+Cinque segnalazioni:
+
+1. **« Ouvrir la séance resta in BLACK anche in LIGHT »** — il giro scorso aveva già ritinto i
+   due pannelli di `ThetaReadyCheck`/`MetabolicCheck` (`readyCheckLight.css`), ma aveva
+   lasciato scuro apposta il VELO a tutto schermo di `MetabolicCheck` (`rgba(0,0,0,0.8)`),
+   seguendo l'analogia con lo scrim di `HistoryModal`. Analogia sbagliata per questa forma:
+   `HistoryModal` copre quasi tutto lo schermo (il velo è un filo ai bordi), `MetabolicCheck`
+   è una carta piccola (460px) al centro di un velo grande — l'impressione resta "schermo
+   nero" anche col pannello già corretto. Nuova regola in `readyCheckLight.css`: il velo si
+   ritinge anche lui, con la stessa espressione già usata da `scegliStrumento`
+   (`color-mix(in srgb, var(--s-ground) 80%, transparent)`). Verificato via test sintetico
+   (nessun MUSE/Meter vero in questo ambiente): il colore risolto è ora quello del fondo di
+   SERENITY, non nero.
+
+2. **« Hai ancora i bottoni di EQUILIBRIUM in SANTE SYSTEME »** — `HealthPanel` (condiviso)
+   riduce/espande sé stesso con lo stesso `GlassCollapseToggle` di History/Processus (giro
+   scorso). Nuovo `healthPanelButtons.css`, stessa tecnica: involucro `.ser-health-wrap` +
+   le traduzioni di `tip_collapse`/`tip_expand` (due stati, due glifi: − quando si può
+   ridurre, + quando si può espandere, invece della singola × di una chiusura). Verificato
+   via test sintetico: 30×30px, cerchio di vetro, glifo corretto in entrambi gli stati.
+
+3. **« Quando si nasconde una camm deve vedersi meglio in LIGHT — la scritta sempre dentro il
+   cerchio »** — due difetti distinti in `CameraCerchio.tsx`/`Cerchio.tsx` (entrambi SOLO
+   SERENITY, non condivisi: modificati direttamente). Il cerchio "affondato" di una camm
+   nascosta (`vetroDaSpenta`) non aveva ombra (`boxShadow:'none'`, pensato per un modulo
+   "previsto ma non montato") — in chiaro `--s-disc-sunk` è quasi lo stesso colore del fondo:
+   senza ombra spariva. Ora `vetroDaSpenta` prende un'ombra vera (`var(--s-shadow)`), la sola
+   eccezione a `spenta` (verificato: nessun altro cerchio in SERENITY usa `vetroDaSpenta`,
+   nessun effetto collaterale altrove). La didascalia (nome della camera) era FUORI dal
+   cerchio, una riga sotto — spostata DENTRO: centrata quando collassata (l'unica cosa scritta
+   su un disco vuoto), un'etichetta in alto quando espansa (il badge LIVE, se c'è, scende per
+   fargli posto). Verificato dal vivo: "CAM 2 (PC)" leggibile dentro il cerchio in entrambi
+   gli stati, in tema chiaro.
+
+4. **« Il bottone EP deve essere posizionato sotto TONE »** — spostato dalla barra comandi
+   sotto il quadrante alla barra laterale, subito dopo i quattro metodi (stesso stile a
+   pillola bordata). Resta visibile per tutta la seduta aperta (non solo quando nessun ciclo
+   è armato, a differenza dei quattro metodi: un EP si registra in qualunque momento).
+   Verificato dal vivo: EP compare sotto TONE nella colonna.
+
+5. **« Posiziona Santé Système, Journal de session a destra dell'arco »** — erano ancorati a
+   tutta larghezza in fondo al quadrante (`left:16, right:16`), sopra l'arco stesso. Ora
+   ancorati solo a destra (`right:32`, lo stesso bordo delle camere), larghezza fissa (380px)
+   invece che a tutto campo. MNA non è stato toccato (non era nella segnalazione, resta
+   ancorato come prima). Verificato dal vivo: il pannello journal appare come un riquadro
+   stretto in basso a destra, non più a tutta larghezza.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, verifica dal vivo (profilo TEST) — velo di MetabolicCheck e toggle di Santé Système
+verificati via test sintetico (nessun hardware vero disponibile qui), il resto verificato
+sulla seduta reale: EP sotto TONE, journal ancorato a destra, camm PC leggibile da collassata.
+Nessun errore in console. `git status`: `src/serenity/Serenity.tsx`, `src/serenity/main.tsx`,
+`src/serenity/CameraCerchio.tsx`, `src/serenity/Cerchio.tsx`, `src/serenity/readyCheckLight.css`,
+un file nuovo (`healthPanelButtons.css`). EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

@@ -61,7 +61,12 @@ export function Cerchio({ dimensione, children, x = 0, y = 0, viva, spenta, rita
     width: dimensione, height: dimensione, borderRadius: '50%',
     display: 'grid', placeItems: 'center',
     background: spenta ? 'var(--s-disc-sunk)' : 'var(--s-disc)',
-    boxShadow: spenta ? 'none' : (viva ? 'var(--s-shadow-lift)' : 'var(--s-shadow)'),
+    // ⚠️ Segnalato: « quando si nasconde una camm deve vedersi meglio in LIGHT ». `spenta`
+    // senza ombra è giusto per un disco "previsto ma non montato" (si vede che non c'è ancora
+    // niente) — ma `vetroDaSpenta` è un bottone VERO, non un segnaposto: in tema chiaro
+    // `--s-disc-sunk` è quasi lo stesso colore del fondo (`--s-ground`), e senza ombra il
+    // cerchio spariva del tutto. Un'ombra vera lo rimette in rilievo, come ogni altro cerchio.
+    boxShadow: spenta ? (vetroDaSpenta ? 'var(--s-shadow)' : 'none') : (viva ? 'var(--s-shadow-lift)' : 'var(--s-shadow)'),
     transition: 'box-shadow var(--s-calm) var(--s-ease), background var(--s-calm) var(--s-ease), opacity var(--s-slow) var(--s-ease)',
     ...(opacita !== undefined ? { opacity: opacita } : {}),
     ...(x || y ? {

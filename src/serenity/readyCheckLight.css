@@ -37,12 +37,28 @@
  * I bordi/sfondi in `rgba(255,255,255,·)` (il "vetro" scuro: card leggermente più chiare del
  * fondo nero, anelli di respiro, tracce di bottoni) restano quelli — su un pannello ora chiaro
  * diventano solo più tenui, non invisibili come sarebbe stato il testo quasi-bianco lasciato
- * intatto. Il velo esterno di `MetabolicCheck` (`rgba(0,0,0,0.8)`, DIETRO il pannello) resta
- * scuro apposta, stessa scelta di `historyLight.css` per il velo di `HistoryModal`. I colori
- * satura (ambra/rosso/verde di stato) non si toccano: già leggibili su entrambi i fondi.
+ * intatto. I colori satura (ambra/rosso/verde di stato) non si toccano: già leggibili su
+ * entrambi i fondi.
+ *
+ * ── IL VELO DI `MetabolicCheck`, RIVISTO — segnalato di nuovo: « Ouvrir la séance resta in
+ * BLACK anche qua do siamo in LIGHT ». Il primo giro lasciava `rgba(0,0,0,0.8)` scuro apposta,
+ * stessa scelta di `historyLight.css` per il velo di `HistoryModal` — ma lì il pannello copre
+ * QUASI TUTTO lo schermo (il velo è un filo ai bordi); qui il pannello è una carta piccola
+ * (460px) al centro di un velo A TUTTO SCHERMO: l'impressione è "schermo nero", non "carta
+ * scura con un bordo". La stessa analogia applicata all'ingrosso era sbagliata per QUESTA
+ * forma — qui il velo si ritinge anche lui, con la stessa espressione già usata dal pannello
+ * "con che cosa si audita?" di SERENITY (`color-mix(in srgb, var(--s-ground) 80%, transparent)`).
  *
  * @see docs/serenity-refonte.md
  */
+
+/* ── IL VELO A TUTTO SCHERMO DI `MetabolicCheck` ───────────────────────────────────────────
+   Segnalato: « Ouvrir la séance resta in BLACK ». Questo è il vero colpevole — v. la nota
+   sopra: un pannello piccolo su un velo grande legge come "schermo nero" anche col pannello
+   già corretto. Stessa espressione già usata da `scegliStrumento` in `Serenity.tsx`. */
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(0,0,0,0.8)"] {
+  background: color-mix(in srgb, var(--s-ground) 80%, transparent) !important;
+}
 
 /* ── I DUE PANNELLI, DA VETRO NERO A VETRO CHIARO ──────────────────────────────────────── */
 :root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(2,6,23"] {

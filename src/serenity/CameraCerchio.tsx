@@ -179,7 +179,7 @@ export function CameraCerchio({
                   coprire il volto al centro. */}
               {inDiretta && (
                 <span style={{
-                  position: 'absolute', top: '10%', left: '50%', transform: 'translateX(-50%)',
+                  position: 'absolute', top: '19%', left: '50%', transform: 'translateX(-50%)',
                   fontSize: Math.max(8, dimEffettiva * 0.045), letterSpacing: '0.08em', fontWeight: 700,
                   padding: '1px 7px', borderRadius: 999,
                   background: 'rgba(52,211,153,0.85)', color: '#04140d',
@@ -200,15 +200,34 @@ export function CameraCerchio({
                 </span>
               )}
             </div>
+            {/* ── LA DIDASCALIA, DENTRO IL CERCHIO — segnalato: « la scritta deve essere
+                all'interno del cerchio sempre ». Prima era una riga di testo FUORI, sotto il
+                cerchio — due elementi separati da leggere insieme invece di uno solo. Fuori
+                dal `<div>` che sparisce da collassata (sopra): deve restare leggibile anche a
+                camera nascosta, quando è l'unica cosa scritta su un disco altrimenti vuoto. */}
+            {collassata ? (
+              <span style={{
+                position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                textAlign: 'center', padding: '0 12%', pointerEvents: 'none',
+                fontFamily: 'var(--s-sans)', fontSize: Math.max(9, dimEffettiva * 0.13), fontWeight: 700,
+                letterSpacing: '0.02em', color: 'var(--s-ink-soft)',
+              }}>
+                {titolo}
+              </span>
+            ) : (
+              <span style={{
+                position: 'absolute', top: '6%', left: '50%', transform: 'translateX(-50%)',
+                maxWidth: '84%', pointerEvents: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                fontFamily: 'var(--s-sans)', fontSize: Math.max(8, dimEffettiva * 0.048), fontWeight: 700,
+                letterSpacing: '0.03em', padding: '2px 9px', borderRadius: 999,
+                background: 'rgba(0,0,0,0.4)', color: '#f4f7ff', textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+              }}>
+                {titolo}
+              </span>
+            )}
           </div>
         </Cerchio>
       </div>
-      {/* La didascalia — SEMPRE leggibile, non solo al passaggio del mouse (segnalato). */}
-      <span style={{
-        fontFamily: 'var(--s-sans)', fontSize: collassata ? 12 : 14, color: 'var(--s-ink-soft)', letterSpacing: '0.02em',
-      }}>
-        {titolo}
-      </span>
     </div>
   );
 }

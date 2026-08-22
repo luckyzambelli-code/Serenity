@@ -15,6 +15,7 @@ import './tailwind-compat.css';
 import './historyLight.css';
 import './modalCloseButtons.css';
 import './readyCheckLight.css';
+import './healthPanelButtons.css';
 import { I18nProvider } from '../i18n';
 import Serenity from './Serenity';
 
