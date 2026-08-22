@@ -1913,6 +1913,88 @@ export default function Serenity() {
         // sessione — non si ripete l'errore.
         return null;
       })()}
+      {/* ── LA BARRA LATERALE — APRI/CHIUDI e i quattro metodi, FUORI DALL'ARCO ─────────────
+          Segnalato: « metti i bottoni Contact, Null, Mirror, Tone ed anche OPEN sul lato
+          sinistro fuori dall'arco, così si ha più spazio per il ciclo stesso ». Prima
+          stavano nella barra comandi orizzontale, sopra il quadrante — la stessa riga in cui
+          vive anche « a che punto sono, cosa devo fare » (`SuggerimentoCiclo`) quando un
+          ciclo è armato: più pillole in quella riga, meno posto per quel testo. Ancorata al
+          bordo sinistro di `<main>` (che ha già `position:relative`), verticale, fuori dal
+          contenitore del quadrante — zero logica nuova, gli stessi `chiudi`/`apri`/
+          `cycles.armCycle`/`mirror.armMirror`/`setToneAttivo` di sempre, solo spostati. */}
+      <div style={{
+        position: 'absolute', left: 20, top: 118, bottom: 24, zIndex: 8,
+        display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 10, width: 148,
+      }}>
+        <button className="s-glass s-glass-btn" onClick={aperta ? chiudi : apri} style={{
+          cursor: 'pointer',
+          background: 'var(--s-disc)', color: 'var(--s-ink)',
+          borderRadius: 16, padding: '12px 10px',
+          fontSize: 14, letterSpacing: '0.08em', textTransform: 'uppercase',
+          fontFamily: 'var(--s-sans)', lineHeight: 1.3, textAlign: 'center',
+        }}>
+          {/* ── SEGNALATO: « le bouton FERMER — on ne sait pas s'il correspond à la séance ou
+              au cycle ». App.tsx distingue ESPLICITAMENTE i due gesti nel testo (« ferma la
+              seduta » contro « chiudi/annulla il ciclo »): qui la parola sola "CHIUDI" non lo
+              diceva, e un ANNULLA di ciclo poteva sembrare lo stesso gesto. Ora dice sempre
+              "LA SEDUTA" per esteso — l'unico bottone che la governa. */}
+          {aperta
+            ? LC('chiudi la seduta', 'fermer la séance', 'close the session', 'cerrar la sesión', 'stäng sessionen')
+            : LC('apri una seduta', 'ouvrir une séance', 'open a session', 'abrir una sesión', 'öppna en session')}
+        </button>
+        {/* ── PAUSA/RIPRENDI, ORA VICINO A "FERMER LA SÉANCE" — segnalato: « il bottone di
+            pausa deve essere vicino al bottone Fermer la séance ». Stessa scelta dell'auditor
+            di sempre (`pausaManuale`), stesso stato (`pausata`) — solo spostata qui, subito
+            sotto il bottone che governa la seduta intera, di cui la pausa è la scelta
+            "minore". Icona sola: lo stato lo dice già il badge "in pausa" dentro il
+            quadrante, accanto all'orologio. */}
+        {aperta && (
+          <button
+            className="s-glass s-glass-btn"
+            onClick={pausaManuale}
+            title={(pausata
+              ? LC('riprendi la seduta', 'reprendre la séance', 'resume the session', 'reanudar la sesión', 'återuppta sessionen')
+              : LC('metti in pausa', 'mettre en pause', 'pause', 'pausar', 'pausa')) as string}
+            style={{
+              cursor: 'pointer', padding: '10px 10px', borderRadius: 16,
+              background: 'var(--s-disc)', display: 'flex', justifyContent: 'center',
+              color: pausata ? 'var(--s-alive)' : 'var(--s-ink-soft)',
+            }}>
+            {pausata ? <Play size={20} strokeWidth={1.8} fill="currentColor" /> : <Pause size={20} strokeWidth={1.8} />}
+          </button>
+        )}
+        {/* ── I QUATTRO METODI — segnalato: « devi fare come in EQUILIBRIUM con dei BOTTONI più
+            visibili per ogni ciclo separatamente ». Quattro pillole vere, ciascuna col SUO
+            nome scritto per intero e un colore che le distingue — gli stessi tre segnali di
+            `tokens.css` più l'inchiostro neutro per TONE. Visibili solo quando c'è davvero una
+            scelta da fare (seduta aperta, nessun ciclo già armato) — stessa condizione di
+            sempre, solo la posizione è cambiata. */}
+        {aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && (
+          <>
+            {([
+              { k: 'contact', hue: 'var(--s-still)', label: 'CONTACT',
+                onClick: () => cycles.armCycle('charge') },
+              { k: 'null', hue: 'var(--s-alive)', label: 'NULL',
+                onClick: () => cycles.armCycle('null') },
+              // ── MIRROR — il terzo metodo, escluso a vicenda con CONTACT/NULL ────────────
+              { k: 'mirror', hue: 'var(--s-reserve)', label: 'MIRROR', onClick: () => mirror.armMirror() },
+              // ── TONE SCALE — il quarto metodo, escluso a vicenda con gli altri tre. A
+              // differenza degli altri tre non si "arma" per un solo item: si ENTRA nel
+              // metodo (`toneAttivo`) e ci si lavora per più resistenze di fila.
+              { k: 'tone', hue: null, label: 'TONE', onClick: () => setToneAttivo(true) },
+            ]).map(c => (
+              <button key={c.k} className="s-glass s-glass-btn" onClick={c.onClick} style={{
+                border: `1.5px solid ${c.hue ?? 'var(--s-ink-ghost)'}`, cursor: 'pointer',
+                borderRadius: 16, padding: '10px 10px', background: 'var(--s-disc)',
+                fontFamily: 'var(--s-sans)', fontSize: 14.5, fontWeight: 700, letterSpacing: '0.05em',
+                color: c.hue ?? 'var(--s-ink-soft)', textAlign: 'center',
+              }}>
+                {c.label}
+              </button>
+            ))}
+          </>
+        )}
+      </div>
       {/* ── L'INTESTAZIONE, che non è una barra ───────────────────────────────────────────
           Nessun fondo, nessuna linea di separazione: il nome sta posato sulla stessa
           superficie di tutto il resto. Una barra è già un pannello. */}
@@ -2247,6 +2329,27 @@ export default function Serenity() {
         }}>
           <HelpCircle size={32} strokeWidth={1.6} />
         </button>
+        {/* ── L'ASSISTENTE IA, ORA QUI — segnalato: « la zona API mettila dopo l'icona GUIDE ».
+            Stesso componente di App.tsx, montato TALE E QUALE (legge già `useUiStore` da sé,
+            si adatta al tema di SERENITY senza bisogno di passarglielo): una chiave Gemini
+            propria dell'auditor (mai inviata a SERENITY/EQUILIBRIUM), lo stesso contesto di
+            seduta che App.tsx gli passa — nome/i, tempo, TA, carica, ultima reazione, le
+            ultime righe del giornale. */}
+        {aperta && (
+          <AIAssistant
+            lang={lang as string}
+            sessionContext={{
+              pcName: avvio?.solo ? nomeAuditor : nomePreclear,
+              auditorName: nomeAuditor,
+              sessionTime: tempo,
+              totalTa: meterC ? theta.totalTa : metricsStore.get().totalTa,
+              qL: metricsStore.get().qL,
+              eta: metricsStore.get().eta,
+              needleReaction,
+              recentLogs: journal.logs.slice(-15).map(l => ({ time: l.time, speaker: l.speaker ?? '', text: l.text })),
+            }}
+          />
+        )}
       </header>
       {guidaAperta && <GuideModal lang={lang} onClose={() => setGuidaAperta(false)} />}
       {creditiAperti && <CreditsModal onClose={() => setCreditiAperti(false)} />}
@@ -2355,45 +2458,10 @@ export default function Serenity() {
         }}>
           <BookOpen size={26} strokeWidth={1.8} />
         </button>
-        {/* ⚠️ Niente `border: 'none'` qui — segnalato: « je ne vois pas de GLASS FORM ». Uno
-            stile inline vince sempre su una classe CSS per la stessa proprietà: dichiararlo qui
-            cancellava in silenzio il bordo di `.s-glass`. */}
-        <button className="s-glass s-glass-btn" onClick={aperta ? chiudi : apri} style={{
-          cursor: 'pointer',
-          background: 'var(--s-disc)', color: 'var(--s-ink)',
-          borderRadius: 999, padding: '11px 28px',
-          fontSize: 15.5, letterSpacing: '0.1em', textTransform: 'uppercase',
-          fontFamily: 'var(--s-sans)',
-        }}>
-          {/* ── SEGNALATO: « le bouton FERMER — on ne sait pas s'il correspond à la séance ou
-              au cycle ». App.tsx distingue ESPLICITAMENTE i due gesti nel testo (« ferma la
-              seduta » contro « chiudi/annulla il ciclo »): qui la parola sola "CHIUDI" non lo
-              diceva, e un ANNULLA di ciclo poteva sembrare lo stesso gesto. Ora dice sempre
-              "LA SEDUTA" per esteso — l'unico bottone che la governa. */}
-          {aperta
-            ? LC('chiudi la seduta', 'fermer la séance', 'close the session', 'cerrar la sesión', 'stäng sessionen')
-            : LC('apri una seduta', 'ouvrir une séance', 'open a session', 'abrir una sesión', 'öppna en session')}
-        </button>
-        {/* ── PAUSA/RIPRENDI, LA STESSA SCELTA DELL'AUDITOR — segnalata assente insieme agli
-            altri moduli mancanti: App.tsx la offre sempre in seduta (barra laterale,
-            Play/Pause), non solo come reazione automatica alla perdita dello strumento (quella
-            resta sopra, muta, un badge). Icona sola: lo stato lo dice già il badge "in pausa"
-            accanto all'orologio, più avanti nella stessa barra. */}
-        {aperta && (
-          <button
-            className="s-glass s-glass-btn"
-            onClick={pausaManuale}
-            title={(pausata
-              ? LC('riprendi la seduta', 'reprendre la séance', 'resume the session', 'reanudar la sesión', 'återuppta sessionen')
-              : LC('metti in pausa', 'mettre en pause', 'pause', 'pausar', 'pausa')) as string}
-            style={{
-              cursor: 'pointer', padding: 10, borderRadius: 999,
-              background: 'var(--s-disc)', display: 'flex',
-              color: pausata ? 'var(--s-alive)' : 'var(--s-ink-soft)',
-            }}>
-            {pausata ? <Play size={22} strokeWidth={1.8} fill="currentColor" /> : <Pause size={22} strokeWidth={1.8} />}
-          </button>
-        )}
+        {/* ── OUVRIR/FERMER e PAUSA, ORA NELLA BARRA LATERALE — segnalato: « metti i bottoni
+            Contact, Null, Mirror, Tone ed anche OPEN sul lato sinistro fuori dall'arco » e poi
+            « il bottone di pausa deve essere vicino al bottone Fermer la séance ». Vedi la
+            barra a sé, ancorata al bordo sinistro di `<main>`, poco più giù. */}
         {/* ── IL CICLO — un item, quattro strade, ciascuna col SUO bottone ──────────────────
             Segnalato: « la visibilità dei CICLI non è ottimale... devi fare come in EQUILIBRIUM
             con dei BOTTONI più visibili per ogni ciclo separatamente, uno accanto all'altro ».
@@ -2442,41 +2510,9 @@ export default function Serenity() {
                       'rösten är inte tillgänglig — skriv item')
                   : ''}
             </span>
-            {/* ⚠️ Era `flexBasis:'100%'` — segnalato: « écris pour les cycles tout sur la même
-                ligne afin de gagner la place pour l'Arc ». Forzava questo blocco su una riga
-                TUTTA sua, anche quando c'era spazio per stare accanto al campo dell'item — una
-                riga in più, tolta al quadrante sotto. Ora è un figlio normale della riga
-                flessibile: sta a fianco quando c'è posto, va a capo da sé (il genitore ha già
-                `flexWrap:'wrap'`) solo se davvero non ci sta. */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.1em',
-                            textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
-                {LC('poi scegli il metodo', 'puis choisis la méthode', 'then choose the method', 'luego elige el método', 'välj sedan metoden')}
-              </span>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {([
-                  { k: 'contact', hue: 'var(--s-still)', label: 'CONTACT',
-                    onClick: () => cycles.armCycle('charge') },
-                  { k: 'null', hue: 'var(--s-alive)', label: 'NULL',
-                    onClick: () => cycles.armCycle('null') },
-                  // ── MIRROR — il terzo metodo, escluso a vicenda con CONTACT/NULL ────────────
-                  { k: 'mirror', hue: 'var(--s-reserve)', label: 'MIRROR', onClick: () => mirror.armMirror() },
-                  // ── TONE SCALE — il quarto metodo, escluso a vicenda con gli altri tre. A
-                  // differenza degli altri tre non si "arma" per un solo item: si ENTRA nel
-                  // metodo (`toneAttivo`) e ci si lavora per più resistenze di fila.
-                  { k: 'tone', hue: null, label: 'TONE', onClick: () => setToneAttivo(true) },
-                ]).map(c => (
-                  <button key={c.k} className="s-glass s-glass-btn" onClick={c.onClick} style={{
-                    border: `1.5px solid ${c.hue ?? 'var(--s-ink-ghost)'}`, cursor: 'pointer',
-                    borderRadius: 999, padding: '6px 14px', background: 'var(--s-disc)',
-                    fontFamily: 'var(--s-sans)', fontSize: 14.5, fontWeight: 700, letterSpacing: '0.05em',
-                    color: c.hue ?? 'var(--s-ink-soft)',
-                  }}>
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* ── I QUATTRO METODI, ORA NELLA BARRA LATERALE — segnalato: « metti i bottoni
+                Contact, Null, Mirror, Tone... sul lato sinistro fuori dall'arco, così si ha
+                più spazio per il ciclo stesso ». Vedi la barra a sé, poco più giù. */}
           </>
         )}
         {/* ── TONE SCALE, ATTIVO — locate → raise → done, si ripete per ogni resistenza ────────
@@ -2911,27 +2947,6 @@ export default function Serenity() {
             }}>
             {ep.epValidated ? 'EP ✓' : 'EP'}
           </button>
-        )}
-        {/* ── L'ASSISTENTE IA — segnalato assente insieme al resto dei moduli. Stesso
-            componente di App.tsx, montato TALE E QUALE (legge già `useUiStore` da sé, si
-            adatta al tema di SERENITY senza bisogno di passarglielo): una chiave Gemini
-            propria dell'auditor (mai inviata a SERENITY/EQUILIBRIUM), lo stesso contesto di
-            seduta che App.tsx gli passa — nome/i, tempo, TA, carica, ultima reazione, le
-            ultime righe del giornale. */}
-        {aperta && (
-          <AIAssistant
-            lang={lang as string}
-            sessionContext={{
-              pcName: avvio?.solo ? nomeAuditor : nomePreclear,
-              auditorName: nomeAuditor,
-              sessionTime: tempo,
-              totalTa: meterC ? theta.totalTa : metricsStore.get().totalTa,
-              qL: metricsStore.get().qL,
-              eta: metricsStore.get().eta,
-              needleReaction,
-              recentLogs: journal.logs.slice(-15).map(l => ({ time: l.time, speaker: l.speaker ?? '', text: l.text })),
-            }}
-          />
         )}
         <span style={{ flex: 1 }} />
         {!aperta && (

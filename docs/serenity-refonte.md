@@ -1773,6 +1773,39 @@ completato, esattamente come App.tsx. `git status`: `src/serenity/Serenity.tsx` 
 
 ---
 
+## Ventiseiesimo giro (20/08/2026) — i quattro metodi e APRI fuori dall'arco, l'assistente dopo GUIDE
+
+Due riordini: « metti i bottoni Contact, Null, Mirror, Tone ed anche OPEN sul lato sinistro
+fuori dall'arco, così si ha più spazio per il ciclo stesso » e « la zona API mettila dopo
+l'icona GUIDE ».
+
+1. **Barra laterale, nuova.** APRI/CHIUDI LA SEDUTA e i quattro metodi (CONTACT/NULL/MIRROR/
+   TONE) erano nella barra comandi orizzontale, sopra il quadrante — la stessa riga dove vive
+   anche `SuggerimentoCiclo` (« a che punto sono, cosa devo fare ») quando un ciclo è armato:
+   più pillole in quella riga, meno posto per quel testo. Spostati in una colonna verticale
+   ancorata al bordo sinistro di `<main>` (`position:absolute`, fuori dal contenitore del
+   quadrante), verticalmente centrata. Zero logica nuova — gli stessi `chiudi`/`apri`/
+   `cycles.armCycle`/`mirror.armMirror`/`setToneAttivo` di sempre, con le stesse condizioni di
+   visibilità, solo spostati. La barra comandi ora ha solo il campo item + lo stato della voce
+   + MNA/journal/EP — la richiesta di spazio per il ciclo stesso.
+
+2. **L'assistente IA, dall'intestazione.** Montato nella barra comandi al giro 23 — spostato
+   nell'intestazione, subito dopo il bottone Guide (?), come richiesto.
+
+3. **Pausa, accanto a "Fermer la séance".** Segnalato subito dopo, nello stesso giro: « il
+   bottone di pausa deve essere vicino al bottone Fermer la séance ». Era rimasta nella barra
+   comandi orizzontale quando gli altri quattro l'hanno lasciata — spostata anche lei, subito
+   sotto APRI/CHIUDI nella stessa colonna. Stesso stato (`pausata`/`pausaManuale`) di sempre.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, verifica dal vivo — la barra laterale appare correttamente (CHIUDI LA SÉANCE/PAUSA/
+CONTACT/NULL/MIRROR/TONE, verticale, fuori dall'arco, nessuna sovrapposizione), l'arco ha
+visibilmente più spazio, l'assistente IA appare nell'intestazione dopo Guide, la pausa
+funziona (badge "paused", icona Play, orologio fermo). `git status`: solo
+`src/serenity/Serenity.tsx`. EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
