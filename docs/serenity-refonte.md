@@ -1806,6 +1806,64 @@ funziona (badge "paused", icona Play, orologio fermo). `git status`: solo
 
 ---
 
+## Ventisettesimo giro (22/08/2026) — le letture sopra CLOSE SESSION, un bug di click trovato subito, History a due temi
+
+Cinque segnalazioni: « il TA ed il time session mettili sopra CLOSE SESSION, nonché
+diagnostica », poi (mentre verificavo dal vivo) « le module History et Processus ne
+s'ouvrent pas », « il faut aussi que ces deux modules soient en white ou dark en fonction du
+choix effectué », e « CHANGE AUDITOR OR PRECLEAR doit être sous forme d'icône... en haut ».
+
+1. **Le letture, sopra CLOSE SESSION.** Orologio, scelta MUSE/METER/DUE, qualità segnale,
+   integrità biometrica, TA/fase/TA totale/velocità — stavano ancorate al fondo del
+   quadrante (giro 19). Spostate in cima alla stessa colonna della barra laterale (giro 26),
+   impilate in verticale invece che in riga (la colonna è larga 148px, non tutto l'arco).
+   Zero logica nuova, solo la disposizione.
+
+2. **BUG BLOCCANTE trovato subito dopo, verificando dal vivo**: History e Processus non si
+   aprivano più. La nuova barra laterale (giro 26) è alta quanto quasi tutta la pagina per
+   poter CENTRARE i suoi bottoni — ma un `<div>` copre l'intero rettangolo anche dove non
+   c'è nulla da vedere, e quel rettangolo si sovrapponeva alle icone Historique/Processus
+   della barra comandi appena sopra (`top:118` cadeva proprio lì): i click finivano rubati
+   da questo contenitore invece di raggiungere le icone — la STESSA famiglia di bug degli
+   « angoli trasparenti » delle camere, trovata un giro fa. `pointerEvents:'none'` sul
+   contenitore, riacceso `'auto'` su ogni bottone vero (i due di apri/pausa, i quattro
+   metodi, il selettore MUSE/METER/DUE).
+
+3. **`HistoryModal` era sempre scuro, anche in EQUILIBRIUM** — la sua stessa classe lo dice
+   (`.nest-dark-modal`): non legge mai `useUiStore`, a differenza di `ProcessusModal` (già
+   correttamente bicromo, verificato). Non essendo possibile toccare quel file condiviso,
+   nuovo `serenity/historyLight.css`: un override mirato a `.nest-dark-modal` e alle sue
+   classi Tailwind interne (`text-slate-*`, `bg-white/*`, `bg-slate-*`, `border-*`, …),
+   attivo SOLO sotto `:root[data-tema='chiaro']` — la stessa preferenza di `tokens.css` — con
+   un pezzo di selettore in più che batte in specificità le regole originali (tutte
+   `!important`) a prescindere dall'ordine nel DOM. Il velo di fondo dietro il pannello resta
+   scuro apposta (uno scrim, come quello di `CreditsModal`/`GuideModal`); un piccolo badge
+   secondario (« archive N · autres N ») ha colore scritto in linea, non in una classe —
+   resta a basso contrasto in chiaro, dichiarato qui invece che finto sistemato.
+
+4. **« Change auditor or preclear », ora un'icona.** Era un link di testo isolato in fondo
+   alla barra comandi (« ← changer d'auditeur ou de préclair »). `UserCog`, dentro la stessa
+   pillola Auditor/PC/Expert in alto, PRIMA dell'icona di salvataggio — la stessa
+   `ricomincia()` di sempre.
+
+**Non verificabile in questo ambiente** (segnalato nello stesso messaggio, nessun MUSE/Meter
+vero disponibile qui): « les réactions ne s'affichent pas », « journal/santé/intégrité pas
+actifs ». Con "sans instruments" (l'unico modo di testare qui) Santé Système e l'integrità
+biometrica restano correttamente muti — nessuno strumento, nessuna lettura da mostrare, per
+design (mai un controllo bugiardo). Il giornale invece appariva regolarmente
+("journal · N ligne(s)") in ogni prova. Resta aperto: serve sapere se questi sintomi si
+vedono anche CON un MUSE/Meter vero collegato, per continuare a cercarli con qualcosa di più
+di una lettura del codice.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, verifica dal vivo estesa — le letture appaiono sopra CLOSE SESSION, History e
+Processus si aprono di nuovo in entrambi i test (icone cliccabili), History passa
+correttamente da scuro a chiaro col selettore tema (Processus già lo faceva), l'icona
+cambia-persone funziona (riporta a "chi audita?"). `git status`: `src/serenity/Serenity.tsx`,
+`src/serenity/main.tsx`, e il nuovo `src/serenity/historyLight.css`. EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

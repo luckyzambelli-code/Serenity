@@ -82,7 +82,7 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
@@ -1925,9 +1925,141 @@ export default function Serenity() {
       <div style={{
         position: 'absolute', left: 20, top: 118, bottom: 24, zIndex: 8,
         display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 10, width: 148,
+        /* ⚠️ BUG TROVATO — segnalato: « le module History et Processus ne s'ouvrent pas ».
+           Questo contenitore è alto quanto quasi tutta la pagina (`top:118, bottom:24`) per
+           poter CENTRARE verticalmente i suoi bottoni — ma uno `<div>` copre l'intero
+           rettangolo anche dove non c'è nulla da vedere, e quel rettangolo si sovrapponeva
+           alle icone Historique/Processus della barra comandi appena sopra (`top:118` cadeva
+           proprio lì): i click su quelle icone finivano rubati da questo `<div>` invece di
+           raggiungerle — la STESSA famiglia di bug degli « angoli trasparenti » delle camere,
+           trovata un giro fa. `pointerEvents:'none'` qui, riacceso `'auto'` su ogni bottone
+           vero: il rettangolo torna trasparente ai click dove non c'è niente da premere. */
+        pointerEvents: 'none',
       }}>
+        {/* ── LE LETTURE, ORA QUI SOPRA — segnalato: « il TA ed il time session mettili sopra
+            CLOSE SESSION, nonché diagnostica ». Stava ancorata al fondo del quadrante (giro
+            19, « les écrits en bas de l'arc ») — spostata nella stessa colonna della barra
+            laterale, sopra il bottone che chiude la seduta, impilata in verticale (la
+            colonna è larga 148px, non più la striscia orizzontale che aveva tutto l'arco a
+            disposizione). Zero logica nuova: le stesse letture, lo stesso ordine di
+            importanza (orologio, poi la scelta dell'ago, poi la diagnostica), solo una
+            colonna invece di una riga. */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          {/* L'orologio resta sulla superficie di SERENITY, fuori dal pannello scuro: si
+              guarda una volta ogni tanto, lo strumento in continuazione. */}
+          <span style={{
+            fontFamily: 'var(--s-mono)', fontSize: 17, letterSpacing: '0.06em',
+            color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-ghost)',
+            transition: 'color var(--s-slow) var(--s-ease)',
+            fontVariantNumeric: 'tabular-nums',
+          }}>
+            {orologio(tempo)}
+          </span>
+          {/* ── IN PAUSA — segnalato: la perdita del MUSE deve fermare la seduta, non solo
+              cambiare colore a un puntino in intestazione facile da non notare. */}
+          {aperta && pausata && (
+            <span className="ser-pulse" style={{
+              fontFamily: 'var(--s-sans)', fontSize: 12, fontWeight: 700, letterSpacing: '0.05em',
+              padding: '3px 10px', borderRadius: 999, textAlign: 'center',
+              background: 'var(--s-reserve)', color: 'var(--s-ground)',
+            }}>
+              {pausaMotivoRef.current === 'manuale'
+                ? LC('in pausa', 'en pause', 'paused', 'en pausa', 'pausad')
+                : LC('strumento perso', 'instrument perdu', 'instrument lost',
+                    'instrumento perdido', 'instrument förlorat')}
+            </span>
+          )}
+          {/* ── QUALE AGO GUARDARE — SOLO quando c'è davvero una scelta ───────────────────
+              Segnalato: « les deux aiguilles ? pas vue ». Non è un secondo ago da disegnare
+              accanto al primo (App.tsx li disegna insieme apposta MAI — vedi la nota su
+              `agoEeg`, sopra): è la scelta stessa che mancava, muta e fissa sul Meter.
+              Segnalato di nuovo: « manca anche la vista ENTRAMBI » — la terza voce di
+              App.tsx (`reazioniViste`), che tiene l'ago sul Meter (misurato, non
+              ricostruito) ma AGGIUNGE le reazioni del MUSE etichettate. */}
+          {museOk && meterC && (
+            <div style={{ pointerEvents: 'auto' }}>
+              <SegmentoVetro<'eeg' | 'theta' | 'both'>
+                opzioni={[{ k: 'eeg', label: 'MUSE' }, { k: 'theta', label: 'METER' }, { k: 'both', label: LC('DUE', 'DEUX', 'BOTH', 'DOS', 'TVÅ') }]}
+                selezionato={reazioniViste === 'both' ? 'both' : agoScelto}
+                onChange={v => { setReazioniViste(v); setAgoScelto(v === 'both' ? 'theta' : v); }}
+                minLarghezza={64}
+              />
+            </div>
+          )}
+          {/* ── SEGNALE E INTEGRITÀ DEL MUSE — dipendono dal MUSE essere connesso (`museOk`),
+              non da quale dei due aghi si sta guardando in questo momento — stessa
+              distinzione già fatta per « Santé Système » (`museOk || meterC`, un OR, non
+              l'uno o l'altro). */}
+          {museOk && (
+            <span style={{
+              fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
+              color: 'var(--s-ink-faint)', display: 'flex', gap: 10,
+            }}>
+              {museGate.signalQuality > 0 && <span>{museGate.signalQuality}%</span>}
+              {moduleVis.biometric && (
+                <span title={t('biometric_integrity') as string}>
+                  <LetturaIntegrita />
+                </span>
+              )}
+            </span>
+          )}
+          {/* ── LA LETTURA, DETTA A NUMERI — solo quando c'è un ago EEG davvero collegato:
+              senza MUSE il TA da EEG non significa niente (resta al suo valore di riposo), e
+              mostrarlo lo stesso sembrerebbe una lettura vera. Impilate una per riga: la
+              colonna è stretta, non c'è posto per una riga sola come sull'arco. */}
+          {agoEeg && (
+            <div style={{
+              fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
+              color: 'var(--s-ink-faint)', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: 2,
+            }}>
+              <LetturaTA />
+              <LetturaFase t={t} />
+              <span title={t('total_ta') as string}>
+                <LetturaTotalTa override={meterC ? theta.totalTa : null} bodyMotion={theta.bodyMotion} />
+              </span>
+              <span title={t('mental_processing_velocity') as string}>
+                <LetturaVelocita t={t} />
+              </span>
+              {/* ── LE REAZIONI DELL'ALTRO STRUMENTO, ETICHETTATE — la vista « DUE » qui sopra:
+                  con l'ago sul Meter e « DUE » selezionato, la lettura del MUSE (ricostruita)
+                  si aggiunge accanto, sigla compresa. */}
+            </div>
+          )}
+          {reazioniViste === 'both' && meterC && agoEeg === false && museOk && (
+            <span style={{
+              fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
+              color: 'var(--s-alive)', display: 'flex', gap: 6, alignItems: 'baseline',
+            }}>
+              <span style={{ fontSize: 10, opacity: 0.75 }}>MUSE</span>
+              <LetturaTA />
+            </span>
+          )}
+          {/* ── LA STESSA LETTURA, DAL METER — con METER/senza strumenti restava muto, anche a
+              strumento vero collegato e a numeri veri disponibili. */}
+          {!agoEeg && meterC && (
+            <div style={{
+              fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
+              color: 'var(--s-ink-faint)', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: 2,
+            }}>
+              <span>TA {theta.ta !== null ? theta.ta.toFixed(2) : '—'}</span>
+              {theta.taNow !== null && Math.abs(theta.taNow - (theta.ta ?? theta.taNow)) > 0.01 && (
+                <span>→ {theta.taNow.toFixed(2)}</span>
+              )}
+              {theta.fn.fn && (
+                <span style={{ color: 'var(--s-reserve)' }}>
+                  {LC('galleggia', 'flotte', 'floating', 'flota', 'flyter')}
+                </span>
+              )}
+              <span title={t('total_ta') as string}>
+                <LetturaTotalTa override={theta.totalTa} bodyMotion={theta.bodyMotion} />
+              </span>
+            </div>
+          )}
+        </div>
         <button className="s-glass s-glass-btn" onClick={aperta ? chiudi : apri} style={{
-          cursor: 'pointer',
+          cursor: 'pointer', pointerEvents: 'auto',
           background: 'var(--s-disc)', color: 'var(--s-ink)',
           borderRadius: 16, padding: '12px 10px',
           fontSize: 14, letterSpacing: '0.08em', textTransform: 'uppercase',
@@ -1956,7 +2088,7 @@ export default function Serenity() {
               ? LC('riprendi la seduta', 'reprendre la séance', 'resume the session', 'reanudar la sesión', 'återuppta sessionen')
               : LC('metti in pausa', 'mettre en pause', 'pause', 'pausar', 'pausa')) as string}
             style={{
-              cursor: 'pointer', padding: '10px 10px', borderRadius: 16,
+              cursor: 'pointer', pointerEvents: 'auto', padding: '10px 10px', borderRadius: 16,
               background: 'var(--s-disc)', display: 'flex', justifyContent: 'center',
               color: pausata ? 'var(--s-alive)' : 'var(--s-ink-soft)',
             }}>
@@ -1984,7 +2116,7 @@ export default function Serenity() {
               { k: 'tone', hue: null, label: 'TONE', onClick: () => setToneAttivo(true) },
             ]).map(c => (
               <button key={c.k} className="s-glass s-glass-btn" onClick={c.onClick} style={{
-                border: `1.5px solid ${c.hue ?? 'var(--s-ink-ghost)'}`, cursor: 'pointer',
+                border: `1.5px solid ${c.hue ?? 'var(--s-ink-ghost)'}`, cursor: 'pointer', pointerEvents: 'auto',
                 borderRadius: 16, padding: '10px 10px', background: 'var(--s-disc)',
                 fontFamily: 'var(--s-sans)', fontSize: 14.5, fontWeight: 700, letterSpacing: '0.05em',
                 color: c.hue ?? 'var(--s-ink-soft)', textAlign: 'center',
@@ -2074,12 +2206,30 @@ export default function Serenity() {
               {t('ser_expert_tag')}
             </span>
           )}
-          {/* ── SALVA QUESTA CONFIGURAZIONE, ORA QUI DENTRO — segnalato: « le bouton doit être
-              inclus dans le champ avec les indications Auditeur/PC Expert/Normal, sous forme
-              d'icône ». Stessa azione di prima (`salvaConfigAperto`/`salvaConfigurazione`), ma
-              non più una pillola a parte accanto a questa: un'icona sola, dentro la STESSA
-              pillola di chi/come si audita — perché salvare LA CONFIGURAZIONE è salvare
-              esattamente quello che questa pillola racconta, non un'azione indipendente. */}
+          {/* ── CAMBIA AUDITOR O PRECLEAR, ORA UN'ICONA QUI DENTRO — segnalato: « CHANGE AUDITOR
+              OR PRECLEAR doit être sous forme d'icône à avant l'icône sauvegarde de
+              l'indication de Auditor/PC et mode en haut ». Era un link di testo in fondo alla
+              barra comandi ("← changer d'auditeur ou de préclair"), lontano dalla pillola che
+              descrive chi sta auditando — la stessa `ricomincia()` di sempre, solo un'icona,
+              nello stesso posto delle scelte che cambia. */}
+          {!aperta && (
+            <button
+              className="s-glass-btn"
+              onClick={ricomincia}
+              title={t('ser_change_people') as string}
+              style={{
+                display: 'flex', alignItems: 'center', border: 'none', background: 'none',
+                cursor: 'pointer', padding: 2, color: 'var(--s-ink-faint)', lineHeight: 0,
+              }}>
+              <UserCog size={24} strokeWidth={1.8} aria-hidden="true" />
+            </button>
+          )}
+          {/* ── SALVA QUESTA CONFIGURAZIONE — segnalato: « le bouton doit être inclus dans le
+              champ avec les indications Auditeur/PC Expert/Normal, sous forme d'icône ».
+              Stessa azione di prima (`salvaConfigAperto`/`salvaConfigurazione`), un'icona sola,
+              dentro la STESSA pillola di chi/come si audita — perché salvare LA
+              CONFIGURAZIONE è salvare esattamente quello che questa pillola racconta, non
+              un'azione indipendente. */}
           {!aperta && (
             <div style={{ position: 'relative' }}>
               <button
@@ -2948,15 +3098,10 @@ export default function Serenity() {
             {ep.epValidated ? 'EP ✓' : 'EP'}
           </button>
         )}
+        {/* Il link « ← changer d'auditeur ou de préclair » è diventato l'icona `UserCog`
+            dentro il campo Auditor/PC in alto — segnalato: « CHANGE AUDITOR OR PRECLEAR doit
+            être sous forme d'icône... en haut ». Non più qui. */}
         <span style={{ flex: 1 }} />
-        {!aperta && (
-          <button onClick={ricomincia} style={{
-            border: 'none', background: 'none', cursor: 'pointer',
-            fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-faint)',
-          }}>
-            ← {t('ser_change_people')}
-          </button>
-        )}
       </div>
 
       {/* ── IL CAMPO ──────────────────────────────────────────────────────────────────────
@@ -3397,147 +3542,11 @@ export default function Serenity() {
               </div>
             </div>
           )}
-          {/* ── LA STRISCIA DELLE LETTURE, IN BASSO SULL'ARCO — segnalata: « les écrits en bas
-              de l'arc (TA, durée, etc) doivent être positionnés exactement comme dans
-              Equilibrium pour avoir plus de place pour l'ARC ». Stava FUORI da questo
-              contenitore, un figlio in più della colonna flessibile della sezione — ogni
-              lettura aggiunta (TA totale, velocità di rilascio, badge di pausa) lo faceva
-              crescere, e siccome il quadrante qui sopra ha un `maxHeight` calcolato SULLO
-              spazio che resta, crescere quella striscia vuol dire restringere l'arco. In
-              App.tsx queste letture stanno DENTRO il pannello dello strumento (`Panel3D`,
-              laterale) — non sotto, non fuori: non contendono mai spazio all'arco perché non
-              sono nel suo stesso flusso. Stessa idea qui: un'unica striscia ancorata al FONDO
-              di QUESTO contenitore (`position:absolute`, come `ToneColumn`/i cassetti sopra),
-              fuori dal flusso della sezione — il quadrante torna a leggere `calc(100% - 44px)`
-              come uno spazio VERO, non conteso. */}
-          <div style={{
-            position: 'absolute', left: 16, right: 16, bottom: 10, zIndex: 3,
-            display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center',
-            gap: 16, rowGap: 4, pointerEvents: 'none',
-          }}>
-            <div style={{ pointerEvents: 'auto' }}>
-              {/* ── QUALE AGO GUARDARE — SOLO quando c'è davvero una scelta ───────────────────
-                  Segnalato: « les deux aiguilles ? pas vue ». Non è un secondo ago da disegnare
-                  accanto al primo (App.tsx li disegna insieme apposta MAI — vedi la nota su
-                  `agoEeg`, sopra): è la scelta stessa che mancava, muta e fissa sul Meter.
-                  Segnalato di nuovo: « manca anche la vista ENTRAMBI » — la terza voce di
-                  App.tsx (`reazioniViste`), che tiene l'ago sul Meter (misurato, non
-                  ricostruito) ma AGGIUNGE le reazioni del MUSE etichettate. */}
-              {museOk && meterC && (
-                <SegmentoVetro<'eeg' | 'theta' | 'both'>
-                  opzioni={[{ k: 'eeg', label: 'MUSE' }, { k: 'theta', label: 'METER' }, { k: 'both', label: LC('DUE', 'DEUX', 'BOTH', 'DOS', 'TVÅ') }]}
-                  selezionato={reazioniViste === 'both' ? 'both' : agoScelto}
-                  onChange={v => { setReazioniViste(v); setAgoScelto(v === 'both' ? 'theta' : v); }}
-                  minLarghezza={64}
-                />
-              )}
-            </div>
-            {/* L'orologio resta sulla superficie di SERENITY, fuori dal pannello scuro: si
-                guarda una volta ogni tanto, lo strumento in continuazione. */}
-            <span style={{
-              fontFamily: 'var(--s-mono)', fontSize: 15.5, letterSpacing: '0.06em',
-              color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-ghost)',
-              transition: 'color var(--s-slow) var(--s-ease)',
-              fontVariantNumeric: 'tabular-nums',
-            }}>
-              {orologio(tempo)}
-            </span>
-            {/* ── IN PAUSA — segnalato: la perdita del MUSE deve fermare la seduta, non solo
-                cambiare colore a un puntino in intestazione facile da non notare. */}
-            {aperta && pausata && (
-              <span className="ser-pulse" style={{
-                fontFamily: 'var(--s-sans)', fontSize: 13.5, fontWeight: 700, letterSpacing: '0.06em',
-                padding: '3px 10px', borderRadius: 999,
-                background: 'var(--s-reserve)', color: 'var(--s-ground)',
-              }}>
-                {pausaMotivoRef.current === 'manuale'
-                  ? LC('in pausa', 'en pause', 'paused', 'en pausa', 'pausad')
-                  : LC('in pausa — strumento perso', 'en pause — instrument perdu', 'paused — instrument lost',
-                      'en pausa — instrumento perdido', 'pausad — instrument förlorat')}
-              </span>
-            )}
-            {/* ── SEGNALE E INTEGRITÀ DEL MUSE — segnalato: « je ne vois pas les modules
-                journal de session etc. manquants » — l'integrità biometrica era ANNIDATA
-                dentro `agoEeg &&` (il blocco del TA da EEG, sotto): con METER connesso e
-                l'ago scelto su Meter (`agoEeg=false`), spariva anche se il MUSE restava
-                connesso e leggeva — non era il modulo a mancare, era la condizione sbagliata.
-                La qualità del segnale/l'integrità dipendono dal MUSE essere connesso
-                (`museOk`), non da quale dei due aghi si sta guardando in questo momento —
-                stessa distinzione già fatta per « Santé Système » (`agoEeg || meterC`,
-                un OR, non l'uno o l'altro). */}
-            {museOk && (
-              <span style={{
-                fontFamily: 'var(--s-mono)', fontSize: 14.5, letterSpacing: '0.04em',
-                color: 'var(--s-ink-faint)', display: 'flex', gap: 14,
-              }}>
-                {museGate.signalQuality > 0 && <span>{museGate.signalQuality}%</span>}
-                {moduleVis.biometric && (
-                  <span title={t('biometric_integrity') as string}>
-                    <LetturaIntegrita />
-                  </span>
-                )}
-              </span>
-            )}
-            {/* ── LA LETTURA, DETTA A NUMERI — solo quando c'è un ago EEG davvero collegato:
-                senza MUSE il TA da EEG non significa niente (resta al suo valore di riposo), e
-                mostrarlo lo stesso sembrerebbe una lettura vera. */}
-            {agoEeg && (
-              <span style={{
-                fontFamily: 'var(--s-mono)', fontSize: 14.5, letterSpacing: '0.04em',
-                color: 'var(--s-ink-faint)', display: 'flex', gap: 14,
-              }}>
-                <LetturaTA />
-                <LetturaFase t={t} />
-                <span title={t('total_ta') as string}>
-                  <LetturaTotalTa override={meterC ? theta.totalTa : null} bodyMotion={theta.bodyMotion} />
-                </span>
-                <span title={t('mental_processing_velocity') as string}>
-                  <LetturaVelocita t={t} />
-                </span>
-                {/* ── LE REAZIONI DELL'ALTRO STRUMENTO, ETICHETTATE — la vista « DUE » qui sopra:
-                    con l'ago sul Meter e « DUE » selezionato, la lettura del MUSE (ricostruita)
-                    si aggiunge accanto, sigla compresa — stessa idea di App.tsx (`reazioniViste
-                    === 'both'`), senza il disegno del secondo ago (SERENITY ne mostra sempre
-                    uno solo, la scelta fatta nel decimo giro). */}
-              </span>
-            )}
-            {reazioniViste === 'both' && meterC && agoEeg === false && museOk && (
-              <span style={{
-                fontFamily: 'var(--s-mono)', fontSize: 14.5, letterSpacing: '0.04em',
-                color: 'var(--s-alive)', display: 'flex', gap: 8, alignItems: 'baseline',
-              }}>
-                <span style={{ fontSize: 11, opacity: 0.75 }}>MUSE</span>
-                <LetturaTA />
-              </span>
-            )}
-            {/* ── LA STESSA LETTURA, DAL METER — con METER/senza strumenti restava muto, anche a
-                strumento vero collegato e a numeri veri disponibili (`theta.ta`/`taNow`, già
-                calcolati da `useThetaMeter`). Il TA di riposo, quello ISTANTANEO se si scosta,
-                e FN se l'estensimetro fluttua (`theta.fn.fn`, lo stesso segnale che l'arco
-                legge). */}
-            {!agoEeg && meterC && (
-              <span style={{
-                fontFamily: 'var(--s-mono)', fontSize: 14.5, letterSpacing: '0.04em',
-                color: 'var(--s-ink-faint)', display: 'flex', gap: 14,
-              }}>
-                <span>TA {theta.ta !== null ? theta.ta.toFixed(2) : '—'}</span>
-                {theta.taNow !== null && Math.abs(theta.taNow - (theta.ta ?? theta.taNow)) > 0.01 && (
-                  <span>→ {theta.taNow.toFixed(2)}</span>
-                )}
-                {theta.fn.fn && (
-                  <span style={{ color: 'var(--s-reserve)' }}>
-                    {LC('galleggia', 'flotte', 'floating', 'flota', 'flyter')}
-                  </span>
-                )}
-                <span title={t('total_ta') as string}>
-                  <LetturaTotalTa override={theta.totalTa} bodyMotion={theta.bodyMotion} />
-                </span>
-              </span>
-            )}
-          </div>
         </div>
         {/* `CycleStatusBar` si è spostato nel blocco dei comandi CONTACT/NULL, sopra: stesso
-            posto di App.tsx (« riga sotto la domanda »), non più qui vicino al quadrante. */}
+            posto di App.tsx (« riga sotto la domanda »), non più qui vicino al quadrante. Le
+            letture (orologio, TA, diagnostica) si sono spostate nella barra laterale — vedi
+            la nota lì, sopra "CLOSE SESSION". */}
 
         {/* ⚠️ I QUATTRO CERCHI SATELLITE (assessment, cycle hint, …) SONO STATI TOLTI DA QUI,
             non solo spenti. Erano posizionati per orbitare un cerchio centrale da 380 px; con

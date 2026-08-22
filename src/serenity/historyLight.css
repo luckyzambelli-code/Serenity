@@ -1,0 +1,109 @@
+/**
+ * historyLight.css — « History » in tema chiaro.
+ *
+ * ── PERCHÉ ESISTE ───────────────────────────────────────────────────────────────────────────
+ * Segnalato: « il faut aussi que ces deux modules [Historique et Processus] soient en white ou
+ * dark en fonction du choix effectué ». `ProcessusModal` legge già `useUiStore().isLightTheme`
+ * da sé (autosufficiente in entrambi i temi, nessuna correzione serviva). `HistoryModal` no:
+ * il suo stesso nome di classe lo dice — `.nest-dark-modal` — ed è SCURO SEMPRE, anche in
+ * EQUILIBRIUM, a prescindere dal suo tema (non un bug di SERENITY: `HistoryModal.tsx` non
+ * importa mai `useUiStore`). Qui però l'auditor ha scelto un tema, e la seconda finestra più
+ * usata (dopo il quadrante) restare buia in mezzo a una pagina bianco perla è la stessa
+ * incoerenza già corretta altrove in questa refonte.
+ *
+ * ── PERCHÉ QUI, NON DENTRO `HistoryModal.tsx` ──────────────────────────────────────────────
+ * Quel file è condiviso — cambiarlo cambierebbe anche EQUILIBRIUM, che NON ha chiesto questo.
+ * `HistoryModal` colora sé stesso con un proprio `<style>` interno che ridipinge le classi
+ * Tailwind di default (pensate per un fondo chiaro) in una tavolozza scura, con `!important`.
+ * Qui si fa la stessa cosa nella direzione opposta, SOLO quando `data-tema="chiaro"` è
+ * sull'`<html>` (la stessa preferenza di `tokens.css`) — un selettore con un pezzo in più
+ * (`:root[data-tema='chiaro']`) batte in specificità le regole originali a parità di
+ * `!important`, senza serve l'ordine nel DOM.
+ *
+ * ── QUEL CHE RESTA FUORI ────────────────────────────────────────────────────────────────────
+ * Il velo di fondo (`rgba(0,0,0,0.55)`, DIETRO il pannello) resta scuro apposta — è lo stesso
+ * scrim di `CreditsModal`/`GuideModal`, indipendente dal tema per design. Un piccolo badge
+ * secondario (« archive N · autres N ») ha colore/fondo scritti in linea, non in una classe:
+ * resta con basso contrasto in chiaro — un dettaglio minore, dichiarato qui invece che finto
+ * sistemato con un trucco fragile.
+ *
+ * @see docs/serenity-refonte.md
+ */
+
+:root[data-tema='chiaro'] .nest-dark-modal {
+  background: linear-gradient(160deg, #f3f7fc 0%, #e6eef8 100%) !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal h2 {
+  color: #0f172a !important;
+  text-shadow: none !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal label,
+:root[data-tema='chiaro'] .nest-dark-modal .text-slate-400,
+:root[data-tema='chiaro'] .nest-dark-modal .text-slate-500 {
+  color: #64748b !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal .text-slate-600,
+:root[data-tema='chiaro'] .nest-dark-modal .text-slate-700,
+:root[data-tema='chiaro'] .nest-dark-modal .text-slate-800 {
+  color: #0f172a !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal .text-cyan-700,
+:root[data-tema='chiaro'] .nest-dark-modal .text-cyan-800 {
+  color: #0e7490 !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal .bg-white\/50,
+:root[data-tema='chiaro'] .nest-dark-modal .bg-white\/55,
+:root[data-tema='chiaro'] .nest-dark-modal .bg-white\/60,
+:root[data-tema='chiaro'] .nest-dark-modal .bg-white\/40,
+:root[data-tema='chiaro'] .nest-dark-modal .bg-white\/30 {
+  background: rgba(255,255,255,0.85) !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal .bg-slate-100,
+:root[data-tema='chiaro'] .nest-dark-modal .bg-slate-200,
+:root[data-tema='chiaro'] .nest-dark-modal .bg-slate-50 {
+  background: rgba(8,145,178,0.06) !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal .border-slate-200,
+:root[data-tema='chiaro'] .nest-dark-modal .border-slate-300,
+:root[data-tema='chiaro'] .nest-dark-modal .border-slate-200\/60,
+:root[data-tema='chiaro'] .nest-dark-modal .border-slate-200\/40 {
+  border-color: rgba(8,145,178,0.20) !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal .border-white\/60 {
+  border-color: rgba(8,145,178,0.30) !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal input,
+:root[data-tema='chiaro'] .nest-dark-modal textarea {
+  color: #0f172a !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal input::placeholder {
+  color: #94a3b8 !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal .bg-cyan-50 {
+  background: rgba(8,145,178,0.10) !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal .border-cyan-300 {
+  border-color: rgba(8,145,178,0.35) !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal .bg-cyan-100\/50 {
+  background: rgba(8,145,178,0.14) !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal .bg-red-50,
+:root[data-tema='chiaro'] .nest-dark-modal .bg-red-50\/30 {
+  background: rgba(220,38,38,0.08) !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal .border-red-200,
+:root[data-tema='chiaro'] .nest-dark-modal .border-red-400 {
+  border-color: rgba(220,38,38,0.35) !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal .text-red-600,
+:root[data-tema='chiaro'] .nest-dark-modal .text-red-700 {
+  color: #b91c1c !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal .bg-red-100 {
+  background: rgba(220,38,38,0.14) !important;
+}
+:root[data-tema='chiaro'] .nest-dark-modal .bg-slate-600,
+:root[data-tema='chiaro'] .nest-dark-modal .bg-slate-700 {
+  background: rgba(8,145,178,0.18) !important;
+}
