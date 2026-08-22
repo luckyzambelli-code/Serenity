@@ -94,10 +94,15 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
   };
 
   return (
+    // ⚠️ Segnalato: « la zone assessment doit être aussi à gauche... mais tous en dehors de la
+    // zone arc, qui se réduit dès qu'un module apparaît ». Prima galleggiava `position:absolute`
+    // SUL quadrante (un angolo a sé, senza toccare la taglia di nessun altro) — ora vive IN
+    // FLUSSO, in una colonna vera che `Serenity.tsx` gli riserva accanto all'arco (che si
+    // restringe per farle posto): niente più `position`/`top`/`left` qui, la taglia e il posto
+    // li decide chi la monta, come ogni altro elemento normale del layout.
     <div className="s-glass s-glass-lift" style={{
-      position: 'absolute', top: 16, left: 32, zIndex: 5,
       display: 'flex', flexDirection: 'column', gap: 8,
-      width: 320, maxHeight: attivo ? 460 : 'auto',
+      width: '100%', maxHeight: attivo ? '100%' : 'auto', overflowY: 'auto',
       borderRadius: 16, background: 'var(--s-disc)', padding: '12px 14px',
       pointerEvents: 'auto',
     }}>

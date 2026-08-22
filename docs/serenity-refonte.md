@@ -2006,6 +2006,66 @@ un file nuovo (`healthPanelButtons.css`). EQUILIBRIUM invariato.
 
 ---
 
+## Trentesimo giro (22/08/2026) — assessment/Santé/journal in colonne vere fuori dall'arco, l'arco si restringe, le letture nell'angolo, l'intestazione compatta a sinistra
+
+Quattro segnalazioni, la più grande di questo giro:
+
+1. **« La zone assessment doit être aussi à gauche, comme Système Santé/Journal, mais tous en
+   dehors de la zone arc, qui se réduit dès qu'un module apparaît. Les zones modules doivent
+   être larges de moitié »** — la riscrittura più grande: assessment/Santé/journal
+   galleggiavano `position:absolute` SUL quadrante (due giri fa erano stati ancorati a un
+   angolo/lato, ma restavano fuori dal FLUSSO — l'arco non sapeva che esistevano). Ora
+   `<section>` è una riga a tre colonne vera: assessment a sinistra, l'arco al centro
+   (`flex:1`, si restringe da sé), Santé/journal a destra — ciascuna colonna aperta prende
+   metà della riga (`width:'50%'`), un terzo a testa se sono aperte insieme (altrimenti
+   l'arco sparirebbe: trovato verificando dal vivo). `ZonaAssessment.tsx` non è più
+   `position:absolute` (zero logica toccata, solo il contenitore).
+   **Due bug trovati per strada, nello stesso giro**:
+   - Le colonne finivano SOTTO la barra laterale (OPEN/PAUSA/CONTACT/…): `<section>` non
+     aveva mai avuto bisogno di uno spazio riservato per lei finché tutto era assoluto.
+     `paddingLeft` su `<section>`.
+   - `<section>` aveva un'ALTEZZA DI GRIGLIA MINUSCOLA (111px su 900): `gridTemplateRows`
+     di `<main>` (`'auto 1fr auto'`) era scritto per l'ordine header/arco/comandi, ma i
+     comandi si erano spostati SOPRA l'arco in un giro passato senza aggiornare il modello —
+     la riga elastica (`1fr`) andava ai comandi, non all'arco. Restava invisibile perché
+     l'arco (`aspect-ratio`) trabocca dal proprio riquadro senza saperlo. Corretto:
+     `'auto auto 1fr'`.
+   - **Segnalato ANCORA, a verifica in corso**: « le zones devono essere sotto les cams » — le
+     camere (`position:absolute, top:16, right:32`) e la nuova colonna destra occupavano LA
+     STESSA area. `paddingTop` sulla colonna destra, pari alla vera altezza dello stack delle
+     camere (una o due, aperte o collassate) — le tiene sempre sotto.
+
+2. **« Les boutons History et Processus après le bouton langue »** — spostati da subito dopo
+   il numero di versione a subito dopo `SelettoreLingua`.
+
+3. **« Les boutons de haut doivent être justifiés à gauche à côté du numéro de build »** — lo
+   spazio elastico (`flex:1`) che spingeva tema/lingua/pillola/connessioni verso destra è
+   stato spostato in fondo all'intestazione (dopo l'assistente IA): ora tutto si accoda a
+   sinistra, il vuoto va tutto a destra.
+
+4. **« L'horloge, le temps de session, le TA et la somme de TA doivent être inscrits en haut à
+   gauche dans la zone de l'arc »** — l'intero blocco letture (ora reale, tempo di seduta,
+   badge pausa, segnale/integrità, TA/fase/TA totale/velocità) spostato dalla barra laterale
+   all'angolo in alto a sinistra DENTRO il riquadro dell'arco stesso — lo stesso posto in cui
+   stava `ZonaAssessment` prima di diventare una colonna. `--s-ink-faint` al posto di
+   `-ghost` (due punti), stessa ragione già scritta per il giornale: questo riquadro ha il suo
+   schermo scuro apposta in tema scuro.
+
+**Osservazione, non richiesta oggi**: con TUTTI i moduli accesi insieme (l'impostazione di
+fabbrica — `SERENITY_MODULES_DEFAULT` li accende tutti), assessment (33%) + Santé/journal
+(33%) lasciano l'arco molto stretto, e MNA (che continua a galleggiare SUL quadrante, mai
+toccato) può arrivare a coprirlo quasi del tutto a quella taglia. Con un solo modulo alla
+volta (l'uso più comune, gli altri spenti da CONFIG) l'arco resta ampio — verificato dal vivo.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, verifica dal vivo estesa (profilo TEST, resize della finestra) — le tre colonne, il
+`paddingLeft`/`paddingTop` che le tengono fuori da barra laterale e camere, l'intestazione
+compatta a sinistra, le letture nell'angolo dell'arco. Nessun errore in console oltre ai
+fallimenti di rete attesi. `git status`: solo `src/serenity/Serenity.tsx` e
+`src/serenity/ZonaAssessment.tsx`. EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

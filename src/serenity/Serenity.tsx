@@ -1759,9 +1759,43 @@ export default function Serenity() {
     );
   }
 
+  /* ── LARGHEZZA DELLE COLONNE MODULO — segnalato: « le zones modules doivent être larges de
+   *  moitié ». Metà larghezza va bene con UNA sola colonna aperta (assessment SOLO, o Santé/
+   *  journal SOLI) — con ENTRAMBE aperte insieme (di norma il journal è sempre acceso, e
+   *  l'assessment lo è quasi sempre) « metà + metà » lascerebbe l'arco a zero, sparito sotto le
+   *  due colonne — trovato verificando dal vivo QUESTO stesso giro. Con due colonne, un terzo a
+   *  testa: l'arco tiene sempre almeno un terzo buono della riga. */
+  const assessColOpen = aperta && moduleVis.ri;
+  const rightColOpen = (aperta && moduleVis.health && (museOk || meterC)) || moduleVis.journal;
+  const moduleColCount = (assessColOpen ? 1 : 0) + (rightColOpen ? 1 : 0);
+  const moduleColWidth = moduleColCount >= 2 ? '33%' : '50%';
+  /* ── LE CAMERE SONO SOPRA — segnalato: « le zones devono essere sotto les cams ». Le camere
+   *  galleggiano `position:absolute, top:16, right:32` sulla STESSA colonna destra dove ora
+   *  vive Santé Système/journal (in flusso, sotto) — senza spazio riservato, le due si
+   *  sovrapponevano. Un `paddingTop` sulla colonna destra pari alla vera altezza dello stack
+   *  (aperta/collassata, una o due camere) le tiene SEMPRE sotto, mai più sotto le camere. */
+  const cam2H = !moduleVis.cam2 ? 0 : (cam2Collassata ? 88 : 340);
+  const cam1H = !moduleVis.cam1 ? 0 : (cam1Collassata ? 88 : 213);
+  const camStackH = (moduleVis.cam1 || moduleVis.cam2)
+    ? 16 + cam2H + (moduleVis.cam1 && moduleVis.cam2 ? 14 : 0) + cam1H + 20
+    : 0;
+
   return (
     <main style={{
-      height: '100%', display: 'grid', gridTemplateRows: 'auto 1fr auto',
+      height: '100%', display: 'grid',
+      /* ⚠️ BUG TROVATO verificando dal vivo QUESTO stesso giro: `'auto 1fr auto'` era scritto
+         per TRE figli nell'ordine header/quadrante/comandi (« era `<footer>`, l'ultimo figlio
+         della pagina » — nota più giù su `ser-comandi`) — quando i comandi si sono spostati
+         SOPRA il quadrante (un giro passato), l'ordine è diventato header/comandi/quadrante,
+         ma il modello no: la riga elastica (`1fr`) restava la SECONDA, che ora è `ser-comandi`
+         (una barra di bottoni, non lo strumento) — a `<section>` (l'arco, ciò che davvero ha
+         bisogno di spazio) restava l'ULTIMA riga, `auto`: strizzata al minimo. Restava invisibile
+         finché l'arco (il suo `aspect-ratio` deriva l'altezza dalla LARGHEZZA, non dallo spazio
+         verticale del genitore) semplicemente TRABOCCAVA dal proprio riquadro senza saperlo —
+         disegnato alla taglia giusta, ma con una riga di GRIGLIA minuscola sotto. Le nuove colonne
+         dei moduli (assessment/Santé/journal, sopra), IN FLUSSO invece che `position:absolute`,
+         quello spazio lo chiedono per davvero: `1fr` ora va a `<section>`, l'ultima riga. */
+      gridTemplateRows: 'auto auto 1fr',
       padding: '38px 44px', gap: 24, position: 'relative',
     }}>
       {/* ── METER / MUSE / NESSUNO STRUMENTO — si sceglie PRIMA di aprire ──────────────────────
@@ -1972,126 +2006,11 @@ export default function Serenity() {
            vero: il rettangolo torna trasparente ai click dove non c'è niente da premere. */
         pointerEvents: 'none',
       }}>
-        {/* ── LE LETTURE, ORA QUI SOPRA — segnalato: « il TA ed il time session mettili sopra
-            CLOSE SESSION, nonché diagnostica ». Stava ancorata al fondo del quadrante (giro
-            19, « les écrits en bas de l'arc ») — spostata nella stessa colonna della barra
-            laterale, sopra il bottone che chiude la seduta, impilata in verticale (la
-            colonna è larga 148px, non più la striscia orizzontale che aveva tutto l'arco a
-            disposizione). Zero logica nuova: le stesse letture, lo stesso ordine di
-            importanza (orologio, poi la scelta dell'ago, poi la diagnostica), solo una
-            colonna invece di una riga. */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          {/* ── L'ORA ATTUALE, SOPRA — segnalato: « sopra una icona con l'ora attuale ».
-              L'icona `Clock` la distingue da quella della seduta appena sotto — due letture,
-              due sigle, non da confondere. */}
-          <span style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            fontFamily: 'var(--s-mono)', fontSize: 14, letterSpacing: '0.04em',
-            color: 'var(--s-ink-ghost)',
-          }}>
-            <Clock size={13} strokeWidth={1.8} aria-hidden="true" />
-            <OraReale />
-          </span>
-          {/* ── L'OROLOGIO DELLA SEDUTA — segnalato: « vicino all'ora ci deve essere l'icona
-              che indica cosa è ». `Timer` dice che questo È la durata della seduta, non l'ora
-              vera (appena sopra) — resta sulla superficie di SERENITY, fuori dal pannello
-              scuro: si guarda una volta ogni tanto, lo strumento in continuazione. */}
-          <span style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            fontFamily: 'var(--s-mono)', fontSize: 17, letterSpacing: '0.06em',
-            color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-ghost)',
-            transition: 'color var(--s-slow) var(--s-ease)',
-            fontVariantNumeric: 'tabular-nums',
-          }}>
-            <Timer size={15} strokeWidth={1.8} aria-hidden="true" />
-            {orologio(tempo)}
-          </span>
-          {/* ── IN PAUSA — segnalato: la perdita del MUSE deve fermare la seduta, non solo
-              cambiare colore a un puntino in intestazione facile da non notare. */}
-          {aperta && pausata && (
-            <span className="ser-pulse" style={{
-              fontFamily: 'var(--s-sans)', fontSize: 12, fontWeight: 700, letterSpacing: '0.05em',
-              padding: '3px 10px', borderRadius: 999, textAlign: 'center',
-              background: 'var(--s-reserve)', color: 'var(--s-ground)',
-            }}>
-              {pausaMotivoRef.current === 'manuale'
-                ? LC('in pausa', 'en pause', 'paused', 'en pausa', 'pausad')
-                : LC('strumento perso', 'instrument perdu', 'instrument lost',
-                    'instrumento perdido', 'instrument förlorat')}
-            </span>
-          )}
-          {/* ── SEGNALE E INTEGRITÀ DEL MUSE — dipendono dal MUSE essere connesso (`museOk`),
-              non da quale dei due aghi si sta guardando in questo momento — stessa
-              distinzione già fatta per « Santé Système » (`museOk || meterC`, un OR, non
-              l'uno o l'altro). */}
-          {museOk && (
-            <span style={{
-              fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
-              color: 'var(--s-ink-faint)', display: 'flex', gap: 10,
-            }}>
-              {museGate.signalQuality > 0 && <span>{museGate.signalQuality}%</span>}
-              {moduleVis.biometric && (
-                <span title={t('biometric_integrity') as string}>
-                  <LetturaIntegrita />
-                </span>
-              )}
-            </span>
-          )}
-          {/* ── LA LETTURA, DETTA A NUMERI — solo quando c'è un ago EEG davvero collegato:
-              senza MUSE il TA da EEG non significa niente (resta al suo valore di riposo), e
-              mostrarlo lo stesso sembrerebbe una lettura vera. Impilate una per riga: la
-              colonna è stretta, non c'è posto per una riga sola come sull'arco. */}
-          {agoEeg && (
-            <div style={{
-              fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
-              color: 'var(--s-ink-faint)', display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: 2,
-            }}>
-              <LetturaTA />
-              <LetturaFase t={t} />
-              <span title={t('total_ta') as string}>
-                <LetturaTotalTa override={meterC ? theta.totalTa : null} bodyMotion={theta.bodyMotion} />
-              </span>
-              <span title={t('mental_processing_velocity') as string}>
-                <LetturaVelocita t={t} />
-              </span>
-              {/* ── LE REAZIONI DELL'ALTRO STRUMENTO, ETICHETTATE — la vista « DUE » qui sopra:
-                  con l'ago sul Meter e « DUE » selezionato, la lettura del MUSE (ricostruita)
-                  si aggiunge accanto, sigla compresa. */}
-            </div>
-          )}
-          {reazioniViste === 'both' && meterC && agoEeg === false && museOk && (
-            <span style={{
-              fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
-              color: 'var(--s-alive)', display: 'flex', gap: 6, alignItems: 'baseline',
-            }}>
-              <span style={{ fontSize: 10, opacity: 0.75 }}>MUSE</span>
-              <LetturaTA />
-            </span>
-          )}
-          {/* ── LA STESSA LETTURA, DAL METER — con METER/senza strumenti restava muto, anche a
-              strumento vero collegato e a numeri veri disponibili. */}
-          {!agoEeg && meterC && (
-            <div style={{
-              fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
-              color: 'var(--s-ink-faint)', display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: 2,
-            }}>
-              <span>TA {theta.ta !== null ? theta.ta.toFixed(2) : '—'}</span>
-              {theta.taNow !== null && Math.abs(theta.taNow - (theta.ta ?? theta.taNow)) > 0.01 && (
-                <span>→ {theta.taNow.toFixed(2)}</span>
-              )}
-              {theta.fn.fn && (
-                <span style={{ color: 'var(--s-reserve)' }}>
-                  {LC('galleggia', 'flotte', 'floating', 'flota', 'flyter')}
-                </span>
-              )}
-              <span title={t('total_ta') as string}>
-                <LetturaTotalTa override={theta.totalTa} bodyMotion={theta.bodyMotion} />
-              </span>
-            </div>
-          )}
-        </div>
+        {/* ── LE LETTURE, ORA DENTRO L'ARCO — segnalato: « l'horloge, le temps de session, le TA
+            e la somme de TA doivent être inscrits en haut à gauche dans la zone de l'arc ».
+            Stavano qui (colonna stretta a lato, fuori dallo strumento) — spostate dentro il
+            riquadro dello strumento stesso, angolo in alto a sinistra (v. più giù, appena
+            prima di `<QuantumSphere>`). Zero logica nuova, solo dove compaiono. */}
         <button className="s-glass s-glass-btn" onClick={aperta ? chiudi : apri} style={{
           cursor: 'pointer', pointerEvents: 'auto',
           background: 'var(--s-disc)', color: 'var(--s-ink)',
@@ -2213,13 +2132,15 @@ export default function Serenity() {
         <span style={{ fontFamily: 'var(--s-mono)', fontSize: 13.5, color: 'var(--s-ink-faint)' }}>
           {__SERENITY_VERSION__}
         </span>
-        {/* ── STORICO E PROCESSUS, ORA QUI — segnalato: « sposta tutti i bottoni in alto vicino
-            al numero di versione, in modo da avere il tutto sulla stessa linea ». Stavano nella
-            barra comandi sotto il quadrante (v. nota lì, ancora leggibile per la cronologia di
-            come ci sono arrivati); erano gli ultimi due bottoni statici rimasti fuori
-            dall'intestazione (CONTACT/NULL/MIRROR/TONE/OPEN/PAUSA sono nella barra laterale per
-            un'altra richiesta esplicita, non "bottoni" in questo senso). Stessa icona, stesso
-            `onClick`, nessuna logica toccata — solo la riga in cui compaiono ora. */}
+        {/* ⚠️ SEGNALATO: « la langue doit pouvoir être changée en cours de route » — non solo
+            alle quattro domande d'avvio. Stessi due selettori di `Avvio.tsx`, condivisi da
+            `Impostazioni.tsx`: qui restano visibili per tutta la seduta, non solo prima. */}
+        <SelettoreTema />
+        <SelettoreLingua />
+        {/* ── STORICO E PROCESSUS, DOPO IL BOTTONE LINGUA — segnalato: « les boutons History et
+            Processus après le bouton langue ». Stavano subito dopo il numero di versione, PRIMA
+            di tema/lingua — spostati dopo. Stessa icona, stesso `onClick`, nessuna logica
+            toccata — solo la posizione. */}
         <button className="s-glass s-glass-btn" onClick={() => setHistoryAperto(true)} title={t('sidebar_history') as string} style={{
           cursor: 'pointer', padding: 8, borderRadius: 999,
           background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
@@ -2232,12 +2153,6 @@ export default function Serenity() {
         }}>
           <BookOpen size={22} strokeWidth={1.8} />
         </button>
-        <span style={{ flex: 1 }} />
-        {/* ⚠️ SEGNALATO: « la langue doit pouvoir être changée en cours de route » — non solo
-            alle quattro domande d'avvio. Stessi due selettori di `Avvio.tsx`, condivisi da
-            `Impostazioni.tsx`: qui restano visibili per tutta la seduta, non solo prima. */}
-        <SelettoreTema />
-        <SelettoreLingua />
         {/* ── DA QUI IN POI, ZONE SEPARATE E NOMINATE ─────────────────────────────────────────
             Segnalato: « en haut tu dois expliciter les écrits pour comprendre de quoi il
             s'agit, pas seulement les séparer. Il faut qu'on comprenne que ce sont des choses
@@ -2574,6 +2489,12 @@ export default function Serenity() {
             }}
           />
         )}
+        {/* ── LO SPAZIO VUOTO, ORA IN FONDO — segnalato: « les boutons de haut doivent être
+            justifiés à gauche à côté du numéro de build ». Lo spazio elastico (`flex:1`) stava
+            subito dopo Historique/Processus, spingendo tema/lingua/pillola/connessioni/CONFIG a
+            distribuirsi verso destra invece di restare compatti accanto al nome. Spostato qui,
+            ultimo elemento: tutto il resto si accoda a sinistra, il vuoto va tutto a destra. */}
+        <span style={{ flex: 1 }} />
       </header>
       {guidaAperta && <GuideModal lang={lang} onClose={() => setGuidaAperta(false)} />}
       {creditiAperti && <CreditsModal onClose={() => setCreditiAperti(false)} />}
@@ -3098,6 +3019,17 @@ export default function Serenity() {
       <section style={{
         position: 'relative', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', gap: 16, minHeight: 0,
+        /* ⚠️ BUG TROVATO verificando dal vivo QUESTO stesso giro: la colonna assessment (sotto,
+           « LA RIGA A TRE COLONNE ») comincia al bordo sinistro di `<section>` — che è anche
+           dove comincia, `position:absolute`, la barra laterale (OPEN/PAUSA/CONTACT/NULL/
+           MIRROR/TONE/EP, `left:20, width:148`). Prima che l'assessment diventasse una colonna
+           VERA (era `position:absolute` anche lei, sopra il quadrante, mai qui) la sovrapposizione
+           non si vedeva: sotto c'era solo il bordo invisibile del riquadro dell'arco. Ora è una
+           carta opaca vera — `paddingLeft` qui sposta TUTTO il contenuto di `<section>` dopo la
+           barra laterale (168px di span + margine), senza toccare gli overlay ancorati a destra
+           (`right:…`, camere/meter/MNA: quegli offset restano relativi al bordo destro, non
+           spostano). */
+        paddingLeft: 190,
       }}>
       {/* ── IL CASSETTO DEL METER — ancorato SOTTO l'intestazione, dove sta il suo indicatore ──
           Non nel flusso della pagina (galleggia, `position:absolute`, come le camere qui sotto e
@@ -3199,19 +3131,31 @@ export default function Serenity() {
           all'angolo opposto delle camere, sempre presente a seduta aperta, col titolo sempre
           leggibile. Zero stato nuovo — `assessAttivo`/`assessItems` sono gli stessi di sempre,
           solo un contenitore vero al posto del cassetto. */}
-      {aperta && moduleVis.ri && (
-        <ZonaAssessment
-          attivo={assessAttivo}
-          onToggle={() => setAssessAttivo(v => !v)}
-          items={assessItems}
-          LC={LC}
-          dueAghi={museOk && meterC}
-          onIndica={segnaIndicazione}
-          onAggiungiItem={aggiungiItemManuale}
-          cercaLettura={cercaLetturaPerParola}
-        />
-      )}
-
+      {/* ── LA RIGA A TRE COLONNE — segnalato: « la zone assessment doit être aussi à gauche...
+          mais tous en dehors de la zone arc, qui se réduit dès qu'un module apparaît. Les
+          zones modules doivent être larges de moitié ». Le zone dei moduli (assessment a
+          sinistra, Santé Système/journal a destra — v. più giù, dopo l'arco) galleggiavano SUL
+          quadrante, `position:absolute`: non toccavano la sua taglia, e la sua taglia non
+          toccava la LORO — un modulo aperto e l'arco restavano SOVRAPPOSTI, mai uno accanto
+          all'altro. Ora sono colonne VERE in questa riga: quando una si apre prende metà della
+          larghezza (`width:'50%'`) e l'arco (`flex:1`, colonna centrale) le cede il posto
+          restringendosi — mai più sovrapposti. */}
+      <div style={{ display: 'flex', width: '100%', height: '100%', minHeight: 0, alignItems: 'stretch', gap: moduleColCount > 0 ? 16 : 0 }}>
+        {assessColOpen && (
+          <div style={{ width: moduleColWidth, maxWidth: 560, flexShrink: 0, display: 'flex', alignItems: 'flex-start', overflow: 'hidden' }}>
+            <ZonaAssessment
+              attivo={assessAttivo}
+              onToggle={() => setAssessAttivo(v => !v)}
+              items={assessItems}
+              LC={LC}
+              dueAghi={museOk && meterC}
+              onIndica={segnaIndicazione}
+              onAggiungiItem={aggiungiItemManuale}
+              cercaLettura={cercaLetturaPerParola}
+            />
+          </div>
+        )}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {/*
           ── LE STESSE DIMENSIONI, NON SOLO GLI STESSI COLORI ────────────────────────────
           Segnalato più volte di seguito: prima « stesso disegno, stessa grafica » (i colori),
@@ -3252,6 +3196,107 @@ export default function Serenity() {
           boxShadow: isLightTheme ? 'var(--s-shadow)' : 'var(--s-shadow-lift)',
           transition: 'background var(--s-calm) var(--s-ease), box-shadow var(--s-calm) var(--s-ease)',
         }}>
+          {/* ── LE LETTURE, IN ALTO A SINISTRA — segnalato: « l'horloge, le temps de session, le
+              TA e la somme de TA doivent être inscrits en haut à gauche dans la zone de l'arc ».
+              Stavano nella barra laterale, fuori dallo strumento — ora nell'angolo di QUESTO
+              riquadro (lo stesso posto in cui stava `ZonaAssessment`, prima di diventare una
+              colonna vera qui sotto). `--s-ink-faint`, non `-ghost` — stessa ragione già scritta
+              per il giornale: questo riquadro ha il suo SCHERMO scuro apposta in tema scuro,
+              `-ghost` (tarato sul fondo neutro di SERENITY) ci diventava illeggibile. */}
+          <div style={{
+            position: 'absolute', top: 14, left: 16, zIndex: 5,
+            display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6,
+            pointerEvents: 'none',
+          }}>
+            <span style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              fontFamily: 'var(--s-mono)', fontSize: 14, letterSpacing: '0.04em',
+              color: 'var(--s-ink-faint)',
+            }}>
+              <Clock size={13} strokeWidth={1.8} aria-hidden="true" />
+              <OraReale />
+            </span>
+            <span style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              fontFamily: 'var(--s-mono)', fontSize: 17, letterSpacing: '0.06em',
+              color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
+              transition: 'color var(--s-slow) var(--s-ease)',
+              fontVariantNumeric: 'tabular-nums',
+            }}>
+              <Timer size={15} strokeWidth={1.8} aria-hidden="true" />
+              {orologio(tempo)}
+            </span>
+            {aperta && pausata && (
+              <span className="ser-pulse" style={{
+                fontFamily: 'var(--s-sans)', fontSize: 12, fontWeight: 700, letterSpacing: '0.05em',
+                padding: '3px 10px', borderRadius: 999, textAlign: 'center',
+                background: 'var(--s-reserve)', color: 'var(--s-ground)',
+              }}>
+                {pausaMotivoRef.current === 'manuale'
+                  ? LC('in pausa', 'en pause', 'paused', 'en pausa', 'pausad')
+                  : LC('strumento perso', 'instrument perdu', 'instrument lost',
+                      'instrumento perdido', 'instrument förlorat')}
+              </span>
+            )}
+            {museOk && (
+              <span style={{
+                fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
+                color: 'var(--s-ink-faint)', display: 'flex', gap: 10,
+              }}>
+                {museGate.signalQuality > 0 && <span>{museGate.signalQuality}%</span>}
+                {moduleVis.biometric && (
+                  <span title={t('biometric_integrity') as string}>
+                    <LetturaIntegrita />
+                  </span>
+                )}
+              </span>
+            )}
+            {agoEeg && (
+              <div style={{
+                fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
+                color: 'var(--s-ink-faint)', display: 'flex', flexDirection: 'column',
+                alignItems: 'flex-start', gap: 2,
+              }}>
+                <LetturaTA />
+                <LetturaFase t={t} />
+                <span title={t('total_ta') as string}>
+                  <LetturaTotalTa override={meterC ? theta.totalTa : null} bodyMotion={theta.bodyMotion} />
+                </span>
+                <span title={t('mental_processing_velocity') as string}>
+                  <LetturaVelocita t={t} />
+                </span>
+              </div>
+            )}
+            {reazioniViste === 'both' && meterC && agoEeg === false && museOk && (
+              <span style={{
+                fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
+                color: 'var(--s-alive)', display: 'flex', gap: 6, alignItems: 'baseline',
+              }}>
+                <span style={{ fontSize: 10, opacity: 0.75 }}>MUSE</span>
+                <LetturaTA />
+              </span>
+            )}
+            {!agoEeg && meterC && (
+              <div style={{
+                fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
+                color: 'var(--s-ink-faint)', display: 'flex', flexDirection: 'column',
+                alignItems: 'flex-start', gap: 2,
+              }}>
+                <span>TA {theta.ta !== null ? theta.ta.toFixed(2) : '—'}</span>
+                {theta.taNow !== null && Math.abs(theta.taNow - (theta.ta ?? theta.taNow)) > 0.01 && (
+                  <span>→ {theta.taNow.toFixed(2)}</span>
+                )}
+                {theta.fn.fn && (
+                  <span style={{ color: 'var(--s-reserve)' }}>
+                    {LC('galleggia', 'flotte', 'floating', 'flota', 'flyter')}
+                  </span>
+                )}
+                <span title={t('total_ta') as string}>
+                  <LetturaTotalTa override={theta.totalTa} bodyMotion={theta.bodyMotion} />
+                </span>
+              </div>
+            )}
+          </div>
           <QuantumSphere
             needleOffsetProp={agoEeg ? needleOffsetEeg : SET_OFFSET}
             /* ⚠️ BUG TROVATO — segnalato: « quand on choisit MUSE, apparaît toujours
@@ -3464,104 +3509,96 @@ export default function Serenity() {
               onChiudi={() => setModuleVis(v => ({ ...v, mna: false }))}
             />
           )}
-          {/* ── SANTÉ SYSTÈME, LO STESSO `HealthPanel` DI APP.TSX — segnalato: « integra anche
-              Santé Système ». `eegBuffer`/`gyroBuffer` sono la STESSA coppia di ref che
-              `useMuseConnection` (condiviso) riempie in App.tsx: qui esistevano già, per
-              `ToneColumn` — mancava solo lo strumento per LEGGERLI. Montato TALE E QUALE:
-              le sue zone interne (onda EEG, radar giroscopio, quadrante BPM) restano il
-              proprio SCHERMO scuro apposta — uno strumento resta uno strumento, a
-              prescindere dal tema di SERENITY attorno (vedi `--sm-panel-shadow` in
-              `tokens.css`); solo l'intestazione (l'etichetta, non lo schermo) segue il tema,
-              perché legge la STESSA `useUiStore().isLightTheme` di SERENITY. */}
-          {/* ⚠️ Segnalato: « posiziona Santé Système, Journal de session a destra dell'arco ».
-              Stavano ancorati a TUTTA la larghezza in fondo al quadrante (`left:16, right:16`)
-              — sopra l'arco stesso, nel mezzo di dove l'ago si legge. Ora ancorati SOLO a
-              destra (`right:32`, lo stesso bordo delle camere qui sopra: la colonna destra è
-              già il posto dei pannelli che galleggiano), larghezza fissa invece che a tutto
-              campo — l'arco resta libero sotto di loro. */}
-          {aperta && moduleVis.health && (museOk || meterC) && (
-            <div className="ser-health-wrap" style={{
-              position: 'absolute', right: 32, bottom: 16, zIndex: 6, width: 380,
-              maxHeight: '78%', overflowY: 'auto', borderRadius: 18,
-            }}>
-              <HealthPanel
-                eegBuffer={eegBuffer}
-                gyroBuffer={gyroBuffer}
-                displayBpm={realBpm}
-                signalQuality={museGate.signalQuality}
-                museConnection={muse.museConnection}
-                batteryLevel={batteryLevel}
-                sessionState={aperta ? 'running' : 'idle'}
-                onHide={() => setModuleVis(v => ({ ...v, health: false }))}
-                t={k => t(k as Parameters<typeof t>[0]) as string}
-                panelStyle={extra => ({
-                  background: 'var(--s-disc)',
-                  border: isLightTheme ? '1px solid rgba(60,64,72,0.16)' : '1px solid rgba(255,255,255,0.08)',
-                  ...extra,
-                })}
-              />
-            </div>
-          )}
-          {/* ── IL GIORNALE, LO STESSO CASSETTO — segnalato: « integra anche il journal de
-              session ». Stessa lista di `components/TranscriptLog.tsx` (ordine per TEMPO non
-              per arrivo, righe RITIRATE in ambra, righe METER nel colore dell'ago, `hideSpeech`
-              per le sedute SOLO), riscritta con i token `var(--s-*)` di SERENITY invece delle
-              classi `text-white/…` fisse di quel componente — la stessa ragione per cui
-              `CycleHint` non è stato riusato TALE E QUALE, vedi `SuggerimentoCiclo`. */}
-          {moduleVis.journal && (
-            <div className="s-glass s-glass-lift" style={{
-              position: 'absolute', right: 32, bottom: 16, zIndex: 6, width: 380,
-              maxHeight: '70%', display: 'flex', flexDirection: 'column',
-              background: 'var(--s-disc)', borderRadius: 18, padding: '10px 16px 14px',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexShrink: 0 }}>
-                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.12em',
-                              textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
-                  {t('ser_journal')}
-                </span>
-                <button onClick={() => setModuleVis(v => ({ ...v, journal: false }))} style={{
-                  border: 'none', background: 'none', cursor: 'pointer',
-                  color: 'var(--s-ink-faint)', fontSize: 18, lineHeight: 1, padding: 2,
-                }}>×</button>
-              </div>
-              <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
-                {[...journal.logs]
-                  .filter(l => !(avvio.solo && (l.speaker === 'Aud' || l.speaker === 'PC')))
-                  .sort((a, b) => (a.time ?? 0) - (b.time ?? 0))
-                  .reverse()
-                  .map((log, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 8, fontFamily: 'var(--s-mono)', fontSize: 12.5, lineHeight: 1.4 }}>
-                      {/* ⚠️ `--s-ink-faint`, NON `--s-ink-ghost` — segnalato via test dal vivo:
-                          questo pannello galleggia sullo SCHERMO scuro dell'ago (vedi la nota
-                          sopra `HealthPanel`), non sulla superficie chiara di SERENITY dove
-                          `--s-ink-ghost` resta leggibile. Scuro su scuro con quel token
-                          diventava illeggibile — la stessa famiglia di difetto di `CycleHint`,
-                          qui risolta seguendo la convenzione già usata da `PannelloMna` sullo
-                          stesso fondo (le sue etichette usano `--s-ink-faint`, mai `-ghost`). */}
-                      <span style={{ color: 'var(--s-ink-faint)', width: 38, flexShrink: 0 }}>
-                        {(log.time || 0).toFixed(1)}s
-                      </span>
-                      <span style={{
-                        color: log.type === 'retracted' ? 'var(--s-reserve)'
-                          : log.type === 'meter' ? 'var(--s-reserve)'
-                          : log.speaker === 'SYS' ? 'var(--s-ink-faint)' : 'var(--s-ink)',
-                        fontWeight: (log.type === 'highlight' || log.type === 'success') ? 700 : 400,
-                      }}>
-                        {log.speaker && log.speaker !== 'NEEDLE' && (
-                          <b>{log.speaker === 'Aud' ? 'AUD' : log.speaker === 'PC' ? 'PC' : log.speaker}: </b>
-                        )}
-                        {log.text}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
         </div>
+        {/* chiude qui il wrapper centrale (`flex:1`) che avvolge l'arco — v. la nota sopra
+            "LA RIGA A TRE COLONNE": la colonna destra (Santé/Journal) è un SUO fratello, non un
+            figlio, nella riga a tre colonne. */}
+        </div>
+        {/* ── COLONNA DESTRA — SANTÉ SYSTÈME E JOURNAL, FUORI DALL'ARCO ─────────────────────
+            Segnalato: « posiziona Santé Système, Journal de session a destra dell'arco... mais
+            tous en dehors de la zone arc, qui se réduit dès qu'un module apparaît ». Un giro fa
+            erano ancorati `position:absolute` a destra DEL QUADRANTE (`right:32`): non toccavano
+            la sua taglia, restavano sovrapposti quando aperti. Ora è la STESSA colonna vera
+            dell'assessment a sinistra (v. sopra) — `width:'50%'`, in flusso: l'arco si restringe
+            per farle posto invece di restarne coperto. `HealthPanel` — montato TALE E QUALE
+            (`eegBuffer`/`gyroBuffer` sono la STESSA coppia di ref che `useMuseConnection`
+            riempie in App.tsx; le sue zone interne restano il proprio SCHERMO scuro apposta,
+            uno strumento resta uno strumento a prescindere dal tema attorno — solo l'intestazione
+            segue `useUiStore().isLightTheme`). Journal — stessa lista di
+            `components/TranscriptLog.tsx`, riscritta coi token `var(--s-*)` di SERENITY. */}
+        {rightColOpen && (
+          <div style={{
+            width: moduleColWidth, maxWidth: 560, flexShrink: 0, paddingTop: camStackH,
+            display: 'flex', flexDirection: 'column', gap: 16, overflow: 'hidden',
+          }}>
+            {aperta && moduleVis.health && (museOk || meterC) && (
+              <div className="ser-health-wrap" style={{ maxHeight: '78%', overflowY: 'auto', borderRadius: 18 }}>
+                <HealthPanel
+                  eegBuffer={eegBuffer}
+                  gyroBuffer={gyroBuffer}
+                  displayBpm={realBpm}
+                  signalQuality={museGate.signalQuality}
+                  museConnection={muse.museConnection}
+                  batteryLevel={batteryLevel}
+                  sessionState={aperta ? 'running' : 'idle'}
+                  onHide={() => setModuleVis(v => ({ ...v, health: false }))}
+                  t={k => t(k as Parameters<typeof t>[0]) as string}
+                  panelStyle={extra => ({
+                    background: 'var(--s-disc)',
+                    border: isLightTheme ? '1px solid rgba(60,64,72,0.16)' : '1px solid rgba(255,255,255,0.08)',
+                    ...extra,
+                  })}
+                />
+              </div>
+            )}
+            {moduleVis.journal && (
+              <div className="s-glass s-glass-lift" style={{
+                maxHeight: '70%', display: 'flex', flexDirection: 'column',
+                background: 'var(--s-disc)', borderRadius: 18, padding: '10px 16px 14px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexShrink: 0 }}>
+                  <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.12em',
+                                textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
+                    {t('ser_journal')}
+                  </span>
+                  <button onClick={() => setModuleVis(v => ({ ...v, journal: false }))} style={{
+                    border: 'none', background: 'none', cursor: 'pointer',
+                    color: 'var(--s-ink-faint)', fontSize: 18, lineHeight: 1, padding: 2,
+                  }}>×</button>
+                </div>
+                <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {[...journal.logs]
+                    .filter(l => !(avvio.solo && (l.speaker === 'Aud' || l.speaker === 'PC')))
+                    .sort((a, b) => (a.time ?? 0) - (b.time ?? 0))
+                    .reverse()
+                    .map((log, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 8, fontFamily: 'var(--s-mono)', fontSize: 12.5, lineHeight: 1.4 }}>
+                        <span style={{ color: 'var(--s-ink-faint)', width: 38, flexShrink: 0 }}>
+                          {(log.time || 0).toFixed(1)}s
+                        </span>
+                        <span style={{
+                          color: log.type === 'retracted' ? 'var(--s-reserve)'
+                            : log.type === 'meter' ? 'var(--s-reserve)'
+                            : log.speaker === 'SYS' ? 'var(--s-ink-faint)' : 'var(--s-ink)',
+                          fontWeight: (log.type === 'highlight' || log.type === 'success') ? 700 : 400,
+                        }}>
+                          {log.speaker && log.speaker !== 'NEEDLE' && (
+                            <b>{log.speaker === 'Aud' ? 'AUD' : log.speaker === 'PC' ? 'PC' : log.speaker}: </b>
+                          )}
+                          {log.text}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
         {/* `CycleStatusBar` si è spostato nel blocco dei comandi CONTACT/NULL, sopra: stesso
             posto di App.tsx (« riga sotto la domanda »), non più qui vicino al quadrante. Le
-            letture (orologio, TA, diagnostica) si sono spostate nella barra laterale — vedi
-            la nota lì, sopra "CLOSE SESSION". */}
+            letture (orologio, TA, diagnostica) sono ora nell'angolo dell'arco — vedi la nota
+            lì, appena prima di `<QuantumSphere>`. */}
 
         {/* ⚠️ I QUATTRO CERCHI SATELLITE (assessment, cycle hint, …) SONO STATI TOLTI DA QUI,
             non solo spenti. Erano posizionati per orbitare un cerchio centrale da 380 px; con
