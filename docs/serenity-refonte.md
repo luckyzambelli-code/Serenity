@@ -2066,6 +2066,71 @@ fallimenti di rete attesi. `git status`: solo `src/serenity/Serenity.tsx` e
 
 ---
 
+## Trentunesimo giro (22/08/2026) — l'assessment sotto EP, l'arco riprende lo spazio, le camere più piccole, il MUSE non indossato si legge, i due bottoni contano
+
+Cinque segnalazioni:
+
+1. **« La zona assessment... deve stare sotto il bottone EP, rimonta l'insieme dei bottoni
+   CLOSE THE SESSION... quindi la zona arco deve occupare tutto lo spazio liberato »** —
+   l'assessment non è più una colonna nella riga a fianco dell'arco (giro scorso): è tornata
+   nella barra laterale, sotto i sette bottoni (OPEN/PAUSA/CONTACT/NULL/MIRROR/TONE/EP), nello
+   stesso involucro allargato apposta (« larga la metà »: `width:'50%', maxWidth:560` sul
+   contenitore, ma un involucro STRETTO da 148px avvolge SOLO i bottoni, così non si allargano
+   anche loro). Nella riga dell'arco è rimasta solo la colonna destra (Santé/journal): senza
+   assessment a contendersi lo spazio, l'arco (`flex:1`) la riprende tutta — non più due terzi,
+   tutta. `paddingLeft` di `<section>` ora segue la STESSA percentuale della barra laterale
+   (`calc(50% + 40px)` quando l'assessment è aperta, altrimenti il vecchio valore fisso), così
+   la riga dell'arco comincia sempre dopo di lei qualunque sia la sua vera larghezza.
+
+2. **« System Health deve essere larga la metà e si deve vedere tutta »** — `maxHeight:'78%',
+   overflowY:'auto'` tagliava il pannello a metà: tolto, il pannello si vede per intero. La
+   larghezza (metà riga) è la stessa della colonna destra, condivisa con journal — « la stessa
+   larghezza che Santé Système » era già vera (stesso genitore, nessuna larghezza propria).
+
+3. **« La zona camm deve essere di 1/5 più piccola »** — CAM 2 (PC) 340→272, CAM 1 (auditor)
+   213→170 (×0,8 su entrambe, stessa proporzione). Aggiornata anche `camStackH` (lo spazio
+   riservato sopra la colonna destra, v. giro scorso) con le nuove taglie.
+
+4. **« Non appare quando il MUSE non è indossato » / « quando spengo il MUSE appare sempre
+   connesso »** — due segnalazioni, due esiti diversi.
+   - **BUG TROVATO e corretto**: l'avviso "non indossato" usava `t('ser_meter_disconnected')`
+     ("meter scollegato") — la chiave SBAGLIATA, copiata dal Meter, per un avviso che riguarda
+     il MUSE. App.tsx ha la chiave giusta (`muse_tip_not_worn`), tradotta nelle 5 lingue, mai
+     usata qui. Anche `dettaglio` mostrava solo un "⚠" muto — ora la PAROLA (`muse_not_worn`),
+     come fa App.tsx (« MUSE · not worn »), leggibile senza passare il mouse sopra.
+   - **Non risolto, richiede hardware vero**: la disconnessione (« resta sempre connesso da
+     spento ») non è nel codice di SERENITY — `useMuseConnection`/`useMuseContactGate` sono gli
+     STESSI hook condivisi di App.tsx, chiamati con gli stessi parametri (confrontati riga per
+     riga, nessuna differenza). Il meccanismo che dovrebbe correggersi da solo è dentro l'hook
+     condiviso: un watchdog che declassa `museConnection` a "disconnesso" dopo 6 secondi senza
+     nuovi campioni EEG (commento nel codice: « muse-js' own disconnect event doesn't always
+     fire, so the badge would otherwise lie forever »). Non modificato — è un file condiviso, e
+     senza un MUSE vero qui non posso verificare se il guasto è davvero nella finestra dei 6
+     secondi o altrove. Serve sapere se lo stesso sintomo appare ANCHE in EQUILIBRIUM: se sì, è
+     l'hook condiviso (da toccare con più cautela, e con la tua conferma); se solo in SERENITY,
+     c'è dell'altro da trovare qui.
+
+5. **« I bottoni History e Processus devono indicare il numero di elementi »** — un pallino
+   numerico in alto a destra su ciascun bottone: `getSessionsByProfile` (la stessa funzione
+   sincrona già usata da `HistoryModal` per lo stesso conto) per History, `processusPdfs.length`
+   per Processus. Assente quando il conto è zero, per non gridare un numero vuoto.
+
+**Rimandato a un prossimo giro** (segnalato ma non ancora fatto in questo): « i bottoni
+MUSE/METER/NO INSTRUMENTS devono essere un solo bottone con le tre icone » (un cambio di
+interazione più grande — tre indicatori indipendenti, ciascuno col proprio stato/colore/click,
+da fondere in un unico controllo segmentato senza perdere nessuna delle tre informazioni) e
+« non vedo il bottone SAVE CONFIGURATION in CONFIG » (esiste già, ma SOLO nella pillola
+dell'intestazione, visibile solo a seduta chiusa — da capire se serve anche dentro CONFIG o se
+basta saperlo).
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, verifica dal vivo (profilo TEST) — assessment sotto EP, arco più largo, camere più
+piccole, nessun errore in console oltre a fallimenti di rete attesi. Il MUSE-non-indossato e la
+disconnessione non sono verificabili senza hardware vero. `git status`: solo
+`src/serenity/Serenity.tsx`. EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

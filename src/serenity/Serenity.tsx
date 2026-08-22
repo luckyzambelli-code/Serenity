@@ -61,7 +61,7 @@ import { SQUEEZE_TARGET_OFFSET } from '../engine/thetaSetup';
 import { sessionRecorder } from '../engine/SessionRecorder';
 import { sessionRecord, cycleRecord, fnRecord, itemRecord, chiaveItem } from '../engine/corpus';
 import { corpusWrite, corpusAvailable } from '../lib/corpusWriter';
-import { getProfiles, getPcProfiles, saveSession, saveSessionPdf, saveSessionPdfAsync, getAllProcessusFiles } from '../lib/storage';
+import { getProfiles, getPcProfiles, saveSession, saveSessionPdf, saveSessionPdfAsync, getAllProcessusFiles, getSessionsByProfile } from '../lib/storage';
 import { isServerAvailable, serverGetProcessusList, serverProcessusUrl } from '../lib/serverStorage';
 import { ProcessusModal, type ProcessusEntry } from '../components/ProcessusModal';
 import { costruisciRiepilogo, generaPdf, type SerenityReportInput } from './sessionReport';
@@ -1759,23 +1759,24 @@ export default function Serenity() {
     );
   }
 
-  /* ── LARGHEZZA DELLE COLONNE MODULO — segnalato: « le zones modules doivent être larges de
-   *  moitié ». Metà larghezza va bene con UNA sola colonna aperta (assessment SOLO, o Santé/
-   *  journal SOLI) — con ENTRAMBE aperte insieme (di norma il journal è sempre acceso, e
-   *  l'assessment lo è quasi sempre) « metà + metà » lascerebbe l'arco a zero, sparito sotto le
-   *  due colonne — trovato verificando dal vivo QUESTO stesso giro. Con due colonne, un terzo a
-   *  testa: l'arco tiene sempre almeno un terzo buono della riga. */
+  /* ── ASSESSMENT, ORA SOTTO EP — segnalato: « la zona assessment deve stare sotto il bottone
+   *  EP... quindi la zona arco deve occupare tutto lo spazio liberato ». Non è più una colonna
+   *  nella riga a fianco dell'arco (v. la barra laterale, sopra, dove vive ora) — l'arco
+   *  (sotto) riprende TUTTA quella larghezza: nella riga resta solo la colonna destra
+   *  (Santé/journal), sempre a metà (`50%`, mai più ridotta a un terzo: non condivide più
+   *  la riga con l'assessment). */
   const assessColOpen = aperta && moduleVis.ri;
   const rightColOpen = (aperta && moduleVis.health && (museOk || meterC)) || moduleVis.journal;
-  const moduleColCount = (assessColOpen ? 1 : 0) + (rightColOpen ? 1 : 0);
-  const moduleColWidth = moduleColCount >= 2 ? '33%' : '50%';
+  const moduleColWidth = '50%';
   /* ── LE CAMERE SONO SOPRA — segnalato: « le zones devono essere sotto les cams ». Le camere
    *  galleggiano `position:absolute, top:16, right:32` sulla STESSA colonna destra dove ora
    *  vive Santé Système/journal (in flusso, sotto) — senza spazio riservato, le due si
    *  sovrapponevano. Un `paddingTop` sulla colonna destra pari alla vera altezza dello stack
-   *  (aperta/collassata, una o due camere) le tiene SEMPRE sotto, mai più sotto le camere. */
-  const cam2H = !moduleVis.cam2 ? 0 : (cam2Collassata ? 88 : 340);
-  const cam1H = !moduleVis.cam1 ? 0 : (cam1Collassata ? 88 : 213);
+   *  (aperta/collassata, una o due camere) le tiene SEMPRE sotto, mai più sotto le camere.
+   *  Le taglie (272/170) sono le stesse di `CameraCerchio` sotto — « la zona camm deve essere
+   *  di 1/5 più piccola » (340→272, 213→170.4→170), ridotte insieme lì e qui. */
+  const cam2H = !moduleVis.cam2 ? 0 : (cam2Collassata ? 88 : 272);
+  const cam1H = !moduleVis.cam1 ? 0 : (cam1Collassata ? 88 : 170);
   const camStackH = (moduleVis.cam1 || moduleVis.cam2)
     ? 16 + cam2H + (moduleVis.cam1 && moduleVis.cam2 ? 14 : 0) + cam1H + 20
     : 0;
@@ -1994,7 +1995,9 @@ export default function Serenity() {
           `cycles.armCycle`/`mirror.armMirror`/`setToneAttivo` di sempre, solo spostati. */}
       <div style={{
         position: 'absolute', left: 20, top: 118, bottom: 24, zIndex: 8,
-        display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 10, width: 148,
+        display: 'flex', flexDirection: 'column',
+        justifyContent: (aperta && moduleVis.ri) ? 'flex-start' : 'center',
+        gap: 10, width: '50%', maxWidth: 560,
         /* ⚠️ BUG TROVATO — segnalato: « le module History et Processus ne s'ouvrent pas ».
            Questo contenitore è alto quanto quasi tutta la pagina (`top:118, bottom:24`) per
            poter CENTRARE verticalmente i suoi bottoni — ma uno `<div>` copre l'intero
@@ -2006,6 +2009,13 @@ export default function Serenity() {
            vero: il rettangolo torna trasparente ai click dove non c'è niente da premere. */
         pointerEvents: 'none',
       }}>
+        {/* ── I BOTTONI, IN UNA COLONNA STRETTA A SÉ — segnalato: « la zona assessment... deve
+            stare sotto il bottone EP, rimonta l'insieme dei bottoni CLOSE THE SESSION ». Il
+            contenitore intorno (sopra) è ora largo quanto l'assessment (« larga la metà »,
+            v. sotto) per fargli posto SOTTO — ma i bottoni stessi devono restare STRETTI come
+            sempre, non allargarsi con lui: un involucro suo, 148px, `align-items` di default
+            (`stretch`) dentro QUESTO, non nel contenitore largo. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 148, flexShrink: 0 }}>
         {/* ── LE LETTURE, ORA DENTRO L'ARCO — segnalato: « l'horloge, le temps de session, le TA
             e la somme de TA doivent être inscrits en haut à gauche dans la zone de l'arc ».
             Stavano qui (colonna stretta a lato, fuori dallo strumento) — spostate dentro il
@@ -2100,6 +2110,28 @@ export default function Serenity() {
             {ep.epValidated ? 'EP ✓' : 'EP'}
           </button>
         )}
+        </div>
+        {/* ── L'ASSESSMENT, SOTTO EP — segnalato: « la zone assessment... deve stare sotto il
+            bottone EP... rimonta l'insieme dei bottoni... quindi la zona arco deve occupare
+            tutto lo spazio liberato ». Era una colonna nella riga a tre a fianco dell'arco
+            (giro scorso) — spostato qui, sotto i bottoni, nella STESSA striscia a sinistra
+            (mai più nella riga dell'arco: l'arco ora la riprende tutta, v. sotto). «Larga la
+            metà»: il contenitore intorno è largo `50%`/max 560px — qui prende `width:'100%'`
+            di QUELLO, non degli stretti 148px dei bottoni sopra. */}
+        {assessColOpen && (
+          <div style={{ width: '100%', flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', pointerEvents: 'auto' }}>
+            <ZonaAssessment
+              attivo={assessAttivo}
+              onToggle={() => setAssessAttivo(v => !v)}
+              items={assessItems}
+              LC={LC}
+              dueAghi={museOk && meterC}
+              onIndica={segnaIndicazione}
+              onAggiungiItem={aggiungiItemManuale}
+              cercaLettura={cercaLetturaPerParola}
+            />
+          </div>
+        )}
       </div>
       {/* ── L'INTESTAZIONE, che non è una barra ───────────────────────────────────────────
           Nessun fondo, nessuna linea di separazione: il nome sta posato sulla stessa
@@ -2141,17 +2173,42 @@ export default function Serenity() {
             Processus après le bouton langue ». Stavano subito dopo il numero di versione, PRIMA
             di tema/lingua — spostati dopo. Stessa icona, stesso `onClick`, nessuna logica
             toccata — solo la posizione. */}
+        {/* ── IL NUMERO SOPRA I DUE BOTTONI — segnalato: « i bottoni History e Processus devono
+            indicare il numero di elementi presenti sul bottone ». `getSessionsByProfile`
+            (già usato da `HistoryModal` per lo stesso conto — sincrona, localStorage, non
+            l'archivio CORPUS) per questo auditor; `processusPdfs.length`, lo stato già in
+            mano. Un pallino in alto a destra sul bottone, come un contatore di notifiche —
+            assente (nessun numero) quando l'archivio è vuoto, per non gridare uno zero. */}
         <button className="s-glass s-glass-btn" onClick={() => setHistoryAperto(true)} title={t('sidebar_history') as string} style={{
-          cursor: 'pointer', padding: 8, borderRadius: 999,
+          position: 'relative', cursor: 'pointer', padding: 8, borderRadius: 999,
           background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
         }}>
           <HistoryIcon size={22} strokeWidth={1.8} />
+          {(() => {
+            const n = (() => { try { return getSessionsByProfile(avvio?.auditorId || '_default').length; } catch { return 0; } })();
+            return n > 0 ? (
+              <span style={{
+                position: 'absolute', top: -4, right: -4, minWidth: 17, height: 17, borderRadius: 999,
+                background: 'var(--s-ink)', color: 'var(--s-ground)',
+                fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px',
+              }}>{n}</span>
+            ) : null;
+          })()}
         </button>
         <button className="s-glass s-glass-btn" onClick={() => setProcessusAperto(true)} title={t('processus_modal_title') as string} style={{
-          cursor: 'pointer', padding: 8, borderRadius: 999,
+          position: 'relative', cursor: 'pointer', padding: 8, borderRadius: 999,
           background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
         }}>
           <BookOpen size={22} strokeWidth={1.8} />
+          {processusPdfs.length > 0 && (
+            <span style={{
+              position: 'absolute', top: -4, right: -4, minWidth: 17, height: 17, borderRadius: 999,
+              background: 'var(--s-ink)', color: 'var(--s-ground)',
+              fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px',
+            }}>{processusPdfs.length}</span>
+          )}
         </button>
         {/* ── DA QUI IN POI, ZONE SEPARATE E NOMINATE ─────────────────────────────────────────
             Segnalato: « en haut tu dois expliciter les écrits pour comprendre de quoi il
@@ -2302,20 +2359,27 @@ export default function Serenity() {
             (percentuale, ricerca in corso, un problema), sta in `dettaglio` — corto anch'esso.
             La frase intera resta, come `title`, per chi passa il mouse o usa un lettore di
             schermo: NULLA è stato tolto, solo spostato da "sempre visibile" a "a richiesta". */}
+        {/* ⚠️ BUG TROVATO — segnalato: « non appare quando il MUSE non è indossato ». Il
+            `title` usava `ser_meter_disconnected` ("meter scollegato") — la chiave SBAGLIATA,
+            copiata dal Meter, per un avviso che riguarda il MUSE indossato o no. App.tsx ha
+            la chiave giusta (`muse_tip_not_worn`), già tradotta nelle 5 lingue, mai usata qui.
+            Anche `dettaglio` diceva solo "⚠" (un simbolo muto, da capire) — App.tsx scrive la
+            PAROLA (« MUSE · not worn »): qui lo stesso, `muse_not_worn` invece del simbolo
+            solo, così si legge senza dover passare il mouse sopra. */}
         <IndicatoreConnessione
           onClick={muse.handleConnectMuse}
           icona={<Headphones size={26} strokeWidth={1.8} />}
           etichetta="MUSE"
           title={
             muse.museConnection === 'connected'
-              ? (museGate.museContact ? undefined : t('ser_meter_disconnected') as string)
+              ? (museGate.museContact ? undefined : t('muse_tip_not_worn') as string)
               : muse.museConnection === 'searching' ? t('searching') as string : t('ser_connect_muse') as string
           }
           dettaglio={
             muse.museConnection === 'connected'
               ? (museGate.museContact
                   ? (batteryLevel !== null ? `${batteryLevel}%` : '✓')
-                  : '⚠')
+                  : t('muse_not_worn') as string)
               : muse.museConnection === 'searching' ? '…' : null
           }
           stato={
@@ -3019,17 +3083,14 @@ export default function Serenity() {
       <section style={{
         position: 'relative', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', gap: 16, minHeight: 0,
-        /* ⚠️ BUG TROVATO verificando dal vivo QUESTO stesso giro: la colonna assessment (sotto,
-           « LA RIGA A TRE COLONNE ») comincia al bordo sinistro di `<section>` — che è anche
-           dove comincia, `position:absolute`, la barra laterale (OPEN/PAUSA/CONTACT/NULL/
-           MIRROR/TONE/EP, `left:20, width:148`). Prima che l'assessment diventasse una colonna
-           VERA (era `position:absolute` anche lei, sopra il quadrante, mai qui) la sovrapposizione
-           non si vedeva: sotto c'era solo il bordo invisibile del riquadro dell'arco. Ora è una
-           carta opaca vera — `paddingLeft` qui sposta TUTTO il contenuto di `<section>` dopo la
-           barra laterale (168px di span + margine), senza toccare gli overlay ancorati a destra
-           (`right:…`, camere/meter/MNA: quegli offset restano relativi al bordo destro, non
-           spostano). */
-        paddingLeft: 190,
+        /* ⚠️ BUG TROVATO verificando dal vivo: la riga dell'arco comincia al bordo sinistro di
+           `<section>` — che è anche dove comincia, `position:absolute`, la barra laterale
+           (OPEN/PAUSA/CONTACT/NULL/MIRROR/TONE/EP, poi l'assessment sotto). `paddingLeft`
+           sposta la riga dopo di lei — non un numero fisso: la barra laterale è larga 148px
+           SENZA assessment aperto, ma metà di `<main>` (`width:'50%', maxWidth:560`, v. sopra)
+           CON assessment aperto — lo stesso `calc`/`min` qui, sulla stessa percentuale, tiene
+           la riga sempre dopo di lei qualunque sia la sua vera larghezza in quel momento. */
+        paddingLeft: assessColOpen ? 'min(calc(50% + 40px), 600px)' : 190,
       }}>
       {/* ── IL CASSETTO DEL METER — ancorato SOTTO l'intestazione, dove sta il suo indicatore ──
           Non nel flusso della pagina (galleggia, `position:absolute`, come le camere qui sotto e
@@ -3098,8 +3159,10 @@ export default function Serenity() {
                  giro precedente che l'aveva ridotta di un terzo per non coprire l'arco — la
                  riduzione resta comunque valida, l'arco ora ha molto più spazio suo, vedi il
                  19° giro). Portata a 340: più grande, senza tornare ai 453/680 che coprivano
-                 il quadrante. */
-              dimensione={340}
+                 il quadrante.
+                 ⚠️ Segnalato ANCORA: « la zona camm deve essere di 1/5 più piccola ». 340×0,8
+                 = 272 (CAM 1 uguale, 213×0,8 ≈ 170) — la stessa proporzione fra le due. */
+              dimensione={272}
               dimensioneCollassata={88}
               titolo={t('cam2') as string}
               externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
@@ -3113,7 +3176,7 @@ export default function Serenity() {
           )}
           {moduleVis.cam1 && (
             <CameraCerchio
-              dimensione={213}
+              dimensione={170}
               dimensioneCollassata={88}
               titolo={t('cam1') as string}
               offlineLabel={t('camera_offline') as string}
@@ -3131,30 +3194,14 @@ export default function Serenity() {
           all'angolo opposto delle camere, sempre presente a seduta aperta, col titolo sempre
           leggibile. Zero stato nuovo — `assessAttivo`/`assessItems` sono gli stessi di sempre,
           solo un contenitore vero al posto del cassetto. */}
-      {/* ── LA RIGA A TRE COLONNE — segnalato: « la zone assessment doit être aussi à gauche...
-          mais tous en dehors de la zone arc, qui se réduit dès qu'un module apparaît. Les
-          zones modules doivent être larges de moitié ». Le zone dei moduli (assessment a
-          sinistra, Santé Système/journal a destra — v. più giù, dopo l'arco) galleggiavano SUL
-          quadrante, `position:absolute`: non toccavano la sua taglia, e la sua taglia non
-          toccava la LORO — un modulo aperto e l'arco restavano SOVRAPPOSTI, mai uno accanto
-          all'altro. Ora sono colonne VERE in questa riga: quando una si apre prende metà della
-          larghezza (`width:'50%'`) e l'arco (`flex:1`, colonna centrale) le cede il posto
-          restringendosi — mai più sovrapposti. */}
-      <div style={{ display: 'flex', width: '100%', height: '100%', minHeight: 0, alignItems: 'stretch', gap: moduleColCount > 0 ? 16 : 0 }}>
-        {assessColOpen && (
-          <div style={{ width: moduleColWidth, maxWidth: 560, flexShrink: 0, display: 'flex', alignItems: 'flex-start', overflow: 'hidden' }}>
-            <ZonaAssessment
-              attivo={assessAttivo}
-              onToggle={() => setAssessAttivo(v => !v)}
-              items={assessItems}
-              LC={LC}
-              dueAghi={museOk && meterC}
-              onIndica={segnaIndicazione}
-              onAggiungiItem={aggiungiItemManuale}
-              cercaLettura={cercaLetturaPerParola}
-            />
-          </div>
-        )}
+      {/* ── LA RIGA A DUE COLONNE — segnalato: « la zona assessment... deve stare sotto il
+          bottone EP... quindi la zona arco deve occupare tutto lo spazio liberato ».
+          L'assessment è andato sotto EP, nella barra laterale (v. sopra) — non condivide più
+          questa riga con l'arco. Resta una sola colonna a fianco (Santé Système/journal, a
+          destra — v. più giù, dopo l'arco): quando è aperta prende metà della riga
+          (`width:'50%'`), e l'arco (`flex:1`, colonna centrale) le cede il posto
+          restringendosi — SENZA di lei l'arco riprende TUTTA la riga, non solo due terzi. */}
+      <div style={{ display: 'flex', width: '100%', height: '100%', minHeight: 0, alignItems: 'stretch', gap: rightColOpen ? 16 : 0 }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {/*
           ── LE STESSE DIMENSIONI, NON SOLO GLI STESSI COLORI ────────────────────────────
@@ -3531,8 +3578,12 @@ export default function Serenity() {
             width: moduleColWidth, maxWidth: 560, flexShrink: 0, paddingTop: camStackH,
             display: 'flex', flexDirection: 'column', gap: 16, overflow: 'hidden',
           }}>
+            {/* ⚠️ Segnalato: « la zona System Health deve essere larga la metà e si deve vedere
+                tutta ». `maxHeight:'78%', overflowY:'auto'` tagliava il pannello a metà,
+                costringendo a scorrere per vederlo intero — tolto: il pannello si vede per
+                intero, alla SUA altezza vera, non a una percentuale arbitraria. */}
             {aperta && moduleVis.health && (museOk || meterC) && (
-              <div className="ser-health-wrap" style={{ maxHeight: '78%', overflowY: 'auto', borderRadius: 18 }}>
+              <div className="ser-health-wrap" style={{ borderRadius: 18 }}>
                 <HealthPanel
                   eegBuffer={eegBuffer}
                   gyroBuffer={gyroBuffer}
