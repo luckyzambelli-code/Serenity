@@ -1,0 +1,77 @@
+/**
+ * readyCheckLight.css — la schermata « pronti per la seduta » in tema chiaro.
+ *
+ * ── PERCHÉ ESISTE ───────────────────────────────────────────────────────────────────────────
+ * Segnalato: « Ready for session con les deux e solo can resta sempre in DARK, deve essere in
+ * LIGHT se scelto ». `ThetaReadyCheck` (le boîtes) e `MetabolicCheck` (il respiro guidato del
+ * MUSE) — src/components/, condivisi con EQUILIBRIUM — non leggono mai `useUiStore`: ogni
+ * colore è scritto in linea, in RGBA letterali pensati per un vetro scuro su sfondo nero.
+ * Restano scuri SEMPRE, anche quando l'auditor ha scelto il tema chiaro di SERENITY.
+ *
+ * ── PERCHÉ QUI, NON DENTRO I DUE COMPONENTI ────────────────────────────────────────────────
+ * Condivisi con EQUILIBRIUM — cambiarli cambierebbe anche lui, che non ha chiesto questo.
+ * Stessa tecnica di `historyLight.css`: un foglio SOLO SERENITY, un'ancora `data-tema='chiaro'`
+ * più uno scope proprio (`.ser-ready-wrap`, l'involucro che avvolge i due componenti in
+ * `Serenity.tsx` — SERENITY non tocca il file condiviso, solo l'antenato attorno ad esso).
+ *
+ * ── PERCHÉ « [style*=…] » E NON UNA CLASSE ─────────────────────────────────────────────────
+ * `HistoryModal` almeno riusa classi Tailwind (`.text-slate-700`...) da poter ribattere in
+ * specificità. Questi due componenti non hanno NESSUNA classe — ogni colore è un valore RGBA
+ * scritto a mano nell'attributo `style`. L'unico gancio possibile da fuori è un selettore
+ * d'attributo a sottostringa (`[style*="rgba(240,246,255"]`), che React serializza sempre nello
+ * stesso formato letterale — fragile quanto un numero magico, ma è l'unico che esiste senza
+ * toccare il file condiviso.
+ *
+ * ── COSA SI RITINGE, E PERCHÉ SOLO QUESTO ──────────────────────────────────────────────────
+ * Ogni RGBA qui dentro è UNA fra decine di varianti di opacità della stessa terna: i due
+ * pannelli usano ~5 famiglie di "quasi-bianco" per il testo a più livelli di enfasi (titolo,
+ * corpo, etichetta...), tutte diverse solo per l'alfa. Ridipingerle TUTTE una per una (alfa
+ * compreso) vorrebbe dire scrivere decine di regole quasi identiche — invece si riconosce la
+ * FAMIGLIA (la terna RGB, qualunque alfa segua: il carattere jolly `*=` la cattura) e le si dà
+ * UN SOLO inchiostro sostitutivo per famiglia, su due livelli (chi era vicino al bianco pieno →
+ * inchiostro pieno; chi era più trasparente → inchiostro secondario). Si perde la sfumatura
+ * ESATTA fra un 0.85 e un 0.95 di opacità — non si perde la leggibilità, che è quel che conta:
+ * la stessa scelta già fatta in `historyLight.css` (lì su classi Tailwind, qui su RGBA).
+ *
+ * ── QUEL CHE RESTA FUORI, DICHIARATO INVECE CHE FINTO SISTEMATO ────────────────────────────
+ * I bordi/sfondi in `rgba(255,255,255,·)` (il "vetro" scuro: card leggermente più chiare del
+ * fondo nero, anelli di respiro, tracce di bottoni) restano quelli — su un pannello ora chiaro
+ * diventano solo più tenui, non invisibili come sarebbe stato il testo quasi-bianco lasciato
+ * intatto. Il velo esterno di `MetabolicCheck` (`rgba(0,0,0,0.8)`, DIETRO il pannello) resta
+ * scuro apposta, stessa scelta di `historyLight.css` per il velo di `HistoryModal`. I colori
+ * satura (ambra/rosso/verde di stato) non si toccano: già leggibili su entrambi i fondi.
+ *
+ * @see docs/serenity-refonte.md
+ */
+
+/* ── I DUE PANNELLI, DA VETRO NERO A VETRO CHIARO ──────────────────────────────────────── */
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(2,6,23"] {
+  background: linear-gradient(100deg, #f3f7fc 0%, #e6eef8 100%) !important;
+  border-right-color: rgba(8,145,178,0.25) !important;
+}
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(40,40,46"] {
+  background: linear-gradient(160deg, #f6f9fd 0%, #e9f1f8 100%) !important;
+  border-color: rgba(8,145,178,0.20) !important;
+}
+
+/* ── TESTO « QUASI BIANCO », DUE LIVELLI DI ENFASI ─────────────────────────────────────────
+   Famiglia più vicina al bianco pieno (titoli, valori, l'informazione principale) → inchiostro
+   pieno. Famiglia più trasparente (corpo del testo, etichette secondarie) → inchiostro attenuato,
+   ma sempre leggibile — mai lo stesso quasi-bianco lasciato su un fondo ora chiaro. */
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(240,246,255"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(230,236,245"] {
+  color: #0f172a !important;
+}
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(226,238,255"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(220,228,240"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(200,214,234"] {
+  color: #475569 !important;
+}
+
+/* ── I BORDI DI VETRO, RITINTI ANZICHÉ SPARITI ─────────────────────────────────────────────
+   `rgba(255,255,255,·)` come bordo (mai come sfondo, qui: uno sfondo forzato romperebbe gli
+   anelli del respiro e le carte semitrasparenti — v. nota sopra). Un bordo bianco su vetro
+   chiaro sarebbe invisibile quanto il testo quasi-bianco; qui basta ritingerlo. */
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255,255,255"] {
+  border-color: rgba(8,145,178,0.22) !important;
+}

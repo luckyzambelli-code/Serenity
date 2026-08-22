@@ -13,6 +13,8 @@ import { createRoot } from 'react-dom/client';
 import './tokens.css';
 import './tailwind-compat.css';
 import './historyLight.css';
+import './modalCloseButtons.css';
+import './readyCheckLight.css';
 import { I18nProvider } from '../i18n';
 import Serenity from './Serenity';
 

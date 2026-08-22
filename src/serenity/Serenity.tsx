@@ -82,7 +82,7 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
@@ -183,6 +183,25 @@ const LetturaVelocita = React.memo(function LetturaVelocita({ t }: { t: (k: stri
  *  NUTRITO qui (`hooks/useChargeEngine` gli scrive `setTarget` a ogni METRICS_UPDATE, montato
  *  da sempre) — mancava solo chi lo LEGGE. Isolato in un suo `React.memo` come `LetturaTA`:
  *  aggiorna spesso, non deve ridisegnare tutta l'intestazione. */
+/** ── L'ORA VERA, NON QUELLA DELLA SEDUTA — segnalato: « vicino all'ora [della seduta] ci
+ *  deve essere l'icona che indica cosa è, e sopra un'icona con l'ora attuale ». Due letture
+ *  diverse: `orologio(tempo)` (sotto, con l'icona `Timer`) dice DA QUANTO è aperta la seduta;
+ *  questa dice CHE ORE SONO davvero — utile a chi deve rispettare un orario, non ce l'aveva
+ *  App.tsx ma qui è stata chiesta esplicitamente. Un `setInterval` di un secondo, isolato nel
+ *  suo componente: non deve far ridisegnare la barra laterale intera ogni tick. */
+const OraReale = React.memo(function OraReale() {
+  const [ora, setOra] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setOra(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+      {ora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+    </span>
+  );
+});
+
 const LetturaIntegrita = React.memo(function LetturaIntegrita() {
   const pct = useSyncExternalStore(integrityTracker.subscribe, integrityTracker.getCurrent);
   return (
@@ -414,6 +433,7 @@ export default function Serenity() {
   const uiAlpha = useUiStore(s => s.uiAlpha);
   const wallpaperUrl = useUiStore(s => s.wallpaperUrl);
   const moduleVis = useSerenityModuleStore(s => s.moduleVis);
+  const setModuleVis = useSerenityModuleStore(s => s.setModuleVis);
   // Segnalato: « nessuno sfondo » — la STESSA preferenza di EQUILIBRIUM, applicata alla
   // superficie di SERENITY con un velo (`--s-veil`) invece del vetro scuro di EQUILIBRIUM:
   // stessa funzione (« IL TUO fondo »), grafica propria.
@@ -823,16 +843,13 @@ export default function Serenity() {
    *  primePhaseRef.current = ...`), qui raccolta in una funzione sola per non poterle scordare
    *  disaccoppiate. */
   const setPrimePhase = (p: PrimePhase) => { setPrimePhaseState(p); primePhaseRef.current = p; };
-  const [mnaAperto, setMnaAperto] = useState(false);
   const mnaSessionRef = useRef<MnaSession>({ ...MNA_SESSION_VUOTA });
-  /** ── SANTÉ SYSTÈME / GIORNALE — segnalato: « integra anche il journal de session, Santé
-   *  Système ». Stesso cassetto ancorato al quadrante di `PannelloMna` (sopra), UN cassetto
-   *  alla volta: aprirne uno chiude gli altri due, come CONFIG chiude tutto il resto. */
-  const [saluteAperto, setSaluteAperto] = useState(false);
-  const [giornaleAperto, setGiornaleAperto] = useState(false);
-  const apriMna = () => { setMnaAperto(v => { const n = !v; if (n) { setSaluteAperto(false); setGiornaleAperto(false); } return n; }); };
-  const apriSalute = () => { setSaluteAperto(v => { const n = !v; if (n) { setMnaAperto(false); setGiornaleAperto(false); } return n; }); };
-  const apriGiornale = () => { setGiornaleAperto(v => { const n = !v; if (n) { setMnaAperto(false); setSaluteAperto(false); } return n; }); };
+  /** ── SANTÉ SYSTÈME / GIORNALE / MNA — segnalato: « integra anche il journal de session,
+   *  Santé Système », poi di nuovo: « questi moduli non devono avere bottoni, si attivano
+   *  solamente via CONFIG ». Non c'è più uno stato "aperto" separato da `moduleVis`: il
+   *  toggle di CONFIG è l'UNICO interruttore, esattamente come App.tsx fa per `HealthPanel`
+   *  (`onHide={() => setModuleVis(v => ({...v, health:false}))}` — lo stesso "nascondere" È
+   *  "spegnere il modulo", non due azioni). */
   const metabolicPhaseRef = useRef<'idle' | 'baseline' | 'breath' | 'result'>('idle');
 
   /** L'EP a 4 stadi — CONDIVISO con EQUILIBRIUM (`hooks/useEpValidation`), non un secondo
@@ -1442,7 +1459,6 @@ export default function Serenity() {
     mnaSessionRef.current = { ...MNA_SESSION_VUOTA };
     setPrimePhase('CAPTURE');
     mnaSessionRef.current.phaseLog.push({ phase: 'CAPTURE', t: Date.now() });
-    setMnaAperto(false);
     // ── CORPUS: apertura di seduta — stessa logica di App.tsx ────────────────────────────
     // Va scritta ADESSO, non alla fine: è la configurazione con cui si leggerà tutto il resto,
     // e se la seduta si interrompe le reazioni già scritte devono restare interpretabili.
@@ -1501,6 +1517,22 @@ export default function Serenity() {
     avviaSeduta();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metabolicOpen, meterC, museOk, avvio?.distanza, remote.remoteMuseConnected]);
+  /** ── SALTA IL RESPIRO DEL MUSE SE IL SOFFIO DEL METER È GIÀ RIUSCITO — segnalato: « il test
+   *  del MUSE non deve essere fatto se il test del soffio del Meter è stato fatto con successo ».
+   *  `theta.breathOk` diventa vero/falso solo a prova del soffio conclusa (`ThetaReadyCheck`,
+   *  qui sotto o dentro `PannelloMeter` prima ancora di aprire la seduta) — se è riuscita,
+   *  `MetabolicCheck` chiederebbe la STESSA cosa una seconda volta con un altro strumento: non
+   *  resta nulla da verificare, si passa oltre da soli. `thetaReadyDone` come guardia: senza,
+   *  l'effetto scatterebbe anche mentre `ThetaReadyCheck` è ancora aperto (un `breathOk` di UNA
+   *  prova precedente in questa stessa apertura). Stesso schema dell'effetto qui sopra: mai uno
+   *  stato scritto durante il render, solo dopo, in un effetto. */
+  useEffect(() => {
+    if (!metabolicOpen || !thetaReadyDone) return;
+    if (!(meterC && theta.breathOk)) return;
+    setMetabolicOpen(false);
+    avviaSedutaConProntezza(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metabolicOpen, thetaReadyDone, meterC, theta.breathOk]);
   /**
    * ── APRI UNA SEDUTA — SI CHIEDE PRIMA QUALE STRUMENTO, non si sceglie per l'utente ────────
    * Segnalato: « la logica, METER/MUSE/NESSUN STRUMENTO non sembra ancora implementata ».
@@ -1649,7 +1681,7 @@ export default function Serenity() {
     // MNA — la seduta finisce, un tono acceso non deve sopravviverle (stessa regola di
     // App.tsx: « seduta finita/in pausa → azzera tutto l'audio »).
     primeFreqAudio.killAll();
-    setPrimePhase('IDLE'); setPrimeCopies([]); setPrimeCaptured(false); setMnaAperto(false);
+    setPrimePhase('IDLE'); setPrimeCopies([]); setPrimeCaptured(false);
     setAperta(false); setPausata(false); pausaMotivoRef.current = null;
   };
   /** Si ricomincia dalle domande. Solo a seduta chiusa: cambiare preclear a metà seduta
@@ -1856,6 +1888,7 @@ export default function Serenity() {
         const readinessMuseOk = avvio?.distanza ? remote.remoteMuseConnected : museOk;
         if (meterC && !thetaReadyDone) {
           return (
+            <div className="ser-ready-wrap">
             <ThetaReadyCheck
               scaleMeasured={theta.setup.scaleMeasured}
               breathOk={theta.breathOk}
@@ -1890,10 +1923,12 @@ export default function Serenity() {
               }}
               onCancel={() => { setMetabolicOpen(false); avviaSeduta(); }}
             />
+            </div>
           );
         }
         if (readinessMuseOk) {
           return (
+            <div className="ser-ready-wrap">
             <MetabolicCheck
               lang={lang}
               meterAlreadyCalibrated={meterC && theta.setup.scaleMeasured}
@@ -1904,6 +1939,7 @@ export default function Serenity() {
               onCancel={a => avviaSedutaConProntezza(a)}
               onPhase={() => {}}
             />
+            </div>
           );
         }
         // Né meter da provare né MUSE da ascoltare (la connessione scelta è FALLITA nel
@@ -1945,14 +1981,29 @@ export default function Serenity() {
             importanza (orologio, poi la scelta dell'ago, poi la diagnostica), solo una
             colonna invece di una riga. */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          {/* L'orologio resta sulla superficie di SERENITY, fuori dal pannello scuro: si
-              guarda una volta ogni tanto, lo strumento in continuazione. */}
+          {/* ── L'ORA ATTUALE, SOPRA — segnalato: « sopra una icona con l'ora attuale ».
+              L'icona `Clock` la distingue da quella della seduta appena sotto — due letture,
+              due sigle, non da confondere. */}
           <span style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            fontFamily: 'var(--s-mono)', fontSize: 14, letterSpacing: '0.04em',
+            color: 'var(--s-ink-ghost)',
+          }}>
+            <Clock size={13} strokeWidth={1.8} aria-hidden="true" />
+            <OraReale />
+          </span>
+          {/* ── L'OROLOGIO DELLA SEDUTA — segnalato: « vicino all'ora ci deve essere l'icona
+              che indica cosa è ». `Timer` dice che questo È la durata della seduta, non l'ora
+              vera (appena sopra) — resta sulla superficie di SERENITY, fuori dal pannello
+              scuro: si guarda una volta ogni tanto, lo strumento in continuazione. */}
+          <span style={{
+            display: 'flex', alignItems: 'center', gap: 5,
             fontFamily: 'var(--s-mono)', fontSize: 17, letterSpacing: '0.06em',
             color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-ghost)',
             transition: 'color var(--s-slow) var(--s-ease)',
             fontVariantNumeric: 'tabular-nums',
           }}>
+            <Timer size={15} strokeWidth={1.8} aria-hidden="true" />
             {orologio(tempo)}
           </span>
           {/* ── IN PAUSA — segnalato: la perdita del MUSE deve fermare la seduta, non solo
@@ -1968,23 +2019,6 @@ export default function Serenity() {
                 : LC('strumento perso', 'instrument perdu', 'instrument lost',
                     'instrumento perdido', 'instrument förlorat')}
             </span>
-          )}
-          {/* ── QUALE AGO GUARDARE — SOLO quando c'è davvero una scelta ───────────────────
-              Segnalato: « les deux aiguilles ? pas vue ». Non è un secondo ago da disegnare
-              accanto al primo (App.tsx li disegna insieme apposta MAI — vedi la nota su
-              `agoEeg`, sopra): è la scelta stessa che mancava, muta e fissa sul Meter.
-              Segnalato di nuovo: « manca anche la vista ENTRAMBI » — la terza voce di
-              App.tsx (`reazioniViste`), che tiene l'ago sul Meter (misurato, non
-              ricostruito) ma AGGIUNGE le reazioni del MUSE etichettate. */}
-          {museOk && meterC && (
-            <div style={{ pointerEvents: 'auto' }}>
-              <SegmentoVetro<'eeg' | 'theta' | 'both'>
-                opzioni={[{ k: 'eeg', label: 'MUSE' }, { k: 'theta', label: 'METER' }, { k: 'both', label: LC('DUE', 'DEUX', 'BOTH', 'DOS', 'TVÅ') }]}
-                selezionato={reazioniViste === 'both' ? 'both' : agoScelto}
-                onChange={v => { setReazioniViste(v); setAgoScelto(v === 'both' ? 'theta' : v); }}
-                minLarghezza={64}
-              />
-            </div>
           )}
           {/* ── SEGNALE E INTEGRITÀ DEL MUSE — dipendono dal MUSE essere connesso (`museOk`),
               non da quale dei due aghi si sta guardando in questo momento — stessa
@@ -2158,6 +2192,25 @@ export default function Serenity() {
         <span style={{ fontFamily: 'var(--s-mono)', fontSize: 13.5, color: 'var(--s-ink-faint)' }}>
           {__SERENITY_VERSION__}
         </span>
+        {/* ── STORICO E PROCESSUS, ORA QUI — segnalato: « sposta tutti i bottoni in alto vicino
+            al numero di versione, in modo da avere il tutto sulla stessa linea ». Stavano nella
+            barra comandi sotto il quadrante (v. nota lì, ancora leggibile per la cronologia di
+            come ci sono arrivati); erano gli ultimi due bottoni statici rimasti fuori
+            dall'intestazione (CONTACT/NULL/MIRROR/TONE/OPEN/PAUSA sono nella barra laterale per
+            un'altra richiesta esplicita, non "bottoni" in questo senso). Stessa icona, stesso
+            `onClick`, nessuna logica toccata — solo la riga in cui compaiono ora. */}
+        <button className="s-glass s-glass-btn" onClick={() => setHistoryAperto(true)} title={t('sidebar_history') as string} style={{
+          cursor: 'pointer', padding: 8, borderRadius: 999,
+          background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
+        }}>
+          <HistoryIcon size={22} strokeWidth={1.8} />
+        </button>
+        <button className="s-glass s-glass-btn" onClick={() => setProcessusAperto(true)} title={t('processus_modal_title') as string} style={{
+          cursor: 'pointer', padding: 8, borderRadius: 999,
+          background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
+        }}>
+          <BookOpen size={22} strokeWidth={1.8} />
+        </button>
         <span style={{ flex: 1 }} />
         {/* ⚠️ SEGNALATO: « la langue doit pouvoir être changée en cours de route » — non solo
             alle quattro domande d'avvio. Stessi due selettori di `Avvio.tsx`, condivisi da
@@ -2514,7 +2567,7 @@ export default function Serenity() {
           irraggiungibile. Non si può cambiare `HistoryModal` stesso (è condiviso, cambierebbe
           anche EQUILIBRIUM): un involucro `fixed` qui gli dà l'antenato che si aspetta. */}
       {historyAperto && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
+        <div className="ser-history-wrap" style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
           <Suspense fallback={null}>
             <HistoryModal
               activeProfile={(() => {
@@ -2530,7 +2583,7 @@ export default function Serenity() {
           `ProcessusModal` disegna sé stesso con `absolute inset-0`, e senza un antenato
           grande quanto lo schermo resterebbe chiuso nella cornice piccola di `<main>`. */}
       {processusAperto && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
+        <div className="ser-processus-wrap" style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
           <ProcessusModal
             processusPdfs={processusPdfs}
             setProcessusPdfs={setProcessusPdfs}
@@ -2585,32 +2638,15 @@ export default function Serenity() {
           `<footer>`, l'ultimo figlio della pagina) è lo STESSO, spostato qui sopra il
           quadrante: nessuna riga di logica toccata, solo l'ordine in cui compaiono. */}
       <div className="ser-comandi" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 18, rowGap: 10 }}>
-        {/* ── LO STORICO, ORA PRIMA — segnalato: « Fermer la séance et pause doivent être
-            après Historique ». Era nell'intestazione, dopo CONFIG/Guide, ben lontano dal
-            bottone che chiude la seduta; spostato qui, primo elemento della barra comandi,
-            così chi vuole ritrovare una seduta passata lo trova PRIMA di chiudere o mettere
-            in pausa quella in corso, non dopo. La seduta chiusa (`chiudi()`, sotto) si salva
-            ora da sé, senza mai passare da uno schermo di rapporto — questo bottone è dove si
-            va a RITROVARLA, col suo PDF. Raggiungibile sempre, non solo a seduta chiusa. */}
-        <button className="s-glass s-glass-btn" onClick={() => setHistoryAperto(true)} title={t('sidebar_history') as string} style={{
-          cursor: 'pointer', padding: 10, borderRadius: 999,
-          background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
-        }}>
-          <HistoryIcon size={26} strokeWidth={1.8} />
-        </button>
-        {/* ── PROCESSUS — segnalato due volte: « manquent PROCESSUS et les autres modules ».
-            Stesso posto di History, appena accanto: la biblioteca dei PDF di processo, sempre
-            raggiungibile. Vedi la nota sopra a `processusPdfs` per cosa resta un raffinamento
-            (il visore a più finestre trascinabili di App.tsx). */}
-        <button className="s-glass s-glass-btn" onClick={() => setProcessusAperto(true)} title={t('processus_modal_title') as string} style={{
-          cursor: 'pointer', padding: 10, borderRadius: 999,
-          background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
-        }}>
-          <BookOpen size={26} strokeWidth={1.8} />
-        </button>
-        {/* ── OUVRIR/FERMER e PAUSA, ORA NELLA BARRA LATERALE — segnalato: « metti i bottoni
-            Contact, Null, Mirror, Tone ed anche OPEN sul lato sinistro fuori dall'arco » e poi
-            « il bottone di pausa deve essere vicino al bottone Fermer la séance ». Vedi la
+        {/* ── STORICO E PROCESSUS, SPOSTATI IN INTESTAZIONE — segnalato: « sposta tutti i
+            bottoni in alto vicino al numero di versione ». Erano qui, primi due elementi di
+            questa barra (v. `<header>`, accanto a `{__SERENITY_VERSION__}`, per dove sono ora
+            e perché). Il commento resta per chi cerca la cronologia: prima erano
+            nell'intestazione originale di App.tsx, poi spostati qui sotto il quadrante, ora di
+            nuovo in alto — sempre lo stesso `onClick`, mai una riga di logica toccata.
+            OUVRIR/FERMER e PAUSA restano nella barra laterale (richiesta separata, esplicita:
+            « metti i bottoni... sul lato sinistro fuori dall'arco » e poi « il bottone di
+            pausa deve essere vicino al bottone Fermer la séance »). Vedi la
             barra a sé, ancorata al bordo sinistro di `<main>`, poco più giù. */}
         {/* ── IL CICLO — un item, quattro strade, ciascuna col SUO bottone ──────────────────
             Segnalato: « la visibilità dei CICLI non è ottimale... devi fare come in EQUILIBRIUM
@@ -3015,72 +3051,17 @@ export default function Serenity() {
             </div>
           </>
         )}
-        {/* Il giornale NON si mostra da sé: scorrere alla periferia tira l'occhio proprio
-            mentre l'ago legge. Il conteggio (sotto, ORA cliccabile — vedi la nota più giù su
-            `apriGiornale`) resta muto finché l'auditor non lo chiede lui stesso. Qui solo il
-            caso a righe zero, dove un bottone che apre il nulla sarebbe un controllo bugiardo. */}
-        {(!moduleVis.journal || journal.logs.length === 0) && (
+        {/* ── SEGNALATO: « i moduli ASSESSMENT, System Health, Journal, MNA non devono avere
+            bottoni, si attivano solamente via CONFIG ». Erano bottoni che aprivano un
+            cassetto (`apriMna`/`apriSalute`/`apriGiornale`) sopra la scelta già fatta in
+            CONFIG (`moduleVis`) — due controlli per la stessa cosa. Tolti: `moduleVis` da
+            solo decide ora se ognuno di questi si vede, esattamente come `ZonaAssessment` fa
+            già (nessun bottone, mai avuto). Il conteggio del giornale resta qui, muto, solo
+            quando il modulo è spento (altrimenti lo dice già la sua stessa zona, più giù). */}
+        {!moduleVis.journal && (
           <span style={{ fontSize: 14.5, color: 'var(--s-ink-faint)' }}>
             {t('ser_journal')} · {journal.logs.length} {t(journal.logs.length === 1 ? 'ser_line' : 'ser_lines')}
           </span>
-        )}
-        {/* ── IL METER — segnalato: « comment peux-tu mettre la connexion METER EN BAS, le MUSE
-            en haut ». La sua connessione e la sua configurazione stanno ORA solo in
-            intestazione (l'indicatore + la freccia accanto, vedi sopra) — niente più un secondo
-            pannello quaggiù da imparare a parte. */}
-        {/* ── ASSESSMENT — spostato nella sua ZONA (`ZonaAssessment`, ancorata in alto a
-            sinistra, accanto al quadrante) — segnalato: « deve avere una sua zona, come in
-            equilibrium ». Non più qui: vedi il commento sopra `<section>`. */}
-        {/* MNA — segnalato assente: un ATTREZZO, non un modo. Si apre SENZA lasciare il ciclo
-            in corso (`PannelloMna` galleggia sul quadrante, la seduta resta sotto) — stesso
-            principio del tasto MNA nella barra dei comandi di App.tsx. */}
-        {aperta && moduleVis.mna && (
-          <button
-            className="s-glass s-glass-btn"
-            onClick={apriMna}
-            style={{
-              cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
-              background: 'var(--s-disc)',
-              fontFamily: 'var(--s-sans)', fontSize: 15,
-              color: mnaAperto || primePhase !== 'CAPTURE' && primePhase !== 'IDLE' ? 'var(--s-still)' : 'var(--s-ink-faint)',
-            }}>
-            MNA
-          </button>
-        )}
-        {/* ── SANTÉ SYSTÈME — segnalato: « integra anche Santé Système ». Lo stesso
-            `HealthPanel` di App.tsx (EEG/GYRO/PPG/elettrodi), montato TALE E QUALE — la sua
-            sorgente (`eegBuffer`/`gyroBuffer`, poco più in alto) è la STESSA di App.tsx: era
-            già qui, senza uno strumento per leggerla. */}
-        {aperta && moduleVis.health && (museOk || meterC) && (
-          <button
-            className="s-glass s-glass-btn"
-            onClick={apriSalute}
-            style={{
-              cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
-              background: 'var(--s-disc)',
-              fontFamily: 'var(--s-sans)', fontSize: 15,
-              color: saluteAperto ? 'var(--s-still)' : 'var(--s-ink-faint)',
-            }}>
-            {LC('salute sistema', 'santé système', 'system health', 'salud del sistema', 'systemhälsa')}
-          </button>
-        )}
-        {/* ── IL GIORNALE, ORA LEGGIBILE — segnalato: « integra anche il journal de session ».
-            Prima si vedeva solo il conteggio (rimasto qui accanto, invariato): un clic apre
-            ora la STESSA lista, ordinata e colorata come `components/TranscriptLog.tsx`, nella
-            lingua visiva di SERENITY (quel componente resta bianco-su-scuro fisso: qui serve
-            leggibile anche in tema chiaro, vedi `RigaGiornale` sotto). */}
-        {moduleVis.journal && journal.logs.length > 0 && (
-          <button
-            className="s-glass s-glass-btn"
-            onClick={apriGiornale}
-            style={{
-              cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
-              background: 'var(--s-disc)',
-              fontFamily: 'var(--s-sans)', fontSize: 14.5,
-              color: giornaleAperto ? 'var(--s-still)' : 'var(--s-ink-faint)',
-            }}>
-            {t('ser_journal')} · {journal.logs.length} {t(journal.logs.length === 1 ? 'ser_line' : 'ser_lines')}
-          </button>
         )}
         {/* EP — l'auditor lo apre da sé quando vuole registrarlo, non un conto alla rovescia
             automatico (in EQUILIBRIUM quella finestra non è mai raggiungibile). "EP ✓" una
@@ -3420,10 +3401,32 @@ export default function Serenity() {
               />
             )}
           </div>
+          {/* ── QUALE AGO GUARDARE, SOTTO L'AGO — segnalato: « les deux aiguilles ? pas vue »,
+              poi di nuovo: « i bottoni MUSE/METER/BOTH devono restare sotto l'ago » (erano
+              stati spostati nella barra laterale insieme alle altre letture, ma questo non è
+              una lettura — è la scelta di QUALE ago guardare, e sta bene solo vicino
+              all'ago). Non è un secondo ago da disegnare accanto al primo (App.tsx li disegna
+              insieme apposta MAI — vedi la nota su `agoEeg`, sopra): è la scelta stessa che
+              mancava, muta e fissa sul Meter. La terza voce (`reazioniViste`, « DUE ») tiene
+              l'ago sul Meter (misurato, non ricostruito) ma AGGIUNGE le reazioni del MUSE
+              etichettate. Ancorato al fondo del quadrante, centrato, appena sotto il perno
+              dell'ago. */}
+          {museOk && meterC && (
+            <div style={{
+              position: 'absolute', left: '50%', bottom: 12, transform: 'translateX(-50%)', zIndex: 4,
+            }}>
+              <SegmentoVetro<'eeg' | 'theta' | 'both'>
+                opzioni={[{ k: 'eeg', label: 'MUSE' }, { k: 'theta', label: 'METER' }, { k: 'both', label: LC('DUE', 'DEUX', 'BOTH', 'DOS', 'TVÅ') }]}
+                selezionato={reazioniViste === 'both' ? 'both' : agoScelto}
+                onChange={v => { setReazioniViste(v); setAgoScelto(v === 'both' ? 'theta' : v); }}
+                minLarghezza={64}
+              />
+            </div>
+          )}
           {/* ── MNA — galleggia SUL quadrante, non lo sostituisce ────────────────────────────
               « Si apre senza lasciare il ciclo »: la seduta resta visibile sotto, com'è in
               App.tsx (ancorato in fondo al pannello dello strumento, non a tutta pagina). */}
-          {aperta && moduleVis.mna && mnaAperto && (
+          {aperta && moduleVis.mna && (
             <PannelloMna
               primePhase={primePhase}
               setPrimePhase={setPrimePhase}
@@ -3452,7 +3455,7 @@ export default function Serenity() {
                 // locale per controllo. Stesso inoltro di App.tsx.
                 try { networkManager.send({ type: 'MNA_AUDIO', ...payload }, true); } catch { /* noop */ }
               }}
-              onChiudi={() => setMnaAperto(false)}
+              onChiudi={() => setModuleVis(v => ({ ...v, mna: false }))}
             />
           )}
           {/* ── SANTÉ SYSTÈME, LO STESSO `HealthPanel` DI APP.TSX — segnalato: « integra anche
@@ -3464,7 +3467,7 @@ export default function Serenity() {
               prescindere dal tema di SERENITY attorno (vedi `--sm-panel-shadow` in
               `tokens.css`); solo l'intestazione (l'etichetta, non lo schermo) segue il tema,
               perché legge la STESSA `useUiStore().isLightTheme` di SERENITY. */}
-          {aperta && moduleVis.health && saluteAperto && (museOk || meterC) && (
+          {aperta && moduleVis.health && (museOk || meterC) && (
             <div style={{
               position: 'absolute', left: 16, right: 16, bottom: 16, zIndex: 6,
               maxHeight: '78%', overflowY: 'auto', borderRadius: 18,
@@ -3477,7 +3480,7 @@ export default function Serenity() {
                 museConnection={muse.museConnection}
                 batteryLevel={batteryLevel}
                 sessionState={aperta ? 'running' : 'idle'}
-                onHide={() => setSaluteAperto(false)}
+                onHide={() => setModuleVis(v => ({ ...v, health: false }))}
                 t={k => t(k as Parameters<typeof t>[0]) as string}
                 panelStyle={extra => ({
                   background: 'var(--s-disc)',
@@ -3493,7 +3496,7 @@ export default function Serenity() {
               per le sedute SOLO), riscritta con i token `var(--s-*)` di SERENITY invece delle
               classi `text-white/…` fisse di quel componente — la stessa ragione per cui
               `CycleHint` non è stato riusato TALE E QUALE, vedi `SuggerimentoCiclo`. */}
-          {giornaleAperto && (
+          {moduleVis.journal && (
             <div className="s-glass s-glass-lift" style={{
               position: 'absolute', left: 16, right: 16, bottom: 16, zIndex: 6,
               maxHeight: '70%', display: 'flex', flexDirection: 'column',
@@ -3504,7 +3507,7 @@ export default function Serenity() {
                               textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
                   {t('ser_journal')}
                 </span>
-                <button onClick={() => setGiornaleAperto(false)} style={{
+                <button onClick={() => setModuleVis(v => ({ ...v, journal: false }))} style={{
                   border: 'none', background: 'none', cursor: 'pointer',
                   color: 'var(--s-ink-faint)', fontSize: 18, lineHeight: 1, padding: 2,
                 }}>×</button>

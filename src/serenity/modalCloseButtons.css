@@ -1,0 +1,72 @@
+/**
+ * modalCloseButtons.css — il bottone di chiusura di History e Processus, in stile SERENITY.
+ *
+ * ── PERCHÉ ESISTE ───────────────────────────────────────────────────────────────────────────
+ * Segnalato: « i bottoni di chiusura di History e Processus sono quelli stile EQUILIBRIUM,
+ * cambiali con lo stile SERENITY ». I due pannelli chiudono sé stessi con `GlassCollapseToggle`
+ * (src/components/GlassCollapseToggle.tsx) — l'interruttore a levetta di EQUILIBRIUM (una pista
+ * ovale + un pollice che scivola), riusato anche per MNA/salute/journal/R&I. SERENITY chiude i
+ * SUOI pannelli con un cerchio di vetro (`.s-glass s-glass-btn`, lo stesso di History/Processus
+ * quando li si APRE, poco più su in `Serenity.tsx`) — due linguaggi diversi per la stessa azione.
+ *
+ * ── PERCHÉ QUI, NON DENTRO `GlassCollapseToggle.tsx` ───────────────────────────────────────
+ * Quel file è condiviso con moltissimi pannelli di EQUILIBRIUM (MNA, salute, R&I, biometria,
+ * journal, EP...) — cambiarlo cambierebbe tutti loro, e il segnalato riguardava SOLO History e
+ * Processus. Il componente non accetta `className` (tutto in linea, nessuna classe): non c'è
+ * gancio da cui appendere una regola CSS finché non arriva da FUORI un antenato con nome. I due
+ * `<div className="ser-history-wrap">`/`<div className="ser-processus-wrap">` che avvolgono i
+ * pannelli in `Serenity.tsx` sono quell'antenato — file SERENITY, non condiviso.
+ *
+ * ── COME RICONOSCE IL BOTTONE GIUSTO, NON UN ALTRO ────────────────────────────────────────
+ * Dentro i due pannelli ci sono ALTRI bottoni con `title` (filtri, tag...) — non basta
+ * "qualunque bottone nell'involucro". `GlassCollapseToggle` marca il suo `aria-label`/`title`
+ * con `t('tip_close')`: le 5 traduzioni esatte (src/i18n.tsx) sono l'unico aggancio stabile
+ * senza toccare il componente condiviso. `:is()` le raggruppa senza ripetere il selettore.
+ *
+ * ── COME SI RITINGE UN INTERRUTTORE IN UN CERCHIO ─────────────────────────────────────────
+ * Il bottone resta lo STESSO elemento (nessun cambio di struttura, `onClick` intatto) — solo
+ * `!important` per battere lo `style` in linea (unica cosa che vince sugli inline, a parità di
+ * origine). I suoi due `<div>` interni (pista + pollice) spariscono; un chip di vetro rotondo,
+ * ricetta `.s-glass s-glass-btn` di Serenity.tsx, prende il loro posto — con una « × » scritta
+ * via `::after` (niente markup in più, il componente resta quello che è).
+ *
+ * @see docs/serenity-refonte.md
+ */
+
+.ser-history-wrap button:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"]),
+.ser-processus-wrap button:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"]) {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 999px !important;
+  background: var(--s-disc) !important;
+  backdrop-filter: var(--s-glass-blur) !important;
+  -webkit-backdrop-filter: var(--s-glass-blur) !important;
+  border: 1px solid var(--s-glass-edge) !important;
+  box-shadow: var(--s-glass-highlight), var(--s-shadow) !important;
+  transition: box-shadow var(--s-slow) var(--s-ease), transform 120ms var(--s-ease) !important;
+}
+.ser-history-wrap button:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"]):hover,
+.ser-processus-wrap button:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"]):hover {
+  box-shadow: var(--s-glass-highlight), var(--s-shadow-lift) !important;
+}
+.ser-history-wrap button:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"]):active,
+.ser-processus-wrap button:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"]):active {
+  transform: scale(0.97) !important;
+}
+.ser-history-wrap button:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"]) > div,
+.ser-processus-wrap button:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"]) > div {
+  display: none !important;
+}
+.ser-history-wrap button:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"])::after,
+.ser-processus-wrap button:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"])::after {
+  content: '×';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  line-height: 1;
+  font-family: var(--s-sans, sans-serif);
+  color: var(--s-ink-soft);
+}

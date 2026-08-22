@@ -1864,6 +1864,89 @@ cambia-persone funziona (riporta a "chi audita?"). `git status`: `src/serenity/S
 
 ---
 
+## Ventottesimo giro (22/08/2026) — chiusura di History/Processus in stile SERENITY, tutto in alto vicino alla versione, i moduli solo da CONFIG
+
+Otto segnalazioni nello stesso messaggio:
+
+1. **« Ready for session » resta sempre DARK, deve seguire il tema chiaro.** `ThetaReadyCheck`
+   (le boîtes) e `MetabolicCheck` (il respiro guidato del MUSE) — condivisi con EQUILIBRIUM —
+   non leggono mai `useUiStore`: ogni colore è un RGBA scritto in linea, senza NESSUNA classe
+   a cui appendere un override (a differenza di `HistoryModal`, che almeno riusa classi
+   Tailwind). Nuovo `serenity/readyCheckLight.css`: un involucro proprio
+   (`.ser-ready-wrap`, attorno ai due componenti in `Serenity.tsx`) più selettori
+   `[style*="rgba(…"]` a sottostringa — l'unico gancio possibile senza toccare il file
+   condiviso. Ritinti i due pannelli (da vetro nero a vetro chiaro) e le famiglie di testo
+   "quasi bianco" (due livelli di enfasi, non ogni sfumatura di alfa — la stessa
+   semplificazione già fatta in `historyLight.css` sulle classi Tailwind). **Dichiarato
+   aperto**: i bordi/sfondi in `rgba(255,255,255,·)` (il "vetro" scuro delle carte e degli
+   anelli del respiro) restano quelli, solo ritinti come bordo — su un pannello ora chiaro
+   sono più tenui, non invisibili come sarebbe stato il testo lasciato intatto. Non
+   verificabile dal vivo in questo ambiente: la schermata si apre solo a Meter/MUSE
+   realmente collegati.
+
+2. **Il test del MUSE non deve rifarsi se il soffio del Meter è già riuscito.** Nuovo
+   `useEffect` in `Serenity.tsx` (stesso schema di quello già presente per la connessione
+   fallita a metà controllo: mai uno stato scritto durante il render): quando
+   `thetaReadyDone` e `theta.breathOk` sono entrambi veri, salta `MetabolicCheck` e apre la
+   seduta direttamente (`avviaSedutaConProntezza(null)`) — la stessa prova non si richiede
+   due volte con due strumenti diversi. Copre sia il caso appena fatto (`ThetaReadyCheck`
+   qui) sia quello fatto PRIMA in `PannelloMeter`, all'apertura della seduta.
+
+3. **MUSE/METER/DUE, di nuovo sotto l'ago.** Era stato spostato nella barra laterale insieme
+   a Contact/Null/Mirror/Tone (giro 26) — ma è la scelta di quale AGO guardare, non un
+   metodo di ciclo: rimesso come overlay assoluto dentro il quadrante, appena sotto l'arco.
+
+4. **Ora reale, sopra il tempo di seduta.** Nuovo componente `OraReale` (un orologio che si
+   aggiorna ogni secondo, `Clock` di lucide) nella colonna della barra laterale, appena
+   sopra `<Timer/> {orologio(tempo)}` — due informazioni diverse (che ore sono / da quanto
+   dura la seduta), ciascuna con la SUA icona.
+
+5. **Verifica di « configure the meter ».** Letto `PannelloMeter.tsx` per intero: usa solo
+   token `var(--s-*)` (quindi già adattivo al tema da solo), chiama direttamente le funzioni
+   di `useThetaMeter` (zero logica propria, come dichiara la sua stessa intestazione),
+   monta correttamente `onFatto={() => setMeterSetupAperto(false)}`. Nessun difetto trovato
+   nel codice. Non verificabile end-to-end in questo ambiente: serve un Theta-Meter vero
+   collegato via WebHID per aprire davvero il cassetto (gated `meterC &&`).
+
+6. **I bottoni di chiusura di History/Processus, in stile SERENITY.** Erano l'interruttore a
+   levetta di EQUILIBRIUM (`GlassCollapseToggle`, condiviso con moltissimi altri pannelli —
+   MNA, salute, R&I, biometria, journal, EP: cambiarlo avrebbe cambiato anche loro). Nuovo
+   `serenity/modalCloseButtons.css`: due involucri propri (`.ser-history-wrap`,
+   `.ser-processus-wrap`) più un aggancio sulle 5 traduzioni esatte di `tip_close`
+   (`src/i18n.tsx`) — l'unico modo di riconoscere QUEL bottone e non un altro bottone
+   titolato nello stesso pannello, senza toccare il componente condiviso. Il bottone resta lo
+   stesso elemento (`onClick` intatto): solo ridipinto in un cerchio di vetro `.s-glass
+   s-glass-btn`, con una « × » al posto della pista/pollice. Verificato dal vivo: 34×34px,
+   `border-radius:999px`, `::after` con la « × » — su entrambi i pannelli.
+
+7. **Tutti i bottoni statici, vicino al numero di versione.** History e Processus (gli ultimi
+   due bottoni statici rimasti fuori dall'intestazione — Contact/Null/Mirror/Tone/OPEN/PAUSA
+   restano nella barra laterale, richiesta separata ed esplicita) spostati dalla barra comandi
+   sotto il quadrante all'intestazione, subito dopo `{__SERENITY_VERSION__}`. A 1280px di
+   larghezza l'intestazione va comunque a capo (`flexWrap:'wrap'`, comportamento preesistente:
+   c'era già troppo contenuto — tema/lingua, pillola Auditor/PC, le connessioni, CONFIG,
+   Guide, assistente — per stare su una riga a quella larghezza anche PRIMA di questo giro);
+   su una finestra più larga i due bottoni stanno sulla stessa riga del nome/versione, come
+   segnalato.
+
+8. **ASSESSMENT/System Health/Journal/MNA, solo da CONFIG.** Rimossi i tre bottoni che li
+   aprivano dalla barra comandi (MNA, "salute sistema", il conteggio-journal cliccabile) —
+   ora si vedono SOLO quando il relativo interruttore in CONFIG è acceso
+   (`moduleVis.mna`/`.health`/`.journal`, lo stesso store già esistente), come già faceva
+   `ZonaAssessment`. Le loro chiusure interne spengono direttamente l'interruttore
+   (`onHide={() => setModuleVis(v => ({ ...v, health: false }))}`, lo stesso schema già usato
+   da `HealthPanel` in App.tsx) invece di uno stato locale separato.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, verifica dal vivo (profilo TEST) — History e Processus si aprono dall'intestazione,
+i due bottoni di chiusura sono ora cerchi di vetro SERENITY (34×34px, confermato via
+`getComputedStyle`), nessun errore in console oltre a fallimenti di rete attesi (nessun
+server P2P/hardware reale in questo ambiente). `git status`: `src/serenity/Serenity.tsx`,
+`src/serenity/main.tsx`, tre file nuovi (`modalCloseButtons.css`, `readyCheckLight.css`, e
+`historyLight.css` già esistente, invariato). EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
