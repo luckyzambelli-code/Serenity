@@ -45,7 +45,10 @@ import type { ReactNode } from 'react';
 
 export type StatoConnessione = 'connesso' | 'in-attesa' | 'cercando' | 'errore' | 'spento';
 
-const COLORE_PUNTO: Record<StatoConnessione, string> = {
+/** Esportato per `SelettoreStrumento` — segnalato: « i bottoni MUSE, Meter, No instrument
+ *  devono essere un solo bottone con solo le icone ». Stesso linguaggio di colore, un solo
+ *  punto per icona invece che punto+parola per pillola: la mappa non si duplica altrove. */
+export const COLORE_PUNTO: Record<StatoConnessione, string> = {
   connesso:  'var(--s-still)',
   cercando:  'var(--s-alive)',
   errore:    'var(--s-reserve)',

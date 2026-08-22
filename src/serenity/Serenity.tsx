@@ -23,7 +23,7 @@
  * @see docs/serenity-refonte.md
  */
 
-import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore, lazy, Suspense } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, lazy, Suspense } from 'react';
 import { useMetric, metricsStore } from '../store/metricsStore';
 import { chargeStateById } from '../lib/chargeState';
 import { sessionClock } from '../runtime/SessionClock';
@@ -77,7 +77,7 @@ import { PannelloEp } from './PannelloEp';
 import { PannelloConfig } from './PannelloConfig';
 import { PannelloMna } from './PannelloMna';
 import { CameraCerchio } from './CameraCerchio';
-import { IndicatoreConnessione } from './IndicatoreConnessione';
+import { IndicatoreConnessione, COLORE_PUNTO } from './IndicatoreConnessione';
 import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
@@ -430,6 +430,37 @@ export default function Serenity() {
    *  in seduta, DIVERSO dallo spegnimento da CONFIG (`moduleVis`): qui lo stream resta vivo. */
   const [cam1Collassata, setCam1Collassata] = useState(false);
   const [cam2Collassata, setCam2Collassata] = useState(false);
+  /** ⚠️ BUG TROVATO — segnalato: « i bottoni a sinistra non devono sovrapporsi alle scritte in
+   *  alto ». La barra laterale (OPEN/PAUSA/CONTACT/…) è ancorata con un `top` FISSO — ma
+   *  l'altezza vera di `<header>` + `.ser-comandi` sopra di lei CAMBIA (l'assistente IA, la
+   *  riga dell'item, `CycleStatusBar` a ciclo armato…): un numero fisso andava bene per UNA
+   *  sola combinazione di quel contenuto, sbagliato per le altre. Misurata per davvero, DOPO
+   *  ogni resa (`useLayoutEffect` SENZA lista di dipendenze — gira dopo ogni commit, prima
+   *  della vernice — non un `ResizeObserver`: verificato dal vivo che in questo ambiente di
+   *  test i suoi callback non arrivano mai, anche su un ridimensionamento vero della finestra;
+   *  una misura ripetuta ad ogni resa non dipende da quel meccanismo, ed è già lo stesso ritmo
+   *  del resto della pagina — l'orologio di seduta la fa comunque ridisegnare ogni secondo).
+   *  `Math.round` sui due numeri prima di confrontarli: `setState` con lo STESSO valore non
+   *  fa ridisegnare — nessun ciclo infinito, si ferma da sé quando l'altezza smette di
+   *  cambiare. */
+  const comandiRef = useRef<HTMLDivElement | null>(null);
+  const [sidebarTop, setSidebarTop] = useState(118);
+  // DELIBERATAMENTE senza lista di dipendenze: deve girare dopo OGNI resa (v. la nota sopra
+  // sul perché non un `ResizeObserver`), non solo quando certe dipendenze cambiano —
+  // `setSidebarTop(prev => prev === nuovo ? prev : nuovo)` è la guardia che impedisce il
+  // ciclo infinito di cui l'avviso sotto avverte: a valore invariato React non ridisegna,
+  // l'effetto si ferma da sé.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => {
+    const el = comandiRef.current;
+    if (!el) return;
+    // `offsetTop`/`offsetHeight`, non `getBoundingClientRect()`: sono già relativi
+    // all'antenato posizionato più vicino (`<main>`, `position:relative`) — lo STESSO
+    // riferimento del `top` assoluto della barra laterale, senza dover sottrarre
+    // manualmente la posizione della finestra.
+    const nuovo = Math.round(el.offsetTop + el.offsetHeight) + 14;
+    setSidebarTop(prev => (prev === nuovo ? prev : nuovo));
+  });
   const uiAlpha = useUiStore(s => s.uiAlpha);
   const wallpaperUrl = useUiStore(s => s.wallpaperUrl);
   const moduleVis = useSerenityModuleStore(s => s.moduleVis);
@@ -1762,12 +1793,15 @@ export default function Serenity() {
   /* ── ASSESSMENT, ORA SOTTO EP — segnalato: « la zona assessment deve stare sotto il bottone
    *  EP... quindi la zona arco deve occupare tutto lo spazio liberato ». Non è più una colonna
    *  nella riga a fianco dell'arco (v. la barra laterale, sopra, dove vive ora) — l'arco
-   *  (sotto) riprende TUTTA quella larghezza: nella riga resta solo la colonna destra
-   *  (Santé/journal), sempre a metà (`50%`, mai più ridotta a un terzo: non condivide più
-   *  la riga con l'assessment). */
+   *  (sotto) riprende TUTTA quella larghezza. Nella riga resta solo la colonna destra
+   *  (Santé/journal). Segnalato di nuovo: « System Health deve essere della stessa larghezza
+   *  che le camm » — non più a metà riga, ma larga quanto CAM 2 (la più grande delle due, 272px
+   *  — v. sotto), la STESSA colonna sotto cui già vivono le camere (« sotto les cams »). Con le
+   *  due colonne strette (148 + 272, invece di 50%+50% di prima) l'arco (`flex:1`) si allarga
+   *  fino quasi a toccarle — segnalato: « la zona arc deve quindi allargarsi ». */
   const assessColOpen = aperta && moduleVis.ri;
   const rightColOpen = (aperta && moduleVis.health && (museOk || meterC)) || moduleVis.journal;
-  const moduleColWidth = '50%';
+  const moduleColWidth = 272;
   /* ── LE CAMERE SONO SOPRA — segnalato: « le zones devono essere sotto les cams ». Le camere
    *  galleggiano `position:absolute, top:16, right:32` sulla STESSA colonna destra dove ora
    *  vive Santé Système/journal (in flusso, sotto) — senza spazio riservato, le due si
@@ -1994,10 +2028,14 @@ export default function Serenity() {
           contenitore del quadrante — zero logica nuova, gli stessi `chiudi`/`apri`/
           `cycles.armCycle`/`mirror.armMirror`/`setToneAttivo` di sempre, solo spostati. */}
       <div style={{
-        position: 'absolute', left: 20, top: 118, bottom: 24, zIndex: 8,
+        position: 'absolute', left: 20, top: sidebarTop, bottom: 24, zIndex: 8,
         display: 'flex', flexDirection: 'column',
         justifyContent: (aperta && moduleVis.ri) ? 'flex-start' : 'center',
-        gap: 10, width: '50%', maxWidth: 560,
+        /* ⚠️ Segnalato: « assessment deve essere largo quanto i bottoni Contact...ecc ».
+           Era stata allargata (« larga la metà », giro scorso) per farle prendere più spazio —
+           tornata alla STESSA larghezza dei sette bottoni sopra di lei (148px, l'involucro
+           stretto qui sotto non serve più: dentro e fuori sono la stessa misura). */
+        gap: 10, width: 148,
         /* ⚠️ BUG TROVATO — segnalato: « le module History et Processus ne s'ouvrent pas ».
            Questo contenitore è alto quanto quasi tutta la pagina (`top:118, bottom:24`) per
            poter CENTRARE verticalmente i suoi bottoni — ma uno `<div>` copre l'intero
@@ -2113,11 +2151,11 @@ export default function Serenity() {
         </div>
         {/* ── L'ASSESSMENT, SOTTO EP — segnalato: « la zone assessment... deve stare sotto il
             bottone EP... rimonta l'insieme dei bottoni... quindi la zona arco deve occupare
-            tutto lo spazio liberato ». Era una colonna nella riga a tre a fianco dell'arco
-            (giro scorso) — spostato qui, sotto i bottoni, nella STESSA striscia a sinistra
-            (mai più nella riga dell'arco: l'arco ora la riprende tutta, v. sotto). «Larga la
-            metà»: il contenitore intorno è largo `50%`/max 560px — qui prende `width:'100%'`
-            di QUELLO, non degli stretti 148px dei bottoni sopra. */}
+            tutto lo spazio liberato ». Era una colonna nella riga a tre a fianco dell'arco —
+            spostato qui, sotto i bottoni, nella STESSA striscia a sinistra (mai più nella riga
+            dell'arco: l'arco la riprende tutta, v. sotto). Segnalato di nuovo: « largo quanto
+            i bottoni Contact...ecc » — il contenitore intorno è di nuovo 148px (v. sopra), e
+            `width:'100%'` qui prende esattamente quella misura, non più una larga a parte. */}
         {assessColOpen && (
           <div style={{ width: '100%', flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', pointerEvents: 'auto' }}>
             <ZonaAssessment
@@ -2338,109 +2376,79 @@ export default function Serenity() {
           )}
         </span>
         <span style={{ width: 1, height: 16, background: 'var(--s-ink-ghost)', flexShrink: 0 }} />
-        {/* ── LE CONNESSIONI, UN PUNTO E UNA PAROLA PER DISPOSITIVO ──────────────────────────
-            Segnalato: deve capirsi SUBITO quale dispositivo è collegato, quale non lo è, se
-            regge, quale aspetta, se c'è un problema, quando sta cercando — senza diventare un
-            pannello diagnostico. `IndicatoreConnessione` fa questo, e SOLO questo, per ognuno
-            dei dispositivi reali di questa seduta. Vedi la nota in testa a quel file per la
-            scelta dei tre colori.
-            L'etichetta "STRUMENTI" qui davanti: la sola zona dove due parole simili (MUSE
-            locale qui, MUSE del preclear più avanti se a distanza) potevano confondersi. */}
-        <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.12em',
-                      textTransform: 'uppercase', color: 'var(--s-ink-ghost)' }}>
-          {LC('strumenti', 'instruments', 'instruments', 'instrumentos', 'instrument')}
-        </span>
-        {/* ── ETICHETTE CORTE, ORA — segnalato: « Connecter MUSE, Connecter le Meter, Séance
-            sans instrument doivent être des ICÔNES avec écrit MUSE, METER, Sans Instruments ».
-            Prima la parola PORTAVA lo stato intero ("connetti muse"/"meter scollegato"/…) — una
-            frase diversa ogni volta, da rileggere per capire qual è il dispositivo. Ora la
-            parola è SEMPRE il nome corto del dispositivo (invariante), lo stato si legge dal
-            punto colorato (v. `IndicatoreConnessione`) e, quando serve un dettaglio in più
-            (percentuale, ricerca in corso, un problema), sta in `dettaglio` — corto anch'esso.
-            La frase intera resta, come `title`, per chi passa il mouse o usa un lettore di
-            schermo: NULLA è stato tolto, solo spostato da "sempre visibile" a "a richiesta". */}
-        {/* ⚠️ BUG TROVATO — segnalato: « non appare quando il MUSE non è indossato ». Il
-            `title` usava `ser_meter_disconnected` ("meter scollegato") — la chiave SBAGLIATA,
-            copiata dal Meter, per un avviso che riguarda il MUSE indossato o no. App.tsx ha
-            la chiave giusta (`muse_tip_not_worn`), già tradotta nelle 5 lingue, mai usata qui.
-            Anche `dettaglio` diceva solo "⚠" (un simbolo muto, da capire) — App.tsx scrive la
-            PAROLA (« MUSE · not worn »): qui lo stesso, `muse_not_worn` invece del simbolo
-            solo, così si legge senza dover passare il mouse sopra. */}
-        <IndicatoreConnessione
-          onClick={muse.handleConnectMuse}
-          icona={<Headphones size={26} strokeWidth={1.8} />}
-          etichetta="MUSE"
-          title={
+        {/* ── LE CONNESSIONI, UN SOLO BOTTONE, SOLO ICONE — segnalato di nuovo: « i bottoni
+            MUSE, Meter, No instrument devono essere un solo bottone con solo le icone
+            (survolando ogni icona si scrive cosa significa), così guadagniamo spazio in
+            larghezza ». Erano tre pillole `IndicatoreConnessione` separate (punto + icona +
+            PAROLA, la STRUMENTI davanti) — qui una pillola SOLA (`.s-glass`), tre icone dentro,
+            ciascuna il proprio bottone/stato/tooltip: stessa informazione di prima (nulla
+            tolto, la frase intera che spiega lo stato resta in `title`, letta al passaggio del
+            mouse), niente più parole sempre visibili. Il colore del punto è lo STESSO di
+            `IndicatoreConnessione` (`COLORE_PUNTO`, esportato da lì apposta: una sola mappa,
+            non duplicata) — un pallino invece che punto+parola, in alto a destra sull'icona. */}
+        {(() => {
+          const museStato: import('./IndicatoreConnessione').StatoConnessione =
             muse.museConnection === 'connected'
-              ? (museGate.museContact ? undefined : t('muse_tip_not_worn') as string)
-              : muse.museConnection === 'searching' ? t('searching') as string : t('ser_connect_muse') as string
-          }
-          dettaglio={
+              ? (museGate.museContact ? 'connesso' : 'errore')
+              : muse.museConnection === 'searching' ? 'cercando' : 'in-attesa';
+          const museTitolo = `MUSE — ${
             muse.museConnection === 'connected'
               ? (museGate.museContact
                   ? (batteryLevel !== null ? `${batteryLevel}%` : '✓')
-                  : t('muse_not_worn') as string)
-              : muse.museConnection === 'searching' ? '…' : null
-          }
-          stato={
-            muse.museConnection === 'connected'
-              ? (museGate.museContact ? 'connesso' : 'errore')
-              : muse.museConnection === 'searching' ? 'cercando' : 'in-attesa'
-          }
-        />
-        {/* ── IL METER, LO STESSO PUNTO-E-PAROLA DEL MUSE ─────────────────────────────────────
-            Segnalato: « non vedo dove posso connettere il METER ». `theta.connect()` esisteva
-            già (fase 5, l'ago si disegna) ma nessun elemento dell'interfaccia lo chiamava mai —
-            qui, esattamente come per MUSE accanto, un click sul punto avvia (o chiude) la
-            connessione WebHID. Il "senza driver" del browser (`theta.unavailable`) resta
-            distinguibile da "non ancora connesso": due stati diversi, non uno solo. */}
-        <IndicatoreConnessione
-          onClick={theta.unavailable ? undefined : (meterC ? theta.disconnect : theta.connect)}
-          icona={<Gauge size={26} strokeWidth={1.8} />}
-          etichetta="METER"
-          title={
-            // ⚠️ Segnalato: « la connessione METER non la vedo, vedo invece connessione MUSE ».
-            // La causa vera: questa etichetta usava `theta_uncalibrated` ("non tarato") — una
-            // parola che non nomina il meter, e che l'auditor legge come "MUSE" o comunque
-            // come qualcos'altro, non come lo stato del Theta-Meter. `ser_meter_unavailable`
-            // ("meter non disponibile qui") dice la cosa giusta: È il meter, e non lo si può
-            // usare in questo browser/ambiente.
-            theta.unavailable ? t('ser_meter_unavailable') as string
-              : meterC ? undefined
-              : theta.status === 'connecting' ? undefined : t('theta_connect') as string
-          }
-          dettaglio={
-            theta.unavailable ? '—'
-              : meterC ? '✓'
-              : theta.status === 'connecting' ? '…' : null
-          }
-          stato={
+                  : t('muse_tip_not_worn') as string)
+              : muse.museConnection === 'searching' ? t('searching') as string : t('ser_connect_muse') as string
+          }`;
+          const meterStato: import('./IndicatoreConnessione').StatoConnessione =
             theta.unavailable ? 'spento'
               : meterC ? 'connesso'
-              : theta.status === 'connecting' ? 'cercando' : 'in-attesa'
-          }
-        />
-        {/* ── SENZA STRUMENTI — segnalato: « manque SANS INSTRUMENTS à côté de MUSE et METER ».
-            Il pannello "con che cosa si audita?" (`scegliStrumento`) offriva già questa terza
-            via, ma solo dentro un modale che appare SOLO se nessuno strumento è già connesso —
-            chi vuole dichiararlo ESPLICITAMENTE, senza passare da quel modale, non aveva dove
-            farlo. Stesso `IndicatoreConnessione`, stessa famiglia di MUSE/METER: attivarla
-            spegne entrambi gli strumenti (« senza strumenti » è ESCLUSIVO con loro, come nel
-            modale — `scegliConn`), disattivarla non fa nulla da sé, si torna a scegliere. */}
-        <IndicatoreConnessione
-          onClick={() => {
-            const nuovo = !senzaStrumenti;
-            setSenzaStrumenti(nuovo);
-            if (nuovo) {
-              if (muse.museConnection !== 'disconnected') muse.handleConnectMuse();
-              if (meterC) theta.disconnect();
-            }
-          }}
-          icona={<MessageSquareOff size={26} strokeWidth={1.8} />}
-          etichetta={LC('SENZA STRUMENTI', 'SANS INSTRUMENTS', 'NO INSTRUMENTS', 'SIN INSTRUMENTOS', 'UTAN INSTRUMENT') as string}
-          title={t('no_instruments_mode') as string}
-          stato={senzaStrumenti ? 'connesso' : 'in-attesa'}
-        />
+              : theta.status === 'connecting' ? 'cercando' : 'in-attesa';
+          const meterTitolo = `METER — ${
+            theta.unavailable ? t('ser_meter_unavailable') as string
+              : meterC ? t('theta_cans') as string
+              : theta.status === 'connecting' ? t('searching') as string : t('theta_connect') as string
+          }`;
+          const noneTitolo = `${LC('SENZA STRUMENTI', 'SANS INSTRUMENTS', 'NO INSTRUMENTS', 'SIN INSTRUMENTOS', 'UTAN INSTRUMENT')} — ${t('no_instruments_mode') as string}`;
+          const strumenti: Array<{ key: string; icona: React.ReactNode; onClick?: () => void; stato: import('./IndicatoreConnessione').StatoConnessione; title: string }> = [
+            { key: 'muse', icona: <Headphones size={22} strokeWidth={1.8} />, onClick: muse.handleConnectMuse, stato: museStato, title: museTitolo },
+            { key: 'meter', icona: <Gauge size={22} strokeWidth={1.8} />, onClick: theta.unavailable ? undefined : (meterC ? theta.disconnect : theta.connect), stato: meterStato, title: meterTitolo },
+            {
+              key: 'none', icona: <MessageSquareOff size={22} strokeWidth={1.8} />,
+              onClick: () => {
+                const nuovo = !senzaStrumenti;
+                setSenzaStrumenti(nuovo);
+                if (nuovo) {
+                  if (muse.museConnection !== 'disconnected') muse.handleConnectMuse();
+                  if (meterC) theta.disconnect();
+                }
+              },
+              stato: senzaStrumenti ? 'connesso' : 'in-attesa', title: noneTitolo,
+            },
+          ];
+          return (
+            <span className="s-glass" style={{
+              display: 'flex', alignItems: 'center', gap: 2, background: 'var(--s-disc)',
+              borderRadius: 999, padding: '4px 6px',
+            }}>
+              {strumenti.map(s => (
+                <button key={s.key} className="s-glass-btn" onClick={s.onClick} title={s.title}
+                  style={{
+                    position: 'relative', border: 'none', background: 'transparent',
+                    cursor: s.onClick ? 'pointer' : 'default', padding: 6, borderRadius: 999,
+                    display: 'flex', color: 'var(--s-ink-soft)',
+                  }}>
+                  {s.icona}
+                  <span aria-hidden="true" style={{
+                    position: 'absolute', top: 3, right: 3, width: 7, height: 7, borderRadius: '50%',
+                    background: COLORE_PUNTO[s.stato],
+                    boxShadow: (s.stato === 'connesso' || s.stato === 'errore')
+                      ? `0 0 0 2px color-mix(in srgb, ${COLORE_PUNTO[s.stato]} 25%, transparent)` : 'none',
+                    transition: 'background var(--s-slow) var(--s-ease), box-shadow var(--s-slow) var(--s-ease)',
+                  }} />
+                </button>
+              ))}
+            </span>
+          );
+        })()}
         {/* ── LA SUA ESPANSIONE — due lattine/lattina sola, le due prove, la taratura TA ──────
             Segnalato: la stessa connessione non deve avere due abitudini diverse (una in alto,
             una in fondo alla pagina) da imparare. Qui, SOLO a meter connesso, una freccia
@@ -2643,7 +2651,7 @@ export default function Serenity() {
           non in un piede di pagina lontano da dove l'occhio già guarda. Questo blocco (era
           `<footer>`, l'ultimo figlio della pagina) è lo STESSO, spostato qui sopra il
           quadrante: nessuna riga di logica toccata, solo l'ordine in cui compaiono. */}
-      <div className="ser-comandi" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 18, rowGap: 10 }}>
+      <div ref={comandiRef} className="ser-comandi" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 18, rowGap: 10 }}>
         {/* ── STORICO E PROCESSUS, SPOSTATI IN INTESTAZIONE — segnalato: « sposta tutti i
             bottoni in alto vicino al numero di versione ». Erano qui, primi due elementi di
             questa barra (v. `<header>`, accanto a `{__SERENITY_VERSION__}`, per dove sono ora
@@ -3085,12 +3093,10 @@ export default function Serenity() {
         alignItems: 'center', justifyContent: 'center', gap: 16, minHeight: 0,
         /* ⚠️ BUG TROVATO verificando dal vivo: la riga dell'arco comincia al bordo sinistro di
            `<section>` — che è anche dove comincia, `position:absolute`, la barra laterale
-           (OPEN/PAUSA/CONTACT/NULL/MIRROR/TONE/EP, poi l'assessment sotto). `paddingLeft`
-           sposta la riga dopo di lei — non un numero fisso: la barra laterale è larga 148px
-           SENZA assessment aperto, ma metà di `<main>` (`width:'50%', maxWidth:560`, v. sopra)
-           CON assessment aperto — lo stesso `calc`/`min` qui, sulla stessa percentuale, tiene
-           la riga sempre dopo di lei qualunque sia la sua vera larghezza in quel momento. */
-        paddingLeft: assessColOpen ? 'min(calc(50% + 40px), 600px)' : 190,
+           (OPEN/PAUSA/CONTACT/NULL/MIRROR/TONE/EP, poi l'assessment sotto, STESSA larghezza —
+           v. sopra). `paddingLeft` sposta la riga dopo di lei: un numero fisso basta di nuovo,
+           la barra laterale è sempre 148px ora, con o senza assessment aperta. */
+        paddingLeft: 190,
       }}>
       {/* ── IL CASSETTO DEL METER — ancorato SOTTO l'intestazione, dove sta il suo indicatore ──
           Non nel flusso della pagina (galleggia, `position:absolute`, come le camere qui sotto e

@@ -2131,6 +2131,52 @@ disconnessione non sono verificabili senza hardware vero. `git status`: solo
 
 ---
 
+## Trentaduesimo giro (22/08/2026) — assessment stretta come i bottoni, System Health quanto le camm, MUSE/METER/NONE in un solo bottone, l'arco quasi tocca i bordi, un bug di sovrapposizione trovato per strada
+
+Cinque segnalazioni:
+
+1. **« Assessment deve essere largo quanto i bottoni Contact...ecc »** — tornata da « larga la
+   metà » (giro scorso) a 148px, la STESSA larghezza dei sette bottoni sopra di lei nella barra
+   laterale. L'involucro esterno che li conteneva entrambi è tornato anche lui a 148px fisso
+   (non più `50%`/max 560).
+
+2. **« System Health deve essere della stessa larghezza che le camm »** — non più a metà riga:
+   la colonna destra (Santé/journal, sotto le camere) è ora larga 272px, la stessa di CAM 2
+   (la più grande delle due).
+
+3. **« I bottoni MUSE, Meter, No instrument devono essere un solo bottone con solo le icone »** —
+   le tre pillole `IndicatoreConnessione` (punto + icona + PAROLA, la STRUMENTI davanti) sono
+   diventate UNA pillola sola, tre icone dentro: ciascuna resta il proprio bottone/stato/click,
+   ma senza più etichette sempre visibili — la frase intera (stato, percentuale batteria,
+   « non indossato »…) resta nel `title`, letta al passaggio del mouse. Il colore del punto di
+   stato è la STESSA mappa di `IndicatoreConnessione` (`COLORE_PUNTO`, ora esportata da lì:
+   una sola fonte, non duplicata).
+
+4. **« La zona arc deve quindi allargarsi »** — conseguenza diretta delle prime due: con le due
+   colonne più strette (148+272 invece di metà riga ciascuna), l'arco (`flex:1`) riprende lo
+   spazio da sé, senza bisogno di codice a parte.
+
+5. **BUG TROVATO per strada, verificando dal vivo**: « i bottoni a sinistra non devono
+   sovrapporsi alle scritte in alto » — vero, e la causa era un `top` FISSO (118px) sulla barra
+   laterale, tarato per UNA combinazione di contenuto di `<header>`+`.ser-comandi` sopra di
+   lei; con l'assistente IA o la riga dell'item presenti quel bordo vero era più in basso, e la
+   barra ci finiva sopra. Prima corretto con un `ResizeObserver` — poi trovato, sempre
+   verificando dal vivo, che in QUESTO ambiente di test i suoi callback non arrivano MAI
+   (confermato con un secondo `ResizeObserver` di prova, anche su un ridimensionamento vero
+   della finestra): non ci si può appoggiare a un meccanismo silenzioso qui. Sostituito con una
+   misura reale ad ogni resa (`useLayoutEffect` senza lista di dipendenze, una guardia
+   `prev === nuovo` per non ridisegnare a vuoto) — verificato dal vivo: `top` passa da 118 a
+   240px una volta aperta la seduta, e "FERMER LA SÉANCE" non copre più "ÉCRIS OU DIS L'ITEM".
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo — un avviso nuovo
+di `useLayoutEffect` risolto con un `eslint-disable` motivato, non ignorato), `vitest run`
+639/639, verifica dal vivo estesa (profilo TEST, con un test isolato di `ResizeObserver` per
+diagnosticare il bug del punto 5). Nessun errore in console oltre a fallimenti di rete attesi.
+`git status`: `src/serenity/Serenity.tsx`, `src/serenity/IndicatoreConnessione.tsx`.
+EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
