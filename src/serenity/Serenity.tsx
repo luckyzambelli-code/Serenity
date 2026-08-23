@@ -1294,6 +1294,14 @@ export default function Serenity() {
     : mirror.mirrorArmed ? 'mirror'
     : cycles.cycleArmed ? (cycles.cycleKind === 'null' ? 'null' : 'contact')
     : 'free';
+  /** ── MODALITÀ CICLO — segnalato: « quando si comincia un ciclo mi piacerebbe che sparisse
+   *  tutto quello non necessario e che alla fine riapparisse ». Confermato dopo una proposta
+   *  scritta (cosa sparisce, cosa resta, e perché): scatta SOLO a ciclo armato/in corso — non
+   *  dall'apertura della seduta, che resta piena finché l'auditor sta ancora scegliendo. Zero
+   *  stato nuovo: `mode` (sopra) già distingue `'free'` da tutto il resto — la STESSA
+   *  condizione che già nasconde/mostra i cinque cerchi dei metodi, ora estesa alla barra
+   *  amministrativa in alto. */
+  const modalitaCiclo = mode !== 'free';
 
   /**
    * ── LA FASE DEL CICLO, LA STESSA SCALA DI App.tsx ────────────────────────────────────────
@@ -1855,17 +1863,17 @@ export default function Serenity() {
    *  due colonne strette (148 + 272, invece di 50%+50% di prima) l'arco (`flex:1`) si allarga
    *  fino quasi a toccarle — segnalato: « la zona arc deve quindi allargarsi ». */
   const assessColOpen = aperta && moduleVis.ri;
-  /* ⚠️ BUG TROVATO — segnalato: « la fenêtre Santé Système apparaît alors que le MUSE n'est
-   *  pas activé... fais apparaître les modules SEULEMENT s'ils correspondent au choix des
-   *  instruments, EXACTEMENT comme dans EQUILIBRIUM, VERIFIE LE CODE ». Verificato: App.tsx
-   *  (righe intorno a "Main Dashboard Area") ha un commento ESPLICITO — « FIX M-07: dead
-   *  `hideHealth = false` removed — visibility driven by `moduleVis` ONLY » — cioè EQUILIBRIUM
-   *  ha RIMOSSO deliberatamente un cancello sugli strumenti che un tempo aveva: oggi `Santé
-   *  Système` si mostra quando `moduleVis.health` è acceso, PUNTO, strumento collegato o no.
-   *  Il `&& (museOk || meterC)` qui era un'invenzione mia, non una riproduzione — tolto, per
-   *  la stessa regola di sempre: riprodurre EQUILIBRIUM, non una versione più prudente
-   *  inventata qui. */
-  const rightColOpen = (aperta && moduleVis.health) || moduleVis.journal;
+  /* ⚠️ SEGNALATO DI NUOVO, stavolta al contrario: « vedo che appare Santé Système anche
+   *  senza il MUSE ». Un giro passato avevo tolto il cancello `&& (museOk || meterC)` per
+   *  riprodurre App.tsx alla lettera (il suo commento « FIX M-07 » dice che mostra Santé
+   *  SEMPRE, strumento collegato o no) — verificato di nuovo dal vivo, stavolta aprendo
+   *  DAVVERO EQUILIBRIUM senza strumenti: è vero, lo fa anche lui. Ma qui la richiesta non è
+   *  "correggi una divergenza da EQUILIBRIUM" — è una preferenza esplicita e diversa PER
+   *  SERENITY, vista e confermata dopo aver guardato entrambe le app fianco a fianco: Santé
+   *  Système (EEG/GYRO/elettrodi — dati del SUO MUSE, non del meter) non ha senso da vedere
+   *  senza un MUSE connesso. Cancello rimesso, stavolta come scelta dichiarata di SERENITY,
+   *  non come un'invenzione prudente scoperta per caso. */
+  const rightColOpen = (aperta && moduleVis.health && museOk) || moduleVis.journal;
   const moduleColWidth = 272;
   /* ── LE CAMERE SONO SOPRA — segnalato: « le zones devono essere sotto les cams ». Le camere
    *  galleggiano `position:absolute, top:16, right:32` sulla STESSA colonna destra dove ora
@@ -1874,18 +1882,17 @@ export default function Serenity() {
    *  (aperta/collassata, una o due camere) le tiene SEMPRE sotto, mai più sotto le camere.
    *  Le taglie (272/170) sono le stesse di `CameraCerchio` sotto — « la zona camm deve essere
    *  di 1/5 più piccola » (340→272, 213→170.4→170), ridotte insieme lì e qui.
-   *  ⚠️ SEGNALATO DI NUOVO: « il journal et Santé système non si vedono completamente, sposta
-   *  la camm PC completamente in alto in modo da renderli visibile ». Le due camere una SOPRA
-   *  l'altra (272+14+170+margini ≈ 490px) riservavano quasi mezza pagina — Santé Système e il
-   *  Journal cominciavano così in basso da restare quasi sempre fuori dallo schermo, non solo
-   *  "non del tutto visibili". Ora AFFIANCATE (una riga, non una colonna: v. il contenitore
-   *  qui sotto) — CAM 2 (PC) resta com'era, in alto, con NULLA più sotto di lei che la spinga
-   *  a riservare spazio verticale doppio: la riserva ora è alta quanto la PIÙ ALTA delle due,
-   *  non la somma — libera fino a ~186px per Santé Système/Journal. */
+   *  ⚠️ SEGNALATO, poi di nuovo AL CONTRARIO — prima « sposta la camm PC completamente in
+   *  alto » (le due AFFIANCATE, riserva pari alla più alta delle due, non la somma), poi
+   *  « sposta la cam AUDITOR in alto di quella del PC per poter spostare la camm PC a
+   *  destra » — CAM 1 di nuovo SOPRA CAM 2 (v. il contenitore più giù), quindi la riserva
+   *  torna a sommare le due altezze: la richiesta esplicita di QUESTO giro vince sul
+   *  risparmio verticale del giro precedente. Compensato in parte riducendo ancora il
+   *  padding di `<main>` (v. sotto), per lasciare comunque più spazio vero all'arco. */
   const cam2H = !moduleVis.cam2 ? 0 : (cam2Collassata ? 88 : 272);
   const cam1H = !moduleVis.cam1 ? 0 : (cam1Collassata ? 88 : 170);
   const camStackH = (moduleVis.cam1 || moduleVis.cam2)
-    ? 16 + Math.max(cam2H, cam1H) + 20
+    ? 16 + cam1H + (moduleVis.cam1 && moduleVis.cam2 ? 14 : 0) + cam2H + 20
     : 0;
 
   return (
@@ -1907,9 +1914,11 @@ export default function Serenity() {
       /* ⚠️ Segnalato: « lo spazio dell'arco deve essere più grande, fallo occupare tutto lo
          spazio disponibile ». Il padding di `<main>` (38/44px) toglieva spazio VERO all'arco
          su ogni schermo, non solo su quelli piccoli: su un'aspect-ratio larga com'è la sua
-         (1600/850) è quasi sempre la LARGHEZZA a decidere la taglia finale. Ridotto — resta
-         comunque un margine dai bordi della finestra, solo più stretto. */
-      padding: '20px 24px', gap: 24, position: 'relative',
+         (1600/850) è quasi sempre la LARGHEZZA a decidere la taglia finale. Ridotto una prima
+         volta (38/44→20/24); ridotto ANCORA qui — segnalato di nuovo insieme al riordino
+         delle camere (v. `camStackH`, sopra), che quel riordino da solo toglie spazio verticale
+         a Santé/Journal: compensato in parte lasciando all'arco un margine più stretto ancora. */
+      padding: '16px 20px', gap: 20, position: 'relative',
     }}>
       {/* ── METER / MUSE / NESSUNO STRUMENTO — si sceglie PRIMA di aprire ──────────────────────
           Segnalato: « la logica... non sembra ancora implementata ». Le TRE voci sullo stesso
@@ -2318,6 +2327,13 @@ export default function Serenity() {
           più larghi delle parole nude di prima. Senza, su una finestra stretta gli ultimi
           indicatori uscivano dal bordo invece di andare a capo — persi, non solo compressi. */}
       <header style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 14, rowGap: 10 }}>
+        {/* ── MODALITÀ CICLO, LA BARRA AMMINISTRATIVA SPARISCE — v. la nota su `modalitaCiclo`.
+            Logo/crediti, tema, lingua, storico, processus, l'assetto: decisi una volta, mai
+            bisogno di guardarli con un ago che sta reagendo. Nulla di questo è tolto per
+            davvero — l'intero blocco torna intatto appena il ciclo si chiude (`ANNULLA` o un
+            esito), la STESSA condizione che già fa ricomparire i cinque cerchi dei metodi. */}
+        {!modalitaCiclo && (
+        <>
         {/* ── IL LOGO — segnalato: « avant tout tu dois mettre le logo... comme pour
             Equilibrium ». Stessa immagine (`/logo-alt-scientology.png`, nella cartella
             pubblica condivisa dai due build), stesso gesto (apre i crediti — `CreditsModal`,
@@ -2552,6 +2568,13 @@ export default function Serenity() {
           </div>
         </span>
         <span style={{ width: 1, height: 16, background: 'var(--s-ink-ghost)', flexShrink: 0 }} />
+        </>
+        )}
+        {/* ── LE CONNESSIONI, SEMPRE VISIBILI ANCHE IN MODALITÀ CICLO — v. la nota su
+            `modalitaCiclo`: qui SOLO i puntini di stato restano leggibili (un disconnessione a
+            metà lettura va vista SUBITO), non i bottoni per CONNETTERSI — quelli si disattivano
+            (`onClick` diventa `undefined`, lo stesso trattamento che « il meter non è
+            disponibile » usa già più sotto), niente di nuovo inventato qui. */}
         {/* ── LE CONNESSIONI, UN SOLO BOTTONE, SOLO ICONE — segnalato di nuovo: « i bottoni
             MUSE, Meter, No instrument devono essere un solo bottone con solo le icone
             (survolando ogni icona si scrive cosa significa), così guadagniamo spazio in
@@ -2605,11 +2628,13 @@ export default function Serenity() {
               display: 'flex', alignItems: 'center', gap: 2, background: 'var(--s-disc)',
               borderRadius: 999, padding: '4px 6px',
             }}>
-              {strumenti.map(s => (
-                <button key={s.key} className="s-glass-btn" onClick={s.onClick} title={s.title}
+              {strumenti.map(s => {
+                const clic = modalitaCiclo ? undefined : s.onClick;
+                return (
+                <button key={s.key} className="s-glass-btn" onClick={clic} title={s.title}
                   style={{
                     position: 'relative', border: 'none', background: 'transparent',
-                    cursor: s.onClick ? 'pointer' : 'default', padding: 6, borderRadius: 999,
+                    cursor: clic ? 'pointer' : 'default', padding: 6, borderRadius: 999,
                     display: 'flex', color: 'var(--s-ink-soft)',
                   }}>
                   {s.icona}
@@ -2621,7 +2646,8 @@ export default function Serenity() {
                     transition: 'background var(--s-slow) var(--s-ease), box-shadow var(--s-slow) var(--s-ease)',
                   }} />
                 </button>
-              ))}
+                );
+              })}
             </span>
           );
         })()}
@@ -2631,7 +2657,9 @@ export default function Serenity() {
             accanto al suo stesso indicatore apre `PannelloMeter` come un cassetto ancorato
             proprio lì (`position:absolute`, sotto l'intestazione) — la stessa idea del cassetto
             di CONFIG, non un secondo luogo. */}
-        {meterC && (
+        {/* Nascosto in modalità ciclo — la sua taratura si rivede annullando il ciclo, non a
+            metà lettura (stessa regola già scritta per la barra amministrativa sopra). */}
+        {meterC && !modalitaCiclo && (
           <button className="s-glass s-glass-btn" onClick={() => setMeterSetupAperto(v => !v)} style={{
             cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
             background: 'var(--s-disc)',
@@ -2697,6 +2725,11 @@ export default function Serenity() {
             />
           </>
         )}
+        {/* CONFIG/Guida — nascosti in modalità ciclo, come il resto della barra amministrativa
+            (v. `modalitaCiclo`): non sono azioni da fare a metà lettura. Tornano appena il
+            ciclo si chiude. */}
+        {!modalitaCiclo && (
+        <>
         <span style={{ width: 1, height: 16, background: 'var(--s-ink-ghost)', flexShrink: 0 }} />
         {/* CONFIG — raggiungibile in ogni momento, come il cassetto di EQUILIBRIUM. */}
         <button className="s-glass s-glass-btn" onClick={() => setConfigAperto(true)} title={t('config') as string} style={{
@@ -2716,13 +2749,18 @@ export default function Serenity() {
         }}>
           <HelpCircle size={32} strokeWidth={1.6} />
         </button>
+        </>
+        )}
         {/* ── L'ASSISTENTE IA, ORA QUI — segnalato: « la zona API mettila dopo l'icona GUIDE ».
             Stesso componente di App.tsx, montato TALE E QUALE (legge già `useUiStore` da sé,
             si adatta al tema di SERENITY senza bisogno di passarglielo): una chiave Gemini
             propria dell'auditor (mai inviata a SERENITY/EQUILIBRIUM), lo stesso contesto di
             seduta che App.tsx gli passa — nome/i, tempo, TA, carica, ultima reazione, le
-            ultime righe del giornale. */}
-        {aperta && (
+            ultime righe del giornale.
+            ⚠️ Nascosto in modalità ciclo (v. `modalitaCiclo`) — non è uno strumento per la
+            lettura in corso, e la sua barra di input competerebbe con lo spazio dedicato al
+            campo item del ciclo. */}
+        {aperta && !modalitaCiclo && (
           <AIAssistant
             lang={lang as string}
             sessionContext={{
@@ -3378,36 +3416,19 @@ export default function Serenity() {
       {aperta && (moduleVis.cam1 || moduleVis.cam2) && (
         <div style={{
           position: 'absolute', top: 16, right: 32, zIndex: 5,
-          /* ⚠️ Segnalato: « sposta la camm PC completamente in alto, in modo da rendere
-             visibili Santé Système e il Journal ». Da COLONNA (CAM 2 sopra, CAM 1 sotto —
-             quasi 490px riservati) a RIGA (affiancate, stesso bordo superiore — v. la nota
-             su `camStackH`): CAM 2 (PC) resta grande e in cima esattamente come prima, ma
-             non ha più nulla stivato sotto di sé che costringa la colonna Santé/Journal a
-             partire quasi a metà pagina. */
-          display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 14,
+          /* ⚠️ SEGNALATO DI NUOVO, al contrario del giro precedente: « sposta la cam AUDITOR
+             in alto di quella del PC per poter spostare la camm PC a destra ». Da RIGA
+             (affiancate, stesso bordo superiore) a COLONNA di nuovo — ma stavolta CAM 1
+             (Auditor, più piccola) IN CIMA, CAM 2 (PC) sotto di lei e spostata verso il bordo
+             vero con un margine negativo (`marginRight`), non più semplicemente allineata a
+             CAM 1. `camStackH` (sopra) torna a sommare le due altezze — la riga aveva
+             liberato spazio per Santé/Journal proprio evitando questa somma; qui la richiesta
+             esplicita vince su quel risparmio, compensato spostando altrove (il padding di
+             `<main>`, sotto) parte dello spazio che l'arco chiede in più nella stessa
+             segnalazione. */
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 14,
           pointerEvents: 'none',
         }}>
-          {moduleVis.cam2 && (
-            <CameraCerchio
-              /* ⚠️ Segnalato di nuovo: « la camm PC doit être plus grande ». Era 260 (dopo un
-                 giro precedente che l'aveva ridotta di un terzo per non coprire l'arco — la
-                 riduzione resta comunque valida, l'arco ora ha molto più spazio suo, vedi il
-                 19° giro). Portata a 340: più grande, senza tornare ai 453/680 che coprivano
-                 il quadrante.
-                 ⚠️ Segnalato ANCORA: « la zona camm deve essere di 1/5 più piccola ». 340×0,8
-                 = 272 (CAM 1 uguale, 213×0,8 ≈ 170) — la stessa proporzione fra le due. */
-              dimensione={272}
-              dimensioneCollassata={88}
-              titolo={t('cam2') as string}
-              externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
-              offlineLabel={t('camera_offline') as string}
-              opacita={uiAlpha}
-              collassata={cam2Collassata}
-              onToggleCollasso={() => setCam2Collassata(v => !v)}
-              statoTesto={statoCamPc}
-              inDiretta={!!avvio.distanza}
-            />
-          )}
           {moduleVis.cam1 && (
             <CameraCerchio
               dimensione={170}
@@ -3418,6 +3439,22 @@ export default function Serenity() {
               collassata={cam1Collassata}
               onToggleCollasso={() => setCam1Collassata(v => !v)}
             />
+          )}
+          {moduleVis.cam2 && (
+            <div style={{ marginRight: -24 }}>
+              <CameraCerchio
+                dimensione={272}
+                dimensioneCollassata={88}
+                titolo={t('cam2') as string}
+                externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
+                offlineLabel={t('camera_offline') as string}
+                opacita={uiAlpha}
+                collassata={cam2Collassata}
+                onToggleCollasso={() => setCam2Collassata(v => !v)}
+                statoTesto={statoCamPc}
+                inDiretta={!!avvio.distanza}
+              />
+            </div>
           )}
         </div>
       )}
@@ -3981,7 +4018,13 @@ export default function Serenity() {
                 tutta ». `maxHeight:'78%', overflowY:'auto'` tagliava il pannello a metà,
                 costringendo a scorrere per vederlo intero — tolto: il pannello si vede per
                 intero, alla SUA altezza vera, non a una percentuale arbitraria. */}
-            {aperta && moduleVis.health && (
+            {/* ⚠️ BUG TROVATO verificando dal vivo QUESTO stesso giro: `rightColOpen` (sopra)
+                aveva già il cancello `&& museOk`, ma QUESTA condizione — quella che monta
+                DAVVERO `<HealthPanel>` — era rimasta la vecchia, senza il cancello: Santé
+                Système continuava a comparire nel testo di pagina nonostante il contenitore
+                fosse "chiuso". Due condizioni per la stessa cosa, una sola aggiornata — la
+                stessa famiglia di bug della duplicazione segnalata nel resoconto. */}
+            {aperta && moduleVis.health && museOk && (
               <div className="ser-health-wrap" style={{ borderRadius: 18 }}>
                 <HealthPanel
                   eegBuffer={eegBuffer}

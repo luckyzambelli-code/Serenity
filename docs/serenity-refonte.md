@@ -2753,6 +2753,52 @@ Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `
 
 ---
 
+## Quarantaquattresimo giro (23/08/2026) — modalità ciclo, Santé Système richiede il MUSE per davvero, camere riordinate
+
+Quattro segnalazioni insieme, confermate una per una prima di scrivere codice.
+
+**1. Modalità ciclo** — confermata dopo una proposta scritta (cosa sparisce, cosa resta, e
+perché). Nuovo `modalitaCiclo = mode !== 'free'` (zero stato in più: `mode` già distingue
+libero da tutto il resto, la STESSA condizione che già nasconde/mostra i cinque cerchi dei
+metodi). A ciclo armato spariscono: logo/crediti, tema, lingua, storico, processus, l'assetto,
+CONFIG, Guida, l'assistente IA — tutti decisi una volta, mai bisogno di guardarli con un ago
+che reagisce. Restano SEMPRE: l'arco/le letture/NEEDLE LIGHT, i controlli del ciclo in corso,
+EP, CHIUDI/PAUSA, le camere, il Journal, l'Assessment (« la parte di auditing libera » — già
+raggiungibile, nessuna modifica necessaria: ANNULLA chiude il ciclo e i quattro cerchi
+ricompaiono da soli). Il selettore strumenti resta visibile ma diventa INERTE (`onClick`
+`undefined`, `cursor:'default'`) — i puntini di stato restano leggibili (una disconnessione a
+metà lettura va vista subito), i bottoni per connettersi no.
+
+**2. « Vedo che appare Santé Système anche senza il MUSE »** — verificato di nuovo dal vivo,
+aprendo DAVVERO EQUILIBRIUM senza strumenti: lo fa anche lui (il "FIX M-07" di App.tsx è
+confermato). Ma qui la richiesta, vista e confermata dopo aver guardato le due app fianco a
+fianco, è una preferenza dichiarata e diversa per SERENITY — non una divergenza da correggere.
+Rimesso il cancello `&& museOk`. **Bug trovato verificando dal vivo**: `rightColOpen` (la
+condizione che decide lo spazio della colonna) aveva il cancello nuovo, ma la condizione che
+monta DAVVERO `<HealthPanel>`, poco più sotto, era rimasta la vecchia — due condizioni per la
+stessa cosa, una sola aggiornata. Corrette entrambe.
+
+**3. Le camere riordinate** — segnalato al contrario del giro precedente: « sposta la cam
+AUDITOR in alto di quella del PC per poter spostare la camm PC a destra ». Da riga (affiancate)
+a colonna di nuovo, ma stavolta CAM 1 (Auditor) in cima, CAM 2 (PC) sotto di lei e spostata
+verso il bordo vero (`marginRight: -24`). `camStackH` torna a sommare le due altezze — il
+risparmio verticale del giro precedente ceduto alla richiesta esplicita di questo.
+
+**4. « L'arco deve essere più grande »** — compensato in parte il punto 3 riducendo ancora il
+padding di `<main>` (20/24px → 16/20px).
+
+Verificato dal vivo (profilo TEST, senza strumenti): Santé Système assente dal testo di pagina
+(prima ancora presente nonostante il cancello su `rightColOpen`), CAM 1 sopra/CAM 2 sotto-
+destra, ciclo CONTACT armato → l'intera barra amministrativa sparisce (verificato anche che i
+tre bottoni strumenti diventano `cursor:'default'`), ANNULLA → tutto riappare.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639.
+
+`git status`: `src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
