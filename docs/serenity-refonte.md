@@ -2355,6 +2355,72 @@ console oltre a fallimenti di rete attesi. `git status`: `src/serenity/Avvio.tsx
 
 ---
 
+## Trentaseiesimo giro (23/08/2026) — le reazioni sopra l'arco, Santé Système senza cancello sugli strumenti, i quattro metodi tondi, i CREDITS scrivono SERENITY
+
+Otto segnalazioni, la più importante trovata leggendo il codice condiviso fino in fondo:
+
+1. **« Le fond de la zone ARC, Journal, Assessment... je veux de la transparence »** — il giro
+   scorso li aveva resi trasparenti SOLO in chiaro, lasciandoli vetro smerigliato in scuro
+   (stessa ragione dell'arco — sbagliata per LORO: quella ragione, l'ago che disegna in colori
+   chiari, riguarda SOLO l'arco). `--s-zone-bg`/`--s-zone-border` ora trasparenti in ENTRAMBI i
+   temi per le zone; l'arco resta l'unica eccezione, gestita a parte.
+
+2. **« PRÊT POUR LA SÉANCE... cette zone n'a pas les couleurs de fond du reste »** — i due
+   pannelli (`ThetaReadyCheck`/`MetabolicCheck`) erano stati ritinti in un azzurro chiaro
+   INVENTATO, diverso dal `--s-ground` perlato di tutta SERENITY. Ora lo stesso fondo vero, lo
+   stesso bordo neutro delle altre zone.
+
+3. **« Santé Système ne se voit pas en entier, et elle apparaît alors que le MUSE n'est pas
+   activé... VERIFIE LE CODE, il est déjà opérationnel dans EQUILIBRIUM »** — verificato: il
+   codice di App.tsx ha un commento esplicito, « FIX M-07: dead `hideHealth = false` removed —
+   visibility driven by `moduleVis` ONLY » — EQUILIBRIUM ha RIMOSSO deliberatamente il cancello
+   sugli strumenti che un tempo aveva. Il `&& (museOk || meterC)` qui era un'invenzione mia,
+   non una riproduzione — tolto. Anche il taglio verticale corretto: la colonna che la contiene
+   aveva `overflow:'hidden'` invece di uno scorrimento proprio.
+
+4. **« Dans équilibrium apparaissent les réactions écrites au-dessus de l'aiguille, dans
+   SERENITY elles n'apparaissent pas »** — verificato nel codice condiviso: `QuantumSphere.tsx`
+   dice da sé perché non le disegna più — « Reaction label REMOVED — reactions are shown in
+   the top data-stack » — App.tsx le scrive appena SOPRA il quadrante, non dentro
+   `QuantumSphere`. Portata la STESSA riga in SERENITY, leggendo `needleReactionKey`/
+   `thetaReactionKey` che esistevano già (mai letti per questo): stessa tabella sigle, stessi
+   due colori (MUSE bianco, METER ambra), stessa regola una/due righe secondo `reazioniViste`.
+
+5. **« Les boutons CYCLES à gauche... des boutons ronds, exactement dans le style de l'image
+   de référence, cohérents avec tous les autres boutons... moins présents, mais plus
+   différenciés »** — CONTACT/NULL/MIRROR/TONE (ed EP) erano le UNICHE pillole rettangolari
+   della barra laterale, in un'app dove ogni altro bottone è un cerchio (CONFIG, Guide,
+   History, Processus, le camere). Ora cerchi anche loro (54px, la stessa famiglia di
+   `CameraCerchio`: icona dentro, didascalia sempre leggibile sotto) — più piccoli (« moins
+   présents ») e distinti anche per ICONA, non solo per colore (« plus différenciés »): `Hand`
+   per CONTACT, `Target` per NULL, `FlipHorizontal2` per MIRROR, `AudioWaveform` per TONE.
+
+6. **« Les indications du TA, motion, etc correspondent exactement à celle de EQUILIBRIUM »**
+   — verificate le soglie di velocità (1.15/0.85, identiche) e la tabella delle reazioni
+   (identica, v. punto 4); corretta una differenza di scrittura trovata: « — motion » (trattino
+   lungo), non « · motion ».
+
+7. **« QUAND ON APPUYE POUR VOIR LES CREDITS ON A TOUJOURS EQUILIBRIUM »** — bug reale:
+   `CreditsModal` (condiviso) scriveva `EQUILIBRIUM`/`__APP_VERSION__` a mano, montato TALE E
+   QUALE in SERENITY. Nuove props opzionali `appName`/`appVersion` — default invariato
+   (EQUILIBRIUM non li passa, nessun cambiamento per lui), SERENITY passa i propri. Verificato
+   dal vivo: "SERENITY v3.0.68" nella finestra dei crediti.
+
+**Rimandato a un prossimo giro** (segnalato ma non ancora fatto): « quand on arme un CYCLE,
+l'écriture DONNE L'ITEM... mets-la directement sur la ligne du bouton... fais disparaître le
+TITRE... également pour toutes les étapes du CYCLE » — una ristrutturazione dei quattro
+metodi (CONTACT/NULL/MIRROR/TONE), passo per passo, che merita un giro dedicato invece di un
+rattoppo veloce in fondo a un giro già grande.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, verifica dal vivo estesa (profilo TEST) — bottoni tondi, Santé Système senza
+strumenti connessi, CREDITS con SERENITY, nessun errore in console oltre a fallimenti di rete
+attesi. `git status`: `src/components/CreditsModal.tsx` (props opzionali, default invariato —
+EQUILIBRIUM non tocca), `src/serenity/Serenity.tsx`, `src/serenity/readyCheckLight.css`,
+`src/serenity/tokens.css`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

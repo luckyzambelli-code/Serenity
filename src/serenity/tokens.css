@@ -186,11 +186,16 @@
 
   --s-disc:        rgba(52, 53, 57, 0.36);
   --s-disc-sunk:   rgba(28, 29, 31, 0.36);
-  /* In scuro le zone restano com'erano — v. la nota su `--s-zone-bg` in `:root`: qui l'ago
-     disegna in colori chiari pensati per un fondo scuro, e i pannelli scuri restano leggibili
-     sul proprio fondo. */
-  --s-zone-bg:     var(--s-disc);
-  --s-zone-border: var(--s-glass-edge);
+  /* ⚠️ Segnalato di nuovo: « le fond de la zone ARC, Journal, Assessment et les autres... je
+     veux de la transparence... ». Un giro fa questi due restavano `var(--s-disc)` (il vetro
+     smerigliato) anche in scuro, per la STESSA ragione per cui l'arco (sotto, in
+     `Serenity.tsx`) resta un gradiente vero in scuro — ma quella ragione (l'ago disegna in
+     colori chiari, pensati per un fondo scuro) riguarda SOLO l'arco, non Assessment/Santé/
+     journal/MNA: quei pannelli sono solo testo, nessun ago da leggere sopra. Trasparenti
+     anche loro, qui — resta SOLO l'arco (gestito a parte, `background` inline in
+     `Serenity.tsx`, mai questo token) col suo gradiente proprio. */
+  --s-zone-bg:     transparent;
+  --s-zone-border: rgba(232, 230, 225, 0.16);
   --s-shadow:      0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.45);
   --s-shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.40), 0 16px 44px rgba(0, 0, 0, 0.55);
   /* Sullo scuro il riflesso è più tenue (il vetro vero riflette meno su un fondo scuro) — e

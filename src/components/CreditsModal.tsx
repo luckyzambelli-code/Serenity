@@ -81,8 +81,18 @@ function Medaillon({ title }: { title: string }) {
  * CreditsModal — s'ouvre au clic sur le logo Alternative Scientology (barre du haut).
  * PRÉSENTATION SEULE : aucun état métier, aucun calcul. Les textes viennent de `credits.ts`,
  * la MÊME source que ceux dessinés pendant l'animation d'ouverture.
+ *
+ * ⚠️ BUG TROVATO — segnalato: « quand on appuie pour voir les credits on a toujours EQUILIBRIUM,
+ * écrit SERENITY ». Il nome e la versione erano scritti a mano (`EQUILIBRIUM`, `__APP_VERSION__`
+ * — la costante di EQUILIBRIUM) — montato TALE E QUALE in `Serenity.tsx`, mostrava sempre il
+ * nome sbagliato. `appName`/`appVersion` opzionali, col default di sempre: EQUILIBRIUM non
+ * cambia (non li passa), SERENITY passa i propri.
  */
-export function CreditsModal({ onClose }: { onClose: () => void }) {
+export function CreditsModal({ onClose, appName = 'EQUILIBRIUM', appVersion = __APP_VERSION__ }: {
+  onClose: () => void;
+  appName?: string;
+  appVersion?: string;
+}) {
   const { t, lang } = useI18n();
   const lines = creditLines(lang);
   const cr = creditCopyright(lang);
@@ -119,12 +129,12 @@ export function CreditsModal({ onClose }: { onClose: () => void }) {
                            letterSpacing: '0.30em', textIndent: '0.30em',
                            color: 'rgba(240,246,255,0.92)',
                            textShadow: '0 0 18px rgba(180,210,255,0.20)' }}>
-              EQUILIBRIUM
+              {appName}
             </span>
             {/* La versione sta QUI, sotto il nome: è del programma, non del copyright. */}
             <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 13,
                            letterSpacing: '0.10em', color: 'rgba(226,238,255,0.62)' }}>
-              v{__APP_VERSION__}
+              v{appVersion}
             </span>
           </div>
           <Medaillon title="Ondes" />

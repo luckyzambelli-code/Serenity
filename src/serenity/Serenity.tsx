@@ -82,7 +82,7 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Hand, Target, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
@@ -157,7 +157,10 @@ const LetturaTotalTa = React.memo(function LetturaTotalTa({ override, bodyMotion
   return (
     <span style={{ fontFamily: 'var(--s-mono)', fontVariantNumeric: 'tabular-nums' }}>
       Σ {totalTa.toFixed(2)}
-      {bodyMotion && <span style={{ color: 'var(--s-reserve)' }}> · motion</span>}
+      {/* ⚠️ Segnalato: « je veux que les indications du TA, motion, etc correspondent
+          exactement à celle de EQUILIBRIUM » — `TotalTaReadout` (App.tsx, condiviso) scrive
+          "— motion" (trattino lungo), non "· motion": stessa parola, stesso segno. */}
+      {bodyMotion && <span style={{ color: 'var(--s-reserve)' }}> — motion</span>}
     </span>
   );
 });
@@ -1808,7 +1811,17 @@ export default function Serenity() {
    *  due colonne strette (148 + 272, invece di 50%+50% di prima) l'arco (`flex:1`) si allarga
    *  fino quasi a toccarle — segnalato: « la zona arc deve quindi allargarsi ». */
   const assessColOpen = aperta && moduleVis.ri;
-  const rightColOpen = (aperta && moduleVis.health && (museOk || meterC)) || moduleVis.journal;
+  /* ⚠️ BUG TROVATO — segnalato: « la fenêtre Santé Système apparaît alors que le MUSE n'est
+   *  pas activé... fais apparaître les modules SEULEMENT s'ils correspondent au choix des
+   *  instruments, EXACTEMENT comme dans EQUILIBRIUM, VERIFIE LE CODE ». Verificato: App.tsx
+   *  (righe intorno a "Main Dashboard Area") ha un commento ESPLICITO — « FIX M-07: dead
+   *  `hideHealth = false` removed — visibility driven by `moduleVis` ONLY » — cioè EQUILIBRIUM
+   *  ha RIMOSSO deliberatamente un cancello sugli strumenti che un tempo aveva: oggi `Santé
+   *  Système` si mostra quando `moduleVis.health` è acceso, PUNTO, strumento collegato o no.
+   *  Il `&& (museOk || meterC)` qui era un'invenzione mia, non una riproduzione — tolto, per
+   *  la stessa regola di sempre: riprodurre EQUILIBRIUM, non una versione più prudente
+   *  inventata qui. */
+  const rightColOpen = (aperta && moduleVis.health) || moduleVis.journal;
   const moduleColWidth = 272;
   /* ── LE CAMERE SONO SOPRA — segnalato: « le zones devono essere sotto les cams ». Le camere
    *  galleggiano `position:absolute, top:16, right:32` sulla STESSA colonna destra dove ora
@@ -2123,34 +2136,46 @@ export default function Serenity() {
             {pausata ? <Play size={20} strokeWidth={1.8} fill="currentColor" /> : <Pause size={20} strokeWidth={1.8} />}
           </button>
         )}
-        {/* ── I QUATTRO METODI — segnalato: « devi fare come in EQUILIBRIUM con dei BOTTONI più
-            visibili per ogni ciclo separatamente ». Quattro pillole vere, ciascuna col SUO
-            nome scritto per intero e un colore che le distingue — gli stessi tre segnali di
-            `tokens.css` più l'inchiostro neutro per TONE. Visibili solo quando c'è davvero una
-            scelta da fare (seduta aperta, nessun ciclo già armato) — stessa condizione di
-            sempre, solo la posizione è cambiata. */}
+        {/* ── I QUATTRO METODI, ORA TONDI — segnalato: « les boutons CYCLES à gauche doivent
+            être moins présents, mais plus différenciés les uns des autres... des boutons ronds,
+            exactement dans le style de l'image de référence, cohérents avec tous les autres
+            boutons de l'interface ». Erano quattro pillole rettangolari col nome per intero —
+            gli UNICI bottoni rettangolari della barra laterale, in un'app dove ogni altro
+            bottone (CONFIG, Guide, History, Processus, le camere) è un CERCHIO. Ora cerchi
+            anche loro, stessa famiglia visiva di `CameraCerchio` (icona dentro, didascalia
+            sotto sempre leggibile — mai solo un `title`): MENO presenti (54px invece di una
+            pillola larga quanto la colonna), ma PIÙ differenziati — un'icona propria per
+            ciascuno (non solo un colore di bordo), scelta per la GESTO del metodo: `Hand` =
+            CONTACT (il contatto diretto), `Target` = NULL (il bersaglio dell'equilibrio),
+            `FlipHorizontal2` = MIRROR (il raddoppio), `AudioWaveform` = TONE (la scala). */}
         {aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && (
           <>
             {([
-              { k: 'contact', hue: 'var(--s-still)', label: 'CONTACT',
+              { k: 'contact', hue: 'var(--s-still)', label: 'CONTACT', Icona: Hand,
                 onClick: () => cycles.armCycle('charge') },
-              { k: 'null', hue: 'var(--s-alive)', label: 'NULL',
+              { k: 'null', hue: 'var(--s-alive)', label: 'NULL', Icona: Target,
                 onClick: () => cycles.armCycle('null') },
               // ── MIRROR — il terzo metodo, escluso a vicenda con CONTACT/NULL ────────────
-              { k: 'mirror', hue: 'var(--s-reserve)', label: 'MIRROR', onClick: () => mirror.armMirror() },
+              { k: 'mirror', hue: 'var(--s-reserve)', label: 'MIRROR', Icona: FlipHorizontal2,
+                onClick: () => mirror.armMirror() },
               // ── TONE SCALE — il quarto metodo, escluso a vicenda con gli altri tre. A
               // differenza degli altri tre non si "arma" per un solo item: si ENTRA nel
               // metodo (`toneAttivo`) e ci si lavora per più resistenze di fila.
-              { k: 'tone', hue: null, label: 'TONE', onClick: () => setToneAttivo(true) },
+              { k: 'tone', hue: null, label: 'TONE', Icona: AudioWaveform, onClick: () => setToneAttivo(true) },
             ]).map(c => (
-              <button key={c.k} className="s-glass s-glass-btn" onClick={c.onClick} style={{
-                border: `1.5px solid ${c.hue ?? 'var(--s-ink-ghost)'}`, cursor: 'pointer', pointerEvents: 'auto',
-                borderRadius: 16, padding: '10px 10px', background: 'var(--s-disc)',
-                fontFamily: 'var(--s-sans)', fontSize: 14.5, fontWeight: 700, letterSpacing: '0.05em',
-                color: c.hue ?? 'var(--s-ink-soft)', textAlign: 'center',
-              }}>
-                {c.label}
-              </button>
+              <div key={c.k} style={{ display: 'grid', justifyItems: 'center', gap: 4, pointerEvents: 'auto' }}>
+                <button className="s-glass s-glass-btn" onClick={c.onClick} title={c.label} style={{
+                  width: 54, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: `1.5px solid ${c.hue ?? 'var(--s-ink-ghost)'}`, cursor: 'pointer',
+                  borderRadius: '50%', background: 'var(--s-disc)', color: c.hue ?? 'var(--s-ink-soft)',
+                }}>
+                  <c.Icona size={22} strokeWidth={1.8} aria-hidden="true" />
+                </button>
+                <span style={{
+                  fontFamily: 'var(--s-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
+                  color: c.hue ?? 'var(--s-ink-faint)',
+                }}>{c.label}</span>
+              </div>
             ))}
             {/* ── IL QUINTO METODO, « APERTO » — segnalato: « manca la zona LIBRE sotto TONE ».
                 `engine/sessionMode.ts` conta CINQUE metodi, non quattro — CONTACT/NULL/MIRROR/
@@ -2186,19 +2211,24 @@ export default function Serenity() {
             come in App.tsx. A differenza dei quattro metodi sopra resta visibile SEMPRE a
             seduta aperta, non solo quando nessun ciclo è armato: si registra un EP in
             qualunque momento della seduta, non solo fra un ciclo e l'altro. */}
+        {/* Tondo come i quattro metodi sopra — stessa famiglia, stessa ragione. */}
         {aperta && (
-          <button
-            className="s-glass s-glass-btn"
-            onClick={() => { if (!ep.epValidated) ep.setEpTimestamp(sessionClock.now()); ep.setEpManualOpen(true); }}
-            style={{
-              cursor: 'pointer', pointerEvents: 'auto',
-              border: '1.5px solid var(--s-ink-ghost)', borderRadius: 16, padding: '10px 10px',
-              background: 'var(--s-disc)',
-              fontFamily: 'var(--s-sans)', fontSize: 14.5, fontWeight: 700, letterSpacing: '0.05em',
-              color: ep.epValidated ? 'var(--s-still)' : 'var(--s-ink-soft)', textAlign: 'center',
-            }}>
-            {ep.epValidated ? 'EP ✓' : 'EP'}
-          </button>
+          <div style={{ display: 'grid', justifyItems: 'center', gap: 4, pointerEvents: 'auto' }}>
+            <button
+              className="s-glass s-glass-btn"
+              onClick={() => { if (!ep.epValidated) ep.setEpTimestamp(sessionClock.now()); ep.setEpManualOpen(true); }}
+              title="EP" style={{
+                width: 54, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', border: '1.5px solid var(--s-ink-ghost)', borderRadius: '50%',
+                background: 'var(--s-disc)', color: ep.epValidated ? 'var(--s-still)' : 'var(--s-ink-soft)',
+              }}>
+              {ep.epValidated ? <BadgeCheck size={22} strokeWidth={1.8} aria-hidden="true" /> : <FileCheck size={22} strokeWidth={1.8} aria-hidden="true" />}
+            </button>
+            <span style={{
+              fontFamily: 'var(--s-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
+              color: ep.epValidated ? 'var(--s-still)' : 'var(--s-ink-faint)',
+            }}>{ep.epValidated ? 'EP ✓' : 'EP'}</span>
+          </div>
         )}
         </div>
         {/* ── L'ASSESSMENT, SOTTO EP — segnalato: « la zone assessment... deve stare sotto il
@@ -2646,7 +2676,10 @@ export default function Serenity() {
         <span style={{ flex: 1 }} />
       </header>
       {guidaAperta && <GuideModal lang={lang} onClose={() => setGuidaAperta(false)} />}
-      {creditiAperti && <CreditsModal onClose={() => setCreditiAperti(false)} />}
+      {creditiAperti && (
+        <CreditsModal onClose={() => setCreditiAperti(false)}
+          appName="SERENITY" appVersion={__SERENITY_VERSION__} />
+      )}
       {/* ⚠️ BUG TROVATO — segnalato: « quand on clique sur Historique rien apparaît et on ne
           peut pas sortir ». `HistoryModal` (App.tsx) disegna sé stesso con `absolute inset-0`
           (una classe Tailwind: relativo all'ANTENATO posizionato più vicino), non `fixed`
@@ -3329,6 +3362,63 @@ export default function Serenity() {
           condiviso, lo stesso di App.tsx) invece della costante `SET_OFFSET` — l'ago EEG si
           muove per davvero, non solo quello del Theta-Meter.
         */}
+        {/* ⚠️ Segnalato: « dans équilibrium apparaissent les réactions écrites au-dessus de
+            l'aiguille, dans SERENITY elles n'apparaissent pas ». Verificato nel codice
+            condiviso: `QuantumSphere.tsx` stesso dice perché non le disegna più lui —
+            « Reaction label REMOVED (see note above) — reactions are shown in the top
+            data-stack » — App.tsx le scrive appena SOPRA il quadrante (non dentro
+            `QuantumSphere`), leggendo `needleReactionKey`/`thetaReactionKey` che qui esistono
+            già (mai letti per QUESTO). Stessa tabella sigle, stessi due colori (MUSE bianco,
+            METER ambra), stessa regola « una riga sola senza sigla se guardo un ago solo, due
+            righe etichettate se guardo DUE » (`reazioniViste`). */}
+        {aperta && (() => {
+          const RLBL: Record<string, string> = {
+            reaction_fn: 'F/N', reaction_blow_down: 'LF BD', reaction_long_fall: 'LONG FALL',
+            reaction_fall: 'FALL', reaction_sf: 'SF', reaction_dirty: 'DN',
+          };
+          const lblMuse = museOk ? (RLBL[needleReactionKey] || '') : '';
+          const lblMeter = meterC ? (RLBL[thetaReactionKey] || '') : '';
+          const BIANCO = 'rgba(255,255,255,0.92)', BIANCO_A = 'rgba(255,255,255,0.35)';
+          const AMBRA = '#f59e0b', AMBRA_A = 'rgba(245,158,11,0.45)';
+          const riga = (sigla: string, testo: string, col: string, alone: string) => (
+            <span key={sigla} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8, lineHeight: 1.1 }}>
+              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 9, letterSpacing: '0.1em',
+                            color: col, opacity: 0.6, width: 40, textAlign: 'right' }}>{sigla}</span>
+              <span style={{ fontWeight: 400, fontSize: 20, letterSpacing: '0.14em', color: col,
+                            textShadow: `0 0 12px ${alone}` }}>{testo}</span>
+            </span>
+          );
+          let contenuto: React.ReactNode = null;
+          if (reazioniViste === 'both') {
+            if (lblMuse || lblMeter) {
+              contenuto = (
+                <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 2, alignItems: 'flex-start' }}>
+                  {lblMuse ? riga('MUSE', lblMuse, BIANCO, BIANCO_A) : null}
+                  {lblMeter ? riga('METER', lblMeter, AMBRA, AMBRA_A) : null}
+                </span>
+              );
+            }
+          } else {
+            const solo = reazioniViste === 'theta' ? lblMeter : lblMuse;
+            if (solo) {
+              const col = reazioniViste === 'theta' ? AMBRA : BIANCO;
+              const alone = reazioniViste === 'theta' ? AMBRA_A : BIANCO_A;
+              contenuto = (
+                <span style={{ fontWeight: 400, fontSize: 20, letterSpacing: '0.14em', color: col,
+                              textShadow: `0 0 12px ${alone}` }}>{solo}</span>
+              );
+            }
+          }
+          if (!contenuto) return null;
+          return (
+            <div style={{
+              height: reazioniViste === 'both' ? 52 : 28,
+              display: 'flex', justifyContent: 'center', alignItems: 'center', pointerEvents: 'none',
+            }}>
+              {contenuto}
+            </div>
+          );
+        })()}
         <div style={{
           /* ⚠️ Era `calc(100% - 44px)`: quei 44px riservavano lo spazio per l'orologio e le
              letture che stavano SOTTO questo contenitore, nel flusso di `<section>`. Ora che
@@ -3733,16 +3823,22 @@ export default function Serenity() {
             uno strumento resta uno strumento a prescindere dal tema attorno — solo l'intestazione
             segue `useUiStore().isLightTheme`). Journal — stessa lista di
             `components/TranscriptLog.tsx`, riscritta coi token `var(--s-*)` di SERENITY. */}
+        {/* ⚠️ Segnalato: « la fenêtre Santé Système ne se voit pas en entier ». `overflow:'hidden'`
+            qui tagliava netto qualunque cosa non ci stesse (Santé Système non ha più un suo
+            `maxHeight`/scorrimento interno — tolto un giro fa apposta, « si deve vedere tutta »
+            — quindi se il contenuto supera lo spazio vero, con `hidden` spariva senza modo di
+            raggiungerlo). `overflowY:'auto'` invece: se tutto ci sta non cambia nulla, se no si
+            scorre per vedere il resto — mai più tagliato senza rimedio. */}
         {rightColOpen && (
           <div style={{
             width: moduleColWidth, maxWidth: 560, flexShrink: 0, paddingTop: camStackH,
-            display: 'flex', flexDirection: 'column', gap: 16, overflow: 'hidden',
+            display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto',
           }}>
             {/* ⚠️ Segnalato: « la zona System Health deve essere larga la metà e si deve vedere
                 tutta ». `maxHeight:'78%', overflowY:'auto'` tagliava il pannello a metà,
                 costringendo a scorrere per vederlo intero — tolto: il pannello si vede per
                 intero, alla SUA altezza vera, non a una percentuale arbitraria. */}
-            {aperta && moduleVis.health && (museOk || meterC) && (
+            {aperta && moduleVis.health && (
               <div className="ser-health-wrap" style={{ borderRadius: 18 }}>
                 <HealthPanel
                   eegBuffer={eegBuffer}

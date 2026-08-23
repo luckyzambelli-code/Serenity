@@ -60,14 +60,19 @@
   background: color-mix(in srgb, var(--s-ground) 80%, transparent) !important;
 }
 
-/* ── I DUE PANNELLI, DA VETRO NERO A VETRO CHIARO ──────────────────────────────────────── */
+/* ── I DUE PANNELLI, DA VETRO NERO AL FONDO DI SERENITY ────────────────────────────────────
+   ⚠️ Segnalato di nuovo: « cette zone n'a pas les couleurs de fond du reste ». Il primo giro
+   li aveva ritinti in un azzurro chiaro inventato (`#f3f7fc`/`#e6eef8`) — leggibile, ma un
+   colore A SÉ, diverso dal `--s-ground` perlato di tutta SERENITY. Ora lo stesso fondo VERO
+   della pagina, e un bordo neutro (`--s-zone-border`, lo stesso delle altre zone) al posto
+   del ciano inventato. */
 :root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(2,6,23"] {
-  background: linear-gradient(100deg, #f3f7fc 0%, #e6eef8 100%) !important;
-  border-right-color: rgba(8,145,178,0.25) !important;
+  background: var(--s-ground) !important;
+  border-right-color: var(--s-zone-border) !important;
 }
 :root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(40,40,46"] {
-  background: linear-gradient(160deg, #f6f9fd 0%, #e9f1f8 100%) !important;
-  border-color: rgba(8,145,178,0.20) !important;
+  background: var(--s-ground) !important;
+  border-color: var(--s-zone-border) !important;
 }
 
 /* ── TESTO « QUASI BIANCO », DUE LIVELLI DI ENFASI ─────────────────────────────────────────
@@ -89,5 +94,5 @@
    anelli del respiro e le carte semitrasparenti — v. nota sopra). Un bordo bianco su vetro
    chiaro sarebbe invisibile quanto il testo quasi-bianco; qui basta ritingerlo. */
 :root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255,255,255"] {
-  border-color: rgba(8,145,178,0.22) !important;
+  border-color: var(--s-zone-border) !important;
 }
