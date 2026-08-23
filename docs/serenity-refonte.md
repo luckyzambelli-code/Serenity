@@ -2684,6 +2684,46 @@ senza alcun ciclo armato, nessuna scritta "signal" residua in tutto il testo di 
 
 ---
 
+## Quarantaduesimo giro (23/08/2026) — l'arco non si sposta più con le reazioni, l'item scritto senza ciclo non arma più CONTACT, l'ombra dell'arco tolta
+
+Tre segnalazioni:
+
+1. **« C'est gênant de déplacer la zone ARC en fonction des réactions, elle doit rester
+   figée »** — il riquadro delle reazioni sopra l'arco (portato da App.tsx due giri fa) aveva
+   un'altezza VARIABILE: `null` (niente riquadro affatto) quando non c'era reazione, 52 o 28px
+   secondo quanti aghi si guardano quando c'era — l'arco, sotto nella stessa colonna flex, si
+   spostava su e giù ogni volta. Ora un'altezza FISSA (52px, il caso più alto) sempre presente
+   a seduta aperta, contenuto o no: l'arco non si muove mai più.
+
+2. **« Au début, alors que je n'ai pas choisi de cycle, dans la zone écris ou dis l'item il
+   fait démarrer par défaut CONTACT, NON, cela doit simplement écrire dans assessment l'item
+   et la réaction »** — l'Invio in quel campo chiamava `cycles.armCycle('charge')` SEMPRE,
+   anche quando l'auditor voleva solo dare un item da assessment senza ancora scegliere un
+   metodo. CONTACT/NULL restano armabili dai loro cerchi (che leggono lo stesso `item`, appena
+   scritto) — il campo ora scrive nel giornale con `journal.addLog({speaker:'Aud',...})`, la
+   STESSA funzione già usata da `onTranscript` della voce: l'assessment (se accesa) lo
+   raccoglie da sé, nessun ciclo armato di nascosto. Verificato dal vivo che CONTACT non si
+   arma più premendo Invio nel campo (i quattro cerchi restano proposti dopo ripetuti tentativi)
+   — la riga nel giornale non si è lasciata confermare in questo ambiente di test: la
+   simulazione remota della pressione di Invio su questo campo specifico non è risultata
+   affidabile (né con la vecchia né con la nuova gestione — lo stesso limite sembra preesistente
+   allo strumento di test, non introdotto da questa modifica), ma la funzione chiamata è la
+   STESSA, già in produzione, usata dalla voce.
+
+3. **« Togli l'ombra alla zona ARC AGO »** — restava un'ombra di rilievo
+   (`--s-shadow`/`--s-shadow-lift`) ereditata da quando il fondo dell'arco era pieno; con lo
+   sfondo ormai trasparente (giro precedente) un'ombra sotto un riquadro senza fondo si legge
+   come un bordo scuro extra, non un rilievo vero. Tolta — resta solo il filo sottile del
+   bordo.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo (profilo TEST) — l'ombra dell'arco sparita a schermo, CONTACT/NULL/MIRROR/
+TONE mai armati dopo ripetuti Invio nel campo item.
+
+`git status`: `src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

@@ -2851,7 +2851,22 @@ export default function Serenity() {
                 value={item}
                 onChange={e => setItem(e.target.value)}
                 placeholder={t('ser_item_placeholder') as string}
-                onKeyDown={e => { if (e.key === 'Enter') cycles.armCycle('charge'); }}
+                /* ⚠️ SEGNALATO: « au début, alors que je n'ai pas choisi de cycle, dans la
+                    zone écris ou dis l'item il fait démarrer par défaut CONTACT, NON, cela
+                    doit simplement écrire dans assessment l'item et la réaction ». Vero — un
+                    Invio qui armava SEMPRE un ciclo CONTACT, anche quando l'auditor voleva
+                    solo dare un item da assessment (nessun ciclo scelto ancora, per scelta).
+                    CONTACT/NULL restano armabili dai loro cerchi (che leggono lo stesso
+                    `item`, appena scritto) — questo campo ora scrive solo nel giornale, come
+                    la voce (`useVoiceItem`'s `onTranscript`, sopra, stessa `journal.addLog`):
+                    l'assessment (se accesa) lo raccoglie da sé, nessun ciclo armato di
+                    nascosto. */
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && item.trim()) {
+                    journal.addLog({ speaker: 'Aud', text: item.trim(), time: sessionClock.now(), type: 'normal' });
+                    setItem('');
+                  }
+                }}
                 style={{
                   borderRadius: 999, background: 'var(--s-disc)',
                   outline: 'none', fontFamily: 'var(--s-serif)', fontSize: 15.5, color: 'var(--s-ink)',
@@ -3483,10 +3498,17 @@ export default function Serenity() {
               );
             }
           }
-          if (!contenuto) return null;
+          {/* ⚠️ SEGNALATO: « c'est gênant de déplacer la zone ARC en fonction des réactions,
+              elle doit rester figée ». Prima l'altezza di questo riquadro dipendeva dal
+              contenuto — `null` (niente riquadro affatto) quando non c'era reazione, 52px o
+              28px secondo `reazioniViste` quando c'era: l'arco SOTTO, in una colonna flex, si
+              spostava su e giù ogni volta che una reazione appariva/spariva o che si cambiava
+              ago guardato. Ora un'altezza FISSA (52px, il caso più alto — due righe MUSE+METER)
+              SEMPRE presente a seduta aperta, contenuto o no: l'arco non si muove mai più,
+              cambia solo se qualcosa si vede dentro questo riquadro immobile. */}
           return (
             <div style={{
-              height: reazioniViste === 'both' ? 52 : 28,
+              height: 52,
               display: 'flex', justifyContent: 'center', alignItems: 'center', pointerEvents: 'none',
             }}>
               {contenuto}
@@ -3527,8 +3549,13 @@ export default function Serenity() {
              restano il vero limite su una finestra bassa. */
           background: 'transparent',
           border: '1px solid var(--s-zone-border)',
-          boxShadow: isLightTheme ? 'var(--s-shadow)' : 'var(--s-shadow-lift)',
-          transition: 'background var(--s-calm) var(--s-ease), box-shadow var(--s-calm) var(--s-ease)',
+          /* ⚠️ Segnalato: « togli l'ombra alla zona ARC AGO ». Restava un'ombra di rilievo
+             (`--s-shadow`/`--s-shadow-lift`) ereditata da quando il fondo era pieno — con lo
+             sfondo ormai trasparente (v. sopra) un'ombra sotto un riquadro senza fondo si legge
+             come un bordo scuro extra, non più un rilievo reale. Tolta — resta solo il filo
+             sottile del bordo a dire dov'è il quadrante. */
+          boxShadow: 'none',
+          transition: 'background var(--s-calm) var(--s-ease)',
         }}>
           {/* ── LE LETTURE, IN ALTO A SINISTRA — segnalato: « l'horloge, le temps de session, le
               TA e la somme de TA doivent être inscrits en haut à gauche dans la zone de l'arc ».
