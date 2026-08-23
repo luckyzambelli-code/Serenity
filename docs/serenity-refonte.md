@@ -2615,6 +2615,75 @@ eseguibile) — non solo "il codice sembra giusto", il file è davvero dentro il
 
 ---
 
+## Quarantunesimo giro (23/08/2026) — le camere affiancate liberano Santé/Journal, Santé Système compatto, i cinque cerchi in riga liberano l'assessment, NEEDLE LIGHT, l'animazione iniziale
+
+Sette segnalazioni, misurate dal vivo con `getBoundingClientRect` prima di toccare una riga
+di codice — non supposizioni sul layout.
+
+1. **« Il journal et Santé système non si vedono completamente, sposta la camm PC
+   completamente in alto »** — misurato: a 1400×900, Santé Système cominciava a y=724 (176px
+   liberi prima del fondo finestra) e il Journal a y=1164, **fuori dallo schermo per intero**.
+   Causa esatta: `paddingTop: camStackH` sulla colonna destra riservava spazio per le DUE
+   camere impilate (CAM 2 sopra, CAM 1 sotto — 272+14+170+margini ≈ 490px). Le camere ora
+   AFFIANCATE (una riga, non una colonna) — CAM 2 resta grande e in cima esattamente come
+   prima, ma non ha più nulla stivato sotto di sé: la riserva è ora alta quanto la PIÙ ALTA
+   delle due (non la somma), libera ~186px.
+
+2. **« Santé système devi cambiarlo. Metti il giro affiancato a EEG... Il PPG indica solo il
+   numero di BPM senza il cerchio e mettigli accanto sulla stessa linea il capteur MUSE 2 »**
+   — cambio di STRUTTURA di `HealthPanel.tsx` (condiviso con App.tsx: « EQUILIBRIUM detta
+   struttura, SERENITY solo la grafica » vale anche al contrario). Nuova prop opzionale
+   `compact` (default `false`, App.tsx non la passa — la sua resa non cambia di un pixel):
+   quando vera, GYRO affiancato a EEG (`flex:1`/`flex:2`) invece che sotto, e PPG diventa un
+   numero solo (niente `CircularGauge`) sulla stessa riga di MUSE 2/batteria — estratta la riga
+   MUSE 2 (`MuseSensorLine`) e la griglia elettrodi (`ElectrodeGrid`) come funzioni a sé,
+   riusate TALE E QUALI dalla resa originale di App.tsx (via `ElectrodeRing`, invariata) e
+   dalla resa compatta di SERENITY. SERENITY passa `compact`.
+
+3. **« I bottoni dei cicli spostali a sinistra e porta in alto la zona assessment »** — i
+   cinque cerchi (CONTACT/NULL/MIRROR/TONE/EP) erano impilati in colonna, ~390px prima che
+   l'assessment potesse cominciare. Ora una riga che va a capo da sé (`flexWrap`), larga
+   quanto l'intero contenitore (272px): quattro cerchi entrano nella stessa riga
+   (54×4+10×3=246<272), il quinto (EP) va a capo — due righe invece di cinque, l'assessment
+   risale di conseguenza. CHIUDI/PAUSA restano nella loro colonna stretta di sempre (148px),
+   solo i cinque cerchi cambiano contenitore.
+
+4. **« Si deve poter attivare Assessment al di fuori dei cicli »** — verificato nel codice:
+   `assessColOpen`/il toggle di `ZonaAssessment` non erano MAI stati legati allo stato del
+   ciclo — la vera causa era che il bottone era irraggiungibile (punto 3, sopra), non
+   disabilitato. Con l'assessment ora visibile, verificato dal vivo: aperta con successo senza
+   alcun ciclo armato (badge CONTACT/NULL/MIRROR/TONE assente, i quattro cerchi ancora tutti
+   proposti) — nessuna modifica di logica necessaria, solo di layout.
+
+5. **« Togli le percentuali con la scritta signal »** — la riga "segnale N%" (aggiunta un
+   giro fa per spiegare cosa fosse un numero nudo) tolta del tutto — non più un'etichetta da
+   chiarire, il numero stesso non deve più esserci.
+
+6. **« Manca la possibilità di mettere/togliere la scia »** — trovato in App.tsx: una levetta
+   ESATTA, `showTrailPref` (default `true`), « NEEDLE LIGHT — la scia luminosa dell'ago e le
+   etichette di reazione », mai portata qui — `showTrail` su `<QuantumSphere>` restava fissa a
+   `true`. Aggiunta la stessa levetta, stessa condizione (un ago da vedere, non MIRROR/TONE),
+   nell'angolo delle letture sopra l'arco.
+
+7. **« Metti anche l'animazione iniziale con SERENITY come nome »** — `SplashScreen`
+   (condiviso) non era MAI montato in SERENITY: nessuna animazione all'avvio, mai. Il testo
+   sotto il logo (`'EQUILIBRIUM'`) era scritto a mano — nuova prop opzionale `appName`
+   (default `'EQUILIBRIUM'`, stessa ricetta di `CreditsModal`), SERENITY monta il componente
+   passando `appName="SERENITY"`. Verificato via `tsc`/lettura del codice (stessa struttura
+   già provata di `CreditsModal`) — la finestra di 3,8 s dell'animazione si è rivelata troppo
+   corta da catturare in uno screenshot col giro di chiamate remoto di questo ambiente di
+   test; nessun rischio nella modifica (prop+ref, stesso schema già in produzione).
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo a TRE larghezze (1400×900, 1280×800, 1024×700, profilo TEST) — camere
+affiancate, Santé Système compatto con PPG/MUSE 2 sulla stessa riga (confermato via DOM, non
+solo a occhio), Journal visibile senza scorrimento a 1400×900, assessment aperta con successo
+senza alcun ciclo armato, nessuna scritta "signal" residua in tutto il testo di pagina.
+`git status`: `src/components/HealthPanel.tsx`, `src/components/SplashScreen.tsx`,
+`src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

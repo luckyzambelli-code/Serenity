@@ -86,6 +86,7 @@ import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOf
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
+import { SplashScreen } from '../components/SplashScreen';
 import { HealthPanel } from '../components/HealthPanel';
 /** ── HISTORY, CARICATA A RICHIESTA — segnalato: « il Report post session non ci sia più in
  *  Serenity, solo il PDF in History ». Lo stesso `HistoryModal` di App.tsx, TALE E QUALE (i
@@ -1134,6 +1135,18 @@ export default function Serenity() {
    *  "attiva" con un gesto diretto, esclusivo con CONTACT/NULL/MIRROR. Dichiarato QUI (non più
    *  giù, dove viveva prima) perché la logica dell'ago qui sotto ne ha bisogno. */
   const [toneAttivo, setToneAttivo] = useState(false);
+  /** ── NEEDLE LIGHT — segnalato: « manca la possibilità di mettere/togliere la scia ». App.tsx
+   *  ha ESATTAMENTE questa levetta (`showTrailPref`, default `true`): « AGO/AGO+ non era un
+   *  metodo: era la scia, ed è diventata una levetta a parte ». Mai portata qui — `showTrail`
+   *  su `<QuantumSphere>` restava fissa a `true` (v. sotto), l'auditor non poteva spegnerla.
+   *  Stesso nome di stato, stesso default. */
+  const [showTrailPref, setShowTrailPref] = useState(true);
+  /** ── L'ANIMAZIONE INIZIALE — segnalato: « metti anche l'animazione iniziale con SERENITY
+   *  come nome ». `SplashScreen` (condiviso) non era MAI montato qui — SERENITY si apriva
+   *  direttamente sulla prima domanda, senza l'animazione che App.tsx mostra sempre all'avvio.
+   *  Stesso stato di App.tsx (`showSplash`, default `true`), montato più sotto con
+   *  `appName="SERENITY"` (v. la nota in `SplashScreen.tsx`). */
+  const [showSplash, setShowSplash] = useState(true);
   /**
    * ⚠️ SEGNALATO: « per la logica ago METER/MUSE, non funziona allo stesso modo che su
    * Equilibrium ». Vero — mancavano DUE dei livelli di `agoPrincipale` (App.tsx):
@@ -1282,14 +1295,14 @@ export default function Serenity() {
    * « dì l'item… » qui sotto — invece di ricomporre la stessa risposta da quattro booleani.
    */
   const faseCiclo = useMemo(() => deriveCyclePhase({
-    splashOpen: false, sessionState: aperta ? 'running' : 'idle',
+    splashOpen: showSplash, sessionState: aperta ? 'running' : 'idle',
     hasInstrument: muse.museConnection === 'connected' || meterC,
     preflightOpen: false, epWindowOpen: ep.epWindowOpen, reportOpen: false,
     mode, cycleArmed: cycles.cycleArmed, asIsPending: cycles.asIsPending, nullPhase: cycles.nullPhase,
     itemNamed: !!item.trim() || itemSpoken,
     mirrorArmed: mirror.mirrorArmed, mirrorLocked: mirror.mirrorDisp.locked, mirrorReached: mirror.mirrorDisp.reached,
     tonePhase: tone.tonePhase,
-  }), [aperta, muse.museConnection, meterC, ep.epWindowOpen, mode, cycles.cycleArmed, cycles.asIsPending,
+  }), [showSplash, aperta, muse.museConnection, meterC, ep.epWindowOpen, mode, cycles.cycleArmed, cycles.asIsPending,
        cycles.nullPhase, item, itemSpoken, mirror.mirrorArmed, mirror.mirrorDisp.locked, mirror.mirrorDisp.reached,
        tone.tonePhase]);
 
@@ -1852,11 +1865,19 @@ export default function Serenity() {
    *  sovrapponevano. Un `paddingTop` sulla colonna destra pari alla vera altezza dello stack
    *  (aperta/collassata, una o due camere) le tiene SEMPRE sotto, mai più sotto le camere.
    *  Le taglie (272/170) sono le stesse di `CameraCerchio` sotto — « la zona camm deve essere
-   *  di 1/5 più piccola » (340→272, 213→170.4→170), ridotte insieme lì e qui. */
+   *  di 1/5 più piccola » (340→272, 213→170.4→170), ridotte insieme lì e qui.
+   *  ⚠️ SEGNALATO DI NUOVO: « il journal et Santé système non si vedono completamente, sposta
+   *  la camm PC completamente in alto in modo da renderli visibile ». Le due camere una SOPRA
+   *  l'altra (272+14+170+margini ≈ 490px) riservavano quasi mezza pagina — Santé Système e il
+   *  Journal cominciavano così in basso da restare quasi sempre fuori dallo schermo, non solo
+   *  "non del tutto visibili". Ora AFFIANCATE (una riga, non una colonna: v. il contenitore
+   *  qui sotto) — CAM 2 (PC) resta com'era, in alto, con NULLA più sotto di lei che la spinga
+   *  a riservare spazio verticale doppio: la riserva ora è alta quanto la PIÙ ALTA delle due,
+   *  non la somma — libera fino a ~186px per Santé Système/Journal. */
   const cam2H = !moduleVis.cam2 ? 0 : (cam2Collassata ? 88 : 272);
   const cam1H = !moduleVis.cam1 ? 0 : (cam1Collassata ? 88 : 170);
   const camStackH = (moduleVis.cam1 || moduleVis.cam2)
-    ? 16 + cam2H + (moduleVis.cam1 && moduleVis.cam2 ? 14 : 0) + cam1H + 20
+    ? 16 + Math.max(cam2H, cam1H) + 20
     : 0;
 
   return (
@@ -2164,6 +2185,19 @@ export default function Serenity() {
             {pausata ? <Play size={20} strokeWidth={1.8} fill="currentColor" /> : <Pause size={20} strokeWidth={1.8} />}
           </button>
         )}
+        </div>
+        {/* ── I CINQUE CERCHI, ORA IN RIGA — segnalato: « i bottoni dei cicli spostali a
+            sinistra e porta in alto la zona assessment, in modo da renderla visibile ». Erano
+            impilati in colonna, uno sotto l'altro (CONTACT/NULL/MIRROR/TONE/EP: cinque cerchi
+            da 54px + didascalia + margini ≈ 390px) SOPRA l'assessment — a quell'altezza,
+            sommata a CHIUDI/PAUSA, l'assessment cominciava troppo in basso per restare dentro
+            lo schermo. Qui una riga che va a capo da sé (`flexWrap`), larga quanto l'intero
+            contenitore (272px, la stessa di Assessment/Santé Système) invece della colonna
+            stretta di 148px di CHIUDI/PAUSA sopra: quattro cerchi entrano nella STESSA riga
+            (54×4 + 10×3 = 246 < 272), il quinto (EP) va a capo — due righe invece di cinque,
+            l'assessment risale di conseguenza. Stessa larghezza, stesso posto (« a sinistra »,
+            l'intero blocco resta ancorato al bordo sinistro di sempre) — solo più compatti. */}
+        <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 10, width: 272 }}>
         {/* ── I QUATTRO METODI, ORA TONDI — segnalato: « les boutons CYCLES à gauche doivent
             être moins présents, mais plus différenciés les uns des autres... des boutons ronds,
             exactement dans le style de l'image de référence, cohérents avec tous les autres
@@ -2696,6 +2730,8 @@ export default function Serenity() {
         <CreditsModal onClose={() => setCreditiAperti(false)}
           appName="SERENITY" appVersion={__SERENITY_VERSION__} />
       )}
+      {/* ── L'ANIMAZIONE INIZIALE — v. la nota su `showSplash`, sopra. */}
+      {showSplash && <SplashScreen onDismiss={() => setShowSplash(false)} appName="SERENITY" />}
       {/* ⚠️ BUG TROVATO — segnalato: « quand on clique sur Historique rien apparaît et on ne
           peut pas sortir ». `HistoryModal` (App.tsx) disegna sé stesso con `absolute inset-0`
           (una classe Tailwind: relativo all'ANTENATO posizionato più vicino), non `fixed`
@@ -3308,7 +3344,13 @@ export default function Serenity() {
       {aperta && (moduleVis.cam1 || moduleVis.cam2) && (
         <div style={{
           position: 'absolute', top: 16, right: 32, zIndex: 5,
-          display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 14,
+          /* ⚠️ Segnalato: « sposta la camm PC completamente in alto, in modo da rendere
+             visibili Santé Système e il Journal ». Da COLONNA (CAM 2 sopra, CAM 1 sotto —
+             quasi 490px riservati) a RIGA (affiancate, stesso bordo superiore — v. la nota
+             su `camStackH`): CAM 2 (PC) resta grande e in cima esattamente come prima, ma
+             non ha più nulla stivato sotto di sé che costringa la colonna Santé/Journal a
+             partire quasi a metà pagina. */
+          display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 14,
           pointerEvents: 'none',
         }}>
           {moduleVis.cam2 && (
@@ -3535,15 +3577,10 @@ export default function Serenity() {
                 fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
                 color: 'var(--s-ink-faint)', display: 'flex', gap: 10,
               }}>
-                {/* ⚠️ Segnalato: « c'è scritto... delle percentuali? » — un numero nudo, nessuna
-                    parola a dire cos'è. Aggiunta l'etichetta, come già per il resto di questo
-                    angolo — un `title` da solo (letto solo al passaggio del mouse) non bastava,
-                    la stessa ragione già scritta per « MUSE non indossato ». */}
-                {museGate.signalQuality > 0 && (
-                  <span title={t('signal_quality') as string}>
-                    {LC('segnale', 'signal', 'signal', 'señal', 'signal')} {museGate.signalQuality}%
-                  </span>
-                )}
+                {/* ⚠️ Segnalato di nuovo: « togli le percentuali con la scritta signal ». La
+                    riga "segnale N%" (aggiunta un giro fa dopo « c'è scritto... delle
+                    percentuali? », per dire COSA fosse quel numero) va via del tutto ora —
+                    non più un'etichetta da chiarire, il numero stesso non deve più esserci. */}
                 {moduleVis.biometric && (
                   <span title={t('biometric_integrity') as string}>
                     <LetturaIntegrita />
@@ -3616,6 +3653,29 @@ export default function Serenity() {
                 </span>
               </div>
             )}
+            {/* ── NEEDLE LIGHT — segnalato: « manca la possibilità di mettere/togliere la
+                scia ». Stessa levetta di App.tsx (`showTrailPref`), stessa condizione — un
+                ago da vedere (MUSE o METER) e non MIRROR/TONE, che hanno il loro quadrante e
+                nessuna scia da accendere. `pointerEvents:'auto'`: il resto di questo angolo
+                è solo lettura (`pointerEvents:'none'` sul contenitore), questo è l'UNICO
+                bottone vero qui dentro. */}
+            {(agoEeg || meterC) && !mirror.mirrorArmed && !toneAttivo && (
+              <button type="button" onClick={() => setShowTrailPref(v => !v)}
+                title={LC('NEEDLE LIGHT — la scia luminosa dell\'ago e le etichette di reazione',
+                          'NEEDLE LIGHT — la traînée lumineuse de l\'aiguille et les libellés de réaction',
+                          'NEEDLE LIGHT — the needle\'s glowing trail and the reaction labels',
+                          'NEEDLE LIGHT — la estela luminosa de la aguja y las etiquetas de reacción',
+                          'NEEDLE LIGHT — nålens lysande svans och reaktionsetiketterna') as string}
+                style={{
+                  pointerEvents: 'auto', marginTop: 2, borderRadius: 999, cursor: 'pointer',
+                  fontFamily: 'var(--s-sans)', fontSize: 9.5, fontWeight: 700, letterSpacing: '0.04em',
+                  padding: '3px 9px', background: 'transparent',
+                  border: '1px solid var(--s-ink-ghost)',
+                  color: showTrailPref ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
+                }}>
+                {showTrailPref ? '● ' : '○ '}NEEDLE LIGHT
+              </button>
+            )}
           </div>
           <QuantumSphere
             needleOffsetProp={agoEeg ? needleOffsetEeg : SET_OFFSET}
@@ -3643,7 +3703,7 @@ export default function Serenity() {
             needleReactionKey={agoEeg ? needleReactionKey : thetaReactionKey}
             asIsnessState={ep.asIsnessState}
             onClick={() => { theta.resetToSet(); resetNeedleEeg(); }}
-            showTrail
+            showTrail={showTrailPref}
             sessionState={aperta ? 'running' : 'idle'}
           />
           {/* ── « PREMI START », SUL QUADRANTE — segnalato: « pour démarrer la séance, je veux
@@ -3887,6 +3947,9 @@ export default function Serenity() {
                   sessionState={aperta ? 'running' : 'idle'}
                   onHide={() => setModuleVis(v => ({ ...v, health: false }))}
                   t={k => t(k as Parameters<typeof t>[0]) as string}
+                  /* ⚠️ Segnalato: « Santé Système devi cambiarlo... renderà meno alta la zona » —
+                      v. la nota su `compact` in `HealthPanel.tsx`. Solo SERENITY la chiede. */
+                  compact
                   /* ⚠️ Segnalato: « la zone ARC doit avoir le même fond que le fond général...
                       et les zones également, juste un petit liseré très fin de séparation ».
                       `--s-zone-bg`/`--s-zone-border` (v. `tokens.css`): trasparente per davvero

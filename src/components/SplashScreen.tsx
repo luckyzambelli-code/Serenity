@@ -3,9 +3,17 @@ import { creditLines, creditCopyright } from '../credits';
 import { useI18n } from '../i18n';
 import { LAYER } from "../ui/layers";
 
-interface SplashScreenProps { onDismiss: () => void; }
+interface SplashScreenProps {
+  onDismiss: () => void;
+  /** ⚠️ SEGNALATO: « metti anche l'animazione iniziale con SERENITY come nome ». Il testo
+   *  disegnato sotto il logo (`label`, più sotto) era scritto a mano, `'EQUILIBRIUM'` —
+   *  App.tsx non passava nulla, il default. SERENITY (che prima non montava affatto questo
+   *  componente: nessuna animazione iniziale) lo monta ora passando `appName="SERENITY"`,
+   *  stessa ricetta di `CreditsModal` (props opzionali, default invariato per App.tsx). */
+  appName?: string;
+}
 
-export function SplashScreen({ onDismiss }: SplashScreenProps) {
+export function SplashScreen({ onDismiss, appName = 'EQUILIBRIUM' }: SplashScreenProps) {
   const [visible, setVisible]   = useState(true);  // opaque from first frame → blocks interface
   const [closing, setClosing]   = useState(false);
   const canvasRef    = useRef<HTMLCanvasElement>(null);
@@ -16,6 +24,11 @@ export function SplashScreen({ onDismiss }: SplashScreenProps) {
   // Stable ref so timers are never reset by App re-renders
   const onDismissRef = useRef(onDismiss);
   useEffect(() => { onDismissRef.current = onDismiss; }, [onDismiss]);
+  // Stessa ragione di `langRef`, sotto: la lettura del disegno vive in un `useEffect` a
+  // dipendenze vuote (monta l'animazione UNA sola volta) — una ref, non la prop diretta,
+  // perché quella chiusura non deve mai essere ricreata.
+  const appNameRef = useRef(appName);
+  useEffect(() => { appNameRef.current = appName; }, [appName]);
   // La boucle de dessin est montée UNE fois : la langue passe par une ref pour que les
   // crédits suivent la langue choisie sans jamais relancer l'animation.
   const { lang } = useI18n();
@@ -275,7 +288,7 @@ export function SplashScreen({ onDismiss }: SplashScreenProps) {
       const logoAR = logoImgRef.current ? (logoImgRef.current.width / logoImgRef.current.height) : 3.2;
       const logoW  = titleW;
       const logoH  = logoW / logoAR;
-      const label  = 'EQUILIBRIUM';
+      const label  = appNameRef.current;
       const trackEm = 0.16;
 
       // Pick a font size so the tracked label width ≈ titleW.

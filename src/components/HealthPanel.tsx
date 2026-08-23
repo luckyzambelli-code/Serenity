@@ -20,11 +20,21 @@ interface HealthPanelProps {
   onHide:               () => void;
   t:                    (key: string) => string;
   panelStyle:           (extra?: React.CSSProperties) => React.CSSProperties;
+  /** ⚠️ SEGNALATO (solo SERENITY): « Santé Système devi cambiarlo. Metti il giro affiancato a
+   *  EEG (rendendo più stretto EEG). Il PPG indica solo il numero di BPM senza il cerchio e
+   *  mettigli accanto sulla stessa linea il capteur MUSE 2 — renderà meno alta la zona ». Un
+   *  cambio di STRUTTURA, non solo di grafica — App.tsx monta questo stesso componente, e
+   *  « EQUILIBRIUM detta struttura e taglia, SERENITY solo la grafica » (v.
+   *  `docs/serenity-refonte.md`, principio dimensionale) vale anche al contrario: non si
+   *  cambia la struttura di App.tsx per un desiderio di SERENITY. Prop opzionale, default
+   *  `false` — App.tsx non la passa, non cambia una riga della SUA resa; SERENITY la passa
+   *  `true` per la resa compatta descritta sopra. */
+  compact?:             boolean;
 }
 
 export function HealthPanel({
   eegBuffer, gyroBuffer, displayBpm, signalQuality, museConnection,
-  batteryLevel, sessionState, onHide, t, panelStyle,
+  batteryLevel, sessionState, onHide, t, panelStyle, compact = false,
 }: HealthPanelProps) {
   const isLightTheme         = useUiStore(s => s.isLightTheme);
   const appMode              = useNetworkStore(s => s.appMode);
@@ -104,23 +114,48 @@ export function HealthPanel({
       </div>
 
       {/* sub-zones */}
-      {!collapsed && (
-      <div className="flex flex-col gap-2">
-        {panels.map(({ key, label }) => (
-          <SubPanel
-            key={key}
-            panelKey={key}
-            label={label}
-            eegBuffer={eegBuffer}
-            gyroBuffer={gyroBuffer}
-            displayBpm={displayBpm}
-            museConnection={effectiveMuse}
-            batteryLevel={effectiveBattery}
-            sessionState={sessionState}
-          />
-        ))}
-      </div>
-      )}
+      {!collapsed && (compact ? (
+        /* ── RESA COMPATTA, SOLO SERENITY — v. la nota su `compact` sopra. GYRO affiancato a
+           EEG (che si restringe per fargli posto, `flex:2`/`flex:1`) invece di stargli sotto;
+           PPG diventa un numero solo (niente `CircularGauge`, il cerchio) sulla STESSA riga
+           di MUSE 2/batteria invece di una zona a sé (100px risparmiati). */
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2" style={{ minHeight: 72 }}>
+            <div className="relative overflow-hidden" style={{ flex: 2, minHeight: 72 }}>
+              <span className="absolute left-2 top-1 z-10 text-[10px] tracking-widest uppercase font-bold text-white/70">EEG</span>
+              <div className="absolute inset-0 pt-5 pb-1 px-1.5">
+                <EegWaveform dataBuffer={eegBuffer} isRunning={sessionState === 'running'} />
+              </div>
+            </div>
+            <div className="relative overflow-hidden" style={{ flex: 1, minHeight: 72 }}>
+              <span className="absolute left-2 top-1 z-10 text-[10px] tracking-widest uppercase font-bold text-white/70">GYRO</span>
+              <GyroRadar gyroBuffer={gyroBuffer} />
+            </div>
+          </div>
+          <div className="px-1.5">
+            <MuseSensorLine connected={effectiveMuse === 'connected'} batteryLevel={effectiveBattery} bpm={displayBpm} />
+          </div>
+          <div className="px-1.5">
+            <ElectrodeGrid eegBuffer={eegBuffer} connected={effectiveMuse === 'connected'} />
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {panels.map(({ key, label }) => (
+            <SubPanel
+              key={key}
+              panelKey={key}
+              label={label}
+              eegBuffer={eegBuffer}
+              gyroBuffer={gyroBuffer}
+              displayBpm={displayBpm}
+              museConnection={effectiveMuse}
+              batteryLevel={effectiveBattery}
+              sessionState={sessionState}
+            />
+          ))}
+        </div>
+      ))}
     </div>
   );
 }
@@ -261,62 +296,103 @@ function ElectrodeRing({
   const connected = museConnection === 'connected';
   return (
     <div className="absolute inset-0 pt-5 pb-1 px-1.5 flex flex-col justify-center gap-1.5">
-      {/* Ligne MUSE 2 + batterie (petite, comme à l'origine) */}
-      <div className="flex items-center justify-between text-[10px] font-mono">
-        <div className="flex items-center gap-1">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-            stroke={connected ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.28)'} strokeWidth="2.2">
-            <path d="M6 7l12 10-6 5V2l6 5L6 17"/>
-          </svg>
-          <span style={{ color: connected ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.32)' }}>MUSE 2</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="relative" style={{ width: 26, height: 12 }}>
-            <div style={{
-              position: 'absolute', inset: 0,
-              border: `1.5px solid rgba(255,255,255,${batteryLevel !== null ? 0.6 : 0.28})`,
-              borderRadius: 2, background: 'rgba(0,0,0,0.4)', overflow: 'hidden',
-            }}>
-              <div style={{ height: '100%', width: `${batteryLevel || 0}%`, background: 'rgba(255,255,255,0.82)' }} />
-            </div>
-            <div style={{ position: 'absolute', right: -2, top: 4, bottom: 4, width: 1.5, background: `rgba(255,255,255,${batteryLevel !== null ? 0.6 : 0.28})`, borderRadius: 1 }} />
-          </div>
-          <span className="text-[12px] font-mono font-black tabular-nums" style={{ color: 'rgba(255,255,255,0.85)' }}>
-            {batteryLevel !== null ? `${batteryLevel.toFixed(0)}%` : ''}
-          </span>
-        </div>
-      </div>
+      <MuseSensorLine connected={connected} batteryLevel={batteryLevel} />
+      <ElectrodeGrid eegBuffer={eegBuffer} connected={connected} />
+    </div>
+  );
+}
 
-      {/* Grille électrodes horizontale (4 colonnes) */}
-      <div className="grid grid-cols-4 gap-1">
-        {['TP9', 'AF7', 'AF8', 'TP10'].map((ch, i) => {
-          const s   = eegBuffer.current?.[i] ?? [];
-          const rms = s.length
-            ? Math.sqrt(s.slice(-64).reduce((a: number, v: number) => a + v * v, 0) / Math.min(64, s.length))
-            : 0;
-          const qv  = rms < 5 ? 0 : rms > 500 ? 20 : Math.min(100, (rms / 200) * 100);
-          const ok  = connected && qv > 40;
-          // MONOCHROME : la qualité se lit par la LUMINOSITÉ (opacité), pas par la couleur.
-          const op  = !connected ? 0.25 : 0.4 + (qv / 100) * 0.55;
-          const col = `rgba(255,255,255,${op.toFixed(3)})`;
-          return (
-            <div key={ch} className="flex flex-col items-center gap-0.5">
-              <div style={{
-                width: 18, height: 18, borderRadius: '50%',
-                border: `1.5px solid ${col}`,
-                background: ok ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.03)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <svg width="10" height="6" viewBox="0 0 12 8" fill="none">
-                  <path d="M0 4 L2 4 L3 1 L5 7 L7 1 L9 7 L10 4 L12 4"
-                    stroke={col} strokeWidth="1.2" strokeLinecap="round" />
-                </svg>
-              </div>
-              <span className="text-[8px] font-mono font-bold" style={{ color: col }}>{ch}</span>
-            </div>
-          );
-        })}
+// ── LA RIGA « MUSE 2 » — segnalata: « mettigli accanto sulla stessa linea il capteur MUSE 2 »
+// (v. la nota su `compact`). Era la prima riga di `ElectrodeRing`, mai una funzione a sé —
+// estratta per essere riusata TALE E QUALE dalla resa compatta di SERENITY (con `bpm` in più
+// sulla stessa riga) SENZA duplicare il disegno dell'icona/batteria: la resa di App.tsx (via
+// `ElectrodeRing`, sopra) non cambia di un pixel, chiama solo la stessa funzione.
+function MuseSensorLine({
+  connected, batteryLevel, bpm,
+}: {
+  connected: boolean;
+  batteryLevel: number | null;
+  /** Presente SOLO nella resa compatta di SERENITY — il numero del PPG, senza il suo cerchio
+   *  (`CircularGauge`), sulla stessa riga del sensore MUSE 2. `undefined` = non disegnarlo
+   *  affatto (il caso di App.tsx, dove il PPG resta la sua zona a sé con l'anello). */
+  bpm?: number | null;
+}) {
+  return (
+    <div className="flex items-center justify-between text-[10px] font-mono">
+      {bpm !== undefined && (
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-[9px] tracking-widest uppercase font-bold text-white/60">PPG</span>
+          <span className="text-[13px] font-mono font-black tabular-nums" style={{ color: 'rgba(255,255,255,0.9)' }}>
+            {bpm != null && isFinite(bpm) ? Math.round(bpm) : '—'}
+          </span>
+          <span className="text-white/50">BPM</span>
+        </div>
+      )}
+      <div className="flex items-center gap-1">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+          stroke={connected ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.28)'} strokeWidth="2.2">
+          <path d="M6 7l12 10-6 5V2l6 5L6 17"/>
+        </svg>
+        <span style={{ color: connected ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.32)' }}>MUSE 2</span>
       </div>
+      <div className="flex items-center gap-1">
+        <div className="relative" style={{ width: 26, height: 12 }}>
+          <div style={{
+            position: 'absolute', inset: 0,
+            border: `1.5px solid rgba(255,255,255,${batteryLevel !== null ? 0.6 : 0.28})`,
+            borderRadius: 2, background: 'rgba(0,0,0,0.4)', overflow: 'hidden',
+          }}>
+            <div style={{ height: '100%', width: `${batteryLevel || 0}%`, background: 'rgba(255,255,255,0.82)' }} />
+          </div>
+          <div style={{ position: 'absolute', right: -2, top: 4, bottom: 4, width: 1.5, background: `rgba(255,255,255,${batteryLevel !== null ? 0.6 : 0.28})`, borderRadius: 1 }} />
+        </div>
+        <span className="text-[12px] font-mono font-black tabular-nums" style={{ color: 'rgba(255,255,255,0.85)' }}>
+          {batteryLevel !== null ? `${batteryLevel.toFixed(0)}%` : ''}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ── LA GRIGLIA ELETTRODI — stessa estrazione, stessa ragione: SOLO i quattro cerchi TP9/AF7/
+// AF8/TP10, senza la riga MUSE 2 sopra (quella è `MuseSensorLine`, ora indipendente). App.tsx
+// (via `ElectrodeRing`) le monta insieme, una sotto l'altra — SERENITY compatto le monta
+// separate, con altro in mezzo (EEG/GYRO affiancati, sopra).
+function ElectrodeGrid({
+  eegBuffer, connected,
+}: {
+  eegBuffer: React.RefObject<{ [channel: number]: number[] }>;
+  connected: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-4 gap-1">
+      {['TP9', 'AF7', 'AF8', 'TP10'].map((ch, i) => {
+        const s   = eegBuffer.current?.[i] ?? [];
+        const rms = s.length
+          ? Math.sqrt(s.slice(-64).reduce((a: number, v: number) => a + v * v, 0) / Math.min(64, s.length))
+          : 0;
+        const qv  = rms < 5 ? 0 : rms > 500 ? 20 : Math.min(100, (rms / 200) * 100);
+        const ok  = connected && qv > 40;
+        // MONOCHROME : la qualité se lit par la LUMINOSITÉ (opacité), pas par la couleur.
+        const op  = !connected ? 0.25 : 0.4 + (qv / 100) * 0.55;
+        const col = `rgba(255,255,255,${op.toFixed(3)})`;
+        return (
+          <div key={ch} className="flex flex-col items-center gap-0.5">
+            <div style={{
+              width: 18, height: 18, borderRadius: '50%',
+              border: `1.5px solid ${col}`,
+              background: ok ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.03)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="10" height="6" viewBox="0 0 12 8" fill="none">
+                <path d="M0 4 L2 4 L3 1 L5 7 L7 1 L9 7 L10 4 L12 4"
+                  stroke={col} strokeWidth="1.2" strokeLinecap="round" />
+              </svg>
+            </div>
+            <span className="text-[8px] font-mono font-bold" style={{ color: col }}>{ch}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
