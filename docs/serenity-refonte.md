@@ -2724,6 +2724,35 @@ TONE mai armati dopo ripetuti Invio nel campo item.
 
 ---
 
+## Quarantatreesimo giro (23/08/2026) — la pillola chi/come/dove compressa a un'icona sola
+
+Richiesta esplicita, dopo un resoconto: la pillola "chi audita" impacchettava fino a QUATTRO
+azioni sempre in chiaro (interruttore Basic/Expert, cambia auditor/preclear, salva
+configurazione — le ultime due solo prima di aprire) — le stesse informazioni che `Avvio.tsx`
+raccoglie una volta sola, tornate a vista per tutta la seduta. `Avvio.tsx` lo dice di sé
+stesso: « sono cose che si controllano una volta all'inizio, non che si guardano in seduta ».
+
+**Corretta un'idea sbagliata proposta a voce prima di scrivere codice**: "riapri lo stesso
+Avvio.tsx" non è praticabile — `ricomincia()` (l'unica via per rivedere `Avvio.tsx`) azzera
+`avvio` e ricomincia le QUATTRO domande da capo, ed è commentata esplicitamente « solo a
+seduta chiusa »: riusarla a metà seduta vorrebbe dire chiuderla. Scelto invece un piccolo
+pannello a tendina proprio (`assettoAperto`, nuovo stato) dietro un'unica icona
+(`SlidersHorizontal`) — le stesse tre azioni di prima, IDENTICHE (nessuna tolta, nessuna
+logica nuova: `setAvvio`, `ricomincia`, `salvaConfigurazione` tutte le stesse chiamate), solo
+non più tutte in chiaro insieme.
+
+Verificato dal vivo: la pillola ora mostra solo nome+ruolo; l'icona apre il pannello con
+"basic/expert · cambia" (funzionante nei due sensi), "cambia auditor o preclear" e "salva
+questa configurazione" — le ultime due spariscono correttamente a seduta aperta (`!aperta`,
+invariato), lasciando solo il livello.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639.
+
+`git status`: `src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

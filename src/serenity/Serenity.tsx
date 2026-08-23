@@ -82,7 +82,7 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, SlidersHorizontal } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
@@ -436,6 +436,14 @@ export default function Serenity() {
    * offre di salvare in ogni momento — non solo nell'unico istante in cui il pannello capita di
    * essere aperto. */
   const [salvaConfigAperto, setSalvaConfigAperto] = useState(false);
+  /** ── L'ASSETTO, ORA UN'UNICA ICONA — segnalato: « comprimere la pillola chi/come/dove a un
+   *  nome + icona "modifica assetto" ». Prima l'interruttore Basic/Expert stava SEMPRE in
+   *  chiaro dentro la pillola, e cambia-persone/salva-configurazione (solo prima di aprire)
+   *  erano due icone IN PIÙ nella stessa pillola — fino a quattro azioni sempre a vista per
+   *  un'informazione che, come dice `Avvio.tsx` di sé stesso, "si controlla una volta
+   *  all'inizio, non che si guarda in seduta". Un solo interruttore qui, un solo pannello
+   *  sotto con le stesse azioni di prima (nessuna tolta) — non più tutte in chiaro insieme. */
+  const [assettoAperto, setAssettoAperto] = useState(false);
   /** Il « minimizza » di ciascuna camera — lo stesso `isVisible` di `CameraFeed.tsx`, un gesto
    *  in seduta, DIVERSO dallo spegnimento da CONFIG (`moduleVis`): qui lo stream resta vivo. */
   const [cam1Collassata, setCam1Collassata] = useState(false);
@@ -2416,121 +2424,132 @@ export default function Serenity() {
               {t('ser_remote_tag')}
             </span>
           )}
-          {/* ── BASIC/EXPERT, ORA UN INTERRUTTORE VERO — segnalato: « devi anche permettere di
-              schiacciare su expert per passare in normale, e viceversa ». Prima si vedeva SOLO
-              quando esperto (`avvio.esperto &&`, uno `<span>` muto, nessun `onClick`) — cambiare
-              richiedeva tornare indietro fino alla domanda dell'avvio. Ora sempre visibile, come
-              lo stesso interruttore di `Sidebar.tsx` (EQUILIBRIUM: `onClick={() =>
-              setUiLevel(uiLevel === 'expert' ? 'normal' : 'expert')}`) — qui `setAvvio` al
-              posto di `setUiLevel`, la STESSA idea (un bottone che dice il livello ATTUALE e
-              lo capovolge al tocco), non un secondo meccanismo inventato. */}
-          <button
-            onClick={() => setAvvio(a => a ? { ...a, esperto: !a.esperto } : a)}
-            title={(avvio.esperto ? t('sidebar_level_expert_tip') : t('sidebar_level_normal_tip')) as string}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5, border: 'none', background: 'none',
-              cursor: 'pointer', padding: 0, fontFamily: 'inherit', fontSize: 'inherit',
-              color: 'inherit',
-            }}>
-            {avvio.esperto
-              ? <Wrench size={24} strokeWidth={1.8} aria-hidden="true" />
-              : <CircleUser size={24} strokeWidth={1.8} aria-hidden="true" />}
-            {avvio.esperto ? t('ser_expert_tag') : t('ser_normal_tag')}
-          </button>
-          {/* ── CAMBIA AUDITOR O PRECLEAR, ORA UN'ICONA QUI DENTRO — segnalato: « CHANGE AUDITOR
-              OR PRECLEAR doit être sous forme d'icône à avant l'icône sauvegarde de
-              l'indication de Auditor/PC et mode en haut ». Era un link di testo in fondo alla
-              barra comandi ("← changer d'auditeur ou de préclair"), lontano dalla pillola che
-              descrive chi sta auditando — la stessa `ricomincia()` di sempre, solo un'icona,
-              nello stesso posto delle scelte che cambia. */}
-          {!aperta && (
+          {/* ── L'ASSETTO, UN'UNICA ICONA — v. la nota su `assettoAperto`, sopra. Prima qui
+              c'erano fino a TRE cose sempre in chiaro (interruttore Basic/Expert, cambia-
+              persone, salva-configurazione) — le stesse quattro domande che `Avvio.tsx` pone
+              UNA VOLTA sola, tornate a vista per tutta la seduta. Nessuna tolta: solo dietro
+              un solo gesto in più, non più tutte davanti agli occhi ad ogni sguardo alla
+              barra. */}
+          <div style={{ position: 'relative' }}>
             <button
               className="s-glass-btn"
-              onClick={ricomincia}
-              title={t('ser_change_people') as string}
+              onClick={() => setAssettoAperto(v => !v)}
+              title={LC('assetto della seduta — livello, e chi audita', 'réglages de la séance — niveau, et qui audite',
+                'session setup — level, and who is auditing', 'ajustes de la sesión — nivel, y quién audita',
+                'sessionsinställningar — nivå, och vem som auditerar') as string}
               style={{
                 display: 'flex', alignItems: 'center', border: 'none', background: 'none',
                 cursor: 'pointer', padding: 2, color: 'var(--s-ink-faint)', lineHeight: 0,
               }}>
-              <UserCog size={24} strokeWidth={1.8} aria-hidden="true" />
+              <SlidersHorizontal size={22} strokeWidth={1.8} aria-hidden="true" />
             </button>
-          )}
-          {/* ── SALVA QUESTA CONFIGURAZIONE — segnalato: « le bouton doit être inclus dans le
-              champ avec les indications Auditeur/PC Expert/Normal, sous forme d'icône ».
-              Stessa azione di prima (`salvaConfigAperto`/`salvaConfigurazione`), un'icona sola,
-              dentro la STESSA pillola di chi/come si audita — perché salvare LA
-              CONFIGURAZIONE è salvare esattamente quello che questa pillola racconta, non
-              un'azione indipendente. */}
-          {!aperta && (
-            <div style={{ position: 'relative' }}>
-              <button
-                className="s-glass-btn"
-                onClick={() => { setSalvaConfigAperto(v => !v); setConfigSalvata(false); }}
-                title={LC('salva questa configurazione', 'sauvegarder cette configuration',
-                  'save this configuration', 'guardar esta configuración', 'spara denna konfiguration') as string}
-                style={{
-                  display: 'flex', alignItems: 'center', border: 'none', background: 'none',
-                  cursor: 'pointer', padding: 2, color: 'var(--s-ink-faint)', lineHeight: 0,
-                }}>
-                <Save size={24} strokeWidth={1.8} aria-hidden="true" />
-              </button>
-              {salvaConfigAperto && (
-                <div className="s-glass s-glass-lift" style={{
-                  position: 'absolute', top: '100%', right: 0, marginTop: 8, zIndex: 40,
-                  display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 14px',
-                  borderRadius: 12, background: 'var(--s-disc)',
-                  minWidth: 260,
-                }}>
-                  <span style={{ fontSize: 13.5, lineHeight: 1.5, color: 'var(--s-ink-faint)' }}>
-                    {LC('auditor, preclear, locale/distanza, e gli strumenti connessi in questo momento — tutto insieme.',
-                      'auditeur, préclair, local/distance, et les instruments connectés en ce moment — le tout ensemble.',
-                      'auditor, preclear, local/distance, and the instruments connected right now — all together.',
-                      'auditor, preclear, local/distancia, y los instrumentos conectados ahora mismo — todo junto.',
-                      'auditor, preclear, lokal/distans, och instrumenten som är anslutna just nu — allt tillsammans.')}
+            {assettoAperto && (
+              <div className="s-glass s-glass-lift" style={{
+                position: 'absolute', top: '100%', right: 0, marginTop: 8, zIndex: 40,
+                display: 'flex', flexDirection: 'column', gap: 4, padding: 8,
+                borderRadius: 12, background: 'var(--s-disc)', minWidth: 260,
+              }}>
+                {/* ── LIVELLO — stesso interruttore di prima, in riga invece che compresso
+                    dentro la pillola: dice il livello ATTUALE, lo capovolge al tocco. */}
+                <button
+                  onClick={() => setAvvio(a => a ? { ...a, esperto: !a.esperto } : a)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, border: 'none', background: 'none',
+                    cursor: 'pointer', padding: '8px 6px', borderRadius: 8, textAlign: 'left',
+                    fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink)',
+                  }}>
+                  {avvio.esperto
+                    ? <Wrench size={20} strokeWidth={1.8} aria-hidden="true" />
+                    : <CircleUser size={20} strokeWidth={1.8} aria-hidden="true" />}
+                  {avvio.esperto ? t('ser_expert_tag') : t('ser_normal_tag')}
+                  <span style={{ marginLeft: 'auto', fontSize: 12.5, color: 'var(--s-ink-faint)' }}>
+                    {LC('cambia', 'changer', 'change', 'cambiar', 'ändra')}
                   </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {/* ⚠️ Segnalato (di nuovo): « non è chiaro che devi schiacciare su save ».
-                        `autoFocus` — il cassetto si apre già col cursore acceso nel campo, non
-                        c'è un click in più da indovinare — e INVIO salva, lo stesso gesto
-                        aggiunto qui sopra per il campo gemello del dialogo d'apertura. */}
-                    <input
-                      autoFocus
-                      value={nomeConfigDaSalvare}
-                      onChange={e => { setNomeConfigDaSalvare(e.target.value); setConfigSalvata(false); }}
-                      onKeyDown={e => { if (e.key === 'Enter' && nomeConfigDaSalvare.trim()) {
-                        salvaConfigurazione(nomeConfigDaSalvare, avvio,
-                          { muse: museOk, theta: meterC, none: senzaStrumenti || (!museOk && !meterC) });
-                        setConfigSalvata(true);
-                      } }}
-                      placeholder={LC('nome di questa configurazione…', 'nom de cette configuration…',
-                        'name for this configuration…', 'nombre de esta configuración…', 'namn för denna konfiguration…') as string}
-                      style={{
-                        flex: 1, border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
-                        outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink)',
-                        padding: '2px 4px',
-                      }}
-                    />
+                </button>
+                {/* ── CAMBIA AUDITOR O PRECLEAR — solo prima di aprire (v. `ricomincia`: chiude
+                    anche la rete a distanza, non si fa a metà seduta). */}
+                {!aperta && (
+                  <button
+                    onClick={() => { setAssettoAperto(false); ricomincia(); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10, border: 'none', background: 'none',
+                      cursor: 'pointer', padding: '8px 6px', borderRadius: 8, textAlign: 'left',
+                      fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink)',
+                    }}>
+                    <UserCog size={20} strokeWidth={1.8} aria-hidden="true" />
+                    {t('ser_change_people')}
+                  </button>
+                )}
+                {/* ── SALVA QUESTA CONFIGURAZIONE — stessa azione/stesso stato di prima
+                    (`salvaConfigAperto`/`salvaConfigurazione`), solo dentro questo pannello
+                    invece che nella sua propria icona a parte nella pillola. */}
+                {!aperta && (
+                  <>
                     <button
-                      disabled={!nomeConfigDaSalvare.trim()}
-                      onClick={() => {
-                        salvaConfigurazione(nomeConfigDaSalvare, avvio,
-                          { muse: museOk, theta: meterC, none: senzaStrumenti || (!museOk && !meterC) });
-                        setConfigSalvata(true);
-                      }}
+                      onClick={() => { setSalvaConfigAperto(v => !v); setConfigSalvata(false); }}
                       style={{
-                        border: 'none', background: 'none', cursor: nomeConfigDaSalvare.trim() ? 'pointer' : 'default',
-                        opacity: nomeConfigDaSalvare.trim() ? 1 : 0.4,
-                        fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-soft)', whiteSpace: 'nowrap',
+                        display: 'flex', alignItems: 'center', gap: 10, border: 'none', background: 'none',
+                        cursor: 'pointer', padding: '8px 6px', borderRadius: 8, textAlign: 'left',
+                        fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink)',
                       }}>
-                      {configSalvata
-                        ? LC('salvata ✓', 'enregistrée ✓', 'saved ✓', 'guardada ✓', 'sparad ✓')
-                        : LC('salva', 'enregistrer', 'save', 'guardar', 'spara')}
+                      <Save size={20} strokeWidth={1.8} aria-hidden="true" />
+                      {LC('salva questa configurazione', 'sauvegarder cette configuration',
+                        'save this configuration', 'guardar esta configuración', 'spara denna konfiguration')}
                     </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+                    {salvaConfigAperto && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 6px 8px' }}>
+                        <span style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--s-ink-faint)' }}>
+                          {LC('auditor, preclear, locale/distanza, e gli strumenti connessi in questo momento — tutto insieme.',
+                            'auditeur, préclair, local/distance, et les instruments connectés en ce moment — le tout ensemble.',
+                            'auditor, preclear, local/distance, and the instruments connected right now — all together.',
+                            'auditor, preclear, local/distancia, y los instrumentos conectados ahora mismo — todo junto.',
+                            'auditor, preclear, lokal/distans, och instrumenten som är anslutna just nu — allt tillsammans.')}
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {/* ⚠️ `autoFocus` — il cassetto si apre già col cursore acceso nel
+                              campo, e INVIO salva, lo stesso gesto del campo gemello nel
+                              dialogo d'apertura. */}
+                          <input
+                            autoFocus
+                            value={nomeConfigDaSalvare}
+                            onChange={e => { setNomeConfigDaSalvare(e.target.value); setConfigSalvata(false); }}
+                            onKeyDown={e => { if (e.key === 'Enter' && nomeConfigDaSalvare.trim()) {
+                              salvaConfigurazione(nomeConfigDaSalvare, avvio,
+                                { muse: museOk, theta: meterC, none: senzaStrumenti || (!museOk && !meterC) });
+                              setConfigSalvata(true);
+                            } }}
+                            placeholder={LC('nome di questa configurazione…', 'nom de cette configuration…',
+                              'name for this configuration…', 'nombre de esta configuración…', 'namn för denna konfiguration…') as string}
+                            style={{
+                              flex: 1, border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
+                              outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink)',
+                              padding: '2px 4px',
+                            }}
+                          />
+                          <button
+                            disabled={!nomeConfigDaSalvare.trim()}
+                            onClick={() => {
+                              salvaConfigurazione(nomeConfigDaSalvare, avvio,
+                                { muse: museOk, theta: meterC, none: senzaStrumenti || (!museOk && !meterC) });
+                              setConfigSalvata(true);
+                            }}
+                            style={{
+                              border: 'none', background: 'none', cursor: nomeConfigDaSalvare.trim() ? 'pointer' : 'default',
+                              opacity: nomeConfigDaSalvare.trim() ? 1 : 0.4,
+                              fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-soft)', whiteSpace: 'nowrap',
+                            }}>
+                            {configSalvata
+                              ? LC('salvata ✓', 'enregistrée ✓', 'saved ✓', 'guardada ✓', 'sparad ✓')
+                              : LC('salva', 'enregistrer', 'save', 'guardar', 'spara')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </span>
         <span style={{ width: 1, height: 16, background: 'var(--s-ink-ghost)', flexShrink: 0 }} />
         {/* ── LE CONNESSIONI, UN SOLO BOTTONE, SOLO ICONE — segnalato di nuovo: « i bottoni
