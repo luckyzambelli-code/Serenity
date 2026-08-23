@@ -90,9 +90,29 @@
 }
 
 /* ── I BORDI DI VETRO, RITINTI ANZICHÉ SPARITI ─────────────────────────────────────────────
-   `rgba(255,255,255,·)` come bordo (mai come sfondo, qui: uno sfondo forzato romperebbe gli
-   anelli del respiro e le carte semitrasparenti — v. nota sopra). Un bordo bianco su vetro
-   chiaro sarebbe invisibile quanto il testo quasi-bianco; qui basta ritingerlo. */
+   `rgba(255,255,255,·)` come bordo. Un bordo bianco su vetro chiaro sarebbe invisibile quanto
+   il testo quasi-bianco; qui basta ritingerlo. */
 :root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255,255,255"] {
   border-color: var(--s-zone-border) !important;
+}
+
+/* ── LE « CARTE » DI VETRO BIANCO, ORA VISIBILI SU FONDO CHIARO ────────────────────────────
+   ⚠️ Segnalato di nuovo: « il ready for the session CANS non corrisponde alla scelta LIGHT/
+   DARK, ma ha colori propri ». Il pannello principale (`rgba(2,6,23,·)`, sopra) e il testo
+   erano già ritinti — restavano le CARTE PICCOLE dentro `ThetaReadyCheck`/`MetabolicCheck` (le
+   tappe della prova, i bottoni ANNULLA/CONTINUA, la barra di avanzamento): fondo
+   `rgba(255,255,255,0.0X)`, pensato per leggersi come "un po' più chiaro" SUL FONDO NERO di
+   prima — su un fondo ora chiaro (`var(--s-ground)`) diventa bianco su bianco, quasi
+   invisibile. Non "il colore sbagliato": NESSUN colore, la carta sparisce — a occhio si legge
+   comunque come "non ha seguito la scelta", perché la struttura a carte scompare e resta solo
+   il testo. Un solo alfa per selettore (l'attributo cattura una sottostringa letterale, non un
+   prefisso numerico): elencati gli alfa che qui dentro sono SEMPRE sfondo, mai bordo/ombra di
+   un ALTRO elemento — verificato uno per uno per non ritingere per sbaglio il pannello
+   principale (che usa `0.14` nel SUO bordo, escluso apposta). Stesso inchiostro-carta delle
+   altre superfici "leggermente sollevate" di SERENITY, `--s-disc-sunk`. */
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255,255,255,0.04)"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255,255,255,0.05)"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255,255,255,0.06)"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255,255,255,0.08)"] {
+  background: var(--s-disc-sunk) !important;
 }

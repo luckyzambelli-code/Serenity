@@ -482,6 +482,24 @@ export default function Serenity() {
   const wallpaperUrl = useUiStore(s => s.wallpaperUrl);
   const moduleVis = useSerenityModuleStore(s => s.moduleVis);
   const setModuleVis = useSerenityModuleStore(s => s.setModuleVis);
+  /** ⚠️ SEGNALATO: « dimmi esattamente cosa fai apparire come moduli in BASIC e EXPERT ».
+   *  Risposta onesta al momento della domanda: NIENTE — l'interruttore (sopra, nella pillola
+   *  dell'intestazione) cambiava solo la SUA icona/parola, nessun modulo ne seguiva. Verificato
+   *  App.tsx: `espertoAttivo` (== `uiLevel === 'expert'`) governa un `useEffect` che scrive
+   *  `moduleVis.biometric` — vero in EXPERT, falso in BASIC, una PREFERENZA scritta all'apertura
+   *  del livello (l'auditor può poi comunque riaccenderlo/spegnerlo da CONFIG, la stessa scelta
+   *  resta sua) — e una seconda cosa, un pannello "diagnostica" (Total TA + velocità) dietro un
+   *  cassetto visibile SOLO in EXPERT: quella seconda parte resta fuori da qui apposta, non
+   *  ambigua ma DIVERSA — in SERENITY il Total TA e la velocità sono già SEMPRE visibili
+   *  nell'angolo dell'arco (una scelta esplicita di un giro precedente, non un'omissione), e
+   *  nasconderli di nuovo dietro EXPERT sarebbe togliere qualcosa che l'auditor vede oggi senza
+   *  che l'abbia chiesto — la stessa riga della prima, non la seconda. Qui solo la sincronia del
+   *  modulo biometrico, la parte SENZA ambiguità. */
+  const espertoAttivo = avvio?.esperto;
+  useEffect(() => {
+    if (espertoAttivo === undefined) return;
+    setModuleVis(v => (v.biometric === espertoAttivo ? v : { ...v, biometric: espertoAttivo }));
+  }, [espertoAttivo, setModuleVis]);
   // Segnalato: « nessuno sfondo » — la STESSA preferenza di EQUILIBRIUM, applicata alla
   // superficie di SERENITY con un velo (`--s-veil`) invece del vetro scuro di EQUILIBRIUM:
   // stessa funzione (« IL TUO fondo »), grafica propria.
@@ -1857,7 +1875,12 @@ export default function Serenity() {
          dei moduli (assessment/Santé/journal, sopra), IN FLUSSO invece che `position:absolute`,
          quello spazio lo chiedono per davvero: `1fr` ora va a `<section>`, l'ultima riga. */
       gridTemplateRows: 'auto auto 1fr',
-      padding: '38px 44px', gap: 24, position: 'relative',
+      /* ⚠️ Segnalato: « lo spazio dell'arco deve essere più grande, fallo occupare tutto lo
+         spazio disponibile ». Il padding di `<main>` (38/44px) toglieva spazio VERO all'arco
+         su ogni schermo, non solo su quelli piccoli: su un'aspect-ratio larga com'è la sua
+         (1600/850) è quasi sempre la LARGHEZZA a decidere la taglia finale. Ridotto — resta
+         comunque un margine dai bordi della finestra, solo più stretto. */
+      padding: '20px 24px', gap: 24, position: 'relative',
     }}>
       {/* ── METER / MUSE / NESSUNO STRUMENTO — si sceglie PRIMA di aprire ──────────────────────
           Segnalato: « la logica... non sembra ancora implementata ». Le TRE voci sullo stesso
@@ -3433,7 +3456,14 @@ export default function Serenity() {
              letture che stavano SOTTO questo contenitore, nel flusso di `<section>`. Ora che
              sono dentro (la striscia in basso, `position:absolute`, vedi sotto), non c'è più
              nulla dopo il quadrante in quel flusso — gli si può ridare tutta l'altezza vera. */
-          width: 'min(100%, 2200px)', aspectRatio: '1600 / 850', maxHeight: '100%',
+          /* ⚠️ SEGNALATO ANCORA: « lo spazio dell'arco deve essere più grande, fallo occupare
+             tutto lo spazio disponibile ». Il tetto in px (2200) non era mai il vero limite:
+             con l'`aspect-ratio` 1600/850 (largo quasi 1,9 volte la sua altezza) è la LARGHEZZA
+             disponibile — non l'altezza — a decidere la taglia su uno schermo normale (non
+             ultra-wide), e quella arriva dal padding di `<main>` e dalla riserva della barra
+             laterale, non da questo tetto. Tolto il tetto (era comunque già oltre lo schermo
+             tipico) — resta `100%` della larghezza vera lasciata libera qui sotto. */
+          width: '100%', aspectRatio: '1600 / 850', maxHeight: '100%',
           borderRadius: 18, overflow: 'hidden', position: 'relative',
           /* ⚠️ Segnalato: « il fondo della zona arc deve essere trasparente ». In chiaro era
              `var(--s-ground)` — LO STESSO colore della pagina, ma un colore PIENO: con uno
@@ -3552,41 +3582,29 @@ export default function Serenity() {
                 color: 'var(--s-ink-faint)', display: 'flex', flexDirection: 'column',
                 alignItems: 'flex-start', gap: 2,
               }}>
-                <span>TA {theta.ta !== null ? theta.ta.toFixed(2) : '—'}</span>
-                {/* ⚠️ Segnalato: « sotto un numero che non so cosa sia » — la freccia da sola,
-                    senza parola, non diceva che questo È il TA proprio ADESSO (quello sopra è
-                    il riposo, misurato all'inizio): l'ago si sta muovendo verso questo valore
-                    in questo istante. Stessa etichetta visibile, non solo un `title`. */}
-                {theta.taNow !== null && Math.abs(theta.taNow - (theta.ta ?? theta.taNow)) > 0.01 && (
-                  <span title={LC('il TA proprio adesso — l\'ago si sta muovendo verso questo valore',
-                    'le TA à l\'instant — l\'aiguille se dirige vers cette valeur',
-                    'the TA right now — the needle is moving toward this value',
-                    'el TA ahora mismo — la aguja se mueve hacia este valor',
-                    'TA just nu — nålen rör sig mot detta värde')}>
-                    {LC('adesso', 'maintenant', 'là', 'ahora', 'nu')} → {theta.taNow.toFixed(2)}
-                  </span>
-                )}
-                {/* ⚠️ Segnalato: « non vedo scritto la differenza fra TA a due cans ed una »,
-                    poi di nuovo: « METTI LE SCRITTE ESATTAMENTE COME IN EQUILIBRIUM ».
-                    App.tsx scrive SEMPRE su quale base poggia il numero — due lattine, una
-                    lattina riportata a due con lo scarto misurato, o una lattina con la
-                    divisione tolta perché lo scarto non è stato misurato: lo stesso TA a
-                    vedersi vuol dire tre cose diverse, e senza questa riga non si distinguono.
-                    `tone.taMostrato` (`useToneCycle`, condiviso — la STESSA funzione
-                    `taToTwoCans`) esisteva già nel ritorno del motore, mai letta qui.
-                    ⚠️ Confrontato PAROLA PER PAROLA col testo di App.tsx (riga "SU CHE COSA SI
-                    BASA IL NUMERO"): un'unica differenza, l'abbreviazione "1 div." al posto di
-                    "1 divisione"/"1 division"/"1 división" per intero — corretta, ora identiche
-                    in tutte le cinque lingue (lo svedese "delstreck" era già uguale). */}
+                {/* ⚠️ SEGNALATO DI NUOVO: « che vuol dire nel TA maintenant seguita da un
+                    numero? » e « TA 1 boîte → 2 senza nessun numero? ». Il giro scorso aveva
+                    aggiunto DUE numeri (`theta.ta`, il riposo, e « adesso → » `theta.taNow`) più
+                    la didascalia base — tre righe per un solo dato, un'invenzione SERENITY: letto
+                    App.tsx parola per parola (riga "SU CHE COSA SI BASA IL NUMERO"), lì c'è UN
+                    SOLO numero — `tone.taMostrato.ta` — SEMPRE quello ADESSO (la funzione lo
+                    calcola da `taNow`, non dal riposo: v. `useToneCycle.ts`), con la sua
+                    didascalia SUBITO sotto. Nessuna riga « riposo » separata, nessuna freccia:
+                    ecco perché la didascalia sembrava "senza numero" — il numero giusto non era
+                    quello di sopra (il riposo), non erano allineati. Ora la STESSA unica coppia
+                    numero+didascalia di App.tsx, non due invenzioni nuove. */}
                 {tone.taMostrato && (
-                  <span style={{ fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'uppercase',
-                                color: tone.taMostrato.margin > 0 ? 'var(--s-reserve)' : 'var(--s-ink-ghost)' }}>
-                    {tone.taMostrato.basis === 'two-cans'
-                      ? LC('TA · 2 lattine', 'TA · 2 boîtes', 'TA · 2 cans', 'TA · 2 latas', 'TA · 2 burkar')
-                      : tone.taMostrato.basis === 'solo-measured'
-                      ? LC('TA · 1 lattina → 2', 'TA · 1 boîte → 2', 'TA · 1 can → 2', 'TA · 1 lata → 2', 'TA · 1 burk → 2')
-                      : LC('TA · 1 lattina − 1 divisione', 'TA · 1 boîte − 1 division', 'TA · 1 can − 1 division', 'TA · 1 lata − 1 división', 'TA · 1 burk − 1 delstreck')}
-                  </span>
+                  <>
+                    <span>TA {tone.taMostrato.ta.toFixed(2)}</span>
+                    <span style={{ fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'uppercase',
+                                  color: tone.taMostrato.margin > 0 ? 'var(--s-reserve)' : 'var(--s-ink-ghost)' }}>
+                      {tone.taMostrato.basis === 'two-cans'
+                        ? LC('TA · 2 lattine', 'TA · 2 boîtes', 'TA · 2 cans', 'TA · 2 latas', 'TA · 2 burkar')
+                        : tone.taMostrato.basis === 'solo-measured'
+                        ? LC('TA · 1 lattina → 2', 'TA · 1 boîte → 2', 'TA · 1 can → 2', 'TA · 1 lata → 2', 'TA · 1 burk → 2')
+                        : LC('TA · 1 lattina − 1 divisione', 'TA · 1 boîte − 1 division', 'TA · 1 can − 1 division', 'TA · 1 lata − 1 división', 'TA · 1 burk − 1 delstreck')}
+                    </span>
+                  </>
                 )}
                 {theta.fn.fn && (
                   <span style={{ color: 'var(--s-reserve)' }}>

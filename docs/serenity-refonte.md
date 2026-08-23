@@ -2534,6 +2534,60 @@ dopo EP, il tooltip della voce presente e col testo giusto. `git status`:
 
 ---
 
+## Trentanovesimo giro (23/08/2026) — CANS ritinto per davvero in chiaro, il TA « adesso » era un'invenzione, l'arco più grande sul serio, Basic/Expert allinea il modulo biometrico, la guida al permesso vocale
+
+Cinque segnalazioni:
+
+1. **« Il ready for the session CANS non corrisponde alla scelta LIGHT/DARK, ma ha colori
+   propri »** — il pannello principale di `ThetaReadyCheck` (fondo, testo) era già ritinto in
+   chiaro; restavano le CARTE PICCOLE dentro (le due tappe della prova, i bottoni ANNULLA/
+   CONTINUA, la barra di avanzamento): fondo `rgba(255,255,255,0.0X)`, pensato per leggersi
+   come "un po' più chiaro" SUL FONDO NERO di prima — su un fondo ora chiaro diventa bianco su
+   bianco, quasi invisibile. Non "il colore sbagliato": NESSUN colore, la struttura a carte
+   spariva e restava solo il testo — da cui l'impressione di "colori propri". Aggiunta la
+   ritinta per i quattro alfa usati SOLO come sfondo in questi due componenti (0.04/0.05/0.06/
+   0.08), verificati uno per uno per non toccare per sbaglio il bordo del pannello principale
+   (che usa 0.14, escluso apposta).
+
+2. **« Che vuol dire nel TA maintenant seguita da un numero? » / « TA 1 boîte → 2 senza nessun
+   numero? »** — trovato l'errore alla radice: un giro fa avevo AGGIUNTO due righe (« TA
+   {riposo} » e « adesso → {taNow} ») accanto alla didascalia della base — TRE informazioni per
+   un solo dato, un'invenzione mai esistita in App.tsx. Letto parola per parola: EQUILIBRIUM
+   mostra UN SOLO numero, `tone.taMostrato.ta` (che la funzione calcola già da `taNow`, non dal
+   riposo), con la sua didascalia subito sotto — punto. Ecco perché la didascalia sembrava
+   "senza numero": il numero sopra (il riposo) non era quello a cui si riferiva. Tolte le due
+   righe inventate, resta la stessa coppia numero+didascalia di App.tsx.
+
+3. **« Lo spazio dell'arco deve essere più grande, fallo occupare tutto lo spazio disponibile »**
+   — il tetto in px (alzato a 2200 il giro scorso) non era mai il vero limite: con un
+   `aspect-ratio` largo quasi 1,9 volte la sua altezza, su uno schermo normale è la LARGHEZZA
+   disponibile a decidere la taglia, non un tetto mai raggiunto. Tolto il tetto (`100%` puro) e
+   ridotto il padding di `<main>` (38/44px → 20/24px), che toglieva spazio vero all'arco su
+   OGNI schermo, non solo sui piccoli.
+
+4. **« Dimmi esattamente cosa fai apparire come moduli in BASIC e EXPERT »** — risposta onesta
+   trovata leggendo il codice: NIENTE. L'interruttore cambiava solo la propria icona/parola,
+   nessun modulo lo seguiva — un'omissione, non una scelta. Verificato App.tsx: `espertoAttivo`
+   governa un `useEffect` che scrive `moduleVis.biometric` (vero in EXPERT, falso in BASIC, una
+   preferenza che l'auditor può comunque poi cambiare a mano da CONFIG) e un secondo pannello
+   "diagnostica" (Total TA + velocità) dietro un cassetto visibile solo in EXPERT. Replicata la
+   PRIMA parte (la sincronia del modulo biometrico, verificata dal vivo nei due sensi) — la
+   seconda lasciata FUORI apposta e dichiarata, non nascosta: in SERENITY il Total TA e la
+   velocità sono già sempre visibili nell'angolo dell'arco per una scelta esplicita di un giro
+   precedente, e nasconderli di nuovo dietro EXPERT toglierebbe qualcosa che l'auditor vede oggi
+   senza che l'abbia chiesto — ambiguità reale, non risolta da sola.
+
+5. **« Non posso aggiungere Serenity a Reconnaissance vocale, come fare? »** — risposta data in
+   chat (nessun codice: impostazioni di sistema macOS), non nel codice.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo (profilo TEST, tema scuro) — l'arco visibilmente più largo a parità di
+finestra, la didascalia TA senza più le due righe inventate, `moduleVis.biometric` che
+diventa `true`/`false` passando Basic↔Expert (controllato in `localStorage['ser_module_vis']`
+nei due sensi). `git status`: `src/serenity/Serenity.tsx`, `src/serenity/readyCheckLight.css`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
