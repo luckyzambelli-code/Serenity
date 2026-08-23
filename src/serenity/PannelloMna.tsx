@@ -110,9 +110,13 @@ export function PannelloMna({
   const avvicinamento = Math.max(0, Math.min(1, 1 - primeDelta / 1.5));
 
   return (
+    // ⚠️ Segnalato: « la zone ARC doit avoir le même fond que le fond général... et les zones
+    // également, juste un petit liseré très fin de séparation ». `--s-zone-bg`/`--s-zone-border`
+    // (v. `tokens.css`): trasparente per davvero in chiaro con un bordo sottile, il vetro
+    // smerigliato di sempre in scuro.
     <div className="s-glass s-glass-lift" style={{
       position: 'absolute', left: 16, right: 16, bottom: 16, zIndex: 6,
-      background: 'var(--s-disc)', borderRadius: 18,
+      background: 'var(--s-zone-bg)', border: '1px solid var(--s-zone-border)', borderRadius: 18,
       padding: '12px 18px', pointerEvents: 'auto',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>

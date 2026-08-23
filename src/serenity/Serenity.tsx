@@ -1894,6 +1894,12 @@ export default function Serenity() {
                 <input
                   value={nomeConfigDaSalvare}
                   onChange={e => { setNomeConfigDaSalvare(e.target.value); setConfigSalvata(false); }}
+                  // ⚠️ Segnalato: « non è chiaro che devi schiacciare su save ». INVIO salva —
+                  // il gesto naturale dopo aver scritto un nome, invece di dover trovare il
+                  // piccolo bottone testuale accanto (che resta, per chi preferisce il mouse).
+                  onKeyDown={e => { if (e.key === 'Enter' && nomeConfigDaSalvare.trim()) {
+                    salvaConfigurazione(nomeConfigDaSalvare, avvio, connSel); setConfigSalvata(true);
+                  } }}
                   placeholder={LC('nome di questa configurazione…', 'nom de cette configuration…',
                     'name for this configuration…', 'nombre de esta configuración…', 'namn för denna konfiguration…') as string}
                   style={{
@@ -1926,6 +1932,14 @@ export default function Serenity() {
               <button
                 disabled={!connSel.muse && !connSel.theta && !connSel.none}
                 onClick={async () => {
+                  // ⚠️ Segnalato: « si scrive il nome della session e si può salvarlo, ma non è
+                  // chiaro che devi schiacciare su save — naturalmente si vuole schiacciare il
+                  // bottone grosso OUVRIR UNE SÉANCE ». Vero: due gesti per un'unica intenzione
+                  // (nominare + aprire). Ora basta scrivere il nome — aprire la seduta la
+                  // salva DA SÉ, senza bisogno di trovare e premere "enregistrer" a parte.
+                  if (nomeConfigDaSalvare.trim()) {
+                    salvaConfigurazione(nomeConfigDaSalvare, avvio, connSel);
+                  }
                   const nessuno = connSel.none;
                   setScegliStrumento(false);
                   setSenzaStrumenti(nessuno);
@@ -2395,9 +2409,19 @@ export default function Serenity() {
                       'auditor, preclear, lokal/distans, och instrumenten som är anslutna just nu — allt tillsammans.')}
                   </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {/* ⚠️ Segnalato (di nuovo): « non è chiaro che devi schiacciare su save ».
+                        `autoFocus` — il cassetto si apre già col cursore acceso nel campo, non
+                        c'è un click in più da indovinare — e INVIO salva, lo stesso gesto
+                        aggiunto qui sopra per il campo gemello del dialogo d'apertura. */}
                     <input
+                      autoFocus
                       value={nomeConfigDaSalvare}
                       onChange={e => { setNomeConfigDaSalvare(e.target.value); setConfigSalvata(false); }}
+                      onKeyDown={e => { if (e.key === 'Enter' && nomeConfigDaSalvare.trim()) {
+                        salvaConfigurazione(nomeConfigDaSalvare, avvio,
+                          { muse: museOk, theta: meterC, none: senzaStrumenti || (!museOk && !meterC) });
+                        setConfigSalvata(true);
+                      } }}
                       placeholder={LC('nome di questa configurazione…', 'nom de cette configuration…',
                         'name for this configuration…', 'nombre de esta configuración…', 'namn för denna konfiguration…') as string}
                       style={{
@@ -3157,9 +3181,18 @@ export default function Serenity() {
           il pannello MNA più giù): aprirlo non deve spingere in basso tutto il resto — la stessa
           ragione per cui era sbagliato tenerlo fisso in fondo alla pagina. Si chiude da sé se il
           meter si disconnette (vedi l'`useEffect` accanto a `meterSetupAperto`). */}
+      {/* ⚠️ Segnalato: « la fenêtre de configurer le meter est hors champ en partie ». Nessun
+          `maxHeight`/`overflowY` qui: `PannelloMeter` (4 passi, l'ultimo — la taratura — ha DUE
+          blocchi, il più lungo) poteva superare l'altezza vera della finestra, ancorato solo
+          da `top:16` senza un `bottom` a fermarlo — la parte che usciva sotto (di norma «
+          avanti/indietro », in fondo) restava irraggiungibile, non solo invisibile. Ora un
+          tetto pari all'altezza vera di `<section>` meno un margine, con scorrimento proprio
+          se il contenuto lo supera comunque. */}
       {meterSetupAperto && meterC && (
-        <div style={{ position: 'absolute', top: 16, right: 44, zIndex: 30 }}>
-          <PannelloMeter theta={theta} provaTa={provaTa} onFatto={() => setMeterSetupAperto(false)} />
+        <div style={{ position: 'absolute', top: 16, right: 44, bottom: 16, zIndex: 30, display: 'flex' }}>
+          <div style={{ maxHeight: '100%', overflowY: 'auto' }}>
+            <PannelloMeter theta={theta} provaTa={provaTa} onFatto={() => setMeterSetupAperto(false)} />
+          </div>
         </div>
       )}
 
@@ -3309,10 +3342,15 @@ export default function Serenity() {
              l'immagine con un rettangolo opaco, invece di lasciarla vedere. Trasparente per
              davvero, ora. In scuro resta il gradiente vero: qui l'ago disegna in colori
              CHIARI (pensati per staccarsi da uno sfondo scuro) — trasparente diventerebbero
-             bianco su niente, illeggibile (nota già scritta sopra, mai cambiata). */
+             bianco su niente, illeggibile (nota già scritta sopra, mai cambiata).
+             ⚠️ Segnalato di nuovo: « la zone ARC doit avoir le même fond que le fond général...
+             et les zones également, juste un petit liseré très fin de séparation ». Lo stesso
+             `--s-zone-border` delle altre zone (v. `tokens.css`) al posto della sola ombra —
+             un filo sottile che dice dov'è il quadrante, non un pannello che si stacca. */
           background: isLightTheme
             ? 'transparent'
             : 'radial-gradient(130% 120% at 50% 22%, #2e2e33 0%, #2a2a2f 55%, #262629 100%)',
+          border: '1px solid var(--s-zone-border)',
           boxShadow: isLightTheme ? 'var(--s-shadow)' : 'var(--s-shadow-lift)',
           transition: 'background var(--s-calm) var(--s-ease), box-shadow var(--s-calm) var(--s-ease)',
         }}>
@@ -3363,7 +3401,15 @@ export default function Serenity() {
                 fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
                 color: 'var(--s-ink-faint)', display: 'flex', gap: 10,
               }}>
-                {museGate.signalQuality > 0 && <span>{museGate.signalQuality}%</span>}
+                {/* ⚠️ Segnalato: « c'è scritto... delle percentuali? » — un numero nudo, nessuna
+                    parola a dire cos'è. Aggiunta l'etichetta, come già per il resto di questo
+                    angolo — un `title` da solo (letto solo al passaggio del mouse) non bastava,
+                    la stessa ragione già scritta per « MUSE non indossato ». */}
+                {museGate.signalQuality > 0 && (
+                  <span title={t('signal_quality') as string}>
+                    {LC('segnale', 'signal', 'signal', 'señal', 'signal')} {museGate.signalQuality}%
+                  </span>
+                )}
                 {moduleVis.biometric && (
                   <span title={t('biometric_integrity') as string}>
                     <LetturaIntegrita />
@@ -3403,8 +3449,18 @@ export default function Serenity() {
                 alignItems: 'flex-start', gap: 2,
               }}>
                 <span>TA {theta.ta !== null ? theta.ta.toFixed(2) : '—'}</span>
+                {/* ⚠️ Segnalato: « sotto un numero che non so cosa sia » — la freccia da sola,
+                    senza parola, non diceva che questo È il TA proprio ADESSO (quello sopra è
+                    il riposo, misurato all'inizio): l'ago si sta muovendo verso questo valore
+                    in questo istante. Stessa etichetta visibile, non solo un `title`. */}
                 {theta.taNow !== null && Math.abs(theta.taNow - (theta.ta ?? theta.taNow)) > 0.01 && (
-                  <span>→ {theta.taNow.toFixed(2)}</span>
+                  <span title={LC('il TA proprio adesso — l\'ago si sta muovendo verso questo valore',
+                    'le TA à l\'instant — l\'aiguille se dirige vers cette valeur',
+                    'the TA right now — the needle is moving toward this value',
+                    'el TA ahora mismo — la aguja se mueve hacia este valor',
+                    'TA just nu — nålen rör sig mot detta värde')}>
+                    {LC('adesso', 'maintenant', 'là', 'ahora', 'nu')} → {theta.taNow.toFixed(2)}
+                  </span>
                 )}
                 {/* ⚠️ Segnalato: « non vedo scritto la differenza fra TA a due cans ed una ».
                     App.tsx scrive SEMPRE su quale base poggia il numero — due lattine, una
@@ -3698,9 +3754,13 @@ export default function Serenity() {
                   sessionState={aperta ? 'running' : 'idle'}
                   onHide={() => setModuleVis(v => ({ ...v, health: false }))}
                   t={k => t(k as Parameters<typeof t>[0]) as string}
+                  /* ⚠️ Segnalato: « la zone ARC doit avoir le même fond que le fond général...
+                      et les zones également, juste un petit liseré très fin de séparation ».
+                      `--s-zone-bg`/`--s-zone-border` (v. `tokens.css`): trasparente per davvero
+                      in chiaro con un bordo sottile, il vetro smerigliato di sempre in scuro. */
                   panelStyle={extra => ({
-                    background: 'var(--s-disc)',
-                    border: isLightTheme ? '1px solid rgba(60,64,72,0.16)' : '1px solid rgba(255,255,255,0.08)',
+                    background: 'var(--s-zone-bg)',
+                    border: '1px solid var(--s-zone-border)',
                     ...extra,
                   })}
                 />
@@ -3709,7 +3769,8 @@ export default function Serenity() {
             {moduleVis.journal && (
               <div className="s-glass s-glass-lift" style={{
                 maxHeight: '70%', display: 'flex', flexDirection: 'column',
-                background: 'var(--s-disc)', borderRadius: 18, padding: '10px 16px 14px',
+                background: 'var(--s-zone-bg)', border: '1px solid var(--s-zone-border)',
+                borderRadius: 18, padding: '10px 16px 14px',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexShrink: 0 }}>
                   <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.12em',

@@ -100,10 +100,16 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
     // FLUSSO, in una colonna vera che `Serenity.tsx` gli riserva accanto all'arco (che si
     // restringe per farle posto): niente più `position`/`top`/`left` qui, la taglia e il posto
     // li decide chi la monta, come ogni altro elemento normale del layout.
+    // ⚠️ Segnalato: « la zone ARC doit avoir le même fond que le fond général... et les zones
+    // également, juste un petit liseré très fin de séparation ». `--s-zone-bg`/`--s-zone-border`
+    // (v. `tokens.css`): trasparente per davvero in chiaro, con un bordo sottile — il vetro
+    // smerigliato di sempre in scuro (`.s-glass`'s `border` originale non basta più da solo:
+    // qui serve un bordo VISIBILE anche su un fondo ormai trasparente).
     <div className="s-glass s-glass-lift" style={{
       display: 'flex', flexDirection: 'column', gap: 8,
       width: '100%', maxHeight: attivo ? '100%' : 'auto', overflowY: 'auto',
-      borderRadius: 16, background: 'var(--s-disc)', padding: '12px 14px',
+      borderRadius: 16, background: 'var(--s-zone-bg)', border: '1px solid var(--s-zone-border)',
+      padding: '12px 14px',
       pointerEvents: 'auto',
     }}>
       {/* ── L'INTESTAZIONE — SEMPRE VISIBILE, come in App.tsx: si trova la zona anche chiusa,

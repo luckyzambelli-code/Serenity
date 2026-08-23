@@ -2299,6 +2299,62 @@ invariato nel comportamento (i18n condiviso tocca solo vocabolario SERENITY).
 
 ---
 
+## Trentacinquesimo giro (23/08/2026) — SOLO non più doppio, il nome della configurazione si salva da sé, le letture del TA spiegate, la finestra del meter non esce più dallo schermo, le zone col fondo della pagina
+
+Sette segnalazioni:
+
+1. **« SOLO è scritto due volte »** — bug reale: `ser_solo_sub` valeva letteralmente "SOLO",
+   la stessa parola dell'etichetta sopra — mai stato un sottotitolo vero. La scelta gemella
+   ("Avec un préclair") non ne ha mai avuto uno: tolto anche a SOLO, simmetria invece di
+   inventare un testo che prima non c'era.
+
+2. **« Non è chiaro che devi schiacciare su save... naturalmente si schiaccia OUVRIR UNE
+   SÉANCE »** — invece di spiegare meglio un gesto in più, tolto il gesto in più: scrivere un
+   nome e poi premere OUVRIR UNE SÉANCE ora salva la configurazione DA SÉ, senza dover trovare
+   e premere "enregistrer" a parte. Verificato dal vivo: nome scritto, seduta aperta senza
+   toccare "enregistrer", la configurazione appare comunque nell'elenco delle sedute
+   registrate al riavvio. Aggiunto anche INVIO-per-salvare e `autoFocus` sul campo gemello
+   nella pillola in alto (che resta un salvataggio A PARTE, per rinominare una configurazione
+   senza aprire subito una seduta).
+
+3. **« La pillola in alto non lascia scrivere... VERIFICA LA LOGICA »** — ritestato ancora,
+   stavolta anche il campo dentro « con che cosa si audite? » (typing "Test autosave" fino in
+   fondo, confermato nel `localStorage`): entrambi scrivono correttamente. Nessun bug trovato.
+
+4. **« L'assessment non funziona »** — testato dal vivo passo per passo: apertura/chiusura,
+   cambio vista ASSESSMENT ↔ R&I·MANUEL, item scritto a mano e aggiunto (compare con "non
+   mesuré" e i bottoni Oui/Non), conteggio nel titolo aggiornato. Tutto risponde. Non
+   verificabile: la cattura guidata dalla VOCE (serve un microfono vero).
+
+5. **« Il TA sotto l'ora non è esplicito »** — due numeri senza nessuna parola: la freccia
+   `→ X.XX` (il TA proprio ADESSO, diverso dal riposo sopra) e la percentuale del segnale.
+   Aggiunta l'etichetta visibile a entrambi ("adesso →", "segnale N%") — non solo un `title`
+   al passaggio del mouse, la stessa ragione già scritta per « MUSE non indossato ».
+
+6. **« La fenêtre de configurer le meter est hors champ en partie »** — `PannelloMeter`
+   (4 passi, l'ultimo il più lungo) si ancorava solo con `top:16`, senza un `bottom` a
+   fermarlo: su una finestra non abbastanza alta usciva sotto, portandosi via i bottoni
+   avanti/indietro in fondo. Aggiunto un tetto pari all'altezza vera della sezione, con
+   scorrimento proprio se il contenuto lo supera comunque.
+
+7. **« La zone ARC doit avoir le même fond que le fond général... et les zones également,
+   juste un petit liseré très fin de séparation »** — nuovi token `--s-zone-bg`/
+   `--s-zone-border` in `tokens.css`: trasparenti per davvero in chiaro (lo stesso fondo della
+   pagina, non un colore identico ma opaco) con un bordo sottile a dire dove finiscono —
+   applicati all'arco, assessment, Santé Système, journal, MNA. In scuro restano invariati
+   (il vetro smerigliato di sempre): lì l'ago disegna in colori chiari pensati per un fondo
+   scuro, cambiarlo avrebbe rotto quel contrasto. Verificato dal vivo: arco e journal con
+   bordo sottile, fondo indistinguibile da quello della pagina.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, verifica dal vivo estesa (profilo TEST) — autosave confermato nel localStorage,
+assessment testato passo per passo, arco e journal col nuovo fondo/bordo. Nessun errore in
+console oltre a fallimenti di rete attesi. `git status`: `src/serenity/Avvio.tsx`,
+`src/serenity/PannelloMna.tsx`, `src/serenity/Serenity.tsx`, `src/serenity/ZonaAssessment.tsx`,
+`src/serenity/tokens.css`. EQUILIBRIUM invariato.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

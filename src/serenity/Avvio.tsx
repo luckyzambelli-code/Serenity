@@ -238,8 +238,13 @@ export function Avvio({ onPronto, onRichiama }: {
                   onClick={() => setPannello({ tipo: 'auditor' })} />
         </>;
       case 'chi':
+        {/* ⚠️ Segnalato: « SOLO è scritto due volte ». `ser_solo_sub` valeva LETTERALMENTE
+            "SOLO" (la stessa parola dell'etichetta sopra, mai stata una sottotitolo vero) —
+            la si leggeva due volte sulla stessa scelta. `ser_with_pc`, la scelta gemella, non
+            ha mai avuto un `sotto`: tolto anche qui, per la stessa ragione simmetrica invece
+            di inventare un sottotitolo che prima non c'era. */}
         return <>
-          <Scelta etichetta={t('ser_solo')} sotto={t('ser_solo_sub')}
+          <Scelta etichetta={t('ser_solo')}
                   icona={<User strokeWidth={1.4} style={{ width: '100%', height: '100%' }} />}
                   onClick={() => dai('solo')} />
           <Scelta etichetta={t('ser_with_pc')}
