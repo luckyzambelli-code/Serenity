@@ -45,6 +45,16 @@
  */
 
 :root {
+  /* ── LA TRASPARENZA DI CONFIG, ORA VISTA DA TUTTO IL VETRO ─────────────────────────────────
+     Segnalato: « la trasparenza si può modificare ma non agisce sulle scritte ». Il cursore
+     (`uiAlpha`, condiviso con EQUILIBRIUM) prima governava SOLO `Cerchio.tsx`'s `opacita` — le
+     due camere, e nient'altro: nessuno degli altri pannelli di vetro (journal, Santé, MNA,
+     assessment, le pillole dell'intestazione) lo leggeva mai. `Serenity.tsx` scrive QUESTA
+     variabile su `<html>` a ogni cambiamento (stesso meccanismo di `data-tema`); `.s-glass`,
+     sotto, la applica come `opacity` — quindi ora la copre anche il testo che porta con sé,
+     non solo lo sfondo. Default 1 (pieno) finché lo script non la scrive. */
+  --s-ui-alpha: 1;
+
   /* ── LA SUPERFICIE ───────────────────────────────────────────────────────────────────────
      Non bianco puro: il bianco pieno su uno schermo acceso abbaglia in una stanza in penombra,
      ed è la stanza tipica di una seduta. Perla = un bianco che ha già un po' di grigio dentro. */
@@ -300,6 +310,9 @@ body {
   border: 1px solid var(--s-glass-edge);
   box-shadow: var(--s-glass-highlight);
   isolation: isolate;
+  /* v. la nota su `--s-ui-alpha`, sopra: l'intero pannello (fondo E testo) segue il cursore
+     di CONFIG, non più solo le camere. */
+  opacity: var(--s-ui-alpha);
 }
 /* IL LUCIDO — segnalato con esempi: il vetro vero prende più luce in ALTO che in basso, un
    velo che sfuma via, non un bordo. Uno pseudo-elemento (mai contenuto, mai un colore proprio)

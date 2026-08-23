@@ -82,7 +82,7 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
@@ -462,6 +462,14 @@ export default function Serenity() {
     setSidebarTop(prev => (prev === nuovo ? prev : nuovo));
   });
   const uiAlpha = useUiStore(s => s.uiAlpha);
+  // ⚠️ Segnalato: « la trasparenza si può modificare ma non agisce sulle scritte ». Prima
+  // `uiAlpha` arrivava SOLO a `Cerchio.tsx` (le due camere) — v. la nota su `--s-ui-alpha` in
+  // `tokens.css`. Stesso meccanismo di `data-tema` qui sopra: un attributo su `<html>`, non una
+  // prop passata a mano a ogni pannello — `.s-glass` (journal, Santé, MNA, assessment, le
+  // pillole dell'intestazione…) la legge da sé.
+  useEffect(() => {
+    document.documentElement.style.setProperty('--s-ui-alpha', String(uiAlpha));
+  }, [uiAlpha]);
   const wallpaperUrl = useUiStore(s => s.wallpaperUrl);
   const moduleVis = useSerenityModuleStore(s => s.moduleVis);
   const setModuleVis = useSerenityModuleStore(s => s.setModuleVis);
@@ -2314,12 +2322,27 @@ export default function Serenity() {
               {t('ser_remote_tag')}
             </span>
           )}
-          {avvio.esperto && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <Wrench size={24} strokeWidth={1.8} aria-hidden="true" />
-              {t('ser_expert_tag')}
-            </span>
-          )}
+          {/* ── BASIC/EXPERT, ORA UN INTERRUTTORE VERO — segnalato: « devi anche permettere di
+              schiacciare su expert per passare in normale, e viceversa ». Prima si vedeva SOLO
+              quando esperto (`avvio.esperto &&`, uno `<span>` muto, nessun `onClick`) — cambiare
+              richiedeva tornare indietro fino alla domanda dell'avvio. Ora sempre visibile, come
+              lo stesso interruttore di `Sidebar.tsx` (EQUILIBRIUM: `onClick={() =>
+              setUiLevel(uiLevel === 'expert' ? 'normal' : 'expert')}`) — qui `setAvvio` al
+              posto di `setUiLevel`, la STESSA idea (un bottone che dice il livello ATTUALE e
+              lo capovolge al tocco), non un secondo meccanismo inventato. */}
+          <button
+            onClick={() => setAvvio(a => a ? { ...a, esperto: !a.esperto } : a)}
+            title={(avvio.esperto ? t('sidebar_level_expert_tip') : t('sidebar_level_normal_tip')) as string}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5, border: 'none', background: 'none',
+              cursor: 'pointer', padding: 0, fontFamily: 'inherit', fontSize: 'inherit',
+              color: 'inherit',
+            }}>
+            {avvio.esperto
+              ? <Wrench size={24} strokeWidth={1.8} aria-hidden="true" />
+              : <CircleUser size={24} strokeWidth={1.8} aria-hidden="true" />}
+            {avvio.esperto ? t('ser_expert_tag') : t('ser_normal_tag')}
+          </button>
           {/* ── CAMBIA AUDITOR O PRECLEAR, ORA UN'ICONA QUI DENTRO — segnalato: « CHANGE AUDITOR
               OR PRECLEAR doit être sous forme d'icône à avant l'icône sauvegarde de
               l'indication de Auditor/PC et mode en haut ». Era un link di testo in fondo alla
@@ -3239,7 +3262,13 @@ export default function Serenity() {
           (`width:'50%'`), e l'arco (`flex:1`, colonna centrale) le cede il posto
           restringendosi — SENZA di lei l'arco riprende TUTTA la riga, non solo due terzi. */}
       <div style={{ display: 'flex', width: '100%', height: '100%', minHeight: 0, alignItems: 'stretch', gap: rightColOpen ? 16 : 0 }}>
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* ⚠️ Segnalato: « il MNA portalo sotto la zona ARC, hai spazio ». `flexDirection:'column'`
+            qui sotto (era `row`, ininfluente con un solo figlio): l'arco resta centrato come
+            sempre, e MNA — v. più giù, dopo la sua chiusura — diventa un SECONDO figlio impilato
+            sotto di lui invece di un `position:absolute` DENTRO il suo riquadro. Lo spazio c'è
+            perché l'arco (`aspect-ratio`) quasi mai riempie tutta l'altezza di questa colonna:
+            quel che resta sotto, prima vuoto, è dove MNA va ora. */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
         {/*
           ── LE STESSE DIMENSIONI, NON SOLO GLI STESSI COLORI ────────────────────────────
           Segnalato più volte di seguito: prima « stesso disegno, stessa grafica » (i colori),
@@ -3274,8 +3303,15 @@ export default function Serenity() {
              nulla dopo il quadrante in quel flusso — gli si può ridare tutta l'altezza vera. */
           width: 'min(100%, 1400px)', aspectRatio: '1600 / 850', maxHeight: '100%',
           borderRadius: 18, overflow: 'hidden', position: 'relative',
+          /* ⚠️ Segnalato: « il fondo della zona arc deve essere trasparente ». In chiaro era
+             `var(--s-ground)` — LO STESSO colore della pagina, ma un colore PIENO: con uno
+             sfondo personalizzato (CONFIG → "importa la tua immagine") copriva comunque
+             l'immagine con un rettangolo opaco, invece di lasciarla vedere. Trasparente per
+             davvero, ora. In scuro resta il gradiente vero: qui l'ago disegna in colori
+             CHIARI (pensati per staccarsi da uno sfondo scuro) — trasparente diventerebbero
+             bianco su niente, illeggibile (nota già scritta sopra, mai cambiata). */
           background: isLightTheme
-            ? 'var(--s-ground)'
+            ? 'transparent'
             : 'radial-gradient(130% 120% at 50% 22%, #2e2e33 0%, #2a2a2f 55%, #262629 100%)',
           boxShadow: isLightTheme ? 'var(--s-shadow)' : 'var(--s-shadow-lift)',
           transition: 'background var(--s-calm) var(--s-ease), box-shadow var(--s-calm) var(--s-ease)',
@@ -3582,10 +3618,17 @@ export default function Serenity() {
               />
             </div>
           )}
-          {/* ── MNA — galleggia SUL quadrante, non lo sostituisce ────────────────────────────
-              « Si apre senza lasciare il ciclo »: la seduta resta visibile sotto, com'è in
-              App.tsx (ancorato in fondo al pannello dello strumento, non a tutta pagina). */}
-          {aperta && moduleVis.mna && (
+        </div>
+        {/* ── MNA — ORA SOTTO L'ARCO, NON PIÙ SOPRA ─────────────────────────────────────────
+            Segnalato: « il MNA portalo sotto la zona ARC, hai spazio ». Stava `position:absolute`
+            DENTRO il riquadro dell'arco (ancorato al SUO fondo, `bottom:16` di `PannelloMna` —
+            v. la nota lì): copriva il quadrante invece di stargli accanto. `PannelloMna` non è
+            toccato (resta lui a posizionarsi `absolute, left/right:16, bottom:16`) — cambia
+            solo DOVE: un involucro `position:relative` qui, fratello dell'arco invece che suo
+            figlio, gli dà un riquadro TUTTO SUO in cui ancorarsi, nello spazio che la colonna
+            (ora `flexDirection:'column'`, sopra) lascia libero sotto l'arco. */}
+        {aperta && moduleVis.mna && (
+          <div style={{ position: 'relative', width: '100%', maxWidth: 1400, minHeight: 240, flexShrink: 0 }}>
             <PannelloMna
               primePhase={primePhase}
               setPrimePhase={setPrimePhase}
@@ -3616,8 +3659,8 @@ export default function Serenity() {
               }}
               onChiudi={() => setModuleVis(v => ({ ...v, mna: false }))}
             />
-          )}
-        </div>
+          </div>
+        )}
         {/* chiude qui il wrapper centrale (`flex:1`) che avvolge l'arco — v. la nota sopra
             "LA RIGA A TRE COLONNE": la colonna destra (Santé/Journal) è un SUO fratello, non un
             figlio, nella riga a tre colonne. */}

@@ -30,6 +30,10 @@
  * pannelli, niente bordi »): non c'è una disposizione da salvare perché non ce n'è che una,
  * quella del disegno stesso. Non è dimenticato: è la stessa differenza strutturale già scritta
  * per `EpValidationModal` — una funzione di EQUILIBRIUM che qui non ha un referente reale.
+ * ⚠️ Un paragrafo che lo spiegava è stato QUI dentro per un po' (« Sauvegarder la
+ * configuration : inutile ici... »): segnalato come confuso — leggeva come l'etichetta di un
+ * bottone assente, non come una nota. Tolto: quel che manca resta scritto SOLO qui, per chi
+ * legge il codice, non più sulla superficie che l'auditor guarda.
  *
  * @see docs/serenity-refonte.md — fase 6.
  */
@@ -288,10 +292,6 @@ export function PannelloConfig({ onChiudi, needleTrim = 0, setNeedleTrim = () =>
           </div>
         )}
 
-        {/* ── DISPOSIZIONI — perché non c'è, detto chiaro invece che taciuto ───────────────── */}
-        <div style={{ fontSize: 14, color: 'var(--s-ink-faint)', lineHeight: 1.6 }}>
-          {t('config_save_layout')}: {t('ser_config_no_layouts')}.
-        </div>
       </div>
     </section>
   );

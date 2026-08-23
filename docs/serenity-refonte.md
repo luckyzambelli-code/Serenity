@@ -2240,6 +2240,65 @@ oltre a fallimenti di rete attesi. `git status`: `src/serenity/Serenity.tsx`,
 
 ---
 
+## Trentaquattresimo giro (23/08/2026) — Basic/Expert un interruttore vero, la trasparenza sulle scritte, il fondo dell'arco trasparente, MNA sotto l'arco
+
+Sette segnalazioni:
+
+1. **« Non si può scrivere il nome della configurazione... VERIFICA LA LOGICA »** — verificato
+   DUE VOLTE dal vivo, sui DUE campi che esistono (la pillola in alto vicino a Processus, e lo
+   stesso campo dentro « con che cosa si audita? »): entrambi scrivono correttamente con un
+   click preciso sul campo. Nessun bug trovato nel codice — resta aperto se il sintomo persiste
+   sulla build reale, con più dettagli su come riprodurlo.
+
+2. **« Devi anche permettere di schiacciare su expert per passare in normale, e viceversa »** —
+   bug reale: il tag "esperto" era un `<span>` muto, visibile SOLO quando esperto, nessun modo
+   di tornare indietro se non rifacendo l'avvio. Ora un interruttore vero, sempre visibile
+   (icona+parola cambiano insieme), stesso principio del selettore di `Sidebar.tsx` in
+   EQUILIBRIUM (`onClick` che capovolge lo stato). Verificato dal vivo: clic su "basique" →
+   "expert", e viceversa, il pannello CONFIG appare/sparisce di conseguenza.
+
+3. **« Cambia Normal in Basic »** — le 5 traduzioni di `ser_normal`/`ser_auto_normal`
+   (SERENITY-esclusive, verificato: nessun uso in App.tsx) da "Normal"/"Normale" a
+   "Basic"/"Basique"/"Base"/"Básico"/"Grundläggande". Nuova chiave `ser_normal_tag` (com'era già
+   `ser_expert_tag`) per l'etichetta breve nella pillola.
+
+4. **« La trasparenza si può modificare ma non agisce sulle scritte »** — `uiAlpha` arrivava
+   SOLO a `Cerchio.tsx` (le due camere). Nuova variabile CSS `--s-ui-alpha` su `<html>` (stesso
+   meccanismo di `data-tema`), letta da `.s-glass` come `opacity` — ora copre il pannello E il
+   testo che porta, ovunque compare quella classe. Verificato dal vivo via `getComputedStyle`:
+   45% sul cursore → `opacity:0.45` su un pannello `.s-glass` reale.
+
+5. **« In CONFIG non c'è il bottone di SAUVEGARDER, allora che c'è scritto... »** — un paragrafo
+   spiegava (giustamente) perché il salvataggio delle disposizioni non esiste in SERENITY, ma
+   leggeva come l'etichetta di un bottone assente. Tolto dalla superficie, la spiegazione resta
+   nel commento del file per chi legge il codice.
+
+6. **Il fondo della zona arc, trasparente** — in chiaro era `var(--s-ground)`, lo stesso colore
+   della pagina ma PIENO: con uno sfondo personalizzato (CONFIG → importa un'immagine) copriva
+   comunque l'immagine con un rettangolo opaco. Ora `transparent` per davvero, SOLO in chiaro —
+   in scuro resta il gradiente vero (l'ago vi disegna in colori chiari, pensati per un fondo
+   scuro: trasparente diventerebbero illeggibili).
+
+7. **Il MNA, sotto l'arco invece che sopra** — `PannelloMna` si ancorava `position:absolute`
+   DENTRO il riquadro dell'arco (`bottom:16` — la sua nota lo dice: « ancorato in fondo al
+   pannello dello strumento »), coprendone il fondo. `PannelloMna` non è toccato: cambia
+   l'involucro che lo ospita, ora un fratello dell'arco (non un figlio) nella stessa colonna,
+   diventata `flexDirection:'column'` per impilarli — lo spazio c'è perché l'arco
+   (`aspect-ratio`) quasi mai riempie tutta l'altezza disponibile. Verificato dal vivo: MNA
+   appare chiaramente sotto il quadrante, non più sopra.
+
+**Non ancora verificabile senza hardware vero**: la voce nell'app Mac (v. giro precedente).
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, verifica dal vivo estesa (profilo TEST) — interruttore Basic/Expert nei due sensi,
+trasparenza confermata via DOM, fondo dell'arco trasparente, MNA sotto l'arco, "OUVERT" ancora
+presente. Nessun errore in console oltre a fallimenti di rete attesi. `git status`:
+`src/i18n.tsx` (solo chiavi `ser_*`, verificato nessun uso in App.tsx), `src/serenity/
+PannelloConfig.tsx`, `src/serenity/Serenity.tsx`, `src/serenity/tokens.css`. EQUILIBRIUM
+invariato nel comportamento (i18n condiviso tocca solo vocabolario SERENITY).
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
