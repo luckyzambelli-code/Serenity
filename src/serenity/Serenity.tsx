@@ -82,7 +82,7 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, Unlink } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
@@ -2187,37 +2187,14 @@ export default function Serenity() {
                 }}>{c.label}</span>
               </div>
             ))}
-            {/* ── IL QUINTO METODO, ORA UN CERCHIO ANCHE LUI — segnalato: « manca la zona LIBRE
-                sotto TONE », poi « il bottone OUVERT deve essere anche lui sotto forma di
-                cerchio. Cambia il nome in UNBOUND ». `engine/sessionMode.ts` conta CINQUE
-                metodi, non quattro — CONTACT/NULL/MIRROR/TONE più `free` (SERENITY lo calcola
-                già da sé: `mode` diventa `'free'` quando nessuno degli altri quattro è armato,
-                esattamente la condizione di questo blocco). App.tsx chiama questo stato
-                "APERTO"/"OUVERT" (evitava deliberatamente "libero": « libero suonava come
-                "senza regole" », la sua stessa nota) — richiesta esplicita e nuova, SOLO per
-                SERENITY: "UNBOUND", non toccando la parola di App.tsx. Stessa forma dei quattro
-                metodi sopra (cerchio 54px, icona, didascalia) invece della pillola rettangolare
-                di prima — ma non un bottone: non c'è nulla da armare, ci si è già, quindi
-                `className="s-glass"` (non `-btn`) e cursore di default, non pointer. */}
-            <div style={{ display: 'grid', justifyItems: 'center', gap: 4, pointerEvents: 'auto' }}>
-              <span className="s-glass" title={LC(
-                'nessuna sequenza ciclica predefinita — l\'ago, l\'assessment e l\'R&I restano attivi',
-                'aucune séquence cyclique prédéfinie — l\'aiguille, l\'assessment et le R&I restent actifs',
-                'no predefined cyclic sequence — the needle, assessment and R&I stay active',
-                'sin secuencia cíclica predefinida — la aguja, el assessment y el R&I siguen activos',
-                'ingen fördefinierad cyklisk sekvens — nålen, assessment och R&I förblir aktiva') as string}
-                style={{
-                  width: 54, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: '1.5px solid var(--s-ink-ghost)', cursor: 'default',
-                  borderRadius: '50%', background: 'var(--s-disc)', color: 'var(--s-ink-soft)',
-                }}>
-                <Unlink size={22} strokeWidth={1.8} aria-hidden="true" />
-              </span>
-              <span style={{
-                fontFamily: 'var(--s-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
-                color: 'var(--s-ink-faint)',
-              }}>{LC('SVINCOLATO', 'DÉLIÉ', 'UNBOUND', 'DESLIGADO', 'OBUNDEN')}</span>
-            </div>
+            {/* ── IL QUINTO METODO, TOLTO DI NUOVO — segnalato: « en réalité UNBOUND n'est pas
+                nécessaire, car il est par défaut si on ne choisit pas un CYCLE. ENLEVE LE ».
+                Vero: `mode === 'free'` (`engine/sessionMode.ts`) è già lo stato di partenza,
+                quello in cui ci si trova finché non si preme uno dei quattro cerchi sopra —
+                indicarlo con un QUINTO cerchio (prima pillola "APERTO"/"OUVERT", poi cerchio
+                "UNBOUND") aggiungeva un'icona per uno stato che non richiede scelta né
+                conferma, il contrario dei quattro sopra. Nessun cerchio per il "non ancora
+                scelto": l'assenza dei quattro badge/pillole colorate lo dice già da sé. */}
           </>
         )}
         {/* ── EP, SOTTO TONE — segnalato: « il bottone EP deve essere posizionato sotto TONE ».
@@ -2826,14 +2803,30 @@ export default function Serenity() {
             {/* ── LO STATO DELLA VOCE — segnalato: « non posso dare l'item verbalmente ».
                 Prima questo restava muto finché non arrivava una parola: se il riconoscitore
                 non parte (permesso negato, nessun motore disponibile) l'auditor aspettava senza
-                sapere se il problema era suo o del programma. */}
+                sapere se il problema era suo o del programma.
+                ⚠️ Segnalato di nuovo: « mi dice voice not available ». `useVoiceItem.ts`
+                (condiviso — mai toccato qui) prova nativo macOS poi Whisper offline, la STESSA
+                catena di App.tsx: se qui dice "assente" e in EQUILIBRIUM no, sulla STESSA
+                macchina, non è un bug di logica — è il permesso di sistema. macOS tratta
+                Serenity.app ed Equilibrium.app come DUE applicazioni separate (`appId` diverso
+                in `electron-builder.serenity.cjs`): il « Riconoscimento vocale »/« Microfono »
+                concesso all'una NON vale per l'altra. Non risolvibile da qui (è impostazioni di
+                sistema, non codice) — il `title` sotto dice dove guardare invece di lasciare
+                l'auditor a chiedersi perché. */}
             <span style={{ fontFamily: 'var(--s-sans)', fontSize: 13, color: 'var(--s-ink-faint)', alignSelf: 'flex-end' }}>
               {statoVoce === 'in-ascolto'
                 ? <span className="ser-pulse">🎙 {LC('in ascolto', 'à l\'écoute', 'listening', 'escuchando', 'lyssnar')}</span>
                 : statoVoce === 'assente'
-                  ? LC('🎙 voce non disponibile — scrivi l\'item', 'la voix n\'est pas disponible — écris l\'item',
-                      'voice not available — type the item', 'la voz no está disponible — escribe el ítem',
-                      'rösten är inte tillgänglig — skriv item')
+                  ? <span title={LC(
+                      'controlla Preferenze di Sistema → Privacy e Sicurezza → Microfono/Riconoscimento vocale: il permesso va concesso a "Serenity" separatamente da "Equilibrium"',
+                      'vérifie Réglages Système → Confidentialité et sécurité → Micro/Reconnaissance vocale : la permission doit être accordée à « Serenity » séparément d\'« Equilibrium »',
+                      'check System Settings → Privacy & Security → Microphone/Speech Recognition: the permission must be granted to "Serenity" separately from "Equilibrium"',
+                      'revisa Ajustes del Sistema → Privacidad y seguridad → Micrófono/Reconocimiento de voz: el permiso debe concederse a "Serenity" por separado de "Equilibrium"',
+                      'kontrollera Systeminställningar → Sekretess och säkerhet → Mikrofon/Taligenkänning: behörigheten måste ges till "Serenity" separat från "Equilibrium"') as string}>
+                      {LC('🎙 voce non disponibile — scrivi l\'item', 'la voix n\'est pas disponible — écris l\'item',
+                        'voice not available — type the item', 'la voz no está disponible — escribe el ítem',
+                        'rösten är inte tillgänglig — skriv item')}
+                    </span>
                   : ''}
             </span>
             {/* ── I QUATTRO METODI, ORA NELLA BARRA LATERALE — segnalato: « metti i bottoni
@@ -3440,22 +3433,27 @@ export default function Serenity() {
              letture che stavano SOTTO questo contenitore, nel flusso di `<section>`. Ora che
              sono dentro (la striscia in basso, `position:absolute`, vedi sotto), non c'è più
              nulla dopo il quadrante in quel flusso — gli si può ridare tutta l'altezza vera. */
-          width: 'min(100%, 1400px)', aspectRatio: '1600 / 850', maxHeight: '100%',
+          width: 'min(100%, 2200px)', aspectRatio: '1600 / 850', maxHeight: '100%',
           borderRadius: 18, overflow: 'hidden', position: 'relative',
           /* ⚠️ Segnalato: « il fondo della zona arc deve essere trasparente ». In chiaro era
              `var(--s-ground)` — LO STESSO colore della pagina, ma un colore PIENO: con uno
              sfondo personalizzato (CONFIG → "importa la tua immagine") copriva comunque
              l'immagine con un rettangolo opaco, invece di lasciarla vedere. Trasparente per
-             davvero, ora. In scuro resta il gradiente vero: qui l'ago disegna in colori
-             CHIARI (pensati per staccarsi da uno sfondo scuro) — trasparente diventerebbero
-             bianco su niente, illeggibile (nota già scritta sopra, mai cambiata).
-             ⚠️ Segnalato di nuovo: « la zone ARC doit avoir le même fond que le fond général...
-             et les zones également, juste un petit liseré très fin de séparation ». Lo stesso
-             `--s-zone-border` delle altre zone (v. `tokens.css`) al posto della sola ombra —
-             un filo sottile che dice dov'è il quadrante, non un pannello che si stacca. */
-          background: isLightTheme
-            ? 'transparent'
-            : 'radial-gradient(130% 120% at 50% 22%, #2e2e33 0%, #2a2a2f 55%, #262629 100%)',
+             davvero, ora.
+             ⚠️ SEGNALATO DI NUOVO, stavolta anche per lo scuro: « la zona ARC ha sempre un
+             fondo. NON LO VOGLIO, VOGLIO CHE SIA TRASPARENTE ». In scuro restava apposta un
+             gradiente vero (`#2e2e33`→`#262629`) — la ragione scritta qui sopra per anni («
+             l'ago disegna in colori chiari, pensati per un fondo scuro ») si scopre qui non
+             regge più da sola: `--s-ground` in scuro è `#17181a`, PIÙ scuro del gradiente che
+             lo sostituiva — togliere il gradiente non toglie contrasto all'ago, lo aumenta.
+             Trasparente per davvero in ENTRAMBI i temi, ora — resta solo il filo sottile
+             (`--s-zone-border`) a dire dov'è il quadrante, come le altre zone.
+             ⚠️ Segnalato insieme: « aggrandisci al massimo delle possibilità » — il tetto di
+             larghezza (1400px) era più stretto di quanto la riga lasciasse davvero libero
+             (la barra laterale e le camere GALLEGGIANO, `position:absolute`: non tolgono
+             spazio flex all'arco). Alzato a 2200px — l'`aspectRatio` e `maxHeight:'100%'`
+             restano il vero limite su una finestra bassa. */
+          background: 'transparent',
           border: '1px solid var(--s-zone-border)',
           boxShadow: isLightTheme ? 'var(--s-shadow)' : 'var(--s-shadow-lift)',
           transition: 'background var(--s-calm) var(--s-ease), box-shadow var(--s-calm) var(--s-ease)',
@@ -3568,13 +3566,18 @@ export default function Serenity() {
                     {LC('adesso', 'maintenant', 'là', 'ahora', 'nu')} → {theta.taNow.toFixed(2)}
                   </span>
                 )}
-                {/* ⚠️ Segnalato: « non vedo scritto la differenza fra TA a due cans ed una ».
+                {/* ⚠️ Segnalato: « non vedo scritto la differenza fra TA a due cans ed una »,
+                    poi di nuovo: « METTI LE SCRITTE ESATTAMENTE COME IN EQUILIBRIUM ».
                     App.tsx scrive SEMPRE su quale base poggia il numero — due lattine, una
                     lattina riportata a due con lo scarto misurato, o una lattina con la
                     divisione tolta perché lo scarto non è stato misurato: lo stesso TA a
                     vedersi vuol dire tre cose diverse, e senza questa riga non si distinguono.
                     `tone.taMostrato` (`useToneCycle`, condiviso — la STESSA funzione
-                    `taToTwoCans`) esisteva già nel ritorno del motore, mai letta qui. */}
+                    `taToTwoCans`) esisteva già nel ritorno del motore, mai letta qui.
+                    ⚠️ Confrontato PAROLA PER PAROLA col testo di App.tsx (riga "SU CHE COSA SI
+                    BASA IL NUMERO"): un'unica differenza, l'abbreviazione "1 div." al posto di
+                    "1 divisione"/"1 division"/"1 división" per intero — corretta, ora identiche
+                    in tutte le cinque lingue (lo svedese "delstreck" era già uguale). */}
                 {tone.taMostrato && (
                   <span style={{ fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'uppercase',
                                 color: tone.taMostrato.margin > 0 ? 'var(--s-reserve)' : 'var(--s-ink-ghost)' }}>
@@ -3582,7 +3585,7 @@ export default function Serenity() {
                       ? LC('TA · 2 lattine', 'TA · 2 boîtes', 'TA · 2 cans', 'TA · 2 latas', 'TA · 2 burkar')
                       : tone.taMostrato.basis === 'solo-measured'
                       ? LC('TA · 1 lattina → 2', 'TA · 1 boîte → 2', 'TA · 1 can → 2', 'TA · 1 lata → 2', 'TA · 1 burk → 2')
-                      : LC('TA · 1 lattina − 1 div.', 'TA · 1 boîte − 1 div.', 'TA · 1 can − 1 div.', 'TA · 1 lata − 1 div.', 'TA · 1 burk − 1 delstreck')}
+                      : LC('TA · 1 lattina − 1 divisione', 'TA · 1 boîte − 1 division', 'TA · 1 can − 1 division', 'TA · 1 lata − 1 división', 'TA · 1 burk − 1 delstreck')}
                   </span>
                 )}
                 {theta.fn.fn && (

@@ -2489,6 +2489,51 @@ dei bottoni. `git status`: `src/serenity/Serenity.tsx`, `src/serenity/BottoneCic
 
 ---
 
+## Trentottesimo giro (23/08/2026) — l'arco trasparente anche in scuro e ingrandito, UNBOUND tolto di nuovo, la scritta TA parola per parola come EQUILIBRIUM, un'indicazione per « voice not available »
+
+Quattro segnalazioni:
+
+1. **« La zona ARC con l'ago ha sempre un fondo. NON LO VOGLIO, VOGLIO CHE SIA TRASPARENTE.
+   AGGRANDISCI AL MASSIMO DELLE POSSIBILITÀ »** — in scuro l'arco teneva apposta un gradiente
+   vero (`#2e2e33`→`#262629`), per una ragione scritta a lungo nel codice: l'ago disegna in
+   colori chiari, pensati per un fondo scuro. Verificato che quella ragione non regge più da
+   sola: `--s-ground` in tema scuro è `#17181a`, PIÙ scuro del gradiente che sostituiva —
+   togliere il gradiente non toglie contrasto all'ago, lo aumenta. `background: 'transparent'`
+   ora in ENTRAMBI i temi, resta solo il filo sottile del bordo. Il tetto di larghezza
+   (1400px) era anche più stretto del vero spazio libero (la barra laterale e le camere
+   galleggiano, `position:absolute`: non tolgono spazio flex all'arco) — alzato a 2200px.
+
+2. **« UNBOUND n'est pas nécessaire, car il est par défaut si on ne choisit pas un CYCLE.
+   ENLEVE LE »** — il cerchio aggiunto il giro scorso (dopo la pillola "APERTO" di prima)
+   indicava uno stato che non richiede scelta né conferma: `mode === 'free'` è già dove ci si
+   trova finché non si preme uno dei quattro cerchi. Tolto — l'assenza dei quattro badge
+   colorati dice già da sé che nessun metodo è armato.
+
+3. **« Le scritte TA con 1 o 2 cans non è chiaro. METTI LE SCRITTE ESATTAMENTE COME IN
+   EQUILIBRIUM »** — confrontato parola per parola col testo di App.tsx: un'unica differenza,
+   l'abbreviazione "1 div." al posto di "1 divisione"/"1 division"/"1 división" per intero.
+   Corretta nelle quattro lingue coinvolte (lo svedese "delstreck" era già identico) — la
+   logica (`tone.taMostrato`, la funzione condivisa `taToTwoCans`) era già la stessa da un
+   giro precedente, restava solo questa parola abbreviata.
+
+4. **« Mi dice VOICE NOT AVAILABLE »** — verificato: `useVoiceItem.ts` (condiviso, mai
+   toccato) prova nativo macOS poi Whisper offline, la STESSA catena di App.tsx — se dice
+   "assente" qui e non in EQUILIBRIUM, sulla stessa macchina, non è un bug di logica ma il
+   permesso di sistema: macOS tratta Serenity.app ed Equilibrium.app come due applicazioni
+   separate (`appId` diverso in `electron-builder.serenity.cjs`), il permesso concesso
+   all'una non vale per l'altra. Non risolvibile da codice — aggiunto un `title` che dice
+   dove guardare (Preferenze di Sistema → Privacy e Sicurezza → Microfono/Riconoscimento
+   vocale, concedere a "Serenity" separatamente) invece di lasciare l'auditor a chiedersi
+   perché.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo (profilo TEST, tema scuro) — l'arco senza più `background-image`
+(`getComputedStyle` conferma `none`) e largo quanto lo spazio libero, nessun cerchio UNBOUND
+dopo EP, il tooltip della voce presente e col testo giusto. `git status`:
+`src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
