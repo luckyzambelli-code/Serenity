@@ -366,20 +366,74 @@ body {
    pannello galleggia sopra il resto (i cassetti, i popover, l'MNA). */
 .s-glass-lift { box-shadow: var(--s-glass-highlight), var(--s-shadow-lift); }
 
-/* ── IL PULSANTE DI VETRO ────────────────────────────────────────────────────────────────
-   Segnalato esplicitamente: « les boutons de EQUILIBRIUM ». La differenza fra un pannello e un
-   pulsante di vetro è SOLO l'interazione — stessa sfocatura, stesso bordo, ma qui una
-   transizione al passaggio del mouse (il vetro "risponde") e il cursore a dire che si preme. */
+/* ── IL PULSANTE DI VETRO, L'OMBRA PIÙ PROFONDA ─────────────────────────────────────────
+   Segnalato esplicitamente: « les boutons de EQUILIBRIUM », poi con un'immagine di riferimento
+   precisa (traccia+manopola in vetro spesso) e « NON VEDO CAMBIAMENTO NELLO STILE DEI BOTTONI ».
+   L'ombra ereditata da `--s-shadow` era pensata per le GRANDI zone silenziose (l'arco,
+   l'assessment...) — tenue apposta, per non gridare alla periferia dello sguardo. Su un cerchio
+   di 54px quella stessa ombra è quasi invisibile: non basta a farlo leggere come un OGGETTO di
+   vetro sollevato dal fondo. Qui un'ombra SOLO dei bottoni (due strati, come nel riferimento:
+   un lucido dentro, un'ombra diffusa sotto), più profonda — senza toccare `--s-shadow`, che le
+   zone continuano a usare così com'è. */
 .s-glass-btn {
-  box-shadow: var(--s-glass-highlight), var(--s-shadow);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 8px 32px rgba(44, 47, 51, 0.16);
   cursor: pointer;
-  transition: box-shadow var(--s-slow) var(--s-ease), border-color var(--s-slow) var(--s-ease),
-              transform 120ms var(--s-ease), background var(--s-slow) var(--s-ease);
+  transition: box-shadow var(--s-slow) cubic-bezier(0.4, 0, 0.2, 1),
+              border-color var(--s-slow) var(--s-ease),
+              transform 120ms cubic-bezier(0.4, 0, 0.2, 1), background var(--s-slow) var(--s-ease);
+}
+:root[data-tema='scuro'] .s-glass-btn {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 .s-glass-btn:hover:not(:disabled) {
-  box-shadow: var(--s-glass-highlight), var(--s-shadow-lift);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 12px 40px rgba(44, 47, 51, 0.22);
+}
+:root[data-tema='scuro'] .s-glass-btn:hover:not(:disabled) {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 12px 40px rgba(0, 0, 0, 0.48);
 }
 .s-glass-btn:active:not(:disabled) {
   transform: scale(0.97);
 }
 .s-glass-btn:disabled { cursor: default; }
+
+/* ── IL TOGGLE SCORREVOLE — segnalato con l'immagine di riferimento esatta: traccia+manopola
+   di vetro che scorre, non un bottone che si smonta e rimonta. `BottoneCiclico.tsx` lo usa
+   SOLO quando le tappe sono ESATTAMENTE due (il tema, sole/luna — la stessa coppia
+   dell'immagine): con più tappe (la lingua, cinque) non esiste "l'altro stato" unico verso cui
+   scorrere, e resta il bottone-che-si-trasforma di prima. I quattro strati del riferimento
+   (lucido, manopola di vetro, traccia di vetro, ombra diffusa) sono qui: `backdrop-filter`
+   sulla traccia E sulla manopola (la sfocatura del fondo, non solo un colore), il bordo
+   chiarissimo (`rgba(255,255,255,0.2)`, com'era nel riferimento) e l'ombra a due strati. Colori
+   presi dai token esistenti (non "bianco fisso" del riferimento): su un fondo perla il testo
+   bianco sarebbe illeggibile, `--s-ink`/`--s-ground-warm` restano corretti in ENTRAMBI i temi. */
+.s-toggle-track {
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(44, 47, 51, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: background var(--s-slow) var(--s-ease), box-shadow var(--s-slow) var(--s-ease);
+}
+.s-toggle-track:hover {
+  box-shadow: 0 10px 36px rgba(44, 47, 51, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+:root[data-tema='scuro'] .s-toggle-track {
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+:root[data-tema='scuro'] .s-toggle-track:hover {
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.s-toggle-knob {
+  background: var(--s-ground-warm);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 8px rgba(44, 47, 51, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  color: var(--s-ink);
+}
+:root[data-tema='scuro'] .s-toggle-knob {
+  background: #3a3a40;
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  color: #f4f3f0;
+}

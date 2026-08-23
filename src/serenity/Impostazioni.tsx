@@ -58,8 +58,9 @@ export function SelettoreLingua() {
 }
 
 /**
- * IL SELETTORE DI TEMA — un bottone solo (sole/luna), che si trasforma nell'altro stato al
- * click. Governa la STESSA preferenza di EQUILIBRIUM (vedi sopra).
+ * IL SELETTORE DI TEMA — sole/luna, ESATTAMENTE due tappe: `BottoneCiclico` lo disegna come lo
+ * scivolo di vetro (traccia+manopola che scorre), non più il bottone che si dissolve — v. la
+ * nota in testa a `BottoneCiclico.tsx`. Governa la STESSA preferenza di EQUILIBRIUM (vedi sopra).
  */
 export function SelettoreTema() {
   const { t } = useI18n();
@@ -68,8 +69,8 @@ export function SelettoreTema() {
   return (
     <BottoneCiclico
       opzioni={[
-        { k: 'chiaro' as const, label: t('ser_theme_light'), icona: <Sun size={24} strokeWidth={1.8} aria-hidden="true" /> },
-        { k: 'scuro' as const, label: t('ser_theme_dark'), icona: <Moon size={24} strokeWidth={1.8} aria-hidden="true" /> },
+        { k: 'chiaro' as const, label: t('ser_theme_light'), icona: <Sun size={18} strokeWidth={1.8} aria-hidden="true" /> },
+        { k: 'scuro' as const, label: t('ser_theme_dark'), icona: <Moon size={18} strokeWidth={1.8} aria-hidden="true" /> },
       ]}
       selezionato={isLightTheme ? 'chiaro' : 'scuro'}
       onChange={k => setLightTheme(k === 'chiaro')}

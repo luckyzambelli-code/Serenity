@@ -112,9 +112,12 @@ export function PannelloMna({
   return (
     // ⚠️ Segnalato: « la zone ARC doit avoir le même fond que le fond général... et les zones
     // également, juste un petit liseré très fin de séparation ». `--s-zone-bg`/`--s-zone-border`
-    // (v. `tokens.css`): trasparente per davvero in chiaro con un bordo sottile, il vetro
-    // smerigliato di sempre in scuro.
-    <div className="s-glass s-glass-lift" style={{
+    // (v. `tokens.css`): trasparente per davvero in chiaro con un bordo sottile.
+    // ⚠️ Segnalato ANCORA: « MNA con un fondo proprio » — il colpevole era `className="s-glass
+    // s-glass-lift"`: sfoca (`backdrop-filter`) quel che sta dietro anche a `background`
+    // trasparente, che si legge come "una lastra a sé". Santé non porta questa classe — via
+    // anche qui, resta solo lo stile in linea con i token della zona.
+    <div style={{
       position: 'absolute', left: 16, right: 16, bottom: 16, zIndex: 6,
       background: 'var(--s-zone-bg)', border: '1px solid var(--s-zone-border)', borderRadius: 18,
       padding: '12px 18px', pointerEvents: 'auto',

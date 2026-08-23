@@ -82,7 +82,7 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Hand, Target, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, Unlink } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
@@ -214,39 +214,45 @@ const LetturaIntegrita = React.memo(function LetturaIntegrita() {
   );
 });
 
-/** ── « A CHE PUNTO SONO, E COSA DEVO FARE » — l'equivalente di `components/CycleHint.tsx`,
- *  non il componente stesso: quel file scrive i suoi colori DIRETTI nello stile inline (mai
- *  una `var(--sm-x)`, a differenza di `CycleStatusBar`) — presi in prestito così com'è,
- *  « rgba(240,246,255,0.95) » (quasi bianco) sarebbe leggibile sul fondo scuro di App.tsx e
- *  quasi INVISIBILE sul bianco perla di SERENITY in tema chiaro. Stessa struttura a quattro
- *  righe (titolo/comando/come/avviso), stessi dati (`spiegazioneCiclo`, portato fedele più
- *  sotto) — nella lingua grafica di SERENITY (`var(--s-x)`), non in quella di EQUILIBRIUM. */
-function SuggerimentoCiclo({ titolo, comando, come, avviso, fatto = false }: {
-  titolo: string; comando?: string | null; come: string; avviso?: string | null; fatto?: boolean;
+/** ── « COSA DEVO FARE » — l'equivalente di `components/CycleHint.tsx`, non il componente
+ *  stesso: quel file scrive i suoi colori DIRETTI nello stile inline (mai una `var(--sm-x)`,
+ *  a differenza di `CycleStatusBar`) — presi in prestito così com'è, « rgba(240,246,255,0.95) »
+ *  (quasi bianco) sarebbe leggibile sul fondo scuro di App.tsx e quasi INVISIBILE sul bianco
+ *  perla di SERENITY in tema chiaro. Stessi dati (`spiegazioneCiclo`, portato fedele più sotto)
+ *  — nella lingua grafica di SERENITY (`var(--s-x)`), non in quella di EQUILIBRIUM.
+ *
+ * ⚠️ SEGNALATO: « quand on arme un cycle, l'écriture DONNE L'ITEM avec les explications mets la
+ * directement sur la ligne du bouton... et fais disparaître le TITRE, car il y a déjà le bouton
+ * qui indique la chose. Également pour toutes les étapes du CYCLE ». Prima un blocco a sé
+ * (`titolo` in grassetto + comando/come/avviso), largo quanto la riga (`flexBasis:'100%'`),
+ * SOTTO tutti i bottoni della tappa — un doppione: il badge (CONTACT/NULL/MIRROR/TONE),
+ * `CycleSteps` e il testo del bottone stesso dicono già IN QUALE tappa si è. Qui resta solo il
+ * COME/COSA FARE (mai il nome della tappa, quello lo dice il bottone) — niente più `titolo`,
+ * niente più riga a sé: chi la monta (poco più sotto, ai tre punti di chiamata) la mette SUBITO
+ * dopo il bottone della tappa attiva, sulla STESSA riga elastica (niente `flexBasis`), non più
+ * in fondo a tutto. */
+function SuggerimentoCiclo({ comando, come, avviso, fatto = false }: {
+  comando?: string | null; come: string; avviso?: string | null; fatto?: boolean;
 }) {
   return (
-    <div style={{ width: '100%', marginTop: 2 }}>
-      <div style={{ fontFamily: 'var(--s-sans)', fontSize: 15, fontWeight: 800, letterSpacing: '0.02em',
-                    color: fatto ? 'var(--s-still)' : 'var(--s-ink)' }}>
-        {titolo}
-      </div>
+    <span style={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 340 }}>
       {comando && (
-        <div style={{ fontFamily: 'var(--s-serif)', fontSize: 14.5, lineHeight: 1.4, marginTop: 3,
-                      color: 'var(--s-ink-soft)' }}>
+        <span style={{ fontFamily: 'var(--s-serif)', fontSize: 13.5, lineHeight: 1.35,
+                      color: fatto ? 'var(--s-still)' : 'var(--s-ink-soft)' }}>
           {comando}
-        </div>
+        </span>
       )}
-      <div style={{ fontFamily: 'var(--s-sans)', fontSize: 13.5, lineHeight: 1.45, marginTop: 2,
-                    color: 'var(--s-ink-faint)' }}>
+      <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12.5, lineHeight: 1.4,
+                    color: fatto ? 'var(--s-still)' : 'var(--s-ink-faint)' }}>
         {come}
-      </div>
+      </span>
       {avviso && (
-        <div style={{ fontFamily: 'var(--s-sans)', fontSize: 13.5, fontWeight: 700, marginTop: 3,
+        <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12.5, fontWeight: 700,
                       color: 'var(--s-reserve)' }}>
           {avviso}
-        </div>
+        </span>
       )}
-    </div>
+    </span>
   );
 }
 
@@ -1269,7 +1275,6 @@ export default function Serenity() {
        cycles.nullPhase, item, itemSpoken, mirror.mirrorArmed, mirror.mirrorDisp.locked, mirror.mirrorDisp.reached,
        tone.tonePhase]);
 
-  const senzaNumero = (t: string) => t.replace(/^\s*\d+\s*·\s*/, '');
   const chargePhaseNow = useMetric(m => m.chargePhase);
 
   /**
@@ -2145,15 +2150,20 @@ export default function Serenity() {
             anche loro, stessa famiglia visiva di `CameraCerchio` (icona dentro, didascalia
             sotto sempre leggibile — mai solo un `title`): MENO presenti (54px invece di una
             pillola larga quanto la colonna), ma PIÙ differenziati — un'icona propria per
-            ciascuno (non solo un colore di bordo), scelta per la GESTO del metodo: `Hand` =
-            CONTACT (il contatto diretto), `Target` = NULL (il bersaglio dell'equilibrio),
-            `FlipHorizontal2` = MIRROR (il raddoppio), `AudioWaveform` = TONE (la scala). */}
+            ciascuno (non solo un colore di bordo), scelta per la GESTO del metodo.
+            ⚠️ Segnalato di nuovo: « l'icone Contact deve essere più esplicito, come qualcosa
+            che è mirato » e « l'icone NULL deve essere più esplicito ». `Hand` (un contatto
+            generico) → `Crosshair` (un bersaglio inquadrato: il gesto di MIRARE, non solo di
+            toccare). `Target` (già un bersaglio, ma indistinguibile a colpo d'occhio da
+            `Crosshair` ora su CONTACT) → `Scale`, la bilancia: NULL è il punto di equilibrio,
+            non il puntamento — due gesti diversi, due icone diverse. `FlipHorizontal2` = MIRROR
+            (il raddoppio), `AudioWaveform` = TONE (la scala). */}
         {aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && (
           <>
             {([
-              { k: 'contact', hue: 'var(--s-still)', label: 'CONTACT', Icona: Hand,
+              { k: 'contact', hue: 'var(--s-still)', label: 'CONTACT', Icona: Crosshair,
                 onClick: () => cycles.armCycle('charge') },
-              { k: 'null', hue: 'var(--s-alive)', label: 'NULL', Icona: Target,
+              { k: 'null', hue: 'var(--s-alive)', label: 'NULL', Icona: Scale,
                 onClick: () => cycles.armCycle('null') },
               // ── MIRROR — il terzo metodo, escluso a vicenda con CONTACT/NULL ────────────
               { k: 'mirror', hue: 'var(--s-reserve)', label: 'MIRROR', Icona: FlipHorizontal2,
@@ -2177,31 +2187,37 @@ export default function Serenity() {
                 }}>{c.label}</span>
               </div>
             ))}
-            {/* ── IL QUINTO METODO, « APERTO » — segnalato: « manca la zona LIBRE sotto TONE ».
-                `engine/sessionMode.ts` conta CINQUE metodi, non quattro — CONTACT/NULL/MIRROR/
-                TONE più `free` (« LIBERO »: nessuna sequenza ciclica, solo l'ago — App.tsx lo
-                chiama "APERTO", non "libero": « libero suonava come "senza regole" », la sua
-                stessa nota). SERENITY lo calcola già da sé (`const mode`, sopra: `mode` diventa
-                `'free'` quando nessuno degli altri quattro è armato — esattamente la condizione
-                di questo blocco) ma non lo DICEVA mai: l'auditor vedeva quattro scelte, mai la
-                conferma di essere nella quinta. Qui non un bottone (non c'è nulla da armare, ci
-                si è già), una pillola SEMPRE nello stato "attivo" di App.tsx (fondo chiaro,
-                inchiostro scuro) — la stessa lingua visiva, letta da fuori invece che ricreata a
-                mano. */}
-            <span title={LC(
-              'nessuna sequenza ciclica predefinita — l\'ago, l\'assessment e l\'R&I restano attivi',
-              'aucune séquence cyclique prédéfinie — l\'aiguille, l\'assessment et le R&I restent actifs',
-              'no predefined cyclic sequence — the needle, assessment and R&I stay active',
-              'sin secuencia cíclica predefinida — la aguja, el assessment y el R&I siguen activos',
-              'ingen fördefinierad cyklisk sekvens — nålen, assessment och R&I förblir aktiva') as string}
-              style={{
-                border: '1.5px solid transparent', borderRadius: 16, padding: '10px 10px',
-                background: 'var(--s-ink)', color: 'var(--s-ground)',
-                fontFamily: 'var(--s-sans)', fontSize: 14.5, fontWeight: 800, letterSpacing: '0.05em',
-                textAlign: 'center',
-              }}>
-              {LC('APERTO', 'OUVERT', 'OPEN', 'ABIERTO', 'ÖPPEN')}
-            </span>
+            {/* ── IL QUINTO METODO, ORA UN CERCHIO ANCHE LUI — segnalato: « manca la zona LIBRE
+                sotto TONE », poi « il bottone OUVERT deve essere anche lui sotto forma di
+                cerchio. Cambia il nome in UNBOUND ». `engine/sessionMode.ts` conta CINQUE
+                metodi, non quattro — CONTACT/NULL/MIRROR/TONE più `free` (SERENITY lo calcola
+                già da sé: `mode` diventa `'free'` quando nessuno degli altri quattro è armato,
+                esattamente la condizione di questo blocco). App.tsx chiama questo stato
+                "APERTO"/"OUVERT" (evitava deliberatamente "libero": « libero suonava come
+                "senza regole" », la sua stessa nota) — richiesta esplicita e nuova, SOLO per
+                SERENITY: "UNBOUND", non toccando la parola di App.tsx. Stessa forma dei quattro
+                metodi sopra (cerchio 54px, icona, didascalia) invece della pillola rettangolare
+                di prima — ma non un bottone: non c'è nulla da armare, ci si è già, quindi
+                `className="s-glass"` (non `-btn`) e cursore di default, non pointer. */}
+            <div style={{ display: 'grid', justifyItems: 'center', gap: 4, pointerEvents: 'auto' }}>
+              <span className="s-glass" title={LC(
+                'nessuna sequenza ciclica predefinita — l\'ago, l\'assessment e l\'R&I restano attivi',
+                'aucune séquence cyclique prédéfinie — l\'aiguille, l\'assessment et le R&I restent actifs',
+                'no predefined cyclic sequence — the needle, assessment and R&I stay active',
+                'sin secuencia cíclica predefinida — la aguja, el assessment y el R&I siguen activos',
+                'ingen fördefinierad cyklisk sekvens — nålen, assessment och R&I förblir aktiva') as string}
+                style={{
+                  width: 54, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: '1.5px solid var(--s-ink-ghost)', cursor: 'default',
+                  borderRadius: '50%', background: 'var(--s-disc)', color: 'var(--s-ink-soft)',
+                }}>
+                <Unlink size={22} strokeWidth={1.8} aria-hidden="true" />
+              </span>
+              <span style={{
+                fontFamily: 'var(--s-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
+                color: 'var(--s-ink-faint)',
+              }}>{LC('SVINCOLATO', 'DÉLIÉ', 'UNBOUND', 'DESLIGADO', 'OBUNDEN')}</span>
+            </div>
           </>
         )}
         {/* ── EP, SOTTO TONE — segnalato: « il bottone EP deve essere posizionato sotto TONE ».
@@ -2927,6 +2943,9 @@ export default function Serenity() {
                 {LC('altra resistenza', 'autre résistance', 'another resistance', 'otra resistencia', 'annat motstånd')}
               </button>
             )}
+            {/* « Cosa devo fare » — SULLA STESSA RIGA del bottone della tappa attiva appena
+                sopra (v. la nota su `SuggerimentoCiclo`), non più in fondo a tutto dopo ANNULLA. */}
+            <SuggerimentoCiclo {...spiegazioneCiclo} />
             <button className="s-glass s-glass-btn" onClick={() => {
               if (tone.tonePhase === 'raise') tone.chiudiTone(false);
               tone.resetTone(); setToneAttivo(false);
@@ -2936,10 +2955,6 @@ export default function Serenity() {
             }}>
               {t('cancel')}
             </button>
-            {/* « A che punto sono, e cosa devo fare » — vedi la nota su `spiegazioneCiclo`. */}
-            <div style={{ flexBasis: '100%' }}>
-              <SuggerimentoCiclo {...spiegazioneCiclo} titolo={senzaNumero(spiegazioneCiclo.titolo)} />
-            </div>
           </>
         )}
         {/* ── MIRROR, ARMATO — tre tempi, non due ──────────────────────────────────────────
@@ -3026,16 +3041,15 @@ export default function Serenity() {
                 {LC('ottenuto — valida', 'obtenu — valider', 'obtained — validate', 'obtenido — validar', 'uppnått — validera')}
               </button>
             )}
+            {/* « Cosa devo fare » — SULLA STESSA RIGA del bottone della tappa attiva appena
+                sopra (v. la nota su `SuggerimentoCiclo`), non più in fondo a tutto dopo ANNULLA. */}
+            <SuggerimentoCiclo {...spiegazioneCiclo} />
             <button className="s-glass s-glass-btn" onClick={() => mirror.stopMirror()} style={{
               cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
               fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-ghost)',
             }}>
               {t('cancel')}
             </button>
-            {/* « A che punto sono, e cosa devo fare » — vedi la nota su `spiegazioneCiclo`. */}
-            <div style={{ flexBasis: '100%' }}>
-              <SuggerimentoCiclo {...spiegazioneCiclo} titolo={senzaNumero(spiegazioneCiclo.titolo)} />
-            </div>
           </>
         )}
         {aperta && cycles.cycleArmed && (
@@ -3091,6 +3105,12 @@ export default function Serenity() {
                 </button>
               </>
             )}
+            {/* « Cosa devo fare » — SULLA STESSA RIGA del bottone della tappa attiva appena
+                sopra (v. la nota su `SuggerimentoCiclo`), non più in fondo a tutto dopo
+                `CycleStatusBar`. Nelle tappe senza un bottone proprio (« chiedi un mock-up »,
+                « la carica sale »...) resta comunque QUI, appena prima del contatore/ANNULLA/
+                valida — mai isolata in coda a tutto il resto. */}
+            <SuggerimentoCiclo {...spiegazioneCiclo} />
             {/* ── IL CONTATORE DEL CICLO IN CORSO — mancante ─────────────────────────────
                 In App.tsx un chip dice, per il SOLO metodo in corso (CONTACT con CONTACT,
                 NULL con NULL — « due contatori confondono », scelta utente), quanti cicli
@@ -3168,10 +3188,6 @@ export default function Serenity() {
                 noReadSignal={cycles.noReadSignal}
                 taAtNullStart={cycles.taAtNullStart}
               />
-            </div>
-            {/* « A che punto sono, e cosa devo fare » — vedi la nota su `spiegazioneCiclo`. */}
-            <div style={{ flexBasis: '100%' }}>
-              <SuggerimentoCiclo {...spiegazioneCiclo} titolo={senzaNumero(spiegazioneCiclo.titolo)} />
             </div>
           </>
         )}
@@ -3863,7 +3879,12 @@ export default function Serenity() {
               </div>
             )}
             {moduleVis.journal && (
-              <div className="s-glass s-glass-lift" style={{
+              // ⚠️ Segnalato ANCORA, dopo Santé (già a posto): « GIORNALE con un fondo proprio ».
+              // Non era il fondo (già `--s-zone-bg`, trasparente) — era `className="s-glass
+              // s-glass-lift"`: il `backdrop-filter` di `.s-glass` sfoca quel che sta DIETRO
+              // anche con `background` trasparente, che si legge come "una lastra a sé". Santé,
+              // qui accanto, non porta MAI questa classe — via anche qui.
+              <div style={{
                 maxHeight: '70%', display: 'flex', flexDirection: 'column',
                 background: 'var(--s-zone-bg)', border: '1px solid var(--s-zone-border)',
                 borderRadius: 18, padding: '10px 16px 14px',

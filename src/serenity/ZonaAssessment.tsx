@@ -102,10 +102,15 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
     // li decide chi la monta, come ogni altro elemento normale del layout.
     // ⚠️ Segnalato: « la zone ARC doit avoir le même fond que le fond général... et les zones
     // également, juste un petit liseré très fin de séparation ». `--s-zone-bg`/`--s-zone-border`
-    // (v. `tokens.css`): trasparente per davvero in chiaro, con un bordo sottile — il vetro
-    // smerigliato di sempre in scuro (`.s-glass`'s `border` originale non basta più da solo:
-    // qui serve un bordo VISIBILE anche su un fondo ormai trasparente).
-    <div className="s-glass s-glass-lift" style={{
+    // (v. `tokens.css`): trasparente per davvero in chiaro, con un bordo sottile.
+    // ⚠️ Segnalato ANCORA, dopo Santé (che già funzionava): « ASSESSEMENT, GIORNALE, MNA con un
+    // fondo proprio ». Il colpevole non era il fondo (già trasparente) ma `className="s-glass
+    // s-glass-lift"`: `.s-glass` porta il SUO `backdrop-filter` (30px di sfocatura+saturazione
+    // di quel che sta DIETRO) e la sua ombra — anche con `background` trasparente, sfocare lo
+    // sfondo dietro il pannello lo fa leggere come "una lastra a sé", esattamente l'effetto
+    // segnalato. Santé (`HealthPanel`) non porta MAI questa classe, solo lo stile in linea — qui
+    // lo stesso: via la classe, resta solo `--s-zone-bg`/`--s-zone-border` inline.
+    <div style={{
       display: 'flex', flexDirection: 'column', gap: 8,
       width: '100%', maxHeight: attivo ? '100%' : 'auto', overflowY: 'auto',
       borderRadius: 16, background: 'var(--s-zone-bg)', border: '1px solid var(--s-zone-border)',

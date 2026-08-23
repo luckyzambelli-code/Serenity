@@ -2421,6 +2421,74 @@ EQUILIBRIUM non tocca), `src/serenity/Serenity.tsx`, `src/serenity/readyCheckLig
 
 ---
 
+## Trentasettesimo giro (23/08/2026) — icone Contact/Null più esplicite, UNBOUND tondo, il vetro dei bottoni davvero più spesso, il bug vero dietro « Assessment/Giornale/MNA con un fondo proprio », la fusione titolo+bottone in tutti i cicli
+
+Cinque richieste, nell'ordine dato dall'utente stesso (« ma prima: » — la fusione titolo+
+bottone, già rimandata dal giro scorso, arriva SOLO alla fine):
+
+1. **« L'icône Contact doit être plus explicite, comme quelque chose qui est visé » / « L'icône
+   NULL doit être plus explicite »** — `Hand` (un contatto generico) → `Crosshair` (un
+   bersaglio inquadrato: il gesto di MIRARE). `Target` era già un bersaglio ma ormai
+   indistinguibile a colpo d'occhio da `Crosshair` — sostituito con `Scale`, la bilancia: NULL
+   è il punto di equilibrio raggiunto, non il puntamento — due gesti, due icone.
+
+2. **« Le bouton OUVERT doit être aussi sous forme de cercle. Change le nom en UNBOUND »** —
+   l'unica pillola rettangolare rimasta dopo la conversione dei quattro metodi (giro scorso).
+   Ora un cerchio identico agli altri (54px, icona `Unlink`, didascalia sotto) ma NON un
+   bottone — non c'è nulla da armare, ci si è già — quindi `className="s-glass"` (non `-btn`)
+   e cursore di default. Nome nuovo, SOLO per SERENITY (non tocca "APERTO"/"OUVERT" di
+   App.tsx): IT SVINCOLATO, FR DÉLIÉ, EN UNBOUND, ES DESLIGADO, SV OBUNDEN — evitando di nuovo
+   "libero"/"libre", per la stessa ragione già scritta da App.tsx per "APERTO".
+
+3. **« Crea un toggle button in stile glassmorphism identico all'immagine di riferimento »**
+   (immagine allegata: una traccia+manopola di vetro che scorre, sole/luna, "Light"/"Dark") —
+   quell'immagine È `SelettoreTema` (le stesse due tappe, la stessa coppia di parole).
+   `BottoneCiclico.tsx` ora sceglie da sé fra due rese: con ESATTAMENTE due tappe (il tema) un
+   vero scivolo — traccia 124×40, manopola 32px che scorre con `left` in transizione
+   `cubic-bezier(0.4,0,0.2,1)` — coi quattro strati del riferimento (lucido, manopola di vetro,
+   traccia di vetro, ombra diffusa a due strati); con più tappe (la lingua, cinque) resta il
+   bottone-che-si-trasforma di prima, perché con cinque tappe non esiste "l'altro stato" unico
+   verso cui scorrere. E, letto insieme a « NON VEDO CAMBIAMENTO NELLO STILE DEI BOTTONI »:
+   l'ombra di `.s-glass-btn` (ereditata da `--s-shadow`, tarata per le GRANDI zone silenziose)
+   era troppo debole per leggersi su un cerchio di 54px — ora un'ombra propria dei bottoni, più
+   profonda, senza toccare `--s-shadow` che le zone continuano a usare.
+
+4. **« Hai mantenuto le zone ASSESSMENT, GIORNALE, MNA con un fondo proprio. RENDILI
+   TRASPARENTI COME SALUTE SYSTEMA »** — il bug vero, trovato confrontando dal vivo (via
+   `getComputedStyle`) la catena di antenati di Santé (che l'utente conferma corretta) con
+   quella di Assessment/MNA/Journal: **non era il fondo** — tutti e quattro leggono già
+   `var(--s-zone-bg)`, trasparente. Il colpevole era `className="s-glass s-glass-lift"` sul
+   contenitore radice dei tre pannelli (Santé non la porta MAI, solo stile in linea):
+   `.s-glass` porta il SUO `backdrop-filter: blur(30px) saturate(200%)`, che sfoca e satura
+   quel che sta DIETRO il pannello — anche con `background` trasparente, sfocare lo sfondo lo fa
+   leggere come "una lastra a sé", esattamente l'effetto segnalato tre volte di fila. Tolta la
+   classe dai tre file (`ZonaAssessment.tsx`, `PannelloMna.tsx`, il Journal in `Serenity.tsx`):
+   resta solo lo stile in linea con i token di zona, come Santé.
+
+5. **« Fai la fusione titolo bottone per tutte le tappe dei cicli »** (rimandata dal giro
+   scorso) — `SuggerimentoCiclo` (il testo "cosa devo fare" sotto ogni tappa) mostrava un
+   `titolo` in grassetto ("1 · DAI L'ITEM", "3 · AS-IS"...) in un blocco a sé
+   (`flexBasis:'100%'`), IN FONDO a tutti i bottoni della tappa — un doppione: il badge
+   (CONTACT/NULL/MIRROR/TONE), `CycleSteps` e il testo del bottone stesso dicono già IN QUALE
+   tappa si è. Tolto il `titolo` (il componente non lo accetta più come prop), e la chiamata
+   spostata da "in fondo a tutto" a SUBITO dopo il blocco di bottoni della tappa attiva, sulla
+   stessa riga elastica (niente più `flexBasis`) — nei tre cicli (TONE, MIRROR, CONTACT/NULL).
+   Verificato dal vivo: armato un ciclo CONTACT, la spiegazione ("poi non fare altro: il ciclo
+   avanza da sé fino all'AS-IS") appare ora come semplice didascalia, senza titolo, appena
+   prima del contatore/ANNULLA/valida — non più isolata in coda.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo, `senzaNumero`
+rimosso perché diventato inutile), `vitest run` 639/639, verifica dal vivo estesa (profilo
+TEST, entrambi i temi) — icone Crosshair/Scale distinguibili, UNBOUND tondo con la sua
+didascalia, il toggle tema scorre correttamente fra "light"/"dark" nei due sensi, Assessment/
+Giornale/MNA senza più `backdrop-filter` in tutta la catena di antenati (controllato via
+`getComputedStyle`, non solo a occhio), ciclo CONTACT armato con la spiegazione fusa sulla riga
+dei bottoni. `git status`: `src/serenity/Serenity.tsx`, `src/serenity/BottoneCiclico.tsx`,
+`src/serenity/Impostazioni.tsx`, `src/serenity/tokens.css`, `src/serenity/ZonaAssessment.tsx`,
+`src/serenity/PannelloMna.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

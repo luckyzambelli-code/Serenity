@@ -22,10 +22,21 @@
  * le tappe sotto il bottone, una sola pressione per arrivarci. Il bottone resta lo stesso
  * (mostra solo lo stato attuale) — cambia solo cosa succede al click.
  *
+ * ⚠️ SEGNALATO UNA QUARTA VOLTA, con un'immagine di riferimento precisa (traccia+manopola in
+ * vetro che SCORRE fra due stati, sole/luna): « crea un toggle button in stile glassmorphism
+ * identico all'immagine ». Quell'immagine è ESATTAMENTE `SelettoreTema` (due tappe, sole/luna,
+ * "Light"/"Dark" — la stessa coppia). Con SOLO due tappe la manopola ha un unico "altro lato"
+ * verso cui scorrere — uno scivolo vero, non solo un bottone che si dissolve, ha senso. Con
+ * CINQUE (la lingua) non ce l'ha: dove scorrerebbe la manopola fra cinque tappe, quattro delle
+ * quali nascoste? Sotto, `opzioni.length === 2` sceglie fra i due rendering — stesso
+ * componente, stessa API, la FORMA cambia da sé in base a quante tappe ci sono davvero.
+ *
  * @see docs/serenity-refonte.md
  */
 
 import { useState, type ReactNode } from 'react';
+
+const TOGGLE_W = 124, TOGGLE_H = 40, TOGGLE_KNOB = 32, TOGGLE_PAD = 4;
 
 export interface OpzioneCiclica<T extends string> {
   k: T;
@@ -45,6 +56,44 @@ export function BottoneCiclico<T extends string>({ opzioni, selezionato, onChang
   const corrente = opzioni[idx];
   const prossimo = opzioni[(idx + 1) % opzioni.length].k;
   const [aperto, setAperto] = useState(false);
+
+  // ── LO SCIVOLO — solo con ESATTAMENTE due tappe, v. la nota in testa al file. `idx` vale 0
+  // o 1: la manopola scorre a sinistra (0) o a destra (1), l'etichetta prende lo spazio che
+  // resta dalla parte OPPOSTA alla manopola (mai sovrapposta, mai tagliata).
+  if (opzioni.length === 2 && !elencoCompleto) {
+    const knobLeft = idx === 0 ? TOGGLE_PAD : TOGGLE_W - TOGGLE_KNOB - TOGGLE_PAD;
+    return (
+      <button
+        className="s-glass s-toggle-track"
+        onClick={() => onChange(prossimo)}
+        title={corrente.label as string}
+        aria-pressed={idx === 1}
+        style={{
+          position: 'relative', width: TOGGLE_W, height: TOGGLE_H, borderRadius: 999,
+          background: 'var(--s-disc)', cursor: 'pointer', border: 'none', padding: 0,
+          overflow: 'hidden', flexShrink: 0,
+        }}
+      >
+        <span style={{
+          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+          justifyContent: idx === 0 ? 'flex-end' : 'flex-start',
+          paddingRight: idx === 0 ? 14 : 0, paddingLeft: idx === 1 ? 14 : 0,
+          fontFamily: 'var(--s-sans)', fontSize: 13, fontWeight: 700, color: 'var(--s-ink)',
+          whiteSpace: 'nowrap',
+        }}>
+          <span key={corrente.k} className="s-bottone-morph">{corrente.label}</span>
+        </span>
+        <span className="s-toggle-knob" style={{
+          position: 'absolute', top: TOGGLE_PAD, left: knobLeft, width: TOGGLE_KNOB, height: TOGGLE_KNOB,
+          borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}>
+          {corrente.icona}
+        </span>
+      </button>
+    );
+  }
+
   return (
     <div style={{ position: 'relative' }}>
       <button
