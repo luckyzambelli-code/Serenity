@@ -7,6 +7,16 @@
  * di file da tenere allineati a mano sarebbero il primo posto in cui le due applicazioni
  * divergerebbero senza che nessuno se ne accorga.
  *
+ * ⚠️ BUG TROVATO — segnalato: « non posso aggiungere Serenity a Reconnaissance vocale ». Non
+ * era un problema di permessi: `extraResources` (`native/sm-stt`, il binario Swift che chiede
+ * DAVVERO il permesso a macOS — v. `main.cjs`, `sttBinaryPath`) non era in questo elenco.
+ * Senza quel binario dentro `Serenity.app/Contents/Resources`, il riconoscimento nativo non
+ * parte MAI — non fallisce silenziosamente, semplicemente il file non c'è — quindi macOS non
+ * mostra MAI la richiesta di permesso per "Serenity": non può comparire in un elenco di app
+ * che non gliel'hanno mai chiesto. Lo stesso `sttBinaryPath` in `main.cjs` risolve già per
+ * conto suo da `process.resourcesPath` (diverso per ogni app pacchettizzata) — bastava che il
+ * file ci fosse.
+ *
  * ⚠️ È un `.cjs` e non un `.json` proprio per la versione: scritta a mano resterebbe ferma
  * mentre `bump-serenity.cjs` fa avanzare il numero, e il DMG direbbe una versione diversa da
  * quella nel deposito. Successo alla prima costruzione (3.0.0 sul DMG, 3.0.1 nel file).
@@ -31,6 +41,7 @@ module.exports = {
   files: b.files,
   asarUnpack: b.asarUnpack || [],
   mac: b.mac,
+  extraResources: b.extraResources || [],
   // ⚠️ L'ENTRATA SI SCRIVE, non si indovina. Prima `main.cjs` la deduceva da `app.getName()`,
   // che su macOS può venire dall'Info.plist e su un'altra piattaforma dal package.json: una
   // deduzione che, sbagliando, aprirebbe l'interfaccia SBAGLIATA senza dire niente. Qui il

@@ -2588,6 +2588,33 @@ nei due sensi). `git status`: `src/serenity/Serenity.tsx`, `src/serenity/readyCh
 
 ---
 
+## Quarantesimo giro (23/08/2026) — il vero bug della voce: sm-stt non veniva mai imballato in Serenity.app
+
+Segnalato con lo screenshot delle Preferenze di Sistema: « non appare Serenity [in
+Reconnaissance vocale] e non so come fare ». Non era un problema di permessi da spiegare
+all'utente (come risposto nel giro scorso) — era un BUG di packaging, trovato leggendo
+`electron-builder.serenity.cjs` riga per riga: il file copia da `package.json.build` un
+elenco esplicito di chiavi (`appId`, `files`, `mac`, `asarUnpack`...) invece di prendere
+l'intero oggetto, e `extraResources` — la voce che dice a electron-builder di copiare
+`native/sm-stt` (il binario Swift che chiede DAVVERO il permesso a macOS, v. `main.cjs`,
+`sttBinaryPath`) dentro `Contents/Resources` — non era fra le chiavi copiate.
+
+Conseguenza esatta: senza quel binario nel pacchetto, il riconoscimento nativo non falliva
+silenziosamente — semplicemente non esisteva nulla da eseguire. macOS non può proporre un
+permesso per un processo che non ha mai provato a chiederlo: da qui "Serenity" assente
+dall'elenco, non "permesso negato". La stessa `sttBinaryPath` in `main.cjs` risolve già da sé
+da `process.resourcesPath` (diverso per ogni app pacchettizzata) — bastava che il file fosse
+lì.
+
+Corretto: `extraResources: b.extraResources || []` aggiunto a `electron-builder.serenity.cjs`.
+Verificato non solo compilando ma APRENDO il pacchetto costruito: `ls
+release/mac-arm64/Serenity.app/Contents/Resources/` mostra `sm-stt` presente (96 KB,
+eseguibile) — non solo "il codice sembra giusto", il file è davvero dentro il DMG spedito.
+
+`git status`: `electron-builder.serenity.cjs`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
