@@ -1683,9 +1683,19 @@ export default function Serenity() {
    * strumenti" già scelto in questa seduta, non si chiede nulla — è una configurazione scelta,
    * non una mancanza da rimediare. Altrimenti si apre il pannello qui sotto, e l'apertura vera
    * (`avviaSeduta`) aspetta la sua risposta.
-   */
+   * ⚠️ Segnalato di nuovo: « prima di iniziare la seduta ho scelto MUSE, poi quando inizio la
+   * seduta mi si richiede di nuovo cosa utilizzo — è una doppia cosa uguale ». Vero: "già
+   * collegato" era scritto `=== 'connected'` per davvero, cioè la connessione BLE già
+   * conclusa — ma l'auditor aveva già DETTO la sua scelta cliccando MUSE nella pillola
+   * dell'intestazione, che avvia subito una ricerca ('searching'), non istantanea. Il gate qui
+   * ripeteva la stessa domanda mentre la risposta era già in corso. Ora "già scelto" include
+   * anche la RICERCA in corso (MUSE 'searching', Meter 'connecting') — non solo il traguardo:
+   * chi ha già cliccato un'icona non deve rispondere due volte alla stessa domanda solo perché
+   * il Bluetooth non è istantaneo. */
   const apri = () => {
-    if (!senzaStrumenti && muse.museConnection !== 'connected' && !meterC) {
+    const museInCorso = muse.museConnection !== 'disconnected';
+    const meterInCorso = meterC || theta.status === 'connecting';
+    if (!senzaStrumenti && !museInCorso && !meterInCorso) {
       setConnSel({ muse: false, theta: false, none: false });
       setNomeConfigDaSalvare(''); setConfigSalvata(false);
       setScegliStrumento(true);
@@ -2227,9 +2237,14 @@ export default function Serenity() {
             destra: `alignItems:'center'` così i due si allineano sulla stessa linea invece
             che l'uno sopra l'altro. */}
         <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {/* ⚠️ Segnalato: « anche l'ora ed il time session scrivi in più grande ». 11px/13px
-              restavano minuscoli accanto al resto dei numeri ingranditi questo giro (TA,
-              scala del tono) — 11→15, 13→17, icone di conseguenza. */}
+          {/* ⚠️ Segnalato di nuovo: « le scritte dell'ora ed altre non sono le stesse ».
+              L'armonizzazione delle taglie (giro scorso) ha piegato ciascun valore VECCHIO nel
+              passo più vicino guardando SOLO il numero — 15→base (invariato) e 17→lg (18,
+              +1px): la coppia orologio/tempo-seduta, prima scelta apposta vicina (15/17, un
+              gradino di 2px), si è ritrovata con un gradino diverso (15/18, 3px) senza che
+              nessuno lo decidesse. Sono la STESSA famiglia di informazione (due orologi, uno
+              sopra l'altro) — restano sulla stessa taglia, `--s-fs-base`, non due passi
+              diversi della scala. */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, pointerEvents: 'none', flexShrink: 0 }}>
             <span style={{
               display: 'flex', alignItems: 'center', gap: 3,
@@ -2241,7 +2256,7 @@ export default function Serenity() {
             </span>
             <span style={{
               display: 'flex', alignItems: 'center', gap: 3,
-              fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-lg)', letterSpacing: '0.03em',
+              fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.03em',
               color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
               transition: 'color var(--s-slow) var(--s-ease)',
               fontVariantNumeric: 'tabular-nums',
@@ -4059,8 +4074,16 @@ export default function Serenity() {
                     `viewBox` proporzionale (`width="100%" height="100%"`), quindi si ridisegna
                     più grande per intero — numeri, nomi dei livelli e cursore compresi — non è
                     un contenitore vuoto attorno a un disegno che resta piccolo. */}
+                {/* ⚠️ Segnalato ancora: « sposta la tone scale a sinistra, completamente fuori
+                    dalla zona arco ». A `left:12` (relativo a `<section>`, che ha
+                    `paddingLeft:320` per la barra laterale) il riquadro (460px di larghezza)
+                    finiva comunque a x=472 — 152px OLTRE il bordo dove comincia il disegno
+                    vero dell'arco (x=320): lo copriva ancora, solo meno di prima. Il bordo
+                    DESTRO deve stare PRIMA di quel confine, non il sinistro dopo un margine
+                    fisso — `left:-150` porta il riquadro tutto a x=(-150…310), interamente
+                    nella striscia riservata alla barra laterale, mai dentro il quadrante. */}
                 <div style={{
-                  position: 'absolute', left: 12, top: '22%', bottom: '6%', width: 460,
+                  position: 'absolute', left: -150, top: '22%', bottom: '6%', width: 460,
                   pointerEvents: 'none',
                 }}>
                   <ToneColumn

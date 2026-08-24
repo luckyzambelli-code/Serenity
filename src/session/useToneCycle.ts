@@ -141,6 +141,23 @@ export function useToneCycle(d: ToneCycleDeps) {
    * cambia a ogni tick — senza questo il locatore accumulerebbe per sempre il valore d'avvio.
    */
   const toneMeasuredRef = useRef<number | null>(null);
+  /**
+   * ── BUG TROVATO (segnalato: « con solo MUSE... la scala del tono resta a 0 ») — SPECCHIO
+   * DI `d.qL`, per la STESSA ragione di `toneMeasuredRef` appena sopra. `localizzaTone` (più
+   * giù) legge `d.qL` dentro un `useCallback` con `eslint-disable-next-line
+   * react-hooks/exhaustive-deps` — le sue dipendenze NON includono `d.qL` (di proposito: `qL`
+   * cambia molte volte al secondo, mentre le dipendenze elencate cambiano di rado — ricreare
+   * la funzione a ogni tick sarebbe stato uno spreco). Ma questo significa che la CLOSURE
+   * catturava `d.qL` di QUALUNQUE render l'avesse ricreata l'ultima volta — non
+   * necessariamente quello in cui l'auditor preme davvero "Localizza". Con Meter e MUSE
+   * insieme il TA (che rientrava nelle dipendenze vere) ricreava la funzione spesso abbastanza
+   * da non farlo notare; con SOLO il MUSE, nessuna delle dipendenze elencate cambia più,
+   * `localizzaTone` smette di ricrearsi, e `d.qL` catturato resta quello di ORE prima — un
+   * riferimento sbagliato con cui ogni delta successivo si confronta, spesso vicino a zero per
+   * puro caso. Stesso rimedio di `toneMeasuredRef`: uno specchio sempre aggiornato, letto
+   * dentro la callback invece del parametro diretto.
+   */
+  const qLRef = useRef(0);
 
   // ── IL TA RIPORTATO ALLE DUE LATTINE ─────────────────────────────────────────────────────
   // « Che fa fede sono le DUE LATTINE ». Con una lattina sola la resistenza è un'altra, e più
@@ -166,6 +183,7 @@ export function useToneCycle(d: ToneCycleDeps) {
     ? toneFromTa(taCorretto, taClear, TA_MAX) : null;
   const toneHasMeter = toneMeasured !== null;
   toneMeasuredRef.current = toneMeasured;
+  qLRef.current = d.qL;
 
   /**
    * IL MARGINE DELLA PROVA DELLE LATTINE — senza prova di oggi, una divisione in meno.
@@ -313,7 +331,10 @@ export function useToneCycle(d: ToneCycleDeps) {
     // ⚠️ IL TA CORRETTO, non quello grezzo: se si ancorasse al grezzo e la configurazione
     // cambiasse in seduta, il tono salterebbe di una divisione senza che nulla sia successo.
     toneTaAtStartRef.current = taCorretto;
-    toneQAtStartRef.current = d.hasMuse ? d.qL : null;
+    // ⚠️ `qLRef.current`, non `d.qL` — v. la nota su `qLRef` più sopra: dentro questo
+    // `useCallback` (dipendenze volutamente incomplete) `d.qL` sarebbe stato quello
+    // dell'ultima ricreazione della funzione, non quello di ADESSO.
+    toneQAtStartRef.current = d.hasMuse ? qLRef.current : null;
     toneStartSecRef.current = d.nowSec();   // il ciclo comincia QUI, non al comando 2
     // Premuto col campo VUOTO, la prima parola dell'auditor diventa l'item — come negli altri
     // tre cicli. Senza, in TONE si poteva solo scrivere: e scrivere vuol dire staccare gli

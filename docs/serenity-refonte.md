@@ -3271,6 +3271,66 @@ solo più coerente.
 
 ---
 
+## Cinquantacinquesimo giro (24/08/2026) — quattro segnalazioni verificate, un bug vero trovato nel motore condiviso
+
+**1. L'orologio e il tempo di seduta, tornati coerenti** — segnalato: « le scritte dell'ora
+ed altre non sono le stesse ». L'armonizzazione (giro scorso) aveva piegato ciascun valore
+VECCHIO guardando solo il numero: 15→base (invariato) e 17→lg (18, +1px) — la coppia
+orologio/tempo-seduta, scelta apposta vicina (15/17) qualche giro fa, si è ritrovata con un
+gradino diverso (15/18) senza che nessuno lo decidesse. Sono la stessa famiglia di
+informazione: ora entrambi `--s-fs-base`. Verificato dal vivo con `getComputedStyle`: 15px
+su entrambi.
+
+**2. La scala del tono, spostata completamente fuori dall'arco** — segnalato: « sposta la
+tone scale a sinistra, completamente [fuori] della zona arco ». Misurato dal vivo (le due
+`<svg>`, coordinate di pagina vere): a `left:12` il riquadro finiva 152px oltre il bordo dove
+comincia il disegno del quadrante. Spostato a `left:-150` — verificato di nuovo dal vivo,
+con TONE armato: la colonna sta chiaramente a sinistra, mai sopra la curva.
+
+**3. "avec quoi audite-t-on" non chiede più due volte la stessa cosa** — segnalato: « ho
+scelto MUSE prima di iniziare la seduta, poi all'apertura mi si richiede di nuovo cosa
+utilizzo — è una doppia cosa uguale ». Il cancello di `apri()` guardava `museConnection ===
+'connected'` per davvero — la connessione BLE già CONCLUSA — non "l'auditor ha già scelto".
+Cliccare MUSE nella pillola dell'intestazione avvia una ricerca ('searching'), non
+instantanea: nella finestra fra il click e la connessione vera, aprire la seduta faceva
+ripetere la stessa domanda mentre la risposta era già in corso. "Già scelto" ora include
+anche la ricerca in corso (MUSE 'searching', Meter 'connecting'), non solo il traguardo.
+Non riproducibile fino in fondo in questo ambiente (WebBluetooth fallisce subito, senza
+restare in 'searching' abbastanza per il test) — verificato che il caso INVARIATO (nessuno
+strumento toccato) continua a mostrare il pannello come sempre.
+
+**4. Il bug vero: "con solo MUSE... la scala del tono resta a 0"** — la caccia più seria di
+questo giro. `localizzaTone` (`useToneCycle.ts`) legge `d.qL` dentro un `useCallback` con
+`eslint-disable-next-line react-hooks/exhaustive-deps` — le sue dipendenze reali
+(`d.hasMuse, toneMeasured, toneHasMeter, toneAssessed, taCorretto`) NON includono `d.qL`
+(deliberatamente: `qL` cambia molte volte al secondo, ricreare la funzione a ogni tick
+sarebbe stato uno spreco). Ma questo significa che la CLOSURE catturava `d.qL` di qualunque
+render l'avesse ricreata l'ultima volta — non necessariamente quello in cui l'auditor preme
+"Localizza" davvero. Con Meter e MUSE insieme il TA (una dipendenza vera) ricreava la
+funzione abbastanza spesso da non farlo notare; con SOLO il MUSE, NESSUNA delle dipendenze
+elencate cambia più — `localizzaTone` smette di ricrearsi, e il riferimento `qL` catturato
+resta quello di ore prima, spesso vicino a zero per puro caso. Stesso rimedio già in uso nel
+file per lo stesso problema (`toneMeasuredRef`): uno specchio (`qLRef`) sempre aggiornato nel
+corpo della funzione, letto dentro la callback al posto del parametro diretto — non una
+formula nuova, la correzione di un bug di dipendenze mancanti.
+
+⚠️ **Non risolto in questo giro, chiesto chiarimento**: la parte "non vedo il TA" — durante
+TONE, `agoEeg` (che decide se mostrare il pannello della lettura ago nuda) è forzato a
+`false` SEMPRE (`toneAttivo ? false : ...`), un comportamento preesistente allineato a
+App.tsx (« TONE impone SEMPRE il Meter », mai la preferenza generale) — scritto PRIMA che
+il MUSE potesse guidare TONE da solo. Non toccato senza conferma: decide se il pannello
+della lettura nuda debba restare visibile anche con solo il MUSE.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo estesa per i punti 1/2/3 (profilo TEST). Il punto 4 tocca il motore
+condiviso — nessun hardware reale disponibile per una verifica end-to-end, il fix è stato
+verificato per lettura/ragionamento, non dal vivo con un MUSE fisico.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/Serenity.tsx`,
+`src/session/useToneCycle.ts`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
