@@ -1302,6 +1302,21 @@ export default function Serenity() {
    *  condizione che già nasconde/mostra i cinque cerchi dei metodi, ora estesa alla barra
    *  amministrativa in alto. */
   const modalitaCiclo = mode !== 'free';
+  /** ── L'ASSESSMENT SI ARMA E SI DISARMA CON IL CICLO — segnalato: « l'assessment sembra
+   *  sempre attivo, anche quando è chiuso... nel report abbiamo degli assessment lunghissimi
+   *  che in realtà non lo sono. DEVE ESSERE ATTIVATO al momento dell'armamento del ciclo, ed
+   *  alla fine poi disattivato ». Vero: `assessAttivo` era un interruttore SOLO manuale — se
+   *  restava acceso da una seduta precedente (o da una prova fatta molto prima), gli item
+   *  raccolti nel frattempo finivano nello stesso "assessment" di quello vero, allungandolo nel
+   *  rapporto. Ora si accende da sé quando `mode` esce da `'free'` (un ciclo si arma) e si
+   *  spegne da sé quando ci rientra (il ciclo finisce) — SOLO alle transizioni (`[mode]` come
+   *  unica dipendenza): mentre un ciclo resta armato, `mode` non cambia, quindi l'auditor può
+   *  ancora spegnerla/riaccenderla a mano in qualunque momento (segnalato insieme: « si deve
+   *  poter armare l'assessment quando l'auditor lo ritiene opportuno ») senza che questo
+   *  effetto la rimetta a posto sotto di lui. */
+  useEffect(() => {
+    setAssessAttivo(mode !== 'free');
+  }, [mode]);
 
   /**
    * ── LA FASE DEL CICLO, LA STESSA SCALA DI App.tsx ────────────────────────────────────────
@@ -1862,7 +1877,6 @@ export default function Serenity() {
    *  — v. sotto), la STESSA colonna sotto cui già vivono le camere (« sotto les cams »). Con le
    *  due colonne strette (148 + 272, invece di 50%+50% di prima) l'arco (`flex:1`) si allarga
    *  fino quasi a toccarle — segnalato: « la zona arc deve quindi allargarsi ». */
-  const assessColOpen = aperta && moduleVis.ri;
   /* ⚠️ SEGNALATO DI NUOVO, stavolta al contrario: « vedo che appare Santé Système anche
    *  senza il MUSE ». Un giro passato avevo tolto il cancello `&& (museOk || meterC)` per
    *  riprodurre App.tsx alla lettera (il suo commento « FIX M-07 » dice che mostra Santé
@@ -1872,8 +1886,11 @@ export default function Serenity() {
    *  SERENITY, vista e confermata dopo aver guardato entrambe le app fianco a fianco: Santé
    *  Système (EEG/GYRO/elettrodi — dati del SUO MUSE, non del meter) non ha senso da vedere
    *  senza un MUSE connesso. Cancello rimesso, stavolta come scelta dichiarata di SERENITY,
-   *  non come un'invenzione prudente scoperta per caso. */
-  const rightColOpen = (aperta && moduleVis.health && museOk) || moduleVis.journal;
+   *  non come un'invenzione prudente scoperta per caso.
+   *  ⚠️ Segnalato: « cambia di posizione il giornale con l'assessment ». L'assessment vive ora
+   *  QUI (colonna destra, sotto Santé) — la colonna deve aprirsi anche quando è SOLO lui
+   *  acceso, non più solo per Santé/Journal (che ora è a sinistra). */
+  const rightColOpen = (aperta && moduleVis.health && museOk) || (aperta && moduleVis.ri);
   const moduleColWidth = 272;
   /* ── LE CAMERE SONO SOPRA — segnalato: « le zones devono essere sotto les cams ». Le camere
    *  galleggiano `position:absolute, top:16, right:32` sulla STESSA colonna destra dove ora
@@ -2131,7 +2148,12 @@ export default function Serenity() {
       <div style={{
         position: 'absolute', left: 20, top: sidebarTop, bottom: 24, zIndex: 8,
         display: 'flex', flexDirection: 'column',
-        justifyContent: (aperta && moduleVis.ri) ? 'flex-start' : 'center',
+        /* ⚠️ Segnalato: « cambia di posizione il giornale con l'assessment ». Il Giornale ora
+           vive qui (sotto i bottoni dei metodi), l'Assessment nella colonna destra (sotto
+           Santé Système) — v. i due contenitori più giù per il perché. Questo controllo
+           decideva se "aprire il flusso verso l'alto" quando l'assessment era qui; ora la
+           stessa domanda si fa sul Giornale, che ha preso il suo posto. */
+        justifyContent: (aperta && moduleVis.journal) ? 'flex-start' : 'center',
         /* ⚠️ Segnalato: « assessment deve essere largo quanto i bottoni Contact...ecc » — poi,
            verificando dal vivo QUESTO stesso giro: « la zona ASSESSMENT non mostra il bottone
            [INDICAZIONE] ». Vero — a 148px il selettore di vista (ASSESSMENT/INDICAZIONE, due
@@ -2160,11 +2182,33 @@ export default function Serenity() {
             sempre, non allargarsi con lui: un involucro suo, 148px, `align-items` di default
             (`stretch`) dentro QUESTO, non nel contenitore largo. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 148, flexShrink: 0 }}>
-        {/* ── LE LETTURE, ORA DENTRO L'ARCO — segnalato: « l'horloge, le temps de session, le TA
-            e la somme de TA doivent être inscrits en haut à gauche dans la zone de l'arc ».
-            Stavano qui (colonna stretta a lato, fuori dallo strumento) — spostate dentro il
-            riquadro dello strumento stesso, angolo in alto a sinistra (v. più giù, appena
-            prima di `<QuantumSphere>`). Zero logica nuova, solo dove compaiono. */}
+        {/* ── L'OROLOGIO, ORA QUI — segnalato: « la scritta dell'ora e del TA è un unico pavé
+            che richiede attenzione per essere letto. Metti l'ora ed il tempo di session vicino
+            al bottone FERMER LA SÉANCE (più logico) ». Stava nell'angolo dell'arco, impilato
+            insieme alle letture dell'ago — due famiglie diverse (« che ore sono » contro « che
+            cosa legge l'ago ») lette come fossero la stessa. Qui accanto al bottone che governa
+            la seduta è dove l'orario/il tempo trascorso hanno davvero senso — l'ago ha ripreso
+            da solo lo spazio lasciato libero (v. l'angolo dell'arco, più giù). */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, pointerEvents: 'none' }}>
+          <span style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.04em',
+            color: 'var(--s-ink-faint)',
+          }}>
+            <Clock size={12} strokeWidth={1.8} aria-hidden="true" />
+            <OraReale />
+          </span>
+          <span style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            fontFamily: 'var(--s-mono)', fontSize: 16, letterSpacing: '0.06em',
+            color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
+            transition: 'color var(--s-slow) var(--s-ease)',
+            fontVariantNumeric: 'tabular-nums',
+          }}>
+            <Timer size={14} strokeWidth={1.8} aria-hidden="true" />
+            {orologio(tempo)}
+          </span>
+        </div>
         <button className="s-glass s-glass-btn" onClick={aperta ? chiudi : apri} style={{
           cursor: 'pointer', pointerEvents: 'auto',
           background: 'var(--s-disc)', color: 'var(--s-ink)',
@@ -2298,25 +2342,52 @@ export default function Serenity() {
           </div>
         )}
         </div>
-        {/* ── L'ASSESSMENT, SOTTO EP — segnalato: « la zone assessment... deve stare sotto il
-            bottone EP... rimonta l'insieme dei bottoni... quindi la zona arco deve occupare
-            tutto lo spazio liberato ». Era una colonna nella riga a tre a fianco dell'arco —
-            spostato qui, sotto i bottoni, nella STESSA striscia a sinistra (mai più nella riga
-            dell'arco: l'arco la riprende tutta, v. sotto). Segnalato di nuovo: « largo quanto
-            i bottoni Contact...ecc » — il contenitore intorno è di nuovo 148px (v. sopra), e
-            `width:'100%'` qui prende esattamente quella misura, non più una larga a parte. */}
-        {assessColOpen && (
-          <div style={{ width: '100%', flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', pointerEvents: 'auto' }}>
-            <ZonaAssessment
-              attivo={assessAttivo}
-              onToggle={() => setAssessAttivo(v => !v)}
-              items={assessItems}
-              LC={LC}
-              dueAghi={museOk && meterC}
-              onIndica={segnaIndicazione}
-              onAggiungiItem={aggiungiItemManuale}
-              cercaLettura={cercaLetturaPerParola}
-            />
+        {/* ── IL GIORNALE, SOTTO EP — segnalato: « cambia di posizione il giornale con
+            l'assessment ». Stava nella colonna destra, sotto Santé Système; l'Assessment stava
+            qui, sotto i bottoni dei metodi. Scambiati — stessa logica di entrambi
+            (`moduleVis.journal`/`journal.logs`, invariati), solo la POSIZIONE si scambia. Il
+            contenitore intorno resta quello di prima (148/272px, v. sopra): la larghezza delle
+            due colonne è la stessa, il giornale ci sta esattamente come l'assessment ci stava. */}
+        {aperta && moduleVis.journal && (
+          <div style={{
+            width: '100%', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column',
+            background: 'var(--s-zone-bg)', border: '1px solid var(--s-zone-border)',
+            borderRadius: 18, padding: '10px 16px 14px', pointerEvents: 'auto',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexShrink: 0 }}>
+              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.12em',
+                            textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
+                {t('ser_journal')}
+              </span>
+              <button onClick={() => setModuleVis(v => ({ ...v, journal: false }))} style={{
+                border: 'none', background: 'none', cursor: 'pointer',
+                color: 'var(--s-ink-faint)', fontSize: 18, lineHeight: 1, padding: 2,
+              }}>×</button>
+            </div>
+            <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {[...journal.logs]
+                .filter(l => !(avvio.solo && (l.speaker === 'Aud' || l.speaker === 'PC')))
+                .sort((a, b) => (a.time ?? 0) - (b.time ?? 0))
+                .reverse()
+                .map((log, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, fontFamily: 'var(--s-mono)', fontSize: 12.5, lineHeight: 1.4 }}>
+                    <span style={{ color: 'var(--s-ink-faint)', width: 38, flexShrink: 0 }}>
+                      {(log.time || 0).toFixed(1)}s
+                    </span>
+                    <span style={{
+                      color: log.type === 'retracted' ? 'var(--s-reserve)'
+                        : log.type === 'meter' ? 'var(--s-reserve)'
+                        : log.speaker === 'SYS' ? 'var(--s-ink-faint)' : 'var(--s-ink)',
+                      fontWeight: (log.type === 'highlight' || log.type === 'success') ? 700 : 400,
+                    }}>
+                      {log.speaker && log.speaker !== 'NEEDLE' && (
+                        <b>{log.speaker === 'Aud' ? 'AUD' : log.speaker === 'PC' ? 'PC' : log.speaker}: </b>
+                      )}
+                      {log.text}
+                    </span>
+                  </div>
+                ))}
+            </div>
           </div>
         )}
       </div>
@@ -2607,9 +2678,21 @@ export default function Serenity() {
               : theta.status === 'connecting' ? t('searching') as string : t('theta_connect') as string
           }`;
           const noneTitolo = `${LC('SENZA STRUMENTI', 'SANS INSTRUMENTS', 'NO INSTRUMENTS', 'SIN INSTRUMENTOS', 'UTAN INSTRUMENT')} — ${t('no_instruments_mode') as string}`;
+          {/* ⚠️ BUG TROVATO — segnalato: « quando scelgo senza strumenti e poi scelgo ad
+              esempio cans, senza strumenti resta attivato ». Vero: scegliere MUSE o METER qui
+              non spegneva mai `senzaStrumenti` — solo "NESSUNO" lo toccava (accendendolo E
+              spegnendo gli altri due). Il verso opposto mancava: connettere UNO strumento deve
+              uscire dal gruppo di controllo, non restarci accanto in silenzio. */}
           const strumenti: Array<{ key: string; icona: React.ReactNode; onClick?: () => void; stato: import('./IndicatoreConnessione').StatoConnessione; title: string }> = [
-            { key: 'muse', icona: <Headphones size={22} strokeWidth={1.8} />, onClick: muse.handleConnectMuse, stato: museStato, title: museTitolo },
-            { key: 'meter', icona: <Gauge size={22} strokeWidth={1.8} />, onClick: theta.unavailable ? undefined : (meterC ? theta.disconnect : theta.connect), stato: meterStato, title: meterTitolo },
+            { key: 'muse', icona: <Headphones size={22} strokeWidth={1.8} />,
+              onClick: () => { if (muse.museConnection === 'disconnected') setSenzaStrumenti(false); muse.handleConnectMuse(); },
+              stato: museStato, title: museTitolo },
+            { key: 'meter', icona: <Gauge size={22} strokeWidth={1.8} />,
+              onClick: theta.unavailable ? undefined : () => {
+                if (!meterC) setSenzaStrumenti(false);
+                (meterC ? theta.disconnect : theta.connect)();
+              },
+              stato: meterStato, title: meterTitolo },
             {
               key: 'none', icona: <MessageSquareOff size={22} strokeWidth={1.8} />,
               onClick: () => {
@@ -2648,6 +2731,24 @@ export default function Serenity() {
                 </button>
                 );
               })}
+              {/* ⚠️ SEGNALATO: « la percentuale che appare non so cosa sia. Se è l'integrità
+                  biometrica deve essere spostata sotto l'icona del MUSE in alto dove si
+                  connette ». Vero — `LetturaIntegrita` (un numero nudo, "82%", nessuna parola
+                  accanto) viveva nell'angolo dell'arco, lontano da MUSE/METER/NESSUNO a cui
+                  appartiene (è la qualità del SUO segnale). Spostata qui, nella stessa pillola
+                  — "INT" davanti al numero: mai più un numero senza dire cosa sia, la stessa
+                  regola già scritta più volte in questo file. */}
+              {museOk && moduleVis.biometric && (
+                <span title={t('biometric_integrity') as string} style={{
+                  display: 'flex', alignItems: 'baseline', gap: 3, padding: '0 8px 0 2px',
+                  fontFamily: 'var(--s-mono)', fontSize: 11, color: 'var(--s-ink-faint)',
+                }}>
+                  <span style={{ fontSize: 9, letterSpacing: '0.06em' }}>
+                    {LC('INT', 'INT', 'INT', 'INT', 'INT')}
+                  </span>
+                  <LetturaIntegrita />
+                </span>
+              )}
             </span>
           );
         })()}
@@ -3560,36 +3661,25 @@ export default function Serenity() {
           boxShadow: 'none',
           transition: 'background var(--s-calm) var(--s-ease)',
         }}>
-          {/* ── LE LETTURE, IN ALTO A SINISTRA — segnalato: « l'horloge, le temps de session, le
-              TA e la somme de TA doivent être inscrits en haut à gauche dans la zone de l'arc ».
-              Stavano nella barra laterale, fuori dallo strumento — ora nell'angolo di QUESTO
-              riquadro (lo stesso posto in cui stava `ZonaAssessment`, prima di diventare una
-              colonna vera qui sotto). `--s-ink-faint`, non `-ghost` — stessa ragione già scritta
-              per il giornale: questo riquadro ha il suo SCHERMO scuro apposta in tema scuro,
-              `-ghost` (tarato sul fondo neutro di SERENITY) ci diventava illeggibile. */}
+          {/* ── LE LETTURE, IN ALTO A SINISTRA — segnalato: « la scritta dell'ora e del TA è un
+              unico pavé che richiede attenzione per essere letto. Metti l'ora ed il tempo di
+              session vicino al bottone FERMER LA SÉANCE (più logico), mentre il MUSE TA, Meter
+              TA ecc. lasciali dove sono portandoli al posto dell'ora ». Vero — orologio E TA
+              stavano impilati nello stesso blocco, due famiglie di informazione diverse (« che
+              ore sono, che seduta è » contro « che cosa legge l'ago ADESSO ») lette come se
+              fossero la stessa cosa. L'orologio/tempo di seduta si sono spostati accanto a
+              CHIUDI LA SEDUTA (v. la barra laterale, sopra) — QUI restano solo le letture
+              dell'ago, salite al posto che l'orologio ha lasciato libero. L'integrità
+              biometrica (una percentuale nuda, "non so cosa sia") si è spostata nella pillola
+              MUSE/METER/NESSUNO in alto — è la qualità del segnale DI QUELLO strumento, il suo
+              posto naturale è lì, non qui. `--s-ink-faint`, non `-ghost` — stessa ragione già
+              scritta per il giornale: questo riquadro ha il suo SCHERMO scuro apposta in tema
+              scuro, `-ghost` (tarato sul fondo neutro di SERENITY) ci diventava illeggibile. */}
           <div style={{
             position: 'absolute', top: 14, left: 16, zIndex: 5,
             display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6,
             pointerEvents: 'none',
           }}>
-            <span style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              fontFamily: 'var(--s-mono)', fontSize: 14, letterSpacing: '0.04em',
-              color: 'var(--s-ink-faint)',
-            }}>
-              <Clock size={13} strokeWidth={1.8} aria-hidden="true" />
-              <OraReale />
-            </span>
-            <span style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              fontFamily: 'var(--s-mono)', fontSize: 17, letterSpacing: '0.06em',
-              color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
-              transition: 'color var(--s-slow) var(--s-ease)',
-              fontVariantNumeric: 'tabular-nums',
-            }}>
-              <Timer size={15} strokeWidth={1.8} aria-hidden="true" />
-              {orologio(tempo)}
-            </span>
             {aperta && pausata && (
               <span className="ser-pulse" style={{
                 fontFamily: 'var(--s-sans)', fontSize: 12, fontWeight: 700, letterSpacing: '0.05em',
@@ -3600,22 +3690,6 @@ export default function Serenity() {
                   ? LC('in pausa', 'en pause', 'paused', 'en pausa', 'pausad')
                   : LC('strumento perso', 'instrument perdu', 'instrument lost',
                       'instrumento perdido', 'instrument förlorat')}
-              </span>
-            )}
-            {museOk && (
-              <span style={{
-                fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
-                color: 'var(--s-ink-faint)', display: 'flex', gap: 10,
-              }}>
-                {/* ⚠️ Segnalato di nuovo: « togli le percentuali con la scritta signal ». La
-                    riga "segnale N%" (aggiunta un giro fa dopo « c'è scritto... delle
-                    percentuali? », per dire COSA fosse quel numero) va via del tutto ora —
-                    non più un'etichetta da chiarire, il numero stesso non deve più esserci. */}
-                {moduleVis.biometric && (
-                  <span title={t('biometric_integrity') as string}>
-                    <LetturaIntegrita />
-                  </span>
-                )}
               </span>
             )}
             {agoEeg && (
@@ -3660,19 +3734,35 @@ export default function Serenity() {
                     ecco perché la didascalia sembrava "senza numero" — il numero giusto non era
                     quello di sopra (il riposo), non erano allineati. Ora la STESSA unica coppia
                     numero+didascalia di App.tsx, non due invenzioni nuove. */}
-                {tone.taMostrato && (
-                  <>
-                    <span>TA {tone.taMostrato.ta.toFixed(2)}</span>
-                    <span style={{ fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'uppercase',
-                                  color: tone.taMostrato.margin > 0 ? 'var(--s-reserve)' : 'var(--s-ink-ghost)' }}>
-                      {tone.taMostrato.basis === 'two-cans'
-                        ? LC('TA · 2 lattine', 'TA · 2 boîtes', 'TA · 2 cans', 'TA · 2 latas', 'TA · 2 burkar')
-                        : tone.taMostrato.basis === 'solo-measured'
-                        ? LC('TA · 1 lattina → 2', 'TA · 1 boîte → 2', 'TA · 1 can → 2', 'TA · 1 lata → 2', 'TA · 1 burk → 2')
-                        : LC('TA · 1 lattina − 1 divisione', 'TA · 1 boîte − 1 division', 'TA · 1 can − 1 division', 'TA · 1 lata − 1 división', 'TA · 1 burk − 1 delstreck')}
-                    </span>
-                  </>
-                )}
+                {tone.taMostrato && (() => {
+                  /* ⚠️ SEGNALATO DI NUOVO: « il TA 1 boîte vs 2 boîtes non è chiaro, devi
+                     scrivere la differenza che applichi con una sola can ». La didascalia
+                     diceva CHE una correzione veniva applicata ("→ 2", "− 1 divisione") ma mai
+                     QUANTO — per "solo-measured" lo scarto è un NUMERO vero (misurato in
+                     `PannelloConfig` → taratura TA, `theta.setup.offsets['solo-can']`), non
+                     solo una parola. Scritto ora per intero, con lo stesso segno che
+                     `taToTwoCans` applica davvero (sommato al grezzo, mai indovinato qui). */
+                  const scartoMisurato = theta.setup.offsets?.['solo-can'] ?? 0;
+                  const unaLattina = LC('TA · 1 lattina', 'TA · 1 boîte', 'TA · 1 can', 'TA · 1 lata', 'TA · 1 burk');
+                  const divisione = LC('divisione', 'division', 'division', 'división', 'delstreck');
+                  return (
+                    <>
+                      {/* ⚠️ Segnalato: « scrivi METER TA invece di TA » — questa riga vive nel
+                          ramo "solo meter, niente ago EEG" (`!agoEeg && meterC`): un "TA" nudo
+                          non diceva DI QUALE strumento, importante ora che la lettura dell'ago
+                          e quella del meter possono comparire vicine. */}
+                      <span>{LC('METER TA', 'METER TA', 'METER TA', 'METER TA', 'METER TA')} {tone.taMostrato.ta.toFixed(2)}</span>
+                      <span style={{ fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'uppercase',
+                                    color: tone.taMostrato.margin > 0 ? 'var(--s-reserve)' : 'var(--s-ink-ghost)' }}>
+                        {tone.taMostrato.basis === 'two-cans'
+                          ? LC('TA · 2 lattine', 'TA · 2 boîtes', 'TA · 2 cans', 'TA · 2 latas', 'TA · 2 burkar')
+                          : tone.taMostrato.basis === 'solo-measured'
+                          ? `${unaLattina} ${scartoMisurato >= 0 ? '+' : '−'}${Math.abs(scartoMisurato).toFixed(2)} → 2`
+                          : `${unaLattina} − 1 ${divisione} → 2`}
+                      </span>
+                    </>
+                  );
+                })()}
                 {theta.fn.fn && (
                   <span style={{ color: 'var(--s-reserve)' }}>
                     {LC('galleggia', 'flotte', 'floating', 'flota', 'flyter')}
@@ -3998,51 +4088,22 @@ export default function Serenity() {
                 />
               </div>
             )}
-            {moduleVis.journal && (
-              // ⚠️ Segnalato ANCORA, dopo Santé (già a posto): « GIORNALE con un fondo proprio ».
-              // Non era il fondo (già `--s-zone-bg`, trasparente) — era `className="s-glass
-              // s-glass-lift"`: il `backdrop-filter` di `.s-glass` sfoca quel che sta DIETRO
-              // anche con `background` trasparente, che si legge come "una lastra a sé". Santé,
-              // qui accanto, non porta MAI questa classe — via anche qui.
-              <div style={{
-                maxHeight: '70%', display: 'flex', flexDirection: 'column',
-                background: 'var(--s-zone-bg)', border: '1px solid var(--s-zone-border)',
-                borderRadius: 18, padding: '10px 16px 14px',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexShrink: 0 }}>
-                  <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.12em',
-                                textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
-                    {t('ser_journal')}
-                  </span>
-                  <button onClick={() => setModuleVis(v => ({ ...v, journal: false }))} style={{
-                    border: 'none', background: 'none', cursor: 'pointer',
-                    color: 'var(--s-ink-faint)', fontSize: 18, lineHeight: 1, padding: 2,
-                  }}>×</button>
-                </div>
-                <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  {[...journal.logs]
-                    .filter(l => !(avvio.solo && (l.speaker === 'Aud' || l.speaker === 'PC')))
-                    .sort((a, b) => (a.time ?? 0) - (b.time ?? 0))
-                    .reverse()
-                    .map((log, i) => (
-                      <div key={i} style={{ display: 'flex', gap: 8, fontFamily: 'var(--s-mono)', fontSize: 12.5, lineHeight: 1.4 }}>
-                        <span style={{ color: 'var(--s-ink-faint)', width: 38, flexShrink: 0 }}>
-                          {(log.time || 0).toFixed(1)}s
-                        </span>
-                        <span style={{
-                          color: log.type === 'retracted' ? 'var(--s-reserve)'
-                            : log.type === 'meter' ? 'var(--s-reserve)'
-                            : log.speaker === 'SYS' ? 'var(--s-ink-faint)' : 'var(--s-ink)',
-                          fontWeight: (log.type === 'highlight' || log.type === 'success') ? 700 : 400,
-                        }}>
-                          {log.speaker && log.speaker !== 'NEEDLE' && (
-                            <b>{log.speaker === 'Aud' ? 'AUD' : log.speaker === 'PC' ? 'PC' : log.speaker}: </b>
-                          )}
-                          {log.text}
-                        </span>
-                      </div>
-                    ))}
-                </div>
+            {/* ── L'ASSESSMENT, ORA QUI — segnalato: « cambia di posizione il giornale con
+                l'assessment ». Stava sotto i bottoni dei metodi, a sinistra; il Giornale stava
+                qui, sotto Santé Système. Scambiati — stessa `ZonaAssessment`, stessi dati
+                (`assessAttivo`/`assessItems`, invariati), solo la POSIZIONE si scambia. */}
+            {aperta && moduleVis.ri && (
+              <div style={{ maxHeight: '70%', display: 'flex', pointerEvents: 'auto' }}>
+                <ZonaAssessment
+                  attivo={assessAttivo}
+                  onToggle={() => setAssessAttivo(v => !v)}
+                  items={assessItems}
+                  LC={LC}
+                  dueAghi={museOk && meterC}
+                  onIndica={segnaIndicazione}
+                  onAggiungiItem={aggiungiItemManuale}
+                  cercaLettura={cercaLetturaPerParola}
+                />
               </div>
             )}
           </div>

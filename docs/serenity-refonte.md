@@ -2846,6 +2846,62 @@ Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `
 
 ---
 
+## Quarantaseiesimo giro (24/08/2026) — "senza strumenti" non resta più bloccato, il TA a una lattina scrive lo scarto vero, Assessment si arma col ciclo, Giornale/Assessment scambiati, orologio vicino a CHIUDI, integrità biometrica nella pillola MUSE
+
+Sette segnalazioni.
+
+1. **« Quando scelgo senza strumenti e poi scelgo ad esempio cans, senza strumenti resta
+   attivato »** — bug trovato: nella pillola MUSE/METER/NESSUNO dell'intestazione, scegliere
+   MUSE o METER non spegneva mai `senzaStrumenti` — solo "NESSUNO" lo toccava (accendendolo E
+   spegnendo gli altri due). Corretto: connettere uno strumento ora esce sempre dal gruppo di
+   controllo. Verificato dal vivo: cliccato METER, il punto di "SANS INSTRUMENTS" torna
+   grigio (non più verde/attivo).
+
+2. **« Il TA 1 boîte vs 2 boîtes non è chiaro, devi scrivere la differenza che applichi con
+   una sola can »** — la didascalia diceva CHE una correzione veniva applicata ma mai QUANTO.
+   Per "solo-measured" ora scrive lo scarto vero misurato in taratura
+   (`theta.setup.offsets['solo-can']`, con segno), non solo "→ 2".
+
+3. **Assessment si accende/spegne da sé col ciclo** — segnalato: « sembra sempre attivo,
+   anche quando è chiuso... nel report abbiamo assessment lunghissimi che in realtà non lo
+   sono. DEVE ESSERE ATTIVATO al momento dell'armamento del ciclo, ed alla fine disattivato ».
+   Nuovo `useEffect` su `[mode]`: si accende quando `mode` esce da `'free'`, si spegne quando
+   ci rientra — SOLO alle transizioni, quindi l'auditor può ancora spegnerla/riaccenderla a
+   mano mentre un ciclo resta armato (segnalato insieme: « si deve poter armare l'assessment
+   quando l'auditor lo ritiene opportuno »). Verificato dal vivo: armato CONTACT →
+   ASSESSMENT si apre da sola; ANNULLA → si richiude da sola.
+
+4. **Giornale e Assessment scambiati di posizione** — il Giornale ora sotto i bottoni dei
+   metodi (a sinistra), l'Assessment sotto Santé Système (a destra) — stessa logica di
+   entrambi, invariata, solo la posizione si scambia. Verificato dal vivo.
+
+5. **L'orologio vicino a CHIUDI LA SEDUTA** — segnalato: « la scritta dell'ora e del TA è un
+   unico pavé che richiede attenzione per essere letto ». Orologio/tempo di seduta spostati
+   accanto al bottone che governa la seduta (più logico); le letture dell'ago hanno ripreso il
+   loro posto nell'angolo dell'arco.
+
+6. **« Scrivi METER TA invece di TA »** — nel ramo "solo meter, niente ago EEG" un "TA" nudo
+   non diceva di quale strumento. Ora "METER TA".
+
+7. **L'integrità biometrica, dalla percentuale misteriosa alla pillola MUSE** — segnalato:
+   « la percentuale che appare non so cosa sia... deve essere spostata sotto l'icona del MUSE
+   in alto ». `LetturaIntegrita` (un numero nudo, "82%") viveva nell'angolo dell'arco, lontano
+   da MUSE a cui appartiene. Spostata nella pillola MUSE/METER/NESSUNO, con un'etichetta
+   "INT" davanti al numero — mai più un numero senza dire cosa sia.
+
+**Non ancora fatto, per scelta esplicita**: il riposizionamento delle camere — proposto
+(riga centrata, misurata dal vivo: 27% della larghezza/65% dell'altezza dell'arco coperti) ma
+« non mi convince » — resta da ripensare con una soluzione diversa, dopo questi cambiamenti.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo estesa (profilo TEST, 1400×900) — tutti e sette i punti confermati in
+sessione, incluso il ciclo CONTACT con la nuova intestazione condivisa (giro precedente) che
+continua a funzionare invariato.
+
+`git status`: `src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
