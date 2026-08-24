@@ -2999,6 +2999,45 @@ accende e si spegne correttamente, zona assessment a 280px anche isolata.
 
 ---
 
+## Quarantanovesimo giro (24/08/2026) — il vero bug dietro « CHANGER D'auditeur / sauvegarder cette configuration ne fonctionnent pas », le camere più in alto e ridotte di un quarto
+
+**Il bug vero, riprodotto dal vivo prima di toccare una riga** — segnalato: « quando apri
+[il popover dell'assetto] ti dice CHANGER D'auditeur... e salva questa configurazione, ma
+non funziona ». Riprodotto subito: click reali sul bottone "sauvegarder cette
+configuration" (e lo stesso per "changer d'auditeur ou de préclair") non aprivano nulla —
+tre clic di fila, zero effetto visibile. `document.elementFromPoint` sul centro esatto del
+bottone dava la risposta: un `<div>` DIVERSO, quello di `<section>` (il quadrante),
+riceveva il clic al posto del bottone. Causa: `<header>` (che contiene il popover,
+`position:absolute, zIndex:40`) non aveva mai un suo `position` — un contenitore non
+posizionato non stabilisce un proprio contesto di sovrapposizione, quindi lo `zIndex:40`
+del popover veniva confrontato non contro `<section>` direttamente ma bolliva fino al primo
+antenato che un contesto ce l'ha davvero — e lì perdeva, perché `<section>` (posizionata
+per il quadrante) risultava più in alto nell'ordine di quel contesto. Aggiunto
+`position:'relative', zIndex:10` a `<header>` stesso: ora l'intero blocco (popover incluso)
+forma il proprio contesto e resta sopra `<section>` per costruzione, non per un numero più
+alto scelto a caso. Verificato dal vivo con `document.elementFromPoint` PRIMA (il div di
+`<section>` in cima) e DOPO (il bottone stesso in cima), poi con clic reali del mouse sui
+due bottoni: entrambi funzionano ora. La stessa famiglia di bug degli "angoli trasparenti"
+trovata più volte in questo file — un elemento invisibile che ruba il clic prima che arrivi
+a chi dovrebbe riceverlo, mai per il bottone in sé.
+
+**Le camere, più in alto e più piccole** — segnalato: « devono essere più in alto per
+guadagnare spazio e riduci di 1/4 ». `top:16` → `top:-8` (più vicine al bordo superiore
+della sezione, che comincia già sotto l'intestazione — nessun rischio di finire sopra i
+comandi); taglia ridotta di un quarto (× 0,75): CAM 2 340→255px, CAM 1 210→158px, stessa
+proporzione di sempre. `camStackH` (la riserva di spazio per la colonna sotto) aggiornato
+agli stessi numeri, `-8` compreso — altrimenti la colonna avrebbe riservato più spazio del
+vero, un vuoto morto sopra Santé Système/Assessment.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo estesa (profilo TEST, 1400×900, tema scuro) — i due bottoni del popover
+assetto aprono davvero il loro drawer, le camere confermate più in alto e più piccole senza
+sovrapporsi ai comandi sopra di loro.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

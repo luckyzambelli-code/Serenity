@@ -1921,10 +1921,14 @@ export default function Serenity() {
    *  una riga, stavolta centrata invece che allineata in alto — nessuno scalino). Tornata
    *  la riserva pari alla PIÙ ALTA delle due, non la somma: la riga centrata è sia la scelta
    *  più efficiente sia quella più armoniosa fra le tre provate. */
-  const cam2H = !moduleVis.cam2 ? 0 : (cam2Collassata ? 88 : 340);
-  const cam1H = !moduleVis.cam1 ? 0 : (cam1Collassata ? 88 : 210);
+  const cam2H = !moduleVis.cam2 ? 0 : (cam2Collassata ? 88 : 255);
+  const cam1H = !moduleVis.cam1 ? 0 : (cam1Collassata ? 88 : 158);
+  /* ⚠️ Segnalato ancora: « le camm più in alto per guadagnare spazio ». `top` (sotto, dove
+   *  vivono le `<CameraCerchio>`) è sceso da 16 a -8 — la riserva qui deve seguirlo, non
+   *  restare quella vecchia: altrimenti la colonna sotto (Santé/journal) o le zone
+   *  riserverebbero più spazio del vero, un vuoto morto sopra di loro. */
   const camStackH = (moduleVis.cam1 || moduleVis.cam2)
-    ? 16 + Math.max(cam2H, cam1H) + 20
+    ? -8 + Math.max(cam2H, cam1H) + 20
     : 0;
 
   return (
@@ -2429,8 +2433,25 @@ export default function Serenity() {
           superficie di tutto il resto. Una barra è già un pannello. */}
       {/* `flexWrap` — segnalato indirettamente: le pillole di vetro e i cursori scorrevoli sono
           più larghi delle parole nude di prima. Senza, su una finestra stretta gli ultimi
-          indicatori uscivano dal bordo invece di andare a capo — persi, non solo compressi. */}
-      <header style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 14, rowGap: 10 }}>
+          indicatori uscivano dal bordo invece di andare a capo — persi, non solo compressi.
+          ⚠️ BUG TROVATO — segnalato: « CHANGER D'auditeur... e salva questa configurazione, ma
+          non funziona ». Riprodotto dal vivo: i clic sul bottone "sauvegarder cette
+          configuration" (dentro il popover dell'assetto, `position:absolute, zIndex:40`,
+          figlio di QUESTO `<header>`) non arrivavano affatto al bottone —
+          `document.elementFromPoint` sul centro esatto del bottone restituiva un `<div>`
+          DIVERSO, quello di `<section>` (il quadrante), non il bottone. La causa: `<header>`
+          stesso non aveva mai un `position` — un contenitore NON posizionato non stabilisce un
+          proprio contesto di sovrapposizione, quindi lo `zIndex:40` del popover (un discendente
+          di `<header>`) veniva confrontato non contro `<section>` ma bolliva su fino al primo
+          antenato che UN contesto ce l'ha — e `<section>`, che ha `position:'relative'` (per
+          il quadrante), vinceva comunque quel confronto essendo lei stessa "posizionata" più in
+          basso nell'albero ma elevata di livello. `position:'relative', zIndex:10` qui: ora
+          `<header>` (e tutto quel che ci vive dentro, popover incluso) forma il SUO contesto e
+          resta sopra `<section>` (che non ha un suo `zIndex` esplicito) per costruzione, non
+          per un numero più alto scelto a caso. La STESSA famiglia di bug degli "angoli
+          trasparenti" trovata altrove in questo file — un elemento invisibile che ruba il clic
+          prima che arrivi a chi dovrebbe riceverlo. */}
+      <header style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 14, rowGap: 10, position: 'relative', zIndex: 10 }}>
         {/* ── MODALITÀ CICLO, LA BARRA AMMINISTRATIVA SPARISCE — v. la nota su `modalitaCiclo`.
             Logo/crediti, tema, lingua, storico, processus, l'assetto: decisi una volta, mai
             bisogno di guardarli con un ago che sta reagendo. Nulla di questo è tolto per
@@ -3489,22 +3510,21 @@ export default function Serenity() {
           solo quando `avvio.distanza` lo fornisce. La restrizione qui era un'invenzione, non
           una scelta di EQUILIBRIUM: tolta, per la stessa regola di sempre — riprodurre la
           stessa logica, non una più prudente inventata qui. */}
-      {/* ⚠️ SEGNALATO DI NUOVO: « les camm così non mi piacciono, perché si destabilizza
-          l'auditor che deve cambiare logica di sguardo. Lascia le camm al loro posto a
-          destra, semplicemente le ingrandisci ». Tolto il legame con `modalitaCiclo` (v. la
-          nota più su): un SOLO posto, sempre lo stesso — qui, nell'angolo sopra il quadrante
-          — mai più una seconda resa altrove. Taglie ingrandite (272→340 CAM 2, 170→210
-          CAM 1, stessa proporzione di sempre) rispetto a quelle di un giro fa, quando invece
-          stavano piccole (88px) qui e grandi solo altrove. */}
+      {/* ⚠️ SEGNALATO DI NUOVO: « les camm devono essere più in alto per guadagnare spazio e
+          riduci di 1/4 ». `top:16` → `top:-8`: più vicine al bordo superiore della sezione
+          (che comincia già SOTTO l'intestazione/i comandi, v. `<main>` più su — nessun
+          rischio di finire sopra di loro). Taglia ridotta di un quarto (× 0,75): 340→255 CAM 2,
+          210→158 CAM 1, stessa proporzione di sempre — insieme ai due centimetri guadagnati
+          in alto, il quadrante sotto resta libero su una fetta più larga. */}
       {aperta && (moduleVis.cam1 || moduleVis.cam2) && (
         <div style={{
-          position: 'absolute', top: 16, right: 32, zIndex: 5,
+          position: 'absolute', top: -8, right: 32, zIndex: 5,
           display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16,
           pointerEvents: 'none',
         }}>
           {moduleVis.cam2 && (
             <CameraCerchio
-              dimensione={340}
+              dimensione={255}
               dimensioneCollassata={88}
               titolo={t('cam2') as string}
               externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
@@ -3518,7 +3538,7 @@ export default function Serenity() {
           )}
           {moduleVis.cam1 && (
             <CameraCerchio
-              dimensione={210}
+              dimensione={158}
               dimensioneCollassata={88}
               titolo={t('cam1') as string}
               offlineLabel={t('camera_offline') as string}
