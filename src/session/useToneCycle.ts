@@ -180,20 +180,50 @@ export function useToneCycle(d: ToneCycleDeps) {
    *
    * ⚠️ Il margine si toglie OVUNQUE il tono venga da una misura, non solo dopo la
    * localizzazione: vale da quando la misura esiste, non da quando comincia il ciclo.
+   *
+   * ── PRIORITÀ DELLE FONTI, IL MUSE PRIMA DEL METER — segnalato: « vorrei che la misura sia
+   * quella del MUSE se c'è il MUSE, altrimenti quella del Meter, e se non ci sono entrambi,
+   * dichiarata ». Il MUSE non ha una scala assoluta propria — `d.qL` è un quoziente di carica
+   * 0..1, non tarato su −40…+40 come il TA lo è via `taClear`/`TA_MAX` — quindi può dire SOLO
+   * quanto ci si è mossi da un punto noto, mai un numero assoluto suo: la LOCALIZZAZIONE (sopra,
+   * `localizzaTone`) resta per forza dal Meter se c'è, dichiarata se non c'è, MAI dal solo MUSE
+   * — nessuna riga qui sotto la tocca. Da quel punto in poi, se il MUSE è connesso, guida lui il
+   * MOVIMENTO: la STESSA `toneFromDelta` di sempre (era già scritta per « qualunque sorgente »,
+   * v. la sua nota in `toneScale.ts` — non una formula nuova, solo promossa da "secondo
+   * sguardo" a cursore primario). Il margine delle lattine resta specifico del Theta-Meter: non
+   * si applica quando è il MUSE a guidare.
    */
-  const toneOra = toneAtStart === null
-    ? (toneHasMeter && toneMeasured !== null ? withMargin(toneMeasured, margineTono) : toneAssessed)
-    : toneTaAtStartRef.current !== null && taCorretto !== null
-      ? withMargin(
-          // L'escursione è quella della SCALA DEL TONO — dal TA di clear al fondo scala —,
-          // non l'intero range dello strumento: è lei a valere 80 divisioni.
-          toneFromDelta(toneAtStart, toneTaAtStartRef.current, taCorretto, TA_MAX - taClear),
-          margineTono)
-      : withMargin(toneAtStart, margineTono);
-  /** Il secondo sguardo: la stessa scala, letta sulla carica EEG. `null` senza MUSE. */
-  const toneOraEeg = toneAtStart !== null && toneQAtStartRef.current !== null
+  const toneOraMuse = toneAtStart !== null && toneQAtStartRef.current !== null
     ? toneFromDelta(toneAtStart, toneQAtStartRef.current, d.qL, 1)
     : null;
+  const toneOra = d.hasMuse && toneOraMuse !== null
+    ? toneOraMuse
+    : toneAtStart === null
+      ? (toneHasMeter && toneMeasured !== null ? withMargin(toneMeasured, margineTono) : toneAssessed)
+      : toneTaAtStartRef.current !== null && taCorretto !== null
+        ? withMargin(
+            // L'escursione è quella della SCALA DEL TONO — dal TA di clear al fondo scala —,
+            // non l'intero range dello strumento: è lei a valere 80 divisioni.
+            toneFromDelta(toneAtStart, toneTaAtStartRef.current, taCorretto, TA_MAX - taClear),
+            margineTono)
+        : withMargin(toneAtStart, margineTono);
+  /** Il secondo sguardo per la colonna (`ToneColumn`'s `toneEeg`) — quando il MUSE È già il
+   *  cursore primario (sopra) è la STESSA lettura: la colonna mostra il trattino "EEG" solo se
+   *  diverge di oltre 3 unità dal cursore, quindi coincidendo semplicemente non compare più,
+   *  senza bisogno di spegnerlo qui a mano. `null` senza MUSE, come sempre. */
+  const toneOraEeg = toneOraMuse;
+  /**
+   * ── È UNA MISURA VERA, DA QUALUNQUE STRUMENTO — `toneHasMeter` (sopra) resta
+   * DELIBERATAMENTE specifico del Theta-Meter (lo usano la localizzazione, il margine, il
+   * pulsante "localizza col meter": tutti gesti che restano suoi, MAI del MUSE). Ma
+   * `ToneDial`/`ToneColumn` (dove `toneOra` finisce a schermo) usavano PROPRIO `toneHasMeter`
+   * per decidere se disegnare un numero — un `hasMeter` rimasto `false` con solo il MUSE
+   * connesso avrebbe lasciato il quadrante VUOTO anche col cursore ora guidato per davvero dal
+   * MUSE (verificato leggendo `ToneDial.tsx`: `{hasMeter && (...)}` non disegna NULLA se falso).
+   * Un flag a sé, "è misurato da uno strumento qualunque" — i chiamanti del render passano
+   * QUESTO a `hasMeter`, non più `toneHasMeter` direttamente.
+   */
+  const toneMisurato = toneHasMeter || toneOraMuse !== null;
 
   /**
    * I TESTIMONI — non si mostrano più, ma si registrano.
@@ -206,7 +236,11 @@ export function useToneCycle(d: ToneCycleDeps) {
   useEffect(() => {
     if (tonePhase !== 'raise') return;
     const nuovi: ToneWitness[] = [];
-    if (toneHasMeter && toneOra !== null && reachedTop(toneOra)) nuovi.push('top');
+    // ⚠️ Non più `toneHasMeter` da solo: col MUSE che ora può guidare `toneOra` anche senza
+    // Meter (v. la nota sulla priorità, sopra), il traguardo strumentale "top" deve accendersi
+    // anche allora — altrimenti un tono che raggiunge +40 letto dal MUSE non lascerebbe MAI
+    // questo testimone, anche se una misura vera lo ha visto arrivarci.
+    if ((toneHasMeter || toneOraMuse !== null) && toneOra !== null && reachedTop(toneOra)) nuovi.push('top');
     if (d.fnNow) nuovi.push('fn');
     if (d.hasMuse && d.asIsSignature) nuovi.push('signature');
     if (!nuovi.length) return;
@@ -214,7 +248,7 @@ export function useToneCycle(d: ToneCycleDeps) {
       const add = nuovi.filter(w => !p.includes(w));
       return add.length ? [...p, ...add] : p;
     });
-  }, [tonePhase, toneHasMeter, toneOra, d.fnNow, d.asIsSignature, d.hasMuse]);
+  }, [tonePhase, toneHasMeter, toneOra, toneOraMuse, d.fnNow, d.asIsSignature, d.hasMuse]);
 
   // ── I CICLI TONE SI REGISTRANO ─────────────────────────────────────────────────────────
   // Si tiene il tono di PARTENZA misurato (`located`, null senza meter), QUANTE VOLTE si è dato
@@ -317,7 +351,7 @@ export function useToneCycle(d: ToneCycleDeps) {
     toneAnchor, toneFired,
     // misure derivate
     taMostrato, taCorretto, taClear,
-    toneMeasured, toneHasMeter, margineTono, toneOra, toneOraEeg,
+    toneMeasured, toneHasMeter, toneMisurato, margineTono, toneOra, toneOraEeg,
     // gesti
     localizzaTone, chiudiTone, resetTone,
     // registrazione e voce

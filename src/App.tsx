@@ -3176,7 +3176,7 @@ export default function App() {
     toneAtStart, toneAssessed, setToneAssessed,
     toneRipetizioni, setToneRipetizioni,
     taMostrato,
-    toneMeasured, toneHasMeter, margineTono, toneOra, toneOraEeg,
+    toneMeasured, toneHasMeter, toneMisurato, margineTono, toneOra, toneOraEeg,
     localizzaTone, chiudiTone, resetTone,
     toneCyclesRef, toneAwaitItemRef, toneLogCursorRef,
   } = tone;
@@ -6393,7 +6393,12 @@ export default function App() {
                   toneEeg={toneOraEeg}
                   // Le divisioni tolte dal margine: si scrivono, se no è una correzione muta.
                   margin={margineTono}
-                  hasMeter={toneHasMeter}
+                  // ⚠️ `toneMisurato`, non `toneHasMeter` — la stessa priorità « MUSE se c'è,
+                  // altrimenti Meter, altrimenti dichiarato » (v. `useToneCycle.ts`) ora può
+                  // guidare `toneOra` anche senza Theta-Meter: `toneHasMeter` da solo
+                  // lascerebbe il disegno vuoto in quel caso (`ToneDial`/`ToneColumn` non
+                  // disegnano nulla se `hasMeter` è falso).
+                  hasMeter={toneMisurato}
                   // I nomi dei livelli si traducono come tutto il resto: il preclear legge la
                   // sua posizione sulla scala, e in una lingua che non parla non serve.
                   lang={lang}
@@ -6409,7 +6414,8 @@ export default function App() {
             {!senzaMisura && (
             <div className="absolute inset-0 z-40 pointer-events-none">
               {viewMode === 'tone' ? (
-                <ToneDial tone={toneOra ?? 0} hasMeter={toneHasMeter} approx
+                // ⚠️ `toneMisurato`, non `toneHasMeter` — v. la nota sopra su `ToneColumn`.
+                <ToneDial tone={toneOra ?? 0} hasMeter={toneMisurato} approx
                   located={toneAtStart}
                   phase={tonePhase} toneAtStart={toneAtStart}
                   isLightTheme={isLightTheme} />

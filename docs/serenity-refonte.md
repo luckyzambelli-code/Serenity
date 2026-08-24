@@ -3147,6 +3147,69 @@ per capire dove va lo stream, non modificato — la logica dello stream resta su
 
 ---
 
+## Cinquantaduesimo giro (24/08/2026) — il MUSE prima del Meter nel calcolo del tono, MOTORE CONDIVISO con EQUILIBRIUM
+
+**Segnalato, poi discusso al dettaglio prima di toccare nulla**: « vorrei che la misura sia
+quella del MUSE se c'è il MUSE, altrimenti quella del Meter, e se non ci sono entrambi,
+dichiarata ». Tocca `useToneCycle.ts`/`toneScale.ts` — il MOTORE, condiviso paro paro con
+`App.tsx` (EQUILIBRIUM): confermato esplicitamente che la modifica vale per ENTRAMBE le app,
+non solo per SERENITY.
+
+**Il limite tecnico, capito PRIMA di scrivere la formula**: il MUSE non ha una scala assoluta
+propria — `d.qL` è un quoziente di carica EEG (0..1), non tarato su −40…+40 come il TA lo è
+via `taClear`/`TA_MAX`. Può dire SOLO quanto ci si è mossi da un punto noto, mai un numero
+assoluto suo. La LOCALIZZAZIONE (`localizzaTone`, l'ancoraggio iniziale «sei a −12 adesso»)
+resta quindi per forza dal Meter se c'è, dichiarata se non c'è — MAI dal solo MUSE, nessuna
+combinazione lo permette. Questo non è un'invenzione di questo giro: è la stessa filosofia
+già scritta nel motore (« Ron: the relationship between the Tone Scale and ohms is an
+arbitrary one… what is important is TONE »), verificata leggendo `localizzaTone` prima di
+proporre qualunque formula.
+
+**La formula**: `toneOraMuse` (nuovo) applica la STESSA `toneFromDelta` di sempre — già
+scritta nel motore per « qualunque sorgente », non una formula inventata qui — alla carica
+EEG invece che al TA. `toneOra` la usa come PRIMARIA quando il MUSE è connesso e c'è un
+riferimento valido (`d.hasMuse && toneOraMuse !== null`); altrimenti ricade sulla logica di
+sempre (Meter, poi dichiarato). Il margine delle lattine (specifico del Theta-Meter) non si
+applica quando è il MUSE a guidare. Il "secondo sguardo" della colonna (`toneOraEeg`, il
+trattino tratteggiato "EEG") ora COINCIDE con `toneOraMuse`: quando il MUSE è già il cursore
+primario il trattino semplicemente non compare più (la colonna lo disegna solo se diverge di
+oltre 3 unità dal cursore) — nessuna riga in più serviva a spegnerlo.
+
+**Due effetti collaterali trovati leggendo il codice, corretti nello stesso giro**:
+1. Il testimone strumentale "top" (`toneFired`, per il rapporto) si accendeva solo con
+   `toneHasMeter` — un tono che raggiunge +40 guidato dal MUSE senza Meter non l'avrebbe MAI
+   acceso, anche se una misura vera lo vedeva arrivarci. Esteso a `toneHasMeter ||
+   toneOraMuse !== null`.
+2. **Il bug più serio, trovato leggendo `ToneDial.tsx` prima di fidarmi**: `ToneDial`/
+   `ToneColumn` non disegnano NULLA (`{hasMeter && (...)}`, un cancello vero, non solo la
+   formattazione) se `hasMeter` è falso — e ricevevano `toneHasMeter`, specifico del
+   Theta-Meter. Con la nuova priorità, un ciclo guidato dal SOLO MUSE avrebbe lasciato il
+   quadrante COMPLETAMENTE VUOTO nonostante `toneOra` avesse ora un valore vero. Aggiunto un
+   flag a sé, `toneMisurato` (`toneHasMeter || toneOraMuse !== null`) — `toneHasMeter` resta
+   INTATTO ovunque serva restare specifico del Meter (localizzazione, margine, il bottone
+   "localizza col meter", tutti in App.tsx E Serenity.tsx, non toccati): `toneMisurato` è
+   passato SOLO ai quattro punti di disegno (`hasMeter` prop di `ToneDial`/`ToneColumn`, due
+   in ciascuna app).
+
+**Deliberatamente NON toccato**: il campo `source` del rapporto (`ToneCycleRecord`,
+`'meter'|'meter+eeg'|'assessed'`) — descrive da dove viene il tono di PARTENZA (la
+localizzazione), che questa modifica non cambia affatto (resta sempre Meter-o-dichiarato).
+Toccarlo per riflettere "chi guida il movimento" sarebbe stata un'estensione non chiesta.
+
+**⚠️ Limite di verifica, dichiarato apertamente**: questo ambiente di test non ha un MUSE né
+un Theta-Meter fisici collegabili — non è stato possibile verificare dal vivo il percorso
+CON strumenti veri. Verificato invece: `tsc --noEmit` pulito, `npm run lint` 316 warning
+(nessuno nuovo), `vitest run` 639/639 (le funzioni pure `toneFromDelta`/`toneFromTa`,
+riusate senza modifiche, restano provate da sole in `toneScale.test.ts`); dal vivo il
+percorso SENZA strumenti (TONE armato, "Mort du corps" dichiarato) — nessuna regressione.
+**Il percorso con MUSE e/o Meter veri va provato con l'hardware reale prima di fidarsene in
+seduta**, sia in SERENITY sia in EQUILIBRIUM.
+
+`git status`: `docs/serenity-refonte.md`, `src/App.tsx`, `src/serenity/Serenity.tsx`,
+`src/session/useToneCycle.ts`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

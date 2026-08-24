@@ -4007,9 +4007,14 @@ export default function Serenity() {
               />
             ) : toneAttivo ? (
               <>
+                {/* ⚠️ `hasMeter={tone.toneMisurato}`, non `tone.toneHasMeter` — v. la nota in
+                    `useToneCycle.ts`. Con la priorità « MUSE se c'è, altrimenti Meter,
+                    altrimenti dichiarato », `toneHasMeter` resta vero solo col Theta-Meter: un
+                    ciclo guidato dal solo MUSE avrebbe lasciato il quadrante VUOTO
+                    (`ToneDial`/`ToneColumn` non disegnano nulla se `hasMeter` è falso). */}
                 <ToneDial
                   tone={tone.toneOra ?? 0}
-                  hasMeter={tone.toneHasMeter}
+                  hasMeter={tone.toneMisurato}
                   approx
                   located={tone.toneAtStart}
                   phase={tone.tonePhase}
@@ -4048,7 +4053,7 @@ export default function Serenity() {
                     tone={tone.toneOra ?? 0}
                     toneEeg={tone.toneOraEeg}
                     margin={tone.margineTono}
-                    hasMeter={tone.toneHasMeter}
+                    hasMeter={tone.toneMisurato}
                     lang={lang}
                     charge={museOk ? Math.max(0, Math.min(1, qLnow)) : null}
                     chargeFrom={tone.toneAtStart}
