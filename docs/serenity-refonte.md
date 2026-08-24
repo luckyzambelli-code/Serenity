@@ -2902,6 +2902,49 @@ continua a funzionare invariato.
 
 ---
 
+## Quarantasettesimo giro (24/08/2026) — le camere piccole fuori ciclo, grandi nella striscia liberata durante un ciclo; orologio e "in pausa" a fianco dei loro bottoni; Total TA scritto per intero; l'indicazione "galleggia" tolta; il TA a una lattina in una frase vera
+
+**Le camere, una soluzione diversa invece di un'altra variante** — le ultime tre disposizioni
+(riga, colonna con scalino, riga centrata) erano tutte lo stesso problema riproposto: due
+cerchi che galleggiano nell'angolo, ridisposti in modi diversi, misurati a coprire fino al
+27% della larghezza e il 65% dell'altezza dell'arco qualunque fosse la disposizione. Idea
+diversa, confermata: la TAGLIA non è più sempre la stessa. Nuovo `useEffect` su
+`[modalitaCiclo]` porta `cam1Collassata`/`cam2Collassata` a `true` (piccole, 88px, nell'angolo)
+quando NESSUN ciclo è armato, a `false` (grandi, 272/170px) quando un ciclo lo è — e in quel
+momento le stesse `<CameraCerchio>` non restano nell'angolo: si spostano dentro
+`<header>`, nello spazio che la modalità ciclo (giro precedente) libera togliendo i controlli
+amministrativi. Stesso stato, stessi componenti, solo DOVE renderizzano cambia secondo
+`modalitaCiclo` — mai una seconda coppia di camere. Verificato dal vivo: fuori ciclo, cerchi
+piccoli nell'angolo dell'arco; armato CONTACT, le stesse due camere ricompaiono grandi in
+alto, l'arco mai coperto.
+
+**Cinque rifiniture, segnalate insieme**:
+1. **Orologio a sinistra del bottone CHIUDI** (non più sopra, giro precedente) — riga vera,
+   `alignItems:'center'`, orologio compatto a sinistra, bottone a destra.
+2. **Il badge "in pausa"/"strumento perso" accanto al bottone Pausa/Riprendi** — stava
+   nell'angolo dell'arco, lontano dal bottone che lo governa; ora sulla stessa riga, a
+   sinistra del bottone, come l'orologio sopra è a sinistra di Chiudi.
+3. **L'indicazione "galleggia" tolta** — segnalato: « c'est quoi? ». Verificato App.tsx:
+   `theta.fn.fn` alimenta SOLO la logica interna del ciclo TONE, mai renderizzato a schermo —
+   un'invenzione SERENITY, un'etichetta isolata senza contesto. Tolta, stessa regola di
+   sempre: riprodurre EQUILIBRIUM, non inventare una lettura che lui non mostra mai.
+4. **Il simbolo "Σ" diventa "Total TA"** — verificato `TotalTaReadout` (App.tsx, condiviso):
+   scrive la PAROLA vera (`label`, la stringa `total_ta` tradotta), mai un simbolo
+   matematico. "Σ" era un'altra invenzione SERENITY.
+5. **La didascalia del TA a una lattina, riscritta come una frase** — segnalato ancora: « rends
+   plus clair ». "TA · 1 lattina −0.34 → 2" (giro scorso) restava un telegramma. Ora: "1
+   lattina, corretta di −0.34 ≈ equivalente a 2 lattine" — "≈ equivalente a" al posto della
+   freccia (una freccia si legge come "sta per diventare", non "vale come se fosse").
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo estesa (profilo TEST, 1400×900, tema scuro) — camere piccole/grandi
+confermate nei due stati, orologio e badge pausa nella nuova posizione, ciclo CONTACT e
+Assessment auto-armata (giro precedente) ancora funzionanti insieme alle camere spostate.
+
+`git status`: `src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

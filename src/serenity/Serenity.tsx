@@ -155,9 +155,14 @@ const LetturaTotalTa = React.memo(function LetturaTotalTa({ override, bodyMotion
 }) {
   const eeg = useMetric(m => m.totalTa);
   const totalTa = override ?? eeg;
+  /* ⚠️ Segnalato: « le symbole SOMME change-le en Total TA » — verificato `TotalTaReadout`
+     (App.tsx, condiviso, `components/SessionReadouts.tsx`): scrive la PAROLA vera
+     (`label`, la stringa `total_ta` tradotta), mai un simbolo matematico. "Σ" era
+     un'invenzione SERENITY — tolto, la stessa etichetta di App.tsx al suo posto. */
+  const { t } = useI18n();
   return (
     <span style={{ fontFamily: 'var(--s-mono)', fontVariantNumeric: 'tabular-nums' }}>
-      Σ {totalTa.toFixed(2)}
+      {t('total_ta') as string} {totalTa.toFixed(2)}
       {/* ⚠️ Segnalato: « je veux que les indications du TA, motion, etc correspondent
           exactement à celle de EQUILIBRIUM » — `TotalTaReadout` (App.tsx, condiviso) scrive
           "— motion" (trattino lungo), non "· motion": stessa parola, stesso segno. */}
@@ -1318,6 +1323,22 @@ export default function Serenity() {
     setAssessAttivo(mode !== 'free');
   }, [mode]);
 
+  /** ── LE CAMERE, PICCOLE FUORI CICLO E GRANDI DENTRO — segnalato: « rifletti a una soluzione
+   *  elegante » per la disposizione delle camere, che occupavano fino al 27% della larghezza
+   *  e al 65% dell'altezza dell'arco (misurato dal vivo), qualunque disposizione si provasse.
+   *  Idea confermata: la taglia non è più sempre la stessa — piccole (`collassata`, 88px)
+   *  finché nessun ciclo è armato, GRANDI e spostate nella striscia dell'intestazione (v. più
+   *  giù) proprio quando la modalità ciclo la libera dai controlli amministrativi — lo stesso
+   *  momento in cui l'auditor guarda davvero il volto del preclear. Stessa transizione SOLO
+   *  di `assessAttivo` sopra: cambia alle transizioni di `modalitaCiclo`, l'auditor può
+   *  comunque comprimerle/espanderle a mano nel frattempo (il bottone esiste già su ogni
+   *  cerchio) senza che questo effetto la corregga sotto di lui finché `modalitaCiclo` non
+   *  cambia di nuovo. */
+  useEffect(() => {
+    setCam1Collassata(!modalitaCiclo);
+    setCam2Collassata(!modalitaCiclo);
+  }, [modalitaCiclo]);
+
   /**
    * ── LA FASE DEL CICLO, LA STESSA SCALA DI App.tsx ────────────────────────────────────────
    * `engine/sessionPhase.ts` (`deriveCyclePhase`) — puro TS, già condiviso, mai importato qui
@@ -2182,69 +2203,83 @@ export default function Serenity() {
             sempre, non allargarsi con lui: un involucro suo, 148px, `align-items` di default
             (`stretch`) dentro QUESTO, non nel contenitore largo. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 148, flexShrink: 0 }}>
-        {/* ── L'OROLOGIO, ORA QUI — segnalato: « la scritta dell'ora e del TA è un unico pavé
-            che richiede attenzione per essere letto. Metti l'ora ed il tempo di session vicino
-            al bottone FERMER LA SÉANCE (più logico) ». Stava nell'angolo dell'arco, impilato
-            insieme alle letture dell'ago — due famiglie diverse (« che ore sono » contro « che
-            cosa legge l'ago ») lette come fossero la stessa. Qui accanto al bottone che governa
-            la seduta è dove l'orario/il tempo trascorso hanno davvero senso — l'ago ha ripreso
-            da solo lo spazio lasciato libero (v. l'angolo dell'arco, più giù). */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, pointerEvents: 'none' }}>
-          <span style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.04em',
-            color: 'var(--s-ink-faint)',
-          }}>
-            <Clock size={12} strokeWidth={1.8} aria-hidden="true" />
-            <OraReale />
-          </span>
-          <span style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            fontFamily: 'var(--s-mono)', fontSize: 16, letterSpacing: '0.06em',
-            color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
-            transition: 'color var(--s-slow) var(--s-ease)',
-            fontVariantNumeric: 'tabular-nums',
-          }}>
-            <Timer size={14} strokeWidth={1.8} aria-hidden="true" />
-            {orologio(tempo)}
-          </span>
-        </div>
-        <button className="s-glass s-glass-btn" onClick={aperta ? chiudi : apri} style={{
-          cursor: 'pointer', pointerEvents: 'auto',
-          background: 'var(--s-disc)', color: 'var(--s-ink)',
-          borderRadius: 16, padding: '12px 10px',
-          fontSize: 14, letterSpacing: '0.08em', textTransform: 'uppercase',
-          fontFamily: 'var(--s-sans)', lineHeight: 1.3, textAlign: 'center',
-        }}>
-          {/* ── SEGNALATO: « le bouton FERMER — on ne sait pas s'il correspond à la séance ou
-              au cycle ». App.tsx distingue ESPLICITAMENTE i due gesti nel testo (« ferma la
-              seduta » contro « chiudi/annulla il ciclo »): qui la parola sola "CHIUDI" non lo
-              diceva, e un ANNULLA di ciclo poteva sembrare lo stesso gesto. Ora dice sempre
-              "LA SEDUTA" per esteso — l'unico bottone che la governa. */}
-          {aperta
-            ? LC('chiudi la seduta', 'fermer la séance', 'close the session', 'cerrar la sesión', 'stäng sessionen')
-            : LC('apri una seduta', 'ouvrir une séance', 'open a session', 'abrir una sesión', 'öppna en session')}
-        </button>
-        {/* ── PAUSA/RIPRENDI, ORA VICINO A "FERMER LA SÉANCE" — segnalato: « il bottone di
-            pausa deve essere vicino al bottone Fermer la séance ». Stessa scelta dell'auditor
-            di sempre (`pausaManuale`), stesso stato (`pausata`) — solo spostata qui, subito
-            sotto il bottone che governa la seduta intera, di cui la pausa è la scelta
-            "minore". Icona sola: lo stato lo dice già il badge "in pausa" dentro il
-            quadrante, accanto all'orologio. */}
-        {aperta && (
-          <button
-            className="s-glass s-glass-btn"
-            onClick={pausaManuale}
-            title={(pausata
-              ? LC('riprendi la seduta', 'reprendre la séance', 'resume the session', 'reanudar la sesión', 'återuppta sessionen')
-              : LC('metti in pausa', 'mettre en pause', 'pause', 'pausar', 'pausa')) as string}
-            style={{
-              cursor: 'pointer', pointerEvents: 'auto', padding: '10px 10px', borderRadius: 16,
-              background: 'var(--s-disc)', display: 'flex', justifyContent: 'center',
-              color: pausata ? 'var(--s-alive)' : 'var(--s-ink-soft)',
+        {/* ── L'OROLOGIO, A SINISTRA DEL BOTTONE — segnalato di nuovo: « l'heure et le temps
+            de session à gauche du bouton fermer la séance ». Non più impilato SOPRA (giro
+            scorso) — una riga vera, l'orologio/tempo compatti a sinistra, il bottone a
+            destra: `alignItems:'center'` così i due si allineano sulla stessa linea invece
+            che l'uno sopra l'altro. */}
+        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, pointerEvents: 'none', flexShrink: 0 }}>
+            <span style={{
+              display: 'flex', alignItems: 'center', gap: 3,
+              fontFamily: 'var(--s-mono)', fontSize: 11, letterSpacing: '0.02em',
+              color: 'var(--s-ink-faint)',
             }}>
-            {pausata ? <Play size={20} strokeWidth={1.8} fill="currentColor" /> : <Pause size={20} strokeWidth={1.8} />}
+              <Clock size={10} strokeWidth={1.8} aria-hidden="true" />
+              <OraReale />
+            </span>
+            <span style={{
+              display: 'flex', alignItems: 'center', gap: 3,
+              fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
+              color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
+              transition: 'color var(--s-slow) var(--s-ease)',
+              fontVariantNumeric: 'tabular-nums',
+            }}>
+              <Timer size={11} strokeWidth={1.8} aria-hidden="true" />
+              {orologio(tempo)}
+            </span>
+          </div>
+          <button className="s-glass s-glass-btn" onClick={aperta ? chiudi : apri} style={{
+            flex: 1, minWidth: 0, cursor: 'pointer', pointerEvents: 'auto',
+            background: 'var(--s-disc)', color: 'var(--s-ink)',
+            borderRadius: 16, padding: '12px 8px',
+            fontSize: 12.5, letterSpacing: '0.06em', textTransform: 'uppercase',
+            fontFamily: 'var(--s-sans)', lineHeight: 1.25, textAlign: 'center',
+          }}>
+            {/* ── SEGNALATO: « le bouton FERMER — on ne sait pas s'il correspond à la séance ou
+                au cycle ». App.tsx distingue ESPLICITAMENTE i due gesti nel testo (« ferma la
+                seduta » contro « chiudi/annulla il ciclo »): qui la parola sola "CHIUDI" non lo
+                diceva, e un ANNULLA di ciclo poteva sembrare lo stesso gesto. Ora dice sempre
+                "LA SEDUTA" per esteso — l'unico bottone che la governa. */}
+            {aperta
+              ? LC('chiudi la seduta', 'fermer la séance', 'close the session', 'cerrar la sesión', 'stäng sessionen')
+              : LC('apri una seduta', 'ouvrir une séance', 'open a session', 'abrir una sesión', 'öppna en session')}
           </button>
+        </div>
+        {/* ── PAUSA/RIPRENDI, CON IL SUO STATO ACCANTO — segnalato: « il bottone di pausa
+            deve essere vicino al bottone Fermer la séance » (giro scorso), poi: « le pavé en
+            pause fais le apparaître à côté du bouton REPRISE ». Il badge "in pausa"/
+            "strumento perso" stava nell'angolo dell'arco, lontano dal bottone che la governa
+            — ora sulla STESSA riga, a sinistra del bottone Pausa/Riprendi, come l'orologio
+            sopra è a sinistra di Chiudi. */}
+        {aperta && (
+          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {pausata && (
+              <span className="ser-pulse" style={{
+                fontFamily: 'var(--s-sans)', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+                padding: '3px 8px', borderRadius: 999, textAlign: 'center', flexShrink: 0,
+                background: 'var(--s-reserve)', color: 'var(--s-ground)',
+              }}>
+                {pausaMotivoRef.current === 'manuale'
+                  ? LC('in pausa', 'en pause', 'paused', 'en pausa', 'pausad')
+                  : LC('strumento perso', 'instrument perdu', 'instrument lost',
+                      'instrumento perdido', 'instrument förlorat')}
+              </span>
+            )}
+            <button
+              className="s-glass s-glass-btn"
+              onClick={pausaManuale}
+              title={(pausata
+                ? LC('riprendi la seduta', 'reprendre la séance', 'resume the session', 'reanudar la sesión', 'återuppta sessionen')
+                : LC('metti in pausa', 'mettre en pause', 'pause', 'pausar', 'pausa')) as string}
+              style={{
+                cursor: 'pointer', pointerEvents: 'auto', padding: '10px 10px', borderRadius: 16,
+                background: 'var(--s-disc)', display: 'flex', justifyContent: 'center', flexShrink: 0,
+                color: pausata ? 'var(--s-alive)' : 'var(--s-ink-soft)',
+              }}>
+              {pausata ? <Play size={20} strokeWidth={1.8} fill="currentColor" /> : <Pause size={20} strokeWidth={1.8} />}
+            </button>
+          </div>
         )}
         </div>
         {/* ── I CINQUE CERCHI, ORA IN RIGA — segnalato: « i bottoni dei cicli spostali a
@@ -2876,11 +2911,52 @@ export default function Serenity() {
             }}
           />
         )}
+        {/* ── LE CAMERE, GRANDI QUI DURANTE UN CICLO — v. la nota sulla resa piccola (più giù,
+            sopra il quadrante) per il perché del cambio. La `<header>` perde qui i suoi
+            controlli amministrativi (tema/lingua/storico/assetto/CONFIG/guida/assistente IA,
+            tutti `!modalitaCiclo` come questo blocco è `modalitaCiclo`) — lo spazio che
+            lasciano libero è esattamente dove le camere, ora grandi, trovano posto: in FLUSSO
+            dentro l'intestazione, mai sopra l'arco. Stessi componenti/stesso stato
+            (`cam1Collassata`/`cam2Collassata`, portati a `false` dall'effetto sopra appena
+            `modalitaCiclo` diventa vero) della resa piccola — non una seconda coppia di
+            camere, la STESSA, mostrata qui invece che là. */}
+        {modalitaCiclo && aperta && (moduleVis.cam1 || moduleVis.cam2) && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 16, marginLeft: 'auto' }}>
+            {moduleVis.cam2 && (
+              <CameraCerchio
+                dimensione={272}
+                dimensioneCollassata={88}
+                titolo={t('cam2') as string}
+                externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
+                offlineLabel={t('camera_offline') as string}
+                opacita={uiAlpha}
+                collassata={cam2Collassata}
+                onToggleCollasso={() => setCam2Collassata(v => !v)}
+                statoTesto={statoCamPc}
+                inDiretta={!!avvio.distanza}
+              />
+            )}
+            {moduleVis.cam1 && (
+              <CameraCerchio
+                dimensione={170}
+                dimensioneCollassata={88}
+                titolo={t('cam1') as string}
+                offlineLabel={t('camera_offline') as string}
+                opacita={uiAlpha}
+                collassata={cam1Collassata}
+                onToggleCollasso={() => setCam1Collassata(v => !v)}
+              />
+            )}
+          </span>
+        )}
         {/* ── LO SPAZIO VUOTO, ORA IN FONDO — segnalato: « les boutons de haut doivent être
             justifiés à gauche à côté du numéro de build ». Lo spazio elastico (`flex:1`) stava
             subito dopo Historique/Processus, spingendo tema/lingua/pillola/connessioni/CONFIG a
             distribuirsi verso destra invece di restare compatti accanto al nome. Spostato qui,
-            ultimo elemento: tutto il resto si accoda a sinistra, il vuoto va tutto a destra. */}
+            ultimo elemento: tutto il resto si accoda a sinistra, il vuoto va tutto a destra.
+            ⚠️ Con le camere (sopra) già `marginLeft:'auto'` in modalità ciclo, questo spazio
+            resta utile solo fuori dal ciclo — innocuo lasciarlo sempre, un `flex:1` su uno
+            `<span>` vuoto non sposta nulla quando non c'è nulla dopo di lui da spingere. */}
         <span style={{ flex: 1 }} />
       </header>
       {guidaAperta && <GuideModal lang={lang} onClose={() => setGuidaAperta(false)} />}
@@ -3456,21 +3532,17 @@ export default function Serenity() {
           solo quando `avvio.distanza` lo fornisce. La restrizione qui era un'invenzione, non
           una scelta di EQUILIBRIUM: tolta, per la stessa regola di sempre — riprodurre la
           stessa logica, non una più prudente inventata qui. */}
-      {aperta && (moduleVis.cam1 || moduleVis.cam2) && (
+      {/* ⚠️ SEGNALATO DI NUOVO: « rifletti a una soluzione elegante » — misurato dal vivo,
+          qualunque disposizione fissa provata copriva fino al 27% della larghezza e il 65%
+          dell'altezza dell'arco. L'idea confermata: la taglia (e il POSTO) non sono più
+          sempre gli stessi — piccole e qui, nell'angolo, finché nessun ciclo è armato
+          (`!modalitaCiclo`, v. `cam1Collassata`/`cam2Collassata` sopra); grandi e spostate
+          nella striscia dell'intestazione durante un ciclo (v. `<header>`, più su — la
+          modalità ciclo libera esattamente quello spazio togliendo i controlli
+          amministrativi). Qui SOLO la resa piccola, mai sopra il quadrante. */}
+      {!modalitaCiclo && aperta && (moduleVis.cam1 || moduleVis.cam2) && (
         <div style={{
           position: 'absolute', top: 16, right: 32, zIndex: 5,
-          /* ⚠️ SEGNALATO DI NUOVO: « guarda anche la disposizione delle camm, poiché non è
-             efficiente e non è armoniosa ». Lo scalino col margine negativo (giro precedente —
-             CAM 1 sopra, CAM 2 spostata di `marginRight:-24`) tornava a sommare le due altezze
-             (meno efficiente: il risparmio che la riga aveva liberato per Santé/Journal era di
-             nuovo perso) E affiancava due cerchi di taglia diversa allineati al bordo
-             superiore, con un bordo che si infilava sotto l'altro (poco armonioso). Riga di
-             nuovo (efficiente: la riserva torna al massimo delle due, non la somma — v.
-             `camStackH`), ma stavolta allineata al CENTRO (`alignItems:'center'`, non più
-             `'flex-start'`): due cerchi di taglia diversa allineati sullo stesso bordo restano
-             sbilanciati (uno "fluttua" più in alto dell'altro); allineati sul centro invece si
-             leggono come un gruppo solo, il peso visivo bilanciato — nessun margine negativo,
-             nessuno scalino, solo lo spazio vero fra loro (`gap`). */
           display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16,
           pointerEvents: 'none',
         }}>
@@ -3680,18 +3752,9 @@ export default function Serenity() {
             display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6,
             pointerEvents: 'none',
           }}>
-            {aperta && pausata && (
-              <span className="ser-pulse" style={{
-                fontFamily: 'var(--s-sans)', fontSize: 12, fontWeight: 700, letterSpacing: '0.05em',
-                padding: '3px 10px', borderRadius: 999, textAlign: 'center',
-                background: 'var(--s-reserve)', color: 'var(--s-ground)',
-              }}>
-                {pausaMotivoRef.current === 'manuale'
-                  ? LC('in pausa', 'en pause', 'paused', 'en pausa', 'pausad')
-                  : LC('strumento perso', 'instrument perdu', 'instrument lost',
-                      'instrumento perdido', 'instrument förlorat')}
-              </span>
-            )}
+            {/* ⚠️ Il badge "in pausa"/"strumento perso" si è spostato accanto al bottone
+                Pausa/Riprendi nella barra laterale — v. la nota lì (« le pavé en pause fais
+                le apparaître à côté du bouton REPRISE »). */}
             {agoEeg && (
               <div style={{
                 fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
@@ -3735,16 +3798,21 @@ export default function Serenity() {
                     quello di sopra (il riposo), non erano allineati. Ora la STESSA unica coppia
                     numero+didascalia di App.tsx, non due invenzioni nuove. */}
                 {tone.taMostrato && (() => {
-                  /* ⚠️ SEGNALATO DI NUOVO: « il TA 1 boîte vs 2 boîtes non è chiaro, devi
-                     scrivere la differenza che applichi con una sola can ». La didascalia
-                     diceva CHE una correzione veniva applicata ("→ 2", "− 1 divisione") ma mai
-                     QUANTO — per "solo-measured" lo scarto è un NUMERO vero (misurato in
-                     `PannelloConfig` → taratura TA, `theta.setup.offsets['solo-can']`), non
-                     solo una parola. Scritto ora per intero, con lo stesso segno che
-                     `taToTwoCans` applica davvero (sommato al grezzo, mai indovinato qui). */
+                  /* ⚠️ SEGNALATO ANCORA UNA VOLTA: « devi rendere più chiaro ce que veut dire
+                     TA 1 boîte -xx,x vs 2 ». Il giro scorso aveva aggiunto il numero vero dello
+                     scarto, ma "TA · 1 lattina −0.34 → 2" resta un telegramma — un numero e
+                     una freccia, senza dire CHE COSA succede. Riscritta come una frase vera:
+                     "1 lattina, corretta di −0.34 ≈ equivalente a 2 lattine" — "≈ equivalente
+                     a" al posto della freccia (una freccia si legge come "sta per diventare",
+                     non "vale come se fosse"), il verbo "corretta" a dire che il numero grezzo
+                     è già stato aggiustato, non da aggiustare. */
                   const scartoMisurato = theta.setup.offsets?.['solo-can'] ?? 0;
-                  const unaLattina = LC('TA · 1 lattina', 'TA · 1 boîte', 'TA · 1 can', 'TA · 1 lata', 'TA · 1 burk');
-                  const divisione = LC('divisione', 'division', 'division', 'división', 'delstreck');
+                  const unaLattina = LC('1 lattina', '1 boîte', '1 can', '1 lata', '1 burk');
+                  const dueLattine = LC('2 lattine', '2 boîtes', '2 cans', '2 latas', '2 burkar');
+                  const corretta = LC('corretta di', 'corrigée de', 'corrected by', 'corregida en', 'korrigerad med');
+                  const equivalente = LC('≈ equivalente a', '≈ équivaut à', '≈ equivalent to', '≈ equivalente a', '≈ motsvarar');
+                  const divisioneTolta = LC('con 1 divisione tolta', 'avec 1 division retirée', 'with 1 division removed',
+                    'con 1 división quitada', 'med 1 delstreck borttaget');
                   return (
                     <>
                       {/* ⚠️ Segnalato: « scrivi METER TA invece di TA » — questa riga vive nel
@@ -3752,22 +3820,23 @@ export default function Serenity() {
                           non diceva DI QUALE strumento, importante ora che la lettura dell'ago
                           e quella del meter possono comparire vicine. */}
                       <span>{LC('METER TA', 'METER TA', 'METER TA', 'METER TA', 'METER TA')} {tone.taMostrato.ta.toFixed(2)}</span>
-                      <span style={{ fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'uppercase',
+                      <span style={{ fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'none',
                                     color: tone.taMostrato.margin > 0 ? 'var(--s-reserve)' : 'var(--s-ink-ghost)' }}>
                         {tone.taMostrato.basis === 'two-cans'
                           ? LC('TA · 2 lattine', 'TA · 2 boîtes', 'TA · 2 cans', 'TA · 2 latas', 'TA · 2 burkar')
                           : tone.taMostrato.basis === 'solo-measured'
-                          ? `${unaLattina} ${scartoMisurato >= 0 ? '+' : '−'}${Math.abs(scartoMisurato).toFixed(2)} → 2`
-                          : `${unaLattina} − 1 ${divisione} → 2`}
+                          ? `${unaLattina}, ${corretta} ${scartoMisurato >= 0 ? '+' : '−'}${Math.abs(scartoMisurato).toFixed(2)} ${equivalente} ${dueLattine}`
+                          : `${unaLattina} (${divisioneTolta}) ${equivalente} ${dueLattine}`}
                       </span>
                     </>
                   );
                 })()}
-                {theta.fn.fn && (
-                  <span style={{ color: 'var(--s-reserve)' }}>
-                    {LC('galleggia', 'flotte', 'floating', 'flota', 'flyter')}
-                  </span>
-                )}
+                {/* ⚠️ TOLTO — segnalato: « l'indication flotte ou autre, c'est quoi? ». Verificato
+                    App.tsx: `theta.fn.fn` alimenta SOLO la logica interna del ciclo TONE
+                    (`toneFnNow`/`fnNow`, mai renderizzato a schermo) — questa riga era
+                    un'invenzione SERENITY, un'etichetta isolata senza il contesto per capirla.
+                    Stessa regola di sempre: riprodurre EQUILIBRIUM, non inventare una lettura
+                    che lui stesso non mostra mai. */}
                 <span title={t('total_ta') as string}>
                   <LetturaTotalTa override={theta.totalTa} bodyMotion={theta.bodyMotion} />
                 </span>
