@@ -1,6 +1,6 @@
 # TONE SCALE
 
-*Note pour Ron · version 2.0.163*
+*Note pour Ron · version 2.0.208*
 
 ---
 
@@ -114,18 +114,31 @@ monté, en combien de passes.
 D'où vient ce point de départ, selon ce qu'on a sous la main :
 
 - **avec le mètre** — la mesure le propose ;
-- **avec le mètre ET le MUSE** — les deux, et on les voit ensemble : une marque
-  pointillée montre la même montée lue sur l'activité cérébrale. Si les deux
-  montent de concert, la montée est confirmée par deux instruments qui ne se
-  parlent pas. Si l'un reste en arrière, c'est une information — nous te dirons
-  ce que ça donne ;
-- **sans rien** — ce que le préclair dit, plus l'obnosis de l'auditeur. C'est ta
-  situation, et la vue marche pareil : l'auditeur pose le point de départ et
-  fait monter.
+- **sans rien** — ce que le préclair dit, plus l'obnosis de l'auditeur.
 
-Le rapport écrit d'où vient le chiffre : mesuré, mesuré+EEG, ou assessé. Un ton
-mesuré et un ton dit ne valent pas la même chose, et à froid on ne saurait plus
-les distinguer.
+Le MUSE seul ne peut jamais poser ce point de départ : il donne une charge
+cérébrale relative (0 à 1), pas une échelle absolue comme le fait le TA (calé
+sur la lecture de clair, plus bas). Il peut dire *de combien on a bougé*, jamais
+*où on est*. Poser l'origine reste donc, dans tous les cas, l'affaire du mètre
+ou de l'auditeur — jamais celle du MUSE seul.
+
+**Une fois l'origine posée, la MONTÉE change de guide.** Nous demandions au
+mètre EN PRIORITÉ, et au MUSE seulement en second regard, en pointillé à côté.
+Un préclair l'a fait remarquer : le MUSE dit *quand* la pensée arrive, avant
+même que le corps ne bouge — c'est lui qui devrait mener, quand il est
+branché. La montée suit maintenant :
+
+- **le MUSE, s'il est branché** — même avec le mètre en même temps ;
+- **sinon le mètre, s'il est branché** ;
+- **sinon rien ne bouge** — le ton reste celui que l'auditeur pose à la main.
+
+Le calcul est le même que celui qu'on employait déjà pour la marque
+pointillée — nous ne l'avons pas réinventé, nous avons changé lequel des deux
+regards mène le curseur.
+
+Le rapport écrit d'où vient le chiffre : mesuré, ou assessé. Un ton mesuré et
+un ton dit ne valent pas la même chose, et à froid on ne saurait plus les
+distinguer.
 
 ## Le ton 40, c'est la lecture de CLAIR
 
