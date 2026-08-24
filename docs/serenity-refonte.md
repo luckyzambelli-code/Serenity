@@ -2799,6 +2799,53 @@ Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `
 
 ---
 
+## Quarantacinquesimo giro (24/08/2026) — tolta la duplicazione dei tre cicli, le camm allineate al centro, l'arco senza più un bordo
+
+Il punto 2 del resoconto sulla semplificazione, confermato: « le intestazioni dei tre cicli
+sono copiate quasi parola per parola, tre volte » e « lo stile del bottone a pillola è
+ridigitato a mano più di 15 volte », con una prova già trovata (« l'item è stato detto » aveva
+un `title` in CONTACT/NULL, dimenticato in MIRROR/TONE).
+
+**Il refactoring** — due helper, definiti una sola volta dentro un'unica IIFE che avvolge i
+tre blocchi (`toneAttivo`/`mirror.mirrorArmed`/`cycles.cycleArmed`), chiusi sulle stesse
+variabili che i tre blocchi già leggevano (`item`, `t`, `mode`, `faseCiclo`, `lang`) — zero
+prop da far viaggiare, zero componente nuovo da montare:
+- `testataCiclo(nome, colore)` — badge + item + `CycleSteps`, IDENTICI nei tre blocchi
+  (differiva solo il colore/nome del badge — `null` per il bordo neutro di TONE, un colore
+  pieno per MIRROR/CONTACT/NULL).
+- `pillBtn(colore, dimensione?)` — lo stile del bottone a pillola, usato 16 volte nei tre
+  blocchi (differiva solo il colore, e a volte la taglia del testo).
+- `titoloDichiaraDetto` — il `title` che CONTACT/NULL aveva e MIRROR/TONE no: ora la STESSA
+  costante sui tre bottoni "l'item/la resistenza è stato/a detto/a" — l'incoerenza già trovata
+  non può più ripetersi, perché non c'è più una copia da dimenticare.
+
+Le ~340 righe dei tre blocchi sono scese a circa la metà. Verificato dal vivo: ciclo CONTACT
+armato, badge/item/pista/ANNULLA/AS-IS tutti presenti e funzionanti — nessuna resa cambiata,
+solo la duplicazione tolta.
+
+**Le camere, di nuovo** — terzo tentativo in tre giri: riga (CAM 2 in cima, efficiente) →
+colonna con scalino a margine negativo (CAM 1 in cima, « non efficiente e non armoniosa »,
+segnalato) → riga di nuovo, ma stavolta **allineata al centro** (`alignItems:'center'`) invece
+che al bordo superiore: due cerchi di taglia diversa allineati sullo stesso bordo restano
+sbilanciati, allineati sul centro si leggono come un gruppo solo. Nessun margine negativo,
+nessuno scalino. `camStackH` torna al massimo delle due altezze (non la somma) — la scelta più
+efficiente delle tre era anche la più armoniosa.
+
+**Il bordo dell'arco, tolto** — restava un filo sottile (`--s-zone-border`) dopo che fondo e
+ombra erano già stati tolti nei giri precedenti; segnalato come l'ultimo segno che l'arco
+fosse "un riquadro" invece dell'ago a fluttuare sulla superficie. `border: 'none'`.
+
+Verificato dal vivo (profilo TEST, senza strumenti): camere centrate senza sovrapposizioni,
+Journal di nuovo visibile senza scorrimento, arco senza `border`/`boxShadow` (confermato via
+`getComputedStyle`), ciclo CONTACT funzionante con la nuova intestazione condivisa.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639.
+
+`git status`: `src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

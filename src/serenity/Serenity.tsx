@@ -1882,17 +1882,17 @@ export default function Serenity() {
    *  (aperta/collassata, una o due camere) le tiene SEMPRE sotto, mai più sotto le camere.
    *  Le taglie (272/170) sono le stesse di `CameraCerchio` sotto — « la zona camm deve essere
    *  di 1/5 più piccola » (340→272, 213→170.4→170), ridotte insieme lì e qui.
-   *  ⚠️ SEGNALATO, poi di nuovo AL CONTRARIO — prima « sposta la camm PC completamente in
-   *  alto » (le due AFFIANCATE, riserva pari alla più alta delle due, non la somma), poi
-   *  « sposta la cam AUDITOR in alto di quella del PC per poter spostare la camm PC a
-   *  destra » — CAM 1 di nuovo SOPRA CAM 2 (v. il contenitore più giù), quindi la riserva
-   *  torna a sommare le due altezze: la richiesta esplicita di QUESTO giro vince sul
-   *  risparmio verticale del giro precedente. Compensato in parte riducendo ancora il
-   *  padding di `<main>` (v. sotto), per lasciare comunque più spazio vero all'arco. */
+   *  ⚠️ SEGNALATO tre volte di fila — « sposta la camm PC completamente in alto » (riga,
+   *  riserva pari alla più alta delle due), poi al contrario « sposta la cam AUDITOR in alto
+   *  di quella del PC » (colonna con scalino, riserva di nuovo la somma), poi « la
+   *  disposizione non è efficiente e non è armoniosa » (v. il contenitore più giù: di nuovo
+   *  una riga, stavolta centrata invece che allineata in alto — nessuno scalino). Tornata
+   *  la riserva pari alla PIÙ ALTA delle due, non la somma: la riga centrata è sia la scelta
+   *  più efficiente sia quella più armoniosa fra le tre provate. */
   const cam2H = !moduleVis.cam2 ? 0 : (cam2Collassata ? 88 : 272);
   const cam1H = !moduleVis.cam1 ? 0 : (cam1Collassata ? 88 : 170);
   const camStackH = (moduleVis.cam1 || moduleVis.cam2)
-    ? 16 + cam1H + (moduleVis.cam1 && moduleVis.cam2 ? 14 : 0) + cam2H + 20
+    ? 16 + Math.max(cam2H, cam1H) + 20
     : 0;
 
   return (
@@ -2965,6 +2965,56 @@ export default function Serenity() {
                 più spazio per il ciclo stesso ». Vedi la barra a sé, poco più giù. */}
           </>
         )}
+        {/* ── I TRE CICLI, LA STESSA INTESTAZIONE — segnalato in un resoconto: « le intestazioni
+            dei tre cicli sono copiate quasi parola per parola, tre volte » e « lo stile del
+            bottone a pillola è ridigitato a mano più di 15 volte », con una prova (« l'item è
+            stato detto » aveva un `title` in CONTACT/NULL e non in MIRROR/TONE — una copia
+            dimenticata). Due helper, definiti UNA sola volta, chiusi sulle stesse variabili
+            (`item`/`t`/`mode`/`faseCiclo`/`lang`) che i tre blocchi già leggevano: nessuna
+            prop da far viaggiare, nessun componente nuovo da montare — solo la ripetizione
+            tolta. `testataCiclo` disegna badge+item+pista (IDENTICI nei tre blocchi, differiva
+            solo il colore/nome del badge); `pillBtn` lo stile del bottone a pillola (differiva
+            solo colore, e a volte la taglia del testo — parametro `dimensione`). Il `title`
+            mancante torna automaticamente uguale ovunque, perché non c'è più una copia da
+            dimenticare. */}
+        {(() => {
+          const testataCiclo = (nome: string, colore: string | null) => (
+            <>
+              <span style={{
+                fontFamily: 'var(--s-sans)', fontSize: 13.5, fontWeight: 700, letterSpacing: '0.06em',
+                padding: '3px 10px', borderRadius: 999,
+                ...(colore
+                  ? { background: colore, color: 'var(--s-ground)' }
+                  : { border: '1px solid var(--s-ink-ghost)', color: 'var(--s-ink-soft)' }),
+              }}>
+                {nome}
+              </span>
+              <span style={{ fontFamily: 'var(--s-serif)', fontSize: 15.5, color: 'var(--s-ink)' }}>
+                {item || t('ser_item_placeholder')}
+              </span>
+              {/* ── LA PISTA — segnalato: « i cicli devono essere disposti esattamente come in
+                  equilibrium, stessi campi, stessa logica ». `components/CycleSteps.tsx`, lo
+                  STESSO componente che App.tsx monta (3 volte, una per metodo, identico a qui):
+                  legge `mode`/`faseCiclo`, già calcolati sopra, e ne ricava da sé quanti tempi
+                  ci sono e a quale si è (`engine/cycleSteps.ts`, provato da solo) — non li
+                  decide, li mostra. */}
+              <div style={{ flexBasis: '100%' }}>
+                <CycleSteps mode={mode} phase={faseCiclo} lang={lang} />
+              </div>
+            </>
+          );
+          const pillBtn = (colore: string, dimensione = 15): React.CSSProperties => ({
+            cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+            fontFamily: 'var(--s-sans)', fontSize: dimensione, color: colore,
+          });
+          const titoloDichiaraDetto = LC(
+            'la trascrizione non c\'è o non si sente — dichiara che è stato detto',
+            'pas de transcription ou pas de son — déclare que c\'est dit',
+            'no transcript or no sound — declare it has been said',
+            'sin transcripción o sin sonido — declara que se ha dicho',
+            'ingen transkription eller inget ljud — förklara att det har sagts') as string;
+          return (
+        <>
         {/* ── TONE SCALE, ATTIVO — locate → raise → done, si ripete per ogni resistenza ────────
             (a) LOCALIZZA: da dove si parte (misurato col meter, o dichiarato dall'auditor senza
             strumenti); (b) RAISE: il comando "portalo a tono 40" ripetuto finché non c'è più
@@ -2973,29 +3023,7 @@ export default function Serenity() {
             `chiudiTone`/`resetTone`), stesso testo dei tre tempi. */}
         {aperta && toneAttivo && (
           <>
-            {/* Stesso badge di CONTACT/NULL, senza colore acceso (TONE non ne ha uno — mai un
-                quarto segnale nuovo): il bordo e il nome per intero bastano a dire quale dei
-                quattro sta girando. */}
-            <span style={{
-              fontFamily: 'var(--s-sans)', fontSize: 13.5, fontWeight: 700, letterSpacing: '0.06em',
-              padding: '3px 10px', borderRadius: 999, border: '1px solid var(--s-ink-ghost)',
-              color: 'var(--s-ink-soft)',
-            }}>
-              TONE
-            </span>
-            <span style={{ fontFamily: 'var(--s-serif)', fontSize: 15.5, color: 'var(--s-ink)' }}>
-              {item || t('ser_item_placeholder')}
-            </span>
-            {/* ── LA PISTA — segnalato: « i cicli devono essere disposti esattamente come in
-                equilibrium, stessi campi, stessa logica ». `PassiCiclo` (tolta) era una pista
-                scritta a mano, con le sue etichette e il suo `indiceAttuale` ricalcolati qui —
-                un doppione di `components/CycleSteps.tsx`, lo STESSO componente che App.tsx
-                monta (3 volte, una per metodo, identico a qui): legge `mode`/`faseCiclo`, già
-                calcolati sopra, e ne ricava da sé quanti tempi ci sono e a quale si è
-                (`engine/cycleSteps.ts`, provato da solo) — non li decide, li mostra. */}
-            <div style={{ flexBasis: '100%' }}>
-              <CycleSteps mode={mode} phase={faseCiclo} lang={lang} />
-            </div>
+            {testataCiclo('TONE', null)}
             {faseCiclo === 'tone.say_item' && (
               <>
                 <span className="ser-pulse" style={{
@@ -3004,10 +3032,8 @@ export default function Serenity() {
                 }}>
                   {LC('dì la resistenza…', 'dis la résistance…', 'say the resistance…', 'di la resistencia…', 'säg motståndet…')}
                 </span>
-                <button className="s-glass s-glass-btn" onClick={dichiaraItemDetto} style={{
-                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-                  fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-faint)',
-                }}>
+                <button className="s-glass s-glass-btn" onClick={dichiaraItemDetto} title={titoloDichiaraDetto}
+                  style={pillBtn('var(--s-ink-faint)', 14)}>
                   {LC('l\'ho detta', 'je l\'ai dite', 'said it', 'la he dicho', 'sa det')}
                 </button>
               </>
@@ -3028,10 +3054,7 @@ export default function Serenity() {
                     ))}
                   </select>
                 )}
-                <button className="s-glass s-glass-btn" onClick={() => tone.localizzaTone()} style={{
-                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-                  fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-soft)',
-                }}>
+                <button className="s-glass s-glass-btn" onClick={() => tone.localizzaTone()} style={pillBtn('var(--s-ink-soft)')}>
                   {t('ser_arm_contact') /* stesso gesto/testo di App.tsx: "DAI L'ITEM" */}
                 </button>
               </>
@@ -3044,26 +3067,17 @@ export default function Serenity() {
             )}
             {tone.tonePhase === 'raise' && (
               <>
-                <button className="s-glass s-glass-btn" onClick={() => tone.setToneRipetizioni(v => v + 1)} style={{
-                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-                  fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-soft)',
-                }}>
+                <button className="s-glass s-glass-btn" onClick={() => tone.setToneRipetizioni(v => v + 1)} style={pillBtn('var(--s-ink-soft)')}>
                   {LC('portalo a tono 40', 'mène-le au ton 40', 'raise it to tone 40', 'llévalo al tono 40', 'för det till ton 40')}
                   {tone.toneRipetizioni > 0 ? ` ×${tone.toneRipetizioni}` : ''}
                 </button>
-                <button className="s-glass s-glass-btn" onClick={() => { tone.chiudiTone(true); tone.setTonePhase('done'); }} style={{
-                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-                  fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-still)',
-                }}>
+                <button className="s-glass s-glass-btn" onClick={() => { tone.chiudiTone(true); tone.setTonePhase('done'); }} style={pillBtn('var(--s-still)')}>
                   {LC('tono quaranta raggiunto', 'ton quarante atteint', 'tone forty reached', 'tono cuarenta alcanzado', 'ton fyrtio nådd')}
                 </button>
               </>
             )}
             {tone.tonePhase === 'done' && (
-              <button className="s-glass s-glass-btn" onClick={() => tone.resetTone()} style={{
-                cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-                fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-still)',
-              }}>
+              <button className="s-glass s-glass-btn" onClick={() => tone.resetTone()} style={pillBtn('var(--s-still)')}>
                 {LC('altra resistenza', 'autre résistance', 'another resistance', 'otra resistencia', 'annat motstånd')}
               </button>
             )}
@@ -3073,10 +3087,7 @@ export default function Serenity() {
             <button className="s-glass s-glass-btn" onClick={() => {
               if (tone.tonePhase === 'raise') tone.chiudiTone(false);
               tone.resetTone(); setToneAttivo(false);
-            }} style={{
-              cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-              fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-ghost)',
-            }}>
+            }} style={pillBtn('var(--s-ink-ghost)')}>
               {t('cancel')}
             </button>
           </>
@@ -3089,22 +3100,7 @@ export default function Serenity() {
             il valore in mezzo: segnalato in App.tsx stesso come l'errore da NON ripetere). */}
         {aperta && mirror.mirrorArmed && (
           <>
-            {/* Stesso badge di CONTACT/NULL/TONE, colore riserva — lo stesso della pillola che
-                lo arma qui sopra. */}
-            <span style={{
-              fontFamily: 'var(--s-sans)', fontSize: 13.5, fontWeight: 700, letterSpacing: '0.06em',
-              padding: '3px 10px', borderRadius: 999,
-              background: 'var(--s-reserve)', color: 'var(--s-ground)',
-            }}>
-              MIRROR
-            </span>
-            <span style={{ fontFamily: 'var(--s-serif)', fontSize: 15.5, color: 'var(--s-ink)' }}>
-              {item || t('ser_item_placeholder')}
-            </span>
-            {/* La pista — vedi la nota su `CycleSteps` nel blocco TONE. */}
-            <div style={{ flexBasis: '100%' }}>
-              <CycleSteps mode={mode} phase={faseCiclo} lang={lang} />
-            </div>
+            {testataCiclo('MIRROR', 'var(--s-reserve)')}
             {faseCiclo === 'mirror.say_item' && (
               <>
                 <span className="ser-pulse" style={{
@@ -3113,10 +3109,8 @@ export default function Serenity() {
                 }}>
                   {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
                 </span>
-                <button className="s-glass s-glass-btn" onClick={dichiaraItemDetto} style={{
-                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-                  fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-faint)',
-                }}>
+                <button className="s-glass s-glass-btn" onClick={dichiaraItemDetto} title={titoloDichiaraDetto}
+                  style={pillBtn('var(--s-ink-faint)', 14)}>
                   {LC('l\'item è stato detto', 'l\'item a été dit', 'the item has been said', 'el ítem ha sido dicho', 'item har sagts')}
                 </button>
               </>
@@ -3150,59 +3144,27 @@ export default function Serenity() {
                   mirror.mirrorCycle.declareReached();
                   mirror.setMirrorDisp({ contactQ: mirror.mirrorCycle.contactQ, dischargeQ: mirror.mirrorCycle.dischargeQ,
                     locked: true, reached: true, valueR: mirror.mirrorCycle.valueR });
-                }} style={{
-                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-                  fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-still)',
-                }}>
+                }} style={pillBtn('var(--s-still)')}>
                   {LC('doppio raggiunto', 'double atteint', 'double reached', 'doble alcanzado', 'dubbeln nådd')}
                 </button>
               </>
             ) : (
-              <button className="s-glass s-glass-btn" onClick={() => mirror.stopMirror()} style={{
-                cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-                fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-still)',
-              }}>
+              <button className="s-glass s-glass-btn" onClick={() => mirror.stopMirror()} style={pillBtn('var(--s-still)')}>
                 {LC('ottenuto — valida', 'obtenu — valider', 'obtained — validate', 'obtenido — validar', 'uppnått — validera')}
               </button>
             )}
             {/* « Cosa devo fare » — SULLA STESSA RIGA del bottone della tappa attiva appena
                 sopra (v. la nota su `SuggerimentoCiclo`), non più in fondo a tutto dopo ANNULLA. */}
             <SuggerimentoCiclo {...spiegazioneCiclo} />
-            <button className="s-glass s-glass-btn" onClick={() => mirror.stopMirror()} style={{
-              cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-              fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-ghost)',
-            }}>
+            <button className="s-glass s-glass-btn" onClick={() => mirror.stopMirror()} style={pillBtn('var(--s-ink-ghost)')}>
               {t('cancel')}
             </button>
           </>
         )}
         {aperta && cycles.cycleArmed && (
           <>
-            {/* ── QUALE CICLO STA GIRANDO — segnalato: « il CICLO CONTACT non è specificato in
-                basso, c'è solo DAI L'ITEM ». Vero: un campo di testo e un contatore in grigio
-                non dicono CONTACT finché non si legge la scritta piccola accanto. Ora un badge
-                pieno, dello STESSO colore della pillola che l'ha armato — si vede prima di
-                leggere, non dopo. */}
-            <span style={{
-              fontFamily: 'var(--s-sans)', fontSize: 13.5, fontWeight: 700, letterSpacing: '0.06em',
-              padding: '3px 10px', borderRadius: 999,
-              background: cycles.cycleKind === 'null' ? 'var(--s-alive)' : 'var(--s-still)',
-              color: 'var(--s-ground)',
-            }}>
-              {cycles.cycleKind === 'null' ? 'NULL' : 'CONTACT'}
-            </span>
-            <span style={{ fontFamily: 'var(--s-serif)', fontSize: 15.5, color: 'var(--s-ink)' }}>
-              {item || t('ser_item_placeholder')}
-            </span>
-            {/* ── I PASSI, TUTTI INSIEME — segnalato: « le scritte dei cicli sono confuse...
-                evidenziate le steps, a prova di stupido »; poi di nuovo: « i cicli devono
-                essere disposti esattamente come in equilibrium, stessi campi, stessa logica ».
-                `CycleSteps` — vedi la nota nel blocco TONE — non decide nulla, mostra solo
-                dove si è dentro la sequenza del metodo in corso. Riga a sé (`flexBasis:'100%'`)
-                per restare leggibile invece di accorciarsi. */}
-            <div style={{ flexBasis: '100%' }}>
-              <CycleSteps mode={mode} phase={faseCiclo} lang={lang} />
-            </div>
+            {testataCiclo(cycles.cycleKind === 'null' ? 'NULL' : 'CONTACT',
+              cycles.cycleKind === 'null' ? 'var(--s-alive)' : 'var(--s-still)')}
             {/* ── « DÌ L'ITEM… » — segnalato insieme: la logica di darlo a voce già esiste nel
                 motore (`cycleAwaitItemRef`), ma finché nessuno lo dice a schermo l'auditor non
                 sa che il ciclo sta ASPETTANDO, non è già a mock-up. Pulsa finché la voce (o la
@@ -3215,16 +3177,8 @@ export default function Serenity() {
                 }}>
                   {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
                 </span>
-                <button className="s-glass s-glass-btn" onClick={dichiaraItemDetto} title={LC(
-                    'la trascrizione non c\'è o non si sente — dichiara che l\'item è stato detto',
-                    'pas de transcription ou pas de son — déclare que l\'item a été dit',
-                    'no transcript or no sound — declare the item has been said',
-                    'sin transcripción o sin sonido — declara que el ítem ha sido dicho',
-                    'ingen transkription eller inget ljud — förklara att item har sagts') as string}
-                  style={{
-                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-                  fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-faint)',
-                }}>
+                <button className="s-glass s-glass-btn" onClick={dichiaraItemDetto} title={titoloDichiaraDetto}
+                  style={pillBtn('var(--s-ink-faint)', 14)}>
                   {LC('l\'item è stato detto', 'l\'item a été dit', 'the item has been said', 'el ítem ha sido dicho', 'item har sagts')}
                 </button>
               </>
@@ -3251,24 +3205,15 @@ export default function Serenity() {
                 ciclo e lo lascia « non validato » nel rapporto (`finalizeCycle(false)`,
                 distinto da ogni esito). SERENITY aveva solo la prima: niente modo di uscire
                 da un ciclo armato per errore senza forzare un esito che non è successo. */}
-            <button className="s-glass s-glass-btn" onClick={() => cycles.finalizeCycle(false)} style={{
-              cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-              fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-ghost)',
-            }}>
+            <button className="s-glass s-glass-btn" onClick={() => cycles.finalizeCycle(false)} style={pillBtn('var(--s-ink-ghost)')}>
               {t('cancel')}
             </button>
             {cycles.cycleKind === 'null' ? (
               <>
-                <button className="s-glass s-glass-btn" onClick={() => cycles.validateClearRead(true)} style={{
-                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-                  fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-still)',
-                }}>
+                <button className="s-glass s-glass-btn" onClick={() => cycles.validateClearRead(true)} style={pillBtn('var(--s-still)')}>
                   {t('ser_validate_equilibrium_vgi')}
                 </button>
-                <button className="s-glass s-glass-btn" onClick={() => cycles.validateClearRead(false)} style={{
-                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-                  fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-faint)',
-                }}>
+                <button className="s-glass s-glass-btn" onClick={() => cycles.validateClearRead(false)} style={pillBtn('var(--s-ink-faint)')}>
                   {t('ser_validate_equilibrium_novgi')}
                 </button>
                 {/* ── IL TERZO ESITO, MANCANTE ────────────────────────────────────────────
@@ -3278,18 +3223,12 @@ export default function Serenity() {
                     senza dichiararlo, il ciclo resta indistinguibile da uno abbandonato, e
                     quel ramo del rapporto/CORPUS resta irraggiungibile. SERENITY aveva SOLO i
                     primi due — un bottone intero perso, non solo uno stile. */}
-                <button className="s-glass s-glass-btn" onClick={() => cycles.declareNoRecharging()} style={{
-                  cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-                  fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-reserve)',
-                }}>
+                <button className="s-glass s-glass-btn" onClick={() => cycles.declareNoRecharging()} style={pillBtn('var(--s-reserve)')}>
                   {t('ser_no_recharging')}
                 </button>
               </>
             ) : (
-              <button className="s-glass s-glass-btn" onClick={() => cycles.validateAsIs()} style={{
-                cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-                fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-still)',
-              }}>
+              <button className="s-glass s-glass-btn" onClick={() => cycles.validateAsIs()} style={pillBtn('var(--s-still)')}>
                 {t('ser_validate_asis')}
               </button>
             )}
@@ -3315,6 +3254,9 @@ export default function Serenity() {
             </div>
           </>
         )}
+        </>
+          );
+        })()}
         {/* ── SEGNALATO: « i moduli ASSESSMENT, System Health, Journal, MNA non devono avere
             bottoni, si attivano solamente via CONFIG ». Erano bottoni che aprivano un
             cassetto (`apriMna`/`apriSalute`/`apriGiornale`) sopra la scelta già fatta in
@@ -3416,19 +3358,35 @@ export default function Serenity() {
       {aperta && (moduleVis.cam1 || moduleVis.cam2) && (
         <div style={{
           position: 'absolute', top: 16, right: 32, zIndex: 5,
-          /* ⚠️ SEGNALATO DI NUOVO, al contrario del giro precedente: « sposta la cam AUDITOR
-             in alto di quella del PC per poter spostare la camm PC a destra ». Da RIGA
-             (affiancate, stesso bordo superiore) a COLONNA di nuovo — ma stavolta CAM 1
-             (Auditor, più piccola) IN CIMA, CAM 2 (PC) sotto di lei e spostata verso il bordo
-             vero con un margine negativo (`marginRight`), non più semplicemente allineata a
-             CAM 1. `camStackH` (sopra) torna a sommare le due altezze — la riga aveva
-             liberato spazio per Santé/Journal proprio evitando questa somma; qui la richiesta
-             esplicita vince su quel risparmio, compensato spostando altrove (il padding di
-             `<main>`, sotto) parte dello spazio che l'arco chiede in più nella stessa
-             segnalazione. */
-          display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 14,
+          /* ⚠️ SEGNALATO DI NUOVO: « guarda anche la disposizione delle camm, poiché non è
+             efficiente e non è armoniosa ». Lo scalino col margine negativo (giro precedente —
+             CAM 1 sopra, CAM 2 spostata di `marginRight:-24`) tornava a sommare le due altezze
+             (meno efficiente: il risparmio che la riga aveva liberato per Santé/Journal era di
+             nuovo perso) E affiancava due cerchi di taglia diversa allineati al bordo
+             superiore, con un bordo che si infilava sotto l'altro (poco armonioso). Riga di
+             nuovo (efficiente: la riserva torna al massimo delle due, non la somma — v.
+             `camStackH`), ma stavolta allineata al CENTRO (`alignItems:'center'`, non più
+             `'flex-start'`): due cerchi di taglia diversa allineati sullo stesso bordo restano
+             sbilanciati (uno "fluttua" più in alto dell'altro); allineati sul centro invece si
+             leggono come un gruppo solo, il peso visivo bilanciato — nessun margine negativo,
+             nessuno scalino, solo lo spazio vero fra loro (`gap`). */
+          display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16,
           pointerEvents: 'none',
         }}>
+          {moduleVis.cam2 && (
+            <CameraCerchio
+              dimensione={272}
+              dimensioneCollassata={88}
+              titolo={t('cam2') as string}
+              externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
+              offlineLabel={t('camera_offline') as string}
+              opacita={uiAlpha}
+              collassata={cam2Collassata}
+              onToggleCollasso={() => setCam2Collassata(v => !v)}
+              statoTesto={statoCamPc}
+              inDiretta={!!avvio.distanza}
+            />
+          )}
           {moduleVis.cam1 && (
             <CameraCerchio
               dimensione={170}
@@ -3439,22 +3397,6 @@ export default function Serenity() {
               collassata={cam1Collassata}
               onToggleCollasso={() => setCam1Collassata(v => !v)}
             />
-          )}
-          {moduleVis.cam2 && (
-            <div style={{ marginRight: -24 }}>
-              <CameraCerchio
-                dimensione={272}
-                dimensioneCollassata={88}
-                titolo={t('cam2') as string}
-                externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
-                offlineLabel={t('camera_offline') as string}
-                opacita={uiAlpha}
-                collassata={cam2Collassata}
-                onToggleCollasso={() => setCam2Collassata(v => !v)}
-                statoTesto={statoCamPc}
-                inDiretta={!!avvio.distanza}
-              />
-            </div>
           )}
         </div>
       )}
@@ -3604,12 +3546,17 @@ export default function Serenity() {
              spazio flex all'arco). Alzato a 2200px — l'`aspectRatio` e `maxHeight:'100%'`
              restano il vero limite su una finestra bassa. */
           background: 'transparent',
-          border: '1px solid var(--s-zone-border)',
           /* ⚠️ Segnalato: « togli l'ombra alla zona ARC AGO ». Restava un'ombra di rilievo
              (`--s-shadow`/`--s-shadow-lift`) ereditata da quando il fondo era pieno — con lo
              sfondo ormai trasparente (v. sopra) un'ombra sotto un riquadro senza fondo si legge
-             come un bordo scuro extra, non più un rilievo reale. Tolta — resta solo il filo
-             sottile del bordo a dire dov'è il quadrante. */
+             come un bordo scuro extra, non più un rilievo reale. Tolta.
+             ⚠️ SEGNALATO DI NUOVO: « toglierei anche il tratto di delimitazione della zona
+             ARCO AGO ». Restava il filo sottile (`--s-zone-border`) a dire dove finisce il
+             quadrante — con fondo già trasparente e ombra già tolta, quel filo era l'ultimo
+             segno che l'arco fosse "un riquadro" invece che l'ago stesso a fluttuare sulla
+             superficie di SERENITY. Tolto anche lui: nessun bordo, nessuna ombra, nessun
+             fondo — solo il disegno del quadrante. */
+          border: 'none',
           boxShadow: 'none',
           transition: 'background var(--s-calm) var(--s-ease)',
         }}>
