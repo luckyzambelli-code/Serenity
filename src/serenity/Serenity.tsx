@@ -1323,21 +1323,15 @@ export default function Serenity() {
     setAssessAttivo(mode !== 'free');
   }, [mode]);
 
-  /** ── LE CAMERE, PICCOLE FUORI CICLO E GRANDI DENTRO — segnalato: « rifletti a una soluzione
-   *  elegante » per la disposizione delle camere, che occupavano fino al 27% della larghezza
-   *  e al 65% dell'altezza dell'arco (misurato dal vivo), qualunque disposizione si provasse.
-   *  Idea confermata: la taglia non è più sempre la stessa — piccole (`collassata`, 88px)
-   *  finché nessun ciclo è armato, GRANDI e spostate nella striscia dell'intestazione (v. più
-   *  giù) proprio quando la modalità ciclo la libera dai controlli amministrativi — lo stesso
-   *  momento in cui l'auditor guarda davvero il volto del preclear. Stessa transizione SOLO
-   *  di `assessAttivo` sopra: cambia alle transizioni di `modalitaCiclo`, l'auditor può
-   *  comunque comprimerle/espanderle a mano nel frattempo (il bottone esiste già su ogni
-   *  cerchio) senza che questo effetto la corregga sotto di lui finché `modalitaCiclo` non
-   *  cambia di nuovo. */
-  useEffect(() => {
-    setCam1Collassata(!modalitaCiclo);
-    setCam2Collassata(!modalitaCiclo);
-  }, [modalitaCiclo]);
+  /** ── LE CAMERE, TOLTO IL LEGAME CON LA MODALITÀ CICLO — il giro scorso le rendeva piccole
+   *  fuori da un ciclo e le spostava, grandi, nella striscia dell'intestazione durante un
+   *  ciclo. Segnalato: « così non mi piacciono, perché si destabilizza l'auditor che deve
+   *  cambiare logica di sguardo. Lascia le camm al loro posto a destra, semplicemente le
+   *  ingrandisci ». Il POSTO conta più della taglia: un auditor che sa sempre dove guardare
+   *  batte una camera più grande in un posto che si sposta. Tolto l'effetto che le legava a
+   *  `modalitaCiclo` — restano dove sono sempre state (l'angolo sopra il quadrante, v. più
+   *  giù), taglia fissa e più grande di prima (v. `CameraCerchio` più giù). L'auditor può
+   *  ancora comprimerle/espanderle a mano col bottone di ciascun cerchio — quello resta. */
 
   /**
    * ── LA FASE DEL CICLO, LA STESSA SCALA DI App.tsx ────────────────────────────────────────
@@ -1927,8 +1921,8 @@ export default function Serenity() {
    *  una riga, stavolta centrata invece che allineata in alto — nessuno scalino). Tornata
    *  la riserva pari alla PIÙ ALTA delle due, non la somma: la riga centrata è sia la scelta
    *  più efficiente sia quella più armoniosa fra le tre provate. */
-  const cam2H = !moduleVis.cam2 ? 0 : (cam2Collassata ? 88 : 272);
-  const cam1H = !moduleVis.cam1 ? 0 : (cam1Collassata ? 88 : 170);
+  const cam2H = !moduleVis.cam2 ? 0 : (cam2Collassata ? 88 : 340);
+  const cam1H = !moduleVis.cam1 ? 0 : (cam1Collassata ? 88 : 210);
   const camStackH = (moduleVis.cam1 || moduleVis.cam2)
     ? 16 + Math.max(cam2H, cam1H) + 20
     : 0;
@@ -2196,13 +2190,17 @@ export default function Serenity() {
            vero: il rettangolo torna trasparente ai click dove non c'è niente da premere. */
         pointerEvents: 'none',
       }}>
-        {/* ── I BOTTONI, IN UNA COLONNA STRETTA A SÉ — segnalato: « la zona assessment... deve
-            stare sotto il bottone EP, rimonta l'insieme dei bottoni CLOSE THE SESSION ». Il
-            contenitore intorno (sopra) è ora largo quanto l'assessment (« larga la metà »,
-            v. sotto) per fargli posto SOTTO — ma i bottoni stessi devono restare STRETTI come
-            sempre, non allargarsi con lui: un involucro suo, 148px, `align-items` di default
-            (`stretch`) dentro QUESTO, non nel contenitore largo. */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 148, flexShrink: 0 }}>
+        {/* ── I BOTTONI, IN UNA COLONNA A SÉ — segnalato: « la zona assessment... deve stare
+            sotto il bottone EP, rimonta l'insieme dei bottoni CLOSE THE SESSION ». Il
+            contenitore intorno (sopra) è largo quanto l'assessment (« larga la metà », v.
+            sotto) per fargli posto SOTTO.
+            ⚠️ Segnalato di nuovo: « il bottone Fermer la séance allargalo per avere solo due
+            righe ». Stava in un involucro di 148px (deliberatamente più stretto di questa
+            colonna, 272px) — con l'orologio a sinistra (v. sotto) il bottone stesso restava
+            con appena una novantina di pixel, troppo poco per "FERMER LA SÉANCE" su due
+            righe soltanto. 148 → 272, la STESSA larghezza della colonna e della riga dei
+            cinque cerchi appena sotto: niente più un involucro suo più stretto. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 272, flexShrink: 0 }}>
         {/* ── L'OROLOGIO, A SINISTRA DEL BOTTONE — segnalato di nuovo: « l'heure et le temps
             de session à gauche du bouton fermer la séance ». Non più impilato SOPRA (giro
             scorso) — una riga vera, l'orologio/tempo compatti a sinistra, il bottone a
@@ -2911,52 +2909,11 @@ export default function Serenity() {
             }}
           />
         )}
-        {/* ── LE CAMERE, GRANDI QUI DURANTE UN CICLO — v. la nota sulla resa piccola (più giù,
-            sopra il quadrante) per il perché del cambio. La `<header>` perde qui i suoi
-            controlli amministrativi (tema/lingua/storico/assetto/CONFIG/guida/assistente IA,
-            tutti `!modalitaCiclo` come questo blocco è `modalitaCiclo`) — lo spazio che
-            lasciano libero è esattamente dove le camere, ora grandi, trovano posto: in FLUSSO
-            dentro l'intestazione, mai sopra l'arco. Stessi componenti/stesso stato
-            (`cam1Collassata`/`cam2Collassata`, portati a `false` dall'effetto sopra appena
-            `modalitaCiclo` diventa vero) della resa piccola — non una seconda coppia di
-            camere, la STESSA, mostrata qui invece che là. */}
-        {modalitaCiclo && aperta && (moduleVis.cam1 || moduleVis.cam2) && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 16, marginLeft: 'auto' }}>
-            {moduleVis.cam2 && (
-              <CameraCerchio
-                dimensione={272}
-                dimensioneCollassata={88}
-                titolo={t('cam2') as string}
-                externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
-                offlineLabel={t('camera_offline') as string}
-                opacita={uiAlpha}
-                collassata={cam2Collassata}
-                onToggleCollasso={() => setCam2Collassata(v => !v)}
-                statoTesto={statoCamPc}
-                inDiretta={!!avvio.distanza}
-              />
-            )}
-            {moduleVis.cam1 && (
-              <CameraCerchio
-                dimensione={170}
-                dimensioneCollassata={88}
-                titolo={t('cam1') as string}
-                offlineLabel={t('camera_offline') as string}
-                opacita={uiAlpha}
-                collassata={cam1Collassata}
-                onToggleCollasso={() => setCam1Collassata(v => !v)}
-              />
-            )}
-          </span>
-        )}
         {/* ── LO SPAZIO VUOTO, ORA IN FONDO — segnalato: « les boutons de haut doivent être
             justifiés à gauche à côté du numéro de build ». Lo spazio elastico (`flex:1`) stava
             subito dopo Historique/Processus, spingendo tema/lingua/pillola/connessioni/CONFIG a
             distribuirsi verso destra invece di restare compatti accanto al nome. Spostato qui,
-            ultimo elemento: tutto il resto si accoda a sinistra, il vuoto va tutto a destra.
-            ⚠️ Con le camere (sopra) già `marginLeft:'auto'` in modalità ciclo, questo spazio
-            resta utile solo fuori dal ciclo — innocuo lasciarlo sempre, un `flex:1` su uno
-            `<span>` vuoto non sposta nulla quando non c'è nulla dopo di lui da spingere. */}
+            ultimo elemento: tutto il resto si accoda a sinistra, il vuoto va tutto a destra. */}
         <span style={{ flex: 1 }} />
       </header>
       {guidaAperta && <GuideModal lang={lang} onClose={() => setGuidaAperta(false)} />}
@@ -3532,15 +3489,14 @@ export default function Serenity() {
           solo quando `avvio.distanza` lo fornisce. La restrizione qui era un'invenzione, non
           una scelta di EQUILIBRIUM: tolta, per la stessa regola di sempre — riprodurre la
           stessa logica, non una più prudente inventata qui. */}
-      {/* ⚠️ SEGNALATO DI NUOVO: « rifletti a una soluzione elegante » — misurato dal vivo,
-          qualunque disposizione fissa provata copriva fino al 27% della larghezza e il 65%
-          dell'altezza dell'arco. L'idea confermata: la taglia (e il POSTO) non sono più
-          sempre gli stessi — piccole e qui, nell'angolo, finché nessun ciclo è armato
-          (`!modalitaCiclo`, v. `cam1Collassata`/`cam2Collassata` sopra); grandi e spostate
-          nella striscia dell'intestazione durante un ciclo (v. `<header>`, più su — la
-          modalità ciclo libera esattamente quello spazio togliendo i controlli
-          amministrativi). Qui SOLO la resa piccola, mai sopra il quadrante. */}
-      {!modalitaCiclo && aperta && (moduleVis.cam1 || moduleVis.cam2) && (
+      {/* ⚠️ SEGNALATO DI NUOVO: « les camm così non mi piacciono, perché si destabilizza
+          l'auditor che deve cambiare logica di sguardo. Lascia le camm al loro posto a
+          destra, semplicemente le ingrandisci ». Tolto il legame con `modalitaCiclo` (v. la
+          nota più su): un SOLO posto, sempre lo stesso — qui, nell'angolo sopra il quadrante
+          — mai più una seconda resa altrove. Taglie ingrandite (272→340 CAM 2, 170→210
+          CAM 1, stessa proporzione di sempre) rispetto a quelle di un giro fa, quando invece
+          stavano piccole (88px) qui e grandi solo altrove. */}
+      {aperta && (moduleVis.cam1 || moduleVis.cam2) && (
         <div style={{
           position: 'absolute', top: 16, right: 32, zIndex: 5,
           display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16,
@@ -3548,7 +3504,7 @@ export default function Serenity() {
         }}>
           {moduleVis.cam2 && (
             <CameraCerchio
-              dimensione={272}
+              dimensione={340}
               dimensioneCollassata={88}
               titolo={t('cam2') as string}
               externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
@@ -3562,7 +3518,7 @@ export default function Serenity() {
           )}
           {moduleVis.cam1 && (
             <CameraCerchio
-              dimensione={170}
+              dimensione={210}
               dimensioneCollassata={88}
               titolo={t('cam1') as string}
               offlineLabel={t('camera_offline') as string}
@@ -4160,9 +4116,19 @@ export default function Serenity() {
             {/* ── L'ASSESSMENT, ORA QUI — segnalato: « cambia di posizione il giornale con
                 l'assessment ». Stava sotto i bottoni dei metodi, a sinistra; il Giornale stava
                 qui, sotto Santé Système. Scambiati — stessa `ZonaAssessment`, stessi dati
-                (`assessAttivo`/`assessItems`, invariati), solo la POSIZIONE si scambia. */}
+                (`assessAttivo`/`assessItems`, invariati), solo la POSIZIONE si scambia.
+                ⚠️ Segnalato: « la zona assessment non deve essere ridotta da non vedere quasi
+                più nulla, devi lasciarla ben visibile in altezza ». `maxHeight:'70%'` da solo,
+                in una colonna flex con Santé Système sopra (mai limitata, « si deve vedere
+                tutta »), lasciava questo `<div>` restringersi (`flex-shrink` di default) fin
+                quasi a sparire quando Santé Système era già alta — e `ZonaAssessment` al suo
+                interno ha il proprio `overflowY:'auto'`, quindi si comprimeva senza protestare,
+                mostrando poco più della sua intestazione. `flexShrink:0` + `minHeight:280`: non
+                può più scendere sotto una taglia leggibile, qualunque cosa ci sia sopra — se lo
+                spazio proprio non basta, scorre la COLONNA (`overflowY:'auto'`, già lì), non
+                lei che si schiaccia. */}
             {aperta && moduleVis.ri && (
-              <div style={{ maxHeight: '70%', display: 'flex', pointerEvents: 'auto' }}>
+              <div style={{ maxHeight: '70%', minHeight: 280, flexShrink: 0, display: 'flex', pointerEvents: 'auto' }}>
                 <ZonaAssessment
                   attivo={assessAttivo}
                   onToggle={() => setAssessAttivo(v => !v)}

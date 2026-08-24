@@ -118,12 +118,26 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
       pointerEvents: 'auto',
     }}>
       {/* ── L'INTESTAZIONE — SEMPRE VISIBILE, come in App.tsx: si trova la zona anche chiusa,
-          non solo quando sta già catturando. */}
+          non solo quando sta già catturando.
+          ⚠️ Segnalato: « la gestione dell'assessment come funziona? Voglio che ci sia un
+          bottone di attivazione quando non è armato automaticamente da un ciclo ». Il
+          meccanismo esisteva già — `onToggle` qui SOPRA `attivo`/`assessAttivo`, lo stesso
+          interruttore che arma/disarma davvero la cattura in `Serenity.tsx` — ma si leggeva
+          come una freccia d'accordion (▸/▾), non come un interruttore ON/OFF: niente diceva
+          "questo bottone ARMA l'assessment". Sostituito con un vero interruttore (l'anello
+          vuoto/pieno sotto), ETICHETTATO per esteso quando spento: si vede a colpo d'occhio
+          che è un'ATTIVAZIONE, non solo un'espansione. Fuori da un ciclo (`assessAttivo` resta
+          dov'era l'auditor l'ha lasciato, v. la nota in `Serenity.tsx` sull'effetto legato a
+          `mode`) è questo l'UNICO modo di armarlo — durante un ciclo lo stesso bottone resta
+          comunque qui, sempre disponibile per spegnerlo in anticipo se serve. */}
       <button
         className="s-glass-btn"
         onClick={onToggle}
+        title={(attivo
+          ? LC('disattiva l’assessment', 'désactiver l’assessment', 'deactivate the assessment', 'desactivar el assessment', 'inaktivera assessment')
+          : LC('attiva l’assessment', 'activer l’assessment', 'activate the assessment', 'activar el assessment', 'aktivera assessment')) as string}
         style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
           border: 'none', borderRadius: 10, background: 'transparent', cursor: 'pointer',
           padding: '2px 2px', fontFamily: 'var(--s-sans)',
         }}>
@@ -134,7 +148,25 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
           {vista === 'assess' ? LC('assessment', 'assessment', 'assessment', 'assessment', 'assessment') : t('ri_title_manual')}
           {righe.length > 0 ? ` · ${righe.length}` : ''}
         </span>
-        <span style={{ fontSize: 12, color: 'var(--s-ink-ghost)' }}>{attivo ? '▾' : '▸'}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+          {!attivo && (
+            <span style={{
+              fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700,
+              color: 'var(--s-ink-faint)',
+            }}>
+              {LC('attiva', 'activer', 'activate', 'activar', 'aktivera')}
+            </span>
+          )}
+          {/* ── L'INTERRUTTORE — un anello: pieno e colorato se `attivo`, vuoto se no. Stessa
+              famiglia visiva dei pallini di stato della pillola strumenti in `Serenity.tsx`,
+              non un'invenzione a sé. */}
+          <span aria-hidden="true" style={{
+            width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+            border: `1.5px solid ${attivo ? 'var(--s-still)' : 'var(--s-ink-ghost)'}`,
+            background: attivo ? 'var(--s-still)' : 'transparent',
+            transition: 'background var(--s-calm) var(--s-ease), border-color var(--s-calm) var(--s-ease)',
+          }} />
+        </span>
       </button>
       {attivo && (
         <>

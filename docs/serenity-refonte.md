@@ -2945,6 +2945,60 @@ Assessment auto-armata (giro precedente) ancora funzionanti insieme alle camere 
 
 ---
 
+## Quarantottesimo giro (24/08/2026) — la relocation delle camere annullata (destabilizzava lo sguardo dell'auditor), il bottone CHIUDI allargato, l'interruttore di attivazione dell'assessment reso esplicito, la sua zona con un'altezza minima garantita
+
+**Le camere, tornate al loro unico posto** — il giro precedente le rendeva piccole fuori
+ciclo e le spostava, grandi, dentro `<header>` durante un ciclo. Segnalato: « così non mi
+piacciono, perché si destabilizza l'auditor che deve cambiare logica di sguardo. Lascia le
+camm al loro posto a destra, semplicemente le ingrandisci ». Il POSTO conta più della
+taglia: un auditor che sa sempre dove guardare batte una camera più grande in un posto che
+si sposta due volte per seduta. Tolto l'`useEffect` che legava `cam1Collassata`/
+`cam2Collassata` a `modalitaCiclo`, tolto il blocco camere dentro `<header>` — resta un
+SOLO posto, l'angolo sopra il quadrante di sempre, sempre alla stessa taglia. Taglia
+ingrandita rispetto a quella "piccola" del giro scorso: CAM 2 (PC) 272→340px, CAM 1
+(auditor) 170→210px, stessa proporzione. `camStackH` (la riserva di spazio per il resto del
+layout) aggiornato agli stessi numeri.
+
+**Il bottone CHIUDI LA SEDUTA, allargato** — segnalato: « allargalo per avere solo due
+righe ». Stava in un involucro suo di 148px, deliberatamente più stretto della colonna
+(272px) che lo contiene — con l'orologio a sinistra (giro scorso) il bottone stesso restava
+con appena una novantina di pixel, troppo poco per "FERMER LA SÉANCE" su due righe. 148 →
+272, la STESSA larghezza della colonna e della riga dei cinque cerchi appena sotto: verificato
+dal vivo, il testo entra ora su UNA riga sola.
+
+**L'assessment: come funziona, reso esplicito invece che spiegato solo a parole** —
+chiesto: « la gestione dell'assessment come funziona? Voglio che ci sia un bottone di
+attivazione quando non è armato automaticamente da un ciclo ». Il meccanismo esisteva già:
+l'intestazione di `ZonaAssessment` (`onToggle`) governa lo STESSO `assessAttivo` che arma/
+disarma davvero la cattura in `Serenity.tsx` — non un secondo interruttore. Il problema era
+che si leggeva come una freccia d'accordion (▸/▾), non come un vero ON/OFF: niente diceva a
+colpo d'occhio "questo bottone ARMA l'assessment". Sostituita con un interruttore vero (un
+anello: vuoto quando spento, pieno e colorato quando acceso) più un'etichetta "ATTIVA" per
+esteso quando è spento — non più solo un simbolo. Fuori da un ciclo (`assessAttivo` resta
+dov'era l'auditor l'ha lasciato) è questo l'unico modo di armarlo; durante un ciclo lo
+stesso bottone resta comunque disponibile per spegnerlo in anticipo se serve.
+
+**La zona assessment, un'altezza minima garantita** — segnalato: « non deve essere ridotta
+da non vedere quasi più nulla, devi lasciarla ben visibile in altezza ». `maxHeight:'70%'`
+da solo, in una colonna flex con Santé Système sopra (mai limitata, « si deve vedere tutta
+»), lasciava il contenitore restringersi (`flex-shrink` di default) fin quasi a sparire
+quando Santé Système era già alta — e `ZonaAssessment` ha il proprio `overflowY:'auto'`
+interno, quindi si comprimeva senza protestare, mostrando poco più della sua intestazione.
+`flexShrink:0` + `minHeight:280` aggiunti: non può più scendere sotto una taglia leggibile
+qualunque cosa ci sia sopra — se lo spazio proprio non basta, scorre la COLONNA
+(`overflowY:'auto'`, già lì), non lei che si schiaccia. Verificato dal vivo: aperta,
+l'altezza resta 280px anche a zona sola (nessun'altra zona sopra a spingerla).
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo estesa (profilo TEST, 1400×900, tema scuro) — camere grandi e ferme
+nell'angolo confermate, bottone CHIUDI su una riga, interruttore ASSESSMENT/ATTIVA che si
+accende e si spegne correttamente, zona assessment a 280px anche isolata.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/Serenity.tsx`,
+`src/serenity/ZonaAssessment.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
