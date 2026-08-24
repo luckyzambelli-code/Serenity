@@ -3331,6 +3331,59 @@ verificato per lettura/ragionamento, non dal vivo con un MUSE fisico.
 
 ---
 
+## Cinquantaseiesimo giro (24/08/2026) — verifica del codice, codice morto tolto, letture di storage duplicate consolidate
+
+Chiesto esplicitamente: verificare di nuovo il codice, togliere codice morto, ottimizzare
+dove serve — **senza cambiare calcoli, sistemi o modo di calcolo, senza rompere nulla**.
+Perimetro: `src/serenity/` (l'unica zona che SERENITY può toccare) più i due file del motore
+condiviso appena corretti (`useToneCycle.ts`, invariato in questo giro — nessun altro difetto
+trovato lì).
+
+**Il linter come prima passata** — `npm run lint` segnala SOLO `Serenity.tsx` in tutto
+`src/serenity/` (tutti gli altri 13 file: puliti). Tre punti:
+1. `AVVIO_VUOTO` importato da `flussoAvvio.ts` e mai usato — tolto (il tipo `Avvio` accanto
+   resta, quello serve).
+2. `isHoldMode` — il VALORE non era mai letto in questo file, solo il suo setter
+   (`setIsHoldMode`, passato al motore condiviso). `const [isHoldMode, setIsHoldMode]` →
+   `const [, setIsHoldMode]`: il motore continua a scriverlo esattamente come prima, qui si
+   tiene solo il pezzo usato davvero.
+3. Un `as any` superfluo (`journal.addLog(e as any)`, passato a `useMuseContactGate`) —
+   verificato che i due tipi (`Omit<LogEntry,'time'> & {time?:number}`) sono IDENTICI, stesso
+   `LogEntry` importato dallo stesso posto: il cast zittiva un disallineamento che non
+   esisteva. Tolto, la funzione passa diretta. Un secondo `as any` simile (riga 655, verso
+   `useMuseConnection`) è rimasto: lì i due tipi sono davvero diversi (`time` obbligatorio
+   contro opzionale, `speaker`/`type` stringhe larghe contro union stretti) — toccarlo per
+   bene vorrebbe dire cambiare la firma di un hook condiviso con EQUILIBRIUM, fuori dal
+   perimetro di "senza cambiare i sistemi".
+
+**Oltre il linter — l'ottimizzazione vera trovata**: `getProfiles()`/`getPcProfiles()`
+(`lib/storage.ts`) rileggono e ri-analizzano (`JSON.parse`) l'intero armadio profili da
+`localStorage` a OGNI chiamata. Nel corpo del render (eseguito a OGNI render, non solo
+all'apertura) venivano chiamate **7 volte** in punti diversi per lo stesso identico armadio:
+nome auditor, nome preclear, sesso del preclear, la foto per `HistoryModal`. Consolidate in
+`profiliAuditor`/`profiliPreclear`, lette UNA volta per render invece di ripetutamente — nello
+stesso render sincrono `localStorage` non può cambiare nel frattempo, quindi stesso identico
+risultato con una lettura invece di tre. **Due chiamate lasciate intatte, di proposito**:
+quelle dentro il gestore di chiusura seduta (righe ~1787-1788) — lì la lettura fresca al
+momento dell'evento è quel che serve davvero (l'auditor potrebbe aver cambiato la propria foto
+durante la seduta), consolidarle con le letture di render avrebbe introdotto un dato
+potenzialmente vecchio: la stessa distinzione fra "sempre fresco per costruzione" (dentro il
+render) e "fresco al momento dell'evento" (dentro un gestore) di sempre.
+
+**Cercato e NON trovato**: blocchi di codice disattivato/commentato, file di `src/serenity/`
+mai importati da nessuna parte, cicli ripetuti sullo stesso array (`journal.logs`/
+`assessItems`) nello stesso blocco, `JSON.parse`/regex ricreati inutilmente altrove — il resto
+del file era già in ordine.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (**−3** rispetto a prima, i tre
+punti tolti — nessun nuovo warning), `vitest run` 639/639, dal vivo (profilo TEST) — nome
+auditor nel pill dell'intestazione e profilo attivo nello Storico, entrambi corretti dopo il
+consolidamento delle letture.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

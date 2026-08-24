@@ -66,7 +66,7 @@ import { isServerAvailable, serverGetProcessusList, serverProcessusUrl } from '.
 import { ProcessusModal, type ProcessusEntry } from '../components/ProcessusModal';
 import { costruisciRiepilogo, generaPdf, type SerenityReportInput } from './sessionReport';
 import { Avvio } from './Avvio';
-import { AVVIO_VUOTO, type Avvio as StatoAvvio } from './flussoAvvio';
+import { type Avvio as StatoAvvio } from './flussoAvvio';
 import { useI18n } from '../i18n';
 import { pick5 } from '../i18n5';
 import { useUiStore } from '../store/uiStore';
@@ -700,7 +700,11 @@ export default function Serenity() {
 
   const museGate = useMuseContactGate({
     eegBuffer, museConnection: muse.museConnection, remoteLive: false,
-    timeRef, addLog: e => journal.addLog(e as any),
+    // ⚠️ `as any` tolto (verifica del codice): `useMuseContactGate`'s `addLog` vuole
+    // esattamente `Omit<LogEntry, 'time'> & { time?: number }` — lo stesso tipo di
+    // `journal.addLog` (stesso `LogEntry`, importato dallo stesso `components/TranscriptLog`).
+    // Un cast per zittire un disallineamento che non c'era: la funzione passa diretta.
+    timeRef, addLog: journal.addLog,
   });
 
   // L'ultima reazione MOSTRATA sull'ago EEG — scritta dal motore della carica, letta da
@@ -912,7 +916,11 @@ export default function Serenity() {
   const release = useStableReleaseState({ needleReactionKeyRef });
 
   const [hardwareError, setHardwareError] = useState<string | null>(null);
-  const [isHoldMode, setIsHoldMode] = useState(false);
+  // ⚠️ Codice morto tolto (verifica del codice, richiesta esplicita): il VALORE non era mai
+  // letto in questo file — solo `setIsHoldMode` serve, passato al motore condiviso più sotto.
+  // Il motore continua a scriverlo esattamente come prima (stesso calcolo, stesso stato);
+  // qui si tiene solo il pezzo che questo file usa davvero.
+  const [, setIsHoldMode] = useState(false);
   const [realBpm, setRealBpm] = useState<number | null>(null);
   const realBpmRef = useRef<number | null>(null);
   useEffect(() => { realBpmRef.current = realBpm; }, [realBpm]);
@@ -1203,18 +1211,27 @@ export default function Serenity() {
   useEffect(() => { agoEegRef.current = agoEeg; }, [agoEeg]);
 
   // I profili vengono dallo stesso armadio di EQUILIBRIUM — è la verifica di questa fase.
+  // ⚠️ Ottimizzazione (verifica del codice, richiesta esplicita — stesso risultato, non un
+  // calcolo diverso): `getProfiles()`/`getPcProfiles()` rileggono e ri-analizzano (JSON.parse)
+  // l'intero armadio da `localStorage` a OGNI chiamata — qui sotto e più giù (riga ~3030,
+  // `HistoryModal`) venivano richiamate PIÙ VOLTE nello STESSO render per lo stesso identico
+  // armadio. Lette una volta sola qui, riusate dove prima si rileggevano da capo — nello
+  // stesso render, sincrono, `localStorage` non può essere cambiato nel frattempo: stesso
+  // identico risultato, una lettura invece di tre. (La lettura dentro il gestore di chiusura
+  // seduta, molto più giù, resta SUA: lì la freschezza al momento dell'evento conta davvero,
+  // non va confusa con questa.)
+  const profiliAuditor = (() => { try { return getProfiles(); } catch { return []; } })();
+  const profiliPreclear = (() => { try { return getPcProfiles(); } catch { return []; } })();
   const nome = (lista: Array<{ id: string; name: string }>, id: string | null | undefined) =>
     id === 'nuovo' ? 'nuovo' : (lista.find(p => p.id === id)?.name ?? '—');
-  const nomeAuditor = nome(
-    (() => { try { return getProfiles(); } catch { return []; } })(), avvio?.auditorId);
-  const nomePreclear = nome(
-    (() => { try { return getPcProfiles(); } catch { return []; } })(), avvio?.pcId);
+  const nomeAuditor = nome(profiliAuditor, avvio?.auditorId);
+  const nomePreclear = nome(profiliPreclear, avvio?.pcId);
   /** IL SESSO DEL PRECLEAR — decide il TA di clear (tono 40 di QUESTA persona), come in
    *  App.tsx (`useProfileStore.pcSex`). In SOLO l'auditor È il preclear: il campo vive sul
    *  suo stesso profilo (`PcProfile`/`UserProfile` condividono `sex?: 'm'|'f'` apposta). */
   const pcSex: 'm' | 'f' | undefined = avvio?.solo
-    ? (() => { try { return getProfiles().find(p => p.id === avvio.auditorId)?.sex; } catch { return undefined; } })()
-    : (() => { try { return getPcProfiles().find(p => p.id === avvio?.pcId)?.sex; } catch { return undefined; } })();
+    ? profiliAuditor.find(p => p.id === avvio.auditorId)?.sex
+    : profiliPreclear.find(p => p.id === avvio?.pcId)?.sex;
 
   /**
    * ── LA PROVA DELLE LATTINE DI QUESTO PRECLEAR — segnalata assente insieme a TONE SCALE ────
@@ -3020,9 +3037,7 @@ export default function Serenity() {
         <div className="ser-history-wrap" style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
           <Suspense fallback={null}>
             <HistoryModal
-              activeProfile={(() => {
-                try { return getProfiles().find(p => p.id === avvio?.auditorId) ?? null; } catch { return null; }
-              })()}
+              activeProfile={profiliAuditor.find(p => p.id === avvio?.auditorId) ?? null}
               onClose={() => setHistoryAperto(false)}
               lang={lang as never}
             />
