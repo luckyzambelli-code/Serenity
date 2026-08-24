@@ -3152,9 +3152,16 @@ export default function Serenity() {
                   STESSO componente che App.tsx monta (3 volte, una per metodo, identico a qui):
                   legge `mode`/`faseCiclo`, già calcolati sopra, e ne ricava da sé quanti tempi
                   ci sono e a quale si è (`engine/cycleSteps.ts`, provato da solo) — non li
-                  decide, li mostra. */}
+                  decide, li mostra.
+                  ⚠️ Segnalato: « le scritte delle steps dei cicli sono troppo piccole, aumenta
+                  la taglia dei caratteri ». I 9px di sempre erano pensati per la barra comandi
+                  STRETTA di App.tsx — qui la pista ha una riga tutta per sé (`flexBasis:'100%'`,
+                  sopra), spazio che nessuno usava. `scala={1.5}` (nuovo prop OPZIONALE,
+                  default 1: App.tsx non lo passa, resta esattamente come prima) invece di
+                  toccare le taglie fisse dentro il componente condiviso — SERENITY più
+                  leggibile, EQUILIBRIUM invariato. */}
               <div style={{ flexBasis: '100%' }}>
-                <CycleSteps mode={mode} phase={faseCiclo} lang={lang} />
+                <CycleSteps mode={mode} phase={faseCiclo} lang={lang} scala={1.5} />
               </div>
             </>
           );

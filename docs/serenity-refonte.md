@@ -3038,6 +3038,34 @@ sovrapporsi ai comandi sopra di loro.
 
 ---
 
+## Cinquantesimo giro (24/08/2026) — la pista dei tempi del ciclo, i caratteri troppo piccoli, un prop opzionale invece di toccare il componente condiviso
+
+Segnalato: « le scritte delle steps dei cicli sono troppo piccole, aumenta la taglia dei
+caratteri ». La pista (① ITEM — ② MOCK-UP — ③ AS-IS, ecc.) vive in
+`components/CycleSteps.tsx` — un componente CONDIVISO, lo stesso che `App.tsx`
+(EQUILIBRIUM) monta tre volte nella SUA barra comandi, stretta: i 9px fissi dentro il
+componente erano tarati per QUELLO spazio, non per la riga intera che SERENITY gli riserva
+(`flexBasis:'100%'`, dal giro della deduplicazione). Cambiare quei 9px a peso fisso avrebbe
+ingrandito anche EQUILIBRIUM, mai chiesto — la stessa regola di sempre: SERENITY tocca solo
+la propria pelle, mai il motore né un componente condiviso in un modo che ricada
+sull'altra app.
+
+Aggiunto un prop OPZIONALE, `scala` (default `1` — la taglia esatta di sempre, quella che
+App.tsx continua a vedere non passandolo): cerchio, spunta, testo ed connettore vengono
+tutti moltiplicati per lo stesso fattore, restando nelle stesse proporzioni fra loro. Solo
+`Serenity.tsx` lo passa, `scala={1.5}` — 9px → 14px il testo, 15px → 23px i cerchi
+numerati. Verificato dal vivo: armato CONTACT, il testo "ITEM"/"MOCK-UP"/"AS-IS" letto a
+`getComputedStyle` conferma 14px (era 9).
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo (profilo TEST, ciclo CONTACT armato, 1400×900) — pista chiaramente più
+leggibile, cerchi/testo/connettore scalati insieme senza rompere le proporzioni.
+
+`git status`: `docs/serenity-refonte.md`, `src/components/CycleSteps.tsx`,
+`src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

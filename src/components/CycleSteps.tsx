@@ -25,12 +25,18 @@ import { pick5 } from '../i18n5';
  *
  * Rendering puro: quanti tempi e a quale si è lo dice `engine/cycleSteps`, che si prova da solo.
  */
-export function CycleSteps({ mode, phase, lang, compact = false }: {
+export function CycleSteps({ mode, phase, lang, compact = false, scala = 1 }: {
   mode: SessionMode;
   phase: SessionPhase;
   lang: string;
   /** Compatto: solo i pallini, senza le parole. Per quando lo spazio è poco. */
   compact?: boolean;
+  /** ⚠️ Segnalato (SERENITY): « le scritte delle steps dei cicli sono troppo piccole ».
+   *  Componente CONDIVISO con `App.tsx` (EQUILIBRIUM) — cambiare le taglie qui sotto a peso
+   *  fisso avrebbe rimpicciolito/ingrandito anche lui, mai chiesto. `scala` è un fattore
+   *  opzionale (default 1 = la taglia di sempre, quella che App.tsx continua a vedere non
+   *  passandolo): solo SERENITY lo passa più grande di 1. */
+  scala?: number;
 }) {
   const isLightTheme = useUiStore(s => s.isLightTheme);
   const L = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang, it, fr, en, es, sv);
@@ -59,8 +65,18 @@ export function CycleSteps({ mode, phase, lang, compact = false }: {
   const acceso = isLightTheme ? '#1a1a1f'              : 'rgba(240,246,255,0.98)';
   const avanti = isLightTheme ? 'rgba(58,58,64,0.30)'  : 'rgba(226,238,255,0.26)';
 
+  // `scala` moltiplica ogni taglia — cerchio, spunta, testo, connettore — mantenendo le
+  // stesse proporzioni di sempre fra loro. A `scala=1` sono i numeri esatti di prima.
+  const dimCerchio = Math.round(15 * scala);
+  const dimSpunta  = Math.round(9 * scala);
+  const fsCerchio  = Math.round(9 * scala);
+  const fsLabel    = Math.round(9 * scala);
+  const dimLinea   = Math.round(10 * scala);
+  const gapEsterno = Math.round(6 * scala);
+  const gapInterno = Math.round(4 * scala);
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: gapEsterno, flexWrap: 'nowrap' }}>
       {steps.map((s, i) => {
         // L'ULTIMO TEMPO si spunta solo quando il ciclo è davvero concluso: essere ARRIVATI
         // all'AS-IS non è averlo validato, ed è tutta la differenza (l'app propone, l'auditor
@@ -71,22 +87,22 @@ export function CycleSteps({ mode, phase, lang, compact = false }: {
         return (
           <React.Fragment key={s}>
             {i > 0 && (
-              <span aria-hidden style={{ width: 10, height: 1, flexShrink: 0,
+              <span aria-hidden style={{ width: dimLinea, height: 1, flexShrink: 0,
                 background: i <= cur ? fatto : avanti }} />
             )}
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: gapInterno, flexShrink: 0 }}>
               <span style={{
-                width: 15, height: 15, borderRadius: '50%', flexShrink: 0,
+                width: dimCerchio, height: dimCerchio, borderRadius: '50%', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 800, lineHeight: 1,
+                fontFamily: 'var(--font-sans)', fontSize: fsCerchio, fontWeight: 800, lineHeight: 1,
                 color: inCorso ? (isLightTheme ? '#f2f3f6' : '#12141a') : colore,
                 background: inCorso ? acceso : 'transparent',
                 border: `1px solid ${inCorso ? acceso : colore}` }}>
-                {concluso ? <Check size={9} strokeWidth={3.2} /> : i + 1}
+                {concluso ? <Check size={dimSpunta} strokeWidth={3.2} /> : i + 1}
               </span>
               {!compact && (
                 <span style={{
-                  fontFamily: 'var(--font-sans)', fontSize: 9, letterSpacing: '0.1em',
+                  fontFamily: 'var(--font-sans)', fontSize: fsLabel, letterSpacing: '0.1em',
                   fontWeight: inCorso ? 800 : 600, color: colore, whiteSpace: 'nowrap' }}>
                   {ETICHETTA[s]}
                 </span>
