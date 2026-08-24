@@ -78,7 +78,7 @@ export function BottoneCiclico<T extends string>({ opzioni, selezionato, onChang
           position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
           justifyContent: idx === 0 ? 'flex-end' : 'flex-start',
           paddingRight: idx === 0 ? 14 : 0, paddingLeft: idx === 1 ? 14 : 0,
-          fontFamily: 'var(--s-sans)', fontSize: 13, fontWeight: 700, color: 'var(--s-ink)',
+          fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', fontWeight: 700, color: 'var(--s-ink)',
           whiteSpace: 'nowrap',
         }}>
           <span key={corrente.k} className="s-bottone-morph">{corrente.label}</span>
@@ -104,7 +104,7 @@ export function BottoneCiclico<T extends string>({ opzioni, selezionato, onChang
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           minWidth: minLarghezza, borderRadius: 999, padding: '6px 14px',
           background: 'var(--s-disc)', cursor: 'pointer',
-          fontFamily: 'var(--s-sans)', fontSize: 14.5, fontWeight: 700, color: 'var(--s-ink)',
+          fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', fontWeight: 700, color: 'var(--s-ink)',
           overflow: 'hidden',
         }}
       >
@@ -126,7 +126,7 @@ export function BottoneCiclico<T extends string>({ opzioni, selezionato, onChang
               display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
               border: 'none', borderRadius: 8, padding: '6px 12px', textAlign: 'left',
               background: o.k === selezionato ? 'var(--s-disc-sunk)' : 'transparent',
-              fontFamily: 'var(--s-sans)', fontSize: 14.5, fontWeight: 700,
+              fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', fontWeight: 700,
               color: o.k === selezionato ? 'var(--s-still)' : 'var(--s-ink)',
             }}>
               {o.icona}{o.label}

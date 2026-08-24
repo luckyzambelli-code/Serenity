@@ -3233,6 +3233,44 @@ fatto nulla).
 
 ---
 
+## Cinquantaquattresimo giro (24/08/2026) — la scala dei caratteri armonizzata in tutto `src/serenity/`
+
+Segnalato (analisi del codice, tre motivi confermati insieme): « troppi font diversi insieme,
+taglie incoerenti, difficile da leggere in generale ». Contati i letterali `fontSize:` in
+TUTTI i file di `src/serenity/`: **oltre venti taglie diverse**, spesso a 0,5px l'una
+dall'altra (9, 9.5, 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15, 15.5, 16, 17, 18, 20,
+21, 22, 26, 27, 28, 30) — la deriva di decine di giri che hanno ognuno aggiustato UN testo
+senza guardare gli altri, non una scala voluta.
+
+**Le FAMIGLIE restavano coerenti** (verificato prima di cambiare qualunque cosa): serif per
+le parole umane (domande dei dialoghi, comandi letti a voce, il nome dell'app), sans per
+l'interfaccia (etichette, bottoni), mono per i numeri tabulari (TA, orologio, tono) — nessuna
+tocca.
+
+**Le TAGLIE si riducono a sei passi** (`tokens.css`, nuovi `--s-fs-micro/sm/base/lg/xl/hero`),
+scelti sui grappoli naturali dell'istogramma (i salti più netti, non un taglio a caso): ogni
+valore vecchio ricade nel passo più vicino (differenza mai oltre 1,5px, invisibile) — **181
+sostituzioni** in 12 file (66 in `Serenity.tsx`, 115 negli altri). Il caso più netto trovato:
+i titoli `<h1>` a schermo intero (Avvio, Connessione, PannelloConfig, PannelloEp,
+PannelloProfilo) erano **26, 27, 28, 28, 30** — cinque taglie diverse per LO STESSO ruolo in
+cinque file diversi — ora tutti `--s-fs-hero` (28px).
+
+**Un'eccezione deliberata, non forzata nella scala**: il campo per scrivere il nome del
+profilo (`PannelloProfilo.tsx`, 22px) — nessun altro testo condivide il suo ruolo (un campo
+editabile per un nome, non un titolo né un numero), costringerlo nel grappolo più vicino
+avrebbe risolto un'incoerenza che non c'era creandone una vera. Commento lasciato sul posto a
+spiegare perché resta un letterale.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo estesa (profilo TEST, onboarding, "Edit TEST", il quadrante, CONFIG, la
+seduta aperta con Journal/Assessment, EP) — nessuna rottura visiva, gerarchia invariata,
+solo più coerente.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/tokens.css`, e tutti i file `.tsx` di
+`src/serenity/` che avevano almeno un `fontSize:` letterale (12 file).
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

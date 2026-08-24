@@ -243,17 +243,17 @@ function SuggerimentoCiclo({ comando, come, avviso, fatto = false }: {
   return (
     <span style={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 340 }}>
       {comando && (
-        <span style={{ fontFamily: 'var(--s-serif)', fontSize: 13.5, lineHeight: 1.35,
+        <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.35,
                       color: fatto ? 'var(--s-still)' : 'var(--s-ink-soft)' }}>
           {comando}
         </span>
       )}
-      <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12.5, lineHeight: 1.4,
+      <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.4,
                     color: fatto ? 'var(--s-still)' : 'var(--s-ink-faint)' }}>
         {come}
       </span>
       {avviso && (
-        <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12.5, fontWeight: 700,
+        <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', fontWeight: 700,
                       color: 'var(--s-reserve)' }}>
           {avviso}
         </span>
@@ -1989,7 +1989,7 @@ export default function Serenity() {
             borderRadius: 16, background: 'var(--s-disc)',
             minWidth: 320,
           }}>
-            <span style={{ fontFamily: 'var(--s-serif)', fontSize: 18, color: 'var(--s-ink)' }}>
+            <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-lg)', color: 'var(--s-ink)' }}>
               {LC('con che cosa si audita?', 'avec quoi audite-t-on ?', 'what will you audit with?',
                   '¿con qué se audita?', 'vad ska du auditera med?')}
             </span>
@@ -2002,7 +2002,7 @@ export default function Serenity() {
                 <button key={o.k} onClick={() => scegliConn(o.k)} style={{
                   display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
                   border: 'none', cursor: 'pointer', borderRadius: 10, padding: '10px 14px',
-                  fontFamily: 'var(--s-sans)', fontSize: 15.5, letterSpacing: '0.02em',
+                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.02em',
                   background: o.on ? 'var(--s-disc-sunk)' : 'transparent',
                   color: 'var(--s-ink)', boxShadow: o.on ? 'var(--s-shadow)' : 'none',
                 }}>
@@ -2011,7 +2011,7 @@ export default function Serenity() {
                 </button>
               ))}
             </div>
-            <span style={{ fontSize: 14, color: 'var(--s-ink-faint)', maxWidth: 280, lineHeight: 1.5 }}>
+            <span style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)', maxWidth: 280, lineHeight: 1.5 }}>
               {connSel.none ? t('no_instruments_hint') as string : t('connect_either_hint') as string}
             </span>
             {/* ── SALVA QUESTA COMBINAZIONE — chiesto direttamente: « un sistema di
@@ -2035,7 +2035,7 @@ export default function Serenity() {
                     'name for this configuration…', 'nombre de esta configuración…', 'namn för denna konfiguration…') as string}
                   style={{
                     flex: 1, border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
-                    outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink)',
+                    outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
                     padding: '2px 4px',
                   }}
                 />
@@ -2045,7 +2045,7 @@ export default function Serenity() {
                   style={{
                     border: 'none', background: 'none', cursor: nomeConfigDaSalvare.trim() ? 'pointer' : 'default',
                     opacity: nomeConfigDaSalvare.trim() ? 1 : 0.4,
-                    fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-soft)', whiteSpace: 'nowrap',
+                    fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-soft)', whiteSpace: 'nowrap',
                   }}>
                   {configSalvata
                     ? LC('salvata ✓', 'enregistrée ✓', 'saved ✓', 'guardada ✓', 'sparad ✓')
@@ -2056,7 +2056,7 @@ export default function Serenity() {
             <div style={{ display: 'flex', gap: 14, justifyContent: 'flex-end' }}>
               <button onClick={() => setScegliStrumento(false)} style={{
                 border: 'none', background: 'none', cursor: 'pointer',
-                fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-ghost)',
+                fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-ghost)',
               }}>
                 {t('cancel')}
               </button>
@@ -2091,7 +2091,7 @@ export default function Serenity() {
                   borderRadius: 999, padding: '9px 22px',
                   cursor: (connSel.muse || connSel.theta || connSel.none) ? 'pointer' : 'default',
                   opacity: (connSel.muse || connSel.theta || connSel.none) ? 1 : 0.4,
-                  fontFamily: 'var(--s-sans)', fontSize: 15, letterSpacing: '0.06em', textTransform: 'uppercase',
+                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.06em', textTransform: 'uppercase',
                   background: 'var(--s-ink)', color: 'var(--s-ground)',
                 }}>
                 {t('ser_open_session')}
@@ -2233,7 +2233,7 @@ export default function Serenity() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, pointerEvents: 'none', flexShrink: 0 }}>
             <span style={{
               display: 'flex', alignItems: 'center', gap: 3,
-              fontFamily: 'var(--s-mono)', fontSize: 15, letterSpacing: '0.02em',
+              fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.02em',
               color: 'var(--s-ink-faint)',
             }}>
               <Clock size={13} strokeWidth={1.8} aria-hidden="true" />
@@ -2241,7 +2241,7 @@ export default function Serenity() {
             </span>
             <span style={{
               display: 'flex', alignItems: 'center', gap: 3,
-              fontFamily: 'var(--s-mono)', fontSize: 17, letterSpacing: '0.03em',
+              fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-lg)', letterSpacing: '0.03em',
               color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
               transition: 'color var(--s-slow) var(--s-ease)',
               fontVariantNumeric: 'tabular-nums',
@@ -2254,7 +2254,7 @@ export default function Serenity() {
             flex: 1, minWidth: 0, cursor: 'pointer', pointerEvents: 'auto',
             background: 'var(--s-disc)', color: 'var(--s-ink)',
             borderRadius: 16, padding: '12px 8px',
-            fontSize: 12.5, letterSpacing: '0.06em', textTransform: 'uppercase',
+            fontSize: 'var(--s-fs-sm)', letterSpacing: '0.06em', textTransform: 'uppercase',
             fontFamily: 'var(--s-sans)', lineHeight: 1.25, textAlign: 'center',
           }}>
             {/* ── SEGNALATO: « le bouton FERMER — on ne sait pas s'il correspond à la séance ou
@@ -2277,7 +2277,7 @@ export default function Serenity() {
           <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             {pausata && (
               <span className="ser-pulse" style={{
-                fontFamily: 'var(--s-sans)', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+                fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
                 padding: '3px 8px', borderRadius: 999, textAlign: 'center', flexShrink: 0,
                 background: 'var(--s-reserve)', color: 'var(--s-ground)',
               }}>
@@ -2369,7 +2369,7 @@ export default function Serenity() {
                   <c.Icona size={22} strokeWidth={1.8} aria-hidden="true" />
                 </button>
                 <span style={{
-                  fontFamily: 'var(--s-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
+                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
                   color: c.hue ?? 'var(--s-ink-faint)',
                 }}>{c.label}</span>
               </div>
@@ -2405,7 +2405,7 @@ export default function Serenity() {
               {ep.epValidated ? <BadgeCheck size={22} strokeWidth={1.8} aria-hidden="true" /> : <FileCheck size={22} strokeWidth={1.8} aria-hidden="true" />}
             </button>
             <span style={{
-              fontFamily: 'var(--s-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
+              fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
               color: ep.epValidated ? 'var(--s-still)' : 'var(--s-ink-faint)',
             }}>{ep.epValidated ? 'EP ✓' : 'EP'}</span>
           </div>
@@ -2425,13 +2425,13 @@ export default function Serenity() {
             borderRadius: 18, padding: '10px 16px 14px', pointerEvents: 'auto',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexShrink: 0 }}>
-              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.12em',
+              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.12em',
                             textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
                 {t('ser_journal')}
               </span>
               <button onClick={() => setModuleVis(v => ({ ...v, journal: false }))} style={{
                 border: 'none', background: 'none', cursor: 'pointer',
-                color: 'var(--s-ink-faint)', fontSize: 18, lineHeight: 1, padding: 2,
+                color: 'var(--s-ink-faint)', fontSize: 'var(--s-fs-lg)', lineHeight: 1, padding: 2,
               }}>×</button>
             </div>
             <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -2440,7 +2440,7 @@ export default function Serenity() {
                 .sort((a, b) => (a.time ?? 0) - (b.time ?? 0))
                 .reverse()
                 .map((log, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 8, fontFamily: 'var(--s-mono)', fontSize: 12.5, lineHeight: 1.4 }}>
+                  <div key={i} style={{ display: 'flex', gap: 8, fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.4 }}>
                     <span style={{ color: 'var(--s-ink-faint)', width: 38, flexShrink: 0 }}>
                       {(log.time || 0).toFixed(1)}s
                     </span>
@@ -2510,10 +2510,10 @@ export default function Serenity() {
             filter: isLightTheme ? 'none' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.45)) brightness(1.05)',
           }} />
         </button>
-        <span style={{ fontFamily: 'var(--s-serif)', fontSize: 21, letterSpacing: '0.14em' }}>
+        <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-xl)', letterSpacing: '0.14em' }}>
           SERENITY
         </span>
-        <span style={{ fontFamily: 'var(--s-mono)', fontSize: 13.5, color: 'var(--s-ink-faint)' }}>
+        <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)' }}>
           {__SERENITY_VERSION__}
         </span>
         {/* ⚠️ SEGNALATO: « la langue doit pouvoir être changée en cours de route » — non solo
@@ -2542,7 +2542,7 @@ export default function Serenity() {
               <span style={{
                 position: 'absolute', top: -4, right: -4, minWidth: 17, height: 17, borderRadius: 999,
                 background: 'var(--s-ink)', color: 'var(--s-ground)',
-                fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 700,
+                fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px',
               }}>{n}</span>
             ) : null;
@@ -2557,7 +2557,7 @@ export default function Serenity() {
             <span style={{
               position: 'absolute', top: -4, right: -4, minWidth: 17, height: 17, borderRadius: 999,
               background: 'var(--s-ink)', color: 'var(--s-ground)',
-              fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 700,
+              fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px',
             }}>{processusPdfs.length}</span>
           )}
@@ -2583,7 +2583,7 @@ export default function Serenity() {
             stesso materiale per la stessa famiglia di informazioni (chi/come/dove di questa
             seduta), non un secondo linguaggio visivo per dire cose simili. */}
         <span className="s-glass" style={{
-          fontSize: 15, color: 'var(--s-ink-soft)', display: 'flex', alignItems: 'center', gap: 10,
+          fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-soft)', display: 'flex', alignItems: 'center', gap: 10,
           background: 'var(--s-disc)', padding: '5px 12px', borderRadius: 999,
         }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -2630,13 +2630,13 @@ export default function Serenity() {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10, border: 'none', background: 'none',
                     cursor: 'pointer', padding: '8px 6px', borderRadius: 8, textAlign: 'left',
-                    fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink)',
+                    fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
                   }}>
                   {avvio.esperto
                     ? <Wrench size={20} strokeWidth={1.8} aria-hidden="true" />
                     : <CircleUser size={20} strokeWidth={1.8} aria-hidden="true" />}
                   {avvio.esperto ? t('ser_expert_tag') : t('ser_normal_tag')}
-                  <span style={{ marginLeft: 'auto', fontSize: 12.5, color: 'var(--s-ink-faint)' }}>
+                  <span style={{ marginLeft: 'auto', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)' }}>
                     {LC('cambia', 'changer', 'change', 'cambiar', 'ändra')}
                   </span>
                 </button>
@@ -2648,7 +2648,7 @@ export default function Serenity() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 10, border: 'none', background: 'none',
                       cursor: 'pointer', padding: '8px 6px', borderRadius: 8, textAlign: 'left',
-                      fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink)',
+                      fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
                     }}>
                     <UserCog size={20} strokeWidth={1.8} aria-hidden="true" />
                     {t('ser_change_people')}
@@ -2664,7 +2664,7 @@ export default function Serenity() {
                       style={{
                         display: 'flex', alignItems: 'center', gap: 10, border: 'none', background: 'none',
                         cursor: 'pointer', padding: '8px 6px', borderRadius: 8, textAlign: 'left',
-                        fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink)',
+                        fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
                       }}>
                       <Save size={20} strokeWidth={1.8} aria-hidden="true" />
                       {LC('salva questa configurazione', 'sauvegarder cette configuration',
@@ -2672,7 +2672,7 @@ export default function Serenity() {
                     </button>
                     {salvaConfigAperto && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 6px 8px' }}>
-                        <span style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--s-ink-faint)' }}>
+                        <span style={{ fontSize: 'var(--s-fs-sm)', lineHeight: 1.5, color: 'var(--s-ink-faint)' }}>
                           {LC('auditor, preclear, locale/distanza, e gli strumenti connessi in questo momento — tutto insieme.',
                             'auditeur, préclair, local/distance, et les instruments connectés en ce moment — le tout ensemble.',
                             'auditor, preclear, local/distance, and the instruments connected right now — all together.',
@@ -2696,7 +2696,7 @@ export default function Serenity() {
                               'name for this configuration…', 'nombre de esta configuración…', 'namn för denna konfiguration…') as string}
                             style={{
                               flex: 1, border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
-                              outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink)',
+                              outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
                               padding: '2px 4px',
                             }}
                           />
@@ -2710,7 +2710,7 @@ export default function Serenity() {
                             style={{
                               border: 'none', background: 'none', cursor: nomeConfigDaSalvare.trim() ? 'pointer' : 'default',
                               opacity: nomeConfigDaSalvare.trim() ? 1 : 0.4,
-                              fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-soft)', whiteSpace: 'nowrap',
+                              fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-soft)', whiteSpace: 'nowrap',
                             }}>
                             {configSalvata
                               ? LC('salvata ✓', 'enregistrée ✓', 'saved ✓', 'guardada ✓', 'sparad ✓')
@@ -2842,9 +2842,9 @@ export default function Serenity() {
               {museOk && moduleVis.biometric && (
                 <span title={t('biometric_integrity') as string} style={{
                   display: 'flex', alignItems: 'baseline', gap: 3, padding: '0 8px 0 2px',
-                  fontFamily: 'var(--s-mono)', fontSize: 11, color: 'var(--s-ink-faint)',
+                  fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', color: 'var(--s-ink-faint)',
                 }}>
-                  <span style={{ fontSize: 9, letterSpacing: '0.06em' }}>
+                  <span style={{ fontSize: 'var(--s-fs-micro)', letterSpacing: '0.06em' }}>
                     {LC('INT', 'INT', 'INT', 'INT', 'INT')}
                   </span>
                   <LetturaIntegrita />
@@ -2865,7 +2865,7 @@ export default function Serenity() {
           <button className="s-glass s-glass-btn" onClick={() => setMeterSetupAperto(v => !v)} style={{
             cursor: 'pointer', padding: '5px 12px', borderRadius: 999,
             background: 'var(--s-disc)',
-            fontFamily: 'var(--s-sans)', fontSize: 14, color: 'var(--s-ink-faint)',
+            fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)',
           }}>
             {/* ⚠️ Non `theta_setup` ("Assetto") — segnalato: « on ne sait pas les réglages à
                 quoi correspondent ». "Assetto" non dice nemmeno che è il METER a essere in
@@ -2880,7 +2880,7 @@ export default function Serenity() {
             del MUSE accanto. Sparisce da sé al prossimo dato buono (`useChargeEngine` lo azzera
             al primo METRICS_UPDATE valido). */}
         {hardwareError && (
-          <span style={{ fontSize: 14.5, color: 'var(--s-reserve)' }}>{hardwareError}</span>
+          <span style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-reserve)' }}>{hardwareError}</span>
         )}
         {/* La RETE verso il PC a distanza, e il SUO Muse — due dispositivi, due indicatori. Prima
             erano un'unica riga: « quale dei due non risponde? » si doveva dedurre dal testo.
@@ -2892,7 +2892,7 @@ export default function Serenity() {
         {avvio.distanza && (
           <>
             <Divisore />
-            <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.12em',
+            <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.12em',
                           textTransform: 'uppercase', color: 'var(--s-ink-ghost)' }}>
               {LC('a distanza', 'à distance', 'remote', 'a distancia', 'på distans')}
             </span>
@@ -3050,13 +3050,13 @@ export default function Serenity() {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             marginBottom: 10, flexShrink: 0,
           }}>
-            <span style={{ fontFamily: 'var(--s-sans)', fontSize: 14.5, color: '#fff' }}>
+            <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: '#fff' }}>
               {processusVisualizzato.name}
             </span>
             <button onClick={() => setProcessusVisualizzato(null)} style={{
               border: 'none', background: 'rgba(255,255,255,0.12)', color: '#fff',
               borderRadius: 999, padding: '6px 16px', cursor: 'pointer',
-              fontFamily: 'var(--s-sans)', fontSize: 14,
+              fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)',
             }}>
               {LC('chiudi', 'fermer', 'close', 'cerrar', 'stäng')}
             </button>
@@ -3101,7 +3101,7 @@ export default function Serenity() {
                 il campo, e il campo stesso è un vetro con un bordo — si vede che è un posto
                 dove scrivere, non un tratto decorativo. */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.1em',
+              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', letterSpacing: '0.1em',
                             textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
                 {LC('scrivi o dì l\'item', 'écris ou dis l\'item', 'type or say the item', 'escribe o di el ítem', 'skriv eller säg item')}
               </span>
@@ -3128,7 +3128,7 @@ export default function Serenity() {
                 }}
                 style={{
                   borderRadius: 999, background: 'var(--s-disc)',
-                  outline: 'none', fontFamily: 'var(--s-serif)', fontSize: 15.5, color: 'var(--s-ink)',
+                  outline: 'none', fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
                   padding: '6px 14px', width: 220,
                 }}
               />
@@ -3146,7 +3146,7 @@ export default function Serenity() {
                 concesso all'una NON vale per l'altra. Non risolvibile da qui (è impostazioni di
                 sistema, non codice) — il `title` sotto dice dove guardare invece di lasciare
                 l'auditor a chiedersi perché. */}
-            <span style={{ fontFamily: 'var(--s-sans)', fontSize: 13, color: 'var(--s-ink-faint)', alignSelf: 'flex-end' }}>
+            <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)', alignSelf: 'flex-end' }}>
               {statoVoce === 'in-ascolto'
                 ? <span className="ser-pulse">🎙 {LC('in ascolto', 'à l\'écoute', 'listening', 'escuchando', 'lyssnar')}</span>
                 : statoVoce === 'assente'
@@ -3183,7 +3183,7 @@ export default function Serenity() {
           const testataCiclo = (nome: string, colore: string | null) => (
             <>
               <span style={{
-                fontFamily: 'var(--s-sans)', fontSize: 13.5, fontWeight: 700, letterSpacing: '0.06em',
+                fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', fontWeight: 700, letterSpacing: '0.06em',
                 padding: '3px 10px', borderRadius: 999,
                 ...(colore
                   ? { background: colore, color: 'var(--s-ground)' }
@@ -3191,7 +3191,7 @@ export default function Serenity() {
               }}>
                 {nome}
               </span>
-              <span style={{ fontFamily: 'var(--s-serif)', fontSize: 15.5, color: 'var(--s-ink)' }}>
+              <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)' }}>
                 {item || t('ser_item_placeholder')}
               </span>
               {/* ── LA PISTA — segnalato: « i cicli devono essere disposti esattamente come in
@@ -3236,7 +3236,7 @@ export default function Serenity() {
             {faseCiclo === 'tone.say_item' && (
               <>
                 <span className="ser-pulse" style={{
-                  fontFamily: 'var(--s-sans)', fontSize: 14, letterSpacing: '0.04em',
+                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.04em',
                   color: 'var(--s-reserve)',
                 }}>
                   {LC('dì la resistenza…', 'dis la résistance…', 'say the resistance…', 'di la resistencia…', 'säg motståndet…')}
@@ -3253,7 +3253,7 @@ export default function Serenity() {
                   <select value={tone.toneAssessed} onChange={e => tone.setToneAssessed(Number(e.target.value))}
                     style={{
                       border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
-                      outline: 'none', fontFamily: 'var(--s-mono)', fontSize: 14.5, color: 'var(--s-ink)',
+                      outline: 'none', fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
                       cursor: 'pointer', padding: '2px 4px',
                     }}>
                     {TONE_LABELS.map(v => (
@@ -3269,7 +3269,7 @@ export default function Serenity() {
               </>
             )}
             {(tone.tonePhase === 'raise' || tone.tonePhase === 'done') && (
-              <span style={{ fontFamily: 'var(--s-mono)', fontSize: 14.5, color: 'var(--s-ink-faint)' }}>
+              <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
                 {tone.toneAtStart !== null ? `${tone.toneAtStart > 0 ? '+' : ''}${tone.toneAtStart.toFixed(0)} → ` : ''}
                 <b style={{ color: 'var(--s-reserve)' }}>+40</b>
               </span>
@@ -3313,7 +3313,7 @@ export default function Serenity() {
             {faseCiclo === 'mirror.say_item' && (
               <>
                 <span className="ser-pulse" style={{
-                  fontFamily: 'var(--s-sans)', fontSize: 14, letterSpacing: '0.04em',
+                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.04em',
                   color: 'var(--s-reserve)',
                 }}>
                   {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
@@ -3326,7 +3326,7 @@ export default function Serenity() {
             )}
             {!mirror.mirrorDisp.locked ? (
               <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink-faint)', marginRight: 6 }}>
+                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)', marginRight: 6 }}>
                   {LC('quanta carica?', 'combien de charge ?', 'how much charge?', '¿cuánta carga?', 'hur mycket laddning?')}
                 </span>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => (
@@ -3336,7 +3336,7 @@ export default function Serenity() {
                       locked: true, reached: false, valueR: mirror.mirrorCycle.valueR });
                   }} style={{
                     border: 'none', cursor: 'pointer', borderRadius: 999, width: 26, height: 26,
-                    fontFamily: 'var(--s-mono)', fontSize: 14, fontWeight: 700,
+                    fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', fontWeight: 700,
                     background: 'var(--s-disc-sunk)', color: 'var(--s-ink)',
                   }}>
                     {v}
@@ -3345,7 +3345,7 @@ export default function Serenity() {
               </div>
             ) : !mirror.mirrorDisp.reached ? (
               <>
-                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 14.5, color: 'var(--s-ink-faint)' }}>
+                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
                   {LC('portalo al doppio', 'mène-le au double', 'take it to the double', 'llévalo al doble', 'för det till dubbeln')}
                   {' — '}{mirror.mirrorDisp.valueR.toFixed(0)} → {(2 * mirror.mirrorDisp.valueR).toFixed(0)}
                 </span>
@@ -3381,7 +3381,7 @@ export default function Serenity() {
             {(faseCiclo === 'contact.say_item' || faseCiclo === 'null.say_item') && (
               <>
                 <span className="ser-pulse" style={{
-                  fontFamily: 'var(--s-sans)', fontSize: 14, letterSpacing: '0.04em',
+                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.04em',
                   color: 'var(--s-reserve)',
                 }}>
                   {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
@@ -3403,7 +3403,7 @@ export default function Serenity() {
                 NULL con NULL — « due contatori confondono », scelta utente), quanti cicli
                 sono stati armati e quanti portati a compimento questa seduta. `cycleStats`
                 arriva già dallo stesso `useContactNullCycle` — solo non era letto qui. */}
-            <span style={{ fontFamily: 'var(--s-mono)', fontSize: 14, color: 'var(--s-ink-faint)' }}>
+            <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
               {cycles.cycleKind === 'null'
                 ? `${cycles.cycleStats.nStarted} · ${cycles.cycleStats.nDone} CLEAR`
                 : `${cycles.cycleStats.cStarted} · ${cycles.cycleStats.cDone} AS-IS`}
@@ -3474,7 +3474,7 @@ export default function Serenity() {
             già (nessun bottone, mai avuto). Il conteggio del giornale resta qui, muto, solo
             quando il modulo è spento (altrimenti lo dice già la sua stessa zona, più giù). */}
         {!moduleVis.journal && (
-          <span style={{ fontSize: 14.5, color: 'var(--s-ink-faint)' }}>
+          <span style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
             {t('ser_journal')} · {journal.logs.length} {t(journal.logs.length === 1 ? 'ser_line' : 'ser_lines')}
           </span>
         )}
@@ -3679,9 +3679,9 @@ export default function Serenity() {
           const AMBRA = '#f59e0b', AMBRA_A = 'rgba(245,158,11,0.45)';
           const riga = (sigla: string, testo: string, col: string, alone: string) => (
             <span key={sigla} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8, lineHeight: 1.1 }}>
-              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 9, letterSpacing: '0.1em',
+              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', letterSpacing: '0.1em',
                             color: col, opacity: 0.6, width: 40, textAlign: 'right' }}>{sigla}</span>
-              <span style={{ fontWeight: 400, fontSize: 20, letterSpacing: '0.14em', color: col,
+              <span style={{ fontWeight: 400, fontSize: 'var(--s-fs-xl)', letterSpacing: '0.14em', color: col,
                             textShadow: `0 0 12px ${alone}` }}>{testo}</span>
             </span>
           );
@@ -3701,7 +3701,7 @@ export default function Serenity() {
               const col = reazioniViste === 'theta' ? AMBRA : BIANCO;
               const alone = reazioniViste === 'theta' ? AMBRA_A : BIANCO_A;
               contenuto = (
-                <span style={{ fontWeight: 400, fontSize: 20, letterSpacing: '0.14em', color: col,
+                <span style={{ fontWeight: 400, fontSize: 'var(--s-fs-xl)', letterSpacing: '0.14em', color: col,
                               textShadow: `0 0 12px ${alone}` }}>{solo}</span>
               );
             }
@@ -3798,11 +3798,11 @@ export default function Serenity() {
                 solo la riga del numero principale (`fontSize:21`) cresce, non tutto il blocco. */}
             {agoEeg && (
               <div style={{
-                fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
+                fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.03em',
                 color: 'var(--s-ink-faint)', display: 'flex', flexDirection: 'column',
                 alignItems: 'flex-start', gap: 2,
               }}>
-                <span style={{ fontSize: 21, fontWeight: 700, color: 'var(--s-ink)' }}>
+                <span style={{ fontSize: 'var(--s-fs-xl)', fontWeight: 700, color: 'var(--s-ink)' }}>
                   <LetturaTA />
                 </span>
                 <LetturaFase t={t} />
@@ -3816,18 +3816,18 @@ export default function Serenity() {
             )}
             {reazioniViste === 'both' && meterC && agoEeg === false && museOk && (
               <span style={{
-                fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
+                fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.03em',
                 color: 'var(--s-alive)', display: 'flex', gap: 6, alignItems: 'baseline',
               }}>
-                <span style={{ fontSize: 10, opacity: 0.75 }}>MUSE</span>
-                <span style={{ fontSize: 21, fontWeight: 700 }}>
+                <span style={{ fontSize: 'var(--s-fs-micro)', opacity: 0.75 }}>MUSE</span>
+                <span style={{ fontSize: 'var(--s-fs-xl)', fontWeight: 700 }}>
                   <LetturaTA />
                 </span>
               </span>
             )}
             {!agoEeg && meterC && (
               <div style={{
-                fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
+                fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.03em',
                 color: 'var(--s-ink-faint)', display: 'flex', flexDirection: 'column',
                 alignItems: 'flex-start', gap: 2,
               }}>
@@ -3867,10 +3867,10 @@ export default function Serenity() {
                           ⚠️ Segnalato ancora: « il METER TA deve essere scritto più in grande » —
                           stessa taglia (21px) della lettura MUSE qui sopra, non più ereditata
                           dal blocco (13px). */}
-                      <span style={{ fontSize: 21, fontWeight: 700, color: 'var(--s-ink)' }}>
+                      <span style={{ fontSize: 'var(--s-fs-xl)', fontWeight: 700, color: 'var(--s-ink)' }}>
                         {LC('METER TA', 'METER TA', 'METER TA', 'METER TA', 'METER TA')} {tone.taMostrato.ta.toFixed(2)}
                       </span>
-                      <span style={{ fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'none',
+                      <span style={{ fontSize: 'var(--s-fs-micro)', letterSpacing: '0.06em', textTransform: 'none',
                                     color: tone.taMostrato.margin > 0 ? 'var(--s-reserve)' : 'var(--s-ink-ghost)' }}>
                         {tone.taMostrato.basis === 'two-cans'
                           ? LC('TA · 2 lattine', 'TA · 2 boîtes', 'TA · 2 cans', 'TA · 2 latas', 'TA · 2 burkar')
@@ -3907,7 +3907,7 @@ export default function Serenity() {
                           'NEEDLE LIGHT — nålens lysande svans och reaktionsetiketterna') as string}
                 style={{
                   pointerEvents: 'auto', marginTop: 2, borderRadius: 999, cursor: 'pointer',
-                  fontFamily: 'var(--s-sans)', fontSize: 9.5, fontWeight: 700, letterSpacing: '0.04em',
+                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
                   padding: '3px 9px', background: 'transparent',
                   border: '1px solid var(--s-ink-ghost)',
                   color: showTrailPref ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
@@ -3973,7 +3973,7 @@ export default function Serenity() {
                 <Play size={46} strokeWidth={1.6} fill="currentColor" style={{ marginLeft: 6 }} />
               </span>
               <span style={{
-                fontFamily: 'var(--s-sans)', fontSize: 14, fontWeight: 800, letterSpacing: '0.22em',
+                fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', fontWeight: 800, letterSpacing: '0.22em',
                 textTransform: 'uppercase',
               }}>
                 {t('hint_press_start')}

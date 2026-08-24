@@ -63,7 +63,7 @@ const TUTTI_SPENTI: SerenityModuleVis = {
 };
 
 const etichetta: React.CSSProperties = {
-  fontFamily: 'var(--s-sans)', fontSize: 13, letterSpacing: '0.14em', textTransform: 'uppercase',
+  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.14em', textTransform: 'uppercase',
   color: 'var(--s-ink-soft)', marginBottom: 10, display: 'block',
 };
 
@@ -113,12 +113,12 @@ export function PannelloConfig({ onChiudi, needleTrim = 0, setNeedleTrim = () =>
         borderBottom: '1px solid var(--s-ink-ghost)',
       }}>
       <span style={{
-        fontFamily: 'var(--s-sans)', fontSize: 15.5,
+        fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)',
         color: disabilitata ? 'var(--s-ink-soft)' : 'var(--s-ink)',
       }}>
         {testo}
         {disabilitata && (
-          <span style={{ fontSize: 14, color: 'var(--s-ink-faint)', marginLeft: 8 }}>
+          <span style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)', marginLeft: 8 }}>
             {t('ser_config_soon')}
           </span>
         )}
@@ -147,11 +147,11 @@ export function PannelloConfig({ onChiudi, needleTrim = 0, setNeedleTrim = () =>
       <header style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
         <button className="s-glass s-glass-btn" onClick={onChiudi} style={{
           cursor: 'pointer', borderRadius: 999, padding: '6px 14px', background: 'var(--s-disc)',
-          fontFamily: 'var(--s-sans)', fontSize: 15.5, color: 'var(--s-ink-soft)',
+          fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-soft)',
         }}>
           ← {t('ser_back')}
         </button>
-        <h1 style={{ margin: 0, fontFamily: 'var(--s-serif)', fontWeight: 400, fontSize: 26, color: 'var(--s-ink)' }}>
+        <h1 style={{ margin: 0, fontFamily: 'var(--s-serif)', fontWeight: 400, fontSize: 'var(--s-fs-hero)', color: 'var(--s-ink)' }}>
           {t('config')}
         </h1>
       </header>
@@ -167,7 +167,7 @@ export function PannelloConfig({ onChiudi, needleTrim = 0, setNeedleTrim = () =>
             </div>
 
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, color: 'var(--s-ink-soft)', marginBottom: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-soft)', marginBottom: 4 }}>
                 <span>{t('config_transparency')}</span>
                 <span style={{ fontFamily: 'var(--s-mono)' }}>{Math.round(uiAlpha * 100)}%</span>
               </div>
@@ -180,7 +180,7 @@ export function PannelloConfig({ onChiudi, needleTrim = 0, setNeedleTrim = () =>
             </div>
 
             <div>
-              <div style={{ fontSize: 15, color: 'var(--s-ink-soft)', marginBottom: 8 }}>{t('wallpaper')}</div>
+              <div style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-soft)', marginBottom: 8 }}>{t('wallpaper')}</div>
               <input
                 id={inputId} type="file" accept="image/*" style={{ display: 'none' }}
                 onChange={async e => {
@@ -201,7 +201,7 @@ export function PannelloConfig({ onChiudi, needleTrim = 0, setNeedleTrim = () =>
                   background: 'var(--s-disc-sunk)',
                   boxShadow: !wallpaperUrl ? 'var(--s-shadow-lift)' : 'none',
                   display: 'grid', placeItems: 'center',
-                  fontSize: 12.5, fontFamily: 'var(--s-mono)', color: 'var(--s-ink-faint)',
+                  fontSize: 'var(--s-fs-sm)', fontFamily: 'var(--s-mono)', color: 'var(--s-ink-faint)',
                   letterSpacing: '0.06em',
                 }}>
                   DEFAULT
@@ -211,7 +211,7 @@ export function PannelloConfig({ onChiudi, needleTrim = 0, setNeedleTrim = () =>
                   background: 'var(--s-disc)',
                   boxShadow: wallpaperUrl ? 'var(--s-shadow-lift)' : 'var(--s-shadow)',
                   display: 'grid', placeItems: 'center',
-                  fontSize: 12.5, fontFamily: 'var(--s-mono)', color: 'var(--s-ink-faint)',
+                  fontSize: 'var(--s-fs-sm)', fontFamily: 'var(--s-mono)', color: 'var(--s-ink-faint)',
                 }}>
                   {wallpaperUrl
                     ? <img src={wallpaperUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -219,7 +219,7 @@ export function PannelloConfig({ onChiudi, needleTrim = 0, setNeedleTrim = () =>
                 </label>
               </div>
               {(wpInCorso || wpErrore) && (
-                <div style={{ marginTop: 6, fontSize: 13.5, color: wpErrore ? 'var(--s-reserve)' : 'var(--s-ink-faint)' }}>
+                <div style={{ marginTop: 6, fontSize: 'var(--s-fs-sm)', color: wpErrore ? 'var(--s-reserve)' : 'var(--s-ink-faint)' }}>
                   {wpInCorso ? '…' : wpErrore === 'troppo-grande' ? t('wallpaper_too_big') : t('wallpaper_unreadable')}
                 </div>
               )}
@@ -237,13 +237,13 @@ export function PannelloConfig({ onChiudi, needleTrim = 0, setNeedleTrim = () =>
           <div style={{ display: 'flex', gap: 16, marginTop: 10 }}>
             <button className="s-glass s-glass-btn" onClick={() => setModuleVis(TUTTI_ACCESI)} style={{
               cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-              fontFamily: 'var(--s-sans)', fontSize: 13.5, letterSpacing: '0.08em', color: 'var(--s-ink-faint)',
+              fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.08em', color: 'var(--s-ink-faint)',
             }}>
               {t('config_all_on')}
             </button>
             <button className="s-glass s-glass-btn" onClick={() => setModuleVis(TUTTI_SPENTI)} style={{
               cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-              fontFamily: 'var(--s-sans)', fontSize: 13.5, letterSpacing: '0.08em', color: 'var(--s-ink-faint)',
+              fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.08em', color: 'var(--s-ink-faint)',
             }}>
               {t('config_all_off')}
             </button>
@@ -262,7 +262,7 @@ export function PannelloConfig({ onChiudi, needleTrim = 0, setNeedleTrim = () =>
             <span style={etichetta}>{tt('drawer_needle_trim')}</span>
             <div style={{ display: 'grid', gap: 18 }}>
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, color: 'var(--s-ink-soft)', marginBottom: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-soft)', marginBottom: 4 }}>
                   <span>{tt('trim_sensitivity')}</span>
                   <span style={{ fontFamily: 'var(--s-mono)' }}>
                     {needleTrim > 0 ? '+' : ''}{needleTrim} {needleTrim <= -5 ? 'LOW' : needleTrim <= 0 ? 'CENTER' : 'HIGH'}
@@ -273,12 +273,12 @@ export function PannelloConfig({ onChiudi, needleTrim = 0, setNeedleTrim = () =>
                   onChange={e => setNeedleTrim(Number(e.target.value))}
                   style={{ width: '100%', accentColor: 'var(--s-ink)', cursor: 'pointer' }}
                 />
-                <div style={{ fontSize: 13, color: 'var(--s-ink-faint)', lineHeight: 1.5, marginTop: 4 }}>
+                <div style={{ fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)', lineHeight: 1.5, marginTop: 4 }}>
                   {tt('trim_centering')}
                 </div>
               </div>
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, color: 'var(--s-ink-soft)', marginBottom: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-soft)', marginBottom: 4 }}>
                   <span>{tt('trim_inertia')}</span>
                   <span style={{ fontFamily: 'var(--s-mono)' }}>{needleInertia}</span>
                 </div>

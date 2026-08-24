@@ -73,7 +73,7 @@ export function IndicatoreConnessione({ stato, etichetta, dettaglio, onClick, ti
       title={title}
       className={onClick ? 's-glass s-glass-btn' : 's-glass'}
       style={{
-        display: 'flex', alignItems: 'center', gap: 8, fontSize: 15.5, color: 'var(--s-ink)',
+        display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
         background: 'var(--s-disc)', padding: '5px 12px', borderRadius: 999, margin: 0,
         fontFamily: 'var(--s-sans)', fontWeight: 500, cursor: onClick ? 'pointer' : 'default',
       }}

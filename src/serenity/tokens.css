@@ -120,6 +120,28 @@
   --s-sans:  ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
   --s-mono:  ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 
+  /* ── LA SCALA DEI CARATTERI — segnalato (analisi del codice): « troppi font diversi
+     insieme, taglie incoerenti, difficile da leggere in generale ». Contando i letterali
+     `fontSize:` in TUTTO `src/serenity/` sono uscite oltre venti taglie diverse, spesso a
+     0,5px l'una dall'altra — non una scala voluta, la deriva di tanti giri che hanno ognuno
+     aggiustato UN testo di poco senza guardare gli altri. Le FAMIGLIE (serif/sans/mono)
+     avevano già un ruolo coerente — serif per le parole umane (domande, comandi letti a voce,
+     il nome dell'app), sans per l'interfaccia (etichette, bottoni), mono per i numeri
+     (tabulari, TA/orologio/tono) — quelle restano. Le TAGLIE si riducono a sei passi, scelti
+     sui grappoli naturali del conteggio (i salti più netti dell'istogramma, non un taglio a
+     caso): ogni valore vecchio ricade nel passo più vicino, la differenza (mai oltre 1,5px,
+     tranne il grappolo dei titoli — v. `--s-fs-hero`) non si vede, la coerenza sì. */
+  --s-fs-micro: 10px;   /* badge, pallini di stato, etichette minuscole — copriva 9…11.5 */
+  --s-fs-sm:    13px;   /* didascalie, letture secondarie — copriva 12…13.5 */
+  --s-fs-base:  15px;   /* testo dell'interfaccia, corpo normale — copriva 14…16, il più
+                           usato di tutti */
+  --s-fs-lg:    18px;   /* titoli minori, domande dei dialoghi — copriva 17…18 */
+  --s-fs-xl:    21px;   /* numeri in mostra — TA/tono, il nome SERENITY — copriva 20…21 */
+  --s-fs-hero:  28px;   /* i titoli `<h1>` a schermo intero (Avvio, Connessione, i pannelli
+                           EP/profilo/config) — coprivano 26/27/28/30, quattro taglie diverse
+                           per LO STESSO ruolo in quattro file diversi: il caso più netto
+                           d'incoerenza trovato. */
+
   /* ── I TRE TOKEN DI `components/CycleStatusBar.tsx` ─────────────────────────────────────
      Segnalato: « i cicli devono essere disposti esattamente come in equilibrium, stessi
      campi, stessa logica » — risposto montando lì `CycleStatusBar` STESSO (non una sua

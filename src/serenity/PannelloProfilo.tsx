@@ -113,6 +113,12 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
   const testo: React.CSSProperties = {
     border: 'none', borderBottom: '1px solid var(--s-ink-ghost)',
     background: 'none', outline: 'none',
+    // ⚠️ 22px resta un letterale, apposta — l'armonizzazione dei caratteri (v. la scala in
+    // `tokens.css`) ha piegato ogni valore col vicino più stretto (mai oltre 1,5px), ma qui
+    // il vicino sarebbe --s-fs-xl (21px, i NUMERI in mostra — TA/tono) o --s-fs-hero (28px, i
+    // TITOLI a schermo intero): due ruoli diversi da questo, un campo per scrivere il proprio
+    // nome. Costringerlo nell'uno o nell'altro grappolo avrebbe risolto un'incoerenza che non
+    // c'era (nessun altro testo condivide questo ruolo) creandone una vera.
     fontFamily: 'var(--s-serif)', fontSize: 22, color: 'var(--s-ink)',
     textAlign: 'center', padding: '4px 8px', width: 260,
   };
@@ -122,7 +128,7 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
    *  `className` nei punti d'uso). */
   const pillola = (attiva: boolean): React.CSSProperties => ({
     cursor: 'pointer', borderRadius: 999, padding: '8px 20px',
-    fontFamily: 'var(--s-sans)', fontSize: 15, letterSpacing: '0.06em',
+    fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.06em',
     background: attiva ? 'var(--s-ink)' : 'var(--s-disc)',
     color: attiva ? 'var(--s-ground-warm)' : 'var(--s-ink-soft)',
     transition: 'background var(--s-slow) var(--s-ease), color var(--s-slow) var(--s-ease)',
@@ -131,7 +137,7 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
   return (
     <section style={{ height: '100%', display: 'grid', gridTemplateRows: 'auto 1fr auto',
                       alignItems: 'center', gap: 24, justifyItems: 'center' }}>
-      <h1 style={{ margin: 0, fontFamily: 'var(--s-serif)', fontWeight: 400, fontSize: 28 }}>
+      <h1 style={{ margin: 0, fontFamily: 'var(--s-serif)', fontWeight: 400, fontSize: 'var(--s-fs-hero)' }}>
         {modifica
           ? t('ser_edit_title').replace('{nome}', esistente!.nome)
           : t(tipo === 'auditor' ? 'ser_new_auditor_title' : 'ser_new_preclear_title')}
@@ -184,7 +190,7 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
             <button onClick={() => setSesso('m')} className="s-glass s-glass-btn" style={pillola(sesso === 'm')}>{t('ser_man')}</button>
             <button onClick={() => setSesso('f')} className="s-glass s-glass-btn" style={pillola(sesso === 'f')}>{t('ser_woman')}</button>
           </div>
-          <span style={{ fontSize: 14, color: 'var(--s-ink-faint)' }}>
+          <span style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
             {sesso === 'm' ? t('ser_clear_male')
               : sesso === 'f' ? t('ser_clear_female')
               : t('ser_clear_undecided')}
@@ -195,7 +201,7 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
       <div style={{ display: 'flex', alignItems: 'center', gap: 18, minHeight: 40 }}>
         <button className="s-glass s-glass-btn" onClick={onAnnulla} style={{
           cursor: 'pointer', borderRadius: 999, padding: '6px 14px', background: 'var(--s-disc)',
-          fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-faint)',
+          fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)',
         }}>← {t('ser_back')}</button>
         <button onClick={salva} className="s-glass s-glass-btn" style={pillola(true)}>{t('ser_save')}</button>
         {/* ⚠️ ELIMINARE SOLO SU UN PROFILO ESISTENTE, e con la conferma DENTRO il bottone
@@ -205,7 +211,7 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
         {modifica && (
           <button className="s-glass s-glass-btn" onClick={elimina} style={{
             cursor: 'pointer', borderRadius: 999, padding: '8px 20px',
-            fontFamily: 'var(--s-sans)', fontSize: 15, letterSpacing: '0.06em',
+            fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.06em',
             background: confermaElimina ? 'var(--s-reserve)' : 'var(--s-disc)',
             color: confermaElimina ? 'var(--s-ground-warm)' : 'var(--s-ink-faint)',
             transition: 'background var(--s-slow) var(--s-ease), color var(--s-slow) var(--s-ease)',
@@ -213,7 +219,7 @@ export function PannelloProfilo({ tipo, esistente, onFatto, onEliminato, onAnnul
             {confermaElimina ? t('ser_confirm_delete') : t('ser_delete')}
           </button>
         )}
-        {errore && <span style={{ fontSize: 14.5, color: 'var(--s-reserve)' }}>{errore}</span>}
+        {errore && <span style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-reserve)' }}>{errore}</span>}
       </div>
     </section>
   );

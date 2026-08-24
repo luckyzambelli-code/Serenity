@@ -47,25 +47,25 @@ export function PannelloEp({ ep, onValidato }: {
    *  `className` nei punti d'uso). */
   const pillola = (attiva: boolean): React.CSSProperties => ({
     cursor: 'pointer', borderRadius: 999, padding: '8px 20px',
-    fontFamily: 'var(--s-sans)', fontSize: 15, letterSpacing: '0.06em',
+    fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.06em',
     background: attiva ? 'var(--s-ink)' : 'var(--s-disc)',
     color: attiva ? 'var(--s-ground-warm)' : 'var(--s-ink-soft)',
     transition: 'background var(--s-slow) var(--s-ease), color var(--s-slow) var(--s-ease)',
   });
   const campo: React.CSSProperties = {
     border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
-    outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 15.5, color: 'var(--s-ink)',
+    outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
     padding: '6px 4px', width: '100%',
   };
   const etichetta: React.CSSProperties = {
-    fontFamily: 'var(--s-sans)', fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase',
+    fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.08em', textTransform: 'uppercase',
     color: 'var(--s-ink-faint)', marginBottom: 6, display: 'block',
   };
 
   return (
     <section style={{ height: '100%', display: 'grid', gridTemplateRows: 'auto 1fr auto',
                       alignItems: 'center', gap: 24, justifyItems: 'center', padding: '38px 44px' }}>
-      <h1 style={{ margin: 0, fontFamily: 'var(--s-serif)', fontWeight: 400, fontSize: 28,
+      <h1 style={{ margin: 0, fontFamily: 'var(--s-serif)', fontWeight: 400, fontSize: 'var(--s-fs-hero)',
                    color: 'var(--s-ink)' }}>
         {t('ep_modal_title')}
       </h1>
@@ -114,7 +114,7 @@ export function PannelloEp({ ep, onValidato }: {
       <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
         <button className="s-glass s-glass-btn" onClick={() => ep.setEpManualOpen(false)} style={{
           cursor: 'pointer', borderRadius: 999, padding: '6px 14px', background: 'var(--s-disc)',
-          fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-faint)',
+          fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)',
         }}>
           ← {t('cancel')}
         </button>

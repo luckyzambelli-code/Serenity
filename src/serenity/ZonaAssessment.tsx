@@ -142,7 +142,7 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
           padding: '2px 2px', fontFamily: 'var(--s-sans)',
         }}>
         <span style={{
-          fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700,
+          fontSize: 'var(--s-fs-sm)', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700,
           color: attivo ? 'var(--s-still)' : 'var(--s-ink-faint)',
         }}>
           {vista === 'assess' ? LC('assessment', 'assessment', 'assessment', 'assessment', 'assessment') : t('ri_title_manual')}
@@ -151,7 +151,7 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
         <span style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
           {!attivo && (
             <span style={{
-              fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700,
+              fontSize: 'var(--s-fs-micro)', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700,
               color: 'var(--s-ink-faint)',
             }}>
               {LC('attiva', 'activer', 'activate', 'activar', 'aktivera')}
@@ -177,7 +177,7 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
               {(['assess', 'ri'] as const).map(v => (
                 <button key={v} onClick={() => setVista(v)} style={{
                   border: 'none', cursor: 'pointer', borderRadius: 6, padding: '3px 10px',
-                  fontFamily: 'var(--s-sans)', fontSize: 11.5, letterSpacing: '0.04em',
+                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', letterSpacing: '0.04em',
                   textTransform: 'uppercase', fontWeight: 700,
                   background: vista === v ? 'var(--s-disc)' : 'transparent',
                   color: vista === v ? 'var(--s-still)' : 'var(--s-ink-faint)',
@@ -200,13 +200,13 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
                   style={{
                     flex: 1, minWidth: 0, border: '1px solid var(--s-ink-ghost)', borderRadius: 8,
                     background: 'var(--s-disc-sunk)', outline: 'none', padding: '5px 8px',
-                    fontFamily: 'var(--s-mono)', fontSize: 13, color: 'var(--s-ink)',
+                    fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink)',
                   }}
                 />
                 <button onClick={aggiungi} disabled={!bozza.trim()} className="s-glass-btn" style={{
                   border: 'none', borderRadius: 8, padding: '0 12px', flexShrink: 0,
                   cursor: bozza.trim() ? 'pointer' : 'default', opacity: bozza.trim() ? 1 : 0.4,
-                  background: 'var(--s-disc)', color: 'var(--s-ink)', fontSize: 16,
+                  background: 'var(--s-disc)', color: 'var(--s-ink)', fontSize: 'var(--s-fs-base)',
                 }}>+</button>
               </div>
               {/* LA PROPOSTA — quella parola è già stata detta in seduta: eccola, con la lettura
@@ -216,10 +216,10 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
                   textAlign: 'left', border: '1px solid var(--s-reserve)', borderRadius: 8,
                   background: 'var(--s-disc-sunk)', cursor: 'pointer', padding: '6px 8px',
                 }}>
-                  <span style={{ fontSize: 11.5, color: 'var(--s-reserve)' }}>
+                  <span style={{ fontSize: 'var(--s-fs-micro)', color: 'var(--s-reserve)' }}>
                     {t('ri_said_at')} {proposta.tSec.toFixed(0)}s · <b>{proposta.read === 'NULL' ? t('ri_no_read') : proposta.read}</b>
                   </span>
-                  <span style={{ display: 'block', marginTop: 2, fontFamily: 'var(--s-mono)', fontSize: 11.5, color: 'var(--s-ink-faint)' }}>
+                  <span style={{ display: 'block', marginTop: 2, fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', color: 'var(--s-ink-faint)' }}>
                     « {proposta.frase} »
                   </span>
                 </button>
@@ -230,11 +230,11 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', minHeight: 0 }}>
             {righe.length === 0 ? (
               vista === 'assess' ? (
-                <span className="ser-pulse" style={{ fontSize: 14.5, color: 'var(--s-ink-faint)' }}>
+                <span className="ser-pulse" style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
                   {LC('in ascolto…', 'à l\'écoute…', 'listening…', 'escuchando…', 'lyssnar…')}
                 </span>
               ) : (
-                <span style={{ fontSize: 13.5, fontStyle: 'italic', color: 'var(--s-ink-faint)' }}>
+                <span style={{ fontSize: 'var(--s-fs-sm)', fontStyle: 'italic', color: 'var(--s-ink-faint)' }}>
                   {t('ri_empty')}
                 </span>
               )
@@ -247,14 +247,14 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
               return (
                 <div key={it.id} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
-                    <span style={{ fontFamily: 'var(--s-mono)', fontSize: 12.5, color: 'var(--s-ink-faint)', flexShrink: 0 }}>
+                    <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)', flexShrink: 0 }}>
                       {orologio(it.time)}
                     </span>
-                    <span style={{ fontFamily: 'var(--s-serif)', fontSize: 15.5, color: 'var(--s-ink)' }}>
+                    <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)' }}>
                       {it.item}
                     </span>
                     {righe.filter(a => a.gruppo === it.gruppo).length > 1 && (
-                      <span style={{ fontFamily: 'var(--s-mono)', fontSize: 12, color: 'var(--s-ink-ghost)' }}>
+                      <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-ghost)' }}>
                         ×{righe.filter(a => a.gruppo === it.gruppo && a.time <= it.time).length}
                       </span>
                     )}
@@ -265,10 +265,10 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
                         verdetto solo nasconderebbe proprio il dato che si cerca). */}
                     {vista === 'assess' || !dueAghi ? (
                       <span className={inAttesa ? 'ser-pulse' : undefined} style={{
-                        fontFamily: 'var(--s-mono)', fontSize: 13, color: colore, display: 'flex', gap: 6, alignItems: 'baseline',
+                        fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', color: colore, display: 'flex', gap: 6, alignItems: 'baseline',
                       }}>
                         {dueAghi && it.readSrc && (
-                          <span style={{ fontSize: 10.5, color: 'var(--s-ink-ghost)' }}>
+                          <span style={{ fontSize: 'var(--s-fs-micro)', color: 'var(--s-ink-ghost)' }}>
                             {it.readSrc === 'eeg' ? 'MUSE' : 'METER'}
                           </span>
                         )}
@@ -281,7 +281,7 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
                               : `${it.reaction}${it.beforeMs > 0 ? ` −${it.beforeMs}ms` : it.afterMs > 0 ? ` +${it.afterMs}ms` : ''}`}
                       </span>
                     ) : (
-                      <span style={{ display: 'flex', gap: 10, fontFamily: 'var(--s-mono)', fontSize: 12.5 }}>
+                      <span style={{ display: 'flex', gap: 10, fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)' }}>
                         <span style={{ color: it.readMuse && it.readMuse !== 'NULL' ? 'var(--s-still)' : 'var(--s-ink-ghost)' }}>
                           M {it.readMuse && it.readMuse !== 'NULL' ? it.readMuse : '—'}
                         </span>
@@ -299,14 +299,14 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
                         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                           <button onClick={() => onIndica(it.id, true)} title={t('ri_indicates') as string} style={{
                             border: '1px solid var(--s-still)', borderRadius: 999, padding: '2px 9px',
-                            background: 'transparent', cursor: 'pointer', fontSize: 11.5,
+                            background: 'transparent', cursor: 'pointer', fontSize: 'var(--s-fs-micro)',
                             color: 'var(--s-still)', fontFamily: 'var(--s-sans)',
                           }}>
                             {t('ri_yes')}
                           </button>
                           <button onClick={() => onIndica(it.id, false)} title={t('ri_does_not_indicate') as string} style={{
                             border: '1px solid var(--s-ink-ghost)', borderRadius: 999, padding: '2px 9px',
-                            background: 'transparent', cursor: 'pointer', fontSize: 11.5,
+                            background: 'transparent', cursor: 'pointer', fontSize: 'var(--s-fs-micro)',
                             color: 'var(--s-ink-faint)', fontFamily: 'var(--s-sans)',
                           }}>
                             {t('ri_no')}
@@ -315,7 +315,7 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
                       ) : (
                         <button onClick={() => onIndica(it.id, !it.indica)} style={{
                           border: 'none', background: 'transparent', cursor: 'pointer',
-                          fontSize: 11.5, fontFamily: 'var(--s-sans)',
+                          fontSize: 'var(--s-fs-micro)', fontFamily: 'var(--s-sans)',
                           color: it.indica ? 'var(--s-still)' : 'var(--s-ink-faint)',
                         }}>
                           {it.indica ? `✓ ${t('ri_indicates')}` : `✗ ${t('ri_does_not_indicate')}`}
@@ -337,14 +337,14 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
               {dueAghi ? (
                 <>
                   {(() => { const r = resa(items, a => a.readMuse); return (
-                    <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11.5, color: 'var(--s-still)' }}>MUSE {r.si}/{r.tot}</span>
+                    <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', color: 'var(--s-still)' }}>MUSE {r.si}/{r.tot}</span>
                   ); })()}
                   {(() => { const r = resa(items, a => a.readMeter); return (
-                    <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11.5, color: 'var(--s-reserve)' }}>METER {r.si}/{r.tot}</span>
+                    <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', color: 'var(--s-reserve)' }}>METER {r.si}/{r.tot}</span>
                   ); })()}
                 </>
               ) : (() => { const r = resa(items, a => a.reaction ?? undefined); return (
-                <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11.5, color: 'var(--s-still)' }}>{t('ri_indicates')} {r.si}/{r.tot}</span>
+                <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', color: 'var(--s-still)' }}>{t('ri_indicates')} {r.si}/{r.tot}</span>
               ); })()}
             </div>
           )}

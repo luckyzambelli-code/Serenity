@@ -63,7 +63,7 @@ export function SegmentoVetro<T extends string>({ opzioni, selezionato, onChange
           position: 'relative', zIndex: 1, flex: 1, minWidth: minLarghezza,
           border: 'none', background: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          padding: '6px 14px', fontFamily: 'var(--s-sans)', fontSize: 14.5,
+          padding: '6px 14px', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)',
           fontWeight: o.k === selezionato ? 700 : 500, whiteSpace: 'nowrap',
           color: o.k === selezionato ? 'var(--s-ink)' : 'var(--s-ink-faint)',
           transition: 'color var(--s-slow) var(--s-ease), font-weight var(--s-slow) var(--s-ease)',
