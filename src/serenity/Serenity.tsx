@@ -262,6 +262,15 @@ function SuggerimentoCiclo({ comando, come, avviso, fatto = false }: {
   );
 }
 
+/** ── IL DIVISORE VERTICALE — separa le zone della barra comandi in alto (« si deve capire che
+ *  sono cose diverse », v. dove viene usato). Era scritto a mano, lo stesso `<span>` identico,
+ *  in QUATTRO punti diversi del file (analisi del codice, richiesta esplicita di sistemare
+ *  tutto: duplicazione trovata con una ricerca sul letterale) — un componente a sé, non un
+ *  gesto per volta: chi cambia il segno del separatore lo cambia una volta sola. */
+function Divisore() {
+  return <span style={{ width: 1, height: 16, background: 'var(--s-ink-ghost)', flexShrink: 0 }} />;
+}
+
 /** ── IL LAG DI RON E LA % DI DISSOLUZIONE, E TUTTO IL RESTO CHE VA COL CICLO — erano
  *  informazioni dinamiche di EQUILIBRIUM (`CycleStatusBar`, riga sotto la domanda), non solo
  *  il disegno dell'arco. Segnalato di nuovo: « i cicli devono essere disposti esattamente
@@ -842,10 +851,20 @@ export default function Serenity() {
       id, time: tSec, item: testo, gruppo, reaction: scelta ?? READ_NON_MISURATO, beforeMs: 0, afterMs: 0,
       readSrc: agoEegRef.current ? 'eeg' : 'theta', kind: 'manual', readMuse: museRead, readMeter: meterRead,
     }]);
-    journal.addLog({ speaker: 'NEEDLE', time: tSec,
-      text: `◎ R&I · ${testo} → ${!scelta || scelta === 'NULL'
+    // ⚠️ CORRETTO (analisi del codice, richiesta esplicita di sistemare tutto): questa riga
+    // scriveva SEMPRE "(NULL)" quando non c'era reazione — anche quando la ragione vera era
+    // "nessuno strumento connesso" (`scelta === undefined`), un caso ben diverso da "l'ago ha
+    // guardato e non ha reagito" (`scelta === 'NULL'`). Il pannello (`ZonaAssessment`)
+    // distingueva già i due casi (`READ_NON_MISURATO` → "non misurato" vs `'NULL'` →
+    // "nessuna reazione"); il Giornale no. Stessa distinzione qui.
+    const etichettaEsito = scelta === undefined
+      ? LC('non misurato', 'non mesuré', 'not measured', 'no medido', 'inte mätt')
+      : scelta === 'NULL'
         ? LC('nessuna reazione (NULL)', 'aucune réaction (NULL)', 'no reaction (NULL)',
-             'sin reacción (NULL)', 'ingen reaktion (NULL)') : scelta}`,
+             'sin reacción (NULL)', 'ingen reaktion (NULL)')
+        : scelta;
+    journal.addLog({ speaker: 'NEEDLE', time: tSec,
+      text: `◎ R&I · ${testo} → ${etichettaEsito}`,
       type: scelta && scelta !== 'NULL' ? 'success' : 'normal' });
   };
   /**
@@ -1907,27 +1926,24 @@ export default function Serenity() {
    *  acceso, non più solo per Santé/Journal (che ora è a sinistra). */
   const rightColOpen = (aperta && moduleVis.health && museOk) || (aperta && moduleVis.ri);
   const moduleColWidth = 272;
-  /* ── LE CAMERE SONO SOPRA — segnalato: « le zones devono essere sotto les cams ». Le camere
-   *  galleggiano `position:absolute, top:16, right:32` sulla STESSA colonna destra dove ora
-   *  vive Santé Système/journal (in flusso, sotto) — senza spazio riservato, le due si
-   *  sovrapponevano. Un `paddingTop` sulla colonna destra pari alla vera altezza dello stack
-   *  (aperta/collassata, una o due camere) le tiene SEMPRE sotto, mai più sotto le camere.
-   *  Le taglie (272/170) sono le stesse di `CameraCerchio` sotto — « la zona camm deve essere
-   *  di 1/5 più piccola » (340→272, 213→170.4→170), ridotte insieme lì e qui.
-   *  ⚠️ SEGNALATO tre volte di fila — « sposta la camm PC completamente in alto » (riga,
-   *  riserva pari alla più alta delle due), poi al contrario « sposta la cam AUDITOR in alto
-   *  di quella del PC » (colonna con scalino, riserva di nuovo la somma), poi « la
-   *  disposizione non è efficiente e non è armoniosa » (v. il contenitore più giù: di nuovo
-   *  una riga, stavolta centrata invece che allineata in alto — nessuno scalino). Tornata
-   *  la riserva pari alla PIÙ ALTA delle due, non la somma: la riga centrata è sia la scelta
-   *  più efficiente sia quella più armoniosa fra le tre provate. */
+  /* ── LE CAMERE SONO SOPRA — le `<CameraCerchio>` (più giù, `position:absolute, top:-8,
+   *  right:32`) galleggiano sulla STESSA colonna destra dove vive Santé Système/journal (in
+   *  flusso, sotto): senza spazio riservato le due si sovrapponevano. Un `paddingTop` sulla
+   *  colonna destra pari alla vera altezza dello stack (`camStackH`, sotto — aperta o
+   *  collassata, una o due camere) le tiene sempre sotto le camere, mai coperte.
+   *  Le taglie (255/158, `cam2H`/`cam1H`) DEVONO restare identiche a `dimensione` sulle due
+   *  `<CameraCerchio>` più giù — sono la stessa taglia vista da due punti diversi (quanto
+   *  spazio riservare qui, quanto disegnare lì): se una cambia senza l'altra, la riserva e il
+   *  disegno vero si disallineano in silenzio. Cronologia completa (i tentativi di
+   *  disposizione provati e scartati) in `docs/serenity-refonte.md`, non ripetuta qui. */
+  // ⚠️ Segnalato: « la cam dell'auditor non è necessaria, falla sparire dall'interfaccia
+  // dell'auditor. Lasciala per le connessioni a distanza » — CAM 1 (sotto) ora si monta SOLO
+  // con `avvio.distanza`. La riserva di spazio deve seguire la STESSA condizione, altrimenti
+  // resterebbe un vuoto morto sopra Santé Système/journal in ogni seduta locale.
+  const cam1Mostrata = moduleVis.cam1 && avvio.distanza;
   const cam2H = !moduleVis.cam2 ? 0 : (cam2Collassata ? 88 : 255);
-  const cam1H = !moduleVis.cam1 ? 0 : (cam1Collassata ? 88 : 158);
-  /* ⚠️ Segnalato ancora: « le camm più in alto per guadagnare spazio ». `top` (sotto, dove
-   *  vivono le `<CameraCerchio>`) è sceso da 16 a -8 — la riserva qui deve seguirlo, non
-   *  restare quella vecchia: altrimenti la colonna sotto (Santé/journal) o le zone
-   *  riserverebbero più spazio del vero, un vuoto morto sopra di loro. */
-  const camStackH = (moduleVis.cam1 || moduleVis.cam2)
+  const cam1H = !cam1Mostrata ? 0 : (cam1Collassata ? 88 : 158);
+  const camStackH = (moduleVis.cam2 || cam1Mostrata)
     ? -8 + Math.max(cam2H, cam1H) + 20
     : 0;
 
@@ -2211,23 +2227,26 @@ export default function Serenity() {
             destra: `alignItems:'center'` così i due si allineano sulla stessa linea invece
             che l'uno sopra l'altro. */}
         <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {/* ⚠️ Segnalato: « anche l'ora ed il time session scrivi in più grande ». 11px/13px
+              restavano minuscoli accanto al resto dei numeri ingranditi questo giro (TA,
+              scala del tono) — 11→15, 13→17, icone di conseguenza. */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, pointerEvents: 'none', flexShrink: 0 }}>
             <span style={{
               display: 'flex', alignItems: 'center', gap: 3,
-              fontFamily: 'var(--s-mono)', fontSize: 11, letterSpacing: '0.02em',
+              fontFamily: 'var(--s-mono)', fontSize: 15, letterSpacing: '0.02em',
               color: 'var(--s-ink-faint)',
             }}>
-              <Clock size={10} strokeWidth={1.8} aria-hidden="true" />
+              <Clock size={13} strokeWidth={1.8} aria-hidden="true" />
               <OraReale />
             </span>
             <span style={{
               display: 'flex', alignItems: 'center', gap: 3,
-              fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
+              fontFamily: 'var(--s-mono)', fontSize: 17, letterSpacing: '0.03em',
               color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
               transition: 'color var(--s-slow) var(--s-ease)',
               fontVariantNumeric: 'tabular-nums',
             }}>
-              <Timer size={11} strokeWidth={1.8} aria-hidden="true" />
+              <Timer size={14} strokeWidth={1.8} aria-hidden="true" />
               {orologio(tempo)}
             </span>
           </div>
@@ -2295,7 +2314,20 @@ export default function Serenity() {
             (54×4 + 10×3 = 246 < 272), il quinto (EP) va a capo — due righe invece di cinque,
             l'assessment risale di conseguenza. Stessa larghezza, stesso posto (« a sinistra »,
             l'intero blocco resta ancorato al bordo sinistro di sempre) — solo più compatti. */}
-        <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 10, width: 272 }}>
+        {/* ⚠️ Segnalato: « isola la zona dei bottoni dei cicli, compreso EP, con una piccola
+            riga come quella del giornale ». Era una riga di cerchi a sé, senza un contenitore
+            proprio — la STESSA cornice sottile del Giornale/Assessment/Santé Système
+            (`--s-zone-bg`/`--s-zone-border`, v. il Giornale appena sotto), non un materiale
+            nuovo: un'altra zona della pagina, riconoscibile come tale.
+            `aperta &&`: senza, la cornice restava visibile VUOTA anche prima di aprire una
+            seduta (i cerchi dentro sono già tutti `aperta && ...`, il contenitore no) — un
+            riquadro con niente dentro si legge come un difetto, non come una zona in attesa. */}
+        {aperta && (
+        <div style={{
+          display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 10, width: 272,
+          background: 'var(--s-zone-bg)', border: '1px solid var(--s-zone-border)',
+          borderRadius: 18, padding: 10,
+        }}>
         {/* ── I QUATTRO METODI, ORA TONDI — segnalato: « les boutons CYCLES à gauche doivent
             être moins présents, mais plus différenciés les uns des autres... des boutons ronds,
             exactement dans le style de l'image de référence, cohérents avec tous les autres
@@ -2379,6 +2411,7 @@ export default function Serenity() {
           </div>
         )}
         </div>
+        )}
         {/* ── IL GIORNALE, SOTTO EP — segnalato: « cambia di posizione il giornale con
             l'assessment ». Stava nella colonna destra, sotto Santé Système; l'Assessment stava
             qui, sotto i bottoni dei metodi. Scambiati — stessa logica di entrambi
@@ -2538,7 +2571,7 @@ export default function Serenity() {
             ogni zona (`divisore`, sotto) — MAI un'etichetta su ognuna, quello tornerebbe a
             gridare — e le sole DUE zone davvero ambigue (STRUMENTI/A DISTANZA, più avanti:
             stessa parola "MUSE" poteva dire due dispositivi diversi) hanno anche il nome. */}
-        <span style={{ width: 1, height: 16, background: 'var(--s-ink-ghost)', flexShrink: 0 }} />
+        <Divisore />
         {/* Chi audita, chi si audita, e dove — detto in una riga sola e in grigio: sono cose
             che si controllano una volta all'inizio, non che si guardano in seduta.
             ⚠️ Segnalato: « met un icone... pour l'auditeur (SOLO, Expert, etc.) ». Le STESSE
@@ -2692,7 +2725,7 @@ export default function Serenity() {
             )}
           </div>
         </span>
-        <span style={{ width: 1, height: 16, background: 'var(--s-ink-ghost)', flexShrink: 0 }} />
+        <Divisore />
         </>
         )}
         {/* ── LE CONNESSIONI, SEMPRE VISIBILI ANCHE IN MODALITÀ CICLO — v. la nota su
@@ -2844,7 +2877,7 @@ export default function Serenity() {
             diverso, su una persona diversa, in un luogo diverso. */}
         {avvio.distanza && (
           <>
-            <span style={{ width: 1, height: 16, background: 'var(--s-ink-ghost)', flexShrink: 0 }} />
+            <Divisore />
             <span style={{ fontFamily: 'var(--s-sans)', fontSize: 12, letterSpacing: '0.12em',
                           textTransform: 'uppercase', color: 'var(--s-ink-ghost)' }}>
               {LC('a distanza', 'à distance', 'remote', 'a distancia', 'på distans')}
@@ -2885,7 +2918,7 @@ export default function Serenity() {
             ciclo si chiude. */}
         {!modalitaCiclo && (
         <>
-        <span style={{ width: 1, height: 16, background: 'var(--s-ink-ghost)', flexShrink: 0 }} />
+        <Divisore />
         {/* CONFIG — raggiungibile in ogni momento, come il cassetto di EQUILIBRIUM. */}
         <button className="s-glass s-glass-btn" onClick={() => setConfigAperto(true)} title={t('config') as string} style={{
           cursor: 'pointer', padding: 8, borderRadius: 999,
@@ -3523,7 +3556,14 @@ export default function Serenity() {
           rischio di finire sopra di loro). Taglia ridotta di un quarto (× 0,75): 340→255 CAM 2,
           210→158 CAM 1, stessa proporzione di sempre — insieme ai due centimetri guadagnati
           in alto, il quadrante sotto resta libero su una fetta più larga. */}
-      {aperta && (moduleVis.cam1 || moduleVis.cam2) && (
+      {/* ⚠️ Segnalato: « la cam dell'auditor non è necessaria, falla sparire dall'interfaccia
+          dell'auditor. Lasciala per le connessioni a distanza ». Verificato in `CameraCerchio`:
+          CAM 1 non riceve mai `externalStream` — è SEMPRE la sua webcam locale via
+          `getUserMedia`, un autoritratto che non serve a chi lo guarda già di persona. In
+          seduta REMOTA lo stesso autoritratto diventa utile (sapere di essere inquadrati per
+          la videochiamata, come in Zoom/Meet) — quindi non sparisce del tutto, solo fuori da
+          `avvio.distanza`. */}
+      {aperta && (moduleVis.cam2 || cam1Mostrata) && (
         <div style={{
           position: 'absolute', top: -8, right: 32, zIndex: 5,
           display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16,
@@ -3543,7 +3583,7 @@ export default function Serenity() {
               inDiretta={!!avvio.distanza}
             />
           )}
-          {moduleVis.cam1 && (
+          {cam1Mostrata && (
             <CameraCerchio
               dimensione={158}
               dimensioneCollassata={88}
@@ -3738,13 +3778,19 @@ export default function Serenity() {
             {/* ⚠️ Il badge "in pausa"/"strumento perso" si è spostato accanto al bottone
                 Pausa/Riprendi nella barra laterale — v. la nota lì (« le pavé en pause fais
                 le apparaître à côté du bouton REPRISE »). */}
+            {/* ⚠️ Segnalato: « il METER TA deve essere scritto più in grande ed il MUSE TA
+                anche ». `LetturaTA`/il "METER TA" (più giù) ereditavano la taglia del blocco
+                intero (13px) — la STESSA di fase/Total TA/velocità, che restano dov'erano: qui
+                solo la riga del numero principale (`fontSize:21`) cresce, non tutto il blocco. */}
             {agoEeg && (
               <div style={{
                 fontFamily: 'var(--s-mono)', fontSize: 13, letterSpacing: '0.03em',
                 color: 'var(--s-ink-faint)', display: 'flex', flexDirection: 'column',
                 alignItems: 'flex-start', gap: 2,
               }}>
-                <LetturaTA />
+                <span style={{ fontSize: 21, fontWeight: 700, color: 'var(--s-ink)' }}>
+                  <LetturaTA />
+                </span>
                 <LetturaFase t={t} />
                 <span title={t('total_ta') as string}>
                   <LetturaTotalTa override={meterC ? theta.totalTa : null} bodyMotion={theta.bodyMotion} />
@@ -3760,7 +3806,9 @@ export default function Serenity() {
                 color: 'var(--s-alive)', display: 'flex', gap: 6, alignItems: 'baseline',
               }}>
                 <span style={{ fontSize: 10, opacity: 0.75 }}>MUSE</span>
-                <LetturaTA />
+                <span style={{ fontSize: 21, fontWeight: 700 }}>
+                  <LetturaTA />
+                </span>
               </span>
             )}
             {!agoEeg && meterC && (
@@ -3801,8 +3849,13 @@ export default function Serenity() {
                       {/* ⚠️ Segnalato: « scrivi METER TA invece di TA » — questa riga vive nel
                           ramo "solo meter, niente ago EEG" (`!agoEeg && meterC`): un "TA" nudo
                           non diceva DI QUALE strumento, importante ora che la lettura dell'ago
-                          e quella del meter possono comparire vicine. */}
-                      <span>{LC('METER TA', 'METER TA', 'METER TA', 'METER TA', 'METER TA')} {tone.taMostrato.ta.toFixed(2)}</span>
+                          e quella del meter possono comparire vicine.
+                          ⚠️ Segnalato ancora: « il METER TA deve essere scritto più in grande » —
+                          stessa taglia (21px) della lettura MUSE qui sopra, non più ereditata
+                          dal blocco (13px). */}
+                      <span style={{ fontSize: 21, fontWeight: 700, color: 'var(--s-ink)' }}>
+                        {LC('METER TA', 'METER TA', 'METER TA', 'METER TA', 'METER TA')} {tone.taMostrato.ta.toFixed(2)}
+                      </span>
                       <span style={{ fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'none',
                                     color: tone.taMostrato.margin > 0 ? 'var(--s-reserve)' : 'var(--s-ink-ghost)' }}>
                         {tone.taMostrato.basis === 'two-cans'
@@ -3980,8 +4033,15 @@ export default function Serenity() {
                     SVG col suo `viewBox` proporzionale (`width="100%"`): allargare QUESTO
                     involucro lo ridisegna più grande per intero, numeri e nomi compresi — non
                     tocca il componente condiviso, solo lo spazio che SERENITY gli concede. */}
+                {/* ⚠️ Segnalato ancora: « la scala del tono deve essere molto più grande ed
+                    occupare più spazio per essere visibile ». 320px/38%-14% (un giro fa) restava
+                    piccola rispetto al resto del quadrante. Allargata (320→460) e alzata di
+                    altezza (38%→22% dall'alto, 14%→6% da sotto): l'SVG interno ha il suo
+                    `viewBox` proporzionale (`width="100%" height="100%"`), quindi si ridisegna
+                    più grande per intero — numeri, nomi dei livelli e cursore compresi — non è
+                    un contenitore vuoto attorno a un disegno che resta piccolo. */}
                 <div style={{
-                  position: 'absolute', left: 12, top: '38%', bottom: '14%', width: 320,
+                  position: 'absolute', left: 12, top: '22%', bottom: '6%', width: 460,
                   pointerEvents: 'none',
                 }}>
                   <ToneColumn

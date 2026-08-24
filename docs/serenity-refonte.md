@@ -3066,6 +3066,87 @@ leggibile, cerchi/testo/connettore scalati insieme senza rompere le proporzioni.
 
 ---
 
+## Cinquantunesimo giro (24/08/2026) — l'assessment verificato dal vivo, l'analisi del codice richiesta e i suoi correttivi, la scala del tono ingrandita, TA/orologio più grandi, la zona dei cicli isolata, la cam dell'auditor sparita in locale
+
+**Verifica funzionale dell'ASSESSMENT** — chiesto: « verifica che l'assessment funzioni ».
+Testato dal vivo, seduta senza strumenti, NESSUN ciclo armato (il caso più delicato, senza
+l'aiuto dell'auto-armamento): attivazione manuale, item dichiarato nel campo `écris ou dis
+l'item`, raccolto da solo (`ASSESSMENT · 1`), lettura "non mesuré" corretta, bottoni Oui/Non
+funzionanti, rapporto ago/indicazione "0/0" corretto per costruzione (un item non misurato non
+entra nel conteggio). Tab R&I · Manuel testato a parte: item aggiunto a mano, scritto nel
+Giornale. Un'imprecisione trovata e corretta nello stesso giro (v. sotto): il Giornale
+scriveva sempre "(NULL)" anche quando la ragione vera era "nessuno strumento".
+
+**L'analisi del codice, richiesta esplicitamente** ("come se l'avesse fatto un altro"), e i
+correttivi applicati subito dopo la conferma ("correggi il tutto"):
+1. **Divisore verticale duplicato 4 volte** (lo stesso `<span>` letterale, trovato con una
+   ricerca) — estratto in un componente `Divisore` a sé.
+2. **Commento stantio su `camStackH`** — narrava ancora i tre tentativi di disposizione delle
+   camere scartati (riga/scalino/riga centrata) e taglie vecchie (272/170 invece delle 255/158
+   vere) — riscritto per riflettere lo stato ATTUALE, con un rimando a questo file per la
+   cronologia invece di ripeterla nel codice.
+3. **Wording del Giornale per l'R&I manuale** — `aggiungiItemManuale` scriveva sempre "(NULL)"
+   quando non c'era reazione, anche col vero motivo "nessuno strumento connesso"
+   (`READ_NON_MISURATO`) — distinto ora dal vero "NULL" (l'ago ha guardato e non ha reagito),
+   la stessa distinzione che il pannello (`ZonaAssessment`) faceva già.
+4. **Decisioni RINVIATE, con motivazione** — la scomposizione del file da 4188 righe in hook
+   più piccoli (proposta nell'analisi) e l'aggiunta di test sul livello di rendering: nel
+   verificare la fattibilità della prima, è emerso che `museOk`, `attivaAssessment`, `agoEegRef`
+   e `assessActiveRef` sono usati in punti sparsi per tutto il file con vincoli d'ordine di
+   dichiarazione stretti — un'estrazione fatta in fretta in questo stesso giro (mentre
+   arrivavano nuove richieste) rischiava di rompere silenziosamente l'assessment appena
+   verificato. Rinviata a un giro dedicato, sua sola cosa da fare, con più margine per
+   verificare ogni punto di aggancio uno per uno.
+
+**La scala del tono, ingrandita** — segnalato: « deve essere molto più grande ed occupare più
+spazio per essere visibile ». L'involucro (in `Serenity.tsx`, `ToneColumn` stesso è puro e
+condiviso, non toccato) allargato 320→460px, alzato di altezza 38%→22% dall'alto e 14%→6% da
+sotto. Verificato dal vivo con TONE armato: colonna molto più leggibile, nessuna
+sovrapposizione con quadrante/camere/pannello MNA.
+
+**METER TA e MUSE TA, scritti più in grande** — la riga del numero principale (in tre punti:
+la lettura MUSE quando l'ago è EEG, la stessa quando compare accanto al METER, e "METER TA")
+passa da 13px (ereditato dal blocco intero) a 21px con un proprio `<span>` — fase/Total
+TA/velocità, che condividevano lo stesso blocco, restano alla taglia di sempre: solo il numero
+che si legge da lontano cresce.
+
+**Orologio e tempo di seduta, scritti più in grande** — accanto al bottone CHIUDI LA SEDUTA:
+11px→15px l'ora vera, 13px→17px il tempo di seduta, icone di conseguenza.
+
+**La zona dei bottoni dei cicli, isolata** — segnalato: « isola la zona dei bottoni dei cicli,
+compreso EP, con una piccola riga come quella del giornale ». La riga di cerchi
+(CONTACT/NULL/MIRROR/TONE/EP) non aveva un contenitore proprio — ora la STESSA cornice sottile
+di Giornale/Assessment/Santé Système (`--s-zone-bg`/`--s-zone-border`). Un bug introdotto e
+corretto nello stesso giro: la cornice restava visibile VUOTA anche a seduta chiusa (i cerchi
+dentro sono tutti `aperta && ...`, il contenitore non lo era) — aggiunto `aperta &&` anche
+sul contenitore, verificato dal vivo prima/dopo lo screenshot a seduta chiusa.
+
+**La cam dell'auditor, sparita dall'interfaccia locale** — segnalato: « non è necessaria,
+falla sparire dall'interfaccia dell'auditor. Lasciala per le connessioni a distanza ».
+Verificato in `CameraCerchio`: CAM 1 non riceve mai `externalStream`, è SEMPRE la sua webcam
+locale — un autoritratto inutile a chi è già di persona nella stanza, utile invece in una
+videochiamata (sapere di essere inquadrati). Montata ora solo con `avvio.distanza` — sia nel
+render sia nella riserva di spazio (`camStackH`, `cam1Mostrata` nuovo). Verificato dal vivo,
+seduta SOLO locale: CAM 1 non compare più, CAM 2 (PC) resta.
+
+**Due domande dell'utente, risposte a parte, non nel codice**: come si calcola oggi la scala
+del tono (spiegazione: `useToneCycle.ts`/`toneFromTa`/`toneFromDelta` — il cursore PRIMARIO
+viene sempre dal TA col meter, o dichiarato dall'auditor senza; il MUSE alimenta solo due
+annotazioni SECONDARIE già esistenti, `toneOraEeg` e la barra di carica, mai il cursore); e se
+includere il MUSE nel calcolo primario — non implementato, perché tocca `engine/toneScale.ts`/
+`useToneCycle.ts`, MOTORE CONDIVISO con EQUILIBRIUM: serve una conferma esplicita sulla
+formula prima di cambiarlo, non una scelta presa da soli in un file che App.tsx usa identico.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 316 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo estesa (profilo TEST, 1400×900, seduta SOLO locale senza strumenti, poi
+CONTACT armato) — assessment end-to-end, cam1 assente, zona cicli incorniciata (piena e
+vuota-a-riposo), orologio/TA leggibili, colonna del tono grande e pulita.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/Serenity.tsx` (`CameraCerchio.tsx` letto
+per capire dove va lo stream, non modificato — la logica dello stream resta sua).
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
