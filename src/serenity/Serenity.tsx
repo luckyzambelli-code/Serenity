@@ -2730,9 +2730,16 @@ export default function Serenity() {
         )}
         {/* ── LE CONNESSIONI, SEMPRE VISIBILI ANCHE IN MODALITÀ CICLO — v. la nota su
             `modalitaCiclo`: qui SOLO i puntini di stato restano leggibili (un disconnessione a
-            metà lettura va vista SUBITO), non i bottoni per CONNETTERSI — quelli si disattivano
-            (`onClick` diventa `undefined`, lo stesso trattamento che « il meter non è
-            disponibile » usa già più sotto), niente di nuovo inventato qui. */}
+            metà lettura va vista SUBITO).
+            ⚠️ Segnalato: « quando abbiamo un ciclo in corso dobbiamo poter attivare uno
+            strumento non attivato ». Prima TUTTI i bottoni di connessione si disattivavano in
+            modalità ciclo (`onClick` sempre `undefined`) — giusto per non poter STACCARE uno
+            strumento a metà lettura (un'interruzione vera, quella resta vietata), sbagliato per
+            chi vuole AGGIUNGERNE uno che non c'era: se il MUSE si scollega da solo a metà
+            seduta, o si decide di affiancare il Meter, aspettare la fine del ciclo per poterlo
+            ricollegare non serve a nessuno. Ora il gesto resta permesso quando lo strumento
+            NON è ancora connesso (`!s.connesso`) — disattivato SOLO quando cliccarlo
+            DISCONNETTEREBBE uno strumento già attivo durante un ciclo. */}
         {/* ── LE CONNESSIONI, UN SOLO BOTTONE, SOLO ICONE — segnalato di nuovo: « i bottoni
             MUSE, Meter, No instrument devono essere un solo bottone con solo le icone
             (survolando ogni icona si scrive cosa significa), così guadagniamo spazio in
@@ -2770,16 +2777,20 @@ export default function Serenity() {
               non spegneva mai `senzaStrumenti` — solo "NESSUNO" lo toccava (accendendolo E
               spegnendo gli altri due). Il verso opposto mancava: connettere UNO strumento deve
               uscire dal gruppo di controllo, non restarci accanto in silenzio. */}
-          const strumenti: Array<{ key: string; icona: React.ReactNode; onClick?: () => void; stato: import('./IndicatoreConnessione').StatoConnessione; title: string }> = [
+          // ⚠️ `connesso` — SOLO lo stato ATTIVO/in ascolto di ciascuno strumento, non
+          // "ricerca in corso": cliccare durante una ricerca la riprova/annulla, non stacca un
+          // dato che sta arrivando davvero. Decide, sotto, quali bottoni restano vivi durante
+          // un ciclo (v. la nota sopra, « attivare uno strumento non attivato »).
+          const strumenti: Array<{ key: string; icona: React.ReactNode; onClick?: () => void; connesso: boolean; stato: import('./IndicatoreConnessione').StatoConnessione; title: string }> = [
             { key: 'muse', icona: <Headphones size={22} strokeWidth={1.8} />,
               onClick: () => { if (muse.museConnection === 'disconnected') setSenzaStrumenti(false); muse.handleConnectMuse(); },
-              stato: museStato, title: museTitolo },
+              connesso: muse.museConnection === 'connected', stato: museStato, title: museTitolo },
             { key: 'meter', icona: <Gauge size={22} strokeWidth={1.8} />,
               onClick: theta.unavailable ? undefined : () => {
                 if (!meterC) setSenzaStrumenti(false);
                 (meterC ? theta.disconnect : theta.connect)();
               },
-              stato: meterStato, title: meterTitolo },
+              connesso: meterC, stato: meterStato, title: meterTitolo },
             {
               key: 'none', icona: <MessageSquareOff size={22} strokeWidth={1.8} />,
               onClick: () => {
@@ -2790,7 +2801,10 @@ export default function Serenity() {
                   if (meterC) theta.disconnect();
                 }
               },
-              stato: senzaStrumenti ? 'connesso' : 'in-attesa', title: noneTitolo,
+              // "NESSUNO" non attiva mai uno strumento fermo — al contrario, ne stacca due se
+              // acceso: resta un gesto di DISCONNESSIONE a tutti gli effetti, mai permesso a
+              // ciclo in corso (v. `connesso` sopra), qualunque sia il suo stato attuale.
+              connesso: true, stato: senzaStrumenti ? 'connesso' : 'in-attesa', title: noneTitolo,
             },
           ];
           return (
@@ -2799,7 +2813,7 @@ export default function Serenity() {
               borderRadius: 999, padding: '4px 6px',
             }}>
               {strumenti.map(s => {
-                const clic = modalitaCiclo ? undefined : s.onClick;
+                const clic = (modalitaCiclo && s.connesso) ? undefined : s.onClick;
                 return (
                 <button key={s.key} className="s-glass-btn" onClick={clic} title={s.title}
                   style={{

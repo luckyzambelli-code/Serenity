@@ -3210,6 +3210,29 @@ seduta**, sia in SERENITY sia in EQUILIBRIUM.
 
 ---
 
+## Cinquantatreesimo giro (24/08/2026) — attivare uno strumento durante un ciclo
+
+Segnalato: « quando abbiamo un ciclo in corso dobbiamo poter attivare uno strumento non
+attivato ». La pillola MUSE/METER/NESSUNO, in modalità ciclo, disattivava TUTTI i bottoni di
+connessione (`onClick` sempre `undefined`) — giusto per non poter STACCARE uno strumento a
+metà lettura, sbagliato per chi vuole AGGIUNGERNE uno che non c'era (il MUSE che si scollega
+da solo a metà seduta, o il Meter affiancato a ciclo già avviato).
+
+Aggiunto `connesso` a ciascuno strumento della pillola (SOLO lo stato ATTIVO — "in ricerca"
+non conta, cliccare durante una ricerca la riprova/annulla, non stacca un dato che arriva
+davvero): il bottone resta vivo in modalità ciclo quando lo strumento NON è ancora connesso,
+si disattiva SOLO quando cliccarlo disconnetterebbe uno strumento già attivo. "NESSUNO" resta
+sempre disattivato a ciclo in corso — è per costruzione un gesto di disconnessione (stacca gli
+altri due se acceso), mai di attivazione.
+
+Verificato dal vivo: CONTACT armato, cliccato MUSE (non connesso) — il Giornale conferma che
+la ricerca è partita davvero ("Searching for Muses...", prima del fix il click non avrebbe
+fatto nulla).
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
