@@ -43,6 +43,7 @@ import { QuantumSphere } from '../components/QuantumSphere';
 import { ClearDial } from '../components/ClearDial';
 import { CycleStatusBar } from '../components/CycleStatusBar';
 import { CycleSteps } from '../components/CycleSteps';
+import { PistaCiclo } from './PistaCiclo';
 import { ThetaReadyCheck } from '../components/ThetaReadyCheck';
 import { MetabolicCheck } from '../components/MetabolicCheck';
 import { metabolicBaseline, type MetabAssessment } from '../engine/MetabolicBaseline';
@@ -4296,6 +4297,20 @@ export default function Serenity() {
               />
             )}
           </div>
+          )}
+          {/* ── LA PISTA A FUOCO, SOVRAPPOSTA AL LATO SINISTRO DELL'ARCO — segnalato: « le steps
+              devono stare a sinistra dell'arco, senza ridurlo, sovrapposte con trasparenza; il
+              comando in corso grande e al centro, i vicini più piccoli e smorzati; l'ago deve
+              restare tracciabile sotto ». `PistaCiclo` (nuovo, SOLO SERENITY) legge `mode`/
+              `faseCiclo`, le stesse variabili di `CycleSteps` qui sopra nella barra comandi —
+              non la sostituisce (quella resta, compatta, nella barra), la affianca come lettura
+              grande pensata per restare aperta sopra l'arco per tutto il ciclo. Stessa
+              condizione di `QuantumSphere`/dell'arco appena sopra (`!senzaMisura`): senza
+              strumenti l'ago non c'è, e sovrapporsi a un arco assente non avrebbe senso — la
+              guardia interna del componente (`cur < 0`) copre da sé LIBERO e "ciclo non
+              armato". */}
+          {!senzaMisura && (
+            <PistaCiclo mode={mode} phase={faseCiclo} lang={lang} />
           )}
           {/* ── SENZA STRUMENTI, LE SCRITTE PRENDONO IL POSTO DELL'ARCO — segnalato: « COME IN
               EQUILIBRIUM ». Stessa condizione di sopra (`senzaMisura && aperta`), stesso testo

@@ -3496,6 +3496,62 @@ confermati.
 
 ---
 
+## Cinquantanovesimo giro (25/08/2026) — la pista dei tempi a fuoco, sovrapposta all'arco
+
+**Segnalato**: le "steps" del ciclo (ITEM · MOCK-UP · AS-IS, e le sequenze equivalenti di
+NULL/MIRROR/TONE) devono stare a SINISTRA dell'arco, senza ridurlo né spostarlo, sovrapposte
+con trasparenza in modo che l'ago resti tracciabile sotto; il tempo in corso deve essere il
+"principale" — più grande, al centro — e i vicini più piccoli e smorzati, per guidare
+l'attenzione dell'auditor; un clic su un tempo qualunque deve poterlo mettere a fuoco.
+
+**`PistaCiclo.tsx`, nuovo componente, SOLO SERENITY.** `CycleSteps` (orizzontale, già nella
+barra comandi sopra il quadrante) resta dov'era — non la sostituisce, è la lettura estesa,
+pensata per restare sovrapposta all'arco per tutta la durata del tempo in corso. Stessi dati
+puri di sempre, le STESSE funzioni che legge `components/CycleSteps.tsx`
+(`engine/cycleSteps.ts`: `stepsOf`/`currentStep`/`stepDone`) — nessuna logica nuova, solo una
+resa diversa dello stesso dato: non può divergere da lui su quanti tempi ci sono o a quale si
+è.
+
+**Il fuoco manuale non sposta MAI il tempo reale.** Non esiste, e non deve esistere, un
+motore che sappia "salta al tempo 2" — il ciclo lo fa avanzare solo un gesto vero (dare
+l'item, validare l'AS-IS, dichiarare raggiunto...). Un clic su un tempo passato o futuro
+mette a fuoco visivamente quel tempo per rileggerlo (`useState<number|null>`, di nome
+`fuoco`), ma torna da solo al tempo vero non appena il ciclo avanza davvero
+(`useEffect(() => setFuoco(null), [cur])`): un clic che spostasse il tempo reale
+mentirebbe sullo stato dell'audit, esattamente quello che questa pista non deve mai fare.
+
+**La geometria, verificata sul DOM, non solo sulla carta.** Il bordo sinistro vero del
+disegno dell'arco è a x=320 relativo a `<section>` (`paddingLeft:320` per la barra laterale,
+poi il quadrante comincia — misurato via `getBoundingClientRect()` sull'SVG di
+`QuantumSphere`, 340px dal bordo della finestra a 1280px, meno i 20px di margine della
+sezione: torna esatto). `PistaCiclo` parte 20px prima di quel bordo (`left:300`) e si estende
+per 250px: circa 230px dentro il disegno vero dell'arco — sovrapposizione vera, non solo un
+accostamento, con `pointerEvents:'none'` sul contenitore e `'auto'` solo sui singoli bottoni
+(non ruba clic al quadrante nei punti senza testo). Solo il tempo a fuoco porta un fondo
+proprio (`color-mix(in srgb, var(--s-ground) 42%, transparent)`, tarato per restare leggibile
+su qualunque colore dell'arco sotto senza spegnere l'ago che ci passa dietro); i tempi non a
+fuoco restano puro testo, senza impilare altri riquadri semitrasparenti sopra il quadrante.
+Montata con la STESSA condizione di `QuantumSphere`/dell'arco (`!senzaMisura`): senza
+strumenti l'ago non c'è, e sovrapporsi a un arco assente non avrebbe senso — la guardia
+interna del componente (`cur < 0`, la stessa di `CycleSteps`) copre da sé LIBERO e "ciclo non
+armato", nessuna condizione esterna in più da tenere sincronizzata.
+
+**Limite di questa verifica.** La sovrapposizione ago/pista è stata controllata a livello
+geometrico (misure DOM esatte, come sopra) e di codice (nessun conflitto di `pointerEvents`),
+ma non con un ago VERO in movimento: l'anteprima nel browser non può appaiare un MUSE o un
+Theta-Meter reali (Bluetooth/WebHID di un dispositivo fisico). Da verificare nell'app
+pacchettizzata, con uno strumento davvero connesso — gli scarti di posizione, se ce ne sono,
+si correggono da lì.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo nel browser (profilo TEST, 1280×720): nessun errore di compilazione/HMR,
+nessun errore in console, geometria dell'arco confermata via DOM.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/Serenity.tsx`,
+`src/serenity/PistaCiclo.tsx` (nuovo).
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
