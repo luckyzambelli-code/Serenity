@@ -1777,15 +1777,27 @@ export default function Serenity() {
   /** ── L'USCITA DEL CASO LIMITE — la connessione scelta è FALLITA fra "apri una seduta" e
    *  qui: né meter da provare né MUSE da ascoltare, il controllo di prontezza resterebbe aperto
    *  su un pannello vuoto. Un EFFETTO, non uno stato scritto durante il render (vedi la nota
-   *  sopra il ramo `return null` del controllo): si accorge dopo il render, come deve. */
+   *  sopra il ramo `return null` del controllo): si accorge dopo il render, come deve.
+   *  ⚠️ BUG TROVATO — segnalato: « quando comincio la session ed il muse è scelto ma non
+   *  acceso, lascia iniziare lo stesso ». `readinessMuseOk` richiede `museOk`, cioè
+   *  `museConnection === 'connected'` — falso SIA a connessione FALLITA (`'disconnected'`,
+   *  il caso che questo effetto doveva coprire) SIA a connessione ANCORA IN CORSO
+   *  (`'searching'`, il MUSE scelto ma non ancora acceso/associato): l'effetto non li
+   *  distingueva, e trattava « sto ancora cercando » come « ho rinunciato », aprendo la
+   *  seduta subito senza mai aspettare che il MUSE si connettesse davvero. `museCercandoAncora`
+   *  tiene aperto il controllo finché la ricerca è DAVVERO ancora in corso — esce solo se il
+   *  MUSE è tornato a `'disconnected'` per davvero (rinuncia vera), o se non c'è ricerca da
+   *  aspettare (a distanza: `remoteMuseConnected` non ha un suo "searching" locale da qui). */
   useEffect(() => {
     if (!metabolicOpen) return;
     const readinessMuseOk = avvio?.distanza ? remote.remoteMuseConnected : museOk;
     if (meterC || readinessMuseOk) return;
+    const museCercandoAncora = !avvio?.distanza && muse.museConnection === 'searching';
+    if (museCercandoAncora) return;
     setMetabolicOpen(false);
     avviaSeduta();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [metabolicOpen, meterC, museOk, avvio?.distanza, remote.remoteMuseConnected]);
+  }, [metabolicOpen, meterC, museOk, avvio?.distanza, remote.remoteMuseConnected, muse.museConnection]);
   /** ── SALTA IL RESPIRO DEL MUSE SE IL SOFFIO DEL METER È GIÀ RIUSCITO — segnalato: « il test
    *  del MUSE non deve essere fatto se il test del soffio del Meter è stato fatto con successo ».
    *  `theta.breathOk` diventa vero/falso solo a prova del soffio conclusa (`ThetaReadyCheck`,
@@ -2449,6 +2461,11 @@ export default function Serenity() {
           `ThetaReadyCheck` (stretta/respiro del Meter) NO — ANNULLA lì chiude e basta. */}
       {metabolicOpen && (() => {
         const readinessMuseOk = avvio?.distanza ? remote.remoteMuseConnected : museOk;
+        // ⚠️ Calcolato QUI, non solo più giù: serve ANCHE a `onProceed` di `ThetaReadyCheck`
+        // (v. la sua nota fra poco) — stesso bug, stesso rimedio, un solo posto dove chiedersi
+        // « il MUSE sta ancora cercando? ». V. la nota estesa più giù, sul cancello di
+        // `MetabolicCheck`.
+        const museCercandoAncora = !avvio?.distanza && muse.museConnection === 'searching';
         if (meterC && !thetaReadyDone) {
           return (
             <div className="ser-ready-wrap">
@@ -2482,7 +2499,13 @@ export default function Serenity() {
               onProceed={() => {
                 setThetaReadyDone(true);
                 // Nessun MUSE da controllare dopo: si apre la seduta subito, come App.tsx.
-                if (!readinessMuseOk) { setMetabolicOpen(false); avviaSeduta(); }
+                // ⚠️ BUG TROVATO — stesso della nota sul cancello di `MetabolicCheck`, qui
+                // sotto: `!readinessMuseOk` da solo era vero ANCHE col MUSE ancora
+                // `'searching'` (scelto insieme al meter, non ancora acceso) — apriva la
+                // seduta subito invece di aspettarlo. `museCercandoAncora` lo esclude: se sta
+                // ancora cercando, si passa oltre SENZA aprire — il render qui sotto monta
+                // `MetabolicCheck` al giro successivo, che aspetta lui.
+                if (!readinessMuseOk && !museCercandoAncora) { setMetabolicOpen(false); avviaSeduta(); }
               }}
               // ⚠️ BUG TROVATO — segnalato: « se schiacci Cancel o Start Anyway fa partire la
               // seduta comunque ». Verificato App.tsx (`onCancel={() => setMetabolicOpen(false)}`
@@ -2496,7 +2519,17 @@ export default function Serenity() {
             </div>
           );
         }
-        if (readinessMuseOk) {
+        // ⚠️ BUG TROVATO — segnalato: « quando il muse è scelto ma non acceso, lascia
+        // iniziare lo stesso ». Prima il cancello era SOLO `readinessMuseOk` (richiede
+        // `'connected'`) — mentre il MUSE è ancora `'searching'` (scelto, non ancora
+        // acceso/associato) quel controllo era falso, si cadeva dritti al `return null` sotto,
+        // e l'effetto accanto (v. la sua nota) scambiava « sto ancora cercando » per « ho
+        // rinunciato », aprendo la seduta senza aver mai aspettato. `museCercandoAncora`
+        // (calcolato in cima a questa IIFE, stessa condizione già passata a `museConnecting`)
+        // tiene `MetabolicCheck` montato ANCHE durante la ricerca — lui sa già mostrare
+        // "connessione in corso" (`museConnecting`, la sua prop, già cablata): il pezzo
+        // mancante era che qui non lo si lasciava mai arrivare a schermo.
+        if (readinessMuseOk || museCercandoAncora) {
           return (
             <div className="ser-ready-wrap">
             <MetabolicCheck
@@ -2504,7 +2537,7 @@ export default function Serenity() {
               meterAlreadyCalibrated={meterC && theta.setup.scaleMeasured}
               museConnected={readinessMuseOk}
               museWorn={museGate.museContact}
-              museConnecting={!avvio?.distanza && muse.museConnection === 'searching'}
+              museConnecting={museCercandoAncora}
               onProceed={a => avviaSedutaConProntezza(a)}
               onCancel={a => avviaSedutaConProntezza(a)}
               onPhase={() => {}}

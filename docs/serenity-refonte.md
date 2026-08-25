@@ -4075,6 +4075,55 @@ bottoni veri con contenuto reale — la resa finale resta da confermare nell'app
 
 ---
 
+## Settantunesimo giro (25/08/2026) — MUSE scelto ma non acceso: la seduta non parte più da sola
+
+**Segnalato**: « quando comincio la session ed il muse è scelto ma non acceso, lascia iniziare
+lo stesso, non va bene ».
+
+**Il bug vero — `'searching'` scambiato per `'disconnected'`.** `museConnection` ha tre stati:
+`'disconnected'` (mai cercato, o ha rinunciato) · `'searching'` (ricerca in corso) ·
+`'connected'`. Il controllo di prontezza (`metabolicOpen`) usa `readinessMuseOk = museOk`
+(`museConnection === 'connected'`, per davvero collegato) sia per decidere COSA mostrare sia
+per decidere QUANDO uscire e aprire la seduta — ma `readinessMuseOk` è falso in DUE casi
+diversi: connessione FALLITA (`'disconnected'`, il caso che il codice diceva esplicitamente di
+coprire) e connessione ANCORA IN CORSO (`'searching'`, MUSE scelto ma non ancora acceso/
+associato). Il codice non li distingueva — trattava « sto ancora cercando » come « ho
+rinunciato » su TRE punti diversi:
+
+1. **L'effetto di uscita** (`useEffect` accanto a `metabolicOpen`) — apriva la seduta subito
+   appena vedeva `readinessMuseOk` falso, senza aspettare che la ricerca finisse.
+2. **Il cancello di rendering** di `MetabolicCheck` — richiedeva anche lui `readinessMuseOk`,
+   quindi durante la ricerca non montava NULLA (nemmeno con `museConnecting`, la sua prop già
+   pronta apposta per mostrare "connessione in corso" — semplicemente non arrivava mai a
+   schermo).
+3. **`onProceed` di `ThetaReadyCheck`** — stesso controllo (`!readinessMuseOk`), stesso bug: se
+   Meter e MUSE erano scelti insieme, finito il Meter apriva la seduta anche col MUSE ancora in
+   cerca.
+
+**Corretto con `museCercandoAncora`** (`!avvio?.distanza && muse.museConnection === 'searching'`,
+calcolato una volta, usato nei tre punti): l'effetto di uscita NON esce più mentre la ricerca è
+in corso; il cancello di rendering monta `MetabolicCheck` ANCHE durante la ricerca (ora la sua
+prop `museConnecting` arriva davvero a schermo, mostrando "connessione in corso" invece di
+niente); `onProceed` di `ThetaReadyCheck` non salta più avanti. La decisione di procedere
+comunque resta SEMPRE dell'auditor — `MetabolicCheck` ha i suoi bottoni Proceed/Cancel, che
+aprono la seduta a prescindere (per scelta esplicita, non per un bug che salta il controllo).
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `vitest run`
+639/639. Dal vivo: scelto MUSE, il browser di anteprima non ha un vero dispositivo da associare
+— `requestDevice()` fallisce quasi subito (`NotFoundError`, verificato in console), portando
+`museConnection` a `'disconnected'` per davvero in una frazione di secondo: il caso di
+FALLIMENTO VERO, che il codice copriva già correttamente prima di questo giro — non lo stato
+`'searching'` sostenuto che il bug riguardava, impossibile da mantenere in questo ambiente
+senza hardware reale. Il warning React « la dimensione dell'array di dipendenze è cambiata »
+visto durante la modifica dal vivo era un artefatto dell'hot-reload (il file cambiava sotto un
+componente già montato) — confermato assente ricaricando la pagina da zero. La resa vera con
+un MUSE che resta "in ricerca" per un tempo prolungato resta da confermare nell'app
+pacchettizzata, con un MUSE davvero presente ma spento/fuori portata.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
