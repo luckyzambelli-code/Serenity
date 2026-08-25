@@ -58,7 +58,7 @@ import { SuggerimentoCiclo } from './SuggerimentoCiclo';
  * (chiama `dichiaraItemDetto`, il motore) — il resto (testo che pulsa, taglia, posizione) è
  * solo resa.
  */
-export function PistaCiclo({ mode, phase, lang, top, item, itemPlaceholder, spiegazione, onDichiaraDetto }: {
+export function PistaCiclo({ mode, phase, lang, top, item, itemPlaceholder, spiegazione, onDichiaraDetto, children }: {
   mode: SessionMode;
   phase: SessionPhase;
   lang: string;
@@ -78,6 +78,12 @@ export function PistaCiclo({ mode, phase, lang, top, item, itemPlaceholder, spie
   /** Dichiara l'item (o la resistenza, in TONE) detto — chiama `dichiaraItemDetto`, il motore,
    *  invariato: qui solo la resa di « dì l'item… »/« l'ho detta ». */
   onDichiaraDetto: () => void;
+  /** ⚠️ Segnalato: « tutte le indicazioni devono essere a sinistra con i comandi ed anche i
+   *  bottoni ». `bottoniCiclo` — i bottoni VERI del ciclo in corso (validare, annullare,
+   *  ripetere...), calcolati una sola volta in `Serenity.tsx` (`const bottoniCiclo = ...`,
+   *  prima del `return`) e passati qui come `children`: questo componente non li calcola, li
+   *  monta soltanto — stessa regola di `spiegazione`, mai una seconda fonte della verità. */
+  children?: React.ReactNode;
 }) {
   const L = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang, it, fr, en, es, sv);
   const steps = stepsOf(mode);
@@ -291,6 +297,19 @@ export function PistaCiclo({ mode, phase, lang, top, item, itemPlaceholder, spie
       }}>
         <SuggerimentoCiclo {...spiegazione} />
       </div>
+      {/* ── I BOTTONI VERI — segnalato: « tutte le indicazioni devono essere a sinistra con i
+          comandi ed anche i bottoni ». `children`, non calcolati qui (v. la nota sulla prop):
+          `pointerEvents:'auto'` sul contenitore, `flexWrap` perché alcuni gruppi (i dieci
+          bottoni del valore in MIRROR, il selettore + bottone di TONE) restano più larghi di
+          280px se messi tutti su una riga sola. */}
+      {children && (
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8,
+          pointerEvents: 'auto', width: '100%',
+        }}>
+          {children}
+        </div>
+      )}
     </div>
   );
 }

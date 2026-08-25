@@ -4034,6 +4034,47 @@ confermare nell'app pacchettizzata.
 
 ---
 
+## Settantesimo giro (25/08/2026) — anche i bottoni veri dei cicli, a sinistra
+
+**Segnalato**: « nei cicli, tutte le indicazioni devono essere a sinistra con i comandi ed
+anche i bottoni ».
+
+L'ultimo pezzo di UI dei cicli rimasto nella barra comandi in alto — i bottoni VERI (validare,
+annullare, ripetere, il contatore, `CycleStatusBar`), lasciati lì due giri fa proprio perché
+« non riprodotti, l'unico posto dove esistono ». Il ragionamento restava valido ma non la
+conclusione: l'utente conferma esplicitamente di volerli spostati anche loro — nessuna
+ambiguità residua.
+
+**La sfida non era spostarli, era che servono in DUE contesti.** I bottoni funzionano SIA con
+strumenti SIA senza (`aperta && cycles.cycleArmed` non controlla mai `senzaMisura`) — ma
+`PistaCiclo` monta SOLO `!senzaMisura`. Spostarli semplicemente dentro `PistaCiclo` li avrebbe
+fatti sparire per chi audita senza strumenti: una vera regressione funzionale, non solo
+estetica. Risolto MISURANDO una sola volta, montando in DUE posti — la stessa tecnica già
+usata per `spiegazioneCiclo`:
+
+- **`bottoniCiclo`**, un nuovo `const` calcolato PRIMA del `return` del componente (dove
+  `spiegazioneCiclo` già viveva) — non dentro la JSX come prima (`{(() => {...})()}`), perché
+  JSX è un'unica espressione e non permette una `const` a metà per riusarla altrove nello
+  stesso albero. Contenuto TALE E QUALE ai tre blocchi (TONE/MIRROR/CONTACT-NULL): stesse
+  chiamate al motore (`tone.*`/`mirror.*`/`cycles.*`), stesso `pillBtn`, nessuna riga di logica
+  toccata — solo spostato, non riscritto.
+- **Montato in `PistaCiclo`** come nuova prop `children` (con strumenti) — un contenitore
+  proprio (`pointerEvents:'auto'`, `flexDirection:'column'`) dopo `SuggerimentoCiclo`.
+- **Montato nel blocco "senza strumenti"** (senza) — lo STESSO `bottoniCiclo`, non una seconda
+  copia, appeso sotto l'avviso nel testo grande che prende il posto dell'arco.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `vitest run`
+639/639 — un buon segno per un taglia-incolla di questa taglia (centinaia di righe spostate):
+il compilatore avrebbe segnalato qualunque variabile rimasta fuori scope. Dal vivo: sessione
+senza strumenti aperta e ciclo CONTACT già attivo di default, nessun errore in console.
+Stesso limite dei giri precedenti: non sono riuscito a portare `cycles.cycleArmed` a vero nel
+browser di anteprima (dare l'item resta bloccato allo stesso punto già segnalato) per vedere i
+bottoni veri con contenuto reale — la resa finale resta da confermare nell'app pacchettizzata.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/PistaCiclo.tsx`, `src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

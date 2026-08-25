@@ -2083,6 +2083,199 @@ export default function Serenity() {
     ? -8 + Math.max(cam2H, cam1H) + 20
     : 0;
 
+  /** ── I BOTTONI VERI DEI CICLI — segnalato: « tutte le indicazioni devono essere a sinistra
+   *  con i comandi ed anche i bottoni ». Vivevano nella barra comandi in alto (l'ULTIMO pezzo
+   *  di UI dei cicli rimasto lì, un giro fa — deciso allora di lasciarlo perché « un bottone
+   *  vero, non riprodotto »). Calcolato QUI, prima del `return`, non più dentro la JSX della
+   *  barra: serve in DUE punti della JSX (dentro `PistaCiclo`, con strumenti; dentro il
+   *  blocco "senza strumenti", senza), e JSX non permette una `const` a metà di un unico
+   *  albero di espressioni — bisogna calcolarlo una volta sola PRIMA, come già `spiegazioneCiclo`
+   *  (sopra, la stessa tecnica). Nessuna riga di logica toccata: stessi tre blocchi
+   *  (TONE/MIRROR/CONTACT-NULL), stesse chiamate al motore (`tone.*`/`mirror.*`/`cycles.*`),
+   *  stesso `pillBtn` — solo spostati, non riscritti. */
+  const pillBtn = (colore: string, dimensione = 17): React.CSSProperties => ({
+    cursor: 'pointer', borderRadius: 999, padding: '5px 14px', background: 'var(--s-disc)',
+    fontFamily: 'var(--s-sans)', fontSize: dimensione, color: colore,
+  });
+  const bottoniCiclo = (
+    <>
+      {/* ── TONE SCALE, ATTIVO — locate → raise → done, si ripete per ogni resistenza ────────
+          (a) LOCALIZZA: da dove si parte (misurato col meter, o dichiarato dall'auditor senza
+          strumenti); (b) RAISE: il comando "portalo a tono 40" ripetuto finché non c'è più
+          reazione, poi dichiarato raggiunto; (c) DONE: si riparte con un'altra resistenza, o
+          si esce del tutto. Stesse chiamate al motore di App.tsx (`localizzaTone`/
+          `chiudiTone`/`resetTone`), stesso testo dei tre tempi. */}
+      {aperta && toneAttivo && (
+        <>
+          {tone.tonePhase === 'locate' && (
+            <>
+              {!tone.toneHasMeter && (
+                <select value={tone.toneAssessed} onChange={e => tone.setToneAssessed(Number(e.target.value))}
+                  style={{
+                    border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
+                    outline: 'none', fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
+                    cursor: 'pointer', padding: '2px 4px',
+                  }}>
+                  {TONE_LABELS.map(v => (
+                    <option key={v} value={v}>
+                      {v > 0 ? `+${v}` : v} · {levelName(exactLevelName(v) ?? '', lang)}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <button className="s-glass s-glass-btn" onClick={() => tone.localizzaTone()} style={pillBtn('var(--s-ink-soft)')}>
+                {t('ser_arm_contact') /* stesso gesto/testo di App.tsx: "DAI L'ITEM" */}
+              </button>
+            </>
+          )}
+          {(tone.tonePhase === 'raise' || tone.tonePhase === 'done') && (
+            <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
+              {tone.toneAtStart !== null ? `${tone.toneAtStart > 0 ? '+' : ''}${tone.toneAtStart.toFixed(0)} → ` : ''}
+              <b style={{ color: 'var(--s-reserve)' }}>+40</b>
+            </span>
+          )}
+          {tone.tonePhase === 'raise' && (
+            <>
+              <button className="s-glass s-glass-btn" onClick={() => tone.setToneRipetizioni(v => v + 1)} style={pillBtn('var(--s-ink-soft)')}>
+                {LC('portalo a tono 40', 'mène-le au ton 40', 'raise it to tone 40', 'llévalo al tono 40', 'för det till ton 40')}
+                {tone.toneRipetizioni > 0 ? ` ×${tone.toneRipetizioni}` : ''}
+              </button>
+              <button className="s-glass s-glass-btn" onClick={() => { tone.chiudiTone(true); tone.setTonePhase('done'); }} style={pillBtn('var(--s-still)')}>
+                {LC('tono quaranta raggiunto', 'ton quarante atteint', 'tone forty reached', 'tono cuarenta alcanzado', 'ton fyrtio nådd')}
+              </button>
+            </>
+          )}
+          {tone.tonePhase === 'done' && (
+            <button className="s-glass s-glass-btn" onClick={() => tone.resetTone()} style={pillBtn('var(--s-still)')}>
+              {LC('altra resistenza', 'autre résistance', 'another resistance', 'otra resistencia', 'annat motstånd')}
+            </button>
+          )}
+          <button className="s-glass s-glass-btn" onClick={() => {
+            if (tone.tonePhase === 'raise') tone.chiudiTone(false);
+            tone.resetTone(); setToneAttivo(false);
+          }} style={pillBtn('var(--s-ink-ghost)')}>
+            {t('cancel')}
+          </button>
+        </>
+      )}
+      {/* ── MIRROR, ARMATO — tre tempi, non due ──────────────────────────────────────────
+          (a) il VALORE 1–10 dell'item — dieci bottoni, la quantità di carica; (b) il
+          DOPPIO da raggiungere, con la sua dichiarazione; (c) OTTENUTO → valida. Stessa
+          sequenza di App.tsx (`bottoneCiclo`, ramo 'mirror'), stessi tre passi — non due,
+          come una prima lettura avrebbe fatto (« dai l'item » dritto a « ottenuto », senza
+          il valore in mezzo: segnalato in App.tsx stesso come l'errore da NON ripetere). */}
+      {aperta && mirror.mirrorArmed && (
+        <>
+          {!mirror.mirrorDisp.locked ? (
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)', marginRight: 6 }}>
+                {LC('quanta carica?', 'combien de charge ?', 'how much charge?', '¿cuánta carga?', 'hur mycket laddning?')}
+              </span>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => (
+                <button key={v} onClick={() => {
+                  mirror.mirrorCycle.setManualValue(v);
+                  mirror.setMirrorDisp({ contactQ: mirror.mirrorCycle.contactQ, dischargeQ: 0,
+                    locked: true, reached: false, valueR: mirror.mirrorCycle.valueR });
+                }} style={{
+                  border: 'none', cursor: 'pointer', borderRadius: 999, width: 26, height: 26,
+                  fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', fontWeight: 700,
+                  background: 'var(--s-disc-sunk)', color: 'var(--s-ink)',
+                }}>
+                  {v}
+                </button>
+              ))}
+            </div>
+          ) : !mirror.mirrorDisp.reached ? (
+            <>
+              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
+                {LC('portalo al doppio', 'mène-le au double', 'take it to the double', 'llévalo al doble', 'för det till dubbeln')}
+                {' — '}{mirror.mirrorDisp.valueR.toFixed(0)} → {(2 * mirror.mirrorDisp.valueR).toFixed(0)}
+              </span>
+              <button className="s-glass s-glass-btn" onClick={() => {
+                mirror.mirrorCycle.declareReached();
+                mirror.setMirrorDisp({ contactQ: mirror.mirrorCycle.contactQ, dischargeQ: mirror.mirrorCycle.dischargeQ,
+                  locked: true, reached: true, valueR: mirror.mirrorCycle.valueR });
+              }} style={pillBtn('var(--s-still)')}>
+                {LC('doppio raggiunto', 'double atteint', 'double reached', 'doble alcanzado', 'dubbeln nådd')}
+              </button>
+            </>
+          ) : (
+            <button className="s-glass s-glass-btn" onClick={() => mirror.stopMirror()} style={pillBtn('var(--s-still)')}>
+              {LC('ottenuto — valida', 'obtenu — valider', 'obtained — validate', 'obtenido — validar', 'uppnått — validera')}
+            </button>
+          )}
+          <button className="s-glass s-glass-btn" onClick={() => mirror.stopMirror()} style={pillBtn('var(--s-ink-ghost)')}>
+            {t('cancel')}
+          </button>
+        </>
+      )}
+      {aperta && cycles.cycleArmed && (
+        <>
+          {/* ── IL CONTATORE DEL CICLO IN CORSO — mancante ─────────────────────────────
+              In App.tsx un chip dice, per il SOLO metodo in corso (CONTACT con CONTACT,
+              NULL con NULL — « due contatori confondono », scelta utente), quanti cicli
+              sono stati armati e quanti portati a compimento questa seduta. `cycleStats`
+              arriva già dallo stesso `useContactNullCycle` — solo non era letto qui. */}
+          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
+            {cycles.cycleKind === 'null'
+              ? `${cycles.cycleStats.nStarted} · ${cycles.cycleStats.nDone} CLEAR`
+              : `${cycles.cycleStats.cStarted} · ${cycles.cycleStats.cDone} AS-IS`}
+          </span>
+          {/* ── ANNULLA — l'uscita SENZA validare, mancante ────────────────────────────
+              Segnalato nella revisione funzionale: in App.tsx chiudere un ciclo armato ha
+              DUE strade — validare (uno degli esiti a destra) o ANNULLA, che chiude il
+              ciclo e lo lascia « non validato » nel rapporto (`finalizeCycle(false)`,
+              distinto da ogni esito). SERENITY aveva solo la prima: niente modo di uscire
+              da un ciclo armato per errore senza forzare un esito che non è successo. */}
+          <button className="s-glass s-glass-btn" onClick={() => cycles.finalizeCycle(false)} style={pillBtn('var(--s-ink-ghost)')}>
+            {t('cancel')}
+          </button>
+          {cycles.cycleKind === 'null' ? (
+            <>
+              <button className="s-glass s-glass-btn" onClick={() => cycles.validateClearRead(true)} style={pillBtn('var(--s-still)')}>
+                {t('ser_validate_equilibrium_vgi')}
+              </button>
+              <button className="s-glass s-glass-btn" onClick={() => cycles.validateClearRead(false)} style={pillBtn('var(--s-ink-faint)')}>
+                {t('ser_validate_equilibrium_novgi')}
+              </button>
+              {/* ── IL TERZO ESITO, MANCANTE ────────────────────────────────────────────
+                  Segnalato nella revisione funzionale: il ciclo NULL in App.tsx ha TRE
+                  esiti pari (VGI · senza VGI · NON RICARICA), non due — « non ricarica » è,
+                  testuale App.tsx, « il risultato diagnostico più prezioso del ciclo NULL »:
+                  senza dichiararlo, il ciclo resta indistinguibile da uno abbandonato, e
+                  quel ramo del rapporto/CORPUS resta irraggiungibile. SERENITY aveva SOLO i
+                  primi due — un bottone intero perso, non solo uno stile. */}
+              <button className="s-glass s-glass-btn" onClick={() => cycles.declareNoRecharging()} style={pillBtn('var(--s-reserve)')}>
+                {t('ser_no_recharging')}
+              </button>
+            </>
+          ) : (
+            <button className="s-glass s-glass-btn" onClick={() => cycles.validateAsIs()} style={pillBtn('var(--s-still)')}>
+              {t('ser_validate_asis')}
+            </button>
+          )}
+          {/* ── LO STESSO `CycleStatusBar` DI APP.TSX — segnalato: « riproduci la logica dei
+              cicli di equilibrium... stessi posizionamenti ». */}
+          <div style={{ width: '100%' }}>
+            <CycleStatusBar
+              armed={cycles.cycleArmed}
+              manualReady={cycles.manualReady}
+              asIsFalse={cycles.asIsFalse}
+              deltaStar={deltaStar}
+              deltaStarN={deltaStarN}
+              isLightTheme={isLightTheme}
+              signalOk={museGate.museContact}
+              cycleKind={cycles.cycleKind}
+              nullSinceMock={cycles.nullSinceMock}
+              noReadSignal={cycles.noReadSignal}
+              taAtNullStart={cycles.taAtNullStart}
+            />
+          </div>
+        </>
+      )}
+    </>
+  );
+
   return (
     <main style={{
       height: '100%', display: 'grid',
@@ -3368,215 +3561,14 @@ export default function Serenity() {
                 più spazio per il ciclo stesso ». Vedi la barra a sé, poco più giù. */}
           </>
         )}
-        {/* ── I TRE CICLI, LA STESSA INTESTAZIONE — segnalato in un resoconto: « le intestazioni
-            dei tre cicli sono copiate quasi parola per parola, tre volte » e « lo stile del
-            bottone a pillola è ridigitato a mano più di 15 volte », con una prova (« l'item è
-            stato detto » aveva un `title` in CONTACT/NULL e non in MIRROR/TONE — una copia
-            dimenticata). Due helper, definiti UNA sola volta, chiusi sulle stesse variabili
-            (`item`/`t`/`mode`/`faseCiclo`/`lang`) che i tre blocchi già leggevano: nessuna
-            prop da far viaggiare, nessun componente nuovo da montare — solo la ripetizione
-            tolta. `testataCiclo` disegna badge+item+pista (IDENTICI nei tre blocchi, differiva
-            solo il colore/nome del badge); `pillBtn` lo stile del bottone a pillola (differiva
-            solo colore, e a volte la taglia del testo — parametro `dimensione`). Il `title`
-            mancante torna automaticamente uguale ovunque, perché non c'è più una copia da
-            dimenticare. */}
-        {(() => {
-          {/* ⚠️ Segnalato: « le indicazioni, e non solo gli step dei cicli, devono stare a
-              sinistra dell'ago — niente più dei cicli riprodotto in alto a sinistra ». Prima
-              qui viveva `testataCiclo` (badge+item+`CycleSteps` orizzontale, IDENTICI nei tre
-              blocchi) — ora TUTTO quel contenuto vive SOLO in `PistaCiclo` (badge → il nome
-              del metodo nella sua intestazione; item → passato come prop; la pista →
-              `stepsOf`/`currentStep`/`stepDone`, le stesse funzioni pure che leggeva
-              `CycleSteps`). Restano SOLO i bottoni veri (`pillBtn`, sotto) — quelli non sono
-              "riprodotti", sono l'UNICO posto dove esistono. */}
-          const pillBtn = (colore: string, dimensione = 17): React.CSSProperties => ({
-            cursor: 'pointer', borderRadius: 999, padding: '5px 14px', background: 'var(--s-disc)',
-            fontFamily: 'var(--s-sans)', fontSize: dimensione, color: colore,
-          });
-          return (
-        <>
-        {/* ── TONE SCALE, ATTIVO — locate → raise → done, si ripete per ogni resistenza ────────
-            (a) LOCALIZZA: da dove si parte (misurato col meter, o dichiarato dall'auditor senza
-            strumenti); (b) RAISE: il comando "portalo a tono 40" ripetuto finché non c'è più
-            reazione, poi dichiarato raggiunto; (c) DONE: si riparte con un'altra resistenza, o
-            si esce del tutto. Stesse chiamate al motore di App.tsx (`localizzaTone`/
-            `chiudiTone`/`resetTone`), stesso testo dei tre tempi. */}
-        {aperta && toneAttivo && (
-          <>
-            {tone.tonePhase === 'locate' && (
-              <>
-                {!tone.toneHasMeter && (
-                  <select value={tone.toneAssessed} onChange={e => tone.setToneAssessed(Number(e.target.value))}
-                    style={{
-                      border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
-                      outline: 'none', fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
-                      cursor: 'pointer', padding: '2px 4px',
-                    }}>
-                    {TONE_LABELS.map(v => (
-                      <option key={v} value={v}>
-                        {v > 0 ? `+${v}` : v} · {levelName(exactLevelName(v) ?? '', lang)}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <button className="s-glass s-glass-btn" onClick={() => tone.localizzaTone()} style={pillBtn('var(--s-ink-soft)')}>
-                  {t('ser_arm_contact') /* stesso gesto/testo di App.tsx: "DAI L'ITEM" */}
-                </button>
-              </>
-            )}
-            {(tone.tonePhase === 'raise' || tone.tonePhase === 'done') && (
-              <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
-                {tone.toneAtStart !== null ? `${tone.toneAtStart > 0 ? '+' : ''}${tone.toneAtStart.toFixed(0)} → ` : ''}
-                <b style={{ color: 'var(--s-reserve)' }}>+40</b>
-              </span>
-            )}
-            {tone.tonePhase === 'raise' && (
-              <>
-                <button className="s-glass s-glass-btn" onClick={() => tone.setToneRipetizioni(v => v + 1)} style={pillBtn('var(--s-ink-soft)')}>
-                  {LC('portalo a tono 40', 'mène-le au ton 40', 'raise it to tone 40', 'llévalo al tono 40', 'för det till ton 40')}
-                  {tone.toneRipetizioni > 0 ? ` ×${tone.toneRipetizioni}` : ''}
-                </button>
-                <button className="s-glass s-glass-btn" onClick={() => { tone.chiudiTone(true); tone.setTonePhase('done'); }} style={pillBtn('var(--s-still)')}>
-                  {LC('tono quaranta raggiunto', 'ton quarante atteint', 'tone forty reached', 'tono cuarenta alcanzado', 'ton fyrtio nådd')}
-                </button>
-              </>
-            )}
-            {tone.tonePhase === 'done' && (
-              <button className="s-glass s-glass-btn" onClick={() => tone.resetTone()} style={pillBtn('var(--s-still)')}>
-                {LC('altra resistenza', 'autre résistance', 'another resistance', 'otra resistencia', 'annat motstånd')}
-              </button>
-            )}
-            <button className="s-glass s-glass-btn" onClick={() => {
-              if (tone.tonePhase === 'raise') tone.chiudiTone(false);
-              tone.resetTone(); setToneAttivo(false);
-            }} style={pillBtn('var(--s-ink-ghost)')}>
-              {t('cancel')}
-            </button>
-          </>
-        )}
-        {/* ── MIRROR, ARMATO — tre tempi, non due ──────────────────────────────────────────
-            (a) il VALORE 1–10 dell'item — dieci bottoni, la quantità di carica; (b) il
-            DOPPIO da raggiungere, con la sua dichiarazione; (c) OTTENUTO → valida. Stessa
-            sequenza di App.tsx (`bottoneCiclo`, ramo 'mirror'), stessi tre passi — non due,
-            come una prima lettura avrebbe fatto (« dai l'item » dritto a « ottenuto », senza
-            il valore in mezzo: segnalato in App.tsx stesso come l'errore da NON ripetere). */}
-        {aperta && mirror.mirrorArmed && (
-          <>
-            {!mirror.mirrorDisp.locked ? (
-              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)', marginRight: 6 }}>
-                  {LC('quanta carica?', 'combien de charge ?', 'how much charge?', '¿cuánta carga?', 'hur mycket laddning?')}
-                </span>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => (
-                  <button key={v} onClick={() => {
-                    mirror.mirrorCycle.setManualValue(v);
-                    mirror.setMirrorDisp({ contactQ: mirror.mirrorCycle.contactQ, dischargeQ: 0,
-                      locked: true, reached: false, valueR: mirror.mirrorCycle.valueR });
-                  }} style={{
-                    border: 'none', cursor: 'pointer', borderRadius: 999, width: 26, height: 26,
-                    fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', fontWeight: 700,
-                    background: 'var(--s-disc-sunk)', color: 'var(--s-ink)',
-                  }}>
-                    {v}
-                  </button>
-                ))}
-              </div>
-            ) : !mirror.mirrorDisp.reached ? (
-              <>
-                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
-                  {LC('portalo al doppio', 'mène-le au double', 'take it to the double', 'llévalo al doble', 'för det till dubbeln')}
-                  {' — '}{mirror.mirrorDisp.valueR.toFixed(0)} → {(2 * mirror.mirrorDisp.valueR).toFixed(0)}
-                </span>
-                <button className="s-glass s-glass-btn" onClick={() => {
-                  mirror.mirrorCycle.declareReached();
-                  mirror.setMirrorDisp({ contactQ: mirror.mirrorCycle.contactQ, dischargeQ: mirror.mirrorCycle.dischargeQ,
-                    locked: true, reached: true, valueR: mirror.mirrorCycle.valueR });
-                }} style={pillBtn('var(--s-still)')}>
-                  {LC('doppio raggiunto', 'double atteint', 'double reached', 'doble alcanzado', 'dubbeln nådd')}
-                </button>
-              </>
-            ) : (
-              <button className="s-glass s-glass-btn" onClick={() => mirror.stopMirror()} style={pillBtn('var(--s-still)')}>
-                {LC('ottenuto — valida', 'obtenu — valider', 'obtained — validate', 'obtenido — validar', 'uppnått — validera')}
-              </button>
-            )}
-            <button className="s-glass s-glass-btn" onClick={() => mirror.stopMirror()} style={pillBtn('var(--s-ink-ghost)')}>
-              {t('cancel')}
-            </button>
-          </>
-        )}
-        {aperta && cycles.cycleArmed && (
-          <>
-            {/* ── IL CONTATORE DEL CICLO IN CORSO — mancante ─────────────────────────────
-                In App.tsx un chip dice, per il SOLO metodo in corso (CONTACT con CONTACT,
-                NULL con NULL — « due contatori confondono », scelta utente), quanti cicli
-                sono stati armati e quanti portati a compimento questa seduta. `cycleStats`
-                arriva già dallo stesso `useContactNullCycle` — solo non era letto qui. */}
-            <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
-              {cycles.cycleKind === 'null'
-                ? `${cycles.cycleStats.nStarted} · ${cycles.cycleStats.nDone} CLEAR`
-                : `${cycles.cycleStats.cStarted} · ${cycles.cycleStats.cDone} AS-IS`}
-            </span>
-            {/* ── ANNULLA — l'uscita SENZA validare, mancante ────────────────────────────
-                Segnalato nella revisione funzionale: in App.tsx chiudere un ciclo armato ha
-                DUE strade — validare (uno degli esiti a destra) o ANNULLA, che chiude il
-                ciclo e lo lascia « non validato » nel rapporto (`finalizeCycle(false)`,
-                distinto da ogni esito). SERENITY aveva solo la prima: niente modo di uscire
-                da un ciclo armato per errore senza forzare un esito che non è successo. */}
-            <button className="s-glass s-glass-btn" onClick={() => cycles.finalizeCycle(false)} style={pillBtn('var(--s-ink-ghost)')}>
-              {t('cancel')}
-            </button>
-            {cycles.cycleKind === 'null' ? (
-              <>
-                <button className="s-glass s-glass-btn" onClick={() => cycles.validateClearRead(true)} style={pillBtn('var(--s-still)')}>
-                  {t('ser_validate_equilibrium_vgi')}
-                </button>
-                <button className="s-glass s-glass-btn" onClick={() => cycles.validateClearRead(false)} style={pillBtn('var(--s-ink-faint)')}>
-                  {t('ser_validate_equilibrium_novgi')}
-                </button>
-                {/* ── IL TERZO ESITO, MANCANTE ────────────────────────────────────────────
-                    Segnalato nella revisione funzionale: il ciclo NULL in App.tsx ha TRE
-                    esiti pari (VGI · senza VGI · NON RICARICA), non due — « non ricarica » è,
-                    testuale App.tsx, « il risultato diagnostico più prezioso del ciclo NULL »:
-                    senza dichiararlo, il ciclo resta indistinguibile da uno abbandonato, e
-                    quel ramo del rapporto/CORPUS resta irraggiungibile. SERENITY aveva SOLO i
-                    primi due — un bottone intero perso, non solo uno stile. */}
-                <button className="s-glass s-glass-btn" onClick={() => cycles.declareNoRecharging()} style={pillBtn('var(--s-reserve)')}>
-                  {t('ser_no_recharging')}
-                </button>
-              </>
-            ) : (
-              <button className="s-glass s-glass-btn" onClick={() => cycles.validateAsIs()} style={pillBtn('var(--s-still)')}>
-                {t('ser_validate_asis')}
-              </button>
-            )}
-            {/* ── LO STESSO `CycleStatusBar` DI APP.TSX — segnalato: « riproduci la logica dei
-                cicli di equilibrium... stessi posizionamenti ». Stava lontano da qui (in fondo,
-                vicino al quadrante, dietro `agoEeg`): App.tsx lo mette DIRETTAMENTE sotto la
-                domanda/i comandi del ciclo, mai altrove — « riga sotto la domanda », la sua
-                stessa nota. Spostato qui: stesso posto, stesso componente. */}
-            {/* ⚠️ `width:'100%'`, stessa ragione della `CycleSteps` più sopra — colonna
-                verticale, non più riga orizzontale. */}
-            <div style={{ width: '100%' }}>
-              <CycleStatusBar
-                armed={cycles.cycleArmed}
-                manualReady={cycles.manualReady}
-                asIsFalse={cycles.asIsFalse}
-                deltaStar={deltaStar}
-                deltaStarN={deltaStarN}
-                isLightTheme={isLightTheme}
-                signalOk={museGate.museContact}
-                cycleKind={cycles.cycleKind}
-                nullSinceMock={cycles.nullSinceMock}
-                noReadSignal={cycles.noReadSignal}
-                taAtNullStart={cycles.taAtNullStart}
-              />
-            </div>
-          </>
-        )}
-        </>
-          );
-        })()}
+        {/* ── I BOTTONI VERI DEI CICLI — segnalato di nuovo: « tutte le indicazioni devono
+            essere a sinistra con i comandi ed anche i bottoni ». Vivevano qui (l'ULTIMO pezzo
+            di UI dei cicli rimasto nella barra in alto, deciso di lasciarlo per essere « un
+            bottone vero, non riprodotto ») — ora `bottoniCiclo`, calcolato una sola volta
+            PRIMA del `return` del componente (v. lì, poco sopra, per la ragione: tutto ciò che
+            gli serve — `tone`/`mirror`/`cycles`/`museGate`/`deltaStar*`/`isLightTheme` — è già
+            in scope a quel punto), montato in DUE posti: dentro `PistaCiclo` (con strumenti) e
+            dentro il blocco "senza strumenti" (senza) — mai qui. */}
         {/* ── SEGNALATO: « i moduli ASSESSMENT, System Health, Journal, MNA non devono avere
             bottoni, si attivano solamente via CONFIG ». Erano bottoni che aprivano un
             cassetto (`apriMna`/`apriSalute`/`apriGiornale`) sopra la scelta già fatta in
@@ -4263,7 +4255,9 @@ export default function Serenity() {
                   onChiudi={() => setProcedimentoAttivo(null)} top={pistaTop} lang={lang} />
               : <PistaCiclo mode={mode} phase={faseCiclo} lang={lang} top={pistaTop}
                   item={item} itemPlaceholder={t('ser_item_placeholder') as string}
-                  spiegazione={spiegazioneCiclo} onDichiaraDetto={dichiaraItemDetto} />
+                  spiegazione={spiegazioneCiclo} onDichiaraDetto={dichiaraItemDetto}>
+                  {bottoniCiclo}
+                </PistaCiclo>
           )}
           {/* ── SENZA STRUMENTI, LE SCRITTE PRENDONO IL POSTO DELL'ARCO — segnalato: « COME IN
               EQUILIBRIUM ». Stessa condizione di sopra (`senzaMisura && aperta`), stesso testo
@@ -4271,14 +4265,17 @@ export default function Serenity() {
               centrato dove l'arco stava — non un contenuto nuovo, il `SuggerimentoCiclo` che
               nella barra comandi (più su) si è appena spento, qui riappare molto più grande:
               è LUI il soggetto dello schermo adesso, non una didascalia sotto un disegno che
-              non c'è più. I bottoni per avanzare il ciclo restano SOLO nella barra comandi
-              (`testataCiclo`/`pillBtn`, sempre montati lì, con o senza strumenti — a differenza
-              di App.tsx che li sposta qui, SERENITY non li duplica). */}
+              non c'è più.
+              ⚠️ Segnalato ancora: « tutte le indicazioni devono essere a sinistra con i
+              comandi ed anche i bottoni ». `bottoniCiclo` (calcolato sopra, prima del
+              `return`) è lo STESSO montato dentro `PistaCiclo` per chi ha strumenti — qui,
+              senza, prende il loro posto: un solo blocco di JSX, due punti di montaggio, mai
+              due copie da tenere allineate. */}
           {senzaMisura && aperta && (
             <div style={{
               position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)',
               zIndex: 4, maxWidth: 560, padding: '0 24px', textAlign: 'center',
-              display: 'flex', flexDirection: 'column', gap: 12, pointerEvents: 'none',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, pointerEvents: 'none',
             }}>
               <span style={{
                 fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-hero)', fontWeight: 800,
@@ -4300,6 +4297,12 @@ export default function Serenity() {
                   {spiegazioneCiclo.avviso}
                 </span>
               )}
+              <div style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+                pointerEvents: 'auto',
+              }}>
+                {bottoniCiclo}
+              </div>
             </div>
           )}
           {/* ── QUALE AGO GUARDARE, SOTTO L'AGO — segnalato: « les deux aiguilles ? pas vue »,
