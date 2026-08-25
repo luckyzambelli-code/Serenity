@@ -81,6 +81,17 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
   const { t } = useI18n();
   const [vista, setVista] = useState<Vista>('assess');
   const [bozza, setBozza] = useState('');
+  /** ── APERTA/CHIUSA, DIVERSO DA ATTIVA/DISATTIVA — segnalato: « assessment deve poter
+   *  essere disattivato ma lasciando vedere gli item con le reazioni, poiché utili
+   *  all'auditor. Separa la chiusura dalla disattivazione ». Prima un solo booleano
+   *  (`attivo`) faceva le DUE cose insieme: fermava la cattura E nascondeva tutto, item già
+   *  raccolti compresi — spegnere la cattura per un momento cancellava dalla vista un
+   *  riferimento che l'auditor voleva ancora consultare. Ora `espansa` (qui, locale: la vista
+   *  non serve fuori da questo componente) decide SOLO se il contenuto si vede; `attivo`
+   *  (sopra, di `Serenity.tsx`) decide SOLO se arriva un item nuovo. Default aperta: quando
+   *  l'assessment si arma (a mano o col ciclo) l'auditor la vuole vedere subito, non un
+   *  secondo gesto in più. */
+  const [espansa, setEspansa] = useState(true);
 
   const righe = vista === 'assess'
     ? items.filter(a => a.kind === undefined || a.kind === 'item')
@@ -112,7 +123,7 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
     // lo stesso: via la classe, resta solo `--s-zone-bg`/`--s-zone-border` inline.
     <div style={{
       display: 'flex', flexDirection: 'column', gap: 8,
-      width: '100%', maxHeight: attivo ? '100%' : 'auto', overflowY: 'auto',
+      width: '100%', maxHeight: espansa ? '100%' : 'auto', overflowY: 'auto',
       borderRadius: 16, background: 'var(--s-zone-bg)', border: '1px solid var(--s-zone-border)',
       padding: '12px 14px',
       pointerEvents: 'auto',
@@ -121,34 +132,54 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
           non solo quando sta già catturando.
           ⚠️ Segnalato: « la gestione dell'assessment come funziona? Voglio che ci sia un
           bottone di attivazione quando non è armato automaticamente da un ciclo ». Il
-          meccanismo esisteva già — `onToggle` qui SOPRA `attivo`/`assessAttivo`, lo stesso
+          meccanismo esisteva già — `onToggle` qui SOTTO `attivo`/`assessAttivo`, lo stesso
           interruttore che arma/disarma davvero la cattura in `Serenity.tsx` — ma si leggeva
-          come una freccia d'accordion (▸/▾), non come un interruttore ON/OFF: niente diceva
-          "questo bottone ARMA l'assessment". Sostituito con un vero interruttore (l'anello
-          vuoto/pieno sotto), ETICHETTATO per esteso quando spento: si vede a colpo d'occhio
-          che è un'ATTIVAZIONE, non solo un'espansione. Fuori da un ciclo (`assessAttivo` resta
-          dov'era l'auditor l'ha lasciato, v. la nota in `Serenity.tsx` sull'effetto legato a
-          `mode`) è questo l'UNICO modo di armarlo — durante un ciclo lo stesso bottone resta
-          comunque qui, sempre disponibile per spegnerlo in anticipo se serve. */}
-      <button
-        className="s-glass-btn"
-        onClick={onToggle}
-        title={(attivo
-          ? LC('disattiva l’assessment', 'désactiver l’assessment', 'deactivate the assessment', 'desactivar el assessment', 'inaktivera assessment')
-          : LC('attiva l’assessment', 'activer l’assessment', 'activate the assessment', 'activar el assessment', 'aktivera assessment')) as string}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-          border: 'none', borderRadius: 10, background: 'transparent', cursor: 'pointer',
-          padding: '2px 2px', fontFamily: 'var(--s-sans)',
-        }}>
-        <span style={{
-          fontSize: 'var(--s-fs-sm)', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700,
-          color: attivo ? 'var(--s-still)' : 'var(--s-ink-faint)',
-        }}>
-          {vista === 'assess' ? LC('assessment', 'assessment', 'assessment', 'assessment', 'assessment') : t('ri_title_manual')}
-          {righe.length > 0 ? ` · ${righe.length}` : ''}
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+          come una freccia d'accordion (▸/▾), non come un interruttore ON/OFF: sostituito con
+          un vero interruttore (l'anello vuoto/pieno sotto).
+          ⚠️ Segnalato DI NUOVO: « assessment deve poter essere disattivato ma lasciando
+          vedere gli item con le reazioni... separa la chiusura dalla disattivazione ». I DUE
+          gesti erano lo STESSO click — spegnere la cattura nascondeva anche gli item già
+          raccolti. Ora sono DUE bottoni distinti, non uno annidato nell'altro: il TITOLO
+          (a sinistra, con la freccia ▸/▾) apre/chiude la VISTA — `espansa`, sopra, mai tocca
+          la cattura; l'ANELLO (a destra) resta SOLO l'interruttore della cattura — mai tocca
+          la vista. */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <button
+          className="s-glass-btn"
+          onClick={() => setEspansa(v => !v)}
+          title={(espansa
+            ? LC('chiudi la vista', 'fermer la vue', 'close the view', 'cerrar la vista', 'stäng vyn')
+            : LC('apri la vista', 'ouvrir la vue', 'open the view', 'abrir la vista', 'öppna vyn')) as string}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1,
+            border: 'none', borderRadius: 10, background: 'transparent', cursor: 'pointer',
+            padding: '2px 2px', fontFamily: 'var(--s-sans)', textAlign: 'left',
+          }}>
+          <span style={{ fontSize: 'var(--s-fs-micro)', color: 'var(--s-ink-ghost)', flexShrink: 0 }}>
+            {espansa ? '▾' : '▸'}
+          </span>
+          <span style={{
+            fontSize: 'var(--s-fs-sm)', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700,
+            color: attivo ? 'var(--s-still)' : 'var(--s-ink-faint)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {vista === 'assess' ? LC('assessment', 'assessment', 'assessment', 'assessment', 'assessment') : t('ri_title_manual')}
+            {righe.length > 0 ? ` · ${righe.length}` : ''}
+          </span>
+        </button>
+        <button
+          className="s-glass-btn"
+          onClick={onToggle}
+          title={(attivo
+            ? LC('disattiva la cattura (gli item restano visibili)', 'désactiver la capture (les items restent visibles)',
+                 'deactivate capture (items stay visible)', 'desactivar la captura (los ítems siguen visibles)',
+                 'inaktivera insamling (objekten förblir synliga)')
+            : LC('attiva la cattura', 'activer la capture', 'activate capture', 'activar la captura', 'aktivera insamling')) as string}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,
+            border: 'none', borderRadius: 10, background: 'transparent', cursor: 'pointer',
+            padding: '2px 2px', fontFamily: 'var(--s-sans)',
+          }}>
           {!attivo && (
             <span style={{
               fontSize: 'var(--s-fs-micro)', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700,
@@ -166,9 +197,9 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
             background: attivo ? 'var(--s-still)' : 'transparent',
             transition: 'background var(--s-calm) var(--s-ease), border-color var(--s-calm) var(--s-ease)',
           }} />
-        </span>
-      </button>
-      {attivo && (
+        </button>
+      </div>
+      {espansa && (
         <>
           {/* ── IL SELETTORE DI VISTA — solo se `onIndica` è stato dato: senza (assessment
               ancora non collegato all'R&I) la seconda vista non avrebbe niente da fare. */}
@@ -230,8 +261,13 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', minHeight: 0 }}>
             {righe.length === 0 ? (
               vista === 'assess' ? (
-                <span className="ser-pulse" style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
-                  {LC('in ascolto…', 'à l\'écoute…', 'listening…', 'escuchando…', 'lyssnar…')}
+                // ⚠️ « in ascolto… » diceva sempre la stessa cosa anche a cattura SPENTA —
+                // ora distingue: pulsa solo se `attivo` sta davvero ascoltando, altrimenti
+                // dice che è ferma (nessuna animazione: non c'è nulla in corso da notare).
+                <span className={attivo ? 'ser-pulse' : undefined} style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
+                  {attivo
+                    ? LC('in ascolto…', 'à l\'écoute…', 'listening…', 'escuchando…', 'lyssnar…')
+                    : LC('cattura disattivata', 'capture désactivée', 'capture off', 'captura desactivada', 'insamling avstängd')}
                 </span>
               ) : (
                 <span style={{ fontSize: 'var(--s-fs-sm)', fontStyle: 'italic', color: 'var(--s-ink-faint)' }}>

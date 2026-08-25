@@ -36,6 +36,7 @@ import { useStableReleaseState } from '../hooks/useStableReleaseState';
 import { useChargeEngine } from '../hooks/useChargeEngine';
 import { useEpValidation } from '../hooks/useEpValidation';
 import { ITEM_INTERRUPT_MS } from '../engine/tuning';
+import { noInstruments } from '../engine/instrumentModules';
 import { SET_OFFSET } from '../engine/dialGeometry';
 import { THETA_LABEL_AFTER_MS } from '../engine/tuning';
 import { QuantumSphere } from '../components/QuantumSphere';
@@ -237,23 +238,30 @@ const LetturaIntegrita = React.memo(function LetturaIntegrita() {
  * niente più riga a sé: chi la monta (poco più sotto, ai tre punti di chiamata) la mette SUBITO
  * dopo il bottone della tappa attiva, sulla STESSA riga elastica (niente `flexBasis`), non più
  * in fondo a tutto. */
+/** ⚠️ Segnalato: « quando un ciclo è aperto le scritte siano più grandi... DEVONO ESSERE BEN
+ *  VISIBILI ». Questo componente è SOLO di SERENITY (non condiviso con App.tsx, libero di
+ *  crescere senza toccare EQUILIBRIUM) — porta il "comando" letto a voce durante un ciclo, il
+ *  testo che l'auditor guarda più spesso mentre conduce: restava alla stessa taglia piccola
+ *  (`--s-fs-sm`, 13px) di una didascalia qualunque. Il comando (la citazione esatta, es.
+ *  « Localise sur ton cas... ») sale a `--s-fs-lg` (18px, il testo che conta di più); "come"/
+ *  l'avviso a `--s-fs-base` (15px) — un gradino sotto, ma comunque più grandi di prima. */
 function SuggerimentoCiclo({ comando, come, avviso, fatto = false }: {
   comando?: string | null; come: string; avviso?: string | null; fatto?: boolean;
 }) {
   return (
-    <span style={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 340 }}>
+    <span style={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: 420 }}>
       {comando && (
-        <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.35,
+        <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-lg)', lineHeight: 1.35,
                       color: fatto ? 'var(--s-still)' : 'var(--s-ink-soft)' }}>
           {comando}
         </span>
       )}
-      <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.4,
+      <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', lineHeight: 1.4,
                     color: fatto ? 'var(--s-still)' : 'var(--s-ink-faint)' }}>
         {come}
       </span>
       {avviso && (
-        <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', fontWeight: 700,
+        <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', fontWeight: 700,
                       color: 'var(--s-reserve)' }}>
           {avviso}
         </span>
@@ -1367,6 +1375,14 @@ export default function Serenity() {
    *  condizione che già nasconde/mostra i cinque cerchi dei metodi, ora estesa alla barra
    *  amministrativa in alto. */
   const modalitaCiclo = mode !== 'free';
+  /** ── SENZA STRUMENTI, L'ARCO SPARISCE — segnalato: « quando non ci sono strumenti attivi,
+   *  l'arco deve sparire e le scritte dei cicli devono farsi al posto dell'arco, COME IN
+   *  EQUILIBRIUM ». Verificato App.tsx: `senzaMisura` (la STESSA funzione pura condivisa,
+   *  `noInstruments({muse,theta})` — non un'invenzione qui) decide, a seduta in corso, se
+   *  montare `<QuantumSphere>` o un blocco di testo grande al suo posto (« PRIMA DELLO START
+   *  non c'è niente da dire », la sua nota). Stessa condizione qui, con `museOk`/`meterC` al
+   *  posto di `instruments.muse`/`instruments.theta`. */
+  const senzaMisura = noInstruments({ muse: museOk, theta: meterC });
   /** ── L'ASSESSMENT SI ARMA E SI DISARMA CON IL CICLO — segnalato: « l'assessment sembra
    *  sempre attivo, anche quando è chiuso... nel report abbiamo degli assessment lunghissimi
    *  che in realtà non lo sono. DEVE ESSERE ATTIVATO al momento dell'armamento del ciclo, ed
@@ -1519,6 +1535,70 @@ export default function Serenity() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [faseCiclo, toneAttivo, tone.tonePhase, tone.toneRipetizioni, mirror.mirrorArmed, mirror.mirrorDisp,
       cycles.cycleKind, cycles.cycleArmed, cycles.noReadSignal, chargePhaseNow, mode, lang]);
+  /**
+   * ── « COME » SENZA AGO — portato parola per parola da App.tsx (`comeSenzaAgo`), per la
+   * stessa ragione qui: `spiegazioneCiclo.come` (sopra) nomina spesso l'AGO stesso (« l'ago
+   * legge → premi », « aspetta il ritorno alla base ») — parole false quando non c'è nessuno
+   * strumento a leggere alcunché, e una falsa peggio che nessuna: dice all'auditor di
+   * aspettare una cosa che non arriverà. Qui la stessa procedura è detta con gli indicatori
+   * che restano: quel che il PRECLEAR PERCEPISCE e quel che l'AUDITOR OSSERVA. `null` dove il
+   * testo normale va già bene (i tempi di TONE, che sono assessment puro).
+   */
+  const comeSenzaAgo = (fase: string): string | null => {
+    switch (fase) {
+      case 'contact.item': case 'free':
+        return LC('Scrivilo o dillo, poi premi.', 'Écris-le ou dis-le, puis appuie.', 'Type it or say it, then press.', 'Escríbelo o dilo, luego pulsa.', 'Skriv eller säg det, tryck sedan.');
+      case 'contact.mockup':
+        return LC('Chiedi un mock-up. Dichiara l\'AS-IS quando arriva.',
+                  'Demande un mock-up. Déclare l\'AS-IS quand il arrive.',
+                  'Ask for a mock-up. Declare the AS-IS when it comes.',
+                  'Pide un mock-up. Declara el AS-IS cuando llegue.',
+                  'Be om en mock-up. Deklarera AS-IS när den kommer.');
+      case 'null.item':
+        return LC('Scrivilo o dillo, poi premi: si lavora su ciò che non reagisce.',
+                  'Écris-le ou dis-le, puis appuie : on travaille sur ce qui ne réagit pas.',
+                  'Type it or say it, then press: we work on what does not react.',
+                  'Escríbelo o dilo, luego pulsa: se trabaja sobre lo que no reacciona.',
+                  'Skriv eller säg det, tryck sedan: man arbetar på det som inte reagerar.');
+      case 'null.mockup': case 'null.rise':
+        return LC('Chiedi un mock-up. Ci riesce → EQUILIBRIUM. Non ci riesce → NON RICARICA.',
+                  'Demande un mock-up. Il y arrive → EQUILIBRIUM. Il n\'y arrive pas → NE RECHARGE PAS.',
+                  'Ask for a mock-up. He can → EQUILIBRIUM. He can\'t → NO RECHARGING.',
+                  'Pide un mock-up. Lo logra → EQUILIBRIUM. No lo logra → NO RECARGA.',
+                  'Be om en mock-up. Klarar → EQUILIBRIUM. Klarar inte → LADDAR INTE.');
+      case 'contact.say_item': case 'null.say_item':
+        return LC('Dì l\'item adesso: la prima parola che dici diventa l\'item.',
+                  'Dis l\'item maintenant : le premier mot que tu dis devient l\'item.',
+                  'Say the item now: the first word you say becomes the item.',
+                  'Di el ítem ahora: la primera palabra que digas se vuelve el ítem.',
+                  'Säg item nu: det första ordet du säger blir item.');
+      case 'mirror.item': case 'mirror.say_item':
+        return LC('Scrivilo o dillo, poi premi.', 'Écris-le ou dis-le, puis appuie.', 'Type it or say it, then press.', 'Escríbelo o dilo, luego pulsa.', 'Skriv eller säg det, tryck sedan.');
+      case 'mirror.contact':
+        return LC('Quanta carica ha questo item? Dai un valore da 1 a 10.',
+                  'Combien de charge a cet item ? Donne une valeur de 1 à 10.',
+                  'How much charge has this item? Give a value from 1 to 10.',
+                  '¿Cuánta carga tiene este ítem? Da un valor de 1 a 10.',
+                  'Hur mycket laddning har detta item? Ge ett värde 1–10.');
+      case 'mirror.doubling':
+        return LC('Fallo scaricare fino al doppio, poi dichiaralo.',
+                  'Fais-le décharger jusqu\'au double, puis déclare-le.',
+                  'Have it discharge to the double, then declare it.',
+                  'Haz que descargue hasta el doble, luego decláralo.',
+                  'Låt det laddas ur till dubbeln, deklarera sedan.');
+      case 'mirror.reached':
+        return LC('Valida e riparti con un altro item.',
+                  'Valide et repars avec un autre item.',
+                  'Validate and go on with another item.',
+                  'Valida y sigue con otro ítem.',
+                  'Validera och fortsätt med ett annat item.');
+      default:
+        return null;   // TONE è assessment puro: il suo testo va già bene così com'è.
+    }
+  };
+  /** Toglie il « 1 · » davanti al titolo — la numerazione la porta già la pista
+   *  (`CycleSteps`, sotto). Stessa funzione di App.tsx (`senzaNumero`). */
+  const senzaNumero = (s: string) => s.replace(/^\s*\d+\s*·\s*/, '');
 
   /**
    * ── L'ITEM A VOCE, LA SORGENTE CHE MANCAVA ───────────────────────────────────────────────
@@ -3022,9 +3102,14 @@ export default function Serenity() {
             }}>
               <Brain size={32} strokeWidth={1.6} />
             </button>
+            {/* ⚠️ Segnalato: « una parte della zona resta fuori dalla finestra ». `left:0`
+                faceva crescere il popover verso DESTRA dall'icona — che sta vicino al bordo
+                destro dello schermo (fra CONFIG e Guide) — e la barra di `AIAssistant` dentro
+                è larga almeno 380px: usciva sicuramente. `right:0`, come il popover
+                dell'assetto qui sopra: cresce verso SINISTRA, dentro lo schermo. */}
             {aiAperto && (
               <div className="s-glass s-glass-lift" style={{
-                position: 'absolute', top: '100%', left: 0, marginTop: 8, zIndex: 40,
+                position: 'absolute', top: '100%', right: 0, marginTop: 8, zIndex: 40,
                 borderRadius: 12, background: 'var(--s-disc)', padding: 8,
               }}>
                 {/* ── STESSO COMPONENTE DI App.tsx, MONTATO TALE E QUALE (legge già
@@ -3266,18 +3351,25 @@ export default function Serenity() {
             mancante torna automaticamente uguale ovunque, perché non c'è più una copia da
             dimenticare. */}
         {(() => {
+          {/* ⚠️ Segnalato di nuovo: « quando un ciclo è aperto le scritte siano più grandi...
+              DEVONO ESSERE BEN VISIBILI ». Il badge (nome del metodo) sale da `--s-fs-sm` a
+              `--s-fs-base`; l'ITEM — il testo che l'auditor legge e rilegge per tutto il ciclo
+              — sale da `--s-fs-base` a `--s-fs-lg`; la pista (`CycleSteps`) da `scala={1.5}` a
+              `scala={2}` (18px il testo, 30px i cerchi — era già un prop opzionale apposta per
+              questo, v. la sua nota in `tokens.css`/qui accanto: App.tsx non la passa, resta
+              invariato). */}
           const testataCiclo = (nome: string, colore: string | null) => (
             <>
               <span style={{
-                fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', fontWeight: 700, letterSpacing: '0.06em',
-                padding: '3px 10px', borderRadius: 999,
+                fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', fontWeight: 700, letterSpacing: '0.06em',
+                padding: '4px 12px', borderRadius: 999,
                 ...(colore
                   ? { background: colore, color: 'var(--s-ground)' }
                   : { border: '1px solid var(--s-ink-ghost)', color: 'var(--s-ink-soft)' }),
               }}>
                 {nome}
               </span>
-              <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)' }}>
+              <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-lg)', color: 'var(--s-ink)' }}>
                 {item || t('ser_item_placeholder')}
               </span>
               {/* ── LA PISTA — segnalato: « i cicli devono essere disposti esattamente come in
@@ -3285,21 +3377,14 @@ export default function Serenity() {
                   STESSO componente che App.tsx monta (3 volte, una per metodo, identico a qui):
                   legge `mode`/`faseCiclo`, già calcolati sopra, e ne ricava da sé quanti tempi
                   ci sono e a quale si è (`engine/cycleSteps.ts`, provato da solo) — non li
-                  decide, li mostra.
-                  ⚠️ Segnalato: « le scritte delle steps dei cicli sono troppo piccole, aumenta
-                  la taglia dei caratteri ». I 9px di sempre erano pensati per la barra comandi
-                  STRETTA di App.tsx — qui la pista ha una riga tutta per sé (`flexBasis:'100%'`,
-                  sopra), spazio che nessuno usava. `scala={1.5}` (nuovo prop OPZIONALE,
-                  default 1: App.tsx non lo passa, resta esattamente come prima) invece di
-                  toccare le taglie fisse dentro il componente condiviso — SERENITY più
-                  leggibile, EQUILIBRIUM invariato. */}
+                  decide, li mostra. */}
               <div style={{ flexBasis: '100%' }}>
-                <CycleSteps mode={mode} phase={faseCiclo} lang={lang} scala={1.5} />
+                <CycleSteps mode={mode} phase={faseCiclo} lang={lang} scala={2} />
               </div>
             </>
           );
-          const pillBtn = (colore: string, dimensione = 15): React.CSSProperties => ({
-            cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+          const pillBtn = (colore: string, dimensione = 17): React.CSSProperties => ({
+            cursor: 'pointer', borderRadius: 999, padding: '5px 14px', background: 'var(--s-disc)',
             fontFamily: 'var(--s-sans)', fontSize: dimensione, color: colore,
           });
           const titoloDichiaraDetto = LC(
@@ -3328,7 +3413,7 @@ export default function Serenity() {
                   {LC('dì la resistenza…', 'dis la résistance…', 'say the resistance…', 'di la resistencia…', 'säg motståndet…')}
                 </span>
                 <button className="s-glass s-glass-btn" onClick={dichiaraItemDetto} title={titoloDichiaraDetto}
-                  style={pillBtn('var(--s-ink-faint)', 14)}>
+                  style={pillBtn('var(--s-ink-faint)', 15)}>
                   {LC('l\'ho detta', 'je l\'ai dite', 'said it', 'la he dicho', 'sa det')}
                 </button>
               </>
@@ -3378,7 +3463,12 @@ export default function Serenity() {
             )}
             {/* « Cosa devo fare » — SULLA STESSA RIGA del bottone della tappa attiva appena
                 sopra (v. la nota su `SuggerimentoCiclo`), non più in fondo a tutto dopo ANNULLA. */}
-            <SuggerimentoCiclo {...spiegazioneCiclo} />
+            {/* ⚠️ Segnalato: « senza strumenti, le scritte dei cicli devono farsi al posto
+                dell'arco, come in EQUILIBRIUM ». Qui nella barra comandi, `SuggerimentoCiclo`
+                resta SOLO con uno strumento presente — senza, la STESSA informazione (stesso
+                `spiegazioneCiclo`) si sposta al centro, molto più grande, dove l'arco stava
+                (v. vicino a `<QuantumSphere>`): non una seconda copia, la sposta. */}
+            {!senzaMisura && <SuggerimentoCiclo {...spiegazioneCiclo} />}
             <button className="s-glass s-glass-btn" onClick={() => {
               if (tone.tonePhase === 'raise') tone.chiudiTone(false);
               tone.resetTone(); setToneAttivo(false);
@@ -3405,7 +3495,7 @@ export default function Serenity() {
                   {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
                 </span>
                 <button className="s-glass s-glass-btn" onClick={dichiaraItemDetto} title={titoloDichiaraDetto}
-                  style={pillBtn('var(--s-ink-faint)', 14)}>
+                  style={pillBtn('var(--s-ink-faint)', 15)}>
                   {LC('l\'item è stato detto', 'l\'item a été dit', 'the item has been said', 'el ítem ha sido dicho', 'item har sagts')}
                 </button>
               </>
@@ -3450,7 +3540,12 @@ export default function Serenity() {
             )}
             {/* « Cosa devo fare » — SULLA STESSA RIGA del bottone della tappa attiva appena
                 sopra (v. la nota su `SuggerimentoCiclo`), non più in fondo a tutto dopo ANNULLA. */}
-            <SuggerimentoCiclo {...spiegazioneCiclo} />
+            {/* ⚠️ Segnalato: « senza strumenti, le scritte dei cicli devono farsi al posto
+                dell'arco, come in EQUILIBRIUM ». Qui nella barra comandi, `SuggerimentoCiclo`
+                resta SOLO con uno strumento presente — senza, la STESSA informazione (stesso
+                `spiegazioneCiclo`) si sposta al centro, molto più grande, dove l'arco stava
+                (v. vicino a `<QuantumSphere>`): non una seconda copia, la sposta. */}
+            {!senzaMisura && <SuggerimentoCiclo {...spiegazioneCiclo} />}
             <button className="s-glass s-glass-btn" onClick={() => mirror.stopMirror()} style={pillBtn('var(--s-ink-ghost)')}>
               {t('cancel')}
             </button>
@@ -3473,7 +3568,7 @@ export default function Serenity() {
                   {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
                 </span>
                 <button className="s-glass s-glass-btn" onClick={dichiaraItemDetto} title={titoloDichiaraDetto}
-                  style={pillBtn('var(--s-ink-faint)', 14)}>
+                  style={pillBtn('var(--s-ink-faint)', 15)}>
                   {LC('l\'item è stato detto', 'l\'item a été dit', 'the item has been said', 'el ítem ha sido dicho', 'item har sagts')}
                 </button>
               </>
@@ -3483,7 +3578,12 @@ export default function Serenity() {
                 `CycleStatusBar`. Nelle tappe senza un bottone proprio (« chiedi un mock-up »,
                 « la carica sale »...) resta comunque QUI, appena prima del contatore/ANNULLA/
                 valida — mai isolata in coda a tutto il resto. */}
-            <SuggerimentoCiclo {...spiegazioneCiclo} />
+            {/* ⚠️ Segnalato: « senza strumenti, le scritte dei cicli devono farsi al posto
+                dell'arco, come in EQUILIBRIUM ». Qui nella barra comandi, `SuggerimentoCiclo`
+                resta SOLO con uno strumento presente — senza, la STESSA informazione (stesso
+                `spiegazioneCiclo`) si sposta al centro, molto più grande, dove l'arco stava
+                (v. vicino a `<QuantumSphere>`): non una seconda copia, la sposta. */}
+            {!senzaMisura && <SuggerimentoCiclo {...spiegazioneCiclo} />}
             {/* ── IL CONTATORE DEL CICLO IN CORSO — mancante ─────────────────────────────
                 In App.tsx un chip dice, per il SOLO metodo in corso (CONTACT con CONTACT,
                 NULL con NULL — « due contatori confondono », scelta utente), quanti cicli
@@ -4002,6 +4102,13 @@ export default function Serenity() {
               </button>
             )}
           </div>
+          {/* ⚠️ Segnalato: « quando non ci sono strumenti attivi, l'arco deve sparire e le
+              scritte dei cicli devono farsi al posto dell'arco, COME IN EQUILIBRIUM ».
+              Verificato App.tsx: monta `<QuantumSphere>` SOLO `!senzaMisura` — a seduta
+              aperta senza strumenti, un blocco di testo grande (più giù) prende il suo posto.
+              Solo `aperta`, non `!aperta`: PRIMA di aprire, l'arco resta — è lì che vive il
+              bottone PLAY al centro (v. sotto), un disegno SERENITY che App.tsx non ha. */}
+          {!(senzaMisura && aperta) && (
           <QuantumSphere
             needleOffsetProp={agoEeg ? needleOffsetEeg : SET_OFFSET}
             /* ⚠️ BUG TROVATO — segnalato: « quand on choisit MUSE, apparaît toujours
@@ -4031,6 +4138,7 @@ export default function Serenity() {
             showTrail={showTrailPref}
             sessionState={aperta ? 'running' : 'idle'}
           />
+          )}
           {/* ── « PREMI START », SUL QUADRANTE — segnalato: « pour démarrer la séance, je veux
               le même icône que dans equilibrium dans la zone aiguille ». App.tsx la mette
               centrata SUL quadrante, non solo nella barra comandi — stesso `Play` pieno,
@@ -4092,7 +4200,11 @@ export default function Serenity() {
               vista — c'era, si leggeva persino nel testo della pagina, ma non si vedeva MAI. Lo
               stesso contenitore qui, per i tre insieme: nessuna riga toccata DENTRO i tre
               componenti (`ClearDial` si ritrova avvolto due volte, innocuo — due `inset:0`
-              identici occupano lo stesso rettangolo). */}
+              identici occupano lo stesso rettangolo).
+              ⚠️ Stessa condizione di `QuantumSphere` appena sopra — senza strumenti, a seduta
+              aperta, nessuno dei tre archi ha un ago da inseguire: sparisce anche lui, insieme
+              all'ago, per lo stesso motivo. */}
+          {!(senzaMisura && aperta) && (
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
             {mirror.mirrorArmed ? (
               <MirrorDial
@@ -4184,6 +4296,44 @@ export default function Serenity() {
               />
             )}
           </div>
+          )}
+          {/* ── SENZA STRUMENTI, LE SCRITTE PRENDONO IL POSTO DELL'ARCO — segnalato: « COME IN
+              EQUILIBRIUM ». Stessa condizione di sopra (`senzaMisura && aperta`), stesso testo
+              (`spiegazioneCiclo`, `comeSenzaAgo`/`senzaNumero` appena portati da App.tsx),
+              centrato dove l'arco stava — non un contenuto nuovo, il `SuggerimentoCiclo` che
+              nella barra comandi (più su) si è appena spento, qui riappare molto più grande:
+              è LUI il soggetto dello schermo adesso, non una didascalia sotto un disegno che
+              non c'è più. I bottoni per avanzare il ciclo restano SOLO nella barra comandi
+              (`testataCiclo`/`pillBtn`, sempre montati lì, con o senza strumenti — a differenza
+              di App.tsx che li sposta qui, SERENITY non li duplica). */}
+          {senzaMisura && aperta && (
+            <div style={{
+              position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)',
+              zIndex: 4, maxWidth: 560, padding: '0 24px', textAlign: 'center',
+              display: 'flex', flexDirection: 'column', gap: 12, pointerEvents: 'none',
+            }}>
+              <span style={{
+                fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-hero)', fontWeight: 800,
+                letterSpacing: '0.02em', lineHeight: 1.15,
+                color: spiegazioneCiclo.fatto ? 'var(--s-still)' : 'var(--s-ink)',
+              }}>
+                {senzaNumero(spiegazioneCiclo.titolo)}
+              </span>
+              {spiegazioneCiclo.comando && (
+                <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-lg)', lineHeight: 1.35, color: 'var(--s-ink-soft)' }}>
+                  {spiegazioneCiclo.comando}
+                </span>
+              )}
+              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', lineHeight: 1.5, color: 'var(--s-ink-faint)' }}>
+                {comeSenzaAgo(faseCiclo) ?? spiegazioneCiclo.come}
+              </span>
+              {spiegazioneCiclo.avviso && (
+                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', fontWeight: 700, color: 'var(--s-reserve)' }}>
+                  {spiegazioneCiclo.avviso}
+                </span>
+              )}
+            </div>
+          )}
           {/* ── QUALE AGO GUARDARE, SOTTO L'AGO — segnalato: « les deux aiguilles ? pas vue »,
               poi di nuovo: « i bottoni MUSE/METER/BOTH devono restare sotto l'ago » (erano
               stati spostati nella barra laterale insieme alle altre letture, ma questo non è

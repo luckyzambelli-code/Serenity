@@ -3438,6 +3438,64 @@ Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `
 
 ---
 
+## Cinquantottesimo giro (25/08/2026) — il popover di Gemini dentro lo schermo, assessment attivo/aperto separati, i cicli molto più grandi, l'arco che sparisce senza strumenti, il tema chiaro più leggibile
+
+**Il popover di Gemini usciva dallo schermo** — segnalato: « una parte della zona resta
+fuori dalla finestra ». `left:0` faceva crescere il popover verso DESTRA dall'icona, vicino
+al bordo destro (fra CONFIG e Guide) — e la barra di `AIAssistant` dentro è larga almeno
+380px: usciva sicuramente. `right:0`, come il popover dell'assetto già a fianco: cresce
+verso sinistra, dentro lo schermo.
+
+**Assessment: attivo/disattivo separato da aperto/chiuso** — segnalato: « deve poter essere
+disattivato ma lasciando vedere gli item con le reazioni, poiché utili all'auditor. Separa la
+chiusura dalla disattivazione ». I due gesti erano lo STESSO click (`attivo` unico, gating sia
+la cattura sia la vista). Ora due bottoni distinti, non uno annidato nell'altro: il TITOLO
+(con la freccia ▸/▾) apre/chiude la VISTA (`espansa`, nuovo stato locale — mai tocca la
+cattura); l'ANELLO resta SOLO l'interruttore della cattura (mai tocca la vista). Il messaggio
+"in ascolto…" ora distingue: pulsa solo se sta davvero ascoltando, altrimenti dice "cattura
+disattivata" senza animarsi. Verificato dal vivo: item catturato, cattura disattivata (dice
+ACTIVER) — l'item resta visibile con Oui/Non ancora lì.
+
+**Le scritte dei cicli, molto più grandi** — segnalato: « DEVONO ESSERE BEN VISIBILI ». Tre
+punti, tutti locali a SERENITY (nessuno condiviso con App.tsx, liberi di crescere): il
+"comando" di `SuggerimentoCiclo` (la citazione esatta) da `--s-fs-sm` a `--s-fs-lg`; il badge
+del metodo da `--s-fs-sm` a `--s-fs-base`, l'ITEM da `--s-fs-base` a `--s-fs-lg`; la pista
+(`CycleSteps`) da `scala={1.5}` a `scala={2}` (18px il testo, 30px i cerchi — il prop
+opzionale già esisteva apposta per questo).
+
+**Senza strumenti, l'arco sparisce e le scritte prendono il suo posto — COME IN EQUILIBRIUM**
+— segnalato esplicitamente. Verificato App.tsx: monta `<QuantumSphere>` SOLO `!senzaMisura`
+(`noInstruments({muse,theta})`, la STESSA funzione pura condivisa — non un'invenzione); a
+seduta aperta senza strumenti, un blocco di testo grande (titolo, comando, "come" — con
+`comeSenzaAgo`/`senzaNumero`, PORTATI PAROLA PER PAROLA da App.tsx, che evitano di nominare
+un ago che non c'è) prende il suo posto, centrato dove l'arco stava. Stessa condizione per
+l'arco secondario (ClearDial/MirrorDial/ToneDial). Solo `aperta`, non `!aperta`: prima di
+aprire, l'arco resta — è lì che vive il bottone PLAY al centro, un disegno SERENITY che
+App.tsx non ha. I bottoni per avanzare il ciclo restano SOLO nella barra comandi (già sempre
+montati lì, con o senza strumenti) — SERENITY non li duplica come fa App.tsx. Verificato dal
+vivo: seduta senza strumenti, CONTACT armato — l'arco è sparito del tutto, "DONNE L'ITEM /
+Écris-le ou dis-le, puis appuie." (il testo `comeSenzaAgo`, non quello normale che avrebbe
+nominato l'ago) al centro, grande.
+
+**Il tema chiaro, i colori del testo ricalcolati per il contrasto vero** — segnalato di
+nuovo: « le scritte devono essere più visibili, più scure ». Calcolato il contrasto WCAG
+reale (luminanza relativa sRGB, non a occhio): `--s-ink-faint` (`#84898e`) su `--s-ground`
+(`#f4f3f0`) rendeva ≈2,6:1 — ben sotto il minimo leggibile (4,5:1); `--s-ink-soft`
+(`#54585d`) ≈2,5:1, stesso problema — una scurita precedente (« un passo ciascuna ») non
+bastava. Ricalcolati sui target: `--s-ink-soft` → `#3d4045` (≈7:1), `--s-ink-faint` →
+`#63676c` (≈4,5:1, il minimo AA). `--s-ink-ghost` invariato — è il punto "nessun segnale"
+degli indicatori/bordi, non testo da leggere. Verificato dal vivo, tema chiaro: onboarding,
+seduta aperta, Giornale, Assessment, MNA — tutti i testi nettamente più leggibili.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo estesa (profilo TEST, 1400×900, entrambi i temi) — tutti e cinque i punti
+confermati.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/Serenity.tsx`,
+`src/serenity/ZonaAssessment.tsx`, `src/serenity/tokens.css`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

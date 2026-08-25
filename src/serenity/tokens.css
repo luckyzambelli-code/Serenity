@@ -66,11 +66,21 @@
      Nessun nero: il massimo contrasto è riservato all'UNICA cosa che deve essere letta
      davvero, cioè il numero della lettura. Tutto il resto sta sotto. */
   --s-ink:       #2c2f33;
-  /* Segnalato: « le scritte più in grande e più scure, per più visibilità » — `soft`/`faint`
-     scurite di un passo ciascuna. `ghost` resta com'era: è il punto "nessun segnale" degli
-     indicatori di connessione, non testo da leggere. */
-  --s-ink-soft:  #54585d;
-  --s-ink-faint: #84898e;
+  /* ⚠️ Segnalato DI NUOVO: « quando siamo in LIGHT, le scritte devono essere più visibili,
+     più scure ». La scurita precedente (v. sotto, ancora nel commento per la cronologia) non
+     bastava — calcolato il contrasto vero (WCAG, luminanza relativa sRGB): `--s-ink-faint`
+     a `#84898e` su `--s-ground` (`#f4f3f0`) rendeva un rapporto ≈2,6:1 — ben sotto il minimo
+     leggibile (4,5:1 per il testo normale). `--s-ink-soft` a `#54585d` rendeva ≈2,5:1, stesso
+     problema. Scuriti ancora, stavolta calcolando il target: `--s-ink-soft` ≈7:1 (il testo
+     secondario che si legge spesso), `--s-ink-faint` ≈4,5:1 (il minimo AA, per le etichette
+     più periferiche — sempre leggibile, mai il punto più scuro della pagina). `ghost` resta
+     com'era: è il punto "nessun segnale" degli indicatori di connessione e i bordi sottili,
+     non testo da leggere — un contrasto basso lì è la spia stessa di "silenzio", non un
+     difetto.
+     (Cronologia: « le scritte più in grande e più scure, per più visibilità » — un giro fa,
+     `soft`/`faint` scuriti di un passo ciascuna dai valori originali.) */
+  --s-ink-soft:  #3d4045;
+  --s-ink-faint: #63676c;
   --s-ink-ghost: #cfd2d5;
 
   /* ── I CERCHI, ORA IN VETRO LIQUIDO ──────────────────────────────────────────────────────
