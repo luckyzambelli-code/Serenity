@@ -4197,6 +4197,44 @@ confermato sullo schermo, nessun errore in console prima o dopo).
 
 ---
 
+## Settantaquattresimo giro (25/08/2026) — MUSE scelto ma non acceso, la seduta non parte più da sola
+
+**Segnalato**: « pronto per la session con il MUSE non dà i risultati anche se dice pronto ».
+
+**Bug trovato, non solo sospettato — verificato riga per riga contro App.tsx.**
+`MetabolicCheck` (condiviso) chiama la sua prop `onPhase` per dire quando entra nella fase
+`'baseline'` o `'breath'` — è così che `useChargeEngine` (condiviso, alimentato da
+`METRICS_UPDATE`) sa quando nutrire `metabolicBaseline` con le bande EEG/BPM/qualità del
+segnale in arrivo (`hooks/useChargeEngine.ts`: `if (_mp === 'baseline' || _mp === 'breath')
+metabolicBaseline.push(...)`, dove `_mp` è `metabolicPhaseRef.current`). In `Serenity.tsx`,
+`onPhase` era `() => {}` — un vuoto. `metabolicPhaseRef` (già dichiarato, già passato a
+`useChargeEngine`) restava fermo su `'idle'` per tutta la prova: zero campioni raccolti,
+`metabolicBaseline.assess()` uscito da uno stato vuoto — la schermata "pronto" si vedeva
+davvero (i tempi passano comunque, sono un timer locale al componente), ma dietro non c'era un
+solo numero vero. Corretto a `onPhase={p => { metabolicPhaseRef.current = p; }}` — verificato
+identico, carattere per carattere nella struttura, a `App.tsx:6752`.
+
+**La pulizia in più — segnalata insieme.** Senza un reset esplicito alla chiusura,
+`metabolicPhaseRef` poteva restare bloccato su `'baseline'`/`'breath'` DOPO aver chiuso il
+controllo (annullato, o chiuso dall'uscita automatica di caso limite) — `useChargeEngine`
+avrebbe continuato a nutrire `metabolicBaseline` per il resto della seduta, lavoro sprecato
+(mai letto: la prossima apertura lo azzera comunque con `metabolicBaseline.reset()`) ma non
+corretto. Aggiunto `metabolicPhaseRef.current = 'idle'` nei due punti di uscita
+(`avviaSedutaConProntezza`, che copre onProceed/onCancel di `MetabolicCheck` e il salto
+automatico quando il soffio del Meter è già riuscito; l'uscita per connessione fallita) —
+stessa pulizia che App.tsx fa alla chiusura.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo (caricamento pulito, nessun errore in console). La resa vera — un MUSE
+davvero indossato, la prova del respiro che produce contatto/calma/cuore/reattività reali —
+resta da confermare nell'app pacchettizzata: qui non c'è hardware da associare, ma il difetto
+trovato (`onPhase` vuoto) è verificabile leggendo il codice, non serve vederlo per sapere che
+c'era.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

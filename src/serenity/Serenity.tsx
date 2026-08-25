@@ -1778,6 +1778,12 @@ export default function Serenity() {
    *  ma non silenzioso: si legge nel giornale come tutto il resto di questa apertura. */
   const avviaSedutaConProntezza = (a: MetabAssessment | null) => {
     setMetabolicOpen(false);
+    // ⚠️ Segnalato insieme al bug di `onPhase` (v. la sua nota, più giù): senza questo,
+    // `metabolicPhaseRef` poteva restare fermo su `'baseline'`/`'breath'` dopo la chiusura —
+    // `useChargeEngine` avrebbe continuato a nutrire `metabolicBaseline` per il resto della
+    // seduta, lavoro sprecato (mai letto: la PROSSIMA apertura lo azzera comunque con
+    // `metabolicBaseline.reset()`) ma non corretto. Stessa pulizia di App.tsx alla chiusura.
+    metabolicPhaseRef.current = 'idle';
     avviaSeduta();
     if (a) {
       journal.addLog({ speaker: 'SYS', time: 0, type: 'normal', text:
@@ -1809,6 +1815,7 @@ export default function Serenity() {
     const museCercandoAncora = !avvio?.distanza && muse.museConnection === 'searching';
     if (museCercandoAncora) return;
     setMetabolicOpen(false);
+    metabolicPhaseRef.current = 'idle';   // v. la nota accanto ad `avviaSedutaConProntezza`
     avviaSeduta();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metabolicOpen, meterC, museOk, avvio?.distanza, remote.remoteMuseConnected, muse.museConnection]);
@@ -2553,6 +2560,20 @@ export default function Serenity() {
         if (readinessMuseOk || museCercandoAncora) {
           return (
             <div className="ser-ready-wrap">
+            {/* ⚠️ BUG TROVATO — segnalato: « pronto per la session con il MUSE non dà i
+                risultati anche se dice pronto ». `onPhase` era `() => {}`, un vuoto —
+                `MetabolicCheck` lo chiama per dire QUANDO è nella fase `'baseline'`/`'breath'`
+                (il suo stesso commento: « the engine is FED by App's METRICS_UPDATE, it reads
+                the live phase via onPhase »): `useChargeEngine` (condiviso) nutre
+                `metabolicBaseline` SOLO quando `metabolicPhaseRef.current` è una di quelle due
+                fasi (`hooks/useChargeEngine.ts`, vicino a `METRICS_UPDATE`). Senza scrivere
+                quel ref, `metabolicPhaseRef` restava fermo a `'idle'` per SEMPRE — zero
+                campioni raccolti, `assess()` usciva vuoto: « pronto » (la schermata si vedeva,
+                i tempi scorrevano) ma senza un solo numero vero dietro. `metabolicPhaseRef`
+                esisteva già (già passato a `useChargeEngine` più sopra, `corpusSessionRef,
+                tRef, metabolicPhaseRef`) — mancava solo scriverci, esattamente come App.tsx
+                (`onPhase={(p) => { metabolicPhaseRef.current = p; }}`, verificato riga per
+                riga). */}
             <MetabolicCheck
               lang={lang}
               meterAlreadyCalibrated={meterC && theta.setup.scaleMeasured}
@@ -2561,7 +2582,7 @@ export default function Serenity() {
               museConnecting={museCercandoAncora}
               onProceed={a => avviaSedutaConProntezza(a)}
               onCancel={a => avviaSedutaConProntezza(a)}
-              onPhase={() => {}}
+              onPhase={p => { metabolicPhaseRef.current = p; }}
             />
             </div>
           );
