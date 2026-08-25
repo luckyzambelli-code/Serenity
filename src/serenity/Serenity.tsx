@@ -4582,12 +4582,20 @@ export default function Serenity() {
                   /* ⚠️ Segnalato: « Santé Système devi cambiarlo... renderà meno alta la zona » —
                       v. la nota su `compact` in `HealthPanel.tsx`. Solo SERENITY la chiede. */
                   compact
-                  /* ⚠️ Segnalato: « la zone ARC doit avoir le même fond que le fond général...
-                      et les zones également, juste un petit liseré très fin de séparation ».
-                      `--s-zone-bg`/`--s-zone-border` (v. `tokens.css`): trasparente per davvero
-                      in chiaro con un bordo sottile, il vetro smerigliato di sempre in scuro. */
+                  /* ⚠️ BUG TROVATO — segnalato: « quando in LIGHT, il systems HEALTH non si
+                      vede niente ». `--s-zone-bg` è `transparent` in ENTRAMBI i temi (v.
+                      `tokens.css`) — in scuro restava leggibile per un caso, non per un
+                      disegno: `HealthPanel` (condiviso, mai ridipinto) scrive tutto in
+                      `text-white/*`, e con fondo trasparente si vedeva la pagina SCURA dietro.
+                      In chiaro la stessa trasparenza mostra la pagina CHIARA — bianco su
+                      bianco, davvero invisibile. `--s-instrument-bg` (nuovo, v. `tokens.css`,
+                      accanto a `--tr-bg` di `ThetaReadyCheck`): fisso, scuro in ENTRAMBI i
+                      temi — uno strumento resta uno strumento, non l'inseguimento di uno zoccolo
+                      "trasparente" pensato per zone che il proprio testo lo colora da sé
+                      (`ZonaAssessment`/Giornale/`PannelloMna`, che RESTANO su `--s-zone-bg`:
+                      loro il colore lo seguono, `HealthPanel` no). */
                   panelStyle={extra => ({
-                    background: 'var(--s-zone-bg)',
+                    background: 'var(--s-instrument-bg)',
                     border: '1px solid var(--s-zone-border)',
                     ...extra,
                   })}

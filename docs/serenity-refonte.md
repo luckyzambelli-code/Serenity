@@ -3824,6 +3824,41 @@ confermare nell'app pacchettizzata — stesso limite già dichiarato ai due giri
 
 ---
 
+## Sessantacinquesimo giro (25/08/2026) — reazioni MUSE e READY FOR SESSION illeggibili in LIGHT, note nei procedimenti, scorrimento
+
+**Segnalato**: « quando in LIGHT, il systems HEALTH non si vede niente »; « cambia il nome di
+PROCEDURES con PROCEDURES COMMANDS ».
+
+**Il bug vero, in `HealthPanel.tsx` (condiviso).** `panelStyle` (in `Serenity.tsx`) puntava a
+`--s-zone-bg`, che è `transparent` in ENTRAMBI i temi di SERENITY (verificato in
+`tokens.css`, non solo sulla carta). In tema scuro restava leggibile per un CASO, non per un
+disegno: `HealthPanel` è un componente condiviso, scrive tutto in `text-white/*` (Tailwind),
+e con fondo trasparente si vedeva la pagina SCURA dietro. In tema chiaro la stessa
+trasparenza mostra la pagina CHIARA — bianco su bianco, davvero invisibile, non solo poco
+leggibile. Un commento precedente in `tokens.css` diceva « stessa scelta già presa per
+HealthPanel » riferendosi a `ThetaReadyCheck`/`--tr-bg` — non era vero, non era mai stato
+fatto per davvero. Aggiunto `--s-instrument-bg` (stesso valore di `--tr-bg`, `#17181a`, fisso
+in ENTRAMBI i temi — uno strumento resta uno strumento): il `panelStyle` di `HealthPanel` ora
+lo usa al posto di `--s-zone-bg`. Le altre zone che usano `--s-zone-bg` (`ZonaAssessment`,
+Giornale, `PannelloMna`) RESTANO su quel token — il loro testo segue i colori `--s-ink-*` di
+SERENITY da solo, non hanno bisogno di un fondo fisso.
+
+**Il nome, in `ProcessusModal.tsx`.** La sezione dei procedimenti si chiamava "PROCEDURES"
+(EN) / "PROCÉDÉS" (FR) ecc. — ora "PROCEDURES COMMANDS" / "COMMANDES DE PROCÉDÉS" (e le
+traduzioni corrispondenti in IT/ES/SV), per dire più chiaramente che quel che si sceglie sono
+i COMANDI di un procedimento, non il procedimento (il PDF) stesso.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo in tema chiaro (nome nuovo confermato: "COMMANDES DE PROCÉDÉS", nessun
+errore nuovo in console). `HealthPanel` monta solo con un MUSE davvero connesso
+(`museOk`) — la resa visiva del fondo scuro fisso resta da confermare nell'app
+pacchettizzata, stesso limite già dichiarato per `PistaCiclo`/`PistaProcedimento`.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/Serenity.tsx`,
+`src/serenity/tokens.css`, `src/components/ProcessusModal.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

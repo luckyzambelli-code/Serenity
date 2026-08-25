@@ -280,7 +280,7 @@ export function ProcessusModal({
           <div className="px-6 py-4 border-b flex flex-col gap-2" style={{ borderColor: th.divider }}>
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-mono font-bold tracking-[0.35em] uppercase" style={{ color: th.accent }}>
-                ◆ {L('PROCEDIMENTI', 'PROCÉDÉS', 'PROCEDURES', 'PROCEDIMIENTOS', 'PROCEDURER')}
+                ◆ {L('COMANDI PROCEDIMENTI', 'COMMANDES DE PROCÉDÉS', 'PROCEDURES COMMANDS', 'COMANDOS DE PROCEDIMIENTOS', 'PROCEDURKOMMANDON')}
               </span>
               {onApriCartellaProcedimenti && (
                 <button onClick={onApriCartellaProcedimenti}

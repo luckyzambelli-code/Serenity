@@ -183,10 +183,19 @@
      questo token, zero cambiamento là); qui sotto SERENITY lo punta al proprio nero vero.
      ⚠️ Resta scuro in ENTRAMBI i temi di SERENITY, non solo nello scuro: i testi interni del
      pannello sono chiari e fissi (pensati per leggersi su fondo scuro) — cambiarlo a chiaro
-     in tema LIGHT senza riscrivere anche loro li renderebbe illeggibili. Stessa scelta già
-     presa per `HealthPanel` qui sopra: « le sue zone interne restano il proprio schermo
-     scuro, per scelta... uno strumento resta uno strumento a prescindere dal tema ». */
+     in tema LIGHT senza riscrivere anche loro li renderebbe illeggibili. */
   --tr-bg: #17181a;
+  /* ── IL FONDO DI `components/HealthPanel.tsx` — segnalato: « quando in LIGHT, il systems
+     HEALTH non si vede niente ». Il commento qui sopra diceva « stessa scelta già presa per
+     HealthPanel » — non era vero: il suo `panelStyle` (in `Serenity.tsx`) puntava a
+     `--s-zone-bg`, che è `transparent` in ENTRAMBI i temi (v. sopra). In tema scuro restava
+     leggibile per un caso: il testo di `HealthPanel` è tutto `text-white/*` (Tailwind,
+     componente CONDIVISO, mai ridipinto) e con fondo trasparente si vedeva la pagina SCURA
+     dietro. In tema chiaro la stessa trasparenza mostra la pagina CHIARA dietro — bianco su
+     bianco, invisibile per davvero, non solo poco leggibile. Un token a sé (non `--tr-bg`,
+     nome legato a un altro componente), STESSO valore, STESSA regola delle due note qui
+     sopra: fisso, scuro in entrambi i temi — uno strumento resta uno strumento. */
+  --s-instrument-bg: #17181a;
   /* ── IL QUINTO/SESTO TOKEN, PER `components/AIAssistant.tsx` — montato TALE E QUALE per
      l'assistente IA: legge `TOKEN.warn`/`.warnBg`/`.warnEdge` (il banner « configura la
      chiave API ») e `TOKEN.sep` (i separatori). Derivati da `--s-reserve`, lo stesso segnale
