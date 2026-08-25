@@ -3781,6 +3781,49 @@ ma la resa vera va confermata nell'app pacchettizzata.
 
 ---
 
+## Sessantaquattresimo giro (25/08/2026) — il fuoco resta visibile scorrendo, si può chiudere la pista, comincia sotto NEEDLE LIGHT
+
+**Segnalato**: « quand on scrolle les commandes elles doivent se positionner dans la fenêtre
+pour rester visible, maintenant ce n'est pas le cas »; « il faut pouvoir fermé les commandes »;
+« fais commencer les commandes en dessous de needl light ».
+
+**Il fuoco che usciva dallo schermo, in `PistaProcedimento.tsx`.** Cambiare `fuoco` (clic,
+rotellina, frecce) cambiava taglia/opacità del comando ma non garantiva che restasse DENTRO la
+parte visibile del contenitore (`overflowY:'auto'`, altezza limitata) — con molti comandi,
+scorrere con le frecce poteva mettere a fuoco una riga già fuori dallo scorrimento corrente,
+invisibile finché non si scorreva anche a mano. Aggiunto `righeRef` (un ref per riga) e un
+`useEffect` su `[fuoco]` che chiama `scrollIntoView({block:'nearest', behavior:'smooth'})`:
+sposta lo scorrimento SOLO se la riga a fuoco non è già visibile — mai un salto a metà pista
+per un comando già in vista.
+
+**La chiusura, in `PistaCiclo.tsx`.** `PistaProcedimento` aveva già un ✕ (chiude tornando alla
+pista del ciclo); `PistaCiclo` no — restava sempre a schermo finché un ciclo era armato. Un
+nuovo stato locale `chiuso` (nessuna riga nuova in `Serenity.tsx`, resta un dettaglio del
+componente): chiusa, la pista si riduce a una piccola maniglia (`› MOCK-UP`, il nome del tempo
+a fuoco) che riapre al clic — mai sparita per sempre, l'auditor l'ha chiusa per un momento, non
+ha smesso di auditare.
+
+**Il terzo anello di misura — segnalato: « fai cominciare i comandi sotto NEEDLE LIGHT ».**
+`PistaCiclo`/`PistaProcedimento` centravano `top:'50%'` da soli sull'arco, indipendentemente
+da dove finisce il blocco della lettura TA (che porta NEEDLE LIGHT come suo ultimo figlio,
+stesso `<section>`, `top:14,left:16`). Aggiunta la STESSA tecnica di `headerRef`/`comandiRef`
+(giro 62): `taRef` sul blocco della lettura TA, `pistaTop` misurato da un
+`useLayoutEffect` senza dipendenze (`offsetTop+offsetHeight`, relativo a `<section>` — lo
+stesso antenato positioned di `PistaCiclo`/`PistaProcedimento`, nessuna conversione da fare) —
+un terzo anello nella stessa catena, non un numero indovinato. Entrambi i componenti ricevono
+ora `top={pistaTop}` invece di centrarsi da soli; `maxHeight`/`overflowY` ricalcolati sullo
+stesso `top` per non traboccare sotto.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo (flusso completo, nessun errore nuovo in console). La resa vera di
+`PistaCiclo`/`PistaProcedimento` (con contenuto, quindi con uno strumento connesso) resta da
+confermare nell'app pacchettizzata — stesso limite già dichiarato ai due giri precedenti.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/Serenity.tsx`,
+`src/serenity/PistaCiclo.tsx`, `src/serenity/PistaProcedimento.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, X, ChevronRight } from 'lucide-react';
 import { stepsOf, currentStep, stepDone, type StepId } from '../engine/cycleSteps';
 import type { SessionMode } from '../engine/sessionMode';
 import type { SessionPhase } from '../engine/sessionPhase';
@@ -29,10 +29,16 @@ import { pick5 } from '../i18n5';
  * legge `components/CycleSteps.tsx`: nessuna logica nuova, solo una resa diversa dello stesso
  * dato — non può divergere da lui su quanti tempi ci sono o a quale si è.
  */
-export function PistaCiclo({ mode, phase, lang }: {
+export function PistaCiclo({ mode, phase, lang, top }: {
   mode: SessionMode;
   phase: SessionPhase;
   lang: string;
+  /** ⚠️ Segnalato: « fai cominciare i comandi sotto NEEDLE LIGHT ». Non più `top:'50%'`
+   *  (centrata da sola sull'arco): il chiamante (`Serenity.tsx`) misura DAVVERO dove finisce
+   *  il blocco della lettura TA — che porta NEEDLE LIGHT come suo ultimo elemento — e passa
+   *  qui il punto esatto dove questa pista deve cominciare. Stessa tecnica già usata per
+   *  `.ser-comandi`/la barra laterale (`headerRef`/`comandiRef`): misurare, non indovinare. */
+  top: number;
 }) {
   const L = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang, it, fr, en, es, sv);
   const steps = stepsOf(mode);
@@ -42,6 +48,10 @@ export function PistaCiclo({ mode, phase, lang }: {
   // avanza davvero — mai restare a leggere un tempo vecchio mentre l'audit è già oltre.
   const [fuoco, setFuoco] = useState<number | null>(null);
   useEffect(() => { setFuoco(null); }, [cur]);
+  // ⚠️ Segnalato: « bisogna poter chiudere i comandi ». Nessuno stato nuovo in `Serenity.tsx`:
+  // resta locale, come `fuoco` — chiusa mostra solo una piccola maniglia per riaprirla, non
+  // sparisce per sempre (l'auditor l'ha chiusa per un momento, non ha smesso di auditare).
+  const [chiuso, setChiuso] = useState(false);
 
   // Stessa guardia di `CycleSteps`: APERTO non ha sequenza, e fuori da un ciclo non c'è un
   // tempo — in nessuno dei due casi si disegna qualcosa che non direbbe nulla di vero.
@@ -59,25 +69,60 @@ export function PistaCiclo({ mode, phase, lang }: {
   };
   const titoloRileggi = L('fatto — clic per rileggerlo', 'fait — clic pour le relire',
     'done — click to reread it', 'hecho — clic para releerlo', 'klart — klicka för att läsa igen') as string;
+  const titoloApri = L('mostra i comandi del ciclo', 'afficher les commandes du cycle',
+    'show the cycle\'s commands', 'mostrar los comandos del ciclo', 'visa cykelns kommandon') as string;
+  const titoloChiudi = L('nascondi i comandi del ciclo', 'masquer les commandes du cycle',
+    'hide the cycle\'s commands', 'ocultar los comandos del ciclo', 'dölj cykelns kommandon') as string;
 
   const principale = fuoco ?? cur;
+
+  if (chiuso) {
+    return (
+      <button type="button" onClick={() => setChiuso(false)} title={titoloApri}
+        style={{
+          position: 'absolute', left: 16, top, zIndex: 5, pointerEvents: 'auto',
+          display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+          border: '1px solid var(--s-ink-ghost)', borderRadius: 999, padding: '4px 8px 4px 6px',
+          background: 'color-mix(in srgb, var(--s-ground) 42%, transparent)',
+          fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
+          letterSpacing: '0.06em', color: 'var(--s-ink-faint)',
+        }}>
+        <ChevronRight size={12} strokeWidth={2.4} />
+        {ETICHETTA[steps[principale]]}
+      </button>
+    );
+  }
 
   return (
     <div style={{
       // ⚠️ Segnalato: « i procedimenti e i cicli devono essere più a sinistra, allineati a
       // sinistra col METER TA ». `left:16` — lo STESSO valore della lettura TA (il blocco
-      // `top:14, left:16` più giù nello stesso `<section>`, dove vive "METER TA"): non un
-      // numero vicino, lo stesso bordo sinistro. Il vero disegno dell'arco comincia più a
-      // destra (x=320, v. la nota storica accanto a `ToneColumn`) — la pista ora comincia
-      // PRIMA di lui, non sul suo bordo: si legge come parte della colonna di sinistra
-      // (TA sopra, pista sotto), non più come un'etichetta sovrapposta al centro
-      // dell'arco. Nessun pixel della geometria dell'arco cambia (nessuna riga di
-      // `QuantumSphere`/`ClearDial` toccata) — `pointerEvents:'none'` sul contenitore,
-      // `'auto'` solo sui singoli bottoni: non ruba clic al quadrante nei punti senza testo.
-      position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
-      width: 250, display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-      gap: 14, pointerEvents: 'none', zIndex: 5,
+      // `top:14, left:16` nello stesso `<section>`, dove vive "METER TA" e, sotto di lei,
+      // NEEDLE LIGHT): non un numero vicino, lo stesso bordo sinistro. Il vero disegno
+      // dell'arco comincia più a destra (x=320, v. la nota storica accanto a `ToneColumn`) —
+      // la pista comincia PRIMA di lui, non sul suo bordo: si legge come il proseguimento
+      // della colonna di sinistra (TA, NEEDLE LIGHT, poi questa pista), non più come
+      // un'etichetta sovrapposta al centro dell'arco. Nessun pixel della geometria dell'arco
+      // cambia (nessuna riga di `QuantumSphere`/`ClearDial` toccata) —
+      // `pointerEvents:'none'` sul contenitore, `'auto'` solo sui singoli bottoni: non ruba
+      // clic al quadrante nei punti senza testo.
+      position: 'absolute', left: 16, top, zIndex: 5,
+      width: 250, maxHeight: `calc(100% - ${top}px - 24px)`, overflowY: 'auto',
+      display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+      gap: 14, pointerEvents: 'none',
     }}>
+      {/* ── LA MANIGLIA DI CHIUSURA — segnalato: « bisogna poter chiudere i comandi ». Una
+          riga a sé, sempre in cima, `pointerEvents:'auto'` come gli altri bottoni veri di
+          questa pista. */}
+      <button type="button" onClick={() => setChiuso(true)} title={titoloChiudi}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+          border: 'none', background: 'none', cursor: 'pointer', color: 'var(--s-ink-faint)',
+          pointerEvents: 'auto', alignSelf: 'flex-end', marginBottom: -6,
+        }}>
+        <X size={13} strokeWidth={2.4} />
+      </button>
       {steps.map((s, i) => {
         const distanza = Math.abs(i - principale);
         const inFuoco = i === principale;

@@ -549,6 +549,23 @@ export default function Serenity() {
     const nuovo = Math.round(el.offsetTop + el.offsetHeight) + 14;
     setSidebarTop(prev => (prev === nuovo ? prev : nuovo));
   });
+  /** ── IL TERZO ANELLO — segnalato: « fai cominciare i comandi (`PistaCiclo`/
+   *  `PistaProcedimento`) sotto NEEDLE LIGHT ». Quel bottone è l'ultimo figlio del blocco
+   *  della lettura TA (`taRef`, sopra, `top:14,left:16` dentro `<section>`) — misurare DOVE
+   *  finisce quel blocco, non indovinare un numero, è la STESSA tecnica di
+   *  `headerRef`/`comandiRef` appena sopra: qui l'antenato posizionato più vicino è
+   *  `<section>` (non `<main>`), ma `offsetTop`/`offsetHeight` restano relativi a lui allo
+   *  stesso modo — `PistaCiclo`/`PistaProcedimento` vivono anche loro dentro `<section>`,
+   *  quindi lo stesso numero vale per entrambi senza conversioni. */
+  const taRef = useRef<HTMLDivElement | null>(null);
+  const [pistaTop, setPistaTop] = useState(140);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => {
+    const el = taRef.current;
+    if (!el) return;
+    const nuovo = Math.round(el.offsetTop + el.offsetHeight) + 14;
+    setPistaTop(prev => (prev === nuovo ? prev : nuovo));
+  });
   const uiAlpha = useUiStore(s => s.uiAlpha);
   // ⚠️ Segnalato: « la trasparenza si può modificare ma non agisce sulle scritte ». Prima
   // `uiAlpha` arrivava SOLO a `Cerchio.tsx` (le due camere) — v. la nota su `--s-ui-alpha` in
@@ -4054,8 +4071,14 @@ export default function Serenity() {
               MUSE/METER/NESSUNO in alto — è la qualità del segnale DI QUELLO strumento, il suo
               posto naturale è lì, non qui. `--s-ink-faint`, non `-ghost` — stessa ragione già
               scritta per il giornale: questo riquadro ha il suo SCHERMO scuro apposta in tema
-              scuro, `-ghost` (tarato sul fondo neutro di SERENITY) ci diventava illeggibile. */}
-          <div style={{
+              scuro, `-ghost` (tarato sul fondo neutro di SERENITY) ci diventava illeggibile.
+              ⚠️ `ref={taRef}` — segnalato: « fai cominciare i comandi sotto NEEDLE LIGHT »
+              (NEEDLE LIGHT è l'ultimo figlio di QUESTO blocco, più giù). Misurato per davvero
+              (v. `pistaTop`, il terzo anello della stessa catena di `headerRef`/`comandiRef`),
+              non un numero fisso indovinato — se un giorno questo blocco cresce o si
+              accorcia (un'altra lettura aggiunta o tolta), `PistaCiclo`/`PistaProcedimento`
+              lo seguono da soli. */}
+          <div ref={taRef} style={{
             position: 'absolute', top: 14, left: 16, zIndex: 5,
             display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6,
             pointerEvents: 'none',
@@ -4402,8 +4425,8 @@ export default function Serenity() {
           {!senzaMisura && (
             procedimentoAttivo
               ? <PistaProcedimento nome={procedimentoAttivo.nome} comandi={procedimentoAttivo.comandi}
-                  onChiudi={() => setProcedimentoAttivo(null)} />
-              : <PistaCiclo mode={mode} phase={faseCiclo} lang={lang} />
+                  onChiudi={() => setProcedimentoAttivo(null)} top={pistaTop} />
+              : <PistaCiclo mode={mode} phase={faseCiclo} lang={lang} top={pistaTop} />
           )}
           {/* ── SENZA STRUMENTI, LE SCRITTE PRENDONO IL POSTO DELL'ARCO — segnalato: « COME IN
               EQUILIBRIUM ». Stessa condizione di sopra (`senzaMisura && aperta`), stesso testo

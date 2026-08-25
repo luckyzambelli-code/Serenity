@@ -37,18 +37,37 @@ import type { ComandoProcedimento } from '../lib/procedimenti';
  * di eventi per un solo gesto e la pista salterebbe più comandi alla volta); `onKeyDown` con
  * `tabIndex` fa lo stesso con ↑/↓ e ←/→. Il clic diretto su un comando resta il modo primario:
  * questi sono scorciatoie in più, non lo sostituiscono.
+ *
+ * ── IL FUOCO DEVE RESTARE VISIBILE — bug segnalato: « quand on scrolle les commandes elles
+ * doivent se positionner dans la fenêtre pour rester visible, maintenant ce n'est pas le cas ».
+ * Cambiare `fuoco` (clic, rotellina o frecce) cambiava taglia/opacità del comando ma non
+ * garantiva che fosse ancora DENTRO la parte visibile del contenitore (`overflowY:'auto'`,
+ * un'altezza limitata) — con molti comandi, scorrere con le frecce poteva mettere a fuoco una
+ * riga già fuori dallo scorrimento corrente, invisibile finché non si scorreva anche a mano.
+ * `righeRef` (un ref per riga) + un `useEffect` su `[fuoco]` che chiama
+ * `scrollIntoView({block:'nearest'})`: sposta lo scorrimento SOLO se la riga a fuoco non è già
+ * visibile (`'nearest'`, non `'center'` — non salta a metà pista per un comando già in vista).
  */
-export function PistaProcedimento({ nome, comandi, onChiudi }: {
+export function PistaProcedimento({ nome, comandi, onChiudi, top }: {
   nome: string;
   comandi: ComandoProcedimento[];
   onChiudi: () => void;
+  /** ⚠️ Segnalato: « fai cominciare i comandi sotto NEEDLE LIGHT » — v. la stessa nota in
+   *  `PistaCiclo.tsx`. Misurato da `Serenity.tsx`, non più `top:'50%'`. */
+  top: number;
 }) {
   const [fuoco, setFuoco] = useState(0);
   const [ultimoScroll, setUltimoScroll] = useState(0);
   const contenitoreRef = useRef<HTMLDivElement>(null);
+  const righeRef = useRef<(HTMLButtonElement | null)[]>([]);
   // Le frecce servono a un elemento col FOCUS vero — senza mettercelo da soli al montaggio,
   // l'auditor dovrebbe cliccare la pista una volta prima che ↑/↓ facciano qualcosa.
   useEffect(() => { contenitoreRef.current?.focus(); }, []);
+  // Il comando a fuoco resta sempre dentro la parte visibile del contenitore — v. la nota
+  // sopra. `'nearest'`: sposta lo scorrimento SOLO quanto serve, mai più del necessario.
+  useEffect(() => {
+    righeRef.current[fuoco]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [fuoco]);
   if (!comandi.length) return null;
 
   const vaia = (delta: number) => {
@@ -75,11 +94,12 @@ export function PistaProcedimento({ nome, comandi, onChiudi }: {
       style={{
         // ⚠️ Segnalato: « i procedimenti e i cicli devono essere più a sinistra, allineati a
         // sinistra col METER TA » — stessa geometria di `PistaCiclo` (v. la sua nota),
-        // `left:16` come il blocco della lettura TA nello stesso `<section>`.
-        position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
-        width: 280, maxHeight: '82%', overflowY: 'auto',
+        // `left:16` come il blocco della lettura TA nello stesso `<section>`. `top` misurato
+        // da `Serenity.tsx` (sotto NEEDLE LIGHT), non più centrato da solo sull'arco.
+        position: 'absolute', left: 16, top, zIndex: 5,
+        width: 280, maxHeight: `calc(100% - ${top}px - 24px)`, overflowY: 'auto',
         display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-        gap: 12, pointerEvents: 'auto', zIndex: 5, outline: 'none',
+        gap: 12, pointerEvents: 'auto', outline: 'none',
       }}>
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8, position: 'sticky', top: 0,
@@ -109,7 +129,7 @@ export function PistaProcedimento({ nome, comandi, onChiudi }: {
         const opacita = inFuoco ? 1 : distanza === 1 ? 0.55 : 0.26;
         const colore = inFuoco ? 'var(--s-ink)' : 'var(--s-ink-soft)';
         return (
-          <button key={i} type="button" onClick={() => setFuoco(i)}
+          <button key={i} ref={el => { righeRef.current[i] = el; }} type="button" onClick={() => setFuoco(i)}
             style={{
               display: 'flex', alignItems: 'flex-start', gap: 10, border: 'none',
               cursor: 'pointer', padding: '3px 10px', borderRadius: 14, textAlign: 'left',
