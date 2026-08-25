@@ -161,10 +161,16 @@ export function PistaCiclo({ mode, phase, lang, top, item, itemPlaceholder, spie
       // cambia (nessuna riga di `QuantumSphere`/`ClearDial` toccata) —
       // `pointerEvents:'none'` sul contenitore, `'auto'` solo sui singoli bottoni: non ruba
       // clic al quadrante nei punti senza testo.
-      // ⚠️ `width:280`, non più 250 — segnalato: « posizionati esattamente come i comandi dei
-      // procedimenti » (`PistaProcedimento`, stessa larghezza).
+      // ⚠️ `width:320`, non più 280 — segnalato: « le scritte dei comandi dobbiamo allargarle
+      // per renderle su una riga se possibile ». Scelta fra due proposte (« i comandi sotto
+      // l'ago » o « allarghiamo la zona a sinistra ») — la seconda, perché consolidare TUTTO
+      // ciò che riguarda il ciclo a sinistra (steps, item, indicazioni, bottoni) è stata la
+      // direzione esplicita degli ultimi giri: spostare i bottoni sotto l'ago sarebbe tornato
+      // indietro proprio su quello. 320, non un numero arbitrario più grande: allineato al
+      // vero bordo sinistro del disegno dell'arco (x=320, v. la nota storica accanto a
+      // `ToneColumn`) — la pista arriva esattamente fin lì, non oltre, né meno.
       position: 'absolute', left: 16, top, zIndex: 5,
-      width: 280, maxHeight: `calc(100% - ${top}px - 24px)`, overflowY: 'auto',
+      width: 320, maxHeight: `calc(100% - ${top}px - 24px)`, overflowY: 'auto',
       display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
       gap: 12, pointerEvents: 'none',
     }}>
@@ -234,6 +240,7 @@ export function PistaCiclo({ mode, phase, lang, top, item, itemPlaceholder, spie
             style={{
               cursor: 'pointer', borderRadius: 999, padding: '5px 14px', background: 'var(--s-disc)',
               fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-faint)', border: 'none',
+              whiteSpace: 'nowrap',
             }}>
             {mode === 'tone'
               ? L('l\'ho detta', 'je l\'ai dite', 'said it', 'la he dicho', 'sa det')

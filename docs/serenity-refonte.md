@@ -4124,6 +4124,47 @@ pacchettizzata, con un MUSE davvero presente ma spento/fuori portata.
 
 ---
 
+## Settantaduesimo giro (25/08/2026) — MUSE non indossato ben visibile, le scritte dei comandi allargate
+
+**Segnalato**: « quando il MUSE è collegato ma non indossato devi lasciare l'indicazione
+apparente per indicare all'auditor »; « le scritte dei comandi dobbiamo allargarle per renderle
+su una riga se possibile. O mettiamo i comandi sotto l'ago in basso o allarghiamo la zona
+rendendo i bottoni a sinistra verticalmente. Cosa ne pensi? ».
+
+**MUSE non indossato — l'indicazione esisteva, ma solo in un `title`.** Il pallino di stato
+nella barra in alto già distingueva "connesso" da "non indossato" (`museGate.museContact`), ma
+la frase che lo spiega viveva SOLO in un `title` — visibile passando il mouse sopra, che
+l'auditor non fa: guarda il preclear, non l'icona. Verificato App.tsx: ha un banner dedicato,
+SEMPRE visibile, pulsante, centrato in alto sull'arco (`museConnection === 'connected' &&
+!museContact`) — non esisteva ancora in SERENITY. Aggiunto, stessa condizione, stessa scritta
+(`t('no_contact')`, chiave condivisa già tradotta), nella lingua grafica di SERENITY
+(`--s-reserve`, l'ambra di "attenzione" di sempre, non il rosso fisso di App.tsx — la STESSA
+idea, non gli stessi colori).
+
+**Le scritte dei comandi — chiesta la mia opinione fra due strade, scelta e motivata.** Fra «
+sotto l'ago » e « allarghiamo la zona a sinistra »: la seconda, perché consolidare TUTTO ciò
+che riguarda il ciclo a sinistra (steps, item, indicazioni, bottoni) è stata la direzione
+esplicita degli ultimi cinque giri — spostare i bottoni sotto l'ago sarebbe tornato indietro
+proprio su quello, oltre a riaprire lo stesso problema di spazio che « sotto l'ago » aveva già
+(l'arco resta al centro, la fascia sotto non è più larga della colonna a sinistra). Fatto in
+due parti: `pillBtn` (i bottoni veri, `Serenity.tsx`) e il bottone "l'ho detta"
+(`PistaCiclo.tsx`) hanno ora `whiteSpace:'nowrap'` — senza, il testo andava a capo DENTRO la
+pillola quando non ci stava; `PistaCiclo`/`PistaProcedimento` da 280 a 320px — non un numero
+arbitrario, allineato al vero bordo sinistro del disegno dell'arco (x=320, la stessa misura di
+sempre), quindi la pista arriva esattamente fin lì, non oltre.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo (nessun errore nuovo in console, confermato sul log completo — non solo il
+filtro degli errori, che nella console del browser di anteprima ripeteva le voci più vecchie
+invece delle più recenti). Il banner MUSE non indossato e la resa delle scritte allargate con
+un ciclo reale in corso restano da confermare nell'app pacchettizzata — stesso limite hardware
+di sempre.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/Serenity.tsx`, `src/serenity/PistaCiclo.tsx`,
+`src/serenity/PistaProcedimento.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

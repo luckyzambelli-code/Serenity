@@ -101,8 +101,12 @@ export function PistaProcedimento({ nome, comandi, onChiudi, top, lang }: {
         // sinistra col METER TA » — stessa geometria di `PistaCiclo` (v. la sua nota),
         // `left:16` come il blocco della lettura TA nello stesso `<section>`. `top` misurato
         // da `Serenity.tsx` (sotto NEEDLE LIGHT), non più centrato da solo sull'arco.
+        // `width:320`, stessa correzione e stessa ragione di `PistaCiclo` (v. la sua nota):
+        // « le scritte dei comandi... su una riga se possibile » — qui vale per il testo del
+        // comando del procedimento, che già andava a capo su più righe per scelta (`--s-serif`,
+        // lettura estesa), ma la larghezza in più giova comunque alla leggibilità generale.
         position: 'absolute', left: 16, top, zIndex: 5,
-        width: 280, maxHeight: `calc(100% - ${top}px - 24px)`, overflowY: 'auto',
+        width: 320, maxHeight: `calc(100% - ${top}px - 24px)`, overflowY: 'auto',
         display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
         gap: 12, pointerEvents: 'auto', outline: 'none',
       }}>

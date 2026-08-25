@@ -2105,9 +2105,16 @@ export default function Serenity() {
    *  (sopra, la stessa tecnica). Nessuna riga di logica toccata: stessi tre blocchi
    *  (TONE/MIRROR/CONTACT-NULL), stesse chiamate al motore (`tone.*`/`mirror.*`/`cycles.*`),
    *  stesso `pillBtn` — solo spostati, non riscritti. */
+  /** ⚠️ `whiteSpace:'nowrap'` — segnalato: « le scritte dei comandi dobbiamo allargarle per
+   *  renderle su una riga se possibile ». Un bottone-pillola è largo quanto il suo contenuto
+   *  (`alignItems:'flex-start'` sul contenitore, nessuna `width` fissa) — senza `nowrap` il
+   *  testo, se non ci stava nello spazio rimasto, andava a capo DENTRO la pillola invece di
+   *  restare su una riga sola. Vedi la nota accanto a `width:320` di `PistaCiclo`/
+   *  `PistaProcedimento` per l'altra metà della correzione (più spazio, non solo niente
+   *  ritorno a capo). */
   const pillBtn = (colore: string, dimensione = 17): React.CSSProperties => ({
     cursor: 'pointer', borderRadius: 999, padding: '5px 14px', background: 'var(--s-disc)',
-    fontFamily: 'var(--s-sans)', fontSize: dimensione, color: colore,
+    fontFamily: 'var(--s-sans)', fontSize: dimensione, color: colore, whiteSpace: 'nowrap',
   });
   const bottoniCiclo = (
     <>
@@ -3638,6 +3645,28 @@ export default function Serenity() {
            con o senza assessment aperta (solo il CONTENUTO sotto i bottoni compare o no). */
         paddingLeft: 320,
       }}>
+      {/* ── MUSE COLLEGATO MA NON INDOSSATO — segnalato: « devi lasciare l'indicazione
+          apparente per indicare all'auditor ». Verificato App.tsx: ha un banner dedicato, SEMPRE
+          visibile (non solo un `title` al passaggio del mouse — quello esisteva già qui, nel
+          pallino di stato della barra in alto, ma un tooltip non si vede senza andarci sopra
+          col mouse, e l'auditor guarda il preclear, non l'icona) — stessa condizione
+          (`museConnection === 'connected' && !museContact`), stessa scritta (`t('no_contact')`,
+          chiave condivisa, già tradotta nelle 5 lingue), qui nella lingua grafica di SERENITY
+          (`--s-reserve`, l'ambra di sempre per "attenzione" — non il rosso di App.tsx, la
+          STESSA idea nella tavolozza di qui) invece di ricopiare i suoi colori fissi. */}
+      {museOk && !museGate.museContact && (
+        <div className="ser-pulse" style={{
+          position: 'absolute', top: '13%', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 6, pointerEvents: 'none', display: 'flex', alignItems: 'center', gap: 8,
+          padding: '7px 16px', borderRadius: 999, whiteSpace: 'nowrap',
+          background: 'color-mix(in srgb, var(--s-reserve) 16%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--s-reserve) 65%, transparent)',
+          color: 'var(--s-reserve)', fontFamily: 'var(--s-sans)', fontSize: 12, fontWeight: 700,
+          letterSpacing: '0.06em',
+        }}>
+          <span style={{ fontSize: 14 }}>⚠</span> {t('no_contact') as string}
+        </div>
+      )}
       {/* ── IL CASSETTO DEL METER — ancorato SOTTO l'intestazione, dove sta il suo indicatore ──
           Non nel flusso della pagina (galleggia, `position:absolute`, come le camere qui sotto e
           il pannello MNA più giù): aprirlo non deve spingere in basso tutto il resto — la stessa
