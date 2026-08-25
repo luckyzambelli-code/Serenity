@@ -28,6 +28,14 @@ import { pick5 } from '../i18n5';
  * Dati puri da `engine/cycleSteps` (`stepsOf`/`currentStep`/`stepDone`), le STESSE funzioni che
  * legge `components/CycleSteps.tsx`: nessuna logica nuova, solo una resa diversa dello stesso
  * dato — non può divergere da lui su quanti tempi ci sono o a quale si è.
+ *
+ * ── STESSA POSIZIONE DI `PistaProcedimento` — segnalato: « i comandi dei cicli siano
+ * posizionati esattamente come i comandi dei procedimenti ». Stessa larghezza (280, non più
+ * 250), stessa intestazione a pillola (fissa in cima, `position:'sticky'`, col nome del
+ * metodo accanto al bottone di chiusura — invece di un bottone isolato sopra la lista), stesso
+ * calcolo di `maxHeight`. Una sola differenza resta, voluta: qui non c'è scorrimento a
+ * rotellina/frecce — i tempi del ciclo sono 2-4, sempre pochi abbastanza da stare tutti a
+ * schermo, quello scorrimento serve a `PistaProcedimento` per liste potenzialmente lunghe.
  */
 export function PistaCiclo({ mode, phase, lang, top }: {
   mode: SessionMode;
@@ -66,6 +74,11 @@ export function PistaCiclo({ mode, phase, lang, top }: {
     double:      L('DOPPIO', 'DOUBLE', 'DOUBLE', 'DOBLE', 'DUBBEL'),
     obtained:    L('OTTENUTO', 'OBTENU', 'OBTAINED', 'OBTENIDO', 'UPPNÅTT'),
     tone40:      L('TONO 40', 'TON 40', 'TONE 40', 'TONO 40', 'TON 40'),
+  };
+  // Il nome del metodo, l'unico che il titolo dell'intestazione può avere qui — `mode` lo
+  // dice già da sé, `free` non ci arriva mai (`steps.length` sarebbe 0, si esce sopra).
+  const TITOLO_METODO: Record<SessionMode, string> = {
+    contact: 'CONTACT', null: 'NULL', mirror: 'MIRROR', tone: 'TONE', free: '',
   };
   const titoloRileggi = L('fatto — clic per rileggerlo', 'fait — clic pour le relire',
     'done — click to reread it', 'hecho — clic para releerlo', 'klart — klicka för att läsa igen') as string;
@@ -107,30 +120,48 @@ export function PistaCiclo({ mode, phase, lang, top }: {
       // cambia (nessuna riga di `QuantumSphere`/`ClearDial` toccata) —
       // `pointerEvents:'none'` sul contenitore, `'auto'` solo sui singoli bottoni: non ruba
       // clic al quadrante nei punti senza testo.
+      // ⚠️ `width:280`, non più 250 — segnalato: « posizionati esattamente come i comandi dei
+      // procedimenti » (`PistaProcedimento`, stessa larghezza).
       position: 'absolute', left: 16, top, zIndex: 5,
-      width: 250, maxHeight: `calc(100% - ${top}px - 24px)`, overflowY: 'auto',
+      width: 280, maxHeight: `calc(100% - ${top}px - 24px)`, overflowY: 'auto',
       display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-      gap: 14, pointerEvents: 'none',
+      gap: 12, pointerEvents: 'none',
     }}>
-      {/* ── LA MANIGLIA DI CHIUSURA — segnalato la prima volta: « bisogna poter chiudere i
-          comandi »; poi ancora: « la chiusura non è evidente, metti più in rilievo che si
-          capisca ». Prima era un ✕ nudo (nessun bordo, nessun fondo, 20px) — si perdeva
-          contro un arco colorato sotto. Ora un bottone VERO, bordato ed etichettato, stessa
-          lingua visiva di NEEDLE LIGHT/degli altri bottoni-pillola di SERENITY (bordo sempre
-          visibile, non solo al fuoco) — non più un'icona isolata da indovinare. */}
-      <button type="button" onClick={() => setChiuso(true)} title={titoloChiudi}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 5, alignSelf: 'flex-end',
-          borderRadius: 999, cursor: 'pointer', pointerEvents: 'auto',
-          padding: '4px 10px 4px 8px',
-          border: '1px solid var(--s-ink-ghost)',
-          background: 'color-mix(in srgb, var(--s-ground) 55%, transparent)',
+      {/* ── L'INTESTAZIONE — segnalato: « i comandi dei cicli siano posizionati esattamente
+          come i comandi dei procedimenti ». Stessa pillola fissa in cima di
+          `PistaProcedimento` (nome a sinistra, chiusura a destra), non più un bottone isolato
+          sopra la lista. */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8, position: 'sticky', top: 0,
+        padding: '3px 4px 3px 10px', borderRadius: 999,
+        background: 'color-mix(in srgb, var(--s-ground) 68%, transparent)',
+        pointerEvents: 'auto',
+      }}>
+        <span style={{
           fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
-          letterSpacing: '0.06em', color: 'var(--s-ink-soft)',
+          letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--s-ink-faint)',
+          whiteSpace: 'nowrap',
         }}>
-        <X size={12} strokeWidth={2.6} />
-        {etichettaChiudi}
-      </button>
+          {TITOLO_METODO[mode]}
+        </span>
+        {/* ── LA CHIUSURA — segnalato la prima volta: « bisogna poter chiudere i comandi »;
+            poi: « la chiusura non è evidente, metti più in rilievo »; poi ancora: « fai più
+            grande il bottone di chiusura ». Da un'icona nuda di 20px, a un bottone bordato ed
+            etichettato, a QUESTA taglia (icona 15px, testo `--s-fs-sm` invece di `-micro`,
+            padding più largo) — lo stesso trattamento, solo più grande in ogni sua parte. */}
+        <button type="button" onClick={() => setChiuso(true)} title={titoloChiudi}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+            borderRadius: 999, padding: '6px 14px 6px 11px',
+            border: '1px solid var(--s-ink-ghost)',
+            background: 'color-mix(in srgb, var(--s-ground) 55%, transparent)',
+            fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', fontWeight: 700,
+            letterSpacing: '0.06em', color: 'var(--s-ink-soft)',
+          }}>
+          <X size={15} strokeWidth={2.6} />
+          {etichettaChiudi}
+        </button>
+      </div>
       {steps.map((s, i) => {
         const distanza = Math.abs(i - principale);
         const inFuoco = i === principale;

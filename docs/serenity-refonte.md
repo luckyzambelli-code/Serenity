@@ -3900,6 +3900,60 @@ dei giri precedenti sulla pista.
 
 ---
 
+## Sessantasettesimo giro (25/08/2026) — Santé Système leggibile in chiaro, chiusura più grande, la pista dei cicli uguale a quella dei procedimenti
+
+**Segnalato**: « il systems health resta in dark anche quando passiamo in LIGHT, in light
+rendilo ben visibile le scritte » (arrivato a metà lavoro, mentre si rispondeva a un giro
+precedente — trattato subito); « fai più grande il bottone di chiusura dei comandi »; « vorrei
+che i comandi dei cicli siano posizionati esattamente come i comandi dei procedimenti ».
+
+**Santé Système, il fondo scuro fisso non bastava — capovolto con un filtro CSS, da fuori.**
+Il giro scorso `--s-instrument-bg` aveva reso il fondo scuro FISSO in entrambi i temi (perché
+il testo di `HealthPanel`, condiviso, è quasi tutto `text-white/*` fisso) — leggibile, ma una
+macchia scura dentro una pagina chiara non è "ben visibile" come richiesto ora. Verificato
+leggendo `HealthPanel.tsx` riga per riga: dentro non c'è NESSUN colore saturo, solo
+bianco/nero/grigio a varie opacità — condizione ideale per il trucco `filter: invert(1)
+hue-rotate(180deg)` (bianco-su-scuro diventa scuro-su-chiaro, `hue-rotate` non ha nulla da
+correggere perché non c'è tinta da preservare). Un'unica eccezione: l'INTESTAZIONE
+("SYSTEM HEALTH SENSORS") legge già `isLightTheme` da sola e va già scura-su-chiaro — il suo
+titolo ANDREBBE invertito due volte (la sua logica + il filtro) se il filtro coprisse tutto il
+pannello. Applicato quindi due volte: sul pannello intero (`.ser-health-wrap`) E di nuovo,
+separatamente, sulla sola intestazione (`.ser-health-wrap > div > div:first-child`, il suo
+PRIMO figlio) — due `invert()` sulla stessa zona si annullano (verificato: composizione CSS
+standard, il filtro di un discendente si applica alla SUA resa PRIMA di essere ricomposta nel
+sottoalbero filtrato dell'antenato), riportandola alla sua resa originale, corretta da sola.
+Lo stesso annullamento riporta alla resa vera anche il bottone riduci/espandi (dentro
+l'intestazione, già ritinto da questo stesso file). Tutto in `healthPanelButtons.css` — MAI
+dentro `HealthPanel.tsx` condiviso, nessun file toccato lì. **Provato per davvero**, non solo
+sulla carta: iniettato un elemento sintetico nella pagina (stessa struttura, `data-tema` a
+`'chiaro'`) e verificato via screenshot che l'intestazione resta scura-su-chiara e il corpo
+(bianco fisso originale) diventa anche lui scuro-su-chiaro — confermato prima di considerarlo
+fatto, poi ripulito.
+
+**Il bottone di chiusura, più grande — in `PistaCiclo.tsx`/`PistaProcedimento.tsx`.** Icona da
+12 a 15px, testo da `--s-fs-micro` a `--s-fs-sm`, padding più largo (`6px 14px 6px 11px`) — in
+entrambi i componenti, stessa taglia identica.
+
+**`PistaCiclo`, posizionata esattamente come `PistaProcedimento`.** Segnalato esplicitamente.
+Tre differenze rimaste dal giro della sua prima stesura, tolte: larghezza 250→280 (uguale);
+bottone di chiusura isolato sopra la lista → intestazione a pillola fissa in cima
+(`position:'sticky'`), col nome del metodo (CONTACT/NULL/MIRROR/TONE, derivato da `mode`)
+accanto alla chiusura — stessa struttura esatta dell'intestazione di `PistaProcedimento` (nome
++ chiusura nella stessa pillola). Resta un'unica differenza, voluta e dichiarata nel commento
+del file: nessuno scorrimento a rotellina/frecce in `PistaCiclo` — i tempi di un ciclo sono
+2-4, sempre pochi abbastanza da stare tutti a schermo; quello scorrimento in
+`PistaProcedimento` serve per liste di comandi potenzialmente più lunghe.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo (prova sintetica del filtro CSS confermata via screenshot, nessun errore
+nuovo in console). Nessun file condiviso toccato questo giro (`healthPanelButtons.css`,
+`PistaCiclo.tsx`, `PistaProcedimento.tsx` sono tutti e tre SOLO SERENITY) — un solo DMG.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/healthPanelButtons.css`,
+`src/serenity/PistaCiclo.tsx`, `src/serenity/PistaProcedimento.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

@@ -67,3 +67,39 @@
 .ser-health-wrap button:is([title="Expand"],[title="Développer"],[title="Espandi"],[title="Desplegar"],[title="Fäll ut"])::after {
   content: '+';
 }
+
+/*
+ * ── SANTÉ SYSTÈME, VISIBILE ANCHE IN CHIARO — segnalato: « il systems health resta in dark
+ * anche quando passiamo in LIGHT, rendilo ben visibile ». `HealthPanel` (condiviso — MAI
+ * toccato, v. la nota in cima al file) scrive quasi tutto il suo corpo in `text-white/*`
+ * fisso; un giro fa il suo fondo era stato fissato scuro apposta (`--s-instrument-bg`,
+ * `Serenity.tsx`) perché quel testo bianco restasse leggibile — ma un pannello scuro dentro
+ * una pagina chiara resta comunque UNA MACCHIA SCURA, non "ben visibile" come richiesto ora.
+ *
+ * La sua INTESTAZIONE (solo il titolo "SYSTEM HEALTH SENSORS", non il resto del pannello) è
+ * l'unica zona che legge già `isLightTheme` da sé e va già scura-su-chiaro da sola — verificato
+ * leggendo `HealthPanel.tsx` riga per riga.
+ *
+ * Capovolgere l'intero pannello con un filtro CSS applicato QUI, da fuori (mai dentro il
+ * componente condiviso) trasforma bianco-su-scuro in scuro-su-chiaro senza toccarne una riga:
+ * verificato che dentro non ci sia NESSUN colore saturo (solo bianco/nero/grigio a varie
+ * opacità) — `hue-rotate` non ha nulla da correggere, resta un puro capovolgimento di
+ * luminosità, mai una tinta sbagliata.
+ *
+ * L'intestazione però ANDREBBE SCURA due volte (la sua logica + questo filtro) — un SECONDO
+ * `invert()` applicato solo a lei annulla il primo (due invert si annullano): resta l'unica
+ * zona che il filtro non tocca, esattamente perché è l'unica che non ne ha bisogno. Lo stesso
+ * annullamento riporta alla sua resa vera anche il bottone riduci/espandi qui sopra (dentro
+ * l'intestazione), che è già ritinto correttamente dalle regole di questo stesso file.
+ *
+ * ⚠️ Accoppiato alla struttura vera di `HealthPanel.tsx` (`div:first-child` = l'intestazione,
+ * il PRIMO figlio del pannello — verificato leggendo il componente): se un giorno la sua
+ * struttura cambia, va riverificato qui. Stessa classe di rischio già accettata dalle regole
+ * `[title="Collapse"]` qui sopra, nello stesso file.
+ */
+:root[data-tema='chiaro'] .ser-health-wrap {
+  filter: invert(1) hue-rotate(180deg);
+}
+:root[data-tema='chiaro'] .ser-health-wrap > div > div:first-child {
+  filter: invert(1) hue-rotate(180deg);
+}

@@ -60,6 +60,7 @@ export function PistaProcedimento({ nome, comandi, onChiudi, top, lang }: {
 }) {
   const titoloChiudi = pick5(lang, 'chiudi il procedimento', 'fermer le procédé',
     'close the procedure', 'cerrar el procedimiento', 'stäng proceduren') as string;
+  const etichettaChiudi = pick5(lang, 'CHIUDI', 'FERMER', 'CLOSE', 'CERRAR', 'STÄNG') as string;
   const [fuoco, setFuoco] = useState(0);
   const [ultimoScroll, setUltimoScroll] = useState(0);
   const contenitoreRef = useRef<HTMLDivElement>(null);
@@ -113,22 +114,26 @@ export function PistaProcedimento({ nome, comandi, onChiudi, top, lang }: {
         <span style={{
           fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
           letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--s-ink-faint)',
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 210,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 150,
         }}>
           {nome}
         </span>
-        {/* ⚠️ Segnalato: « la chiusura non è evidente, metti più in rilievo che si capisca ».
-            Un bordo proprio (non solo trasparente/senza contorno come prima): dentro la pillola
-            del titolo, senza il bordo si confondeva con un'icona decorativa invece di un
-            bottone vero — stesso trattamento appena dato al ✕ di `PistaCiclo`. */}
+        {/* ⚠️ Segnalato la prima volta: « la chiusura non è evidente, metti più in rilievo »;
+            poi ancora: « fai più grande il bottone di chiusura ». Da un ✕ nudo, a un cerchio
+            bordato, a QUESTO bottone — bordato ED etichettato, stessa taglia di quello appena
+            ingrandito in `PistaCiclo` (icona 15px, testo `--s-fs-sm`): le due piste devono
+            essere posizionate esattamente uguali, il bottone di chiusura compreso. */}
         <button type="button" onClick={onChiudi} title={titoloChiudi}
           style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-            border: '1px solid var(--s-ink-ghost)', background: 'none', cursor: 'pointer',
-            color: 'var(--s-ink-soft)',
+            display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+            borderRadius: 999, padding: '6px 14px 6px 11px', flexShrink: 0,
+            border: '1px solid var(--s-ink-ghost)',
+            background: 'color-mix(in srgb, var(--s-ground) 55%, transparent)',
+            fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', fontWeight: 700,
+            letterSpacing: '0.06em', color: 'var(--s-ink-soft)',
           }}>
-          <X size={12} strokeWidth={2.6} />
+          <X size={15} strokeWidth={2.6} />
+          {etichettaChiudi}
         </button>
       </div>
       {comandi.map((c, i) => {
