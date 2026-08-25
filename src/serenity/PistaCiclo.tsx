@@ -31,12 +31,29 @@ import { SuggerimentoCiclo } from './SuggerimentoCiclo';
  * dato — non può divergere da lui su quanti tempi ci sono o a quale si è.
  *
  * ── STESSA POSIZIONE DI `PistaProcedimento` — segnalato: « i comandi dei cicli siano
- * posizionati esattamente come i comandi dei procedimenti ». Stessa larghezza (280, non più
- * 250), stessa intestazione a pillola (fissa in cima, `position:'sticky'`, col nome del
- * metodo accanto al bottone di chiusura — invece di un bottone isolato sopra la lista), stesso
- * calcolo di `maxHeight`. Una sola differenza resta, voluta: qui non c'è scorrimento a
- * rotellina/frecce — i tempi del ciclo sono 2-4, sempre pochi abbastanza da stare tutti a
- * schermo, quello scorrimento serve a `PistaProcedimento` per liste potenzialmente lunghe.
+ * posizionati esattamente come i comandi dei procedimenti ». Stessa intestazione a pillola
+ * (fissa in cima, `position:'sticky'`, col nome del metodo accanto al bottone di chiusura —
+ * invece di un bottone isolato sopra la lista). Una sola differenza resta, voluta: qui non
+ * c'è scorrimento a rotellina/frecce — i tempi del ciclo sono 2-4, sempre pochi abbastanza da
+ * stare tutti a schermo, quello scorrimento serve a `PistaProcedimento` per liste
+ * potenzialmente lunghe.
+ *
+ * ── SOTTO IL PERNO DELL'AGO, NON PIÙ A SINISTRA — segnalato: « per più leggibilità, sotto il
+ * punto di ancoraggio dell'ago, in uno spazio che permetta il più possibile le scritte su una
+ * riga ». Era una colonna stretta (280→320px) incollata al bordo sinistro dell'arco — le
+ * indicazioni ANDAVANO a capo (item, tempi, bottoni impilati verticalmente). Ora una fascia
+ * ORIZZONTALE, larga quanto il quadrante stesso, che segue il pannello nel FLUSSO normale
+ * della colonna che li impila (`Serenity.tsx`, l'involucro `flex:1 column` intorno all'arco) —
+ * non più `position:absolute` con un `top` calcolato a mano.
+ *
+ * ⚠️ BUG TROVATO nel primo tentativo: `position:absolute` con un `top` misurato viveva DENTRO
+ * il riquadro dell'arco (`overflow:'hidden'`, per i bordi arrotondati) — un `top` che superava
+ * l'altezza del pannello tagliava via la pista, invisibile, anche se il DOM la conteneva per
+ * davvero (si leggeva nel testo di pagina, mai a schermo). Un FRATELLO del pannello nel flusso
+ * normale non può mai finire tagliato via da un contenitore che non lo aspettava: lo stesso
+ * contenuto (intestazione, item, "dì l'item…", i tempi, le indicazioni, i bottoni) dispone i
+ * suoi gruppi in RIGA — ognuno prova a restare su una riga sola, e va a capo fra un gruppo e
+ * l'altro solo se lo spazio non basta davvero, mai a metà frase.
  *
  * ── L'ITEM E LE INDICAZIONI, ANCHE LORO QUI — segnalato: « le indicazioni, e non solo gli
  * step dei cicli, devono stare a sinistra dell'ago — niente più dei cicli riprodotto in alto a
@@ -58,16 +75,10 @@ import { SuggerimentoCiclo } from './SuggerimentoCiclo';
  * (chiama `dichiaraItemDetto`, il motore) — il resto (testo che pulsa, taglia, posizione) è
  * solo resa.
  */
-export function PistaCiclo({ mode, phase, lang, top, item, itemPlaceholder, spiegazione, onDichiaraDetto, children }: {
+export function PistaCiclo({ mode, phase, lang, item, itemPlaceholder, spiegazione, onDichiaraDetto, children }: {
   mode: SessionMode;
   phase: SessionPhase;
   lang: string;
-  /** ⚠️ Segnalato: « fai cominciare i comandi sotto NEEDLE LIGHT ». Non più `top:'50%'`
-   *  (centrata da sola sull'arco): il chiamante (`Serenity.tsx`) misura DAVVERO dove finisce
-   *  il blocco della lettura TA — che porta NEEDLE LIGHT come suo ultimo elemento — e passa
-   *  qui il punto esatto dove questa pista deve cominciare. Stessa tecnica già usata per
-   *  `.ser-comandi`/la barra laterale (`headerRef`/`comandiRef`): misurare, non indovinare. */
-  top: number;
   /** L'item dato per questo ciclo — stringa vuota se non ancora dato. */
   item: string;
   /** Il segnaposto da mostrare al posto dell'item, finché non è stato dato. */
@@ -135,8 +146,7 @@ export function PistaCiclo({ mode, phase, lang, top, item, itemPlaceholder, spie
     return (
       <button type="button" onClick={() => setChiuso(false)} title={titoloApri}
         style={{
-          position: 'absolute', left: 16, top, zIndex: 5, pointerEvents: 'auto',
-          display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', flexShrink: 0,
           border: '1px solid var(--s-ink-ghost)', borderRadius: 999, padding: '4px 8px 4px 6px',
           background: 'color-mix(in srgb, var(--s-ground) 42%, transparent)',
           fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
@@ -150,36 +160,27 @@ export function PistaCiclo({ mode, phase, lang, top, item, itemPlaceholder, spie
 
   return (
     <div style={{
-      // ⚠️ Segnalato: « i procedimenti e i cicli devono essere più a sinistra, allineati a
-      // sinistra col METER TA ». `left:16` — lo STESSO valore della lettura TA (il blocco
-      // `top:14, left:16` nello stesso `<section>`, dove vive "METER TA" e, sotto di lei,
-      // NEEDLE LIGHT): non un numero vicino, lo stesso bordo sinistro. Il vero disegno
-      // dell'arco comincia più a destra (x=320, v. la nota storica accanto a `ToneColumn`) —
-      // la pista comincia PRIMA di lui, non sul suo bordo: si legge come il proseguimento
-      // della colonna di sinistra (TA, NEEDLE LIGHT, poi questa pista), non più come
-      // un'etichetta sovrapposta al centro dell'arco. Nessun pixel della geometria dell'arco
-      // cambia (nessuna riga di `QuantumSphere`/`ClearDial` toccata) —
-      // `pointerEvents:'none'` sul contenitore, `'auto'` solo sui singoli bottoni: non ruba
-      // clic al quadrante nei punti senza testo.
-      // ⚠️ `width:320`, non più 280 — segnalato: « le scritte dei comandi dobbiamo allargarle
-      // per renderle su una riga se possibile ». Scelta fra due proposte (« i comandi sotto
-      // l'ago » o « allarghiamo la zona a sinistra ») — la seconda, perché consolidare TUTTO
-      // ciò che riguarda il ciclo a sinistra (steps, item, indicazioni, bottoni) è stata la
-      // direzione esplicita degli ultimi giri: spostare i bottoni sotto l'ago sarebbe tornato
-      // indietro proprio su quello. 320, non un numero arbitrario più grande: allineato al
-      // vero bordo sinistro del disegno dell'arco (x=320, v. la nota storica accanto a
-      // `ToneColumn`) — la pista arriva esattamente fin lì, non oltre, né meno.
-      position: 'absolute', left: 16, top, zIndex: 5,
-      width: 320, maxHeight: `calc(100% - ${top}px - 24px)`, overflowY: 'auto',
-      display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-      gap: 12, pointerEvents: 'none',
+      // ⚠️ Segnalato: « sotto il punto di ancoraggio dell'ago, in uno spazio che permetta il
+      // più possibile le scritte su una riga » — v. la nota in cima al file. Nel FLUSSO
+      // normale della colonna che impila il pannello dell'ago (`Serenity.tsx`, l'involucro
+      // `flex:1 column, alignItems:center`) — quel `alignItems:'center'` la centra da solo,
+      // nessun `left`/`transform` da calcolare qui. `width` fino a 1400px — la larghezza VERA
+      // del quadrante (v. `Serenity.tsx`, il tetto di `aspectRatio`) — così i gruppi
+      // (intestazione, item, tempi, indicazioni, bottoni) hanno spazio per restare ciascuno su
+      // una riga sola, andando a capo fra un gruppo e l'altro (`flexWrap:'wrap'`) solo se lo
+      // spazio davvero non basta, mai a metà frase.
+      width: 'min(94%, 1400px)', maxWidth: '100%', flexShrink: 0,
+      display: 'flex', flexDirection: 'row', flexWrap: 'wrap',
+      alignItems: 'center', justifyContent: 'center',
+      rowGap: 10, columnGap: 20,
     }}>
       {/* ── L'INTESTAZIONE — segnalato: « i comandi dei cicli siano posizionati esattamente
-          come i comandi dei procedimenti ». Stessa pillola fissa in cima di
-          `PistaProcedimento` (nome a sinistra, chiusura a destra), non più un bottone isolato
-          sopra la lista. */}
+          come i comandi dei procedimenti ». Stessa pillola di `PistaProcedimento` (nome a
+          sinistra, chiusura a destra), non più un bottone isolato sopra la lista — e non più
+          `position:'sticky'` (serviva alla colonna con scorrimento verticale di prima; qui non
+          c'è più scorrimento da inseguire). */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 8, position: 'sticky', top: 0,
+        display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
         padding: '3px 4px 3px 10px', borderRadius: 999,
         background: 'color-mix(in srgb, var(--s-ground) 68%, transparent)',
         pointerEvents: 'auto',
@@ -215,6 +216,7 @@ export function PistaCiclo({ mode, phase, lang, top, item, itemPlaceholder, spie
       <span style={{
         fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-lg)', color: 'var(--s-ink)',
         padding: '0 10px',
+        flexShrink: 0, whiteSpace: 'nowrap',
       }}>
         {item || itemPlaceholder}
       </span>
@@ -222,7 +224,7 @@ export function PistaCiclo({ mode, phase, lang, top, item, itemPlaceholder, spie
           comandi, per tutti i cicli ». TONE dice "la resistenza", gli altri tre "l'item" —
           stessa distinzione che facevano le tre copie nella barra comandi. */}
       {diItem && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 10px', pointerEvents: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 10px', pointerEvents: 'auto', flexShrink: 0 }}>
           <span className="ser-pulse" style={{
             fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.04em',
             color: 'var(--s-reserve)',
@@ -248,71 +250,85 @@ export function PistaCiclo({ mode, phase, lang, top, item, itemPlaceholder, spie
           </button>
         </div>
       )}
-      {steps.map((s, i) => {
-        const distanza = Math.abs(i - principale);
-        const inFuoco = i === principale;
-        const concluso = i < cur || (i === cur && stepDone(phase));
-        // Taglia e chiarezza calano con la distanza dal tempo a fuoco: a colpo d'occhio si
-        // vede QUALE comando conta adesso, senza dover leggere l'intera lista — è la « guida
-        // dell'attenzione » segnalata, non una decorazione.
-        const fs = inFuoco ? 'var(--s-fs-xl)' : distanza === 1 ? 'var(--s-fs-base)' : 'var(--s-fs-sm)';
-        const opacita = inFuoco ? 1 : distanza === 1 ? 0.55 : 0.26;
-        const colore = inFuoco ? 'var(--s-ink)' : concluso ? 'var(--s-still)' : 'var(--s-ink-soft)';
-        return (
-          <button key={s} type="button" onClick={() => setFuoco(i)} title={concluso ? titoloRileggi : undefined}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10, border: 'none',
-              cursor: 'pointer', padding: '3px 10px', borderRadius: 999, textAlign: 'left',
-              pointerEvents: 'auto', opacity: opacita,
-              transition: 'opacity 0.25s ease, font-size 0.25s ease, background 0.25s ease',
-              // Solo il tempo a fuoco porta un fondo — le sue lettere devono staccarsi
-              // dall'arco sotto; gli altri restano puro testo, per non impilare più riquadri
-              // semitrasparenti uno sull'altro (l'ago ci perderebbe leggibilità, il punto (4)
-              // della richiesta). Trasparenza calibrata a mano: abbastanza fondo da leggere il
-              // testo su qualunque colore dell'arco sotto, abbastanza poco (42%) perché l'ago
-              // — che passa anche dietro al tempo a fuoco — resti tracciabile.
-              background: inFuoco ? 'color-mix(in srgb, var(--s-ground) 42%, transparent)' : 'none',
-            }}>
-            <span aria-hidden style={{
-              width: inFuoco ? 26 : 18, height: inFuoco ? 26 : 18, borderRadius: '50%', flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'var(--s-sans)', fontSize: inFuoco ? 12 : 9, fontWeight: 800, lineHeight: 1,
-              color: inFuoco ? 'var(--s-ground)' : colore,
-              background: inFuoco ? 'var(--s-ink)' : 'transparent',
-              border: `1px solid ${colore}`,
-            }}>
-              {concluso ? <Check size={inFuoco ? 14 : 10} strokeWidth={3.2} /> : i + 1}
-            </span>
-            <span style={{
-              fontFamily: 'var(--s-sans)', fontSize: fs, fontWeight: inFuoco ? 800 : 600,
-              letterSpacing: '0.06em', color: colore, whiteSpace: 'nowrap',
-            }}>
-              {ETICHETTA[s]}
-            </span>
-          </button>
-        );
-      })}
-      {/* ── LE INDICAZIONI — segnalato: « le indicazioni, e non solo gli step, devono stare a
-          sinistra dell'ago ». `SuggerimentoCiclo` (comando/come/avviso), lo stesso componente
-          che prima viveva nella barra comandi — segue SEMPRE il tempo reale (`spiegazione`),
-          mai il `fuoco` di preview (v. la nota in cima al file). `pointerEvents:'auto'`: è
-          testo, non un bottone, ma resta sopra un fondo proprio per staccarsi dall'arco come
-          i tempi qui sopra. */}
+      {/* ── I TEMPI, UN GRUPPO SOLO — segnalato: « il più possibile le scritte su una riga ».
+          Prima ogni tempo era un figlio diretto della colonna (`flexDirection:'column'`, uno
+          sotto l'altro per costruzione); ora il contenitore è una riga che può andare a capo
+          FRA i gruppi — senza un involucro proprio, i singoli tempi si sarebbero potuti
+          spezzare in mezzo a loro alla prima mancanza di spazio. `flexWrap:'nowrap'` qui
+          dentro: i tempi restano SEMPRE tutti sulla stessa riga fra loro (sono pochi, 2-4),
+          è il gruppo intero che eventualmente va a capo, mai un tempo da solo. */}
+      <div style={{ display: 'flex', flexWrap: 'nowrap', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+        {steps.map((s, i) => {
+          const distanza = Math.abs(i - principale);
+          const inFuoco = i === principale;
+          const concluso = i < cur || (i === cur && stepDone(phase));
+          // Taglia e chiarezza calano con la distanza dal tempo a fuoco: a colpo d'occhio si
+          // vede QUALE comando conta adesso, senza dover leggere l'intera lista — è la « guida
+          // dell'attenzione » segnalata, non una decorazione.
+          const fs = inFuoco ? 'var(--s-fs-xl)' : distanza === 1 ? 'var(--s-fs-base)' : 'var(--s-fs-sm)';
+          const opacita = inFuoco ? 1 : distanza === 1 ? 0.55 : 0.26;
+          const colore = inFuoco ? 'var(--s-ink)' : concluso ? 'var(--s-still)' : 'var(--s-ink-soft)';
+          return (
+            <button key={s} type="button" onClick={() => setFuoco(i)} title={concluso ? titoloRileggi : undefined}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, border: 'none',
+                cursor: 'pointer', padding: '3px 10px', borderRadius: 999, textAlign: 'left',
+                pointerEvents: 'auto', opacity: opacita,
+                transition: 'opacity 0.25s ease, font-size 0.25s ease, background 0.25s ease',
+                // Solo il tempo a fuoco porta un fondo — le sue lettere devono staccarsi
+                // dall'arco sotto; gli altri restano puro testo, per non impilare più riquadri
+                // semitrasparenti uno sull'altro (l'ago ci perderebbe leggibilità, il punto (4)
+                // della richiesta). Trasparenza calibrata a mano: abbastanza fondo da leggere il
+                // testo su qualunque colore dell'arco sotto, abbastanza poco (42%) perché l'ago
+                // — che passa anche dietro al tempo a fuoco — resti tracciabile.
+                background: inFuoco ? 'color-mix(in srgb, var(--s-ground) 42%, transparent)' : 'none',
+              }}>
+              <span aria-hidden style={{
+                width: inFuoco ? 26 : 18, height: inFuoco ? 26 : 18, borderRadius: '50%', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'var(--s-sans)', fontSize: inFuoco ? 12 : 9, fontWeight: 800, lineHeight: 1,
+                color: inFuoco ? 'var(--s-ground)' : colore,
+                background: inFuoco ? 'var(--s-ink)' : 'transparent',
+                border: `1px solid ${colore}`,
+              }}>
+                {concluso ? <Check size={inFuoco ? 14 : 10} strokeWidth={3.2} /> : i + 1}
+              </span>
+              <span style={{
+                fontFamily: 'var(--s-sans)', fontSize: fs, fontWeight: inFuoco ? 800 : 600,
+                letterSpacing: '0.06em', color: colore, whiteSpace: 'nowrap',
+              }}>
+                {ETICHETTA[s]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {/* ── LE INDICAZIONI — segnalato: « le indicazioni, e non solo gli step, devono stare
+          coi comandi ». `SuggerimentoCiclo` (comando/come/avviso), lo stesso componente che
+          prima viveva nella barra comandi — segue SEMPRE il tempo reale (`spiegazione`), mai
+          il `fuoco` di preview (v. la nota in cima al file). `pointerEvents:'auto'`: è testo,
+          non un bottone, ma resta sopra un fondo proprio per staccarsi dall'arco come i tempi
+          qui sopra. Nessun `flexShrink:0`: è il gruppo più lungo (una frase intera, non
+          un'etichetta) — se qualcosa deve cedere spazio o andare a capo per primo, è lui. */}
       <div style={{
         padding: '4px 10px', pointerEvents: 'auto', borderRadius: 14,
         background: 'color-mix(in srgb, var(--s-ground) 30%, transparent)',
       }}>
         <SuggerimentoCiclo {...spiegazione} />
       </div>
-      {/* ── I BOTTONI VERI — segnalato: « tutte le indicazioni devono essere a sinistra con i
-          comandi ed anche i bottoni ». `children`, non calcolati qui (v. la nota sulla prop):
-          `pointerEvents:'auto'` sul contenitore, `flexWrap` perché alcuni gruppi (i dieci
-          bottoni del valore in MIRROR, il selettore + bottone di TONE) restano più larghi di
-          280px se messi tutti su una riga sola. */}
+      {/* ── I BOTTONI VERI — segnalato: « tutte le indicazioni devono essere coi comandi ed
+          anche i bottoni », poi: « il più possibile le scritte su una riga ». `children`, non
+          calcolati qui (v. la nota sulla prop): `flexDirection:'row'`, non più `'column'` — i
+          bottoni si affiancano invece di impilarsi; `flexWrap` interno resta, per i gruppi
+          davvero larghi (i dieci bottoni del valore in MIRROR, il selettore + bottone di
+          TONE) che possono superare pure i 1400px disponibili. Niente più `width:'100%'`: su
+          una riga che deve stare AFFIANCO agli altri gruppi, forzare la piena larghezza
+          avrebbe spinto ogni altro gruppo su una riga propria — l'esatto opposto della
+          richiesta. */}
       {children && (
         <div style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8,
-          pointerEvents: 'auto', width: '100%',
+          display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8,
+          pointerEvents: 'auto', flexShrink: 0,
         }}>
           {children}
         </div>

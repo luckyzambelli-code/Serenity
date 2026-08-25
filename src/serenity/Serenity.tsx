@@ -499,23 +499,9 @@ export default function Serenity() {
     const nuovo = Math.round(el.offsetTop + el.offsetHeight) + 14;
     setSidebarTop(prev => (prev === nuovo ? prev : nuovo));
   });
-  /** ── IL TERZO ANELLO — segnalato: « fai cominciare i comandi (`PistaCiclo`/
-   *  `PistaProcedimento`) sotto NEEDLE LIGHT ». Quel bottone è l'ultimo figlio del blocco
-   *  della lettura TA (`taRef`, sopra, `top:14,left:16` dentro `<section>`) — misurare DOVE
-   *  finisce quel blocco, non indovinare un numero, è la STESSA tecnica di
-   *  `headerRef`/`comandiRef` appena sopra: qui l'antenato posizionato più vicino è
-   *  `<section>` (non `<main>`), ma `offsetTop`/`offsetHeight` restano relativi a lui allo
-   *  stesso modo — `PistaCiclo`/`PistaProcedimento` vivono anche loro dentro `<section>`,
-   *  quindi lo stesso numero vale per entrambi senza conversioni. */
+  /** `taRef` — il blocco della lettura TA/NEEDLE LIGHT in alto a sinistra del quadrante
+   *  (`top:14,left:16` dentro `<section>`). */
   const taRef = useRef<HTMLDivElement | null>(null);
-  const [pistaTop, setPistaTop] = useState(140);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useLayoutEffect(() => {
-    const el = taRef.current;
-    if (!el) return;
-    const nuovo = Math.round(el.offsetTop + el.offsetHeight) + 14;
-    setPistaTop(prev => (prev === nuovo ? prev : nuovo));
-  });
   const uiAlpha = useUiStore(s => s.uiAlpha);
   // ⚠️ Segnalato: « la trasparenza si può modificare ma non agisce sulle scritte ». Prima
   // `uiAlpha` arrivava SOLO a `Cerchio.tsx` (le due camere) — v. la nota su `--s-ui-alpha` in
@@ -3996,12 +3982,9 @@ export default function Serenity() {
               posto naturale è lì, non qui. `--s-ink-faint`, non `-ghost` — stessa ragione già
               scritta per il giornale: questo riquadro ha il suo SCHERMO scuro apposta in tema
               scuro, `-ghost` (tarato sul fondo neutro di SERENITY) ci diventava illeggibile.
-              ⚠️ `ref={taRef}` — segnalato: « fai cominciare i comandi sotto NEEDLE LIGHT »
-              (NEEDLE LIGHT è l'ultimo figlio di QUESTO blocco, più giù). Misurato per davvero
-              (v. `pistaTop`, il terzo anello della stessa catena di `headerRef`/`comandiRef`),
-              non un numero fisso indovinato — se un giorno questo blocco cresce o si
-              accorcia (un'altra lettura aggiunta o tolta), `PistaCiclo`/`PistaProcedimento`
-              lo seguono da soli. */}
+              ⚠️ `ref={taRef}` — non guida più `PistaCiclo`/`PistaProcedimento` (spostati sotto
+              il pannello del quadrante, nel flusso normale della colonna: v. la nota lì):
+              resta solo per rendere questa lettura. */}
           <div ref={taRef} style={{
             position: 'absolute', top: 14, left: 16, zIndex: 5,
             display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6,
@@ -4137,12 +4120,10 @@ export default function Serenity() {
                 l'obiettivo, il R-Factor ecc. all'inizio seduta ». Verificato App.tsx: quattro
                 campi di testo libero, sempre scrivibili per tutta la seduta aperta — nessuna
                 logica, solo testo che accompagna il rapporto. Montati QUI, dentro lo stesso
-                blocco misurato da `taRef`: `pistaTop` (sotto) si allunga da solo per fargli
-                posto, la STESSA tecnica già usata per NEEDLE LIGHT qui sopra — nessun numero
-                indovinato. Sotto quattro etichette, non affiancate: a `left:16` lo spazio in
-                larghezza è quello della colonna riservata alla barra laterale (272px), non di
-                più — un campo per riga resta leggibile, quattro in fila si sarebbero accavallati
-                col bordo. */}
+                blocco di `taRef`. Sotto quattro etichette, non affiancate: a
+                `left:16` lo spazio in larghezza è quello della colonna riservata alla barra
+                laterale (272px), non di più — un campo per riga resta leggibile, quattro in
+                fila si sarebbero accavallati col bordo. */}
             {aperta && (
               <div style={{
                 display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4,
@@ -4385,16 +4366,6 @@ export default function Serenity() {
               esclusivo con `PistaCiclo` — non uno sopra l'altro: `procedimentoAttivo` (scelto
               nel popover di PROCESSUS) prende il posto della pista del ciclo finché l'auditor
               non lo chiude (✕ dentro `PistaProcedimento`). */}
-          {!senzaMisura && (
-            procedimentoAttivo
-              ? <PistaProcedimento nome={procedimentoAttivo.nome} comandi={procedimentoAttivo.comandi}
-                  onChiudi={() => setProcedimentoAttivo(null)} top={pistaTop} lang={lang} />
-              : <PistaCiclo mode={mode} phase={faseCiclo} lang={lang} top={pistaTop}
-                  item={item} itemPlaceholder={t('ser_item_placeholder') as string}
-                  spiegazione={spiegazioneCiclo} onDichiaraDetto={dichiaraItemDetto}>
-                  {bottoniCiclo}
-                </PistaCiclo>
-          )}
           {/* ── SENZA STRUMENTI, LE SCRITTE PRENDONO IL POSTO DELL'ARCO — segnalato: « COME IN
               EQUILIBRIUM ». Stessa condizione di sopra (`senzaMisura && aperta`), stesso testo
               (`spiegazioneCiclo`, `comeSenzaAgo`/`senzaNumero` appena portati da App.tsx),
@@ -4464,6 +4435,27 @@ export default function Serenity() {
             </div>
           )}
         </div>
+        {/* ── LA PISTA DEL CICLO, SOTTO IL PUNTO DI ANCORAGGIO DELL'AGO ─────────────────────────
+            Segnalato: « i comandi e le indicazioni dei cicli, per più leggibilità, sotto il
+            punto di ancoraggio dell'ago, in uno spazio che permetta il più possibile le
+            scritte su una riga ». ⚠️ BUG TROVATO spostando: prima questo blocco viveva DENTRO
+            il riquadro dell'arco (`overflow:'hidden'`, per i bordi arrotondati del pannello) —
+            posizionarlo `position:absolute` con un `top` che supera l'altezza del pannello lo
+            tagliava via, invisibile, anche se il DOM (e il testo di pagina) lo conteneva per
+            davvero. Qui è un FRATELLO del pannello — non un suo figlio — dentro lo stesso
+            involucro `flex:1 column` che li impila: nessuna misura, nessun ref, nessun `top`
+            calcolato — il flusso normale della colonna lo mette esattamente dove serve, senza
+            poter mai finire tagliato via da un contenitore che non lo aspettava. */}
+        {!senzaMisura && (
+          procedimentoAttivo
+            ? <PistaProcedimento nome={procedimentoAttivo.nome} comandi={procedimentoAttivo.comandi}
+                onChiudi={() => setProcedimentoAttivo(null)} lang={lang} />
+            : <PistaCiclo mode={mode} phase={faseCiclo} lang={lang}
+                item={item} itemPlaceholder={t('ser_item_placeholder') as string}
+                spiegazione={spiegazioneCiclo} onDichiaraDetto={dichiaraItemDetto}>
+                {bottoniCiclo}
+              </PistaCiclo>
+        )}
         {/* ── MNA — ORA SOTTO L'ARCO, NON PIÙ SOPRA ─────────────────────────────────────────
             Segnalato: « il MNA portalo sotto la zona ARC, hai spazio ». Stava `position:absolute`
             DENTRO il riquadro dell'arco (ancorato al SUO fondo, `bottom:16` di `PannelloMna` —

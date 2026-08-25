@@ -20,12 +20,20 @@ import React from 'react';
  * `comando` (la citazione, `--s-fs-lg`) / "come" (spiegazione, `--s-fs-base`) / `avviso`
  * (ambra, `--s-fs-base`) — nessuna logica qui: il TESTO lo decide `spiegazioneCiclo` in
  * `Serenity.tsx`, questo componente lo mostra soltanto.
+ *
+ * ⚠️ `maxWidth` — segnalato insieme allo spostamento di `PistaCiclo` sotto il quadrante («
+ * il più possibile le scritte su una riga »): 420px era tarato sulla vecchia colonna stretta
+ * (280-320px), più stretto ancora di lei. Nella fascia larga (fino a 1400px) di adesso ogni
+ * riga può correre più lunga prima di dover andare a capo — alzato a 760, non tolto del
+ * tutto: `comando`/`come`/`avviso` restano tre frasi DIVERSE (citazione, spiegazione,
+ * avviso), e vanno lette come tre righe distinte anche in una fascia larga, non fuse in
+ * un'unica riga lunghissima che le confonderebbe.
  */
 export function SuggerimentoCiclo({ comando, come, avviso, fatto = false }: {
   comando?: string | null; come: string; avviso?: string | null; fatto?: boolean;
 }) {
   return (
-    <span style={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: 420 }}>
+    <span style={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: 760 }}>
       {comando && (
         <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-lg)', lineHeight: 1.35,
                       color: fatto ? 'var(--s-still)' : 'var(--s-ink-soft)' }}>

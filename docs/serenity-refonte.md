@@ -4235,6 +4235,83 @@ c'era.
 
 ---
 
+## Settantacinquesimo giro (25/08/2026) — i comandi dei cicli, sotto il perno dell'ago
+
+**Segnalato**: « bene tutti i comandi e indicazioni dei cicli mettili ora, per più
+leggibilità, sotto il punto di ancoraggio dell'ago, in uno spazio che permetta di avere il più
+possibile le scritte su una linea ».
+
+**Il posto c'era già, ma non era quello giusto.** `PistaCiclo`/`PistaProcedimento` (la pista a
+fuoco coi tempi del ciclo, l'item, "dì l'item…", le indicazioni, i bottoni veri) vivevano in
+una colonna stretta (320px) incollata al bordo sinistro dell'arco — deciso in un giro
+precedente proprio scegliendo QUELLA delle due strade proposte allora, contro « i comandi
+sotto l'ago ». Segnalato di nuovo, stavolta la direzione è la seconda: spostati sotto il
+perno, in una fascia orizzontale larga quanto il quadrante (fino a 1400px), coi gruppi
+(intestazione, item, tempi, indicazioni, bottoni) disposti in RIGA — ognuno prova a restare su
+una riga sola, va a capo fra un gruppo e l'altro solo se lo spazio non basta davvero.
+
+**⚠️ Bug reale trovato spostandola, non solo un dettaglio estetico.** Il primo tentativo
+misurava (`pannelloRef`/`useLayoutEffect`, la stessa tecnica di `headerRef`/`comandiRef`/
+`taRef` già in uso) dove finisce il pannello del quadrante, e passava quel numero come `top`
+assoluto a `PistaCiclo`. Sembrava corretto — e lo era, come NUMERO. Il problema: il pannello
+ha `overflow:'hidden'` (per i suoi bordi arrotondati), e `PistaCiclo` viveva ANCORA DENTRO
+quel pannello (un `</div>` che credevo chiudesse il pannello, verificato da vivo con
+`getBoundingClientRect()`/`offsetParent`, chiudeva in realtà un blocco interno — il vero
+`</div>` del pannello arriva 90 righe più giù, dopo `PistaCiclo`). Un `top` che supera
+l'altezza del suo stesso contenitore, dentro un contenitore con `overflow:hidden`, si TAGLIA
+via — invisibile a schermo, presente nel DOM e nel testo di pagina (`get_page_text` lo
+mostrava per intero), mai dipinto. Trovato SOLO ispezionando dal vivo (`javascript_tool`,
+`getBoundingClientRect`/`offsetParent` sull'elemento reale) dopo che gli screenshot in una
+finestra 1280×720 e poi 1600×1000 non mostravano niente sotto l'arco.
+
+**La correzione vera, non solo un numero diverso.** Spostato `PistaCiclo`/`PistaProcedimento`
+FUORI dal pannello — fratelli suoi, non più figli, dentro lo stesso involucro `flex:1 column,
+alignItems:'center'` che già impila verticalmente il quadrante. Tolto tutto il posizionamento
+`absolute`/`top`/`transform` calcolato a mano: nel flusso normale della colonna, il `gap`/
+`alignItems:'center'` del contenitore li mette esattamente dove servono, centrati, senza poter
+mai finire tagliati via da un contenitore che non li aspettava. Tolta anche `pannelloRef`/
+`sottoAgoTop` (il ref e l'effetto di misura, ora inutili) e il prop `top` da entrambi i
+componenti — meno stato, non di più, per lo stesso risultato.
+
+**Dentro ai gruppi.** I tempi del ciclo (`steps.map`) ora vivono in un loro contenitore
+`flexWrap:'nowrap'`: restano sempre affiancati fra loro (sono 2-4), è il GRUPPO che
+eventualmente va a capo, mai un tempo da solo a metà. I bottoni veri (`children`, passati da
+`Serenity.tsx`) sono passati da `flexDirection:'column'` a `'row'` — si affiancano invece di
+impilarsi, `flexWrap:'wrap'` resta come rete di sicurezza per i gruppi davvero larghi (i dieci
+bottoni del valore in MIRROR, il selettore + bottone di TONE). Tolto `width:'100%'` da quel
+contenitore: su una riga che deve stare AFFIANCO agli altri gruppi, forzare la piena larghezza
+avrebbe spinto ogni altro gruppo su una riga propria — l'esatto opposto della richiesta.
+`SuggerimentoCiclo` (comando/come/avviso) tiene il suo `maxWidth` alzato da 420 a 760: tarato
+sulla vecchia colonna stretta, ora ha più spazio prima di dover andare a capo, restando
+comunque tre righe distinte (non una frase fusa che confonderebbe citazione/spiegazione/
+avviso).
+
+`PistaProcedimento` segue la stessa riposizione (« i comandi dei procedimenti posizionati
+esattamente come i comandi dei cicli », regola già scritta in un giro precedente) ma tiene il
+proprio scorrimento verticale — i comandi di un procedimento possono essere molti, a
+differenza dei 2-4 tempi fissi di un ciclo — con un tetto d'altezza fisso (`min(50vh,420px)`)
+al posto del `calc()` legato al vecchio `top`.
+
+**Verificato a schermo, non solo a compilazione** — proprio il tipo di verifica che questo
+bug avrebbe reso necessaria comunque: forzato temporaneamente `senzaMisura` a `false` (l'unico
+modo di raggiungere l'arco senza un MUSE vero in questo ambiente — tolto subito dopo, non
+resta nel codice), armato ciascuno dei quattro metodi. CONTACT: intestazione, item, "dì
+l'item…", i tre tempi, tutto su una riga; guida + contatore + ANNULLA + "déclare l'AS-IS" sulla
+riga sotto. NULL: gli stessi gruppi PIÙ i tre esiti (VGI/senza VGI/NON RICARICA) — cinque
+elementi, ancora su una riga sola nella finestra di prova. MIRROR: i dieci bottoni del valore
+1-10 tutti affiancati; bloccato un valore, "5 → 10" e "doppio raggiunto" leggibili. TONE: il
+menù dei livelli nominati di Ron + "dai l'item" + ANNULLA. Verificato in tema chiaro E scuro.
+Nessuna regressione: validato un ciclo CONTACT fino ad AS-IS, il giornale e il ritorno ai
+quattro bottoni funzionano come prima.
+
+`tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo, nessun errore), `vitest run`
+639/639. `git status`: `src/serenity/PistaCiclo.tsx`, `src/serenity/PistaProcedimento.tsx`,
+`src/serenity/Serenity.tsx`, `src/serenity/SuggerimentoCiclo.tsx`.
+
+EQUILIBRIUM 2.0.215, SERENITY 3.0.109.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

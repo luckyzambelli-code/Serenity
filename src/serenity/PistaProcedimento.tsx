@@ -49,13 +49,10 @@ import { pick5 } from '../i18n5';
  * `scrollIntoView({block:'nearest'})`: sposta lo scorrimento SOLO se la riga a fuoco non è già
  * visibile (`'nearest'`, non `'center'` — non salta a metà pista per un comando già in vista).
  */
-export function PistaProcedimento({ nome, comandi, onChiudi, top, lang }: {
+export function PistaProcedimento({ nome, comandi, onChiudi, lang }: {
   nome: string;
   comandi: ComandoProcedimento[];
   onChiudi: () => void;
-  /** ⚠️ Segnalato: « fai cominciare i comandi sotto NEEDLE LIGHT » — v. la stessa nota in
-   *  `PistaCiclo.tsx`. Misurato da `Serenity.tsx`, non più `top:'50%'`. */
-  top: number;
   lang: string;
 }) {
   const titoloChiudi = pick5(lang, 'chiudi il procedimento', 'fermer le procédé',
@@ -97,16 +94,20 @@ export function PistaProcedimento({ nome, comandi, onChiudi, top, lang }: {
         vaia(e.deltaY > 0 ? 1 : -1);
       }}
       style={{
-        // ⚠️ Segnalato: « i procedimenti e i cicli devono essere più a sinistra, allineati a
-        // sinistra col METER TA » — stessa geometria di `PistaCiclo` (v. la sua nota),
-        // `left:16` come il blocco della lettura TA nello stesso `<section>`. `top` misurato
-        // da `Serenity.tsx` (sotto NEEDLE LIGHT), non più centrato da solo sull'arco.
-        // `width:320`, stessa correzione e stessa ragione di `PistaCiclo` (v. la sua nota):
-        // « le scritte dei comandi... su una riga se possibile » — qui vale per il testo del
-        // comando del procedimento, che già andava a capo su più righe per scelta (`--s-serif`,
-        // lettura estesa), ma la larghezza in più giova comunque alla leggibilità generale.
-        position: 'absolute', left: 16, top, zIndex: 5,
-        width: 320, maxHeight: `calc(100% - ${top}px - 24px)`, overflowY: 'auto',
+        // ⚠️ Segnalato: « i comandi e le indicazioni dei cicli, sotto il punto di ancoraggio
+        // dell'ago, in uno spazio che permetta il più possibile le scritte su una riga » —
+        // stessa geometria di `PistaCiclo` (v. la sua nota, e il bug lì trovato spostandola):
+        // nel flusso normale della colonna che impila il pannello dell'ago
+        // (`Serenity.tsx`, l'involucro `flex:1 column, alignItems:'center'`), non più
+        // `position:absolute` con un `top` calcolato a mano. `width` fino a 900 — più stretta
+        // del tetto di `PistaCiclo` (1400): resta una colonna con SCORRIMENTO verticale (i
+        // comandi di un procedimento possono essere molti, a differenza dei 2-4 tempi fissi di
+        // un ciclo), e una colonna troppo larga renderebbe il testo `--s-serif` disagevole da
+        // seguire riga per riga. `maxHeight` un tetto fisso, non più legato a un `top`
+        // assoluto: abbastanza per leggere diversi comandi senza che la lista da sola spinga
+        // il resto della pagina fuori vista.
+        width: 'min(70%, 900px)', maxWidth: '100%', flexShrink: 0,
+        maxHeight: 'min(50vh, 420px)', overflowY: 'auto',
         display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
         gap: 12, pointerEvents: 'auto', outline: 'none',
       }}>
