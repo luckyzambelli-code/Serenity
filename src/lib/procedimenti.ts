@@ -7,8 +7,7 @@
  * per « i comandi di un procedimento » da nessuna parte nell'app: PROCESSUS è un archivio di
  * PDF opachi (`ProcessusModal.tsx`), senza estrazione di testo. Qui si definisce il formato
  * più semplice possibile da scrivere a mano: un file `.txt` per procedimento, il nome del
- * file (senza estensione) è il titolo, un comando per riga. Righe vuote e righe che iniziano
- * con `#` (note dell'auditor, non comandi da leggere in seduta) non contano.
+ * file (senza estensione) è il titolo.
  *
  * La lettura vera è nel processo principale (`main.cjs`, `procedimenti-list` /
  * `procedimenti-folder-open`) — qui solo l'invio via IPC, come `corpusWriter.ts` accanto.
@@ -17,10 +16,15 @@
  * In un browser di anteprima non c'è filesystem: la lista torna vuota e il bottone "apri
  * cartella" non fa nulla — stesso principio di `corpusAvailable()`.
  *
- * ── COMANDI NUMERATI, NOTE SOTTO SENZA NUMERO — segnalato: « a) domande numerate in
- * sequenza; b) commenti per aiutare l'auditor, sotto la domanda, senza numero, anche su più
- * righe ». Una riga del file È un comando; una riga che inizia con `#` è una nota del
- * comando appena prima (`main.cjs` fa l'aggancio, qui si legge già raggruppato).
+ * ── IL NUMERO DAVANTI DICE « QUESTA È LA DOMANDA » — segnalato (due volte, l'ultima la più
+ * precisa): « il numero davanti a una frase indica la domanda; le linee seguenti senza numero
+ * sono le indicazioni per l'auditor e devono apparire con la domanda, in corsivo ». Una riga
+ * che comincia con un numero (`1.`, `1)`, `1 -`, `1:` o solo `1 `) è una nuova domanda; una
+ * riga che NON comincia con un numero è un'indicazione per l'auditor, e si aggancia alla
+ * domanda appena prima (`main.cjs` fa l'aggancio, qui si legge già raggruppato — v.
+ * `RE_DOMANDA_NUMERATA`). Non serve più marcare le note con `#` (restava accettato per
+ * compatibilità, ma bisognava ricordarsene): il numero, che un auditor scrive già copiando
+ * una procedura numerata, BASTA da solo.
  */
 
 /** Un comando del procedimento: il testo (numerato in sequenza) e le sue note (senza numero, 0+ righe). */

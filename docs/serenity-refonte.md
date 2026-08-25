@@ -3859,6 +3859,47 @@ pacchettizzata, stesso limite già dichiarato per `PistaCiclo`/`PistaProcediment
 
 ---
 
+## Sessantaseiesimo giro (25/08/2026) — chiusura più evidente, il numero davanti dice « questa è la domanda »
+
+**Segnalato**: « la chiusura dei comandi non è evidente, metti più in rilievo che si capisca »;
+« vorrei che i comandi nel file TXT fossero trattati in modo che il numero davanti ad una
+frase indichi la domanda — le linee seguenti senza numero sono le indicazioni per l'auditor e
+devono apparire con la domanda ma in corsivo ».
+
+**Il ✕ che si perdeva contro l'arco.** In `PistaCiclo.tsx` era un'icona nuda (20px, nessun
+bordo, nessun fondo) — su un arco colorato sotto si confondeva con un dettaglio decorativo.
+Ora un bottone VERO: bordato, con l'etichetta CHIUDI/FERMER/CLOSE/CERRAR/STÄNG accanto,
+stessa lingua visiva di NEEDLE LIGHT e degli altri bottoni-pillola di SERENITY. Stesso
+trattamento al ✕ di `PistaProcedimento.tsx` (già dentro una pillola col titolo, ma senza
+bordo proprio — ora ce l'ha, più un `title` localizzato che prima mancava; il componente ha
+dovuto ricevere `lang` in più, non ce l'aveva).
+
+**Il marcatore delle note, da `#` al numero — in `main.cjs` (condiviso).** Il formato
+precedente (giro passato) chiedeva di scrivere `#` davanti a ogni nota: bisognava
+ricordarsene, ed era il contrario di come un auditor scrive già un procedimento (una
+procedura numerata, con indicazioni sotto senza numero). Ribaltato: `RE_DOMANDA_NUMERATA =
+/^\d+\s*[.)\-:]?\s*(.*)$/` — una riga che comincia con un numero (`1.`, `1)`, `1 -`, `1:`, o
+solo `1 `) è una nuova domanda; una riga che non comincia con un numero è un'indicazione per
+l'auditor, agganciata alla domanda appena prima (già mostrata in corsivo, sotto la domanda a
+fuoco — `PistaProcedimento.tsx`, invariato: leggeva già `testo`/`note`, solo `main.cjs`
+cambiava DA COSA le riempiva). Il vecchio `#` resta accettato e tolto per compatibilità, ma
+non è più richiesto. Provato a mano (non solo sulla carta) con `node -e` sui cinque formati di
+numerazione più una riga-solo-numero: tutti corretti, incluso un bug trovato PROPRIO da quella
+prova — `3 - Terza domanda` (spazio prima del trattino) restituiva `"- Terza domanda"` con la
+prima versione della regex (il trattino andava cercato SUBITO dopo la cifra, senza permettere
+uno spazio in mezzo); corretto permettendo spazi opzionali sia prima che dopo la punteggiatura.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `vitest run`
+639/639, `node -c main.cjs` pulito, prova manuale della regex (sopra) su tutti i formati più i
+casi limite, dal vivo (nessun errore nuovo in console). La resa vera del ✕/delle note in
+corsivo con un procedimento reale resta da confermare nell'app pacchettizzata — stesso limite
+dei giri precedenti sulla pista.
+
+`git status`: `docs/serenity-refonte.md`, `main.cjs`, `src/lib/procedimenti.ts`,
+`src/serenity/PistaCiclo.tsx`, `src/serenity/PistaProcedimento.tsx`, `src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

@@ -73,6 +73,7 @@ export function PistaCiclo({ mode, phase, lang, top }: {
     'show the cycle\'s commands', 'mostrar los comandos del ciclo', 'visa cykelns kommandon') as string;
   const titoloChiudi = L('nascondi i comandi del ciclo', 'masquer les commandes du cycle',
     'hide the cycle\'s commands', 'ocultar los comandos del ciclo', 'dölj cykelns kommandon') as string;
+  const etichettaChiudi = L('CHIUDI', 'FERMER', 'CLOSE', 'CERRAR', 'STÄNG') as string;
 
   const principale = fuoco ?? cur;
 
@@ -111,17 +112,24 @@ export function PistaCiclo({ mode, phase, lang, top }: {
       display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
       gap: 14, pointerEvents: 'none',
     }}>
-      {/* ── LA MANIGLIA DI CHIUSURA — segnalato: « bisogna poter chiudere i comandi ». Una
-          riga a sé, sempre in cima, `pointerEvents:'auto'` come gli altri bottoni veri di
-          questa pista. */}
+      {/* ── LA MANIGLIA DI CHIUSURA — segnalato la prima volta: « bisogna poter chiudere i
+          comandi »; poi ancora: « la chiusura non è evidente, metti più in rilievo che si
+          capisca ». Prima era un ✕ nudo (nessun bordo, nessun fondo, 20px) — si perdeva
+          contro un arco colorato sotto. Ora un bottone VERO, bordato ed etichettato, stessa
+          lingua visiva di NEEDLE LIGHT/degli altri bottoni-pillola di SERENITY (bordo sempre
+          visibile, non solo al fuoco) — non più un'icona isolata da indovinare. */}
       <button type="button" onClick={() => setChiuso(true)} title={titoloChiudi}
         style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-          border: 'none', background: 'none', cursor: 'pointer', color: 'var(--s-ink-faint)',
-          pointerEvents: 'auto', alignSelf: 'flex-end', marginBottom: -6,
+          display: 'flex', alignItems: 'center', gap: 5, alignSelf: 'flex-end',
+          borderRadius: 999, cursor: 'pointer', pointerEvents: 'auto',
+          padding: '4px 10px 4px 8px',
+          border: '1px solid var(--s-ink-ghost)',
+          background: 'color-mix(in srgb, var(--s-ground) 55%, transparent)',
+          fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
+          letterSpacing: '0.06em', color: 'var(--s-ink-soft)',
         }}>
-        <X size={13} strokeWidth={2.4} />
+        <X size={12} strokeWidth={2.6} />
+        {etichettaChiudi}
       </button>
       {steps.map((s, i) => {
         const distanza = Math.abs(i - principale);

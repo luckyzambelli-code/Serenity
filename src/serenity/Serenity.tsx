@@ -4425,7 +4425,7 @@ export default function Serenity() {
           {!senzaMisura && (
             procedimentoAttivo
               ? <PistaProcedimento nome={procedimentoAttivo.nome} comandi={procedimentoAttivo.comandi}
-                  onChiudi={() => setProcedimentoAttivo(null)} top={pistaTop} />
+                  onChiudi={() => setProcedimentoAttivo(null)} top={pistaTop} lang={lang} />
               : <PistaCiclo mode={mode} phase={faseCiclo} lang={lang} top={pistaTop} />
           )}
           {/* ── SENZA STRUMENTI, LE SCRITTE PRENDONO IL POSTO DELL'ARCO — segnalato: « COME IN

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import type { ComandoProcedimento } from '../lib/procedimenti';
+import { pick5 } from '../i18n5';
 
 /**
  * PistaProcedimento — I COMANDI DI UN PROCEDIMENTO, NELLO STESSO SPAZIO DI `PistaCiclo`.
@@ -48,14 +49,17 @@ import type { ComandoProcedimento } from '../lib/procedimenti';
  * `scrollIntoView({block:'nearest'})`: sposta lo scorrimento SOLO se la riga a fuoco non è già
  * visibile (`'nearest'`, non `'center'` — non salta a metà pista per un comando già in vista).
  */
-export function PistaProcedimento({ nome, comandi, onChiudi, top }: {
+export function PistaProcedimento({ nome, comandi, onChiudi, top, lang }: {
   nome: string;
   comandi: ComandoProcedimento[];
   onChiudi: () => void;
   /** ⚠️ Segnalato: « fai cominciare i comandi sotto NEEDLE LIGHT » — v. la stessa nota in
    *  `PistaCiclo.tsx`. Misurato da `Serenity.tsx`, non più `top:'50%'`. */
   top: number;
+  lang: string;
 }) {
+  const titoloChiudi = pick5(lang, 'chiudi il procedimento', 'fermer le procédé',
+    'close the procedure', 'cerrar el procedimiento', 'stäng proceduren') as string;
   const [fuoco, setFuoco] = useState(0);
   const [ultimoScroll, setUltimoScroll] = useState(0);
   const contenitoreRef = useRef<HTMLDivElement>(null);
@@ -113,13 +117,18 @@ export function PistaProcedimento({ nome, comandi, onChiudi, top }: {
         }}>
           {nome}
         </span>
-        <button type="button" onClick={onChiudi}
+        {/* ⚠️ Segnalato: « la chiusura non è evidente, metti più in rilievo che si capisca ».
+            Un bordo proprio (non solo trasparente/senza contorno come prima): dentro la pillola
+            del titolo, senza il bordo si confondeva con un'icona decorativa invece di un
+            bottone vero — stesso trattamento appena dato al ✕ di `PistaCiclo`. */}
+        <button type="button" onClick={onChiudi} title={titoloChiudi}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-            border: 'none', background: 'none', cursor: 'pointer', color: 'var(--s-ink-faint)',
+            width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+            border: '1px solid var(--s-ink-ghost)', background: 'none', cursor: 'pointer',
+            color: 'var(--s-ink-soft)',
           }}>
-          <X size={12} strokeWidth={2.4} />
+          <X size={12} strokeWidth={2.6} />
         </button>
       </div>
       {comandi.map((c, i) => {

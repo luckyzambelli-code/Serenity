@@ -119,14 +119,17 @@ ipcMain.handle('corpus-folder', () => CORPUS_DIR);
 // non nascosto dentro `userData`). Un file .txt per procedimento — il nome del file (senza
 // estensione) è il titolo mostrato nell'app.
 //
-// ── IL FORMATO, RIVISTO — segnalato: « a) domande numerate in sequenza; b) commenti per
-// aiutare l'auditor, SOTTO la domanda, prima della prossima, SENZA numero — vanno mostrati
-// insieme alla domanda, anche su più righe ». Prima ogni riga con `#` veniva SCARTATA (letta
-// come nota "solo per chi scrive il file", mai mostrata); ora resta, ma non conta come
-// comando a sé: si aggancia al comando appena prima. Una riga SENZA `#` è un nuovo comando
-// (prende il numero successivo); una riga CON `#` è una nota di quel comando (il testo dopo
-// il cancelletto, senza numero); una riga vuota è solo un separatore, non chiude il gruppo.
+// ── IL FORMATO, RIVISTO DI NUOVO — segnalato: « il numero davanti a una frase indica la
+// domanda; le linee seguenti senza numero sono le indicazioni per l'auditor e devono apparire
+// con la domanda, in corsivo ». Il marcatore non è più `#` (bisognava ricordarsi di scriverlo
+// davanti a ogni nota): ora è il NUMERO stesso, la cosa che un auditor scrive già da sé
+// copiando una procedura numerata — una riga che comincia con un numero (`1.`, `1)`, `1 -`,
+// `1:` o solo `1 `) è una nuova domanda; una riga che NON comincia con un numero è
+// un'indicazione per l'auditor, e si aggancia alla domanda appena prima. Un `#` davanti a una
+// nota resta accettato e tolto (compatibilità con procedimenti scritti nel formato
+// precedente), ma non è più richiesto. Riga vuota: solo un separatore, non chiude il gruppo.
 const PROCEDIMENTI_DIR = path.join(os.homedir(), 'EQUILIBRIUM', 'COMANDI', 'Procedimenti');
+const RE_DOMANDA_NUMERATA = /^\d+\s*[.)\-:]?\s*(.*)$/;
 ipcMain.handle('procedimenti-list', () => {
   try {
     fs.mkdirSync(PROCEDIMENTI_DIR, { recursive: true });
@@ -139,14 +142,20 @@ ipcMain.handle('procedimenti-list', () => {
         const comandi = [];
         for (const riga of righe) {
           if (!riga) continue;                       // riga vuota: separatore, non conta
-          if (riga.startsWith('#')) {
-            const nota = riga.slice(1).trim();
-            // Una nota prima di qualunque comando non ha a cosa agganciarsi: si scarta —
-            // non un errore, solo niente da mostrare.
-            if (nota && comandi.length) comandi[comandi.length - 1].note.push(nota);
+          const domanda = riga.match(RE_DOMANDA_NUMERATA);
+          // Il testo dopo il numero deve restare qualcosa — una riga che è SOLO un numero
+          // (nessuna domanda dopo) non ha senso come domanda vuota: cade nel ramo nota, sotto.
+          if (domanda && domanda[1].trim()) {
+            comandi.push({ testo: domanda[1].trim(), note: [] });
             continue;
           }
-          comandi.push({ testo: riga, note: [] });
+          // Niente numero davanti: è un'indicazione per l'auditor, si aggancia alla domanda
+          // appena prima. Un `#` iniziale (il vecchio marcatore) si toglie se c'è, non è più
+          // richiesto.
+          const nota = riga.startsWith('#') ? riga.slice(1).trim() : riga;
+          // Una nota prima di qualunque domanda non ha a cosa agganciarsi: si scarta — non un
+          // errore, solo niente da mostrare.
+          if (nota && comandi.length) comandi[comandi.length - 1].note.push(nota);
         }
         return { nome: f.replace(/\.txt$/i, ''), comandi };
       })
