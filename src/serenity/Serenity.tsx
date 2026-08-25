@@ -497,17 +497,38 @@ export default function Serenity() {
   const [cam2Collassata, setCam2Collassata] = useState(false);
   /** ⚠️ BUG TROVATO — segnalato: « i bottoni a sinistra non devono sovrapporsi alle scritte in
    *  alto ». La barra laterale (OPEN/PAUSA/CONTACT/…) è ancorata con un `top` FISSO — ma
-   *  l'altezza vera di `<header>` + `.ser-comandi` sopra di lei CAMBIA (l'assistente IA, la
-   *  riga dell'item, `CycleStatusBar` a ciclo armato…): un numero fisso andava bene per UNA
-   *  sola combinazione di quel contenuto, sbagliato per le altre. Misurata per davvero, DOPO
-   *  ogni resa (`useLayoutEffect` SENZA lista di dipendenze — gira dopo ogni commit, prima
-   *  della vernice — non un `ResizeObserver`: verificato dal vivo che in questo ambiente di
-   *  test i suoi callback non arrivano mai, anche su un ridimensionamento vero della finestra;
-   *  una misura ripetuta ad ogni resa non dipende da quel meccanismo, ed è già lo stesso ritmo
-   *  del resto della pagina — l'orologio di seduta la fa comunque ridisegnare ogni secondo).
-   *  `Math.round` sui due numeri prima di confrontarli: `setState` con lo STESSO valore non
-   *  fa ridisegnare — nessun ciclo infinito, si ferma da sé quando l'altezza smette di
-   *  cambiare. */
+   *  l'altezza vera di `<header>` sopra di lei CAMBIA (l'assistente IA, i popover…): un numero
+   *  fisso andava bene per UNA sola combinazione di quel contenuto, sbagliato per le altre.
+   *  Misurata per davvero, DOPO ogni resa (`useLayoutEffect` SENZA lista di dipendenze — gira
+   *  dopo ogni commit, prima della vernice — non un `ResizeObserver`: verificato dal vivo che
+   *  in questo ambiente di test i suoi callback non arrivano mai, anche su un ridimensionamento
+   *  vero della finestra; una misura ripetuta ad ogni resa non dipende da quel meccanismo, ed è
+   *  già lo stesso ritmo del resto della pagina — l'orologio di seduta la fa comunque
+   *  ridisegnare ogni secondo). `Math.round` sui due numeri prima di confrontarli: `setState`
+   *  con lo STESSO valore non fa ridisegnare — nessun ciclo infinito, si ferma da sé quando
+   *  l'altezza smette di cambiare.
+   *
+   *  ── LA CATENA A DUE ANELLI — segnalato: « le scritte dei cicli devono essere tutte al lato
+   *  sinistro, sotto il TA, tutte quelle in alto » (rispondendo: « dentro la barra laterale
+   *  esistente »). `.ser-comandi` (il campo item, i quattro blocchi per metodo, i suggerimenti,
+   *  i bottoni di avanzamento — TUTTO quel che stava in cima allo schermo, v. la sua nota più
+   *  giù) non è più una riga della griglia SOPRA il quadrante: è diventata lei stessa un
+   *  riquadro `position:absolute` ancorato a sinistra, subito sotto `<header>` — ed è SOLO per
+   *  questo che serve un PRIMO anello di misura (`headerRef`/`comandiTop`) dove prima bastava
+   *  il flusso normale del documento. Il SECONDO anello (`comandiRef`/`sidebarTop`, sotto)
+   *  esisteva già: misurava `.ser-comandi` per posizionare la barra laterale subito sotto di
+   *  lei — la STESSA relazione, la STESSA logica, non toccata: `.ser-comandi` ha solo cambiato
+   *  MODO di stare a schermo (assoluta invece che in flusso), non SMESSO di essere quel che la
+   *  barra laterale insegue. */
+  const headerRef = useRef<HTMLElement | null>(null);
+  const [comandiTop, setComandiTop] = useState(70);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const nuovo = Math.round(el.offsetTop + el.offsetHeight) + 14;
+    setComandiTop(prev => (prev === nuovo ? prev : nuovo));
+  });
   const comandiRef = useRef<HTMLDivElement | null>(null);
   const [sidebarTop, setSidebarTop] = useState(118);
   // DELIBERATAMENTE senza lista di dipendenze: deve girare dopo OGNI resa (v. la nota sopra
@@ -522,7 +543,9 @@ export default function Serenity() {
     // `offsetTop`/`offsetHeight`, non `getBoundingClientRect()`: sono già relativi
     // all'antenato posizionato più vicino (`<main>`, `position:relative`) — lo STESSO
     // riferimento del `top` assoluto della barra laterale, senza dover sottrarre
-    // manualmente la posizione della finestra.
+    // manualmente la posizione della finestra. Vale ANCHE ora che `.ser-comandi` è assoluta
+    // invece che in flusso: `offsetTop`/`offsetHeight` riportano il suo rettangolo VERO
+    // qualunque sia il suo `position`, non solo quando sta nel flusso normale.
     const nuovo = Math.round(el.offsetTop + el.offsetHeight) + 14;
     setSidebarTop(prev => (prev === nuovo ? prev : nuovo));
   });
@@ -2108,7 +2131,16 @@ export default function Serenity() {
          disegnato alla taglia giusta, ma con una riga di GRIGLIA minuscola sotto. Le nuove colonne
          dei moduli (assessment/Santé/journal, sopra), IN FLUSSO invece che `position:absolute`,
          quello spazio lo chiedono per davvero: `1fr` ora va a `<section>`, l'ultima riga. */
-      gridTemplateRows: 'auto auto 1fr',
+      /* ⚠️ Due righe, non tre — segnalato: « le scritte dei cicli devono essere tutte al lato
+         sinistro, sotto il TA... dentro la barra laterale esistente ». `.ser-comandi` (sotto)
+         non è più un figlio IN FLUSSO: è diventata lei stessa `position:absolute`, ancorata a
+         sinistra sotto `<header>` — un grid item assoluto non partecipa più all'auto-piazzamento
+         (verificato sul DOM: appena `.ser-comandi` è assoluta, `<main>` vede SOLO `<header>` e
+         `<section>` come figli in flusso). Restarle assegnate TRE righe (`'auto auto 1fr'`)
+         avrebbe messo `<section>` sulla SECONDA riga (`auto`, strizzata) invece dell'ultima
+         (`1fr`, elastica) — lo stesso bug già trovato una volta con l'ordine sbagliato dei
+         figli, stavolta con lo stesso ordine ma un figlio in meno. */
+      gridTemplateRows: 'auto 1fr',
       /* ⚠️ Segnalato: « lo spazio dell'arco deve essere più grande, fallo occupare tutto lo
          spazio disponibile ». Il padding di `<main>` (38/44px) toglieva spazio VERO all'arco
          su ogni schermo, non solo su quelli piccoli: su un'aspect-ratio larga com'è la sua
@@ -2645,7 +2677,7 @@ export default function Serenity() {
           per un numero più alto scelto a caso. La STESSA famiglia di bug degli "angoli
           trasparenti" trovata altrove in questo file — un elemento invisibile che ruba il clic
           prima che arrivi a chi dovrebbe riceverlo. */}
-      <header style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 14, rowGap: 10, position: 'relative', zIndex: 10 }}>
+      <header ref={headerRef} style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 14, rowGap: 10, position: 'relative', zIndex: 10 }}>
         {/* ── MODALITÀ CICLO, LA BARRA AMMINISTRATIVA SPARISCE — v. la nota su `modalitaCiclo`.
             Logo/crediti, tema, lingua, storico, processus, l'assetto: decisi una volta, mai
             bisogno di guardarli con un ago che sta reagendo. Nulla di questo è tolto per
@@ -3255,13 +3287,26 @@ export default function Serenity() {
         </div>
       )}
 
-      {/* ── I COMANDI, IN ALTO — segnalato: « i cicli non sono chiari messi sotto, mettili in
-          alto come in equilibrium ». In App.tsx l'item, i quattro metodi, i passi del ciclo in
-          corso e i suoi esiti stanno DENTRO il pannello dello strumento, appena sopra l'arco —
-          non in un piede di pagina lontano da dove l'occhio già guarda. Questo blocco (era
-          `<footer>`, l'ultimo figlio della pagina) è lo STESSO, spostato qui sopra il
-          quadrante: nessuna riga di logica toccata, solo l'ordine in cui compaiono. */}
-      <div ref={comandiRef} className="ser-comandi" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 18, rowGap: 10 }}>
+      {/* ── I COMANDI, ORA A SINISTRA SOTTO L'INTESTAZIONE — segnalato di nuovo: « le scritte
+          dei cicli devono essere ora tutte al lato sinistro, sotto il TA, tutte quelle in
+          alto » (rispondendo: « dentro la barra laterale esistente »). Questo blocco (l'item, i
+          quattro blocchi per metodo con badge/pista/`SuggerimentoCiclo`, i bottoni di
+          avanzamento) stava in cima allo schermo, riga orizzontale sopra il quadrante — prima
+          ancora, un `<footer>` in fondo alla pagina: due giri, due posti diversi, mai il lato
+          sinistro. Ora `position:absolute`, STESSA larghezza (272px) e STESSO bordo sinistro
+          (`left:20`) della barra APRI/PAUSA/CONTACT/NULL/MIRROR/TONE appena sotto — una sola
+          colonna visiva, non due accostate a caso: il `top` (`comandiTop`) segue `<header>`
+          come il `top` di QUELLA barra segue questo blocco (v. la nota sulla "catena a due
+          anelli", dove sono dichiarati `headerRef`/`comandiRef`). `flexDirection:'column'`
+          sostituisce la vecchia riga orizzontale — ogni gruppo che prima si affiancava
+          (badge/item/pista, poi i bottoni) ora si impila, com'è naturale in una colonna
+          stretta. Nessuna riga di LOGICA toccata qui dentro: le stesse chiamate al motore,
+          lo stesso testo — solo dove e come sta a schermo. */}
+      <div ref={comandiRef} className="ser-comandi" style={{
+        position: 'absolute', left: 20, top: comandiTop, width: 272, zIndex: 8,
+        maxHeight: `calc(100% - ${comandiTop}px - 24px)`, overflowY: 'auto',
+        display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12,
+      }}>
         {/* ── STORICO E PROCESSUS, SPOSTATI IN INTESTAZIONE — segnalato: « sposta tutti i
             bottoni in alto vicino al numero di versione ». Erano qui, primi due elementi di
             questa barra (v. `<header>`, accanto a `{__SERENITY_VERSION__}`, per dove sono ora
@@ -3396,7 +3441,15 @@ export default function Serenity() {
                   legge `mode`/`faseCiclo`, già calcolati sopra, e ne ricava da sé quanti tempi
                   ci sono e a quale si è (`engine/cycleSteps.ts`, provato da solo) — non li
                   decide, li mostra. */}
-              <div style={{ flexBasis: '100%' }}>
+              {/* ⚠️ `width:'100%'`, non più `flexBasis:'100%'` — segnalato: « le scritte dei
+                  cicli devono stare al lato sinistro ». `.ser-comandi` era una riga
+                  ORIZZONTALE (`flexBasis` sull'asse principale, cioè la larghezza, per andare
+                  a capo dopo badge+item); ora è una colonna VERTICALE — lo stesso `flexBasis`
+                  vorrebbe dire "occupa tutta l'ALTEZZA disponibile", che avrebbe schiacciato o
+                  fatto traboccare il resto. `width` è la proprietà giusta sull'asse
+                  trasversale di una colonna: riempie la larghezza della barra (272px) senza
+                  toccare l'altezza. */}
+              <div style={{ width: '100%' }}>
                 <CycleSteps mode={mode} phase={faseCiclo} lang={lang} scala={2} />
               </div>
             </>
@@ -3650,7 +3703,9 @@ export default function Serenity() {
                 vicino al quadrante, dietro `agoEeg`): App.tsx lo mette DIRETTAMENTE sotto la
                 domanda/i comandi del ciclo, mai altrove — « riga sotto la domanda », la sua
                 stessa nota. Spostato qui: stesso posto, stesso componente. */}
-            <div style={{ flexBasis: '100%' }}>
+            {/* ⚠️ `width:'100%'`, stessa ragione della `CycleSteps` più sopra — colonna
+                verticale, non più riga orizzontale. */}
+            <div style={{ width: '100%' }}>
               <CycleStatusBar
                 armed={cycles.cycleArmed}
                 manualReady={cycles.manualReady}
@@ -3685,8 +3740,10 @@ export default function Serenity() {
         {/* EP — spostato sotto TONE, nella barra laterale: v. la nota lì. */}
         {/* Il link « ← changer d'auditeur ou de préclair » è diventato l'icona `UserCog`
             dentro il campo Auditor/PC in alto — segnalato: « CHANGE AUDITOR OR PRECLEAR doit
-            être sous forme d'icône... en haut ». Non più qui. */}
-        <span style={{ flex: 1 }} />
+            être sous forme d'icône... en haut ». Non più qui.
+            ⚠️ Lo spaziatore `<span style={{flex:1}}/>` che stava qui (spingeva il resto a
+            destra in una riga ORIZZONTALE) è tolto: in una colonna verticale non serve — non
+            c'è più un "resto" da spingere altrove. */}
       </div>
 
       {/* ── IL CAMPO ──────────────────────────────────────────────────────────────────────

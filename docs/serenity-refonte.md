@@ -3694,6 +3694,68 @@ console pulita per il resto — nessun errore nuovo).
 
 ---
 
+## Sessantaduesimo giro (25/08/2026) — la barra comandi dei cicli, dalla cima allo schermo alla barra laterale
+
+**Segnalato di nuovo, con una risposta questa volta**: « le scritte dei cicli devono essere
+tutte al lato sinistro, sotto il TA, tutte quelle in alto » — chiesto dove esattamente,
+risposto: « dentro la barra laterale esistente ».
+
+**Il problema tecnico, non solo estetico.** `.ser-comandi` (l'item, i quattro blocchi per
+metodo con badge/pista/`SuggerimentoCiclo`, i bottoni di avanzamento) era una riga ORIZZONTALE,
+`position` normale, SECONDA riga della griglia di `<main>` (`gridTemplateRows:'auto auto 1fr'`
+— header/comandi/quadrante). La barra laterale (APRI/PAUSA/CONTACT/NULL/MIRROR/TONE) già
+misurava `.ser-comandi` (`comandiRef`) per sapere DOVE cominciare, restando sempre sotto di
+lei. Spostare `.ser-comandi` a sinistra significava toccare l'anello che tutto questo tiene
+insieme — a farlo alla cieca (senza verificare dal vivo OGNI modalità) si rischiava di
+sovrapporre la nuova colonna proprio alla barra che la misura.
+
+**La catena a DUE anelli, non uno.** Prima: `<header>` in flusso normale → `.ser-comandi` in
+flusso normale, subito sotto → barra laterale, misurata (`comandiRef`/`sidebarTop`) per
+restare sotto `.ser-comandi`. Ora: `.ser-comandi` esce dal flusso (`position:absolute`) e
+diventa lei stessa un riquadro ancorato a sinistra — le serve un PRIMO anello nuovo
+(`headerRef`/`comandiTop`, stessa tecnica: `useLayoutEffect` senza dipendenze, guardia
+`Math.round`+confronto per non ridisegnare all'infinito) per sapere dove comincia LEI, subito
+sotto `<header>`. Il SECONDO anello (`comandiRef`/`sidebarTop`) non è stato toccato: misurava
+`.ser-comandi` prima, la misura ancora ora — `offsetTop`/`offsetHeight` funzionano uguali che
+l'elemento sia in flusso o assoluto, riportano il suo rettangolo VERO in entrambi i casi. La
+barra laterale continua a seguire `.ser-comandi` come sempre; `.ser-comandi` ha solo imparato a
+seguire `<header>` a sua volta.
+
+**`<main>`, due righe di griglia non più tre.** Verificato sul DOM (non solo sulla carta):
+appena `.ser-comandi` diventa assoluta, un `position:absolute` esce dal flusso della griglia —
+`<main>` vede solo `<header>` e `<section>` come figli IN FLUSSO. Lasciare
+`gridTemplateRows:'auto auto 1fr'` (tre righe) avrebbe messo `<section>` (il quadrante) sulla
+SECONDA riga (`auto`, strizzata) invece dell'ultima (`1fr`, elastica) — lo stesso bug già
+trovato un giro fa con l'ordine sbagliato dei figli, stavolta con un figlio in meno. Corretto a
+`'auto 1fr'`.
+
+**`flexBasis` → `width`, l'asse è cambiato.** Due punti dentro `.ser-comandi`
+(`<CycleSteps>`/`<CycleStatusBar>`) forzavano `flexBasis:'100%'` per andare a capo in una riga
+ORIZZONTALE — sull'asse principale, cioè la larghezza. In una colonna VERTICALE l'asse
+principale è l'ALTEZZA: lo stesso `flexBasis:'100%'` avrebbe fatto crescere quei due elementi
+fino a occupare tutto lo spazio verticale disponibile, schiacciando o facendo traboccare il
+resto. Cambiati in `width:'100%'` — la proprietà giusta sull'asse TRASVERSALE di una colonna.
+
+**Stessa larghezza e stesso bordo della barra laterale** (`left:20, width:272`): non due
+colonne accostate a caso, una sola colonna visiva — esattamente « dentro la barra laterale
+esistente ». `maxHeight`/`overflowY:'auto'` come rete di sicurezza se un giorno il contenuto
+di un metodo diventasse più alto dello spazio libero.
+
+Verificato dal vivo (profilo TEST, 1280×720, ENTRAMBI i temi): CONTACT (badge+item+pista+
+CycleStatusBar+2 bottoni), NULL (3 bottoni d'esito invece di 2 — il caso più alto), TONE (il
+selettore del valore assessed) — in tutti e tre, `.ser-comandi` impilata correttamente sotto
+`<header>`, la barra laterale (FERMER LA SÉANCE/pausa/EP/Journal) sempre subito sotto di lei
+senza sovrapposizioni, nessun taglio del contenuto. MIRROR non verificato dal vivo (stesso
+`testataCiclo`/`pillBtn` di CONTACT/NULL, nessuna riga diversa) ma stessa logica.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo estesa come sopra — nessun errore in console (a parte gli `ERR_CONNECTION_
+REFUSED` preesistenti, non legati a questo giro).
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
