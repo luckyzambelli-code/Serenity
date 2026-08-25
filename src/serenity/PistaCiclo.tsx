@@ -64,14 +64,17 @@ export function PistaCiclo({ mode, phase, lang }: {
 
   return (
     <div style={{
-      // Il vero bordo sinistro del disegno dell'arco è x=320 (v. la nota accanto a
-      // `ToneColumn`, misurata sullo stesso quadrante) — 300 lo sfiora da fuori e la larghezza
-      // (250) lo attraversa per circa 230px: sovrapposto per davvero, non solo accostato,
-      // com'era richiesto, senza toccare UN pixel della geometria dell'arco stesso (nessuna
-      // riga di `QuantumSphere`/`ClearDial` cambia — questo è un livello a parte sopra di
-      // loro, `pointerEvents:'none'` sul contenitore, `'auto'` solo sui singoli bottoni: non
-      // ruba clic al quadrante nei punti dove non c'è testo).
-      position: 'absolute', left: 300, top: '50%', transform: 'translateY(-50%)',
+      // ⚠️ Segnalato: « i procedimenti e i cicli devono essere più a sinistra, allineati a
+      // sinistra col METER TA ». `left:16` — lo STESSO valore della lettura TA (il blocco
+      // `top:14, left:16` più giù nello stesso `<section>`, dove vive "METER TA"): non un
+      // numero vicino, lo stesso bordo sinistro. Il vero disegno dell'arco comincia più a
+      // destra (x=320, v. la nota storica accanto a `ToneColumn`) — la pista ora comincia
+      // PRIMA di lui, non sul suo bordo: si legge come parte della colonna di sinistra
+      // (TA sopra, pista sotto), non più come un'etichetta sovrapposta al centro
+      // dell'arco. Nessun pixel della geometria dell'arco cambia (nessuna riga di
+      // `QuantumSphere`/`ClearDial` toccata) — `pointerEvents:'none'` sul contenitore,
+      // `'auto'` solo sui singoli bottoni: non ruba clic al quadrante nei punti senza testo.
+      position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
       width: 250, display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
       gap: 14, pointerEvents: 'none', zIndex: 5,
     }}>

@@ -3756,6 +3756,31 @@ REFUSED` preesistenti, non legati a questo giro).
 
 ---
 
+## Sessantatreesimo giro (25/08/2026) — la pista dei cicli/procedimenti, allineata a sinistra col METER TA
+
+**Segnalato**: « le procedimenti avec question et les CYCLES doivent etre plus a gauche
+alignès a gauche avec le METER TA ».
+
+`PistaCiclo.tsx`/`PistaProcedimento.tsx` (giro 59/60) sovrapponevano l'arco da `left:300` —
+scelto allora per stare DENTRO il disegno vero del quadrante (x=320). Ora `left:16`, LO STESSO
+valore del blocco della lettura TA (`top:14, left:16`, stesso `<section>`, dove vive "METER
+TA") — non un numero vicino, lo stesso bordo sinistro: la pista legge come il proseguimento
+verticale della colonna TA (TA sopra, tempi/comandi del ciclo sotto), non più come
+un'etichetta accostata al centro dell'arco. Nessuna riga di `QuantumSphere`/`ClearDial`
+toccata — stesso principio delle due volte precedenti.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `vitest run`
+639/639. Non verificabile dal vivo con contenuto reale (`PistaCiclo`/`PistaProcedimento`
+compaiono solo `!senzaMisura`, quindi con un MUSE o un Meter davvero connesso — l'anteprima
+nel browser non può appaiare un dispositivo fisico); il numero è preso PARI PARI da quello già
+verificato sul DOM del blocco TA (stesso `<section>`, stessa origine), quindi a basso rischio —
+ma la resa vera va confermata nell'app pacchettizzata.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/PistaCiclo.tsx`,
+`src/serenity/PistaProcedimento.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

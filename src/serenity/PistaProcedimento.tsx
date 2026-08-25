@@ -73,10 +73,10 @@ export function PistaProcedimento({ nome, comandi, onChiudi }: {
         vaia(e.deltaY > 0 ? 1 : -1);
       }}
       style={{
-        // Stessa geometria di `PistaCiclo` — stesso slot, stessa sovrapposizione sull'arco,
-        // verificata sullo stesso DOM (bordo sinistro vero dell'arco a x=320 relativo a
-        // `<section>`).
-        position: 'absolute', left: 300, top: '50%', transform: 'translateY(-50%)',
+        // ⚠️ Segnalato: « i procedimenti e i cicli devono essere più a sinistra, allineati a
+        // sinistra col METER TA » — stessa geometria di `PistaCiclo` (v. la sua nota),
+        // `left:16` come il blocco della lettura TA nello stesso `<section>`.
+        position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
         width: 280, maxHeight: '82%', overflowY: 'auto',
         display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
         gap: 12, pointerEvents: 'auto', zIndex: 5, outline: 'none',
