@@ -4165,6 +4165,38 @@ di sempre.
 
 ---
 
+## Settantatreesimo giro (25/08/2026) — obiettivo, processo, stato fisico, R-Factor
+
+**Segnalato**: « mancano l'obiettivo, rfactor ecc all'inizio session ».
+
+Verificato App.tsx: quattro campi di testo libero, sempre scrivibili per tutta la seduta aperta
+(`sessionState === 'running'`, non solo "all'inizio" — l'auditor può tornarci in qualunque
+momento) — `sessionObjective`/`sessionProcessObjective`/`sessionPhysicalCheck`/
+`sessionBriefing`. Nessuna logica dietro: solo testo che accompagna il rapporto, nessun
+calcolo, nessuna soglia. Mancavano DEL TUTTO in SERENITY (`grep` senza risultati) — coerente
+con l'avviso in cima al file (« fase 6, in corso »): non un bug, una parte non ancora
+costruita.
+
+Aggiunti gli stessi quattro campi, montati dentro lo stesso blocco misurato da `taRef` (la
+lettura TA/NEEDLE LIGHT), sotto quest'ultimo — `pistaTop` si allunga da solo per fargli posto,
+la stessa tecnica già usata tre volte in questa refonte (misurare, non indovinare un numero).
+Un campo per riga, non affiancati: lo spazio in larghezza a `left:16` è quello della colonna
+riservata alla barra laterale, quattro in fila si sarebbero accavallati col bordo.
+
+**Le etichette, tradotte — non ricopiate.** In App.tsx sono FISSE in francese ("Objectif" /
+"Processus" / "État physique" / "R-Factor"), mai passate per `t()` — una svista mai corretta
+là, non una scelta. Qui tradotte con `LC` nelle 5 lingue, coerente con com'è scritto tutto il
+resto di SERENITY: stessi campi, stessa logica, non la stessa svista.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo (sessione aperta senza strumenti — i quattro campi non hanno bisogno di
+strumenti per contare, esattamente come in App.tsx — scritto un valore nel campo Objectif,
+confermato sullo schermo, nessun errore in console prima o dopo).
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

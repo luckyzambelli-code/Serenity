@@ -1073,6 +1073,20 @@ export default function Serenity() {
    * rappresentare i cicli coi loro colori, non solo i bottoni testuali qui in fondo.
    */
   const [item, setItem] = useState('');
+  /** ── OBIETTIVO / PROCESSO / STATO FISICO / R-FACTOR — segnalato: « mancano l'obiettivo, il
+   *  R-Factor ecc. all'inizio seduta ». Verificato App.tsx: quattro campi di testo libero,
+   *  sempre scrivibili durante tutta la seduta aperta (non solo « all'inizio » — l'auditor può
+   *  tornarci in qualunque momento), `sessionObjective`/`sessionProcessObjective`/
+   *  `sessionPhysicalCheck`/`sessionBriefing` — nessuna logica dietro, solo testo che
+   *  accompagna il rapporto. Qui STESSI quattro campi (stessa forma, stesso momento in cui
+   *  contano) — le etichette in App.tsx sono FISSE in francese ("Objectif"/"Processus"/"État
+   *  physique"/"R-Factor", mai passate per `t()`, probabile svista mai corretta là): tradotte
+   *  qui con `LC`, coerente con com'è scritto TUTTO il resto di SERENITY, non una copia
+   *  letterale di quella svista. */
+  const [sessionObjective, setSessionObjective] = useState('');
+  const [sessionProcessObjective, setSessionProcessObjective] = useState('');
+  const [sessionPhysicalCheck, setSessionPhysicalCheck] = useState('');
+  const [sessionBriefing, setSessionBriefing] = useState('');
   /**
    * « L'ITEM È STATO DETTO » — l'uscita a mano dalla fase « dì l'item », quando la trascrizione
    * non c'è (Whisper assente, microfono negato, seduta senza dettatura). Vale come l'item
@@ -4097,6 +4111,45 @@ export default function Serenity() {
                 }}>
                 {showTrailPref ? '● ' : '○ '}NEEDLE LIGHT
               </button>
+            )}
+            {/* ── OBIETTIVO / PROCESSO / STATO FISICO / R-FACTOR — segnalato: « mancano
+                l'obiettivo, il R-Factor ecc. all'inizio seduta ». Verificato App.tsx: quattro
+                campi di testo libero, sempre scrivibili per tutta la seduta aperta — nessuna
+                logica, solo testo che accompagna il rapporto. Montati QUI, dentro lo stesso
+                blocco misurato da `taRef`: `pistaTop` (sotto) si allunga da solo per fargli
+                posto, la STESSA tecnica già usata per NEEDLE LIGHT qui sopra — nessun numero
+                indovinato. Sotto quattro etichette, non affiancate: a `left:16` lo spazio in
+                larghezza è quello della colonna riservata alla barra laterale (272px), non di
+                più — un campo per riga resta leggibile, quattro in fila si sarebbero accavallati
+                col bordo. */}
+            {aperta && (
+              <div style={{
+                display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4,
+                paddingTop: 8, borderTop: '1px solid var(--s-ink-ghost)', pointerEvents: 'auto',
+                width: 240,
+              }}>
+                {([
+                  [LC('obiettivo', 'objectif', 'objective', 'objetivo', 'mål') as string, sessionObjective, setSessionObjective],
+                  [LC('processo', 'processus', 'process', 'proceso', 'process') as string, sessionProcessObjective, setSessionProcessObjective],
+                  [LC('stato fisico', 'état physique', 'physical state', 'estado físico', 'fysiskt tillstånd') as string, sessionPhysicalCheck, setSessionPhysicalCheck],
+                  [LC('r-factor', 'r-factor', 'r-factor', 'r-factor', 'r-factor') as string, sessionBriefing, setSessionBriefing],
+                ] as const).map(([etichetta, valore, setValore]) => (
+                  <div key={etichetta} style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <span style={{
+                      fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
+                      letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--s-ink-faint)',
+                    }}>
+                      {etichetta}
+                    </span>
+                    <input value={valore} onChange={e => setValore(e.target.value)} placeholder={etichetta}
+                      style={{
+                        border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
+                        outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)',
+                        color: 'var(--s-ink)', padding: '2px 0', width: '100%',
+                      }} />
+                  </div>
+                ))}
+              </div>
             )}
           </div>
           {/* ⚠️ Segnalato: « quando non ci sono strumenti attivi, l'arco deve sparire e le
