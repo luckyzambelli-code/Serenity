@@ -15,6 +15,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // CORPUS — una riga in aggiunta all'archivio delle esperienze.
   corpusAppend: (args) => ipcRenderer.invoke('corpus-append', args),
   corpusFolder: () => ipcRenderer.invoke('corpus-folder'),
+  // PROCEDIMENTI — la lista dei procedimenti trovati in ~/EQUILIBRIUM/COMANDI/Procedimenti,
+  // e un modo per aprire (creandola se manca) quella cartella in Finder.
+  listProcedimenti: () => ipcRenderer.invoke('procedimenti-list'),
+  openProcedimentiFolder: () => ipcRenderer.invoke('procedimenti-folder-open'),
   // CHIUSURA — il processo principale ferma l'uscita e chiede; il renderer risponde.
   setSessionActive: (attiva) => ipcRenderer.invoke('session-active', attiva),
   confirmClose: () => ipcRenderer.invoke('close-confirmed'),

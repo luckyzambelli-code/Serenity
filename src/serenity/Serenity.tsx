@@ -44,6 +44,8 @@ import { ClearDial } from '../components/ClearDial';
 import { CycleStatusBar } from '../components/CycleStatusBar';
 import { CycleSteps } from '../components/CycleSteps';
 import { PistaCiclo } from './PistaCiclo';
+import { PistaProcedimento } from './PistaProcedimento';
+import { listaProcedimenti, apriCartellaProcedimenti, type Procedimento } from '../lib/procedimenti';
 import { ThetaReadyCheck } from '../components/ThetaReadyCheck';
 import { MetabolicCheck } from '../components/MetabolicCheck';
 import { metabolicBaseline, type MetabAssessment } from '../engine/MetabolicBaseline';
@@ -371,6 +373,18 @@ export default function Serenity() {
   const [editingTag, setEditingTag] = useState<string | null>(null);
   const [editingTagValue, setEditingTagValue] = useState('');
   const [processusVisualizzato, setProcessusVisualizzato] = useState<{ name: string; url: string } | null>(null);
+  /** ── PROCEDIMENTI — segnalato: « consenti la selezione di procedimenti presenti nella
+   *  cartella COMANDI/Procedimenti, e versa i suoi comandi nello spazio comandi dei cicli ».
+   *  `procedimenti`: la lista trovata in `~/EQUILIBRIUM/COMANDI/Procedimenti` (ricaricata ogni
+   *  volta che PROCESSUS si apre — un file appena trascinato lì dentro compare senza dover
+   *  riavviare l'app). `procedimentoAttivo`: quale, se uno, sta rimpiazzando la pista del
+   *  ciclo nello spazio comandi in questo momento — `null` quando nessuno è stato scelto, o
+   *  dopo che l'auditor lo ha chiuso (v. `PistaProcedimento`, il suo bottone ✕). */
+  const [procedimenti, setProcedimenti] = useState<Procedimento[]>([]);
+  const [procedimentoAttivo, setProcedimentoAttivo] = useState<Procedimento | null>(null);
+  useEffect(() => {
+    if (processusAperto) listaProcedimenti().then(setProcedimenti);
+  }, [processusAperto]);
   useEffect(() => {
     (async () => {
       const serverUp = await isServerAvailable();
@@ -3207,6 +3221,9 @@ export default function Serenity() {
             onSelectProcessus={entry => { setProcessusVisualizzato({ name: entry.name, url: entry.url }); setProcessusAperto(false); }}
             onClose={() => setProcessusAperto(false)}
             t={k => t(k as never) as string}
+            procedimenti={procedimenti}
+            onSelectProcedimento={p => { setProcedimentoAttivo(p); setProcessusAperto(false); }}
+            onApriCartellaProcedimenti={() => { apriCartellaProcedimenti(); }}
           />
         </div>
       )}
@@ -4308,9 +4325,18 @@ export default function Serenity() {
               condizione di `QuantumSphere`/dell'arco appena sopra (`!senzaMisura`): senza
               strumenti l'ago non c'è, e sovrapporsi a un arco assente non avrebbe senso — la
               guardia interna del componente (`cur < 0`) copre da sé LIBERO e "ciclo non
-              armato". */}
+              armato".
+              ⚠️ Segnalato ancora: « una volta scelto un procedimento (PROCESSUS →
+              PROCEDIMENTI), i suoi comandi devono essere inseriti direttamente nello spazio
+              comandi dei cicli, ereditando la stessa trasparenza ». Stesso slot, quindi
+              esclusivo con `PistaCiclo` — non uno sopra l'altro: `procedimentoAttivo` (scelto
+              nel popover di PROCESSUS) prende il posto della pista del ciclo finché l'auditor
+              non lo chiude (✕ dentro `PistaProcedimento`). */}
           {!senzaMisura && (
-            <PistaCiclo mode={mode} phase={faseCiclo} lang={lang} />
+            procedimentoAttivo
+              ? <PistaProcedimento nome={procedimentoAttivo.nome} comandi={procedimentoAttivo.comandi}
+                  onChiudi={() => setProcedimentoAttivo(null)} />
+              : <PistaCiclo mode={mode} phase={faseCiclo} lang={lang} />
           )}
           {/* ── SENZA STRUMENTI, LE SCRITTE PRENDONO IL POSTO DELL'ARCO — segnalato: « COME IN
               EQUILIBRIUM ». Stessa condizione di sopra (`senzaMisura && aperta`), stesso testo

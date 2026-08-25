@@ -3552,6 +3552,64 @@ nessun errore in console, geometria dell'arco confermata via DOM.
 
 ---
 
+## Sessantesimo giro (25/08/2026) — i procedimenti da PROCESSUS, dentro lo spazio comandi dei cicli
+
+**Segnalato**: poter scegliere, dentro PROCESSUS, un procedimento preso da una cartella
+`COMANDI/Procedimenti`; una volta scelto, i suoi comandi devono comparire nello spazio comandi
+dei cicli (la pista appena fatta, giro precedente), ereditando la stessa trasparenza.
+
+**La cartella non esisteva — l'ho creata io, non l'auditor a mano.** Cercata ovunque (repo e
+filesystem): non c'era, e PROCESSUS oggi è solo un archivio di PDF opachi (`ProcessusModal.tsx`
++ IndexedDB), senza estrazione di testo — nessun "comando" strutturato da nessuna parte.
+Chiesto all'utente il formato voluto; risposta: « decidilo tu, così la creo di conseguenza ».
+Scelta, per coerenza con `CORPUS_DIR` (`~/EQUILIBRIUM/corpus`, già lo stesso principio — una
+cartella sotto HOME, non dentro `userData`, che si apre in Finder, si copia, si scrive a mano):
+
+- **`~/EQUILIBRIUM/COMANDI/Procedimenti/`** — un file **`.txt`** per procedimento.
+- **Il nome del file (senza `.txt`) è il titolo** mostrato nell'app.
+- **Un comando per riga.** Righe vuote e righe che iniziano con `#` (note dell'auditor) non
+  contano come comando.
+- **Un bottone "apri cartella" in PROCESSUS** la crea (se manca) e la apre in Finder —
+  l'auditor non deve conoscerne il percorso a memoria né fare `mkdir` a mano.
+
+**Tre file condivisi toccati, con aggiunte SOLO additive** (per questo entrambi i DMG, questo
+giro):
+- **`main.cjs`** — due `ipcMain.handle` nuovi (`procedimenti-list`, `procedimenti-folder-open`),
+  accanto a `corpus-append`/`corpus-folder` con la stessa forma. Nessuna riga esistente
+  toccata.
+- **`preload.cjs`** — due voci nuove su `electronAPI` (`listProcedimenti`,
+  `openProcedimentiFolder`). Nessuna voce esistente toccata.
+- **`components/ProcessusModal.tsx`** — tre prop nuove, **tutte opzionali**
+  (`procedimenti?`, `onSelectProcedimento?`, `onApriCartellaProcedimenti?`). La sezione
+  PROCEDIMENTI si disegna solo se `procedimenti !== undefined`: App.tsx (EQUILIBRIUM) non la
+  passa, quindi il suo `ProcessusModal` resta **esattamente com'era** — verificato leggendo il
+  suo punto di montaggio (`App.tsx:6920`), nessuna delle tre prop nuove è lì.
+
+**`lib/procedimenti.ts`, nuovo** — lo stesso schema di `corpusWriter.ts`: legge via
+`window.electronAPI`, fuori da Electron (l'anteprima nel browser, i test) torna lista vuota e
+non fa nulla, senza eccezioni.
+
+**`PistaProcedimento.tsx`, nuovo, SOLO SERENITY** — stesso slot fisico di `PistaCiclo` (stessa
+posizione sovrapposta all'arco, stessa trasparenza, stesso comportamento visivo a
+fuoco/distanza), ma un componente A SÉ e non una variante: `PistaCiclo` non lascia MAI che un
+clic sposti il tempo REALE del ciclo (v. la sua nota, giro precedente) — un procedimento
+invece è testo puro, senza stato d'audit da proteggere, e lì il clic PUÒ spostare liberamente
+il fuoco. Mescolare le due logiche in un componente condizionale sarebbe stata la fonte di
+errori silenziosi che quella nota mette in guardia. `Serenity.tsx`: `procedimentoAttivo`
+(scelto nel popover PROCEDIMENTI) sostituisce `PistaCiclo` nello stesso slot finché l'auditor
+non lo chiude col ✕ dentro `PistaProcedimento` — mai i due sovrapposti.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `vitest run`
+639/639, `node -c main.cjs`/`node -c preload.cjs` puliti, dal vivo nel browser (profilo TEST):
+PROCESSUS si apre con la sezione PROCÉDÉS (tradotta), stato vuoto corretto, "OUVRIR LE DOSSIER"
+non genera errori fuori da Electron, nessun errore nuovo in console.
+
+`git status`: `docs/serenity-refonte.md`, `main.cjs`, `preload.cjs`,
+`src/components/ProcessusModal.tsx`, `src/serenity/Serenity.tsx`,
+`src/lib/procedimenti.ts` (nuovo), `src/serenity/PistaProcedimento.tsx` (nuovo).
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

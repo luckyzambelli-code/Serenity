@@ -112,6 +112,38 @@ ipcMain.handle('corpus-append', (_e, { file, line }) => {
 });
 ipcMain.handle('corpus-folder', () => CORPUS_DIR);
 
+// ── PROCEDIMENTI (COMANDI) ───────────────────────────────────────────────────────────────
+// Segnalato (SERENITY): « consenti la selezione di procedimenti presenti nella cartella
+// COMANDI/Procedimenti ». La cartella non esisteva — la si crea qui, sotto HOME, accanto a
+// CORPUS_DIR (stesso principio: un posto che si apre in Finder, si copia, si scrive a mano,
+// non nascosto dentro `userData`). Un file .txt per procedimento — il nome del file (senza
+// estensione) è il titolo mostrato nell'app; dentro, un comando per riga. Righe vuote e
+// righe che iniziano con # (note dell'auditor, non comandi) non contano.
+const PROCEDIMENTI_DIR = path.join(os.homedir(), 'EQUILIBRIUM', 'COMANDI', 'Procedimenti');
+ipcMain.handle('procedimenti-list', () => {
+  try {
+    fs.mkdirSync(PROCEDIMENTI_DIR, { recursive: true });
+    return fs.readdirSync(PROCEDIMENTI_DIR)
+      .filter(f => f.toLowerCase().endsWith('.txt'))
+      .sort()
+      .map(f => {
+        const testo = fs.readFileSync(path.join(PROCEDIMENTI_DIR, f), 'utf8');
+        const comandi = testo.split('\n').map(r => r.trim()).filter(r => r && !r.startsWith('#'));
+        return { nome: f.replace(/\.txt$/i, ''), comandi };
+      })
+      .filter(p => p.comandi.length > 0);   // un file vuoto non è un procedimento da mostrare
+  } catch (e) { return []; }
+});
+// Crea la cartella se manca e la apre in Finder — l'auditor non deve saperne il percorso a
+// memoria né crearla a mano: un bottone in PROCESSUS chiama questo, e la cartella è lì.
+ipcMain.handle('procedimenti-folder-open', () => {
+  try {
+    fs.mkdirSync(PROCEDIMENTI_DIR, { recursive: true });
+    shell.openPath(PROCEDIMENTI_DIR);
+    return { ok: true, dir: PROCEDIMENTI_DIR };
+  } catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
+});
+
 // CONN-76: native clipboard read — navigator.clipboard.readText() is blocked in
 // the Electron renderer, so "paste from clipboard" never pasted. Read via the
 // main process instead.

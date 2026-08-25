@@ -1,0 +1,100 @@
+import React, { useState } from 'react';
+import { X } from 'lucide-react';
+
+/**
+ * PistaProcedimento — I COMANDI DI UN PROCEDIMENTO, NELLO STESSO SPAZIO DI `PistaCiclo`.
+ *
+ * ── PERCHÉ ESISTE ───────────────────────────────────────────────────────────────────────────
+ * Segnalato: « una volta scelto un procedimento (da PROCESSUS → PROCEDIMENTI), i suoi comandi
+ * devono essere inseriti direttamente nello spazio comandi dei cicli, ereditando la stessa
+ * trasparenza già impostata ». Stesso slot fisico di `PistaCiclo` (sovrapposto al lato
+ * sinistro dell'arco), stessa resa (tempo a fuoco grande e con fondo, i vicini più piccoli e
+ * smorzati), stesso comportamento al clic — ma la SORGENTE dei "tempi" qui non è
+ * `engine/cycleSteps` (il ciclo REALE, guidato dal motore): è la lista di comandi letta da un
+ * file `.txt` in `~/EQUILIBRIUM/COMANDI/Procedimenti` (`lib/procedimenti.ts`), un semplice
+ * testo di riferimento che l'auditor sceglie di consultare.
+ *
+ * ── PERCHÉ È UN COMPONENTE A SÉ, E NON UNA VARIANTE DI `PistaCiclo` ─────────────────────────
+ * `PistaCiclo` non lascia MAI che il clic sposti il tempo reale (v. la sua nota) — proprio
+ * perché quei tempi sono legati a uno stato d'audit vero. Qui non c'è nessuno stato vero da
+ * proteggere: un procedimento è testo puro, e il clic PUÒ liberamente spostare il fuoco fra i
+ * suoi comandi, è esattamente quel che deve fare. Mescolare le due logiche in un componente
+ * solo (« a volte il clic naviga per davvero, a volte no ») sarebbe stata la fonte di errori
+ * silenziosi che la nota di `PistaCiclo` mette in guardia — due sorgenti diverse, due
+ * componenti diversi, nessuna condizione a runtime da sbagliare.
+ */
+export function PistaProcedimento({ nome, comandi, onChiudi }: {
+  nome: string;
+  comandi: string[];
+  onChiudi: () => void;
+}) {
+  const [fuoco, setFuoco] = useState(0);
+  if (!comandi.length) return null;
+
+  return (
+    <div style={{
+      // Stessa geometria di `PistaCiclo` — stesso slot, stessa sovrapposizione sull'arco,
+      // verificata sullo stesso DOM (bordo sinistro vero dell'arco a x=320 relativo a
+      // `<section>`).
+      position: 'absolute', left: 300, top: '50%', transform: 'translateY(-50%)',
+      width: 260, display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+      gap: 14, pointerEvents: 'none', zIndex: 5,
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'auto',
+        padding: '3px 4px 3px 10px', borderRadius: 999,
+        background: 'color-mix(in srgb, var(--s-ground) 42%, transparent)',
+      }}>
+        <span style={{
+          fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
+          letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--s-ink-faint)',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 190,
+        }}>
+          {nome}
+        </span>
+        <button type="button" onClick={onChiudi}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+            border: 'none', background: 'none', cursor: 'pointer', color: 'var(--s-ink-faint)',
+          }}>
+          <X size={12} strokeWidth={2.4} />
+        </button>
+      </div>
+      {comandi.map((c, i) => {
+        const distanza = Math.abs(i - fuoco);
+        const inFuoco = i === fuoco;
+        const fs = inFuoco ? 'var(--s-fs-xl)' : distanza === 1 ? 'var(--s-fs-base)' : 'var(--s-fs-sm)';
+        const opacita = inFuoco ? 1 : distanza === 1 ? 0.55 : 0.26;
+        const colore = inFuoco ? 'var(--s-ink)' : 'var(--s-ink-soft)';
+        return (
+          <button key={i} type="button" onClick={() => setFuoco(i)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10, border: 'none',
+              cursor: 'pointer', padding: '3px 10px', borderRadius: 999, textAlign: 'left',
+              pointerEvents: 'auto', opacity: opacita,
+              transition: 'opacity 0.25s ease, font-size 0.25s ease, background 0.25s ease',
+              // Stessa taratura di `PistaCiclo`: solo il comando a fuoco porta un fondo, per
+              // non impilare più riquadri semitrasparenti sopra l'ago.
+              background: inFuoco ? 'color-mix(in srgb, var(--s-ground) 42%, transparent)' : 'none',
+            }}>
+            <span aria-hidden style={{
+              width: inFuoco ? 26 : 18, height: inFuoco ? 26 : 18, borderRadius: '50%', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: 'var(--s-sans)', fontSize: inFuoco ? 12 : 9, fontWeight: 800, lineHeight: 1,
+              color: colore, background: 'transparent', border: `1px solid ${colore}`,
+            }}>
+              {i + 1}
+            </span>
+            <span style={{
+              fontFamily: 'var(--s-serif)', fontSize: fs, fontWeight: inFuoco ? 700 : 500,
+              color: colore, lineHeight: 1.25,
+            }}>
+              {c}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
