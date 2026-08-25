@@ -76,30 +76,35 @@
  * `Serenity.tsx`) perché quel testo bianco restasse leggibile — ma un pannello scuro dentro
  * una pagina chiara resta comunque UNA MACCHIA SCURA, non "ben visibile" come richiesto ora.
  *
- * La sua INTESTAZIONE (solo il titolo "SYSTEM HEALTH SENSORS", non il resto del pannello) è
- * l'unica zona che legge già `isLightTheme` da sé e va già scura-su-chiaro da sola — verificato
- * leggendo `HealthPanel.tsx` riga per riga.
- *
  * Capovolgere l'intero pannello con un filtro CSS applicato QUI, da fuori (mai dentro il
  * componente condiviso) trasforma bianco-su-scuro in scuro-su-chiaro senza toccarne una riga:
  * verificato che dentro non ci sia NESSUN colore saturo (solo bianco/nero/grigio a varie
  * opacità) — `hue-rotate` non ha nulla da correggere, resta un puro capovolgimento di
  * luminosità, mai una tinta sbagliata.
  *
- * L'intestazione però ANDREBBE SCURA due volte (la sua logica + questo filtro) — un SECONDO
- * `invert()` applicato solo a lei annulla il primo (due invert si annullano): resta l'unica
- * zona che il filtro non tocca, esattamente perché è l'unica che non ne ha bisogno. Lo stesso
- * annullamento riporta alla sua resa vera anche il bottone riduci/espandi qui sopra (dentro
- * l'intestazione), che è già ritinto correttamente dalle regole di questo stesso file.
+ * ⚠️ BUG TROVATO — segnalato: « le % dans systems health est blanc en light et ne se voit
+ * pas ». La prima versione annullava il capovolgimento su TUTTA l'intestazione
+ * (`div:first-child`) pensando fosse tutta già "theme-aware" — non è vero: dentro
+ * l'intestazione, SOLO il titolo ("SYSTEM HEALTH SENSORS") legge `isLightTheme` da sé; la
+ * spia di qualità segnale accanto (l'etichetta "PC", il pallino di connessione, l'anello SVG,
+ * e la % — verificato riga per riga in `HealthPanel.tsx`) è bianca fissa ESATTAMENTE come il
+ * resto del corpo. Annullare l'intera intestazione riportava anche LEI al bianco originale —
+ * invisibile su un fondo ormai chiaro, il bug segnalato. Corretto restringendo l'annullamento
+ * a SOLO le due zone che vanno davvero preservate: il titolo (`span:first-child`
+ * dell'intestazione) e il bottone riduci/espandi (`div:last-child`, già ritinto
+ * correttamente da questo stesso file) — la spia di qualità segnale, in mezzo ai due, resta
+ * SOTTO il capovolgimento del pannello, come il resto del corpo bianco.
  *
- * ⚠️ Accoppiato alla struttura vera di `HealthPanel.tsx` (`div:first-child` = l'intestazione,
- * il PRIMO figlio del pannello — verificato leggendo il componente): se un giorno la sua
- * struttura cambia, va riverificato qui. Stessa classe di rischio già accettata dalle regole
- * `[title="Collapse"]` qui sopra, nello stesso file.
+ * ⚠️ Accoppiato alla struttura vera di `HealthPanel.tsx` (intestazione = PRIMO figlio del
+ * pannello; al suo interno, titolo = PRIMO figlio, bottone riduci/espandi = ULTIMO figlio —
+ * verificato leggendo il componente): se un giorno la sua struttura cambia, va riverificato
+ * qui. Stessa classe di rischio già accettata dalle regole `[title="Collapse"]` qui sopra,
+ * nello stesso file.
  */
 :root[data-tema='chiaro'] .ser-health-wrap {
   filter: invert(1) hue-rotate(180deg);
 }
-:root[data-tema='chiaro'] .ser-health-wrap > div > div:first-child {
+:root[data-tema='chiaro'] .ser-health-wrap > div > div:first-child > span:first-child,
+:root[data-tema='chiaro'] .ser-health-wrap > div > div:first-child > div:last-child {
   filter: invert(1) hue-rotate(180deg);
 }

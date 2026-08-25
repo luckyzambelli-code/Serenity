@@ -4,6 +4,7 @@ import { stepsOf, currentStep, stepDone, type StepId } from '../engine/cycleStep
 import type { SessionMode } from '../engine/sessionMode';
 import type { SessionPhase } from '../engine/sessionPhase';
 import { pick5 } from '../i18n5';
+import { SuggerimentoCiclo } from './SuggerimentoCiclo';
 
 /**
  * PistaCiclo — LA PROCEDURA A FUOCO, SOVRAPPOSTA AL LATO SINISTRO DELL'ARCO.
@@ -36,8 +37,20 @@ import { pick5 } from '../i18n5';
  * calcolo di `maxHeight`. Una sola differenza resta, voluta: qui non c'è scorrimento a
  * rotellina/frecce — i tempi del ciclo sono 2-4, sempre pochi abbastanza da stare tutti a
  * schermo, quello scorrimento serve a `PistaProcedimento` per liste potenzialmente lunghe.
+ *
+ * ── L'ITEM E LE INDICAZIONI, ANCHE LORO QUI — segnalato: « le indicazioni, e non solo gli
+ * step dei cicli, devono stare a sinistra dell'ago — niente più dei cicli riprodotto in alto a
+ * sinistra ». Prima l'item e `SuggerimentoCiclo` (comando/come/avviso) vivevano SOLO nella
+ * barra comandi in alto — ora vivono SOLO qui: `item`/`spiegazione` sono passati da
+ * `Serenity.tsx` (che li calcola già, `spiegazioneCiclo`), non ricalcolati qui — questo
+ * componente resta una RESA, mai una seconda fonte della verità. `SuggerimentoCiclo`, estratto
+ * in un file a sé (`./SuggerimentoCiclo.tsx`) proprio per poter essere importato qui senza un
+ * giro circolare (`Serenity.tsx` importa già `PistaCiclo` da qui). La guida segue SEMPRE il
+ * tempo REALE (`spiegazione`, calcolata da `faseCiclo`), mai il `fuoco` manuale di preview —
+ * coerente con la nota sopra: solo il gesto vero decide cosa dire adesso, mai il clic su un
+ * tempo passato o futuro.
  */
-export function PistaCiclo({ mode, phase, lang, top }: {
+export function PistaCiclo({ mode, phase, lang, top, item, itemPlaceholder, spiegazione }: {
   mode: SessionMode;
   phase: SessionPhase;
   lang: string;
@@ -47,6 +60,13 @@ export function PistaCiclo({ mode, phase, lang, top }: {
    *  qui il punto esatto dove questa pista deve cominciare. Stessa tecnica già usata per
    *  `.ser-comandi`/la barra laterale (`headerRef`/`comandiRef`): misurare, non indovinare. */
   top: number;
+  /** L'item dato per questo ciclo — stringa vuota se non ancora dato. */
+  item: string;
+  /** Il segnaposto da mostrare al posto dell'item, finché non è stato dato. */
+  itemPlaceholder: string;
+  /** Comando/come/avviso del tempo REALE in corso — lo stesso `spiegazioneCiclo` che la barra
+   *  comandi passava a `SuggerimentoCiclo`, calcolato una sola volta in `Serenity.tsx`. */
+  spiegazione: { titolo: string; comando?: string | null; come: string; avviso?: string | null; fatto?: boolean };
 }) {
   const L = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang, it, fr, en, es, sv);
   const steps = stepsOf(mode);
@@ -162,6 +182,15 @@ export function PistaCiclo({ mode, phase, lang, top }: {
           {etichettaChiudi}
         </button>
       </div>
+      {/* ── L'ITEM — segnalato: « niente più dei cicli riprodotto in alto a sinistra ». Era in
+          `testataCiclo`, nella barra comandi; stessa resa (`--s-serif`/`--s-fs-lg`), qui
+          sotto l'intestazione invece che accanto al badge. */}
+      <span style={{
+        fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-lg)', color: 'var(--s-ink)',
+        padding: '0 10px',
+      }}>
+        {item || itemPlaceholder}
+      </span>
       {steps.map((s, i) => {
         const distanza = Math.abs(i - principale);
         const inFuoco = i === principale;
@@ -206,6 +235,18 @@ export function PistaCiclo({ mode, phase, lang, top }: {
           </button>
         );
       })}
+      {/* ── LE INDICAZIONI — segnalato: « le indicazioni, e non solo gli step, devono stare a
+          sinistra dell'ago ». `SuggerimentoCiclo` (comando/come/avviso), lo stesso componente
+          che prima viveva nella barra comandi — segue SEMPRE il tempo reale (`spiegazione`),
+          mai il `fuoco` di preview (v. la nota in cima al file). `pointerEvents:'auto'`: è
+          testo, non un bottone, ma resta sopra un fondo proprio per staccarsi dall'arco come
+          i tempi qui sopra. */}
+      <div style={{
+        padding: '4px 10px', pointerEvents: 'auto', borderRadius: 14,
+        background: 'color-mix(in srgb, var(--s-ground) 30%, transparent)',
+      }}>
+        <SuggerimentoCiclo {...spiegazione} />
+      </div>
     </div>
   );
 }

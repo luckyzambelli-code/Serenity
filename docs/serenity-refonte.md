@@ -3954,6 +3954,57 @@ nuovo in console). Nessun file condiviso toccato questo giro (`healthPanelButton
 
 ---
 
+## Sessantottesimo giro (25/08/2026) — la % di Santé Système corretta, tutti i cicli fuori dalla barra in alto
+
+**Segnalato**: « le % dans systems health est blanc en light et ne se voit pas »; « voglio che
+le indicazioni e non solo les steps dei cicli siano posizionate a sinistra dell'ago — a questo
+punto non deve più nulla dei cicli essere riprodotto in alto a sinistra ».
+
+**Il bug della %, nato dal filtro troppo largo del giro precedente.** Il doppio-invert
+copriva TUTTA l'intestazione di `HealthPanel` (`div:first-child`), non solo il titolo —
+riportando al bianco originale anche la spia di qualità segnale accanto (etichetta "PC",
+pallino di connessione, anello SVG, e la %), che è bianca fissa ESATTAMENTE come il resto del
+corpo, non theme-aware come il titolo. Corretto restringendo l'annullamento a SOLO le due
+zone che vanno davvero preservate — il titolo (`span:first-child` dell'intestazione) e il
+bottone riduci/espandi (`div:last-child`) — lasciando la spia di qualità segnale, in mezzo ai
+due, SOTTO il capovolgimento del pannello come il resto del corpo. **Riprovato per davvero**
+con un elemento sintetico più fedele (titolo, "PC · 92%", bottone riduci) prima di
+considerarlo fatto: confermato via screenshot che ora tutti e tre si leggono correttamente in
+chiaro.
+
+**Tutto ciò che riguarda i cicli, fuori dalla barra comandi in alto — per davvero, questa
+volta.** Segnalato esplicitamente: dopo aver spostato la pista (step) a sinistra dell'arco (i
+giri scorsi), restava ancora duplicato in alto: `testataCiclo` (badge+item+`CycleSteps`
+orizzontale) e `SuggerimentoCiclo` (comando/come/avviso), montati tre volte — una per
+TONE/MIRROR/CONTACT-NULL. Tolti da lì per davvero: `testataCiclo` (la funzione stessa)
+cancellata, le tre chiamate rimosse; le tre `<SuggerimentoCiclo>` rimosse. `SuggerimentoCiclo`
+estratto dal corpo di `Serenity.tsx` in un file a sé
+([SuggerimentoCiclo.tsx](../src/serenity/SuggerimentoCiclo.tsx), verbatim) — necessario per
+poterlo importare da `PistaCiclo.tsx` senza un giro circolare (`Serenity.tsx` importa già
+`PistaCiclo` da lì). `PistaCiclo` riceve ora tre prop nuove — `item`/`itemPlaceholder`
+(prima nel badge+item di `testataCiclo`) e `spiegazione` (lo stesso `spiegazioneCiclo` già
+calcolato in `Serenity.tsx`, non ricalcolato) — e le mostra nell'ordine: intestazione (nome
+del metodo) → item → pista dei tempi → indicazioni (`SuggerimentoCiclo`). La guida segue
+SEMPRE il tempo REALE (`spiegazione`), mai il `fuoco` di preview — coerente con la regola già
+scritta per la pista: solo un gesto vero decide cosa dire adesso. Restano in alto SOLO i
+bottoni veri (dare l'item, validare, ecc.) — non "riprodotti", sono l'unico posto dove
+esistono. Import di `CycleSteps` (il componente condiviso) tolto da `Serenity.tsx`: non più
+usato da nessuna parte nel file.
+
+**Limite di questa verifica.** Non sono riuscito a portare `cycles.cycleArmed` a vero nel
+browser di anteprima (dare l'item sembra richiedere un passo in più che qui non si attiva) per
+vedere la nuova pista con contenuto reale accanto ai bottoni — verificato invece: `tsc`/`lint`/
+`vitest` puliti (nessun riferimento pendente a `testataCiclo`/`CycleSteps` rimasti,
+il compilatore li avrebbe segnalati), e la sessione senza strumenti resta stabile e senza
+errori nuovi in console dall'apertura fino al tentativo di dare l'item. La resa vera con un
+ciclo davvero armato resta da confermare nell'app pacchettizzata.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/healthPanelButtons.css`,
+`src/serenity/PistaCiclo.tsx`, `src/serenity/Serenity.tsx`,
+`src/serenity/SuggerimentoCiclo.tsx` (nuovo).
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

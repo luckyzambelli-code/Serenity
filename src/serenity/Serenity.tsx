@@ -42,7 +42,6 @@ import { THETA_LABEL_AFTER_MS } from '../engine/tuning';
 import { QuantumSphere } from '../components/QuantumSphere';
 import { ClearDial } from '../components/ClearDial';
 import { CycleStatusBar } from '../components/CycleStatusBar';
-import { CycleSteps } from '../components/CycleSteps';
 import { PistaCiclo } from './PistaCiclo';
 import { PistaProcedimento } from './PistaProcedimento';
 import { listaProcedimenti, apriCartellaProcedimenti, type Procedimento } from '../lib/procedimenti';
@@ -223,55 +222,6 @@ const LetturaIntegrita = React.memo(function LetturaIntegrita() {
     </span>
   );
 });
-
-/** ── « COSA DEVO FARE » — l'equivalente di `components/CycleHint.tsx`, non il componente
- *  stesso: quel file scrive i suoi colori DIRETTI nello stile inline (mai una `var(--sm-x)`,
- *  a differenza di `CycleStatusBar`) — presi in prestito così com'è, « rgba(240,246,255,0.95) »
- *  (quasi bianco) sarebbe leggibile sul fondo scuro di App.tsx e quasi INVISIBILE sul bianco
- *  perla di SERENITY in tema chiaro. Stessi dati (`spiegazioneCiclo`, portato fedele più sotto)
- *  — nella lingua grafica di SERENITY (`var(--s-x)`), non in quella di EQUILIBRIUM.
- *
- * ⚠️ SEGNALATO: « quand on arme un cycle, l'écriture DONNE L'ITEM avec les explications mets la
- * directement sur la ligne du bouton... et fais disparaître le TITRE, car il y a déjà le bouton
- * qui indique la chose. Également pour toutes les étapes du CYCLE ». Prima un blocco a sé
- * (`titolo` in grassetto + comando/come/avviso), largo quanto la riga (`flexBasis:'100%'`),
- * SOTTO tutti i bottoni della tappa — un doppione: il badge (CONTACT/NULL/MIRROR/TONE),
- * `CycleSteps` e il testo del bottone stesso dicono già IN QUALE tappa si è. Qui resta solo il
- * COME/COSA FARE (mai il nome della tappa, quello lo dice il bottone) — niente più `titolo`,
- * niente più riga a sé: chi la monta (poco più sotto, ai tre punti di chiamata) la mette SUBITO
- * dopo il bottone della tappa attiva, sulla STESSA riga elastica (niente `flexBasis`), non più
- * in fondo a tutto. */
-/** ⚠️ Segnalato: « quando un ciclo è aperto le scritte siano più grandi... DEVONO ESSERE BEN
- *  VISIBILI ». Questo componente è SOLO di SERENITY (non condiviso con App.tsx, libero di
- *  crescere senza toccare EQUILIBRIUM) — porta il "comando" letto a voce durante un ciclo, il
- *  testo che l'auditor guarda più spesso mentre conduce: restava alla stessa taglia piccola
- *  (`--s-fs-sm`, 13px) di una didascalia qualunque. Il comando (la citazione esatta, es.
- *  « Localise sur ton cas... ») sale a `--s-fs-lg` (18px, il testo che conta di più); "come"/
- *  l'avviso a `--s-fs-base` (15px) — un gradino sotto, ma comunque più grandi di prima. */
-function SuggerimentoCiclo({ comando, come, avviso, fatto = false }: {
-  comando?: string | null; come: string; avviso?: string | null; fatto?: boolean;
-}) {
-  return (
-    <span style={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: 420 }}>
-      {comando && (
-        <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-lg)', lineHeight: 1.35,
-                      color: fatto ? 'var(--s-still)' : 'var(--s-ink-soft)' }}>
-          {comando}
-        </span>
-      )}
-      <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', lineHeight: 1.4,
-                    color: fatto ? 'var(--s-still)' : 'var(--s-ink-faint)' }}>
-        {come}
-      </span>
-      {avviso && (
-        <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', fontWeight: 700,
-                      color: 'var(--s-reserve)' }}>
-          {avviso}
-        </span>
-      )}
-    </span>
-  );
-}
 
 /** ── IL DIVISORE VERTICALE — separa le zone della barra comandi in alto (« si deve capire che
  *  sono cose diverse », v. dove viene usato). Era scritto a mano, lo stesso `<span>` identico,
@@ -3431,46 +3381,14 @@ export default function Serenity() {
             mancante torna automaticamente uguale ovunque, perché non c'è più una copia da
             dimenticare. */}
         {(() => {
-          {/* ⚠️ Segnalato di nuovo: « quando un ciclo è aperto le scritte siano più grandi...
-              DEVONO ESSERE BEN VISIBILI ». Il badge (nome del metodo) sale da `--s-fs-sm` a
-              `--s-fs-base`; l'ITEM — il testo che l'auditor legge e rilegge per tutto il ciclo
-              — sale da `--s-fs-base` a `--s-fs-lg`; la pista (`CycleSteps`) da `scala={1.5}` a
-              `scala={2}` (18px il testo, 30px i cerchi — era già un prop opzionale apposta per
-              questo, v. la sua nota in `tokens.css`/qui accanto: App.tsx non la passa, resta
-              invariato). */}
-          const testataCiclo = (nome: string, colore: string | null) => (
-            <>
-              <span style={{
-                fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', fontWeight: 700, letterSpacing: '0.06em',
-                padding: '4px 12px', borderRadius: 999,
-                ...(colore
-                  ? { background: colore, color: 'var(--s-ground)' }
-                  : { border: '1px solid var(--s-ink-ghost)', color: 'var(--s-ink-soft)' }),
-              }}>
-                {nome}
-              </span>
-              <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-lg)', color: 'var(--s-ink)' }}>
-                {item || t('ser_item_placeholder')}
-              </span>
-              {/* ── LA PISTA — segnalato: « i cicli devono essere disposti esattamente come in
-                  equilibrium, stessi campi, stessa logica ». `components/CycleSteps.tsx`, lo
-                  STESSO componente che App.tsx monta (3 volte, una per metodo, identico a qui):
-                  legge `mode`/`faseCiclo`, già calcolati sopra, e ne ricava da sé quanti tempi
-                  ci sono e a quale si è (`engine/cycleSteps.ts`, provato da solo) — non li
-                  decide, li mostra. */}
-              {/* ⚠️ `width:'100%'`, non più `flexBasis:'100%'` — segnalato: « le scritte dei
-                  cicli devono stare al lato sinistro ». `.ser-comandi` era una riga
-                  ORIZZONTALE (`flexBasis` sull'asse principale, cioè la larghezza, per andare
-                  a capo dopo badge+item); ora è una colonna VERTICALE — lo stesso `flexBasis`
-                  vorrebbe dire "occupa tutta l'ALTEZZA disponibile", che avrebbe schiacciato o
-                  fatto traboccare il resto. `width` è la proprietà giusta sull'asse
-                  trasversale di una colonna: riempie la larghezza della barra (272px) senza
-                  toccare l'altezza. */}
-              <div style={{ width: '100%' }}>
-                <CycleSteps mode={mode} phase={faseCiclo} lang={lang} scala={2} />
-              </div>
-            </>
-          );
+          {/* ⚠️ Segnalato: « le indicazioni, e non solo gli step dei cicli, devono stare a
+              sinistra dell'ago — niente più dei cicli riprodotto in alto a sinistra ». Prima
+              qui viveva `testataCiclo` (badge+item+`CycleSteps` orizzontale, IDENTICI nei tre
+              blocchi) — ora TUTTO quel contenuto vive SOLO in `PistaCiclo` (badge → il nome
+              del metodo nella sua intestazione; item → passato come prop; la pista →
+              `stepsOf`/`currentStep`/`stepDone`, le stesse funzioni pure che leggeva
+              `CycleSteps`). Restano SOLO i bottoni veri (`pillBtn`, sotto) — quelli non sono
+              "riprodotti", sono l'UNICO posto dove esistono. */}
           const pillBtn = (colore: string, dimensione = 17): React.CSSProperties => ({
             cursor: 'pointer', borderRadius: 999, padding: '5px 14px', background: 'var(--s-disc)',
             fontFamily: 'var(--s-sans)', fontSize: dimensione, color: colore,
@@ -3491,7 +3409,6 @@ export default function Serenity() {
             `chiudiTone`/`resetTone`), stesso testo dei tre tempi. */}
         {aperta && toneAttivo && (
           <>
-            {testataCiclo('TONE', null)}
             {faseCiclo === 'tone.say_item' && (
               <>
                 <span className="ser-pulse" style={{
@@ -3549,14 +3466,6 @@ export default function Serenity() {
                 {LC('altra resistenza', 'autre résistance', 'another resistance', 'otra resistencia', 'annat motstånd')}
               </button>
             )}
-            {/* « Cosa devo fare » — SULLA STESSA RIGA del bottone della tappa attiva appena
-                sopra (v. la nota su `SuggerimentoCiclo`), non più in fondo a tutto dopo ANNULLA. */}
-            {/* ⚠️ Segnalato: « senza strumenti, le scritte dei cicli devono farsi al posto
-                dell'arco, come in EQUILIBRIUM ». Qui nella barra comandi, `SuggerimentoCiclo`
-                resta SOLO con uno strumento presente — senza, la STESSA informazione (stesso
-                `spiegazioneCiclo`) si sposta al centro, molto più grande, dove l'arco stava
-                (v. vicino a `<QuantumSphere>`): non una seconda copia, la sposta. */}
-            {!senzaMisura && <SuggerimentoCiclo {...spiegazioneCiclo} />}
             <button className="s-glass s-glass-btn" onClick={() => {
               if (tone.tonePhase === 'raise') tone.chiudiTone(false);
               tone.resetTone(); setToneAttivo(false);
@@ -3573,7 +3482,6 @@ export default function Serenity() {
             il valore in mezzo: segnalato in App.tsx stesso come l'errore da NON ripetere). */}
         {aperta && mirror.mirrorArmed && (
           <>
-            {testataCiclo('MIRROR', 'var(--s-reserve)')}
             {faseCiclo === 'mirror.say_item' && (
               <>
                 <span className="ser-pulse" style={{
@@ -3626,14 +3534,6 @@ export default function Serenity() {
                 {LC('ottenuto — valida', 'obtenu — valider', 'obtained — validate', 'obtenido — validar', 'uppnått — validera')}
               </button>
             )}
-            {/* « Cosa devo fare » — SULLA STESSA RIGA del bottone della tappa attiva appena
-                sopra (v. la nota su `SuggerimentoCiclo`), non più in fondo a tutto dopo ANNULLA. */}
-            {/* ⚠️ Segnalato: « senza strumenti, le scritte dei cicli devono farsi al posto
-                dell'arco, come in EQUILIBRIUM ». Qui nella barra comandi, `SuggerimentoCiclo`
-                resta SOLO con uno strumento presente — senza, la STESSA informazione (stesso
-                `spiegazioneCiclo`) si sposta al centro, molto più grande, dove l'arco stava
-                (v. vicino a `<QuantumSphere>`): non una seconda copia, la sposta. */}
-            {!senzaMisura && <SuggerimentoCiclo {...spiegazioneCiclo} />}
             <button className="s-glass s-glass-btn" onClick={() => mirror.stopMirror()} style={pillBtn('var(--s-ink-ghost)')}>
               {t('cancel')}
             </button>
@@ -3641,8 +3541,6 @@ export default function Serenity() {
         )}
         {aperta && cycles.cycleArmed && (
           <>
-            {testataCiclo(cycles.cycleKind === 'null' ? 'NULL' : 'CONTACT',
-              cycles.cycleKind === 'null' ? 'var(--s-alive)' : 'var(--s-still)')}
             {/* ── « DÌ L'ITEM… » — segnalato insieme: la logica di darlo a voce già esiste nel
                 motore (`cycleAwaitItemRef`), ma finché nessuno lo dice a schermo l'auditor non
                 sa che il ciclo sta ASPETTANDO, non è già a mock-up. Pulsa finché la voce (o la
@@ -3661,17 +3559,6 @@ export default function Serenity() {
                 </button>
               </>
             )}
-            {/* « Cosa devo fare » — SULLA STESSA RIGA del bottone della tappa attiva appena
-                sopra (v. la nota su `SuggerimentoCiclo`), non più in fondo a tutto dopo
-                `CycleStatusBar`. Nelle tappe senza un bottone proprio (« chiedi un mock-up »,
-                « la carica sale »...) resta comunque QUI, appena prima del contatore/ANNULLA/
-                valida — mai isolata in coda a tutto il resto. */}
-            {/* ⚠️ Segnalato: « senza strumenti, le scritte dei cicli devono farsi al posto
-                dell'arco, come in EQUILIBRIUM ». Qui nella barra comandi, `SuggerimentoCiclo`
-                resta SOLO con uno strumento presente — senza, la STESSA informazione (stesso
-                `spiegazioneCiclo`) si sposta al centro, molto più grande, dove l'arco stava
-                (v. vicino a `<QuantumSphere>`): non una seconda copia, la sposta. */}
-            {!senzaMisura && <SuggerimentoCiclo {...spiegazioneCiclo} />}
             {/* ── IL CONTATORE DEL CICLO IN CORSO — mancante ─────────────────────────────
                 In App.tsx un chip dice, per il SOLO metodo in corso (CONTACT con CONTACT,
                 NULL con NULL — « due contatori confondono », scelta utente), quanti cicli
@@ -4426,7 +4313,9 @@ export default function Serenity() {
             procedimentoAttivo
               ? <PistaProcedimento nome={procedimentoAttivo.nome} comandi={procedimentoAttivo.comandi}
                   onChiudi={() => setProcedimentoAttivo(null)} top={pistaTop} lang={lang} />
-              : <PistaCiclo mode={mode} phase={faseCiclo} lang={lang} top={pistaTop} />
+              : <PistaCiclo mode={mode} phase={faseCiclo} lang={lang} top={pistaTop}
+                  item={item} itemPlaceholder={t('ser_item_placeholder') as string}
+                  spiegazione={spiegazioneCiclo} />
           )}
           {/* ── SENZA STRUMENTI, LE SCRITTE PRENDONO IL POSTO DELL'ARCO — segnalato: « COME IN
               EQUILIBRIUM ». Stessa condizione di sopra (`senzaMisura && aperta`), stesso testo
