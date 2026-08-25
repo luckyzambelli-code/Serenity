@@ -113,7 +113,12 @@ export function ThetaReadyCheck({
     <div style={{ position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: LAYER.session,
                   width: 'min(420px, 34vw)', overflowY: 'auto',
                   // NIENTE velo sul resto: il quadrante deve restare visibile e leggibile.
-                  background: 'linear-gradient(100deg, rgba(2,6,23,0.97) 0%, rgba(2,6,23,0.93) 100%)',
+                  // ⚠️ `var(--tr-bg, ...)` — il fallback qui È il colore di sempre: senza
+                  // questo token (il caso di App.tsx, che non lo definisce) lo sfondo resta
+                  // ESATTAMENTE questo blu-nero, zero cambiamento. SERENITY lo punta al proprio
+                  // nero vero (v. `tokens.css`) — segnalato: « il fondo sembra nero, diverso
+                  // sia da DARK che LIGHT », due tinte di "nero" diverse affiancate.
+                  background: 'var(--tr-bg, linear-gradient(100deg, rgba(2,6,23,0.97) 0%, rgba(2,6,23,0.93) 100%))',
                   backdropFilter: 'blur(10px)',
                   borderRight: '1px solid rgba(245,158,11,0.3)',
                   boxShadow: '18px 0 50px rgba(0,0,0,0.5)',

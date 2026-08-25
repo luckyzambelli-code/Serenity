@@ -82,7 +82,7 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, SlidersHorizontal } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, SlidersHorizontal, Brain } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
@@ -458,6 +458,16 @@ export default function Serenity() {
    *  all'inizio, non che si guarda in seduta". Un solo interruttore qui, un solo pannello
    *  sotto con le stesse azioni di prima (nessuna tolta) — non più tutte in chiaro insieme. */
   const [assettoAperto, setAssettoAperto] = useState(false);
+  /** ── L'ASSISTENTE IA, DIETRO UN'ICONA — segnalato: « riduci la finestra di connessione a
+   *  GEMINI sotto forma di un'icona, che si apra quando schiacci, così recuperiamo spazio e
+   *  non disturbiamo l'auditor ». `AIAssistant` (condiviso con App.tsx) monta da sé una barra
+   *  COMPATTA sempre larga fino a 380px (icona+campo+bottone API+invio) — mai un'icona sola:
+   *  in App.tsx ha senso (un pannello fra tanti, la barra dei comandi è già larga); qui,
+   *  accanto a CONFIG/Guide, restava sempre a vista anche quando nessuno la sta usando. Non si
+   *  tocca il componente condiviso (monta ancora TALE E QUALE, stesso stato interno, stessa
+   *  chat) — solo SERENITY decide se montarlo AFFATTO: un'icona propria lo sostituisce quando
+   *  chiuso, lo rivela quando aperto. */
+  const [aiAperto, setAiAperto] = useState(false);
   /** Il « minimizza » di ciascuna camera — lo stesso `isVisible` di `CameraFeed.tsx`, un gesto
    *  in seduta, DIVERSO dallo spegnimento da CONFIG (`moduleVis`): qui lo stream resta vivo. */
   const [cam1Collassata, setCam1Collassata] = useState(false);
@@ -672,6 +682,20 @@ export default function Serenity() {
       pausaMotivoRef.current = null;
     }
   }, [pausata, aperta, muse.museConnection, meterC]);
+  /** ⚠️ BUG TROVATO — segnalato: « quando sei in session e disattivi il METER e/o il MUSE e
+   *  non hai più strumenti connessi, il bottone NO INSTRUMENT deve attivarsi, invece non lo
+   *  fa ». Vero — il verso "attivo UNO strumento → esco dal gruppo di controllo" esisteva già
+   *  (`onClick` della pillola, più giù), il verso OPPOSTO no: disconnettere l'ULTIMO strumento
+   *  rimasto lasciava `senzaStrumenti` fermo a `false`, senza che nulla lo rimettesse a posto —
+   *  un ago che smette di leggere senza che l'interfaccia lo dica. `disconnected` per il MUSE
+   *  (non `'searching'`: un tentativo in corso non è ancora un "niente", non deve attivare il
+   *  gruppo di controllo sotto i piedi di chi sta provando a riconnettersi). Solo `aperta`: fuori
+   *  seduta la scelta si fa nel pannello dedicato, non da un effetto silenzioso. */
+  useEffect(() => {
+    if (aperta && !senzaStrumenti && muse.museConnection === 'disconnected' && !meterC) {
+      setSenzaStrumenti(true);
+    }
+  }, [aperta, senzaStrumenti, muse.museConnection, meterC]);
   /** ── LA PAUSA CHE SCEGLIE L'AUDITOR — segnalata assente: App.tsx la offre sempre (barra
    *  laterale, Play/Pause/Square), qui c'era solo quella automatica. Stesso gesto di
    *  `handlePause`/`handleResume`: registra nel giornale, ferma/riprende l'orologio (via
@@ -2131,8 +2155,11 @@ export default function Serenity() {
           sequenza di App.tsx: prima le boîtes (`ThetaReadyCheck`, se il meter è collegato e non
           ancora fatto in questa apertura), poi il respiro del MUSE (`MetabolicCheck`, se il
           MUSE è collegato — a distanza si guarda il SUO MUSE, non uno locale che qui non
-          esiste). Nessuno dei due blocca per davvero: ANNULLA su entrambi apre la seduta lo
-          stesso — è consultivo, la decisione resta dell'auditor. */}
+          esiste).
+          ⚠️ I DUE NON SI COMPORTANO UGUALE — corretto un giro dopo aver scoperto il bug (v. la
+          nota su `onCancel` di `ThetaReadyCheck`, più giù): in App.tsx SOLO `MetabolicCheck`
+          apre la seduta anche da ANNULLA (è consultivo, la decisione resta dell'auditor);
+          `ThetaReadyCheck` (stretta/respiro del Meter) NO — ANNULLA lì chiude e basta. */}
       {metabolicOpen && (() => {
         const readinessMuseOk = avvio?.distanza ? remote.remoteMuseConnected : museOk;
         if (meterC && !thetaReadyDone) {
@@ -2170,7 +2197,14 @@ export default function Serenity() {
                 // Nessun MUSE da controllare dopo: si apre la seduta subito, come App.tsx.
                 if (!readinessMuseOk) { setMetabolicOpen(false); avviaSeduta(); }
               }}
-              onCancel={() => { setMetabolicOpen(false); avviaSeduta(); }}
+              // ⚠️ BUG TROVATO — segnalato: « se schiacci Cancel o Start Anyway fa partire la
+              // seduta comunque ». Verificato App.tsx (`onCancel={() => setMetabolicOpen(false)}`
+              // per QUESTO controllo, la stretta/il respiro del Meter): ANNULLA lì chiude e
+              // BASTA, non apre mai la seduta — la nota qui sopra (« nessuno dei due blocca per
+              // davvero ») descriveva `MetabolicCheck` più giù (che in App.tsx SÌ apre la seduta
+              // anche da ANNULLA — quello resta invariato), non `ThetaReadyCheck`: un'invenzione
+              // presa in prestito dal componente sbagliato. Corretto a chiudere soltanto. */}
+              onCancel={() => setMetabolicOpen(false)}
             />
             </div>
           );
@@ -2972,6 +3006,52 @@ export default function Serenity() {
         }}>
           <Settings size={32} strokeWidth={1.6} />
         </button>
+        {/* ── L'ASSISTENTE IA, DIETRO UN'ICONA — v. la nota su `aiAperto`, sopra. Segnalato di
+            nuovo: « porta l'icona dopo config e prima di guide » — qui, non più dopo Guide
+            (posizione di un giro precedente). Un'icona sola (`Brain`, la stessa che
+            `AIAssistant` usa per il proprio bottone interno — non un secondo linguaggio da
+            imparare), il componente condiviso si monta SOLO da aperto, dentro un popover come
+            quello dell'assetto poco più su — chiuso di default, non più sempre a vista. */}
+        {aperta && !modalitaCiclo && (
+          <div style={{ position: 'relative' }}>
+            <button className="s-glass s-glass-btn" onClick={() => setAiAperto(v => !v)}
+              title={LC('assistente IA (Gemini)', 'assistant IA (Gemini)', 'AI assistant (Gemini)',
+                'asistente IA (Gemini)', 'AI-assistent (Gemini)') as string} style={{
+              cursor: 'pointer', padding: 8, borderRadius: 999,
+              background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
+            }}>
+              <Brain size={32} strokeWidth={1.6} />
+            </button>
+            {aiAperto && (
+              <div className="s-glass s-glass-lift" style={{
+                position: 'absolute', top: '100%', left: 0, marginTop: 8, zIndex: 40,
+                borderRadius: 12, background: 'var(--s-disc)', padding: 8,
+              }}>
+                {/* ── STESSO COMPONENTE DI App.tsx, MONTATO TALE E QUALE (legge già
+                    `useUiStore` da sé, si adatta al tema di SERENITY senza bisogno di
+                    passarglielo): una chiave Gemini propria dell'auditor (mai inviata a
+                    SERENITY/EQUILIBRIUM), lo stesso contesto di seduta che App.tsx gli passa —
+                    nome/i, tempo, TA, carica, ultima reazione, le ultime righe del giornale.
+                    Nascosto in modalità ciclo (v. `modalitaCiclo` sopra) — non è uno strumento
+                    per la lettura in corso, e la sua barra di input competerebbe con lo spazio
+                    dedicato al campo item del ciclo. */}
+                <AIAssistant
+                  lang={lang as string}
+                  sessionContext={{
+                    pcName: avvio?.solo ? nomeAuditor : nomePreclear,
+                    auditorName: nomeAuditor,
+                    sessionTime: tempo,
+                    totalTa: meterC ? theta.totalTa : metricsStore.get().totalTa,
+                    qL: metricsStore.get().qL,
+                    eta: metricsStore.get().eta,
+                    needleReaction,
+                    recentLogs: journal.logs.slice(-15).map(l => ({ time: l.time, speaker: l.speaker ?? '', text: l.text })),
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        )}
         {/* ── LA GUIDA — segnalata assente nell'audit funzionale completo. `GuideModal` è
             autosufficiente (un iframe su `/guide/EQUILIBRIUM-manuale.html`, copiato a ogni
             build da `scripts/copy-guide.cjs`) — zero dipendenza dal motore, montata TALE E
@@ -2984,30 +3064,6 @@ export default function Serenity() {
           <HelpCircle size={32} strokeWidth={1.6} />
         </button>
         </>
-        )}
-        {/* ── L'ASSISTENTE IA, ORA QUI — segnalato: « la zona API mettila dopo l'icona GUIDE ».
-            Stesso componente di App.tsx, montato TALE E QUALE (legge già `useUiStore` da sé,
-            si adatta al tema di SERENITY senza bisogno di passarglielo): una chiave Gemini
-            propria dell'auditor (mai inviata a SERENITY/EQUILIBRIUM), lo stesso contesto di
-            seduta che App.tsx gli passa — nome/i, tempo, TA, carica, ultima reazione, le
-            ultime righe del giornale.
-            ⚠️ Nascosto in modalità ciclo (v. `modalitaCiclo`) — non è uno strumento per la
-            lettura in corso, e la sua barra di input competerebbe con lo spazio dedicato al
-            campo item del ciclo. */}
-        {aperta && !modalitaCiclo && (
-          <AIAssistant
-            lang={lang as string}
-            sessionContext={{
-              pcName: avvio?.solo ? nomeAuditor : nomePreclear,
-              auditorName: nomeAuditor,
-              sessionTime: tempo,
-              totalTa: meterC ? theta.totalTa : metricsStore.get().totalTa,
-              qL: metricsStore.get().qL,
-              eta: metricsStore.get().eta,
-              needleReaction,
-              recentLogs: journal.logs.slice(-15).map(l => ({ time: l.time, speaker: l.speaker ?? '', text: l.text })),
-            }}
-          />
         )}
         {/* ── LO SPAZIO VUOTO, ORA IN FONDO — segnalato: « les boutons de haut doivent être
             justifiés à gauche à côté du numéro de build ». Lo spazio elastico (`flex:1`) stava

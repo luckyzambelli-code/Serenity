@@ -162,6 +162,21 @@
      l'ago o la videocamera: uno strumento resta uno strumento a prescindere dal tema
      dell'app attorno), solo piatto. */
   --sm-panel-shadow: 0 16px 34px rgba(38, 40, 48, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+
+  /* ── IL FONDO DI `components/ThetaReadyCheck.tsx` — segnalato: « il fondo del test
+     squeeze/breath sembra nero, diverso sia da DARK che LIGHT ». Il pannello (un cassetto
+     laterale, NON un velo — il suo stesso commento dice « il quadrante deve restare visibile
+     e leggibile », pensato per lasciarsi vedere accanto al resto) porta uno sfondo fisso
+     `rgba(2,6,23,0.97)` — un blu-nero, non il nero NEUTRO di SERENITY (`--s-ground` scuro,
+     `#17181a`): due tinte di "nero" diverse affiancate si notano. `var(--tr-bg, quel-blu-di-
+     sempre)` nel componente: il fallback resta ESATTO per EQUILIBRIUM (che non definisce
+     questo token, zero cambiamento là); qui sotto SERENITY lo punta al proprio nero vero.
+     ⚠️ Resta scuro in ENTRAMBI i temi di SERENITY, non solo nello scuro: i testi interni del
+     pannello sono chiari e fissi (pensati per leggersi su fondo scuro) — cambiarlo a chiaro
+     in tema LIGHT senza riscrivere anche loro li renderebbe illeggibili. Stessa scelta già
+     presa per `HealthPanel` qui sopra: « le sue zone interne restano il proprio schermo
+     scuro, per scelta... uno strumento resta uno strumento a prescindere dal tema ». */
+  --tr-bg: #17181a;
   /* ── IL QUINTO/SESTO TOKEN, PER `components/AIAssistant.tsx` — montato TALE E QUALE per
      l'assistente IA: legge `TOKEN.warn`/`.warnBg`/`.warnEdge` (il banner « configura la
      chiave API ») e `TOKEN.sep` (i separatori). Derivati da `--s-reserve`, lo stesso segnale

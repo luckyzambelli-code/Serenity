@@ -3384,6 +3384,60 @@ consolidamento delle letture.
 
 ---
 
+## Cinquantasettesimo giro (25/08/2026) — il fondo del test squeeze/breath, ANNULLA che non annullava più, NO INSTRUMENT che si riattiva da solo, l'assistente IA dietro un'icona
+
+**Il fondo del test squeeze/breath, non più un nero a parte** — segnalato: « il fondo sembra
+essere nero, diverso sia da DARK che LIGHT ». `ThetaReadyCheck.tsx` (condiviso con
+EQUILIBRIUM) porta un `background` fisso `rgba(2,6,23,0.97)` — un blu-nero, diverso dal nero
+NEUTRO di SERENITY (`--s-ground` scuro, `#17181a`). Il pannello è un cassetto laterale, non un
+velo (il suo stesso commento: « il quadrante deve restare visibile e leggibile ») — pensato
+per convivere con lo sfondo attorno, non per essere un'interruzione a sé come Guide/Crediti.
+`var(--tr-bg, quel-blu-di-sempre)` nel componente condiviso: il fallback resta ESATTO per
+App.tsx (zero cambiamento, non definisce mai questo token); SERENITY lo punta al proprio nero
+vero in `tokens.css`. Resta scuro in ENTRAMBI i temi di SERENITY (non diventa bianco in
+LIGHT): i testi interni sono chiari e fissi, cambiare solo il fondo li renderebbe illeggibili
+— la stessa scelta già presa per `HealthPanel` (« le sue zone interne restano il proprio
+schermo scuro, per scelta »).
+
+**ANNULLA che apriva la seduta lo stesso** — segnalato: « se schiacci Cancel o Start Anyway fa
+partire la seduta comunque ». Verificato App.tsx: per QUESTO controllo (stretta/respiro del
+Meter) `onCancel={() => setMetabolicOpen(false)}` — chiude e basta, non apre mai la seduta. Il
+commento in SERENITY (« nessuno dei due blocca per davvero... è consultivo ») descriveva
+`MetabolicCheck` (il respiro del MUSE, dove App.tsx SÌ apre la seduta anche da ANNULLA — quello
+resta) — un'invenzione presa in prestito dal componente sbagliato. Corretto a chiudere soltanto.
+
+**NO INSTRUMENT che si riattiva da solo** — segnalato: « quando sei in seduta e disattivi il
+METER e/o il MUSE e non hai più strumenti connessi, il bottone NO INSTRUMENT deve attivarsi,
+invece non lo fa ». Il verso "attivo UNO strumento → esco dal gruppo di controllo" esisteva
+già; il verso opposto no. Un nuovo effetto: a seduta aperta, se `senzaStrumenti` è ancora
+falso e MUSE è per davvero `disconnected` (non `'searching'` — un tentativo in corso non è un
+niente) e il Meter non è connesso, si attiva da sé. Verificato dal vivo: MUSE scelto
+all'apertura, connessione fallita nel sandbox (nessun hardware) → il pallino di "SANS
+INSTRUMENTS" diventa verde da solo.
+
+**L'assistente IA, dietro un'icona** — segnalato: « riduci la finestra di connessione a GEMINI
+sotto forma di un'icona, che si apra quando schiacci, così recuperiamo spazio e non
+disturbiamo l'auditor. Porta l'icona dopo config e prima di guide ». `AIAssistant`
+(condiviso) monta da sé una barra sempre larga fino a 380px — mai un'icona sola. Non toccato
+il componente: SERENITY decide solo SE montarlo, dietro un'icona propria (`Brain`, la stessa
+che il componente usa per il suo bottone interno) con un popover, spostata fra CONFIG e Guide
+(era dopo Guide, un giro fa — riposizionata su richiesta esplicita). Verificato dal vivo:
+l'ordine nell'intestazione è CONFIG → assistente IA → Guide, la barra compatta non è più
+sempre a vista, si apre e si chiude col click sull'icona.
+
+**⚠️ Limite di verifica**: i primi due punti (il fondo di `ThetaReadyCheck`, ANNULLA)
+riguardano il test squeeze/breath del Theta-Meter — raggiungibile solo con un Meter fisico
+connesso, assente in questo ambiente. Verificati per lettura/confronto diretto col codice di
+App.tsx, non end-to-end dal vivo.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo per NO INSTRUMENT e l'icona IA (profilo TEST, 1400×900).
+
+`git status`: `docs/serenity-refonte.md`, `src/components/ThetaReadyCheck.tsx`,
+`src/serenity/Serenity.tsx`, `src/serenity/tokens.css`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
