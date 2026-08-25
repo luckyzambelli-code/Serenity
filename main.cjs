@@ -117,8 +117,15 @@ ipcMain.handle('corpus-folder', () => CORPUS_DIR);
 // COMANDI/Procedimenti ». La cartella non esisteva — la si crea qui, sotto HOME, accanto a
 // CORPUS_DIR (stesso principio: un posto che si apre in Finder, si copia, si scrive a mano,
 // non nascosto dentro `userData`). Un file .txt per procedimento — il nome del file (senza
-// estensione) è il titolo mostrato nell'app; dentro, un comando per riga. Righe vuote e
-// righe che iniziano con # (note dell'auditor, non comandi) non contano.
+// estensione) è il titolo mostrato nell'app.
+//
+// ── IL FORMATO, RIVISTO — segnalato: « a) domande numerate in sequenza; b) commenti per
+// aiutare l'auditor, SOTTO la domanda, prima della prossima, SENZA numero — vanno mostrati
+// insieme alla domanda, anche su più righe ». Prima ogni riga con `#` veniva SCARTATA (letta
+// come nota "solo per chi scrive il file", mai mostrata); ora resta, ma non conta come
+// comando a sé: si aggancia al comando appena prima. Una riga SENZA `#` è un nuovo comando
+// (prende il numero successivo); una riga CON `#` è una nota di quel comando (il testo dopo
+// il cancelletto, senza numero); una riga vuota è solo un separatore, non chiude il gruppo.
 const PROCEDIMENTI_DIR = path.join(os.homedir(), 'EQUILIBRIUM', 'COMANDI', 'Procedimenti');
 ipcMain.handle('procedimenti-list', () => {
   try {
@@ -128,7 +135,19 @@ ipcMain.handle('procedimenti-list', () => {
       .sort()
       .map(f => {
         const testo = fs.readFileSync(path.join(PROCEDIMENTI_DIR, f), 'utf8');
-        const comandi = testo.split('\n').map(r => r.trim()).filter(r => r && !r.startsWith('#'));
+        const righe = testo.split('\n').map(r => r.trim());
+        const comandi = [];
+        for (const riga of righe) {
+          if (!riga) continue;                       // riga vuota: separatore, non conta
+          if (riga.startsWith('#')) {
+            const nota = riga.slice(1).trim();
+            // Una nota prima di qualunque comando non ha a cosa agganciarsi: si scarta —
+            // non un errore, solo niente da mostrare.
+            if (nota && comandi.length) comandi[comandi.length - 1].note.push(nota);
+            continue;
+          }
+          comandi.push({ testo: riga, note: [] });
+        }
         return { nome: f.replace(/\.txt$/i, ''), comandi };
       })
       .filter(p => p.comandi.length > 0);   // un file vuoto non è un procedimento da mostrare

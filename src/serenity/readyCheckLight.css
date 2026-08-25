@@ -52,11 +52,28 @@
  * @see docs/serenity-refonte.md
  */
 
+/* ── ⚠️ BUG TROVATO — segnalato di nuovo: « in LIGHT non si vedono le scritte del READY FOR
+   SESSION ». Il colpevole non era un colore dimenticato: era la TECNICA stessa, mai
+   verificata sul DOM vero. Il browser NORMALIZZA una `rgba(a,b,c,d)` scritta senza spazi in
+   una `rgba(a, b, c, d)` CON UNO SPAZIO dopo ogni virgola quando la assegna a una proprietà
+   DIRETTA (`color: 'rgba(240,246,255,0.95)'` → l'attributo `style` sul DOM diventa
+   `color: rgba(240, 246, 255, 0.95);`) — verificato in console:
+   `el.style.color='rgba(240,246,255,0.95)'; el.getAttribute('style')` → CON gli spazi. I
+   selettori qui sotto erano scritti SENZA spazio (`[style*="rgba(240,246,255"]`): non hanno
+   MAI fatto match, su NESSUNA proprietà diretta, da quando questo file esiste — tre giri di
+   "corretto di nuovo" hanno ritoccato i VALORI di sostituzione senza mai scoprire che i
+   selettori non si agganciavano affatto. La sola eccezione è una `rgba` dentro il FALLBACK di
+   un `var(--tr-bg, rgba(2,6,23,...))`: quel testo il browser lo conserva PARI PARI, senza
+   spazi, perché non lo riconosce come colore da normalizzare (è dentro `var()`, un token
+   opaco) — per questo la riga sotto elenca ENTRAMBE le forme per ogni famiglia: qualunque
+   proprietà la usi, diretta o dentro un `var()`, uno dei due selettori aggancia. */
+
 /* ── IL VELO A TUTTO SCHERMO DI `MetabolicCheck` ───────────────────────────────────────────
    Segnalato: « Ouvrir la séance resta in BLACK ». Questo è il vero colpevole — v. la nota
    sopra: un pannello piccolo su un velo grande legge come "schermo nero" anche col pannello
    già corretto. Stessa espressione già usata da `scegliStrumento` in `Serenity.tsx`. */
-:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(0,0,0,0.8)"] {
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(0,0,0,0.8)"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(0, 0, 0, 0.8)"] {
   background: color-mix(in srgb, var(--s-ground) 80%, transparent) !important;
 }
 
@@ -66,11 +83,13 @@
    colore A SÉ, diverso dal `--s-ground` perlato di tutta SERENITY. Ora lo stesso fondo VERO
    della pagina, e un bordo neutro (`--s-zone-border`, lo stesso delle altre zone) al posto
    del ciano inventato. */
-:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(2,6,23"] {
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(2,6,23"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(2, 6, 23"] {
   background: var(--s-ground) !important;
   border-right-color: var(--s-zone-border) !important;
 }
-:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(40,40,46"] {
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(40,40,46"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(40, 40, 46"] {
   background: var(--s-ground) !important;
   border-color: var(--s-zone-border) !important;
 }
@@ -80,19 +99,25 @@
    pieno. Famiglia più trasparente (corpo del testo, etichette secondarie) → inchiostro attenuato,
    ma sempre leggibile — mai lo stesso quasi-bianco lasciato su un fondo ora chiaro. */
 :root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(240,246,255"],
-:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(230,236,245"] {
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(240, 246, 255"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(230,236,245"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(230, 236, 245"] {
   color: #0f172a !important;
 }
 :root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(226,238,255"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(226, 238, 255"],
 :root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(220,228,240"],
-:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(200,214,234"] {
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(220, 228, 240"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(200,214,234"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(200, 214, 234"] {
   color: #475569 !important;
 }
 
 /* ── I BORDI DI VETRO, RITINTI ANZICHÉ SPARITI ─────────────────────────────────────────────
    `rgba(255,255,255,·)` come bordo. Un bordo bianco su vetro chiaro sarebbe invisibile quanto
    il testo quasi-bianco; qui basta ritingerlo. */
-:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255,255,255"] {
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255,255,255"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255, 255, 255"] {
   border-color: var(--s-zone-border) !important;
 }
 
@@ -111,8 +136,12 @@
    principale (che usa `0.14` nel SUO bordo, escluso apposta). Stesso inchiostro-carta delle
    altre superfici "leggermente sollevate" di SERENITY, `--s-disc-sunk`. */
 :root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255,255,255,0.04)"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255, 255, 255, 0.04)"],
 :root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255,255,255,0.05)"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255, 255, 255, 0.05)"],
 :root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255,255,255,0.06)"],
-:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255,255,255,0.08)"] {
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255, 255, 255, 0.06)"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255,255,255,0.08)"],
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255, 255, 255, 0.08)"] {
   background: var(--s-disc-sunk) !important;
 }

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
+import type { ComandoProcedimento } from '../lib/procedimenti';
 
 /**
  * PistaProcedimento — I COMANDI DI UN PROCEDIMENTO, NELLO STESSO SPAZIO DI `PistaCiclo`.
@@ -22,33 +23,73 @@ import { X } from 'lucide-react';
  * solo (« a volte il clic naviga per davvero, a volte no ») sarebbe stata la fonte di errori
  * silenziosi che la nota di `PistaCiclo` mette in guardia — due sorgenti diverse, due
  * componenti diversi, nessuna condizione a runtime da sbagliare.
+ *
+ * ── NUMERO SUL COMANDO, MAI SULLA NOTA — segnalato: « a) domande numerate in sequenza; b)
+ * commenti per aiutare l'auditor, sotto la domanda, prima della prossima, SENZA numero,
+ * mostrati insieme alla domanda, anche su più righe ». `comandi[i].testo` prende il numero
+ * `i+1`; `comandi[i].note` (0+ righe, già raggruppate da `main.cjs`) restano sotto, più
+ * piccole e senza cerchio — leggibili solo quando il loro comando è a fuoco (altrimenti
+ * affollerebbero la lista quando è già tutta smorzata).
+ *
+ * ── SCORRIMENTO A ROTELLINA E FRECCE — segnalato: « si deve poter scorrere fra i comandi con
+ * il mouse, le frecce ». `onWheel` sul contenitore avanza/arretra il fuoco di un comando per
+ * "tacca" di rotellina (throttle con un piccolo cooldown, altrimenti un trackpad manda decine
+ * di eventi per un solo gesto e la pista salterebbe più comandi alla volta); `onKeyDown` con
+ * `tabIndex` fa lo stesso con ↑/↓ e ←/→. Il clic diretto su un comando resta il modo primario:
+ * questi sono scorciatoie in più, non lo sostituiscono.
  */
 export function PistaProcedimento({ nome, comandi, onChiudi }: {
   nome: string;
-  comandi: string[];
+  comandi: ComandoProcedimento[];
   onChiudi: () => void;
 }) {
   const [fuoco, setFuoco] = useState(0);
+  const [ultimoScroll, setUltimoScroll] = useState(0);
+  const contenitoreRef = useRef<HTMLDivElement>(null);
+  // Le frecce servono a un elemento col FOCUS vero — senza mettercelo da soli al montaggio,
+  // l'auditor dovrebbe cliccare la pista una volta prima che ↑/↓ facciano qualcosa.
+  useEffect(() => { contenitoreRef.current?.focus(); }, []);
   if (!comandi.length) return null;
 
+  const vaia = (delta: number) => {
+    setFuoco(f => Math.max(0, Math.min(comandi.length - 1, f + delta)));
+  };
+
   return (
-    <div style={{
-      // Stessa geometria di `PistaCiclo` — stesso slot, stessa sovrapposizione sull'arco,
-      // verificata sullo stesso DOM (bordo sinistro vero dell'arco a x=320 relativo a
-      // `<section>`).
-      position: 'absolute', left: 300, top: '50%', transform: 'translateY(-50%)',
-      width: 260, display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-      gap: 14, pointerEvents: 'none', zIndex: 5,
-    }}>
+    <div
+      ref={contenitoreRef}
+      tabIndex={0}
+      onKeyDown={e => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); vaia(1); }
+        else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); vaia(-1); }
+      }}
+      onWheel={e => {
+        // Cooldown breve: un trackpad manda molti eventi per un solo gesto di scorrimento —
+        // senza freno la pista salterebbe più di un comando a ogni "tacca".
+        const ora = Date.now();
+        if (ora - ultimoScroll < 220) return;
+        if (Math.abs(e.deltaY) < 4) return;
+        setUltimoScroll(ora);
+        vaia(e.deltaY > 0 ? 1 : -1);
+      }}
+      style={{
+        // Stessa geometria di `PistaCiclo` — stesso slot, stessa sovrapposizione sull'arco,
+        // verificata sullo stesso DOM (bordo sinistro vero dell'arco a x=320 relativo a
+        // `<section>`).
+        position: 'absolute', left: 300, top: '50%', transform: 'translateY(-50%)',
+        width: 280, maxHeight: '82%', overflowY: 'auto',
+        display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+        gap: 12, pointerEvents: 'auto', zIndex: 5, outline: 'none',
+      }}>
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'auto',
+        display: 'flex', alignItems: 'center', gap: 8, position: 'sticky', top: 0,
         padding: '3px 4px 3px 10px', borderRadius: 999,
-        background: 'color-mix(in srgb, var(--s-ground) 42%, transparent)',
+        background: 'color-mix(in srgb, var(--s-ground) 68%, transparent)',
       }}>
         <span style={{
           fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
           letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--s-ink-faint)',
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 190,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 210,
         }}>
           {nome}
         </span>
@@ -70,9 +111,9 @@ export function PistaProcedimento({ nome, comandi, onChiudi }: {
         return (
           <button key={i} type="button" onClick={() => setFuoco(i)}
             style={{
-              display: 'flex', alignItems: 'center', gap: 10, border: 'none',
-              cursor: 'pointer', padding: '3px 10px', borderRadius: 999, textAlign: 'left',
-              pointerEvents: 'auto', opacity: opacita,
+              display: 'flex', alignItems: 'flex-start', gap: 10, border: 'none',
+              cursor: 'pointer', padding: '3px 10px', borderRadius: 14, textAlign: 'left',
+              opacity: opacita, width: '100%', boxSizing: 'border-box',
               transition: 'opacity 0.25s ease, font-size 0.25s ease, background 0.25s ease',
               // Stessa taratura di `PistaCiclo`: solo il comando a fuoco porta un fondo, per
               // non impilare più riquadri semitrasparenti sopra l'ago.
@@ -80,17 +121,34 @@ export function PistaProcedimento({ nome, comandi, onChiudi }: {
             }}>
             <span aria-hidden style={{
               width: inFuoco ? 26 : 18, height: inFuoco ? 26 : 18, borderRadius: '50%', flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2,
               fontFamily: 'var(--s-sans)', fontSize: inFuoco ? 12 : 9, fontWeight: 800, lineHeight: 1,
               color: colore, background: 'transparent', border: `1px solid ${colore}`,
             }}>
               {i + 1}
             </span>
-            <span style={{
-              fontFamily: 'var(--s-serif)', fontSize: fs, fontWeight: inFuoco ? 700 : 500,
-              color: colore, lineHeight: 1.25,
-            }}>
-              {c}
+            <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+              <span style={{
+                fontFamily: 'var(--s-serif)', fontSize: fs, fontWeight: inFuoco ? 700 : 500,
+                color: colore, lineHeight: 1.25,
+              }}>
+                {c.testo}
+              </span>
+              {/* Le note: SENZA numero, sotto il comando, leggibili solo quando è lui il
+                  fuoco — altrimenti affollerebbero una pista già smorzata di testo che
+                  nessuno sta leggendo in quel momento. */}
+              {inFuoco && c.note.length > 0 && (
+                <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {c.note.map((n, ni) => (
+                    <span key={ni} style={{
+                      fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', fontStyle: 'italic',
+                      color: 'var(--s-ink-faint)', lineHeight: 1.35,
+                    }}>
+                      {n}
+                    </span>
+                  ))}
+                </span>
+              )}
             </span>
           </button>
         );

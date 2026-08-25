@@ -9,6 +9,7 @@ import { saveProcessusFile, deleteProcessusFile } from '../lib/storage';
 import { useUiStore } from '../store/uiStore';
 import { useI18n } from '../i18n';
 import { pick5 } from '../i18n5';
+import type { Procedimento } from '../lib/procedimenti';
 
 export interface ProcessusEntry {
   name: string;
@@ -38,8 +39,8 @@ interface ProcessusModalProps {
    *  loro (App.tsx/EQUILIBRIUM non le passa) questo componente resta TALE E QUALE a prima,
    *  nessuna sezione nuova nel suo schermo. Con `procedimenti` presente (anche vuoto),
    *  compare la riga PROCEDIMENTI sopra la griglia dei PDF. */
-  procedimenti?: { nome: string; comandi: string[] }[];
-  onSelectProcedimento?: (p: { nome: string; comandi: string[] }) => void;
+  procedimenti?: Procedimento[];
+  onSelectProcedimento?: (p: Procedimento) => void;
   onApriCartellaProcedimenti?: () => void;
 }
 

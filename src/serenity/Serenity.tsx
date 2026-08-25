@@ -3879,7 +3879,17 @@ export default function Serenity() {
           };
           const lblMuse = museOk ? (RLBL[needleReactionKey] || '') : '';
           const lblMeter = meterC ? (RLBL[thetaReactionKey] || '') : '';
-          const BIANCO = 'rgba(255,255,255,0.92)', BIANCO_A = 'rgba(255,255,255,0.35)';
+          {/* ⚠️ BUG TROVATO — segnalato: « le reazioni del MUSE non si leggono in LIGHT ».
+              Portato da App.tsx « TALE E QUALE » un giro fa, comprese le sigle — ma NON il
+              colore: App.tsx lo scrive sopra un quadrante SEMPRE scuro (una costante di
+              EQUILIBRIUM), e un bianco fisso lì ha sempre contrasto. Qui l'arco cambia fondo
+              con `isLightTheme` (« il principio dimensionale »: EQUILIBRIUM detta struttura,
+              non colore) — lo stesso bianco fisso, in tema chiaro, finiva su un fondo perla:
+              invisibile. `AMBRA` (il Meter) resta la stessa in entrambi i temi — un ambra
+              saturo si legge su chiaro e su scuro, la STESSA ragione per cui questa tavolozza
+              lo tiene "fuori dai tre segnali tenui" (v. la nota in cima al file). */}
+          const BIANCO = isLightTheme ? 'var(--s-ink)' : 'rgba(255,255,255,0.92)';
+          const BIANCO_A = isLightTheme ? 'rgba(15,23,42,0.18)' : 'rgba(255,255,255,0.35)';
           const AMBRA = '#f59e0b', AMBRA_A = 'rgba(245,158,11,0.45)';
           const riga = (sigla: string, testo: string, col: string, alone: string) => (
             <span key={sigla} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8, lineHeight: 1.1 }}>

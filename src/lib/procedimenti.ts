@@ -16,12 +16,23 @@
  * ── FUORI DA ELECTRON NON C'È NULLA, E NON È UN ERRORE ──────────────────────────────────────
  * In un browser di anteprima non c'è filesystem: la lista torna vuota e il bottone "apri
  * cartella" non fa nulla — stesso principio di `corpusAvailable()`.
+ *
+ * ── COMANDI NUMERATI, NOTE SOTTO SENZA NUMERO — segnalato: « a) domande numerate in
+ * sequenza; b) commenti per aiutare l'auditor, sotto la domanda, senza numero, anche su più
+ * righe ». Una riga del file È un comando; una riga che inizia con `#` è una nota del
+ * comando appena prima (`main.cjs` fa l'aggancio, qui si legge già raggruppato).
  */
 
-/** Un procedimento: titolo (dal nome del file) e i suoi comandi, uno per riga. */
+/** Un comando del procedimento: il testo (numerato in sequenza) e le sue note (senza numero, 0+ righe). */
+export interface ComandoProcedimento {
+  testo: string;
+  note: string[];
+}
+
+/** Un procedimento: titolo (dal nome del file) e i suoi comandi. */
 export interface Procedimento {
   nome: string;
-  comandi: string[];
+  comandi: ComandoProcedimento[];
 }
 
 interface ElectronProcedimentiApi {

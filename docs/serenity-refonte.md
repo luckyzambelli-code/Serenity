@@ -3610,6 +3610,90 @@ non genera errori fuori da Electron, nessun errore nuovo in console.
 
 ---
 
+## Sessantunesimo giro (25/08/2026) — due bug in LIGHT (uno vero, uno di tecnica), note nei procedimenti, scorrimento a rotellina/frecce
+
+**Segnalato**: « in LIGHT non si vedono le scritte del READY FOR SESSION »; « le reazioni del
+MUSE non si leggono in LIGHT »; sul formato PROCEDIMENTI, in francese: domande numerate in
+sequenza, commenti sotto la domanda senza numero (anche su più righe), scorrimento a
+rotellina/frecce fra i comandi.
+
+**Le reazioni del MUSE, bianche fisse — bug vero, in `Serenity.tsx`.** La scritta di reazione
+(FALL/SF/LONG FALL…) sopra l'arco era stata portata da App.tsx un giro fa, « TALE E QUALE »,
+sigle comprese — ma non il colore: `const BIANCO = 'rgba(255,255,255,0.92)'`, FISSO, mai
+condizionato da `isLightTheme`. In App.tsx questo non è un bug: quell'area è SEMPRE scura, una
+costante di EQUILIBRIUM. In SERENITY l'arco cambia fondo col tema (« il principio dimensionale »
+— EQUILIBRIUM detta struttura, non colore): lo stesso bianco fisso, in tema chiaro, finiva su un
+fondo perla. Ora `BIANCO = isLightTheme ? 'var(--s-ink)' : 'rgba(255,255,255,0.92)'` —
+`AMBRA` (il Meter) resta invariata, è già un colore saturo leggibile su entrambi i fondi.
+
+**« READY FOR SESSION » — non un colore dimenticato: la TECNICA di `readyCheckLight.css` non
+aveva MAI funzionato.** Tre giri di "corretto di nuovo" avevano ritoccato i valori di
+sostituzione senza scoprire che i selettori non si agganciavano affatto. Verificato in console:
+```js
+el.style.color = 'rgba(240,246,255,0.95)'; el.getAttribute('style')
+// → "color: rgba(240, 246, 255, 0.95);"  — UNO SPAZIO dopo ogni virgola
+```
+Il browser NORMALIZZA una `rgba(a,b,c,d)` assegnata a una proprietà DIRETTA, aggiungendo uno
+spazio dopo ogni virgola nell'attributo `style` serializzato — i selettori del foglio erano
+scritti SENZA quello spazio (`[style*="rgba(240,246,255"]`): non hanno mai fatto match, su
+NESSUNA proprietà diretta, da quando il file esiste. La sola eccezione è una `rgba` dentro il
+FALLBACK di un `var(--tr-bg, rgba(2,6,23,...))`: quel testo il browser lo conserva pari pari,
+senza spazi (non lo riconosce come colore da normalizzare, è un token opaco dentro `var()`) —
+per questo il pannello di `ThetaReadyCheck` (background dentro un `var()`) si ritingeva DAVVERO
+mentre il suo stesso titolo (`color` diretto) restava bianco: fondo forzato chiaro + testo
+rimasto bianco fisso = invisibile, esattamente « READY FOR SESSION » sparito. Corretto
+aggiungendo per OGNI famiglia di colore ENTRAMBE le forme (con e senza spazio) come selettori
+alternativi — funziona qualunque sia la proprietà, diretta o dentro un `var()`. Verificato non
+sul DOM vero (serve un Meter connesso, non riproducibile nel browser di anteprima) ma con un
+elemento sintetico nella stessa pagina, stessa tecnica, `data-tema='chiaro'` e
+`.ser-ready-wrap` veri: `getComputedStyle(title).color` → `rgb(15, 23, 42)` (l'inchiostro
+scuro atteso, non più bianco).
+
+**Le note nei procedimenti — segnalato in francese, formato rivisto.** Prima ogni riga con `#`
+veniva SCARTATA (letta come "nota per chi scrive il file", mai mostrata). Ora si aggancia al
+comando appena prima invece di sparire: una riga SENZA `#` è un nuovo comando (prende il
+numero successivo in sequenza); una riga CON `#` è una nota di quel comando (il testo dopo il
+cancelletto, SENZA numero, può ripetersi su più righe); una riga vuota è solo un separatore.
+`main.cjs` fa l'aggancio in lettura (`ComandoProcedimento = {testo, note: string[]}`,
+`lib/procedimenti.ts`); `PistaProcedimento.tsx` mostra le note sotto il comando, in corsivo,
+SOLO quando quel comando è a fuoco (altrimenti affollerebbero una pista già smorzata).
+
+**Scorrimento a rotellina e frecce, in `PistaProcedimento.tsx`.** `onWheel` sul contenitore
+avanza/arretra il fuoco di un comando per "tacca" (cooldown di 220ms — un trackpad manda
+decine di eventi per un solo gesto, senza freno la pista salterebbe più comandi insieme);
+`onKeyDown` con `tabIndex` + autofocus al montaggio fa lo stesso con ↑/↓ e ←/→. Il clic diretto
+su un comando resta il modo primario — queste sono scorciatoie in più.
+
+**Perché SOLO `PistaProcedimento`, non anche `PistaCiclo`.** I comandi di un procedimento sono
+testo puro, senza stato d'audit da proteggere: scorrere/cliccare liberamente è la loro
+funzione. I tempi del CICLO invece sono legati al motore vero — permettere lo stesso
+scorrimento libero lì avrebbe fatto sembrare che rotellina/frecce potessero "avanzare" un
+ciclo reale, che è esattamente quel che la nota di `PistaCiclo` (giro scorso) vieta.
+
+**Non affrontato in questo giro, segnalato genuina ambiguità**: « le scritte dei cicli devono
+essere tutte al lato sinistro, sotto il TA, tutte quelle in alto ». Lo spazio a sinistra è già
+conteso da tre elementi con vincoli propri — la barra laterale APRI/PAUSA/CONTACT/NULL/MIRROR/
+TONE (`position:absolute, left:20, width:272`, il suo `top` calcolato dinamicamente
+dall'altezza di `.ser-comandi` — misura che uno spostamento di `.ser-comandi` stessa
+romperebbe), la lettura TA (dentro `<section>`, `top:14, left:16`) e `PistaCiclo`/
+`PistaProcedimento` (appena fatti, `left:300`, sovrapposti all'arco). Spostare l'intera barra
+comandi (`.ser-comandi`: campo item, i quattro blocchi per metodo, `SuggerimentoCiclo`, i
+bottoni di avanzamento) in quello stesso spazio senza poterne verificare dal vivo la resa in
+OGNI modalità (serve hardware connesso per MUSE/Meter, TONE, MIRROR) rischia di sovrapporre
+elementi già esistenti invece di limitarsi a spostarne uno — richiede una decisione sul layout
+che non è sicuro indovinare alla cieca. Chiesto all'utente come vuole risolvere la
+sovrapposizione prima di implementare.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `vitest run`
+639/639, `node -c main.cjs` pulito, verificato dal vivo (elemento sintetico per il fix LIGHT,
+console pulita per il resto — nessun errore nuovo).
+
+`git status`: `docs/serenity-refonte.md`, `main.cjs`, `src/serenity/Serenity.tsx`,
+`src/serenity/readyCheckLight.css`, `src/serenity/PistaProcedimento.tsx`,
+`src/lib/procedimenti.ts`, `src/components/ProcessusModal.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
