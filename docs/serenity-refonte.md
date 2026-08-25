@@ -4005,6 +4005,35 @@ ciclo davvero armato resta da confermare nell'app pacchettizzata.
 
 ---
 
+## Sessantanovesimo giro (25/08/2026) — « dì l'item… »/« l'ho detta » spostati a sinistra, per tutti i cicli
+
+**Segnalato**: « voglio che anche SAY THE ITEM... il bottone THE ITEM HAS BEEN SAID ecc. siano
+a sinistra con i comandi, e questo per tutti i cicli ».
+
+L'ultimo pezzo di UI dei cicli rimasto nella barra comandi in alto (deciso di lasciarlo lì il
+giro scorso, letto come « bottone vero », non « riprodotto ») — tre copie quasi identiche
+(TONE diceva "la resistenza", MIRROR/CONTACT/NULL "l'item"), tutte condizionate su
+`faseCiclo === '*.say_item'` e tutte che chiamavano lo stesso `dichiaraItemDetto`. Tolte le tre
+copie dalla barra; un blocco solo dentro `PistaCiclo` (che riceve già `phase`, quindi calcola
+da sé `diItem = phase === 'tone.say_item' || 'mirror.say_item' || 'contact.say_item' ||
+'null.say_item'`, nessuna logica nuova) — mostrato subito sotto l'item, sopra la pista dei
+tempi. `onDichiaraDetto`, nuova prop, resta l'UNICA vera azione (chiama `dichiaraItemDetto`, il
+motore, invariato) — testo che pulsa, taglia, posizione sono solo resa, la distinzione
+TONE/altri-metodi (resistenza/item) fatta con `mode === 'tone'`, che `PistaCiclo` ha già.
+
+Rimosso anche `titoloDichiaraDetto` da `Serenity.tsx` (restava senza più nessun punto che lo
+leggesse) — la stessa traduzione ora vive dentro `PistaCiclo`, dove serve.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo), `vitest run`
+639/639, dal vivo (nessun errore nuovo in console, sessione stabile). Stesso limite dei giri
+precedenti: la resa con `phase` davvero a `*.say_item` (che richiede un ciclo armato con
+l'item in attesa) non è stata vista con contenuto reale nel browser di anteprima — da
+confermare nell'app pacchettizzata.
+
+`git status`: `docs/serenity-refonte.md`, `src/serenity/PistaCiclo.tsx`, `src/serenity/Serenity.tsx`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

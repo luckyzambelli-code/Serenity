@@ -3393,12 +3393,6 @@ export default function Serenity() {
             cursor: 'pointer', borderRadius: 999, padding: '5px 14px', background: 'var(--s-disc)',
             fontFamily: 'var(--s-sans)', fontSize: dimensione, color: colore,
           });
-          const titoloDichiaraDetto = LC(
-            'la trascrizione non c\'è o non si sente — dichiara che è stato detto',
-            'pas de transcription ou pas de son — déclare que c\'est dit',
-            'no transcript or no sound — declare it has been said',
-            'sin transcripción o sin sonido — declara que se ha dicho',
-            'ingen transkription eller inget ljud — förklara att det har sagts') as string;
           return (
         <>
         {/* ── TONE SCALE, ATTIVO — locate → raise → done, si ripete per ogni resistenza ────────
@@ -3409,20 +3403,6 @@ export default function Serenity() {
             `chiudiTone`/`resetTone`), stesso testo dei tre tempi. */}
         {aperta && toneAttivo && (
           <>
-            {faseCiclo === 'tone.say_item' && (
-              <>
-                <span className="ser-pulse" style={{
-                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.04em',
-                  color: 'var(--s-reserve)',
-                }}>
-                  {LC('dì la resistenza…', 'dis la résistance…', 'say the resistance…', 'di la resistencia…', 'säg motståndet…')}
-                </span>
-                <button className="s-glass s-glass-btn" onClick={dichiaraItemDetto} title={titoloDichiaraDetto}
-                  style={pillBtn('var(--s-ink-faint)', 15)}>
-                  {LC('l\'ho detta', 'je l\'ai dite', 'said it', 'la he dicho', 'sa det')}
-                </button>
-              </>
-            )}
             {tone.tonePhase === 'locate' && (
               <>
                 {!tone.toneHasMeter && (
@@ -3482,20 +3462,6 @@ export default function Serenity() {
             il valore in mezzo: segnalato in App.tsx stesso come l'errore da NON ripetere). */}
         {aperta && mirror.mirrorArmed && (
           <>
-            {faseCiclo === 'mirror.say_item' && (
-              <>
-                <span className="ser-pulse" style={{
-                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.04em',
-                  color: 'var(--s-reserve)',
-                }}>
-                  {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
-                </span>
-                <button className="s-glass s-glass-btn" onClick={dichiaraItemDetto} title={titoloDichiaraDetto}
-                  style={pillBtn('var(--s-ink-faint)', 15)}>
-                  {LC('l\'item è stato detto', 'l\'item a été dit', 'the item has been said', 'el ítem ha sido dicho', 'item har sagts')}
-                </button>
-              </>
-            )}
             {!mirror.mirrorDisp.locked ? (
               <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                 <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)', marginRight: 6 }}>
@@ -3541,24 +3507,6 @@ export default function Serenity() {
         )}
         {aperta && cycles.cycleArmed && (
           <>
-            {/* ── « DÌ L'ITEM… » — segnalato insieme: la logica di darlo a voce già esiste nel
-                motore (`cycleAwaitItemRef`), ma finché nessuno lo dice a schermo l'auditor non
-                sa che il ciclo sta ASPETTANDO, non è già a mock-up. Pulsa finché la voce (o la
-                dichiarazione a mano qui accanto) non arriva. */}
-            {(faseCiclo === 'contact.say_item' || faseCiclo === 'null.say_item') && (
-              <>
-                <span className="ser-pulse" style={{
-                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.04em',
-                  color: 'var(--s-reserve)',
-                }}>
-                  {LC('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
-                </span>
-                <button className="s-glass s-glass-btn" onClick={dichiaraItemDetto} title={titoloDichiaraDetto}
-                  style={pillBtn('var(--s-ink-faint)', 15)}>
-                  {LC('l\'item è stato detto', 'l\'item a été dit', 'the item has been said', 'el ítem ha sido dicho', 'item har sagts')}
-                </button>
-              </>
-            )}
             {/* ── IL CONTATORE DEL CICLO IN CORSO — mancante ─────────────────────────────
                 In App.tsx un chip dice, per il SOLO metodo in corso (CONTACT con CONTACT,
                 NULL con NULL — « due contatori confondono », scelta utente), quanti cicli
@@ -4315,7 +4263,7 @@ export default function Serenity() {
                   onChiudi={() => setProcedimentoAttivo(null)} top={pistaTop} lang={lang} />
               : <PistaCiclo mode={mode} phase={faseCiclo} lang={lang} top={pistaTop}
                   item={item} itemPlaceholder={t('ser_item_placeholder') as string}
-                  spiegazione={spiegazioneCiclo} />
+                  spiegazione={spiegazioneCiclo} onDichiaraDetto={dichiaraItemDetto} />
           )}
           {/* ── SENZA STRUMENTI, LE SCRITTE PRENDONO IL POSTO DELL'ARCO — segnalato: « COME IN
               EQUILIBRIUM ». Stessa condizione di sopra (`senzaMisura && aperta`), stesso testo

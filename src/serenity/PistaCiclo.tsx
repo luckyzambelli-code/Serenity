@@ -49,8 +49,16 @@ import { SuggerimentoCiclo } from './SuggerimentoCiclo';
  * tempo REALE (`spiegazione`, calcolata da `faseCiclo`), mai il `fuoco` manuale di preview —
  * coerente con la nota sopra: solo il gesto vero decide cosa dire adesso, mai il clic su un
  * tempo passato o futuro.
+ *
+ * ── « DÌ L'ITEM… » / « L'HO DETTA », ANCHE LORO QUI — segnalato: « SAY THE ITEM e il bottone
+ * THE ITEM HAS BEEN SAID devono stare a sinistra coi comandi, per tutti i cicli ». Prima
+ * vivevano nella barra comandi (tre copie quasi identiche — solo TONE diceva "la resistenza"
+ * al posto di "l'item"); qui è UN blocco solo, condizionato su `phase` (che questo componente
+ * riceve già): `*.say_item`, per qualunque metodo. `onDichiaraDetto` resta l'UNICA vera azione
+ * (chiama `dichiaraItemDetto`, il motore) — il resto (testo che pulsa, taglia, posizione) è
+ * solo resa.
  */
-export function PistaCiclo({ mode, phase, lang, top, item, itemPlaceholder, spiegazione }: {
+export function PistaCiclo({ mode, phase, lang, top, item, itemPlaceholder, spiegazione, onDichiaraDetto }: {
   mode: SessionMode;
   phase: SessionPhase;
   lang: string;
@@ -67,10 +75,17 @@ export function PistaCiclo({ mode, phase, lang, top, item, itemPlaceholder, spie
   /** Comando/come/avviso del tempo REALE in corso — lo stesso `spiegazioneCiclo` che la barra
    *  comandi passava a `SuggerimentoCiclo`, calcolato una sola volta in `Serenity.tsx`. */
   spiegazione: { titolo: string; comando?: string | null; come: string; avviso?: string | null; fatto?: boolean };
+  /** Dichiara l'item (o la resistenza, in TONE) detto — chiama `dichiaraItemDetto`, il motore,
+   *  invariato: qui solo la resa di « dì l'item… »/« l'ho detta ». */
+  onDichiaraDetto: () => void;
 }) {
   const L = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang, it, fr, en, es, sv);
   const steps = stepsOf(mode);
   const cur = currentStep(phase, mode);
+  // Stessa condizione dei tre punti di chiamata tolti dalla barra comandi: armato, ma l'item
+  // (la resistenza, in TONE) non è ancora stato dato a voce o dichiarato a mano.
+  const diItem = phase === 'tone.say_item' || phase === 'mirror.say_item'
+    || phase === 'contact.say_item' || phase === 'null.say_item';
 
   // Il fuoco manuale (clic su un tempo diverso da quello reale) si spegne da sé appena il ciclo
   // avanza davvero — mai restare a leggere un tempo vecchio mentre l'audit è già oltre.
@@ -191,6 +206,35 @@ export function PistaCiclo({ mode, phase, lang, top, item, itemPlaceholder, spie
       }}>
         {item || itemPlaceholder}
       </span>
+      {/* ── « DÌ L'ITEM… » / « L'HO DETTA » — segnalato: « devono stare a sinistra coi
+          comandi, per tutti i cicli ». TONE dice "la resistenza", gli altri tre "l'item" —
+          stessa distinzione che facevano le tre copie nella barra comandi. */}
+      {diItem && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 10px', pointerEvents: 'auto' }}>
+          <span className="ser-pulse" style={{
+            fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.04em',
+            color: 'var(--s-reserve)',
+          }}>
+            {mode === 'tone'
+              ? L('dì la resistenza…', 'dis la résistance…', 'say the resistance…', 'di la resistencia…', 'säg motståndet…')
+              : L('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
+          </span>
+          <button type="button" className="s-glass s-glass-btn" onClick={onDichiaraDetto}
+            title={L('la trascrizione non c\'è o non si sente — dichiara che è stato detto',
+              'pas de transcription ou pas de son — déclare que c\'est dit',
+              'no transcript or no sound — declare it has been said',
+              'sin transcripción o sin sonido — declara que se ha dicho',
+              'ingen transkription eller inget ljud — förklara att det har sagts') as string}
+            style={{
+              cursor: 'pointer', borderRadius: 999, padding: '5px 14px', background: 'var(--s-disc)',
+              fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-faint)', border: 'none',
+            }}>
+            {mode === 'tone'
+              ? L('l\'ho detta', 'je l\'ai dite', 'said it', 'la he dicho', 'sa det')
+              : L('l\'item è stato detto', 'l\'item a été dit', 'the item has been said', 'el ítem ha sido dicho', 'item har sagts')}
+          </button>
+        </div>
+      )}
       {steps.map((s, i) => {
         const distanza = Math.abs(i - principale);
         const inFuoco = i === principale;
