@@ -44,6 +44,8 @@ import { ClearDial } from '../components/ClearDial';
 import { CycleStatusBar } from '../components/CycleStatusBar';
 import { PistaCiclo } from './PistaCiclo';
 import { PistaProcedimento } from './PistaProcedimento';
+import { VistaSenzaAgo } from './VistaSenzaAgo';
+import { BottoneCiclico } from './BottoneCiclico';
 import { listaProcedimenti, apriCartellaProcedimenti, type Procedimento } from '../lib/procedimenti';
 import { ThetaReadyCheck } from '../components/ThetaReadyCheck';
 import { MetabolicCheck } from '../components/MetabolicCheck';
@@ -85,7 +87,7 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, SlidersHorizontal, Brain } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, SlidersHorizontal, Brain, Compass, Layers } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
@@ -329,11 +331,20 @@ export default function Serenity() {
    *  volta che PROCESSUS si apre — un file appena trascinato lì dentro compare senza dover
    *  riavviare l'app). `procedimentoAttivo`: quale, se uno, sta rimpiazzando la pista del
    *  ciclo nello spazio comandi in questo momento — `null` quando nessuno è stato scelto, o
-   *  dopo che l'auditor lo ha chiuso (v. `PistaProcedimento`, il suo bottone ✕). */
+   *  dopo che l'auditor lo ha chiuso (v. `PistaProcedimento`, il suo bottone ✕).
+   *  ⚠️ BUG TROVATO — segnalato: « il bottone COMMANDS non indica il numero di file presenti
+   *  se non lo apri prima ». Vero: il caricamento partiva SOLO `if (processusAperto)` — la
+   *  pastiglia del bottone (`procedimenti.length`) restava a 0 (quindi invisibile, v. la sua
+   *  guardia `> 0`) finché l'auditor non apriva il modale ALMENO una volta, anche se i file
+   *  erano già lì dall'inizio. Tolta la guardia: l'effetto gira anche al PRIMO render
+   *  (`processusAperto` è `false` allora, ma l'effetto scatta comunque sul mount), poi di
+   *  nuovo ogni volta che PROCESSUS si apre o si chiude — il ricaricamento "a caldo" di un
+   *  file appena trascinato nella cartella resta invariato, solo non più l'UNICA occasione
+   *  di caricare qualcosa. */
   const [procedimenti, setProcedimenti] = useState<Procedimento[]>([]);
   const [procedimentoAttivo, setProcedimentoAttivo] = useState<Procedimento | null>(null);
   useEffect(() => {
-    if (processusAperto) listaProcedimenti().then(setProcedimenti);
+    listaProcedimenti().then(setProcedimenti);
   }, [processusAperto]);
   useEffect(() => {
     (async () => {
@@ -1228,6 +1239,20 @@ export default function Serenity() {
     } catch { return 'theta'; }
   });
   useEffect(() => { try { localStorage.setItem('equilibrium_ago', agoScelto); } catch { /* noop */ } }, [agoScelto]);
+  /** ── LA VISTA SENZA AGO — chiesto direttamente: « una vista in più... con bottone slide per
+   *  scegliere, come per LIGHT DARK, in cui non mostri l'ago né l'arco, ma solo i colori di
+   *  CONTACT, DISSOLUTION, AS-IS e la velocità di liberazione ». SOLO SERENITY (App.tsx non ha
+   *  questa scelta) — persistita come il tema/la lingua (`localStorage`, la STESSA chiave di
+   *  cui `Serenity.tsx` è già proprietario, non condivisa con `equilibrium_ago`/il tema veri,
+   *  che restano dell'archivio unico: questa è una preferenza di RESA, non un dato clinico).
+   *  V. `VistaSenzaAgo.tsx` per il componente, e più giù (« L'ARCO DEI CICLI ») per dove
+   *  prende il posto di `QuantumSphere`+`ClearDial`. */
+  const [vistaSenzaAgo, setVistaSenzaAgo] = useState<boolean>(() => {
+    try { return localStorage.getItem('serenity_vista_senza_ago') === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('serenity_vista_senza_ago', vistaSenzaAgo ? '1' : '0'); } catch { /* noop */ }
+  }, [vistaSenzaAgo]);
   /** ── « DUE » — segnalato: « manca anche la vista in MUSE/METER di ENTRAMBI ». La terza
    *  voce del selettore di App.tsx (`reazioniViste`): l'ago resta quello del Meter (misurato,
    *  non ricostruito — `setAgoScelto('theta')` quando si sceglie DUE, stessa regola di
@@ -1265,9 +1290,23 @@ export default function Serenity() {
    *      davvero facendo il ciclo.
    * Fuori da questi due casi (nessun ciclo in corso, TONE spento) resta la regola precedente:
    * con un solo strumento vince quello che c'è, con entrambi vince la preferenza `agoScelto`.
-   */
+   *
+   * ⚠️ TERZO CASO, SEGNALATO DI SEGUITO: « quando si fa il test del MUSE resta selezionato il
+   * METER e non si vede cosa si fa col MUSE ». `MetabolicCheck` (il respiro guidato, v.
+   * `metabolicOpen` sopra) è ESPLICITAMENTE il test DEL MUSE — se in questa stessa seduta il
+   * METER è già stato provato prima (`ThetaReadyCheck`, la stretta con le lattine) e
+   * `agoScelto` è rimasto sul Meter (la preferenza persiste da una seduta all'altra), lo
+   * schermo del respiro mostrava l'ago SBAGLIATO: quello che reagisce a una stretta di
+   * lattine che nessuno sta facendo, non quello che il test sta davvero misurando. Stessa
+   * famiglia degli altri due casi (un contesto preciso impone il proprio strumento, la
+   * preferenza generale non conta più lì dentro) — durante `metabolicOpen`, l'ago è quello del
+   * MUSE, punto: non serve nemmeno `museOk` a guardia (se il MUSE non è ancora connesso,
+   * `MetabolicCheck` mostra la sua attesa, non il quadrante — mostrare qui l'EEG "spento"
+   * invece del Meter "acceso" da una prova precedente resta comunque la lettura onesta di cosa
+   * questo schermo sta chiedendo). */
   const cicloEegInCorso = cycles.cycleArmed || mirror.mirrorArmed;
   const agoEeg = toneAttivo ? false
+    : metabolicOpen ? true
     : cicloEegInCorso ? museOk
     : museOk && meterC ? agoScelto === 'eeg'
     : museOk;
@@ -2875,7 +2914,14 @@ export default function Serenity() {
                 ha più inchiostro per carattere di un sans-serif alla STESSA dimensione e
                 colore: più "pieno", quindi percepito più chiaro/acceso su un fondo scuro. Lo
                 stesso colore, nel font di tutto il resto, si legge già più discreto — la
-                doppia richiesta (uniformità + meno bianco) risolta da un solo cambio, non due. */}
+                doppia richiesta (uniformità + meno bianco) risolta da un solo cambio, non due.
+                ⚠️ SEGNALATO DI NUOVO: « la police... più in grigio per non disturbare la vista »
+                — il cambio di font da solo non bastava ancora: `--s-ink` (l'inchiostro PIENO,
+                pensato per titoli/etichette, non per un intero giornale da scorrere) restava
+                comunque il colore più acceso della scala. Sceso a `--s-ink-soft` — un gradino
+                più tenue, la stessa taratura di contrasto (v. `tokens.css`) usata altrove per
+                il testo CORRENTE (non un'invenzione qui), non `--s-ink-faint` (quello resta per
+                le righe SYS, già volutamente le più smorzate di tutte). */}
             <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
               {[...journal.logs]
                 .filter(l => !(avvio.solo && (l.speaker === 'Aud' || l.speaker === 'PC')))
@@ -2889,7 +2935,7 @@ export default function Serenity() {
                     <span style={{
                       color: log.type === 'retracted' ? 'var(--s-reserve)'
                         : log.type === 'meter' ? 'var(--s-reserve)'
-                        : log.speaker === 'SYS' ? 'var(--s-ink-faint)' : 'var(--s-ink)',
+                        : log.speaker === 'SYS' ? 'var(--s-ink-faint)' : 'var(--s-ink-soft)',
                       fontWeight: (log.type === 'highlight' || log.type === 'success') ? 700 : 400,
                     }}>
                       {log.speaker && log.speaker !== 'NEEDLE' && (
@@ -2962,6 +3008,21 @@ export default function Serenity() {
             alle quattro domande d'avvio. Stessi due selettori di `Avvio.tsx`, condivisi da
             `Impostazioni.tsx`: qui restano visibili per tutta la seduta, non solo prima. */}
         <SelettoreTema />
+        {/* ── LA VISTA SENZA AGO — chiesto: « bottone slide per scegliere, come per LIGHT DARK ».
+            STESSO componente di `SelettoreTema` qui accanto (`BottoneCiclico`, lo scivolo di
+            vetro), non un secondo stile inventato — solo due tappe diverse. `Compass` per la
+            vista con l'ago (la sua metafora naturale: un ago che punta), `Layers` per quella
+            senza (bande di colore impilate) — nessuna delle due già in uso altrove in questa
+            barra, per non confondersi con EP/COMMANDS/Processus. */}
+        <BottoneCiclico
+          opzioni={[
+            { k: 'ago' as const, label: LC('ago', 'aiguille', 'needle', 'aguja', 'nål') as string, icona: <Compass size={18} strokeWidth={1.8} aria-hidden="true" /> },
+            { k: 'zone' as const, label: LC('zone', 'zones', 'zones', 'zonas', 'zoner') as string, icona: <Layers size={18} strokeWidth={1.8} aria-hidden="true" /> },
+          ]}
+          selezionato={vistaSenzaAgo ? 'zone' : 'ago'}
+          onChange={k => setVistaSenzaAgo(k === 'zone')}
+          minLarghezza={80}
+        />
         <SelettoreLingua />
         {/* ── STORICO E PROCESSUS, DOPO IL BOTTONE LINGUA — segnalato: « les boutons History et
             Processus après le bouton langue ». Stavano subito dopo il numero di versione, PRIMA
@@ -4161,7 +4222,22 @@ export default function Serenity() {
               aperta senza strumenti, un blocco di testo grande (più giù) prende il suo posto.
               Solo `aperta`, non `!aperta`: PRIMA di aprire, l'arco resta — è lì che vive il
               bottone PLAY al centro (v. sotto), un disegno SERENITY che App.tsx non ha. */}
-          {!(senzaMisura && aperta) && (
+          {/* ── LA VISTA SENZA AGO — chiesto: « non mostri l'ago né l'arco, ma solo i colori di
+              CONTACT, DISSOLUTION, AS-IS e la velocità di liberazione ». Al posto di
+              `QuantumSphere` (l'ago vero) quando `vistaSenzaAgo` è scelto — v. la nota sul suo
+              stato, sopra, e `VistaSenzaAgo.tsx` per il componente. MIRROR e TONE non sono
+              toccati (le loro scale non sono "CONTACT/DISSOLUTION/AS-IS", v. la nota nel file
+              del componente): l'ago sparisce comunque, `MirrorDial`/`ToneDial` (più giù)
+              restano quel che sono, indipendenti da questa scelta. */}
+          {!(senzaMisura && aperta) && vistaSenzaAgo && !mirror.mirrorArmed && !toneAttivo && (
+            <VistaSenzaAgo
+              armed={cycles.cycleArmed}
+              cycleKind={cycles.cycleKind}
+              nullPhase={cycles.nullPhase}
+              isLightTheme={isLightTheme}
+            />
+          )}
+          {!(senzaMisura && aperta) && !(vistaSenzaAgo && !mirror.mirrorArmed && !toneAttivo) && (
           <QuantumSphere
             needleOffsetProp={agoEeg ? needleOffsetEeg : SET_OFFSET}
             /* ⚠️ BUG TROVATO — segnalato: « quand on choisit MUSE, apparaît toujours
@@ -4333,7 +4409,11 @@ export default function Serenity() {
                   />
                 </div>
               </>
-            ) : (
+            ) : vistaSenzaAgo ? null : (
+              // ⚠️ `ClearDial` (l'anello sottile concentrico all'ago) non ha più motivo di
+              // esistere in questa vista: `VistaSenzaAgo`, montata sopra al posto
+              // dell'ago, DISEGNA GIÀ le stesse tre zone — un secondo anello qui le
+              // ripeterebbe, sovrapposto a un ago che questa vista non mostra.
               <ClearDial
                 armed={cycles.cycleArmed}
                 asIsPending={cycles.asIsPending}

@@ -4670,6 +4670,120 @@ EQUILIBRIUM 2.0.220, SERENITY 3.0.114.
 
 ---
 
+## Ottantunesimo giro (26/08/2026) — la VISTA SENZA AGO; OUI/NON grigi con intestazione; MUSE visibile nel test del respiro; il bottone CHIUDI dei cicli tolto
+
+**Segnalato** (sei punti sullo stesso giro precedente, poi una richiesta a parte):
+
+1. « INDICATE and does not indicate sembra che sia indicate già valido. METTILI TUTTE E DUE
+   grigi e cambia colore quando è scelto »
+2. « Does not... non si vede è fuori campo. Scrivi Yes, Not e sopra in testa di colonna
+   INDICATE »
+3. « Quando si fa il test del MUSE resta selezionato il METER e non si vede cosa si fa col
+   MUSE »
+4. « Ma col MUSE il valore di MIRROR era calcolato automaticamente, si iscrive quando si è col
+   METER o senza strumenti »
+5. « Il bottone close dei cicli non mi sembra serva a qualcosa »
+6. « Il bottone COMMANDS non indica il numero di file presenti se non lo apri prima »
+
+poi, a parte: « devi mettere la police de caractère du journal più in grigio per non
+disturbare la vista » e infine la richiesta grande: una vista senza ago.
+
+**1/2) OUI/NON — grigi finché non scelti, corti, con intestazione.** Il giro precedente aveva
+allungato i due bottoni in "✓ indica"/"✗ non indica" (per spiegare cosa fossero) e colorato
+"indica" di verde — ma il verde PRIMA di cliccare lo faceva sembrare già scelto, e la frase
+intera non ci stava nello spazio stretto della colonna (« does not... fuori campo »). Corretto
+i DUE punti insieme: i bottoni tornano corti (`ri_yes`/`ri_no`), ENTRAMBI grigi (nessun colore
+finché la scelta non è fatta — il colore arriva SOLO nel bottone singolo che li sostituisce
+dopo, quello resta invariato), e un'intestazione "INDICATE" (`t('ri_indicates')`, riusata, non
+un'invenzione) compare UNA VOLTA SOLA sopra la lista, allineata a destra come i bottoni stessi
+(`justifyContent:'flex-end'`, lo stesso bordo — nessun calcolo di posizione, i due combaciano
+da soli).
+
+**3) L'ago del MUSE, visibile durante il SUO test.** `agoEeg` (la variabile che decide quale
+ago disegnare) aveva due casi speciali già scritti (TONE impone il Meter, un ciclo EEG in
+corso impone il MUSE) ma non un terzo: durante `MetabolicCheck` (il respiro guidato) restava
+sulla preferenza generale (`agoScelto`) — se il METER era già stato provato prima in questa
+seduta e la preferenza era rimasta lì, lo schermo del respiro mostrava l'ago SBAGLIATO.
+Aggiunto `metabolicOpen ? true : ...`: durante questo schermo l'ago è sempre quello del MUSE.
+
+**4) MIRROR — chiarito, non un bug.** Verificato `useChargeEngine.ts`: `trackMirrorRef` è
+alimentato SOLO dal worker EEG (dentro il suo gestore di messaggi, mai dal Theta-Meter) —
+quando il MUSE è connesso, il motore blocca automaticamente il valore 1–10 al primo vero
+contatto (`MirrorCycle.update`, il "read si è retourné"); coi soli METER o senza strumenti
+`trackMirror` non viene mai chiamato, e restano gli UNICI dieci bottoni manuali già presenti.
+Il meccanismo esiste già e funziona come descritto — nessuna modifica: l'item scrivibile
+aggiunto un giro fa (il testo dell'item, per tutti i metodi) è una variabile SEPARATA dal
+valore 1–10 di MIRROR, non lo tocca.
+
+**5) Il bottone CHIUDI dei cicli, tolto.** Aveva senso quando `PistaCiclo` viveva SOVRAPPOSTA
+all'arco (il file lo ricorda ancora nel titolo) — chiuderla rivelava l'ago che copriva. Da un
+giro all'altro la pista è diventata un FRATELLO dell'arco nel flusso normale: l'ago non è mai
+stato coperto da lei da allora, e chiudere non rivela più nulla — un gesto rimasto senza il
+suo effetto originale. Tolti lo stato `chiuso`, il bottone, la pillola collassata: la pista
+resta sempre visibile.
+
+**6) La pastiglia di COMMANDS, caricata subito.** `listaProcedimenti()` partiva SOLO
+`if (processusAperto)` — la lista (e quindi la pastiglia, `procedimenti.length`) restava a 0
+finché l'auditor non apriva il modale almeno una volta. Tolta la guardia: carica anche al
+primo render, e ancora ogni volta che PROCESSUS si apre o si chiude (il ricaricamento "a
+caldo" di un file appena aggiunto resta invariato).
+
+**Il Journal, ancora più grigio.** Il giro precedente aveva cambiato solo il FONT
+(monospazio → sans-serif). Non bastava: `--s-ink` (l'inchiostro pieno) restava il colore più
+acceso della scala. Sceso a `--s-ink-soft` — un gradino più tenue, lo stesso già usato altrove
+per il testo corrente, non `--s-ink-faint` (quello resta riservato alle righe SYS).
+
+**La VISTA SENZA AGO.** Chiesta per intero: « una vista in più dell'arco con l'ago (bottone
+slide per scegliere, come per LIGHT DARK) in cui non mostri l'ago né l'arco, ma solo i colori
+di CONTACT, DISSOLUTION, AS-IS e la velocità di liberazione, elegante, futurista ma efficiente
+e molto comprensibile, mantenendo tutte le scritte ed i cicli presenti quando c'è l'arco ».
+
+Nuovo file `VistaSenzaAgo.tsx` — una SECONDA resa dello STESSO dato di `ClearDial` (lo stesso
+`chargePhase`/`cycleKind`/`nullPhase` da `metricsStore`, la STESSA fonte dei colori
+`lib/chargeState.ts` — « una funzione → un colore, usato dalla sfera E dall'ago, così le due
+viste non si contraddicono mai »: questa è una terza vista, stessa regola, mai un colore
+inventato). `ClearDial` è un anello SOTTILE (`CYCLE_R=461`, spessore 10 — un filo pensato per
+girare CONCENTRICO all'ago vero); qui l'ago non c'è, la stessa informazione diventa la
+protagonista — banda molto più spessa (30), raggio più grande (610), un centro libero per la
+fase in parole grandi + la velocità invece che vuoto. **La velocità, visibile e non solo
+scritta**: `velRatio` (`metricsStore`, la STESSA fonte di `LetturaVelocita` già esistente in
+`Serenity.tsx`) governa il RITMO dell'impulso della zona attiva — più veloce il rilascio, più
+veloce l'impulso, leggibile a colpo d'occhio prima ancora di leggere il numero (che resta
+comunque scritto, per chi vuole la precisione).
+
+Un bottone slide nell'intestazione (`BottoneCiclico`, lo STESSO componente di
+`SelettoreTema` — nessun secondo stile inventato), persistito in `localStorage` come il tema.
+Al posto di `QuantumSphere`+`ClearDial` quando scelta — MIRROR e TONE non toccati (le loro
+scale, 1–10 e −40…+60, non sono "CONTACT/DISSOLUTION/AS-IS": inventare qui una loro
+traduzione non era stato chiesto) — l'ago sparisce comunque anche lì, `MirrorDial`/`ToneDial`
+restano quel che sono, indipendenti dalla scelta.
+
+⚠️ **BUG TROVATO verificando dal vivo, nello stesso giro**: a riposo (nessun ciclo armato) in
+tema CHIARO le tre zone erano quasi invisibili — la STESSA famiglia di bug già trovata altrove
+in questa sessione (`readyCheckLight.css`, `PannelloMeter.tsx`): un'opacità frazionaria sfuma
+verso lo SFONDO SOTTOSTANTE, non verso un grigio fisso. Qui la cosa raddoppiava: l'intero
+gruppo scendeva a 0.45 quando non armato, E ogni segmento (nessuno "attivo" a riposo) scendeva
+GIÀ a 0.22 per conto suo — 0.45×0.22 ≈ 0.10, un decimo di opacità, praticamente sparito su
+sfondo chiaro. Tolta la doppia attenuazione (ridondante) e tarata una soglia più alta per il
+tema chiaro (0.4 invece di 0.22) — verificato dal vivo, DOPO la correzione, in entrambi i temi.
+
+**Verificato in browser** (`senzaMisura` forzato temporaneamente, tolto subito dopo): vista
+zone a riposo (dark E light, dopo la correzione del contrasto), ciclo CONTACT armato (banda
+rossa attiva col glow, "en attente" finché il contatto vero non arriva — stessa logica di
+`ClearDial`, non un errore), ciclo NULL armato (NULL/RISE/EQUILIBRIUM coi loro colori),
+MIRROR armato (nessun ago, `MirrorDial` intatto). OUI/NON: scritto un item in R&I, bottoni
+"Sì"/"No" grigi con l'intestazione "INDICATE" sopra. Il bottone COMMANDS mostra il numero
+prima di essere mai aperto (verificato leggendo l'effetto, non ancora un vero file di
+procedimento presente in questo ambiente per un conteggio non-zero dal vivo).
+
+`tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo, nessun errore), `vitest run`
+639/639. `git status`: `src/serenity/Serenity.tsx`, `src/serenity/PistaCiclo.tsx`,
+`src/serenity/ZonaAssessment.tsx`, `src/serenity/VistaSenzaAgo.tsx` (nuovo).
+
+EQUILIBRIUM 2.0.221, SERENITY 3.0.115.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

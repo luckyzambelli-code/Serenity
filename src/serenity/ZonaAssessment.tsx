@@ -258,6 +258,22 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
             </div>
           )}
 
+          {/* ── « INDICATE », UNA SOLA VOLTA IN CIMA — segnalato: due correzioni sullo stesso
+              punto. Prima: « OUI/NON deve avere l'indicazione di cosa è » — risposto scrivendo
+              la frase intera su OGNI bottone (`✓ indica`/`✗ non indica`), ma quella frase
+              ripetuta a ogni riga non ci stava nello spazio stretto di questa colonna: « does
+              not... non si vede, è fuori campo ». Ora l'etichetta vive UNA volta sola, come
+              intestazione di colonna — i bottoni tornano corti (`ri_yes`/`ri_no`, "Sì"/"No")
+              e ci stanno. Allineata con `justifyContent:'flex-end'`, lo STESSO bordo destro a
+              cui la riga dei bottoni si allinea (`justifyContent:'space-between'` sotto): non
+              serve calcolare una posizione, i due bordi combaciano da soli. */}
+          {onIndica && righe.some(a => a.reaction !== null) && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingRight: 2 }}>
+              <span style={{ fontSize: 'var(--s-fs-micro)', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
+                {t('ri_indicates')}
+              </span>
+            </div>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', minHeight: 0 }}>
             {righe.length === 0 ? (
               vista === 'assess' ? (
@@ -332,27 +348,31 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
                         indicare: niente ancora da confermare. */}
                     {onIndica && !inAttesa && (
                       it.indica === undefined ? (
-                        // ⚠️ SEGNALATO: « in assessment OUI/NON deve avere l'indicazione di
-                        // cosa è ». Erano `t('ri_yes')`/`t('ri_no')` nudi ("Sì"/"No", "Oui"/
-                        // "Non"…) — il significato ("indica al preclear?") viveva SOLO nel
-                        // `title`, un tooltip che si vede solo passandoci sopra col mouse, non
-                        // leggendo la riga. Stessa frase che lo stato GIÀ deciso mostra due
-                        // righe più giù (`✓ indica`/`✗ non indica`, v. sotto) — non un'aggiunta
-                        // scelta qui, il RIUSO di un testo che nel componente esisteva già.
+                        // ⚠️ SEGNALATO DI NUOVO — due correzioni sullo stesso punto. Prima:
+                        // « OUI/NON deve avere l'indicazione di cosa è » (risposto scrivendo la
+                        // frase intera su ogni bottone). Poi: « INDICATE sembra già scelto —
+                        // mettili tutti e due grigi e cambia colore quando è scelto » (il verde
+                        // su "indica" PRIMA di cliccare lo faceva sembrare già selezionato) e
+                        // « does not... non si vede, fuori campo — scrivi Sì/No e sopra
+                        // un'intestazione INDICATE » (la frase intera non ci stava nello
+                        // spazio stretto). Ora: `ri_yes`/`ri_no` corti (l'intestazione qui
+                        // sopra spiega cosa vogliono dire), ENTRAMBI grigi finché non scelti —
+                        // il colore arriva SOLO dopo, nel bottone singolo che li sostituisce
+                        // (sotto), mai prima.
                         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                           <button onClick={() => onIndica(it.id, true)} title={t('ri_indicates') as string} style={{
-                            border: '1px solid var(--s-still)', borderRadius: 999, padding: '2px 9px',
+                            border: '1px solid var(--s-ink-ghost)', borderRadius: 999, padding: '2px 9px',
                             background: 'transparent', cursor: 'pointer', fontSize: 'var(--s-fs-micro)',
-                            color: 'var(--s-still)', fontFamily: 'var(--s-sans)',
+                            color: 'var(--s-ink-faint)', fontFamily: 'var(--s-sans)',
                           }}>
-                            ✓ {t('ri_indicates')}
+                            {t('ri_yes')}
                           </button>
                           <button onClick={() => onIndica(it.id, false)} title={t('ri_does_not_indicate') as string} style={{
                             border: '1px solid var(--s-ink-ghost)', borderRadius: 999, padding: '2px 9px',
                             background: 'transparent', cursor: 'pointer', fontSize: 'var(--s-fs-micro)',
                             color: 'var(--s-ink-faint)', fontFamily: 'var(--s-sans)',
                           }}>
-                            ✗ {t('ri_does_not_indicate')}
+                            {t('ri_no')}
                           </button>
                         </span>
                       ) : (

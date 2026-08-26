@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Check, X, ChevronRight } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { stepsOf, currentStep, stepDone, type StepId } from '../engine/cycleSteps';
 import type { SessionMode } from '../engine/sessionMode';
 import type { SessionPhase } from '../engine/sessionPhase';
@@ -125,10 +125,6 @@ export function PistaCiclo({ mode, phase, lang, item, setItem, itemPlaceholder, 
   // avanza davvero — mai restare a leggere un tempo vecchio mentre l'audit è già oltre.
   const [fuoco, setFuoco] = useState<number | null>(null);
   useEffect(() => { setFuoco(null); }, [cur]);
-  // ⚠️ Segnalato: « bisogna poter chiudere i comandi ». Nessuno stato nuovo in `Serenity.tsx`:
-  // resta locale, come `fuoco` — chiusa mostra solo una piccola maniglia per riaprirla, non
-  // sparisce per sempre (l'auditor l'ha chiusa per un momento, non ha smesso di auditare).
-  const [chiuso, setChiuso] = useState(false);
 
   // Stessa guardia di `CycleSteps`: APERTO non ha sequenza, e fuori da un ciclo non c'è un
   // tempo — in nessuno dei due casi si disegna qualcosa che non direbbe nulla di vero.
@@ -151,29 +147,8 @@ export function PistaCiclo({ mode, phase, lang, item, setItem, itemPlaceholder, 
   };
   const titoloRileggi = L('fatto — clic per rileggerlo', 'fait — clic pour le relire',
     'done — click to reread it', 'hecho — clic para releerlo', 'klart — klicka för att läsa igen') as string;
-  const titoloApri = L('mostra i comandi del ciclo', 'afficher les commandes du cycle',
-    'show the cycle\'s commands', 'mostrar los comandos del ciclo', 'visa cykelns kommandon') as string;
-  const titoloChiudi = L('nascondi i comandi del ciclo', 'masquer les commandes du cycle',
-    'hide the cycle\'s commands', 'ocultar los comandos del ciclo', 'dölj cykelns kommandon') as string;
-  const etichettaChiudi = L('CHIUDI', 'FERMER', 'CLOSE', 'CERRAR', 'STÄNG') as string;
 
   const principale = fuoco ?? cur;
-
-  if (chiuso) {
-    return (
-      <button type="button" onClick={() => setChiuso(false)} title={titoloApri}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', flexShrink: 0,
-          border: '1px solid var(--s-ink-ghost)', borderRadius: 999, padding: '4px 8px 4px 6px',
-          background: 'color-mix(in srgb, var(--s-ground) 42%, transparent)',
-          fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
-          letterSpacing: '0.06em', color: 'var(--s-ink-faint)',
-        }}>
-        <ChevronRight size={12} strokeWidth={2.4} />
-        {ETICHETTA[steps[principale]]}
-      </button>
-    );
-  }
 
   return (
     <div style={{
@@ -195,11 +170,15 @@ export function PistaCiclo({ mode, phase, lang, item, setItem, itemPlaceholder, 
       alignItems: 'center', justifyContent: 'center',
       rowGap: 10, columnGap: 20,
     }}>
-      {/* ── L'INTESTAZIONE — segnalato: « i comandi dei cicli siano posizionati esattamente
-          come i comandi dei procedimenti ». Stessa pillola di `PistaProcedimento` (nome a
-          sinistra, chiusura a destra), non più un bottone isolato sopra la lista — e non più
-          `position:'sticky'` (serviva alla colonna con scorrimento verticale di prima; qui non
-          c'è più scorrimento da inseguire). */}
+      {/* ── L'INTESTAZIONE — solo il nome del metodo, non più un bottone di chiusura.
+          ⚠️ IL BOTTONE CHIUDI, TOLTO — segnalato: « il bottone close dei cicli non mi sembra
+          serva a qualcosa ». Aveva un senso quando questa pista viveva SOVRAPPOSTA all'arco
+          (il titolo del file lo ricorda ancora): chiuderla rivelava l'ago che copriva. Da
+          quando la pista è un FRATELLO dell'arco nel flusso normale (v. la nota grande in
+          cima al file, « sotto il perno, non più a sinistra ») l'ago non è mai stato coperto
+          da lei — chiuderla non rivela più nulla, un gesto rimasto senza il suo effetto
+          originale. Tolto lo stato `chiuso`, il bottone, la pillola collassata: la pista resta
+          sempre visibile, come il resto dei comandi sotto l'arco. */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
         padding: '3px 4px 3px 10px', borderRadius: 999,
@@ -213,23 +192,6 @@ export function PistaCiclo({ mode, phase, lang, item, setItem, itemPlaceholder, 
         }}>
           {TITOLO_METODO[mode]}
         </span>
-        {/* ── LA CHIUSURA — segnalato la prima volta: « bisogna poter chiudere i comandi »;
-            poi: « la chiusura non è evidente, metti più in rilievo »; poi ancora: « fai più
-            grande il bottone di chiusura ». Da un'icona nuda di 20px, a un bottone bordato ed
-            etichettato, a QUESTA taglia (icona 15px, testo `--s-fs-sm` invece di `-micro`,
-            padding più largo) — lo stesso trattamento, solo più grande in ogni sua parte. */}
-        <button type="button" onClick={() => setChiuso(true)} title={titoloChiudi}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
-            borderRadius: 999, padding: '6px 14px 6px 11px',
-            border: '1px solid var(--s-ink-ghost)',
-            background: 'color-mix(in srgb, var(--s-ground) 55%, transparent)',
-            fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', fontWeight: 700,
-            letterSpacing: '0.06em', color: 'var(--s-ink-soft)',
-          }}>
-          <X size={15} strokeWidth={2.6} />
-          {etichettaChiudi}
-        </button>
       </div>
       {/* ── L'ITEM — segnalato: « niente più dei cicli riprodotto in alto a sinistra ». Era in
           `testataCiclo`, nella barra comandi; stessa resa (`--s-serif`/`--s-fs-lg`), qui
