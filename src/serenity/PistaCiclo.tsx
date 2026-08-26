@@ -164,12 +164,16 @@ export function PistaCiclo({ mode, phase, lang, item, itemPlaceholder, spiegazio
       // più possibile le scritte su una riga » — v. la nota in cima al file. Nel FLUSSO
       // normale della colonna che impila il pannello dell'ago (`Serenity.tsx`, l'involucro
       // `flex:1 column, alignItems:center`) — quel `alignItems:'center'` la centra da solo,
-      // nessun `left`/`transform` da calcolare qui. `width` fino a 1400px — la larghezza VERA
-      // del quadrante (v. `Serenity.tsx`, il tetto di `aspectRatio`) — così i gruppi
-      // (intestazione, item, tempi, indicazioni, bottoni) hanno spazio per restare ciascuno su
-      // una riga sola, andando a capo fra un gruppo e l'altro (`flexWrap:'wrap'`) solo se lo
-      // spazio davvero non basta, mai a metà frase.
-      width: 'min(94%, 1400px)', maxWidth: '100%', flexShrink: 0,
+      // nessun `left`/`transform` da calcolare qui.
+      // ⚠️ `width` fino a 2200px, non più 1400 — segnalato di nuovo: « vedere bene in
+      // larghezza il tutto ». 1400 era già la larghezza VERA del quadrante nel giro
+      // precedente, ma il pannello stesso è stato alzato a 2200 nel frattempo (« aggrandisci
+      // al massimo delle possibilità », un giro di `Serenity.tsx`): questa fascia deve
+      // seguirlo, non restare più stretta di lui. I gruppi (intestazione, item, tempi,
+      // indicazioni, bottoni) hanno così ancora più spazio per restare ciascuno su una riga
+      // sola, andando a capo fra un gruppo e l'altro (`flexWrap:'wrap'`) solo se lo spazio
+      // davvero non basta, mai a metà frase.
+      width: 'min(96%, 2200px)', maxWidth: '100%', flexShrink: 0,
       display: 'flex', flexDirection: 'row', flexWrap: 'wrap',
       alignItems: 'center', justifyContent: 'center',
       rowGap: 10, columnGap: 20,

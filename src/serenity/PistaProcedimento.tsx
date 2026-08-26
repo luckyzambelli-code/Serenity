@@ -94,20 +94,19 @@ export function PistaProcedimento({ nome, comandi, onChiudi, lang }: {
         vaia(e.deltaY > 0 ? 1 : -1);
       }}
       style={{
-        // ⚠️ Segnalato: « i comandi e le indicazioni dei cicli, sotto il punto di ancoraggio
-        // dell'ago, in uno spazio che permetta il più possibile le scritte su una riga » —
-        // stessa geometria di `PistaCiclo` (v. la sua nota, e il bug lì trovato spostandola):
-        // nel flusso normale della colonna che impila il pannello dell'ago
-        // (`Serenity.tsx`, l'involucro `flex:1 column, alignItems:'center'`), non più
-        // `position:absolute` con un `top` calcolato a mano. `width` fino a 900 — più stretta
-        // del tetto di `PistaCiclo` (1400): resta una colonna con SCORRIMENTO verticale (i
-        // comandi di un procedimento possono essere molti, a differenza dei 2-4 tempi fissi di
-        // un ciclo), e una colonna troppo larga renderebbe il testo `--s-serif` disagevole da
-        // seguire riga per riga. `maxHeight` un tetto fisso, non più legato a un `top`
-        // assoluto: abbastanza per leggere diversi comandi senza che la lista da sola spinga
-        // il resto della pagina fuori vista.
-        width: 'min(70%, 900px)', maxWidth: '100%', flexShrink: 0,
-        maxHeight: 'min(50vh, 420px)', overflowY: 'auto',
+        // ⚠️ Segnalato DI NUOVO: « non uno spazio dedicato così poco alto da dover scroll —
+        // metti il tutto sotto il perno dell'ago al fine da vedere bene IN LARGHEZZA il
+        // tutto ». Il tetto precedente (`min(50vh,420px)`, con scorrimento) era esattamente
+        // quello: uno spazio basso che obbligava a scorrere per leggere le indicazioni.
+        // Corretto nella direzione chiesta — LARGHEZZA, non altezza: `width` allargata a
+        // 2200 (lo stesso tetto di `PistaCiclo`, il pannello del quadrante) così il testo
+        // `--s-serif` di ogni comando va a capo molto meno spesso, e serve MENO altezza in
+        // totale per lo stesso contenuto. Nessun `maxHeight`/`overflowY` più: il tutto sta
+        // nel flusso naturale della colonna, alla sua taglia vera — niente da scorrere per
+        // vederlo. Lo scorrimento a rotellina/frecce (`onWheel`/`onKeyDown`, sopra) resta:
+        // non serve più a raggiungere una riga tagliata via da un contenitore troppo basso,
+        // resta comunque comodo per saltare fra i comandi senza dover cliccare ciascuno.
+        width: 'min(96%, 2200px)', maxWidth: '100%', flexShrink: 0,
         display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
         gap: 12, pointerEvents: 'auto', outline: 'none',
       }}>

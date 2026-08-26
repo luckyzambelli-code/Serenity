@@ -2717,95 +2717,21 @@ export default function Serenity() {
           </div>
         )}
         </div>
-        {/* ── I CINQUE CERCHI, ORA IN RIGA — segnalato: « i bottoni dei cicli spostali a
-            sinistra e porta in alto la zona assessment, in modo da renderla visibile ». Erano
-            impilati in colonna, uno sotto l'altro (CONTACT/NULL/MIRROR/TONE/EP: cinque cerchi
-            da 54px + didascalia + margini ≈ 390px) SOPRA l'assessment — a quell'altezza,
-            sommata a CHIUDI/PAUSA, l'assessment cominciava troppo in basso per restare dentro
-            lo schermo. Qui una riga che va a capo da sé (`flexWrap`), larga quanto l'intero
-            contenitore (272px, la stessa di Assessment/Santé Système) invece della colonna
-            stretta di 148px di CHIUDI/PAUSA sopra: quattro cerchi entrano nella STESSA riga
-            (54×4 + 10×3 = 246 < 272), il quinto (EP) va a capo — due righe invece di cinque,
-            l'assessment risale di conseguenza. Stessa larghezza, stesso posto (« a sinistra »,
-            l'intero blocco resta ancorato al bordo sinistro di sempre) — solo più compatti. */}
-        {/* ⚠️ Segnalato: « isola la zona dei bottoni dei cicli, compreso EP, con una piccola
-            riga come quella del giornale ». Era una riga di cerchi a sé, senza un contenitore
-            proprio — la STESSA cornice sottile del Giornale/Assessment/Santé Système
-            (`--s-zone-bg`/`--s-zone-border`, v. il Giornale appena sotto), non un materiale
-            nuovo: un'altra zona della pagina, riconoscibile come tale.
-            `aperta &&`: senza, la cornice restava visibile VUOTA anche prima di aprire una
-            seduta (i cerchi dentro sono già tutti `aperta && ...`, il contenitore no) — un
-            riquadro con niente dentro si legge come un difetto, non come una zona in attesa. */}
+        {/* ── EP, LA SUA PICCOLA ZONA — segnalato: « i comandi e le indicazioni dei cicli
+            devono stare sotto il perno dell'ago, in larghezza »: CONTACT/NULL/MIRROR/TONE (e
+            il campo item che li precede) hanno lasciato questa barra laterale per la stessa
+            fascia larga di `PistaCiclo`, sotto il quadrante — v. la nota lì per il perché e
+            per dove sono ora. EP resta QUI: a differenza dei quattro metodi è visibile SEMPRE
+            a seduta aperta, non solo quando nessun ciclo è armato (si registra un EP in
+            qualunque momento) — non avrebbe senso spostarlo dentro-e-fuori dalla fascia dei
+            cicli insieme a loro. Stessa cornice sottile del Giornale/Assessment/Santé Système
+            (`--s-zone-bg`/`--s-zone-border`): un cerchio solo, non più una riga di cinque. */}
         {aperta && (
         <div style={{
           display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 10, width: 272,
           background: 'var(--s-zone-bg)', border: '1px solid var(--s-zone-border)',
           borderRadius: 18, padding: 10,
         }}>
-        {/* ── I QUATTRO METODI, ORA TONDI — segnalato: « les boutons CYCLES à gauche doivent
-            être moins présents, mais plus différenciés les uns des autres... des boutons ronds,
-            exactement dans le style de l'image de référence, cohérents avec tous les autres
-            boutons de l'interface ». Erano quattro pillole rettangolari col nome per intero —
-            gli UNICI bottoni rettangolari della barra laterale, in un'app dove ogni altro
-            bottone (CONFIG, Guide, History, Processus, le camere) è un CERCHIO. Ora cerchi
-            anche loro, stessa famiglia visiva di `CameraCerchio` (icona dentro, didascalia
-            sotto sempre leggibile — mai solo un `title`): MENO presenti (54px invece di una
-            pillola larga quanto la colonna), ma PIÙ differenziati — un'icona propria per
-            ciascuno (non solo un colore di bordo), scelta per la GESTO del metodo.
-            ⚠️ Segnalato di nuovo: « l'icone Contact deve essere più esplicito, come qualcosa
-            che è mirato » e « l'icone NULL deve essere più esplicito ». `Hand` (un contatto
-            generico) → `Crosshair` (un bersaglio inquadrato: il gesto di MIRARE, non solo di
-            toccare). `Target` (già un bersaglio, ma indistinguibile a colpo d'occhio da
-            `Crosshair` ora su CONTACT) → `Scale`, la bilancia: NULL è il punto di equilibrio,
-            non il puntamento — due gesti diversi, due icone diverse. `FlipHorizontal2` = MIRROR
-            (il raddoppio), `AudioWaveform` = TONE (la scala). */}
-        {aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && (
-          <>
-            {([
-              { k: 'contact', hue: 'var(--s-still)', label: 'CONTACT', Icona: Crosshair,
-                onClick: () => cycles.armCycle('charge') },
-              { k: 'null', hue: 'var(--s-alive)', label: 'NULL', Icona: Scale,
-                onClick: () => cycles.armCycle('null') },
-              // ── MIRROR — il terzo metodo, escluso a vicenda con CONTACT/NULL ────────────
-              { k: 'mirror', hue: 'var(--s-reserve)', label: 'MIRROR', Icona: FlipHorizontal2,
-                onClick: () => mirror.armMirror() },
-              // ── TONE SCALE — il quarto metodo, escluso a vicenda con gli altri tre. A
-              // differenza degli altri tre non si "arma" per un solo item: si ENTRA nel
-              // metodo (`toneAttivo`) e ci si lavora per più resistenze di fila.
-              { k: 'tone', hue: null, label: 'TONE', Icona: AudioWaveform, onClick: () => setToneAttivo(true) },
-            ]).map(c => (
-              <div key={c.k} style={{ display: 'grid', justifyItems: 'center', gap: 4, pointerEvents: 'auto' }}>
-                <button className="s-glass s-glass-btn" onClick={c.onClick} title={c.label} style={{
-                  width: 54, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: `1.5px solid ${c.hue ?? 'var(--s-ink-ghost)'}`, cursor: 'pointer',
-                  borderRadius: '50%', background: 'var(--s-disc)', color: c.hue ?? 'var(--s-ink-soft)',
-                }}>
-                  <c.Icona size={22} strokeWidth={1.8} aria-hidden="true" />
-                </button>
-                <span style={{
-                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
-                  color: c.hue ?? 'var(--s-ink-faint)',
-                }}>{c.label}</span>
-              </div>
-            ))}
-            {/* ── IL QUINTO METODO, TOLTO DI NUOVO — segnalato: « en réalité UNBOUND n'est pas
-                nécessaire, car il est par défaut si on ne choisit pas un CYCLE. ENLEVE LE ».
-                Vero: `mode === 'free'` (`engine/sessionMode.ts`) è già lo stato di partenza,
-                quello in cui ci si trova finché non si preme uno dei quattro cerchi sopra —
-                indicarlo con un QUINTO cerchio (prima pillola "APERTO"/"OUVERT", poi cerchio
-                "UNBOUND") aggiungeva un'icona per uno stato che non richiede scelta né
-                conferma, il contrario dei quattro sopra. Nessun cerchio per il "non ancora
-                scelto": l'assenza dei quattro badge/pillole colorate lo dice già da sé. */}
-          </>
-        )}
-        {/* ── EP, SOTTO TONE — segnalato: « il bottone EP deve essere posizionato sotto TONE ».
-            Stava nella barra comandi sotto il quadrante, lontano dai quattro metodi. L'auditor
-            lo apre da sé quando vuole registrarlo, non un conto alla rovescia automatico (in
-            EQUILIBRIUM quella finestra non è mai raggiungibile) — "EP ✓" una volta validato,
-            come in App.tsx. A differenza dei quattro metodi sopra resta visibile SEMPRE a
-            seduta aperta, non solo quando nessun ciclo è armato: si registra un EP in
-            qualunque momento della seduta, non solo fra un ciclo e l'altro. */}
-        {/* Tondo come i quattro metodi sopra — stessa famiglia, stessa ragione. */}
         {aperta && (
           <div style={{ display: 'grid', justifyItems: 'center', gap: 4, pointerEvents: 'auto' }}>
             <button
@@ -3548,80 +3474,14 @@ export default function Serenity() {
             colore che le distingue — gli stessi tre segnali di `tokens.css` più l'inchiostro
             neutro per TONE (mai un quarto colore nuovo), non gli hex di App.tsx ridisegnati
             uguali: stessa struttura, grafica di SERENITY. */}
-        {aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && (
-          <>
-            {/* ── DOVE SI SCRIVE L'ITEM — segnalato: « non posso scriverlo, non so dove ».
-                Prima un campo nudo, sottolineato, con un placeholder grigio chiaro: facile da
-                non vedere fra le nuove pillole di vetro. Ora un'etichetta SEMPRE visibile sopra
-                il campo, e il campo stesso è un vetro con un bordo — si vede che è un posto
-                dove scrivere, non un tratto decorativo. */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', letterSpacing: '0.1em',
-                            textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
-                {LC('scrivi o dì l\'item', 'écris ou dis l\'item', 'type or say the item', 'escribe o di el ítem', 'skriv eller säg item')}
-              </span>
-              <input
-                className="s-glass"
-                value={item}
-                onChange={e => setItem(e.target.value)}
-                placeholder={t('ser_item_placeholder') as string}
-                /* ⚠️ SEGNALATO: « au début, alors que je n'ai pas choisi de cycle, dans la
-                    zone écris ou dis l'item il fait démarrer par défaut CONTACT, NON, cela
-                    doit simplement écrire dans assessment l'item et la réaction ». Vero — un
-                    Invio qui armava SEMPRE un ciclo CONTACT, anche quando l'auditor voleva
-                    solo dare un item da assessment (nessun ciclo scelto ancora, per scelta).
-                    CONTACT/NULL restano armabili dai loro cerchi (che leggono lo stesso
-                    `item`, appena scritto) — questo campo ora scrive solo nel giornale, come
-                    la voce (`useVoiceItem`'s `onTranscript`, sopra, stessa `journal.addLog`):
-                    l'assessment (se accesa) lo raccoglie da sé, nessun ciclo armato di
-                    nascosto. */
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && item.trim()) {
-                    journal.addLog({ speaker: 'Aud', text: item.trim(), time: sessionClock.now(), type: 'normal' });
-                    setItem('');
-                  }
-                }}
-                style={{
-                  borderRadius: 999, background: 'var(--s-disc)',
-                  outline: 'none', fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
-                  padding: '6px 14px', width: 220,
-                }}
-              />
-            </div>
-            {/* ── LO STATO DELLA VOCE — segnalato: « non posso dare l'item verbalmente ».
-                Prima questo restava muto finché non arrivava una parola: se il riconoscitore
-                non parte (permesso negato, nessun motore disponibile) l'auditor aspettava senza
-                sapere se il problema era suo o del programma.
-                ⚠️ Segnalato di nuovo: « mi dice voice not available ». `useVoiceItem.ts`
-                (condiviso — mai toccato qui) prova nativo macOS poi Whisper offline, la STESSA
-                catena di App.tsx: se qui dice "assente" e in EQUILIBRIUM no, sulla STESSA
-                macchina, non è un bug di logica — è il permesso di sistema. macOS tratta
-                Serenity.app ed Equilibrium.app come DUE applicazioni separate (`appId` diverso
-                in `electron-builder.serenity.cjs`): il « Riconoscimento vocale »/« Microfono »
-                concesso all'una NON vale per l'altra. Non risolvibile da qui (è impostazioni di
-                sistema, non codice) — il `title` sotto dice dove guardare invece di lasciare
-                l'auditor a chiedersi perché. */}
-            <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)', alignSelf: 'flex-end' }}>
-              {statoVoce === 'in-ascolto'
-                ? <span className="ser-pulse">🎙 {LC('in ascolto', 'à l\'écoute', 'listening', 'escuchando', 'lyssnar')}</span>
-                : statoVoce === 'assente'
-                  ? <span title={LC(
-                      'controlla Preferenze di Sistema → Privacy e Sicurezza → Microfono/Riconoscimento vocale: il permesso va concesso a "Serenity" separatamente da "Equilibrium"',
-                      'vérifie Réglages Système → Confidentialité et sécurité → Micro/Reconnaissance vocale : la permission doit être accordée à « Serenity » séparément d\'« Equilibrium »',
-                      'check System Settings → Privacy & Security → Microphone/Speech Recognition: the permission must be granted to "Serenity" separately from "Equilibrium"',
-                      'revisa Ajustes del Sistema → Privacidad y seguridad → Micrófono/Reconocimiento de voz: el permiso debe concederse a "Serenity" por separado de "Equilibrium"',
-                      'kontrollera Systeminställningar → Sekretess och säkerhet → Mikrofon/Taligenkänning: behörigheten måste ges till "Serenity" separat från "Equilibrium"') as string}>
-                      {LC('🎙 voce non disponibile — scrivi l\'item', 'la voix n\'est pas disponible — écris l\'item',
-                        'voice not available — type the item', 'la voz no está disponible — escribe el ítem',
-                        'rösten är inte tillgänglig — skriv item')}
-                    </span>
-                  : ''}
-            </span>
-            {/* ── I QUATTRO METODI, ORA NELLA BARRA LATERALE — segnalato: « metti i bottoni
-                Contact, Null, Mirror, Tone... sul lato sinistro fuori dall'arco, così si ha
-                più spazio per il ciclo stesso ». Vedi la barra a sé, poco più giù. */}
-          </>
-        )}
+        {/* ── L'ITEM, LO STATO DELLA VOCE E I QUATTRO METODI — TRASLOCATI — segnalato: « i
+            comandi e le indicazioni dei cicli devono stare sotto il perno dell'ago, in
+            larghezza ». Vivevano qui (il campo dove scrivere/dire l'item, l'indicazione della
+            voce, i quattro cerchi CONTACT/NULL/MIRROR/TONE): spostati nella stessa fascia
+            larga di `PistaCiclo`, sotto il quadrante — v. la nota lì (`SceltaMetodo`, il
+            fratello di `PistaCiclo` per lo stato "non ancora armato"). Nessuna riga di logica
+            toccata: stesso `item`/`setItem`, stesso `journal.addLog` sull'Invio, stessa voce
+            (`statoVoce`), stesse quattro chiamate (`armCycle`/`armMirror`/`setToneAttivo`). */}
         {/* ── I BOTTONI VERI DEI CICLI — segnalato di nuovo: « tutte le indicazioni devono
             essere a sinistra con i comandi ed anche i bottoni ». Vivevano qui (l'ULTIMO pezzo
             di UI dei cicli rimasto nella barra in alto, deciso di lasciarlo per essere « un
@@ -3820,6 +3680,46 @@ export default function Serenity() {
             perché l'arco (`aspect-ratio`) quasi mai riempie tutta l'altezza di questa colonna:
             quel che resta sotto, prima vuoto, è dove MNA va ora. */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+        {/* ── OBIETTIVO / PROCESSO / STATO FISICO / R-FACTOR — segnalato di nuovo: « devono
+            essere presenti in alto in larghezza ». Vivevano infilati nell'angolo in alto a
+            sinistra del pannello dell'ago, un campo per riga, larghi 240px (lo spazio della
+            barra laterale) — segnalato perché quattro campi affiancati ci sarebbero entrati
+            comodamente, solo non in quell'angolo stretto. Qui, in cima a questa stessa colonna
+            (`flex:1`, la STESSA larghezza del pannello e della pista dei cicli sotto di lui):
+            una riga sola, i quattro campi divisi in parti uguali (`flex:1` ciascuno) — a
+            questa larghezza (fino a 2200px, v. il tetto del pannello) ci stanno affiancati
+            senza sforzo. Nessuna logica toccata: stessi quattro stati
+            (`sessionObjective`/`sessionProcessObjective`/`sessionPhysicalCheck`/
+            `sessionBriefing`), stesso testo libero senza guardia, solo dove e come stanno a
+            schermo. */}
+        {aperta && (
+          <div style={{
+            display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 20,
+            width: 'min(96%, 2200px)', maxWidth: '100%', pointerEvents: 'auto',
+          }}>
+            {([
+              [LC('obiettivo', 'objectif', 'objective', 'objetivo', 'mål') as string, sessionObjective, setSessionObjective],
+              [LC('processo', 'processus', 'process', 'proceso', 'process') as string, sessionProcessObjective, setSessionProcessObjective],
+              [LC('stato fisico', 'état physique', 'physical state', 'estado físico', 'fysiskt tillstånd') as string, sessionPhysicalCheck, setSessionPhysicalCheck],
+              [LC('r-factor', 'r-factor', 'r-factor', 'r-factor', 'r-factor') as string, sessionBriefing, setSessionBriefing],
+            ] as const).map(([etichetta, valore, setValore]) => (
+              <div key={etichetta} style={{ display: 'flex', flexDirection: 'column', gap: 1, flex: '1 1 160px', minWidth: 140 }}>
+                <span style={{
+                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
+                  letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--s-ink-faint)',
+                }}>
+                  {etichetta}
+                </span>
+                <input value={valore} onChange={e => setValore(e.target.value)} placeholder={etichetta}
+                  style={{
+                    border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
+                    outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)',
+                    color: 'var(--s-ink)', padding: '2px 0', width: '100%',
+                  }} />
+              </div>
+            ))}
+          </div>
+        )}
         {/*
           ── LE STESSE DIMENSIONI, NON SOLO GLI STESSI COLORI ────────────────────────────
           Segnalato più volte di seguito: prima « stesso disegno, stessa grafica » (i colori),
@@ -4115,43 +4015,6 @@ export default function Serenity() {
                 }}>
                 {showTrailPref ? '● ' : '○ '}NEEDLE LIGHT
               </button>
-            )}
-            {/* ── OBIETTIVO / PROCESSO / STATO FISICO / R-FACTOR — segnalato: « mancano
-                l'obiettivo, il R-Factor ecc. all'inizio seduta ». Verificato App.tsx: quattro
-                campi di testo libero, sempre scrivibili per tutta la seduta aperta — nessuna
-                logica, solo testo che accompagna il rapporto. Montati QUI, dentro lo stesso
-                blocco di `taRef`. Sotto quattro etichette, non affiancate: a
-                `left:16` lo spazio in larghezza è quello della colonna riservata alla barra
-                laterale (272px), non di più — un campo per riga resta leggibile, quattro in
-                fila si sarebbero accavallati col bordo. */}
-            {aperta && (
-              <div style={{
-                display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4,
-                paddingTop: 8, borderTop: '1px solid var(--s-ink-ghost)', pointerEvents: 'auto',
-                width: 240,
-              }}>
-                {([
-                  [LC('obiettivo', 'objectif', 'objective', 'objetivo', 'mål') as string, sessionObjective, setSessionObjective],
-                  [LC('processo', 'processus', 'process', 'proceso', 'process') as string, sessionProcessObjective, setSessionProcessObjective],
-                  [LC('stato fisico', 'état physique', 'physical state', 'estado físico', 'fysiskt tillstånd') as string, sessionPhysicalCheck, setSessionPhysicalCheck],
-                  [LC('r-factor', 'r-factor', 'r-factor', 'r-factor', 'r-factor') as string, sessionBriefing, setSessionBriefing],
-                ] as const).map(([etichetta, valore, setValore]) => (
-                  <div key={etichetta} style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <span style={{
-                      fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
-                      letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--s-ink-faint)',
-                    }}>
-                      {etichetta}
-                    </span>
-                    <input value={valore} onChange={e => setValore(e.target.value)} placeholder={etichetta}
-                      style={{
-                        border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
-                        outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)',
-                        color: 'var(--s-ink)', padding: '2px 0', width: '100%',
-                      }} />
-                  </div>
-                ))}
-              </div>
             )}
           </div>
           {/* ⚠️ Segnalato: « quando non ci sono strumenti attivi, l'arco deve sparire e le
@@ -4455,6 +4318,91 @@ export default function Serenity() {
                 spiegazione={spiegazioneCiclo} onDichiaraDetto={dichiaraItemDetto}>
                 {bottoniCiclo}
               </PistaCiclo>
+        )}
+        {/* ── NESSUN METODO ANCORA SCELTO — il fratello di `PistaCiclo` per questo stato ──────
+            Segnalato: « perché c'è sempre uno spazio con "type or say the item" in alto a
+            sinistra? ». Perché viveva SEPARATO dal resto dei comandi del ciclo: prima di
+            armare un metodo l'item si scriveva nella barra laterale, in alto a sinistra —
+            dopo aver armato, il ciclo (e il SUO item, sola lettura) comparivano altrove (ora,
+            sotto il quadrante). Due posti diversi per la STESSA cosa, a due passi di distanza
+            uno dall'altro: da qui la sensazione di uno spazio isolato, senza un perché visibile.
+            Ora un solo posto, sempre lo stesso: quando NESSUN metodo è armato, questa fascia
+            (stessa larghezza/riga di `PistaCiclo`, stesso posto sotto il perno) mostra il
+            campo item e i quattro cerchi dei metodi; appena armato, `PistaCiclo` (sopra) prende
+            il suo posto — mai i due insieme, mai una fascia vuota che segnala "manca qualcosa".
+            Nessuna riga di logica toccata: stesso `item`/`setItem`, stesso `journal.addLog`
+            sull'Invio, stessa voce (`statoVoce`), stesse quattro chiamate
+            (`armCycle`/`armMirror`/`setToneAttivo`) — solo spostate qui dalla barra laterale. */}
+        {!senzaMisura && aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && !procedimentoAttivo && (
+          <div style={{
+            width: 'min(96%, 2200px)', maxWidth: '100%', flexShrink: 0,
+            display: 'flex', flexDirection: 'row', flexWrap: 'wrap',
+            alignItems: 'center', justifyContent: 'center',
+            rowGap: 10, columnGap: 24,
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0 }}>
+              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', letterSpacing: '0.1em',
+                            textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
+                {LC('scrivi o dì l\'item', 'écris ou dis l\'item', 'type or say the item', 'escribe o di el ítem', 'skriv eller säg item')}
+              </span>
+              <input
+                className="s-glass"
+                value={item}
+                onChange={e => setItem(e.target.value)}
+                placeholder={t('ser_item_placeholder') as string}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && item.trim()) {
+                    journal.addLog({ speaker: 'Aud', text: item.trim(), time: sessionClock.now(), type: 'normal' });
+                    setItem('');
+                  }
+                }}
+                style={{
+                  borderRadius: 999, background: 'var(--s-disc)',
+                  outline: 'none', fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
+                  padding: '6px 14px', width: 220,
+                }}
+              />
+            </div>
+            {(statoVoce === 'in-ascolto' || statoVoce === 'assente') && (
+              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)', flexShrink: 0 }}>
+                {statoVoce === 'in-ascolto'
+                  ? <span className="ser-pulse">🎙 {LC('in ascolto', 'à l\'écoute', 'listening', 'escuchando', 'lyssnar')}</span>
+                  : <span title={LC(
+                      'controlla Preferenze di Sistema → Privacy e Sicurezza → Microfono/Riconoscimento vocale: il permesso va concesso a "Serenity" separatamente da "Equilibrium"',
+                      'vérifie Réglages Système → Confidentialité et sécurité → Micro/Reconnaissance vocale : la permission doit être accordée à « Serenity » séparément d\'« Equilibrium »',
+                      'check System Settings → Privacy & Security → Microphone/Speech Recognition: the permission must be granted to "Serenity" separately from "Equilibrium"',
+                      'revisa Ajustes del Sistema → Privacidad y seguridad → Micrófono/Reconocimiento de voz: el permiso debe concederse a "Serenity" por separado de "Equilibrium"',
+                      'kontrollera Systeminställningar → Sekretess och säkerhet → Mikrofon/Taligenkänning: behörigheten måste ges till "Serenity" separat från "Equilibrium"') as string}>
+                      {LC('🎙 voce non disponibile — scrivi l\'item', 'la voix n\'est pas disponible — écris l\'item',
+                        'voice not available — type the item', 'la voz no está disponible — escribe el ítem',
+                        'rösten är inte tillgänglig — skriv item')}
+                    </span>}
+              </span>
+            )}
+            {([
+              { k: 'contact', hue: 'var(--s-still)', label: 'CONTACT', Icona: Crosshair,
+                onClick: () => cycles.armCycle('charge') },
+              { k: 'null', hue: 'var(--s-alive)', label: 'NULL', Icona: Scale,
+                onClick: () => cycles.armCycle('null') },
+              { k: 'mirror', hue: 'var(--s-reserve)', label: 'MIRROR', Icona: FlipHorizontal2,
+                onClick: () => mirror.armMirror() },
+              { k: 'tone', hue: null, label: 'TONE', Icona: AudioWaveform, onClick: () => setToneAttivo(true) },
+            ]).map(c => (
+              <div key={c.k} style={{ display: 'grid', justifyItems: 'center', gap: 4, flexShrink: 0 }}>
+                <button className="s-glass s-glass-btn" onClick={c.onClick} title={c.label} style={{
+                  width: 54, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: `1.5px solid ${c.hue ?? 'var(--s-ink-ghost)'}`, cursor: 'pointer',
+                  borderRadius: '50%', background: 'var(--s-disc)', color: c.hue ?? 'var(--s-ink-soft)',
+                }}>
+                  <c.Icona size={22} strokeWidth={1.8} aria-hidden="true" />
+                </button>
+                <span style={{
+                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
+                  color: c.hue ?? 'var(--s-ink-faint)',
+                }}>{c.label}</span>
+              </div>
+            ))}
+          </div>
         )}
         {/* ── MNA — ORA SOTTO L'ARCO, NON PIÙ SOPRA ─────────────────────────────────────────
             Segnalato: « il MNA portalo sotto la zona ARC, hai spazio ». Stava `position:absolute`

@@ -4312,6 +4312,68 @@ EQUILIBRIUM 2.0.215, SERENITY 3.0.109.
 
 ---
 
+## Settantaseiesimo giro (25/08/2026) — niente scroll, tutto in larghezza; OBIETTIVO ecc. in alto; l'item riunito coi metodi
+
+**Segnalato**: « Non devi avere uno spazio dedicato così poco alto da dover scroll per vedere
+le indicazioni e tutto quanto, ma metti il tutto sotto il perno dell'ago al fine da vedere
+bene in larghezza il tutto. Poi OBJECTIVE, Process, Physical State, R-Factor devono essere
+presenti in alto in larghezza. Perché c'è sempre uno spazio con Type or say the Item in alto a
+sinistra? »
+
+**Tre correzioni sulla stessa direzione del giro precedente — quella non bastava ancora.**
+
+**1) Niente più scroll, la larghezza fa il lavoro.** `PistaProcedimento` (il giro scorso)
+aveva preso un `maxHeight:min(50vh,420px)` con `overflowY:'auto'` — esattamente lo « spazio
+dedicato così poco alto da dover scroll » segnalato. Tolto il tetto d'altezza: il contenuto
+sta nel flusso naturale della colonna, alla sua taglia vera. `width` di `PistaCiclo` E
+`PistaProcedimento` alzata da 1400/900 a `min(96%,2200px)` — lo stesso tetto a cui
+`Serenity.tsx` aveva portato il pannello del quadrante in un giro precedente (« aggrandisci al
+massimo delle possibilità »): la fascia dei comandi non deve restare più stretta di lui. Più
+larghezza per lo stesso testo vuol dire meno righe totali, quindi meno bisogno di scorrere —
+la soluzione chiesta esplicitamente, non solo un tetto più permissivo.
+
+**2) OBIETTIVO / PROCESSO / STATO FISICO / R-FACTOR, in alto in larghezza.** Vivevano
+nell'angolo in alto a sinistra del pannello dell'ago, un campo per riga, larghi 240px (lo
+spazio della vecchia barra laterale — la ragione scritta allora: « quattro in fila si
+sarebbero accavallati col bordo », vera SOLO in quello spazio stretto). Spostati in cima alla
+stessa colonna `flex:1` che porta il pannello e la fascia dei cicli — una riga sola, i quattro
+campi divisi in parti uguali (`flex:1 1 160px` ciascuno): a questa larghezza (fino a 2200px)
+entrano affiancati senza sforzo. Nessuna logica toccata — stessi quattro stati, stesso testo
+libero senza guardia.
+
+**3) L'item e i quattro metodi, riuniti con la pista del ciclo — la risposta alla domanda.**
+Perché c'era sempre quello spazio: il campo per scrivere/dire l'item (e i quattro cerchi
+CONTACT/NULL/MIRROR/TONE per armare un metodo) vivevano nella barra laterale in alto a
+sinistra — un posto DIVERSO da dove il ciclo, una volta armato, sarebbe comparso (`PistaCiclo`,
+sotto il quadrante, dal giro precedente). Due luoghi per la STESSA sequenza (scegli il metodo →
+il ciclo armato), a due passi di distanza: da qui la sensazione di uno spazio isolato, senza un
+perché visibile a chi guarda. Corretto spostando l'item, la sua indicazione di voce, e i
+quattro cerchi dei metodi nella STESSA fascia larga sotto il quadrante — un fratello nuovo di
+`PistaCiclo` per lo stato "nessun metodo ancora armato": quando armato uno sparisce e compare
+l'altro, mai i due insieme, mai una fascia vuota. La barra laterale in alto a sinistra ora
+porta solo CHIUDI/PAUSA e EP (che resta lì: visibile SEMPRE, non solo prima di armare un
+metodo — spostarlo insieme agli altri quattro lo avrebbe fatto sparire durante un ciclo).
+Nessuna riga di logica toccata: stesso `item`/`setItem`, stesso `journal.addLog` sull'Invio,
+stessa voce (`statoVoce`), stesse quattro chiamate (`armCycle`/`armMirror`/`setToneAttivo`) —
+solo spostate.
+
+**Verificato a schermo** (tab pulita, `senzaMisura` forzato temporaneamente a `false` per
+raggiungere l'arco senza MUSE vero in questo ambiente — tolto subito dopo): OBJECTIVE/PROCESS/
+PHYSICAL STATE/R-FACTOR in una riga in cima, scrivibili (provato "test obiettivo", comparso
+subito); il campo item e i quattro cerchi dei metodi ora sotto l'arco, non più nella barra
+laterale, che mostra solo CHIUDI/PAUSA/EP; armato CONTACT con un item scritto lì, validato
+fino ad AS-IS, tornato correttamente ai quattro cerchi; armato MIRROR, i quattro tempi + la
+guida + i dieci bottoni del valore tutti leggibili con margine, nessuno scroll. Verificato in
+tema chiaro e scuro.
+
+`tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo, nessun errore), `vitest run`
+639/639. `git status`: `src/serenity/PistaCiclo.tsx`, `src/serenity/PistaProcedimento.tsx`,
+`src/serenity/Serenity.tsx`.
+
+EQUILIBRIUM 2.0.216, SERENITY 3.0.110.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
