@@ -107,6 +107,7 @@ import { primeFreqTracker } from '../engine/PrimeFreqTracker';
 import { primeFreqAudio } from '../lib/primeFreqAudio';
 import { networkManager } from '../lib/networkManager';
 import { useVoiceItem } from '../hooks/useVoiceItem';
+import { voiceToneAnalyzer } from '../lib/voiceToneAnalyzer';
 import { isAssessableItem } from '../engine/assessItemFilter';
 import { deriveCyclePhase } from '../engine/sessionPhase';
 import type { SessionMode } from '../engine/sessionMode';
@@ -1701,7 +1702,18 @@ export default function Serenity() {
     onTranscript: (text, speechEndMs) => {
       const ritardoS = speechEndMs
         ? Math.min(3, Math.max(0, (performance.now() - speechEndMs) / 1000)) : 0;
-      journal.addLog({ speaker: 'Aud', text, time: Math.max(0, sessionClock.now() - ritardoS), type: 'normal' });
+      // ⚠️ IL TONO DI VOCE — segnalato: « solo il testo con il tono di voce ». Mancava per
+      // intero — `useVoiceItem.ts` lo dichiara esplicito («... qui manca tutta la logica di
+      // ruolo/satellite/tono-vocale/relay di rete di App.tsx »), non una svista di questa
+      // sessione ma un pezzo mai portato. `voiceToneAnalyzer` (STESSO singleton condiviso, v.
+      // `lib/voiceToneAnalyzer.ts`) campiona il microfono in un flusso A PARTE da quello del
+      // riconoscitore vocale (v. `apri()`/`chiudi()` per l'avvio/arresto) — `.analyze()` letto
+      // QUI, allo stesso punto in cui App.tsx lo legge (`const tone = voiceToneAnalyzer.analyze()`),
+      // non dentro il riconoscitore: è il consumo della trascrizione a doverlo sapere, non chi
+      // la produce. SERENITY è sempre l'auditor in locale — nessun ramo PC/satellite da
+      // scegliere, il tono è sempre di chi sta parlando qui.
+      const tono = voiceToneAnalyzer.analyze() ?? undefined;
+      journal.addLog({ speaker: 'Aud', text, time: Math.max(0, sessionClock.now() - ritardoS), type: 'normal', tone: tono });
     },
   });
 
@@ -1772,6 +1784,13 @@ export default function Serenity() {
   const avviaSeduta = () => {
     sessionClock.reset(); sessionClock.start();
     sessionStartRef.current = Date.now();
+    // ── IL TONO DI VOCE, AVVIATO CON LA SEDUTA — stessa vita di `voiceToneAnalyzer` in
+    // App.tsx (`init()` all'apertura, `stop()` alla chiusura, v. `chiudi()`): un flusso
+    // microfono A PARTE da quello del riconoscitore vocale, serve solo a leggere l'energia
+    // della voce, non le parole. `void`: se il microfono non è concesso (o è già preso da
+    // altro) `init()` risolve `false` — `onTranscript` (sopra) legge `analyze() ?? undefined`,
+    // niente chip di tono invece di un errore.
+    void voiceToneAnalyzer.init().then(ok => { if (ok) voiceToneAnalyzer.ensureAudioContextActive(); });
     sessionRecorder.reset();   // niente chart/reazioni/CSV di una seduta precedente — come App.tsx
     setPausata(false); pausaMotivoRef.current = null;   // niente pausa residua da una seduta precedente
     journal.resetJournal(t('ser_session_opened'));
@@ -1962,6 +1981,7 @@ export default function Serenity() {
   };
   const chiudi = () => {
     sessionClock.end();
+    voiceToneAnalyzer.stop();   // stessa vita della seduta — v. la nota in `avviaSeduta()`.
     journal.addLog({ speaker: 'SYS', text: t('ser_session_closed'), time: sessionClock.now() });
     /* ⚠️ BUG TROVATO verificando dal vivo, in questo stesso giro: chiudere la seduta con un
        ciclo CONTACT/NULL ancora armato non lo registrava MAI in `auditingCyclesRef` — quel
@@ -2922,30 +2942,67 @@ export default function Serenity() {
                 accanto, per l'etichetta del pulsante ✕ qui sopra — non più un colore a parte
                 per il testo "importante" (Aud/PC) contro quello "di sistema": tutto il
                 giornale allo stesso grigio discreto, la voce di chi parla resta comunque
-                distinguibile dal grassetto (`<b>AUD:</b>`/`<b>PC:</b>`), non dal colore. */}
+                distinguibile dal grassetto (`<b>AUD:</b>`/`<b>PC:</b>`), non dal colore.
+                ⚠️ BUG TROVATO — segnalato: « nel journal non appare il testo ». La causa vera:
+                `.filter(l => !(avvio.solo && ...))` toglieva le righe Aud/PC PROPRIO in seduta
+                SOLO (`avvio.solo`, il caso più comune) — pensato per « l'auditor solo non ha
+                bisogno di rileggersi » (stessa scelta di `TranscriptLog.tsx`'s `hideSpeech` in
+                App.tsx), ma la verbalizzazione è esattamente quel che l'auditor voleva vedere
+                qui. Tolto.
+                ⚠️ SEGNALATO INSIEME: « poi appaiono troppe informazioni... non mettere visibili
+                le reazioni o la dissoluzione, solo il testo con il tono di voce e la reazione
+                se c'è sulla parola ». Filtrato a `speaker === 'Aud' || 'PC'` soltanto — NEEDLE
+                (le reazioni annunciate a parte) e SYS (l'andamento del ciclo, la "dissoluzione")
+                non compaiono più QUI: restano intatti in `journal.logs` (il PDF, gli effetti
+                che riempiono l'item alla voce, tutto il resto che li legge, non cambia). Al
+                posto delle righe NEEDLE separate: la REAZIONE, quando c'è, si legge ORA
+                INSIEME alla parola che l'ha causata — stesso `computeInstantRead` che
+                `aggiungiItemManuale`/`cercaLetturaPerParola` già usano altrove in questo file,
+                letto all'istante della riga, non una seconda fonte del dato. Il TONO DI VOCE
+                (`log.tone`, v. `onTranscript` più sopra — il pezzo che mancava del tutto)
+                mostrato con lo STESSO piccolo chip di `TranscriptLog.tsx` (App.tsx), tradotto
+                nella lingua di SERENITY. */}
             <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
               {[...journal.logs]
-                .filter(l => !(avvio.solo && (l.speaker === 'Aud' || l.speaker === 'PC')))
+                .filter(l => l.speaker === 'Aud' || l.speaker === 'PC')
                 .sort((a, b) => (a.time ?? 0) - (b.time ?? 0))
                 .reverse()
-                .map((log, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 8, fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.4 }}>
-                    <span style={{ color: 'var(--s-ink-faint)', width: 38, flexShrink: 0 }}>
-                      {(log.time || 0).toFixed(1)}s
-                    </span>
-                    <span style={{
-                      color: log.type === 'retracted' ? 'var(--s-reserve)'
-                        : log.type === 'meter' ? 'var(--s-reserve)'
-                        : 'var(--s-ink-faint)',
-                      fontWeight: (log.type === 'highlight' || log.type === 'success') ? 700 : 400,
-                    }}>
-                      {log.speaker && log.speaker !== 'NEEDLE' && (
-                        <b>{log.speaker === 'Aud' ? 'AUD' : log.speaker === 'PC' ? 'PC' : log.speaker}: </b>
-                      )}
-                      {log.text}
-                    </span>
-                  </div>
-                ))}
+                .map((log, i) => {
+                  const reazione = museOk || meterC
+                    ? computeInstantRead(shownReadsRef.current, log.time ?? 0, -Infinity, Infinity,
+                        agoEegRef.current ? 'eeg' : 'theta').read
+                    : undefined;
+                  const reazioneUtile = reazione && reazione !== 'NULL' && reazione !== READ_NON_MISURATO
+                    ? reazione : null;
+                  return (
+                    <div key={i} style={{ display: 'flex', gap: 8, fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.4 }}>
+                      <span style={{ color: 'var(--s-ink-faint)', width: 38, flexShrink: 0 }}>
+                        {(log.time || 0).toFixed(1)}s
+                      </span>
+                      <span style={{ color: 'var(--s-ink-faint)' }}>
+                        <b>{log.speaker === 'Aud' ? 'AUD' : 'PC'}: </b>
+                        {log.text}
+                        {log.tone && (
+                          <span style={{
+                            marginLeft: 6, fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)',
+                            padding: '1px 6px', borderRadius: 999, background: 'var(--s-disc-sunk)',
+                            color: 'var(--s-ink-faint)',
+                          }}>
+                            {(t(`tone_${log.tone.label}` as never) as string || '').toUpperCase()}
+                          </span>
+                        )}
+                        {reazioneUtile && (
+                          <span style={{
+                            marginLeft: 6, fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)',
+                            fontWeight: 700, color: 'var(--s-still)',
+                          }}>
+                            → {reazioneUtile}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  );
+                })}
             </div>
           </div>
         )}

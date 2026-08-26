@@ -611,6 +611,26 @@ export const TONE_LOOKBACK_S = 2.5;
  *  Regola relativa come nel MIRROR: conta la SALITA sopra il livello abituale della persona,
  *  non il superamento di un numero assoluto. */
 export const TONE_LOCATE_RISE_RATIO = 1.35;
+/**
+ * ── LA SCALA CHE SI VEDE SALIRE, SOLO SALIRE — segnalato: « la valeur dans TON n'arrete pas de
+ * monter et descendre sur l'echelle. on doit revoir les calculs ». Trovato: `toneOra` (dopo la
+ * localizzazione) leggeva `d.qL`/il TA corrente GREZZI, senza nessuna attenuazione fra un tick e
+ * l'altro — un rumore anche piccolo sulla misura, moltiplicato dalla pendenza della scala
+ * (`2×TONE_SCALE_MAX/escursione`), diventava un salto visibile di diversi punti. Deciso insieme
+ * (« fai una media mobile e tieni il punto più alto fisso finché uno più alto non è raggiunto —
+ * così la vediamo solo salire »): DUE correzioni, non una.
+ *   1. Una MEDIA MOBILE sulla misura grezza (qL o TA), stessa tecnica di `MIRROR_SMOOTH` in
+ *      `MirrorCycle.ts` — un rumore isolato pesa poco, un movimento vero (più tick nella stessa
+ *      direzione) si vede comunque.
+ *   2. Un'AGGRAPPO AL PUNTO PIÙ ALTO: il tono mostrato non scende mai sotto il massimo raggiunto
+ *      DA QUESTA localizzazione — coerente col comando di Ron (« raise this to tone forty »): si
+ *      sale, non si oscilla intorno a un valore. Si azzera SOLO a una nuova localizzazione (una
+ *      resistenza nuova riparte dal suo proprio punto) o a un reset di seduta — mai durante la
+ *      stessa salita.
+ * Stesso alfa di `MIRROR_SMOOTH` (0.15): non una taratura nuova inventata qui, la stessa
+ * proporzione già in uso per un calcolo "carica istantanea → valore mostrato" dello stesso tipo.
+ */
+export const TONE_SMOOTH = 0.15;
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════
 // INTEGRITÀ DEL SEGNALE

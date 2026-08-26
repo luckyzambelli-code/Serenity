@@ -4868,6 +4868,78 @@ EQUILIBRIUM 2.0.222, SERENITY 3.0.116.
 
 ---
 
+## Giro (26/08/2026) — TONE solo sale; il Journal parla, non annuncia; il tono di voce arriva in SERENITY
+
+**Segnalato**:
+
+1. « Fai una media mobile e tieni il punto più alto sulla scala fisso fino a che un punto più
+   alto non è raggiunto. Così la vediamo solo salire » — decisione presa insieme sul giro
+   precedente (« la valeur dans TON n'arrete pas de monter et descendre »).
+2. « Nel journal non appare il testo. Poi appaiono troppe informazioni, non mettere visibili le
+   reazioni o la dissoluzione, solo il testo con il tono di voce e la reazione se c'è sulla
+   parola »
+3. « Anche nel ciclo non appare più l'item che è pronunciato »
+4. « La barra slide della velocità falla più luminosa, come per l'arco, ma con una barra di
+   progressione non una pallina »
+
+**1) TONE — media mobile + punto più alto fisso.** Aggiunta `TONE_SMOOTH` (`tuning.ts`, stesso
+alfa di `MIRROR_SMOOTH`, 0.15) — una EMA su `qL`/il TA prima di entrare in `toneFromDelta`, sui
+DUE rami (MUSE e METER, non solo quello segnalato). Aggiunto un ratchet (`toneHighRef` in
+`useToneCycle.ts`): dopo la localizzazione, il tono mostrato è `max(valore lisciato adesso,
+punto più alto già visto in QUESTA localizzazione)` — non scende mai, si azzera SOLO a una
+nuova localizzazione o a un reset di seduta. Coerente col comando di Ron (« raise this to tone
+forty »): si sale, non si oscilla.
+
+**2/3) Il Journal e l'item — la STESSA causa, trovata leggendo il codice.** `.filter(l =>
+!(avvio.solo && (l.speaker === 'Aud' || l.speaker === 'PC')))` toglieva le righe Aud/PC
+PROPRIO in seduta SOLO — il caso più comune, e la ragione per cui « il testo non appare » E
+« l'item non appare più »: gli effetti che riempiono l'item alla voce leggono `journal.logs`
+cercando righe `Aud`, e in seduta solo (`avvio.solo`) quelle righe non venivano nemmeno
+SCRITTE a schermo (anche se restavano nell'array sottostante — il filtro era solo sulla RESA).
+Tolto il filtro solo-mode. Insieme, la seconda metà della richiesta: la vista ora mostra SOLO
+`speaker === 'Aud' || 'PC'` (NEEDLE e SYS — le reazioni annunciate a parte, l'andamento del
+ciclo — restano nei dati per il PDF/gli effetti, non più nella resa live); la REAZIONE, se
+c'è, si legge ORA accanto alla parola (stesso `computeInstantRead` di `aggiungiItemManuale`),
+non più su una riga a sé.
+
+**Il tono di voce — un pezzo che a SERENITY mancava per intero.** `useVoiceItem.ts` lo
+dichiarava esplicito nella sua stessa intestazione (« qui manca tutta la logica di
+ruolo/satellite/tono-vocale/relay di rete di App.tsx ») — non una svista di questa sessione,
+un pezzo mai portato. `voiceToneAnalyzer` (lo STESSO singleton di App.tsx, un flusso microfono
+a parte da quello del riconoscitore) ora si avvia con la seduta (`avviaSeduta()`) e si ferma
+alla chiusura (`chiudi()`); `.analyze()` letto nello stesso punto in cui lo legge App.tsx (al
+consumo della trascrizione, non dentro il riconoscitore) e allegato come `tone` a ogni riga
+Aud. Il chip che lo mostra riusa lo stesso stile di `TranscriptLog.tsx`. **Trovato per strada**:
+le chiavi `tone_calm`/`tone_neutral`/`tone_tense`/`tone_stressed` non esistevano affatto in
+`i18n.tsx` — il chip di App.tsx le legge da sempre a vuoto (`t(...) || ''`, mai un errore, solo
+un'etichetta bianca). Aggiunte nelle cinque lingue: correzione di un buco preesistente,
+condivisa con EQUILIBRIUM, non solo per SERENITY.
+
+**4) La barra della velocità, più luminosa, a riempimento.** Il cursore tondo diventa una
+barra RIEMPITA fino alla posizione corrente — colore pieno (non più stemperato al 35%) più un
+`boxShadow` a più strati che imita il glow SVG dei segmenti dell'arco (un `<div>` non può
+usare lo stesso filtro, l'effetto si ottiene impilando ombre).
+
+**Verificato in browser**: velocità come barra luminosa a riempimento (CONTACT armato,
+1.00×); History con i bottoni View/PDF presenti per tutte le sessioni (il punto « nella
+cronologia non appare più la possibilità di visualizzare né scaricare » segnalato a parte NON
+si riproduce in questo ambiente — 5/5 sessioni con PDF, bottoni visibili; se succede ancora
+sulla macchina vera, serve sapere in quali condizioni per restringere la ricerca). Non
+verificato dal vivo (nessun microfono reale in questo ambiente sandbox): il tono di voce che
+appare davvero nel chip, la voce che riempie l'item durante un ciclo.
+
+**Punto rimasto da chiarire**: un messaggio su « il test del MUSE... mostra la sensibilità e
+l'inerzia ma non l'ago, l'auditor non può sapere come regolarle » è arrivato incompleto/
+mescolato — non affrontato in questo giro, in attesa di una riformulazione.
+
+`tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo, nessun errore), `vitest run`
+639/639. `git status`: `src/serenity/Serenity.tsx`, `src/serenity/VistaSenzaAgo.tsx`,
+`src/session/useToneCycle.ts`, `src/engine/tuning.ts`, `src/i18n.tsx`.
+
+EQUILIBRIUM 2.0.224, SERENITY 3.0.117.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

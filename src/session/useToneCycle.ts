@@ -28,6 +28,7 @@ import {
   TONE_TARGET, toneFromTa, toneFromDelta, reachedTop, ToneLocator,
   type TonePhase, type ToneLocateAnchor, type ToneWitness,
 } from '../engine/toneScale';
+import { TONE_SMOOTH } from '../engine/tuning';
 import { TA_MAX } from '../engine/thetaTaScale';
 import { taToTwoCans, toneMargin, withMargin, type PcCanHistory } from '../engine/canTest';
 import type { ElectrodeConfig } from '../engine/thetaSetup';
@@ -158,6 +159,16 @@ export function useToneCycle(d: ToneCycleDeps) {
    * dentro la callback invece del parametro diretto.
    */
   const qLRef = useRef(0);
+  /** ── LA MEDIA MOBILE, E IL PUNTO PIÙ ALTO — v. la nota su `TONE_SMOOTH` in `tuning.ts`.
+   *  `qLSmoothRef`/`taSmoothRef`: la STESSA misura di `qLRef`/`taCorretto`, ma lisciata (EMA,
+   *  stesso alfa di `MIRROR_SMOOTH`) prima di entrare in `toneFromDelta` — un rumore isolato
+   *  pesa poco. `toneHighRef`: il punto più alto raggiunto DA QUESTA localizzazione — il tono
+   *  mostrato non scende mai sotto di lui finché non arriva un punto ancora più alto. `null`
+   *  = nessuna localizzazione ancora fatta in questo ciclo (azzerato in `resetTone`/
+   *  `localizzaTone`, mai durante la stessa salita). */
+  const qLSmoothRef = useRef(0);
+  const taSmoothRef = useRef<number | null>(null);
+  const toneHighRef = useRef<number | null>(null);
 
   // ── IL TA RIPORTATO ALLE DUE LATTINE ─────────────────────────────────────────────────────
   // « Che fa fede sono le DUE LATTINE ». Con una lattina sola la resistenza è un'altra, e più
@@ -184,6 +195,13 @@ export function useToneCycle(d: ToneCycleDeps) {
   const toneHasMeter = toneMeasured !== null;
   toneMeasuredRef.current = toneMeasured;
   qLRef.current = d.qL;
+  // Le due medie mobili, aggiornate a ogni render come `qLRef` — v. la nota su `TONE_SMOOTH`.
+  qLSmoothRef.current = qLSmoothRef.current * (1 - TONE_SMOOTH) + d.qL * TONE_SMOOTH;
+  if (taCorretto !== null) {
+    taSmoothRef.current = taSmoothRef.current === null
+      ? taCorretto
+      : taSmoothRef.current * (1 - TONE_SMOOTH) + taCorretto * TONE_SMOOTH;
+  }
 
   /**
    * IL MARGINE DELLA PROVA DELLE LATTINE — senza prova di oggi, una divisione in meno.
@@ -212,19 +230,32 @@ export function useToneCycle(d: ToneCycleDeps) {
    * si applica quando è il MUSE a guidare.
    */
   const toneOraMuse = toneAtStart !== null && toneQAtStartRef.current !== null
-    ? toneFromDelta(toneAtStart, toneQAtStartRef.current, d.qL, 1)
+    ? toneFromDelta(toneAtStart, toneQAtStartRef.current, qLSmoothRef.current, 1)
     : null;
-  const toneOra = d.hasMuse && toneOraMuse !== null
+  const toneOraGrezzo = d.hasMuse && toneOraMuse !== null
     ? toneOraMuse
     : toneAtStart === null
       ? (toneHasMeter && toneMeasured !== null ? withMargin(toneMeasured, margineTono) : toneAssessed)
-      : toneTaAtStartRef.current !== null && taCorretto !== null
+      : toneTaAtStartRef.current !== null && taSmoothRef.current !== null
         ? withMargin(
             // L'escursione è quella della SCALA DEL TONO — dal TA di clear al fondo scala —,
             // non l'intero range dello strumento: è lei a valere 80 divisioni.
-            toneFromDelta(toneAtStart, toneTaAtStartRef.current, taCorretto, TA_MAX - taClear),
+            toneFromDelta(toneAtStart, toneTaAtStartRef.current, taSmoothRef.current, TA_MAX - taClear),
             margineTono)
         : withMargin(toneAtStart, margineTono);
+  // ── SOLO SALIRE — v. la nota su `TONE_SMOOTH`/`toneHighRef`. Il ratchet vale SOLO dopo una
+  // localizzazione vera (`toneAtStart !== null`): prima di localizzare il numero è ancora una
+  // misura assoluta (o l'assessment dell'auditor), non un movimento da questo punto — non ha
+  // un "più alto" da tenere fisso.
+  const toneOra = toneAtStart === null
+    ? toneOraGrezzo
+    : (() => {
+        const alto = toneHighRef.current === null
+          ? toneOraGrezzo
+          : Math.max(toneOraGrezzo, toneHighRef.current);
+        toneHighRef.current = alto;
+        return alto;
+      })();
   /** Il secondo sguardo per la colonna (`ToneColumn`'s `toneEeg`) — quando il MUSE È già il
    *  cursore primario (sopra) è la STESSA lettura: la colonna mostra il trattino "EEG" solo se
    *  diverge di oltre 3 unità dal cursore, quindi coincidendo semplicemente non compare più,
@@ -305,6 +336,7 @@ export function useToneCycle(d: ToneCycleDeps) {
     setTonePhase('locate');
     setToneAtStart(null); setToneAnchor(null); setToneFired([]);
     toneTaAtStartRef.current = null; toneQAtStartRef.current = null;
+    toneHighRef.current = null; taSmoothRef.current = null;   // niente "punto più alto" residuo
     setToneRipetizioni(0);   // il conto è di QUESTA resistenza, e la resistenza cambia.
     // Il campo si svuota: una resistenza nuova non porta l'etichetta di quella di prima.
     d.setAuditingQuestion('');
@@ -335,6 +367,9 @@ export function useToneCycle(d: ToneCycleDeps) {
     // `useCallback` (dipendenze volutamente incomplete) `d.qL` sarebbe stato quello
     // dell'ultima ricreazione della funzione, non quello di ADESSO.
     toneQAtStartRef.current = d.hasMuse ? qLRef.current : null;
+    // Una localizzazione nuova è una resistenza nuova: nessun "punto più alto" di quella di
+    // prima le resta appiccicato — riparte dalla SUA origine (v. `toneHighRef`, sopra).
+    toneHighRef.current = null;
     toneStartSecRef.current = d.nowSec();   // il ciclo comincia QUI, non al comando 2
     // Premuto col campo VUOTO, la prima parola dell'auditor diventa l'item — come negli altri
     // tre cicli. Senza, in TONE si poteva solo scrivere: e scrivere vuol dire staccare gli
