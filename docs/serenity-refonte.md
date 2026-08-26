@@ -4940,6 +4940,98 @@ EQUILIBRIUM 2.0.224, SERENITY 3.0.117.
 
 ---
 
+## Giro (26/08/2026) — `viewModeRef` sbloccato: MIRROR e TONE si alimentano davvero dal MUSE; l'ago visibile nel test; lo scivolo e l'item non si tagliano più
+
+**Il punto rimasto in sospeso dal giro precedente**, riformulato: « Il test di sensibilità e
+dell'inerzia del MUSE non mostra l'ago del MUSE, dunque impossibile di capire cosa fare » — e,
+insieme, un secondo segnalato che sembrava scollegato: « In MIrror il valore non vien mai
+indicato in automatico e si deve scegliere a mano ». Le due cose avevano DUE cause diverse,
+trovate entrambe rileggendo il codice da capo (non l'ipotesi di un giro precedente, scartata
+esplicitamente: « chiarito, non un bug » non reggeva più davanti al segnalato).
+
+**LA CAUSA VERA DI MIRROR — e, di striscio, di TONE.** `viewModeRef` (in `Serenity.tsx`) porta
+`App.tsx` a distinguere `'needle' | 'mirror' | 'tone'` così che il worker EEG sappia A CHI dare
+il campione (`useChargeEngine.ts`: `if (d.viewModeRef.current === 'mirror') trackMirrorRef(...)`,
+lo stesso per `'tone'`). In `App.tsx` questo ref si RISCRIVE a ogni render
+(`viewModeRef.current = viewMode`). In `Serenity.tsx` portava un commento onesto, di quando
+MIRROR e TONE non esistevano ancora: « SERENITY non ha ancora MIRROR/TONE — sempre 'needle'
+finché quelle viste non arrivano ». Le due viste sono arrivate (giri precedenti), ma nessuno è
+tornato a togliere quel `'needle'` fisso — il ref non è MAI stato risincronizzato. Risultato: il
+worker non chiamava mai `trackMirrorRef`/`trackToneRef`, quindi:
+- **MIRROR**: `MirrorCycle.update()` (il rilevatore di picco che blocca da sé il valore) non
+  riceveva MAI un campione — da qui « non vien mai indicato in automatico », esattamente come
+  segnalato: non una taratura troppo severa, un tubo staccato.
+- **TONE**: il `toneLocator` (che localizza il momento della risalita) restava anch'esso
+  fermo — la MISURA in scala restava viva lo stesso (alimentata altrove, `qLRef.current = d.qL`
+  a ogni render, non passa da questo ref), motivo per cui l'oscillazione del giro precedente si
+  vedeva comunque, ma la LOCALIZZAZIONE automatica no.
+
+Fix in `Serenity.tsx`: `viewModeRef.current` si scrive ora subito dopo aver calcolato `mode`,
+con la STESSA derivazione di `App.tsx` (`mode==='mirror' ? 'mirror' : mode==='tone' ? 'tone' :
+showTrailPref ? 'needle' : 'needle_pure'`). Di striscio, anche `localizzaTone` in
+`useToneCycle.ts` aveva `d.auditingQuestion` assente dalle sue dipendenze (nessuna nota che lo
+giustificasse, a differenza di `d.qL` — v. il giro precedente): aggiunta, per la stessa ragione
+per cui l'item non arrivava sempre a TONE.
+
+**L'AGO NEL TEST MUSE — terzo tentativo, stavolta strutturale.** I primi due (velo più chiaro,
+carta spostata) attenuavano senza risolvere: restava comunque un velo nero (28%) steso su TUTTO
+lo schermo, ago compreso — un ago chiaro su tema scuro perde contrasto anche sotto un velo
+"leggero", e la carta, per quanto spostata, restava una modale grande che tagliava fuori mezzo
+schermo. `MetabolicCheck.tsx`, con `needleTrim` presente: il velo sparisce DEL TUTTO
+(`background:'transparent'`, niente `blur`) e la carta stessa cambia natura — non più una
+modale centrata (460px, a tutto schermo dietro) ma un pannello fluttuante in un ANGOLO
+(340px, ancorato basso-sinistra — l'angolo strutturalmente più lontano dal perno dell'ago, che
+sta in basso ma spostato a destra per via della barra EP/COMMANDS). `pointerEvents:'none'`
+sull'involucro pieno schermo, `'auto'` solo sulla carta: il resto dello schermo, ago compreso,
+torna cliccabile come se l'overlay non ci fosse. Verificato dal vivo (override temporaneo di
+`museConnected`/`museWorn` per raggiungere la schermata senza hardware reale): l'ago si vede,
+si muove, resta leggibile esattamente come in seduta.
+
+**TONE — l'ambiguità « in corso o raggiunto » nell'arco e in testa.** Segnalato: « mette i due
+valori, quello iniziale e il tono 40, ma come auditor non si sà se è già stato ottenuto ».
+La scritta sopra l'arco era LETTERALMENTE identica nelle due fasi (`raise` e `done`) — stesso
+`+40` in `--s-reserve` (un colore che nella dottrina dei tre segnali significa altro: "dato
+presente non sostenibile", non "raggiunto"). Ora: in salita, `--s-tone-hue` con una freccia che
+pulsa (`animate-pulse`) e la scritta "in corso…"; raggiunto, `--s-still` — LO STESSO segnale che
+l'AS-IS/F-N usano altrove per "arrivato" — con un segno di spunta, immobile. Nell'arco stesso
+(`ToneDial.tsx`), la stessa distinzione: la riga ambra e l'anello di avanzamento pulsano SOLO
+mentre si sale, spenti (già avevano il loro segnale: glow fisso + `AS-IS`) una volta raggiunto.
+
+**Lo scivolo con/senza ago — tagliato in francese.** `BottoneCiclico`, ramo a due tappe, usa una
+larghezza FISSA (`TOGGLE_W=124`, tarata su "chiaro"/"scuro") che il `minLarghezza` esistente non
+tocca affatto — il tentativo di un giro precedente (`minLarghezza={120}`) era quindi un'azione a
+vuoto, il taglio restava. Aggiunta una prop dedicata a questo ramo soltanto,
+`larghezzaScivolo` (190px per lo scivolo con/senza ago), senza toccare `SelettoreTema` che non
+la passa.
+
+**L'item nei cicli, tagliato nella sua stessa zona.** `PistaCiclo`: la larghezza dell'`<input>`
+si calcolava in `ch` (`text.length * 1ch`) — `1ch` è la larghezza del glifo "0", non la media dei
+caratteri, e per un font proporzionale (`--s-serif`) questo sottostima sistematicamente lo
+spazio vero. Corretto con un moltiplicatore di sicurezza (`× 1.6`).
+
+**Anche NEEDLE LIGHT e il selettore MUSE/METER/DEUX, nascosti in vista senza ago** — segnalato:
+« Quando abbiamo senza ago, non devi mostrare MUSE/METER DEUX »/« Quando si scegli senza ago non
+devi mostrare NEEDLE LIGHT ». Entrambi parlano di una scia/di uno strumento che appartiene
+all'AGO — nella vista senza ago (`VistaSenzaAgo`) non hanno un oggetto a cui riferirsi.
+
+**Rimasto in sospeso — bloccato, non da questa sessione**: cambiare l'icona di SERENITY con
+l'immagine (testa/cervello in wireframe) allegata in chat. Nessun file accessibile su disco per
+quell'immagine — il cambio (`electron-builder.serenity.cjs`, un `icon` per-app diverso da quello
+condiviso con EQUILIBRIUM) resta pronto a implementarsi appena l'utente fornisce un percorso file
+utilizzabile (idealmente un PNG 1024×1024 o un `.icns` già pronto).
+
+`tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo, nessun errore), `vitest run`
+639/639. Verificato dal vivo nel browser (con override temporanei sempre rimossi dopo): lo
+scivolo mostra "avec aiguille"/"sans aiguille" per intero, NEEDLE LIGHT e MUSE/METER/DEUX
+spariscono in vista senza ago, l'ago è visibile nel test di prontezza MUSE, l'item lungo non si
+taglia più nella pista del ciclo. `git status`: `src/serenity/Serenity.tsx`,
+`src/components/MetabolicCheck.tsx`, `src/components/ToneDial.tsx`, `src/serenity/PistaCiclo.tsx`,
+`src/serenity/BottoneCiclico.tsx`, `src/session/useToneCycle.ts`.
+
+EQUILIBRIUM 2.0.225, SERENITY 3.0.118.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

@@ -194,38 +194,35 @@ export function MetabolicCheck({ lang, meterAlreadyCalibrated = false, museConne
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: LAYER.gate,
-      // ⚠️ IL VELO, SCHIARITO SOLO CON `needleTrim` — segnalato: « deve potersi vedere l'ago
-      // come reagisce quando regoli Needle trim MUSE ». Il velo di sempre (`rgba(0,0,0,0.8)`
-      // + `blur(10px)`) copre l'ago dietro a tutto schermo per davvero — nessuna manopola
-      // avrebbe senso se il suo effetto resta invisibile. Con `needleTrim` presente (SOLO
-      // SERENITY, v. la nota sulla prop) il velo si schiarisce e perde la sfocatura: l'ago
-      // resta leggibile intorno a questa carta, larga 460px su un arco che arriva fino a
-      // 2200 — la carta copre il centro, non l'ago intero, che continua a muoversi visibile
-      // ai suoi lati mentre si regola la manopola.
-      background: needleTrim ? 'rgba(0,0,0,0.28)' : 'rgba(0,0,0,0.8)',
+      // ⚠️ IL VELO — SEGNALATO UNA TERZA VOLTA con `needleTrim`: schiarirlo (28%) e spostare
+      // la carta non bastava, perché quel 28% di nero restava steso su TUTTO lo schermo,
+      // ago compreso — un ago chiaro su tema scuro perde contrasto anche sotto un velo
+      // "leggero". Con `needleTrim` presente (SOLO SERENITY) il velo sparisce DEL TUTTO
+      // (`transparent`, niente blur): l'ago si vede esattamente come in seduta, zero
+      // tinta sopra. Quel che resta a fare da "overlay" è SOLO la carta stessa, spostata da
+      // "modale centrata" a pannello fluttuante in un ANGOLO (sotto) — non più sopra al
+      // perno dell'arco per costruzione, non per un margine indovinato a occhio.
+      background: needleTrim ? 'transparent' : 'rgba(0,0,0,0.8)',
       backdropFilter: needleTrim ? 'none' : 'blur(10px)', WebkitBackdropFilter: needleTrim ? 'none' : 'blur(10px)',
-      display: 'flex', alignItems: 'center',
-      // ⚠️ SEGNALATO DI NUOVO: « on ne voit pas bien l'aiguille, rend la fenetre plus
-      // transparente ou deplace la ». Il velo più chiaro (sopra) non bastava — la CARTA
-      // stessa, centrata sull'INTERO schermo, cade proprio sopra al perno dell'ago (il
-      // pannello dell'arco è più a destra del centro pieno, per via della barra laterale
-      // EP/COMMANDS che gli toglie ~320px a sinistra: il centro VERO dello schermo è quindi
-      // più a sinistra del centro VERO dell'arco). Spostata la carta a sinistra
-      // (`justifyContent:'flex-start'`, un margine) invece che al centro: cade nella fascia
-      // che la barra laterale già occupa, l'arco resta scoperto sulla sua destra.
+      display: 'flex', alignItems: needleTrim ? 'flex-end' : 'center',
       justifyContent: needleTrim ? 'flex-start' : 'center',
-      paddingLeft: needleTrim ? 48 : 0,
+      // Angolo BASSO-SINISTRA: il perno dell'ago sta in basso ma spostato a DESTRA (il
+      // pannello dell'arco perde ~320px a sinistra per la barra EP/COMMANDS) — l'angolo
+      // opposto è il punto dello schermo strutturalmente più lontano da lui, non solo oggi.
+      padding: needleTrim ? '0 0 28px 28px' : 0,
+      pointerEvents: needleTrim ? 'none' : 'auto',
       fontFamily: 'system-ui, sans-serif' }}>
-      <div style={{ width: 460, maxWidth: '92vw', borderRadius: 18, padding: '28px 30px',
-        // Stessa richiesta, seconda metà: « plus transparente ». La carta restava quasi
-        // opaca (0.96/0.94) — scesa a 0.88/0.86 SOLO con `needleTrim`: il testo resta
-        // leggibile (il fondo dietro è comunque scuro, il velo appena sopra), ma un po'
-        // dell'arco/ago dietro la carta stessa traspare, non solo ai suoi lati.
+      <div style={{ width: needleTrim ? 340 : 460, maxWidth: '92vw', borderRadius: 18,
+        padding: needleTrim ? '18px 20px' : '28px 30px',
+        pointerEvents: 'auto',
+        // La carta resta ben leggibile (0.94/0.92: quasi come la modale piena) — è la sua
+        // POSIZIONE a liberare l'ago adesso, non più la sua trasparenza: le due cose erano
+        // in tensione (più trasparente = testo meno leggibile) e bastava risolvere l'una
+        // per lasciar perdere l'altra.
         background: needleTrim
-          ? 'linear-gradient(160deg, rgba(40,40,46,0.88), rgba(26,26,30,0.86))'
+          ? 'linear-gradient(160deg, rgba(40,40,46,0.94), rgba(26,26,30,0.92))'
           : 'linear-gradient(160deg, rgba(40,40,46,0.96), rgba(26,26,30,0.94))',
-        backdropFilter: needleTrim ? 'blur(16px) saturate(1.2)' : 'blur(24px) saturate(1.2)',
-        WebkitBackdropFilter: needleTrim ? 'blur(16px) saturate(1.2)' : 'blur(24px) saturate(1.2)',
+        backdropFilter: 'blur(20px) saturate(1.2)', WebkitBackdropFilter: 'blur(20px) saturate(1.2)',
         border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 24px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.10)', color: 'rgba(240,246,255,0.95)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: '0.02em' }}>{L.title}</div>

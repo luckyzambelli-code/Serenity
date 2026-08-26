@@ -44,24 +44,33 @@ export interface OpzioneCiclica<T extends string> {
   icona?: ReactNode;
 }
 
-export function BottoneCiclico<T extends string>({ opzioni, selezionato, onChange, minLarghezza, elencoCompleto = false }: {
+export function BottoneCiclico<T extends string>({ opzioni, selezionato, onChange, minLarghezza, elencoCompleto = false, larghezzaScivolo }: {
   opzioni: Array<OpzioneCiclica<T>>;
   selezionato: T;
   onChange: (k: T) => void;
   minLarghezza?: number;
   /** Vedi la nota sulla lingua, sopra: click → cassetto con tutte le tappe, non un passo solo. */
   elencoCompleto?: boolean;
+  /** ⚠️ SOLO PER LO SCIVOLO A DUE TAPPE (sotto) — segnalato: « il bottone slide con o senza ago
+   *  deve mostrare in intero ogni lingua, in francese ad esempio è tagliata la parola ».
+   *  `TOGGLE_W` (124px, sotto) è tarato su `SelettoreTema` ("chiaro"/"scuro" — parole corte);
+   *  `minLarghezza` (sopra) non tocca AFFATTO questo ramo (serve solo all'altro, il bottone
+   *  con cassetto) — passarlo alla "vista senza ago" non aveva alcun effetto, il taglio
+   *  restava. Opzionale, default `TOGGLE_W`: chi non lo passa (`SelettoreTema`) resta TALE E
+   *  QUALE, un solo chiamante più esigente allarga SOLO il proprio scivolo. */
+  larghezzaScivolo?: number;
 }) {
   const idx = Math.max(0, opzioni.findIndex(o => o.k === selezionato));
   const corrente = opzioni[idx];
   const prossimo = opzioni[(idx + 1) % opzioni.length].k;
   const [aperto, setAperto] = useState(false);
+  const scivoloW = larghezzaScivolo ?? TOGGLE_W;
 
   // ── LO SCIVOLO — solo con ESATTAMENTE due tappe, v. la nota in testa al file. `idx` vale 0
   // o 1: la manopola scorre a sinistra (0) o a destra (1), l'etichetta prende lo spazio che
   // resta dalla parte OPPOSTA alla manopola (mai sovrapposta, mai tagliata).
   if (opzioni.length === 2 && !elencoCompleto) {
-    const knobLeft = idx === 0 ? TOGGLE_PAD : TOGGLE_W - TOGGLE_KNOB - TOGGLE_PAD;
+    const knobLeft = idx === 0 ? TOGGLE_PAD : scivoloW - TOGGLE_KNOB - TOGGLE_PAD;
     return (
       <button
         className="s-glass s-toggle-track"
@@ -69,7 +78,7 @@ export function BottoneCiclico<T extends string>({ opzioni, selezionato, onChang
         title={corrente.label as string}
         aria-pressed={idx === 1}
         style={{
-          position: 'relative', width: TOGGLE_W, height: TOGGLE_H, borderRadius: 999,
+          position: 'relative', width: scivoloW, height: TOGGLE_H, borderRadius: 999,
           background: 'var(--s-disc)', cursor: 'pointer', border: 'none', padding: 0,
           overflow: 'hidden', flexShrink: 0,
         }}

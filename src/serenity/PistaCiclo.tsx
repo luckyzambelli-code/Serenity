@@ -200,7 +200,17 @@ export function PistaCiclo({ mode, phase, lang, item, setItem, itemPlaceholder, 
           sola lettura: stessa resa (`--s-serif`/`--s-fs-lg`), larghezza che segue il testo
           (`ch` sul valore o sul segnaposto, mai più corta di 6 caratteri) invece di una
           larghezza fissa — un `<input>` a taglia fissa o tronca l'item lungo o lascia un vuoto
-          enorme per uno corto. */}
+          enorme per uno corto.
+          ⚠️ BUG TROVATO — segnalato: « l'item non si vede in intero nella zona sottolineata ».
+          `1ch` = la larghezza del carattere "0" nel font ATTUALE — un numero ESATTO solo per
+          un font monospazio. `--s-serif` non lo è: lettere come "M"/"W" sono molto più larghe
+          di "0"/"i", e con un testo qualunque (non solo cifre) `N caratteri × 1ch` sottostima
+          sistematicamente quanto spazio serve davvero — l'input restava più STRETTO del suo
+          stesso contenuto, che uno scorrimento interno tagliava via ai bordi. Non c'è un modo
+          esatto senza misurare il testo per davvero (un `<span>` fantasma, un `<canvas>`) per
+          un solo campo — un moltiplicatore GENEROSO (×1.6) risolve lo stesso problema con un
+          margine che non si nota (un po' di spazio vuoto in più è innocuo, un item tagliato
+          non lo è). */}
       <input
         value={item}
         onChange={e => setItem(e.target.value)}
@@ -212,7 +222,7 @@ export function PistaCiclo({ mode, phase, lang, item, setItem, itemPlaceholder, 
           fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-lg)', color: 'var(--s-ink)',
           padding: '0 10px', border: 'none', borderBottom: '1px solid var(--s-ink-ghost)',
           background: 'none', outline: 'none',
-          flexShrink: 0, width: `${Math.max(6, (item || itemPlaceholder).length)}ch`,
+          flexShrink: 0, width: `${Math.max(9, (item || itemPlaceholder).length * 1.6)}ch`,
         }}
       />
       {/* ── « DÌ L'ITEM… » / « L'HO DETTA » — segnalato: « devono stare a sinistra coi

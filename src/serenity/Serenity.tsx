@@ -1017,7 +1017,13 @@ export default function Serenity() {
 
   const sessionStateRef = useRef<'idle' | 'running' | 'paused' | 'ended'>('idle');
   useEffect(() => { sessionStateRef.current = aperta ? 'running' : 'idle'; }, [aperta]);
-  /** SERENITY non ha ancora MIRROR/TONE — sempre 'needle' finché quelle viste non arrivano. */
+  /** Il valore vero si scrive più sotto, appena `mode` è calcolato (v. lì): qui resta solo la
+   *  dichiarazione, perché il motore (`useChargeEngine`) la legge da subito. ⚠️ Per un pezzo di
+   *  vita di SERENITY questo ref è rimasto fermo su 'needle' per sempre — MIRROR e TONE erano
+   *  stati costruiti ma nessuno lo risincronizzava più, quindi il worker EEG (`viewModeRef.current
+   *  === 'mirror'`, in `useChargeEngine.ts`) non chiamava MAI `trackMirrorRef`/`trackToneRef`:
+   *  il valore restava per sempre manuale. Segnalato: « In MIrror il valore non vien mai
+   *  indicato in automatico ». */
   const viewModeRef = useRef<'needle' | 'needle_pure' | 'mirror' | 'tone'>('needle');
   const instrumentsRef = useRef({ muse: false, theta: false });
   useEffect(() => { instrumentsRef.current = { muse: muse.museConnection === 'connected', theta: meterC }; });
@@ -1440,6 +1446,10 @@ export default function Serenity() {
     : mirror.mirrorArmed ? 'mirror'
     : cycles.cycleArmed ? (cycles.cycleKind === 'null' ? 'null' : 'contact')
     : 'free';
+  /** Stessa derivazione di App.tsx (`viewMode`, righe 259-262 di App.tsx) — il worker EEG deve
+   *  sapere se siamo in MIRROR/TONE per alimentare `trackMirrorRef`/`trackToneRef`, non solo
+   *  l'ago. V. la nota sul ref più sopra: prima di questa riga restava sempre 'needle'. */
+  viewModeRef.current = mode === 'mirror' ? 'mirror' : mode === 'tone' ? 'tone' : showTrailPref ? 'needle' : 'needle_pure';
   /** ── MODALITÀ CICLO — segnalato: « quando si comincia un ciclo mi piacerebbe che sparisse
    *  tutto quello non necessario e che alla fine riapparisse ». Confermato dopo una proposta
    *  scritta (cosa sparisce, cosa resta, e perché): scatta SOLO a ciclo armato/in corso — non
@@ -2244,10 +2254,29 @@ export default function Serenity() {
               </button>
             </>
           )}
-          {(tone.tonePhase === 'raise' || tone.tonePhase === 'done') && (
+          {/* ⚠️ IN CORSO O RAGGIUNTO — segnalato: « mette i due valori [...] ma come auditor
+              non si sà se è già stato ottenuto, inganna averli tutti e due indicati ». Prima
+              questa scritta era IDENTICA nelle due fasi (stesso `+40` in `--s-reserve`, colore
+              che nella dottrina dei tre segnali non significa "raggiunto" ma "dato presente non
+              sostenibile" — un quarto senso non previsto). Ora: in salita, `--s-tone-hue`
+              (l'identità di TONE, non uno stato) con una freccia che pulsa; raggiunto,
+              `--s-still` — LO STESSO segnale che l'AS-IS/F-N usano altrove per "arrivato" — con
+              un segno di spunta, niente più pulsare. La stessa distinzione, nell'arco (v.
+              `ToneDial`: `animate-pulse` sulla riga ambra solo mentre `raise`). */}
+          {tone.tonePhase === 'raise' && (
+            <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
+              {tone.toneAtStart !== null ? `${tone.toneAtStart > 0 ? '+' : ''}${tone.toneAtStart.toFixed(0)} ` : ''}
+              <span className="animate-pulse" style={{ color: 'var(--s-tone-hue)', fontWeight: 700 }}>
+                → +40 {LC('in corso…', 'en cours…', 'in progress…', 'en curso…', 'pågår…')}
+              </span>
+            </span>
+          )}
+          {tone.tonePhase === 'done' && (
             <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
               {tone.toneAtStart !== null ? `${tone.toneAtStart > 0 ? '+' : ''}${tone.toneAtStart.toFixed(0)} → ` : ''}
-              <b style={{ color: 'var(--s-reserve)' }}>+40</b>
+              <b style={{ color: 'var(--s-still)' }}>
+                ✓ +40 {LC('raggiunto', 'atteint', 'reached', 'alcanzado', 'nådd')}
+              </b>
             </span>
           )}
           {tone.tonePhase === 'raise' && (
@@ -3076,7 +3105,14 @@ export default function Serenity() {
             due sostantivi nudi, che non dicono QUALE dei due si vede ORA né cosa succede al
             clic. Diventano "con ago"/"senza ago" — le STESSE parole della richiesta originale
             (« una vista... in cui non mostri l'ago »), non una parafrasi: leggendo l'etichetta
-            si sa già cosa si sta guardando, non solo con quale icona. */}
+            si sa già cosa si sta guardando, non solo con quale icona.
+            ⚠️ SEGNALATO DI NUOVO: « deve mostrare in intero ogni lingua, in francese ad esempio
+            è tagliata la parola ». `minLarghezza` (sotto) non serve a niente QUI — lo scivolo a
+            due tappe di `BottoneCiclico` ha una larghezza FISSA (124px, tarata su "chiaro"/
+            "scuro") che quel prop non tocca affatto; "avec aiguille"/"sans aiguille" (13
+            caratteri) non ci stava. `larghezzaScivolo`, il prop nuovo fatto apposta (v. la sua
+            nota in `BottoneCiclico.tsx`) — `SelettoreTema` qui accanto non lo passa, resta
+            tale e quale. */}
         <BottoneCiclico
           opzioni={[
             { k: 'ago' as const, label: LC('con ago', 'avec aiguille', 'with needle', 'con aguja', 'med nål') as string, icona: <Compass size={18} strokeWidth={1.8} aria-hidden="true" /> },
@@ -3084,7 +3120,7 @@ export default function Serenity() {
           ]}
           selezionato={vistaSenzaAgo ? 'zone' : 'ago'}
           onChange={k => setVistaSenzaAgo(k === 'zone')}
-          minLarghezza={120}
+          larghezzaScivolo={190}
         />
         <SelettoreLingua />
         {/* ── STORICO E PROCESSUS, DOPO IL BOTTONE LINGUA — segnalato: « les boutons History et
@@ -4260,8 +4296,11 @@ export default function Serenity() {
                 ago da vedere (MUSE o METER) e non MIRROR/TONE, che hanno il loro quadrante e
                 nessuna scia da accendere. `pointerEvents:'auto'`: il resto di questo angolo
                 è solo lettura (`pointerEvents:'none'` sul contenitore), questo è l'UNICO
-                bottone vero qui dentro. */}
-            {(agoEeg || meterC) && !mirror.mirrorArmed && !toneAttivo && (
+                bottone vero qui dentro.
+                ⚠️ MAI IN "SENZA AGO" — segnalato: « quando si sceglie senza ago non devi
+                mostrare NEEDLE LIGHT ». Giusto: la scia luminosa È l'ago — `VistaSenzaAgo`
+                non ne disegna uno, questa levetta non avrebbe nulla su cui agire. */}
+            {(agoEeg || meterC) && !mirror.mirrorArmed && !toneAttivo && !vistaSenzaAgo && (
               <button type="button" onClick={() => setShowTrailPref(v => !v)}
                 title={LC('NEEDLE LIGHT — la scia luminosa dell\'ago e le etichette di reazione',
                           'NEEDLE LIGHT — la traînée lumineuse de l\'aiguille et les libellés de réaction',
@@ -4566,7 +4605,11 @@ export default function Serenity() {
               l'ago sul Meter (misurato, non ricostruito) ma AGGIUNGE le reazioni del MUSE
               etichettate. Ancorato al fondo del quadrante, centrato, appena sotto il perno
               dell'ago. */}
-          {museOk && meterC && (
+          {/* ⚠️ MAI IN "SENZA AGO" — segnalato: « quando abbiamo senza ago, non devi mostrare
+              MUSE/METER DEUX ». Stessa ragione di NEEDLE LIGHT qui sopra: questa è la scelta
+              di QUALE ago guardare — senza nessun ago disegnato (`VistaSenzaAgo`), la scelta
+              non ha più un oggetto. */}
+          {museOk && meterC && !vistaSenzaAgo && (
             <div style={{
               position: 'absolute', left: '50%', bottom: 12, transform: 'translateX(-50%)', zIndex: 4,
             }}>

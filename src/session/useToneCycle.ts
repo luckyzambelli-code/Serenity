@@ -383,7 +383,7 @@ export function useToneCycle(d: ToneCycleDeps) {
     d.setItemSpoken(false);   // la resistenza di QUESTO ciclo va detta da capo.
     setTonePhase('raise');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [d.hasMuse, toneMeasured, toneHasMeter, toneAssessed, taCorretto]);
+  }, [d.hasMuse, toneMeasured, toneHasMeter, toneAssessed, taCorretto, d.auditingQuestion]);
 
   /**
    * IL LOCATORE SI ALIMENTA DA FUORI — lo chiama il gestore del worker EEG, a ogni campione.

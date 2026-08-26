@@ -182,8 +182,14 @@ export const ToneDial = React.memo(function ToneDial({
         const a = tpt(rigaGialla, R + 30), b = tpt(rigaGialla, R - 136);
         const lp = tpt(rigaGialla, R - 164);
         const slide = { transition: 'x1 .45s ease, y1 .45s ease, x2 .45s ease, y2 .45s ease, x .45s ease, y .45s ease' } as React.CSSProperties;
+        // ⚠️ IN CORSO, NON SOLO RAGGIUNTO — segnalato: « mette i due valori [...] ma come
+        // auditor non si sà se è già stato ottenuto [...] deve capirsi che è in corso anche
+        // visualmente nell'arco ». La stanghetta ambra da sola è identica prima e dopo il
+        // "raggiunto" (solo `AS-IS` teal cambia, altrove sul quadrante). Un polso mentre si
+        // sale — spento appena `done`, che ha già il SUO segnale (glow fisso + `AS-IS`) — dice
+        // "sto ancora misurando" senza aggiungere una quarta tinta al sistema.
         return (
-          <g filter="url(#td-glow)">
+          <g filter="url(#td-glow)" className={phase === 'raise' ? 'animate-pulse' : undefined}>
             <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={AMBER} strokeWidth={4} style={slide} />
             <text x={lp.x.toFixed(1)} y={lp.y.toFixed(1)} textAnchor="middle" dominantBaseline="middle"
               fontSize={20} fontWeight={700} fill={AMBER} style={slide}>
@@ -215,7 +221,8 @@ export const ToneDial = React.memo(function ToneDial({
       <path d={arcPath(-1, 1, PROG_R)} fill="none" stroke={isLightTheme ? 'rgba(15,23,42,0.10)' : 'rgba(255,255,255,0.08)'} strokeWidth={14} strokeLinecap="round" />
       {inSalita && progress > 0.001 && (
         <path d={arcPath(-1, -1 + progress * 2, PROG_R)} fill="none" stroke={done ? TEAL : AMBER} strokeWidth={14}
-          strokeLinecap="round" opacity={0.92} filter={done ? 'url(#td-glow)' : undefined} />
+          strokeLinecap="round" opacity={0.92} filter={done ? 'url(#td-glow)' : undefined}
+          className={done ? undefined : 'animate-pulse'} />
       )}
 
       {/* ── IL TESTO DEL CICLO NON STA PIÙ QUI ────────────────────────────────────────────
