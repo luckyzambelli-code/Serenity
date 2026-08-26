@@ -4510,6 +4510,58 @@ EQUILIBRIUM 2.0.218, SERENITY 3.0.112.
 
 ---
 
+## Settantanovesimo giro (26/08/2026) — la pastiglia di COMMANDS conta i procedimenti, non i PDF; la prima riga dei comandi non finisce più fuori vista
+
+**Segnalato**: « devi mettere la pastiglia dei comandi con il numero di file della sezione
+PROCEDURES COMMANDS » — poi, testando i comandi del ciclo: « la prima linea dei comandi non
+deve essere sottostante al bottone CLOSE, perché non si riesce a leggere la domanda » e «
+quando schiacci CLOSE si vede che i comandi sono due volte presenti e si deve schiacciare due
+volte CLOSE ».
+
+**1) La pastiglia sul bottone COMMANDS.** Contava `processusPdfs.length` — l'archivio PDF
+generale, la sezione SBAGLIATA: il bottone si chiama COMMANDS (giro scorso) proprio per
+puntare ai PROCEDIMENTI, non ai PDF. Ora conta `procedimenti.length`, lo stesso array che
+`ProcessusModal` mostra nella card COMANDI PROCEDIMENTI messa in evidenza il giro scorso —
+la pastiglia e la card che evidenzia dicono finalmente lo stesso numero.
+
+**2) BUG TROVATO — la prima riga della pista del ciclo poteva finire fuori vista, senza
+nessun segno che dicesse di scorrere.** Non un doppio montaggio: un solo `<PistaCiclo>` nel
+sorgente, verificato di nuovo con calma. La causa vera era nel contenitore che gli fa da
+casa (`gruppoBasso`, l'ultimo terzo riservato ai comandi, dal giro "l'ultimo terzo in basso"):
+`justifyContent:'center'` su un contenitore con `overflow:'auto'`, quando il contenuto
+(intestazione + item + tempi + indicazioni + bottoni di `PistaCiclo`, spesso più alto del
+terzo disponibile specie a finestra bassa) supera l'altezza del box. CENTRARE un contenuto
+più alto del suo box lo fa sporgere ugualmente sopra E sotto — ma `overflow:'auto'` mostra
+SOLO la fetta dentro al box, e quella sporgenza SOPRA finiva scrollata fuori dalla vista,
+senza barra di scorrimento visibile a dirlo: la prima riga di `PistaCiclo` (la sua stessa
+intestazione, col bottone "CHIUDI"/"FERMER"/"CLOSE" — lo stesso nome del bottone che chiude
+la SEDUTA, la confusione era servita) sembrava sparita, o "sotto" qualcos'altro. Cliccare alla
+cieca dove ci si aspettava quel bottone colpiva invece il testo sotto (la vera prima riga,
+appena rivelata) — da qui il bisogno di cliccare due volte, e la sensazione di vedere « i
+comandi due volte » (la riga vera, prima nascosta e poi rivelata dallo scroll, sembra un
+secondo blocco apparso dal nulla).
+
+Corretto: `justifyContent:'flex-start'` invece di `'center'`. Il contenuto parte SEMPRE dalla
+cima del box — la prima riga è SEMPRE la prima cosa visibile, mai quella scrollata via;
+l'eventuale eccedenza trabocca in basso, dove uno scroll è normale da aspettarsi (e dove sta,
+per costruzione, il gruppo più sacrificabile: i bottoni finali del ciclo, non la sua
+intestazione).
+
+**Verificato in browser** (`senzaMisura` forzato temporaneamente, tolto subito dopo): a
+1400×800 (una finestra bassa, apposta per far traboccare il contenuto), PRIMA della
+correzione solo l'ultimo cerchio (TONE) restava visibile della fascia item+metodi, tutto il
+resto scrollato fuori senza segno; DOPO, item e i tre cerchi CONTACT/NULL/MIRROR/TONE tutti
+visibili dalla cima. Armato CONTACT alla stessa finestra bassa: l'intestazione di `PistaCiclo`
+(badge CONTACT + bottone FERMER) visibile fin da subito, un solo clic su FERMER collassa la
+pista nella maniglia "› ITEM" senza alcun doppione, un secondo clic la riapre identica.
+
+`tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo, nessun errore), `vitest run`
+639/639. `git status`: `src/serenity/Serenity.tsx`.
+
+EQUILIBRIUM 2.0.219, SERENITY 3.0.113.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

@@ -2810,13 +2810,19 @@ export default function Serenity() {
                 background: 'var(--s-disc)', color: 'var(--s-ink-soft)',
               }}>
               <BookOpen size={22} strokeWidth={1.8} aria-hidden="true" />
-              {processusPdfs.length > 0 && (
+              {/* ⚠️ IL NUMERO GIUSTO — segnalato: « la pastiglia dei comandi col numero di file
+                  della sezione PROCEDURES COMMANDS ». Era `processusPdfs.length` (l'archivio PDF
+                  generale, sotto nello stesso modale) — un numero vero ma della sezione
+                  SBAGLIATA: questo bottone si chiama COMMANDS proprio per puntare ai
+                  PROCEDIMENTI, non ai PDF. `procedimenti.length` (lo stesso array che
+                  `ProcessusModal` mostra nella card COMANDI PROCEDIMENTI) è il conteggio giusto. */}
+              {procedimenti.length > 0 && (
                 <span style={{
                   position: 'absolute', top: -2, right: -2, minWidth: 17, height: 17, borderRadius: 999,
                   background: 'var(--s-ink)', color: 'var(--s-ground)',
                   fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px',
-                }}>{processusPdfs.length}</span>
+                }}>{procedimenti.length}</span>
               )}
             </button>
             <span style={{
@@ -4411,8 +4417,27 @@ export default function Serenity() {
         </div>
         </div>
         {/* chiude qui `gruppoAlto` (il `</div>` appena sopra) — l'ultimo terzo qui sotto è
-            `gruppoBasso`, v. la nota sopra "L'ULTIMO TERZO IN BASSO". */}
-        <div style={{ flex: comandiSottoAgo ? '1 1 0%' : '0 0 0%', minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, overflow: comandiSottoAgo ? 'auto' : 'visible' }}>
+            `gruppoBasso`, v. la nota sopra "L'ULTIMO TERZO IN BASSO".
+            ⚠️ BUG TROVATO — segnalato: « la prima linea dei comandi non deve essere
+            sottostante al bottone CLOSE, perché non si riesce a leggere la domanda » e « quando
+            schiacci CLOSE si vede che i comandi sono due volte presenti e si deve schiacciare
+            due volte CLOSE ». Non un doppio montaggio (un solo `<PistaCiclo>` nel sorgente,
+            verificato) — `justifyContent:'center'` qui, su un contenitore che scrolla
+            (`overflow:'auto'`) quando il contenuto (intestazione+item+tempi+indicazioni+bottoni
+            di `PistaCiclo`, spesso più alto del terzo riservato) supera l'altezza disponibile:
+            CENTRARE contenuto più alto del box lo fa sporgere ugualmente sopra E sotto, ma
+            `overflow:'auto'` mostra SOLO quel che sta nel box — la PARTE SOPRA (l'intestazione
+            di `PistaCiclo`, col SUO bottone "CHIUDI"/"FERMER"/"CLOSE" — quello confuso col
+            bottone della seduta, stesso nome) finiva scrollata fuori dalla vista, senza nessuna
+            barra di scorrimento visibile a dirlo: sembrava sparita, o "sotto" qualcos'altro.
+            Cliccare alla cieca dove ci si aspettava quel bottone colpiva invece IL TESTO SOTTO
+            (la vera prima riga, ora visibile) — da qui la sensazione di doverne cliccare due,
+            e di vedere "i comandi due volte" (la riga vera, PRIMA nascosta e poi rivelata dallo
+            scroll, sembra un secondo blocco apparso dal nulla). `justifyContent:'flex-start'`:
+            il contenuto parte SEMPRE dalla cima del box — la prima riga (l'intestazione, il suo
+            bottone di chiusura) è SEMPRE la prima cosa visibile, mai quella scrollata via;
+            l'eventuale eccedenza trabocca in basso, dove uno scroll è normale da aspettarsi. */}
+        <div style={{ flex: comandiSottoAgo ? '1 1 0%' : '0 0 0%', minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 16, overflow: comandiSottoAgo ? 'auto' : 'visible' }}>
         {/* ── LA PISTA DEL CICLO, SOTTO IL PUNTO DI ANCORAGGIO DELL'AGO ─────────────────────────
             Segnalato: « i comandi e le indicazioni dei cicli, per più leggibilità, sotto il
             punto di ancoraggio dell'ago, in uno spazio che permetta il più possibile le
