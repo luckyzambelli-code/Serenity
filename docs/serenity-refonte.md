@@ -4374,6 +4374,84 @@ EQUILIBRIUM 2.0.216, SERENITY 3.0.110.
 
 ---
 
+## Settantasettesimo giro (26/08/2026) — l'ultimo terzo in basso per i comandi; OBIETTIVO ecc. spariscono da soli; PROCESSO tolto
+
+**Segnalato**: « Quando la sessione inizia OBJECTIVE, Physical State, R-Factor se riempiti
+devono sparire dopo 10 secondi per liberare l'interfaccia. Il campo Process, toglilo, perché è
+ridondante con il nuovo Comandi Procedimenti che abbiamo istaurato. Io creerei un bottone
+specifico con icone da mettere a fianco del bottone EP. Hai fatto bene a mettere i comandi in
+tutta larghezza, ma hai ridotto l'ago veramente a troppo piccolo. Devi utilizzare l'ultimo
+terzo in basso come altezza per i comandi. »
+
+Quattro correzioni, tutte sulla stessa riga del giro precedente (« bene la larghezza, ora
+sistemiamo il resto »).
+
+**1) PROCESSO tolto, per davvero — non un'omissione.** Segnalato esplicitamente come
+ridondante: da quando esiste "Comandi Procedimenti" (un elenco di comandi VERI da scegliere,
+`PistaProcedimento`), scrivere lo stesso nome a mano in un campo di testo libero a parte è la
+stessa informazione due volte. Diverso da App.tsx per scelta esplicita dell'utente, non
+un'omissione muta: App.tsx non ha un equivalente di "Comandi Procedimenti", quindi lì il campo
+di testo libero "Processus" resta l'UNICO modo di dire quale processo gira — qui non più.
+Restano `sessionObjective`/`sessionPhysicalCheck`/`sessionBriefing` (OBIETTIVO/STATO
+FISICO/R-FACTOR): nessuna logica dietro nessuno dei tre, solo testo libero che accompagna il
+rapporto.
+
+**2) Un bottone Procedimenti, a fianco di EP.** Prima l'unico modo di aprire l'elenco dei
+procedimenti era il bottone "processes" nella barra in alto — lontano dalla zona EP/comandi
+del ciclo, dove l'auditor guarda per il resto della seduta. Aggiunto un secondo bottone
+rotondo identico (stessa icona `BookOpen`, stesso badge col numero di procedimenti, stesso
+`setProcessusAperto(true)`) nella STESSA cornice `--s-zone-bg` che già conteneva EP — non un
+componente nuovo, la stessa azione raggiungibile da un secondo posto più comodo. Il bottone in
+alto resta: due strade per la stessa porta, non una duplicazione di logica.
+
+**3) OBIETTIVO / STATO FISICO / R-FACTOR spariscono 10 secondi dopo essere stati riempiti.**
+Nuovo stato `campiSessioneNascosti`, un `useEffect` che parte un `setTimeout` di 10s appena
+ALMENO uno dei tre campi ha del testo (si riazzera a ogni tocco: scrivere ancora rimanda la
+sparizione, non la accorcia), e SOLO allora — restano visibili per sempre se sono vuoti,
+niente da nascondere. Passato il tempo, la riga intera cede il posto a una piccola maniglia
+("obiettivo · stato fisico · r-factor", lo stesso stile "chiuso" già usato da `PistaCiclo`):
+un clic la riporta, e resta poi aperta — riaprirla è una scelta per guardarla o correggerla,
+non un invito a essere interrotti di nuovo dieci secondi dopo (il riaprire non rimette in moto
+il conto alla rovescia, che dipende solo dal TESTO dei tre campi, non da
+`campiSessioneNascosti` stesso). Si riazzera anche ad ogni nuova apertura di seduta
+(`apri()` → `setCampiSessioneNascosti(false)`).
+
+**4) L'ultimo terzo in basso, per davvero — non più una speranza lasciata al flex-shrink.**
+La causa vera dell'ago rimpicciolito: nella colonna `flex:1` che porta OBIETTIVO + striscia
+reazioni + pannello dell'ago + pista dei cicli + MNA, tutti i blocchi TRANNE il pannello
+avevano `flexShrink:0` (non si comprimono mai) — quando lo spazio totale non basta, un flex
+column shrinka gli elementi proporzionalmente alla loro taglia di base, e il pannello (il più
+alto di tutti, per via del suo `aspect-ratio` 1600×850) è quello con più pixel da perdere. Il
+risultato: più righe di comandi sotto = ago più piccolo, senza alcun limite esplicito. Corretto
+spezzando la colonna in DUE gruppi veri anziché uno piatto: `gruppoAlto` (OBIETTIVO + striscia
+reazioni + il pannello dell'ago, `flex:'2 1 0%'`) e `gruppoBasso` (pista del ciclo/procedimento
+o scelta del metodo, + MNA, `flex:'1 1 0%'`) — due terzi/un terzo GARANTITI dal browser, non
+più contesi. Una variabile `comandiSottoAgo` (= `aperta && !senzaMisura`, la stessa
+condizione che decide se il gruppo basso avrà davvero qualcosa da mostrare) azzera il gruppo
+basso (`'0 0 0%'`) quando non c'è nulla lì — seduta chiusa o senza strumenti — cosicché l'ago
+non perda mai un terzo per uno spazio che resterebbe vuoto: la stessa vista a riposo di prima
+(l'ago occupa tutto), invariata.
+
+**Verificato a schermo** (`serenity-dev`, `senzaMisura` forzato temporaneamente a `false` per
+raggiungere la UI degli strumenti — tolto subito dopo, `tsc` pulito prima e dopo): a riposo
+(seduta chiusa) l'ago riempie tutto lo spazio, nessun terzo vuoto sprecato; seduta aperta a
+1800px di larghezza, l'ago visibilmente più grande di prima, la riga OBIETTIVO/STATO
+FISICO/R-FACTOR (senza più PROCESSO) in cima, il campo item + i quattro cerchi
+CONTACT/NULL/MIRROR/TONE su una riga sola sotto l'ago, MNA sotto ancora; scritto "test
+obiettivo", atteso 10s, la riga è sparita lasciando la maniglia "objective · physical state ·
+r-factor"; riaperta con un clic, rimasta aperta altri 10s senza risparire da sola; il bottone
+Procedimenti a fianco di EP apre lo stesso popup PROCESSES del bottone in alto; armato CONTACT
+dalla nuova fascia sotto l'ago, `PistaCiclo` compreso e l'ago sempre alla stessa taglia grande.
+Verificato solo in tema scuro (il tema chiaro non tocca nessuna delle quattro correzioni:
+sono tutte disposizione/logica, non colore).
+
+`tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo, nessun errore), `vitest run`
+639/639. `git status`: `src/serenity/Serenity.tsx`.
+
+EQUILIBRIUM 2.0.217, SERENITY 3.0.111.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

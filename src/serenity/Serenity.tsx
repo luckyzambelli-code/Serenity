@@ -1059,20 +1059,37 @@ export default function Serenity() {
    * rappresentare i cicli coi loro colori, non solo i bottoni testuali qui in fondo.
    */
   const [item, setItem] = useState('');
-  /** ── OBIETTIVO / PROCESSO / STATO FISICO / R-FACTOR — segnalato: « mancano l'obiettivo, il
-   *  R-Factor ecc. all'inizio seduta ». Verificato App.tsx: quattro campi di testo libero,
-   *  sempre scrivibili durante tutta la seduta aperta (non solo « all'inizio » — l'auditor può
-   *  tornarci in qualunque momento), `sessionObjective`/`sessionProcessObjective`/
-   *  `sessionPhysicalCheck`/`sessionBriefing` — nessuna logica dietro, solo testo che
-   *  accompagna il rapporto. Qui STESSI quattro campi (stessa forma, stesso momento in cui
-   *  contano) — le etichette in App.tsx sono FISSE in francese ("Objectif"/"Processus"/"État
-   *  physique"/"R-Factor", mai passate per `t()`, probabile svista mai corretta là): tradotte
-   *  qui con `LC`, coerente con com'è scritto TUTTO il resto di SERENITY, non una copia
-   *  letterale di quella svista. */
+  /** ── OBIETTIVO / STATO FISICO / R-FACTOR — segnalato: « mancano l'obiettivo, il R-Factor
+   *  ecc. all'inizio seduta ». Verificato App.tsx: quattro campi di testo libero (Objectif/
+   *  Processus/État physique/R-Factor), sempre scrivibili durante tutta la seduta aperta.
+   *  ⚠️ IL CAMPO "PROCESSO" TOLTO — segnalato: « toglilo, è ridondante col nuovo Comandi
+   *  Procedimenti ». Diversa da App.tsx per scelta esplicita dell'utente, non un'omissione:
+   *  App.tsx non ha PROCESSUS→PROCEDIMENTI (un elenco di comandi VERI da scegliere), quindi lì
+   *  quel campo di testo libero è l'UNICO modo di dire quale processo gira; qui, con la scelta
+   *  di un procedimento vero già disponibile (v. il bottone accanto a EP, sotto), scrivere lo
+   *  stesso nome a mano in un campo separato è la stessa informazione due volte. Restano
+   *  `sessionObjective`/`sessionPhysicalCheck`/`sessionBriefing` — nessuna logica dietro, solo
+   *  testo che accompagna il rapporto — tradotte con `LC`, coerente con tutto il resto di
+   *  SERENITY (le etichette di App.tsx sono fisse in francese, mai passate per `t()`). */
   const [sessionObjective, setSessionObjective] = useState('');
-  const [sessionProcessObjective, setSessionProcessObjective] = useState('');
   const [sessionPhysicalCheck, setSessionPhysicalCheck] = useState('');
   const [sessionBriefing, setSessionBriefing] = useState('');
+  /** ── SPARISCONO DOPO 10 SECONDI, SE RIEMPITI — segnalato: « per liberare l'interfaccia ».
+   *  I tre campi sopra contano una volta scritti (di solito all'inizio seduta) — tenerli
+   *  sempre in vista per tutta la seduta, quando ormai dicono cose già dette, è ingombro senza
+   *  motivo. Non spariscono MAI se sono vuoti (niente da nascondere): il conto alla rovescia
+   *  parte solo quando ALMENO uno dei tre ha del testo, si riazzera a ogni tocco (scrivere
+   *  ancora rimanda la sparizione, non la accorcia) — `useEffect` su
+   *  `[sessionObjective, sessionPhysicalCheck, sessionBriefing]`, un `setTimeout` unico.
+   *  `campiSessioneNascosti` non è per sempre: una piccola maniglia (sotto, nella resa) li
+   *  riporta in vista, esattamente come il "chiuso" di `PistaCiclo`. */
+  const [campiSessioneNascosti, setCampiSessioneNascosti] = useState(false);
+  useEffect(() => {
+    if (!aperta) return;
+    if (!sessionObjective && !sessionPhysicalCheck && !sessionBriefing) return;
+    const id = setTimeout(() => setCampiSessioneNascosti(true), 10000);
+    return () => clearTimeout(id);
+  }, [aperta, sessionObjective, sessionPhysicalCheck, sessionBriefing]);
   /**
    * « L'ITEM È STATO DETTO » — l'uscita a mano dalla fase « dì l'item », quando la trascrizione
    * non c'è (Whisper assente, microfono negato, seduta senza dettatura). Vale come l'item
@@ -1706,6 +1723,7 @@ export default function Serenity() {
     ep.resetEpState();   // niente "EP ✓" residuo da una seduta precedente
     mirror.resetMirror();   // niente ciclo MIRROR residuo da una seduta precedente
     tone.resetTone(); setToneAttivo(false);   // niente TONE residuo da una seduta precedente
+    setCampiSessioneNascosti(false);   // OBIETTIVO/STATO FISICO/R-FACTOR di nuovo in vista
     setProvaTa({ two: null, solo: null });   // niente prova doppia residua da un'altra persona
     setAssessAttivo(false); setAssessItems([]); assessLogCursorRef.current = 0;   // idem, ASSESSMENT
     assessTimesRef.current = []; assessPrevAtRef.current = -Infinity; gruppiItemRef.current = new Map();
@@ -2717,15 +2735,25 @@ export default function Serenity() {
           </div>
         )}
         </div>
-        {/* ── EP, LA SUA PICCOLA ZONA — segnalato: « i comandi e le indicazioni dei cicli
-            devono stare sotto il perno dell'ago, in larghezza »: CONTACT/NULL/MIRROR/TONE (e
-            il campo item che li precede) hanno lasciato questa barra laterale per la stessa
-            fascia larga di `PistaCiclo`, sotto il quadrante — v. la nota lì per il perché e
-            per dove sono ora. EP resta QUI: a differenza dei quattro metodi è visibile SEMPRE
-            a seduta aperta, non solo quando nessun ciclo è armato (si registra un EP in
-            qualunque momento) — non avrebbe senso spostarlo dentro-e-fuori dalla fascia dei
-            cicli insieme a loro. Stessa cornice sottile del Giornale/Assessment/Santé Système
-            (`--s-zone-bg`/`--s-zone-border`): un cerchio solo, non più una riga di cinque. */}
+        {/* ── EP E PROCEDIMENTI, LA STESSA PICCOLA ZONA — segnalato: « i comandi e le
+            indicazioni dei cicli devono stare sotto il perno dell'ago, in larghezza »:
+            CONTACT/NULL/MIRROR/TONE (e il campo item che li precede) hanno lasciato questa
+            barra laterale per la stessa fascia larga di `PistaCiclo`, sotto il quadrante — v.
+            la nota lì per il perché e per dove sono ora. EP resta QUI: a differenza dei
+            quattro metodi è visibile SEMPRE a seduta aperta, non solo quando nessun ciclo è
+            armato (si registra un EP in qualunque momento) — non avrebbe senso spostarlo
+            dentro-e-fuori dalla fascia dei cicli insieme a loro. Stessa cornice sottile del
+            Giornale/Assessment/Santé Système (`--s-zone-bg`/`--s-zone-border`).
+            ⚠️ PROCEDIMENTI, ACCANTO A EP — segnalato: « il campo Process, toglilo, è
+            ridondante col nuovo Comandi Procedimenti; creerei un bottone specifico con icona
+            da mettere accanto al bottone EP ». Tolto il campo di testo libero "processo" (v.
+            la riga OBIETTIVO/ecc. più giù) — restava un secondo modo di dire la STESSA cosa
+            che PROCESSUS→PROCEDIMENTI già dice, scegliendo un comando vero da una lista
+            invece di scriverlo a mano. Al suo posto, qui, lo STESSO bottone già in
+            intestazione (stessa icona `BookOpen`, stesso `onClick={() =>
+            setProcessusAperto(true)}`, stesso contatore `processusPdfs.length`) — una
+            scorciatoia in più durante la seduta, non una funzione nuova: PROCESSUS resta
+            raggiungibile anche da lassù, per chi lo cerca lì. */}
         {aperta && (
         <div style={{
           display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 10, width: 272,
@@ -2748,6 +2776,32 @@ export default function Serenity() {
               fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
               color: ep.epValidated ? 'var(--s-still)' : 'var(--s-ink-faint)',
             }}>{ep.epValidated ? 'EP ✓' : 'EP'}</span>
+          </div>
+        )}
+        {aperta && (
+          <div style={{ display: 'grid', justifyItems: 'center', gap: 4, pointerEvents: 'auto' }}>
+            <button
+              className="s-glass s-glass-btn"
+              onClick={() => setProcessusAperto(true)}
+              title={t('processus_modal_title') as string} style={{
+                position: 'relative', width: 54, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', border: '1.5px solid var(--s-ink-ghost)', borderRadius: '50%',
+                background: 'var(--s-disc)', color: 'var(--s-ink-soft)',
+              }}>
+              <BookOpen size={22} strokeWidth={1.8} aria-hidden="true" />
+              {processusPdfs.length > 0 && (
+                <span style={{
+                  position: 'absolute', top: -2, right: -2, minWidth: 17, height: 17, borderRadius: 999,
+                  background: 'var(--s-ink)', color: 'var(--s-ground)',
+                  fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px',
+                }}>{processusPdfs.length}</span>
+              )}
+            </button>
+            <span style={{
+              fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
+              color: 'var(--s-ink-faint)',
+            }}>{LC('procedimenti', 'procédés', 'processes', 'procedimientos', 'procedurer')}</span>
           </div>
         )}
         </div>
@@ -3679,27 +3733,63 @@ export default function Serenity() {
             sotto di lui invece di un `position:absolute` DENTRO il suo riquadro. Lo spazio c'è
             perché l'arco (`aspect-ratio`) quasi mai riempie tutta l'altezza di questa colonna:
             quel che resta sotto, prima vuoto, è dove MNA va ora. */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-        {/* ── OBIETTIVO / PROCESSO / STATO FISICO / R-FACTOR — segnalato di nuovo: « devono
-            essere presenti in alto in larghezza ». Vivevano infilati nell'angolo in alto a
-            sinistra del pannello dell'ago, un campo per riga, larghi 240px (lo spazio della
-            barra laterale) — segnalato perché quattro campi affiancati ci sarebbero entrati
-            comodamente, solo non in quell'angolo stretto. Qui, in cima a questa stessa colonna
+        <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 16 }}>
+        {/* ── L'ULTIMO TERZO IN BASSO, PER I COMANDI — segnalato: « hai ridotto l'ago veramente
+            a troppo piccolo. devi utilizzare l'ultimo terzo in basso come altezza per i
+            comandi ». Prima l'ago (dentro il wrapper qui sotto) era un semplice figlio
+            `flex` fra tanti altri (OBIETTIVO, pista dei cicli, MNA) in questa stessa colonna:
+            tutti scalavano insieme quando lo spazio non bastava, ma l'ago — il più alto di
+            tutti per via del suo `aspect-ratio` — era quello che perdeva più pixel nello
+            scalare (uno `flex-shrink` uguale per tutti tolti PIÙ pixel a chi ne aveva di più
+            da dare). Due gruppi ora, non più un'unica colonna piatta: `gruppoAlto` (OBIETTIVO
+            + striscia reazioni + l'ago, `flex:'2 1 0%'`) e `gruppoBasso` (pista del ciclo/
+            procedimento/scelta metodo + MNA, `flex:'1 1 0%'`) — due terzi/un terzo, DAVVERO,
+            non più una speranza lasciata al flex-shrink. `comandiSottoAgo` decide quanto
+            spazio riservare al gruppo basso: quando non c'è nulla da mostrare lì (seduta
+            chiusa, o `senzaMisura`) il gruppo basso si azzera (`'0 0 0%'`) e l'ago riprende
+            tutto lo spazio — il terzo riservato non è mai vuoto sprecato quando non serve. */}
+        {(() => {
+          const comandiSottoAgo = aperta && !senzaMisura;
+          return (
+        <>
+        <div style={{ flex: comandiSottoAgo ? '2 1 0%' : '1 1 0%', minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+        {/* ── OBIETTIVO / STATO FISICO / R-FACTOR — segnalato di nuovo: « devono essere
+            presenti in alto in larghezza ». Vivevano infilati nell'angolo in alto a sinistra
+            del pannello dell'ago, un campo per riga — spostati in cima a questa stessa colonna
             (`flex:1`, la STESSA larghezza del pannello e della pista dei cicli sotto di lui):
-            una riga sola, i quattro campi divisi in parti uguali (`flex:1` ciascuno) — a
-            questa larghezza (fino a 2200px, v. il tetto del pannello) ci stanno affiancati
-            senza sforzo. Nessuna logica toccata: stessi quattro stati
-            (`sessionObjective`/`sessionProcessObjective`/`sessionPhysicalCheck`/
-            `sessionBriefing`), stesso testo libero senza guardia, solo dove e come stanno a
-            schermo. */}
-        {aperta && (
+            una riga sola, i campi divisi in parti uguali (`flex:1` ciascuno). Il campo
+            "processo" non c'è più (v. la nota sullo stato, sopra — tolto, ridondante col
+            bottone Procedimenti accanto a EP).
+            ⚠️ SPARISCONO DOPO 10 SECONDI, SE RIEMPITI — segnalato: « per liberare
+            l'interfaccia ». `campiSessioneNascosti` (sopra, col suo `useEffect`) decide se
+            questa riga si vede: quando è vero, una piccola maniglia (come il "chiuso" di
+            `PistaCiclo`) prende il suo posto — un clic la riporta, e restando poi APERTA (il
+            conto alla rovescia non ha un secondo giro automatico: chi la riapre l'ha fatto per
+            guardarla o correggerla, non per essere interrotto di nuovo dieci secondi dopo). */}
+        {aperta && campiSessioneNascosti && (
+          <button type="button" onClick={() => setCampiSessioneNascosti(false)}
+            title={LC('mostra obiettivo, stato fisico, r-factor', 'afficher objectif, état physique, r-factor',
+              'show objective, physical state, r-factor', 'mostrar objetivo, estado físico, r-factor',
+              'visa mål, fysiskt tillstånd, r-factor') as string}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+              border: '1px solid var(--s-ink-ghost)', borderRadius: 999, padding: '4px 10px',
+              background: 'none', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)',
+              fontWeight: 700, letterSpacing: '0.06em', color: 'var(--s-ink-faint)',
+              alignSelf: 'flex-start', width: 'min(96%, 2200px)', maxWidth: '100%',
+            }}>
+            {LC('obiettivo · stato fisico · r-factor', 'objectif · état physique · r-factor',
+              'objective · physical state · r-factor', 'objetivo · estado físico · r-factor',
+              'mål · fysiskt tillstånd · r-factor')}
+          </button>
+        )}
+        {aperta && !campiSessioneNascosti && (
           <div style={{
             display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 20,
             width: 'min(96%, 2200px)', maxWidth: '100%', pointerEvents: 'auto',
           }}>
             {([
               [LC('obiettivo', 'objectif', 'objective', 'objetivo', 'mål') as string, sessionObjective, setSessionObjective],
-              [LC('processo', 'processus', 'process', 'proceso', 'process') as string, sessionProcessObjective, setSessionProcessObjective],
               [LC('stato fisico', 'état physique', 'physical state', 'estado físico', 'fysiskt tillstånd') as string, sessionPhysicalCheck, setSessionPhysicalCheck],
               [LC('r-factor', 'r-factor', 'r-factor', 'r-factor', 'r-factor') as string, sessionBriefing, setSessionBriefing],
             ] as const).map(([etichetta, valore, setValore]) => (
@@ -4298,6 +4388,10 @@ export default function Serenity() {
             </div>
           )}
         </div>
+        </div>
+        {/* chiude qui `gruppoAlto` (il `</div>` appena sopra) — l'ultimo terzo qui sotto è
+            `gruppoBasso`, v. la nota sopra "L'ULTIMO TERZO IN BASSO". */}
+        <div style={{ flex: comandiSottoAgo ? '1 1 0%' : '0 0 0%', minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, overflow: comandiSottoAgo ? 'auto' : 'visible' }}>
         {/* ── LA PISTA DEL CICLO, SOTTO IL PUNTO DI ANCORAGGIO DELL'AGO ─────────────────────────
             Segnalato: « i comandi e le indicazioni dei cicli, per più leggibilità, sotto il
             punto di ancoraggio dell'ago, in uno spazio che permetta il più possibile le
@@ -4446,6 +4540,11 @@ export default function Serenity() {
             />
           </div>
         )}
+        {/* chiude qui `gruppoBasso`, il `<>` e la IIFE che li produce entrambi. */}
+        </div>
+        </>
+          );
+        })()}
         {/* chiude qui il wrapper centrale (`flex:1`) che avvolge l'arco — v. la nota sopra
             "LA RIGA A TRE COLONNE": la colonna destra (Santé/Journal) è un SUO fratello, non un
             figlio, nella riga a tre colonne. */}
