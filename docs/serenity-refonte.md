@@ -4562,6 +4562,114 @@ EQUILIBRIUM 2.0.219, SERENITY 3.0.113.
 
 ---
 
+## Ottantesimo giro (26/08/2026) — Needle Trim spostato nel test del respiro; Journal uniforme; l'item si scrive nei cicli; OUI/NON spiegati
+
+**Segnalato** (otto punti nello stesso messaggio):
+
+1. « in config devi togliere NEEDLE TRIM e devi aggiungerlo quando fai il test col MUSE per il
+   respiro, in modo da avere una logica. ATTENZIONE, deve potersi vedere l'ago come reagisce
+   quando regoli Needle trim MUSE »
+2. « la police de caractère dans Journal deve essere la stessa che nel resto dell'applicazione
+   per uniformità e meno bianca, è troppo visibile e disturba (in DARK) mentre in LIGHT va bene »
+3. « IN LIGHT TA 1 cans vs 2 non si vede, è troppo chiaro »
+4. « In assessement OUI/NNON deve avere l'indicazione di cosa è »
+5. « Quando non ho armato nessun ciclo appare sempre ECRIS OU DIS L'ITEM, se scrivi non lo
+   prende e poi non serve. Deve apparire quando armi un ciclo. Tanto se vuoi un Item lo scrivi
+   in R&I o ASSESSEMENT, dunque non serve »
+6. « IN TONE ti dice "Écris ou dis la résistance..." ma non puoi scriverlo »
+7. « Negli altri cicli anche non si può scrivere, invece si deve, l'auditor potrebbe volerlo
+   scrivere. Questo permette di calcolarne la carica? »
+8. « La prima linea dei comandi di qualsiasi procedimento è sempre sovrastata dal titolo e dal
+   bottone FERMER »
+
+**1) NEEDLE TRIM, da CONFIG al test del respiro.** Tolta la sezione da `PannelloConfig.tsx`
+(pannello a tutta pagina — l'ago non è mai a schermo lì, tararlo non ne mostrava mai l'effetto,
+l'esatto contrario di una taratura). Le stesse due manopole (sensibilità/trim e inerzia, stesso
+motore `runtime/NeedleEngine`) ora vivono dentro `MetabolicCheck` — SOLO SERENITY, una prop
+opzionale `needleTrim` che App.tsx non passa mai (comportamento invariato lì) — visibili appena
+il MUSE è appaiato E indossato (`effConnected`, la stessa condizione che fa partire la
+baseline: prima di allora l'ago non riceve dati veri). **Il velo dell'overlay, schiarito SOLO
+in questa variante**: `rgba(0,0,0,0.8)` + `blur(10px)` di sempre coprirebbe l'ago dietro a
+tutto schermo — con `needleTrim` presente diventa `rgba(0,0,0,0.28)`, niente sfocatura: la
+carta (460px) copre il centro dell'arco (che arriva a 2200px), il resto dell'ago resta
+leggibile e in movimento ai suoi lati mentre si regola la manopola.
+⚠️ **Limite di verifica dichiarato**: in questo ambiente sandbox il MUSE non arriva mai a
+`'connected'`+indossato (nessun casco fisico, nessun bridge Electron/BLE) — l'effetto
+dal vivo (l'ago che reagisce mentre si sposta il cursore) non è stato osservabile qui.
+Verificato invece: `tsc` pulito, la sezione è sparita da CONFIG, `MetabolicCheck` monta la
+nuova sezione senza errori quando `needleTrim`+`effConnected` sono veri (letto nel sorgente),
+il velo si schiarisce solo con la prop presente (letto nel sorgente, invariato per App.tsx
+che non la passa mai).
+
+**2) Il Journal, stesso font del resto dell'app.** Era `--s-mono` — l'unica zona a usarlo per
+il testo corrente. Un font monospazio ha più inchiostro per carattere di un sans-serif alla
+STESSA dimensione e colore: più "pieno", quindi percepito più chiaro/acceso su un fondo scuro
+— non un colore sbagliato (`--s-ink` è già tarato per contrasto in entrambi i temi), la
+TECNICA. Passato a `--s-sans`, lo stesso di tutto il resto (Assessment, PistaCiclo,
+SuggerimentoCiclo…): la doppia richiesta (uniformità + meno bianco) risolta da un solo cambio.
+Verificato: `getComputedStyle` sulla riga del giornale conferma `ui-sans-serif...` invece di
+`ui-monospace...`, stesso colore di prima (nessuna intenzione di toccarlo, solo il font).
+
+**3) « IN LIGHT TA 1 cans vs 2 non si vede ».** Trovato in DUE posti che mostrano lo stesso
+confronto: `PannelloMeter.tsx` (SERENITY, il cassetto del meter sempre raggiungibile) e
+`ThetaReadyCheck.tsx` (condiviso con EQUILIBRIUM, la prima taratura di seduta). Stessa causa in
+entrambi: le etichette "2 ·"/"1 ·" si affievolivano con `opacity:0.6` sul colore EREDITATO
+invece di un token dedicato — un'opacità frazionaria sfuma verso lo SFONDO SOTTOSTANTE, non
+verso un grigio fisso: nello scuro di sempre sfumava verso un fondo comunque scuro (leggibile),
+in chiaro sfuma verso il quasi-bianco (troppo tenue). `PannelloMeter.tsx`: `opacity:0.6` tolto,
+sostituito con `color:'var(--s-ink-faint)'` (il token già tarato per contrasto in entrambi i
+temi). `ThetaReadyCheck.tsx` (condiviso, non toccato direttamente): una regola in più in
+`readyCheckLight.css` (lo stesso foglio SOLO-SERENITY che già ritinge questo componente in
+chiaro) — `[style*="opacity: 0.6"]` → `opacity:1 !important; color:#475569 !important` — SOLO
+due elementi nel file la usano (verificato con un grep mirato), nessun altro elemento colpito
+per sbaglio.
+
+**4) OUI/NON in Assessment/R&I, ora autoesplicativi.** I due bottoni prima del giudizio
+mostravano `t('ri_yes')`/`t('ri_no')` nudi ("Sì"/"No", "Oui"/"Non"…) — il significato
+("indica al preclear?") viveva SOLO nel `title`, un tooltip invisibile finché non ci si passa
+sopra col mouse. Cambiati in `✓ {t('ri_indicates')}` / `✗ {t('ri_does_not_indicate')}` — lo
+STESSO testo che lo stato GIÀ deciso mostra due righe più giù, un riuso non un'invenzione.
+Verificato dal vivo: scritto un item in R&I → Manuale, comparsi i due bottoni "✓ indique" /
+"✗ n'indique pas" (in francese, la lingua della prova).
+
+**5/6/7 — L'ITEM, tolto da dove non serviva, aggiunto dove serve.** Il campo "ECRIS OU DIS
+L'ITEM" (prima di armare un metodo) aveva un bug preciso: premere Invio chiamava
+`setItem('')` SUBITO dopo averlo loggato — lo svuotava prima ancora che l'auditor potesse
+cliccare CONTACT/NULL/MIRROR/TONE, che lo trovava già vuoto. Tolto per intero (l'auditor ha
+già R&I/ASSESSMENT per annotare un item prima di armare). Al suo posto, DENTRO `PistaCiclo`
+(una volta armato un metodo), l'item — prima uno `<span>` di sola lettura — è ora un
+`<input>` vero, per CONTACT/NULL/MIRROR/TONE indistintamente: scrivere chiama `setItem`, LO
+STESSO stato che la voce riempie già — calcola la carica esattamente come un item detto a
+voce, perché per il motore (`useContactNullCycle`/`useMirrorCycle`/`useToneCycle`) è la STESSA
+variabile. Se il ciclo aspetta ancora l'item (`diItem`), Invio chiama anche `onDichiaraDetto`,
+lo stesso gesto del bottone "l'item è stato detto" accanto. Verificato dal vivo: armato
+CONTACT, scritto "test genitore" nel campo — preso; armato TONE, scritto "paura del buio" nel
+campo resistenza — preso, Invio senza errori.
+
+**8) BUG TROVATO — `PistaProcedimento`, la stessa causa già trovata per `PistaCiclo` un giro
+fa, in un posto diverso.** Non un doppio montaggio (un solo `<PistaProcedimento>` nel
+sorgente). La sua intestazione (nome del procedimento + bottone FERMER) portava ancora
+`position:'sticky', top:0` — residuo di quando questo componente scorreva AL SUO INTERNO
+(`overflowY:'auto'`, tolto in un giro precedente per la richiesta « niente scroll, tutto in
+larghezza »). Senza uno scorrimento proprio, `sticky` cerca il primo ANTENATO che scorre — ora
+`gruppoBasso`, in `Serenity.tsx` — e si incolla LÌ: l'intestazione restava fissa in cima a
+QUELLA scatola mentre i comandi veri scorrevano sotto di lei, sempre coperti — esattamente il
+sintomo segnalato, stavolta per i procedimenti invece che per i cicli. `PistaCiclo` non aveva
+mai avuto questo `sticky` (verificato): ecco perché il suo fix di un giro fa (`justifyContent:
+'flex-start'` su `gruppoBasso`) non bastava anche per questo componente — due bug diversi con
+lo stesso sintomo. Tolto `position`/`top`: l'intestazione torna un normale primo figlio nel
+flusso.
+
+`tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo, nessun errore), `vitest run`
+639/639. `git status`: `src/serenity/PannelloConfig.tsx`, `src/serenity/Serenity.tsx`,
+`src/serenity/PistaCiclo.tsx`, `src/serenity/PistaProcedimento.tsx`,
+`src/serenity/PannelloMeter.tsx`, `src/serenity/ZonaAssessment.tsx`,
+`src/serenity/readyCheckLight.css`, `src/components/MetabolicCheck.tsx`.
+
+EQUILIBRIUM 2.0.220, SERENITY 3.0.114.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

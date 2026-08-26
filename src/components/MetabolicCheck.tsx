@@ -83,8 +83,22 @@ const RATE_COLOR: Record<Rating, string> = { good: '#34d399', ok: '#fbbf24', poo
 const LEVEL_COLOR = { go: '#34d399', wait: '#fbbf24', nogo: '#fb5e3b' } as const;
 
 export function MetabolicCheck({ lang, meterAlreadyCalibrated = false, museConnected = true, museWorn = false, museConnecting = false, museOnMac = false, onConnectMuse, onProceed, onCancel, onPhase, onCue,
-  mirror = false, mirrorPhase, mirrorInhale, mirrorAssessment = null }: {
+  mirror = false, mirrorPhase, mirrorInhale, mirrorAssessment = null, needleTrim }: {
   lang: string;
+  /** ⚠️ SOLO SERENITY — segnalato: « in config devi togliere NEEDLE TRIM e devi aggiungerlo
+   *  quando fai il test col MUSE per il respiro, in modo da avere una logica. Deve potersi
+   *  vedere l'ago come reagisce quando regoli Needle trim MUSE ». Assente di default
+   *  (`undefined`): App.tsx non la passa, questo schermo resta TALE E QUALE a prima — la
+   *  manopola dell'ago vive nel SUO cassetto TRIM, separato, come sempre. Con `needleTrim`
+   *  presente, una sezione in più (sotto) monta le stesse due manopole che vivevano in
+   *  `PannelloConfig` — CONFIG è un pannello a tutta pagina che copre l'ago, tararlo lì non ne
+   *  mostrava mai l'effetto. Qui l'ago (di chi guarda) resta a schermo DIETRO questo stesso
+   *  overlay — v. la nota sul velo, sotto, che per QUESTA variante si schiarisce apposta. */
+  needleTrim?: {
+    trim: number; setTrim: (v: number) => void;
+    inertia: number; setInertia: (v: number) => void;
+    labelSection: string; labelSensitivity: string; labelInertia: string; labelCentering: string;
+  };
   /** Le boîtes sono già state tarate in questa seduta (stretta e soffio fatti). Riprendendo una
    *  seduta, questa schermata sembra chiedere di rifare quella prova: sono due strumenti
    *  diversi e si tarano separatamente, e va detto. */
@@ -179,7 +193,17 @@ export function MetabolicCheck({ lang, meterAlreadyCalibrated = false, museConne
   useEffect(() => { if (!mirror) onCueRef.current?.(phase, inhale, aRef.current); }, [phase, inhale, mirror]);
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: LAYER.gate, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+    <div style={{ position: 'fixed', inset: 0, zIndex: LAYER.gate,
+      // ⚠️ IL VELO, SCHIARITO SOLO CON `needleTrim` — segnalato: « deve potersi vedere l'ago
+      // come reagisce quando regoli Needle trim MUSE ». Il velo di sempre (`rgba(0,0,0,0.8)`
+      // + `blur(10px)`) copre l'ago dietro a tutto schermo per davvero — nessuna manopola
+      // avrebbe senso se il suo effetto resta invisibile. Con `needleTrim` presente (SOLO
+      // SERENITY, v. la nota sulla prop) il velo si schiarisce e perde la sfocatura: l'ago
+      // resta leggibile intorno a questa carta, larga 460px su un arco che arriva fino a
+      // 2200 — la carta copre il centro, non l'ago intero, che continua a muoversi visibile
+      // ai suoi lati mentre si regola la manopola.
+      background: needleTrim ? 'rgba(0,0,0,0.28)' : 'rgba(0,0,0,0.8)',
+      backdropFilter: needleTrim ? 'none' : 'blur(10px)', WebkitBackdropFilter: needleTrim ? 'none' : 'blur(10px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ width: 460, maxWidth: '92vw', borderRadius: 18, padding: '28px 30px',
         background: 'linear-gradient(160deg, rgba(40,40,46,0.96), rgba(26,26,30,0.94))', backdropFilter: 'blur(24px) saturate(1.2)', WebkitBackdropFilter: 'blur(24px) saturate(1.2)',
@@ -224,6 +248,46 @@ export function MetabolicCheck({ lang, meterAlreadyCalibrated = false, museConne
           })()}
         </div>
         <div style={{ fontSize: 11.5, lineHeight: 1.4, color: 'rgba(220,228,240,0.7)', marginTop: 6, marginBottom: 20 }}>{L.sub}</div>
+
+        {/* ── LA TARATURA DELL'AGO EEG — SOLO SERENITY, SOLO A MUSE ATTIVO ────────────────────
+            Segnalato: « toglierlo da CONFIG e aggiungerlo qui, deve potersi vedere l'ago come
+            reagisce ». `effConnected` (sopra: appaiato E indossato) è la stessa condizione che
+            fa partire la baseline — prima di allora l'ago non riceve ancora dati veri, tararlo
+            sarebbe regolare un silenzio. Le stesse due manopole di `PannelloConfig`
+            (sensibilità/trim e inerzia), stesso motore (`runtime/NeedleEngine`, applicato da
+            `Serenity.tsx`) — qui SOLO la resa, invariata nella logica. */}
+        {needleTrim && effConnected && (
+          <div style={{ borderRadius: 12, padding: '12px 14px', marginBottom: 18,
+            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)' }}>
+            <div style={{ fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase',
+              color: 'rgba(226,238,255,0.55)', marginBottom: 10 }}>{needleTrim.labelSection}</div>
+            <div style={{ display: 'grid', gap: 14 }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(230,236,245,0.85)', marginBottom: 4 }}>
+                  <span>{needleTrim.labelSensitivity}</span>
+                  <span style={{ fontFamily: 'monospace' }}>
+                    {needleTrim.trim > 0 ? '+' : ''}{needleTrim.trim} {needleTrim.trim <= -5 ? 'LOW' : needleTrim.trim <= 0 ? 'CENTER' : 'HIGH'}
+                  </span>
+                </div>
+                <input type="range" min={-10} max={10} step={1} value={needleTrim.trim}
+                  onChange={e => needleTrim.setTrim(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: 'rgba(240,246,255,0.9)', cursor: 'pointer' }} />
+                <div style={{ fontSize: 10.5, color: 'rgba(200,214,234,0.55)', lineHeight: 1.5, marginTop: 4 }}>
+                  {needleTrim.labelCentering}
+                </div>
+              </div>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(230,236,245,0.85)', marginBottom: 4 }}>
+                  <span>{needleTrim.labelInertia}</span>
+                  <span style={{ fontFamily: 'monospace' }}>{needleTrim.inertia}</span>
+                </div>
+                <input type="range" min={0} max={100} step={1} value={needleTrim.inertia}
+                  onChange={e => needleTrim.setInertia(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: 'rgba(240,246,255,0.9)', cursor: 'pointer' }} />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── BASELINE ─────────────────────────────────────────────────────── */}
         {phase === 'baseline' && (() => {

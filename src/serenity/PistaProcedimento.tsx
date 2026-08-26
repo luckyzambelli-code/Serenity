@@ -111,7 +111,18 @@ export function PistaProcedimento({ nome, comandi, onChiudi, lang }: {
         gap: 12, pointerEvents: 'auto', outline: 'none',
       }}>
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 8, position: 'sticky', top: 0,
+        // ⚠️ BUG TROVATO — segnalato: « la prima linea dei comandi di qualsiasi procedimento è
+        // sempre sovrastata dal titolo e dal bottone FERMER ». `position:'sticky', top:0`
+        // restava da quando questa intestazione doveva restare visibile DURANTE lo scorrimento
+        // INTERNO di questo componente (`overflowY:'auto'`, tolto in un giro precedente — v. la
+        // nota sopra "non uno spazio dedicato così poco alto da dover scroll"). Senza uno
+        // scorrimento proprio, `sticky` cerca il primo ANTENATO che scorre — che ora è
+        // `gruppoBasso`, in `Serenity.tsx` (`overflow:'auto'` quando il contenuto supera il
+        // terzo riservato) — e SI INCOLLA lì: l'intestazione restava fissa in cima a QUELLA
+        // scatola mentre i comandi veri scorrevano SOTTO di lei, sempre coperti. Tolto
+        // `position`/`top`: l'intestazione torna un normale primo figlio nel flusso, non più
+        // sovrapposta a nulla.
+        display: 'flex', alignItems: 'center', gap: 8,
         padding: '3px 4px 3px 10px', borderRadius: 999,
         background: 'color-mix(in srgb, var(--s-ground) 68%, transparent)',
       }}>

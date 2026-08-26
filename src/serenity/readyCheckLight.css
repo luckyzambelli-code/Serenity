@@ -145,3 +145,17 @@
 :root[data-tema='chiaro'] .ser-ready-wrap [style*="rgba(255, 255, 255, 0.08)"] {
   background: var(--s-disc-sunk) !important;
 }
+
+/* ── « 2 · »/« 1 · », LA COPPIA DI ETICHETTE NEL CONFRONTO ─────────────────────────────────
+   ⚠️ Segnalato: « IN LIGHT TA 1 cans vs 2 non si vede, è troppo chiaro ». Le due piccole
+   etichette (`ThetaReadyCheck.tsx`, il riquadro "confronto delle due prove") si affievoliscono
+   con `opacity:0.6` sul colore EREDITATO dal genitore — un'opacità frazionaria sfuma verso lo
+   SFONDO SOTTOSTANTE, non verso un grigio fisso: nello scuro di sempre sfumava verso un fondo
+   comunque scuro (leggibile), qui il fondo è ora chiaro (la regola sopra) e la stessa
+   percentuale sfuma verso il quasi-bianco — troppo tenue. Non tocca `opacity` in sé
+   (servirebbe anche nello scuro, invariato): la SPEGNE qui e fissa un inchiostro pieno a
+   contrasto garantito, come le altre famiglie di testo di questo file. */
+:root[data-tema='chiaro'] .ser-ready-wrap [style*="opacity: 0.6"] {
+  opacity: 1 !important;
+  color: #475569 !important;
+}

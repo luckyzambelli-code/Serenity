@@ -337,9 +337,16 @@ export function PannelloMeter({ theta, provaTa, onFatto }: {
                 padding: '10px 12px', borderRadius: 10, background: 'var(--s-disc-sunk)',
                 border: `1px solid ${scarto === null ? 'var(--s-reserve)' : 'var(--s-still)'}`,
               }}>
+                {/* ⚠️ SEGNALATO: « IN LIGHT TA 1 cans vs 2 non si vede, è troppo chiaro ».
+                    "2 ·"/"1 ·" scolorivano con `opacity:0.6` sul colore EREDITATO (`--s-ink`)
+                    invece di un token dedicato: un'opacità frazionaria sfuma verso lo sfondo
+                    SOTTOSTANTE, non verso un grigio fisso — su `--s-disc-sunk` chiaro (questo
+                    riquadro) il risultato è più tenue di quanto sembri nello scuro, dove lo
+                    stesso 0.6 sfuma verso un fondo comunque scuro. `--s-ink-faint`, tarato per
+                    contrasto in ENTRAMBI i temi (v. `tokens.css`), non dipende dal fondo dietro. */}
                 <div style={{ display: 'flex', gap: 16, alignItems: 'baseline', justifyContent: 'center', fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)' }}>
-                  <span><span style={{ fontSize: 'var(--s-fs-sm)', opacity: 0.6 }}>2 · </span>{provaTa.two!.toFixed(2)}</span>
-                  <span><span style={{ fontSize: 'var(--s-fs-sm)', opacity: 0.6 }}>1 · </span>{provaTa.solo!.toFixed(2)}</span>
+                  <span><span style={{ fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)' }}>2 · </span>{provaTa.two!.toFixed(2)}</span>
+                  <span><span style={{ fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)' }}>1 · </span>{provaTa.solo!.toFixed(2)}</span>
                   <span style={{ color: scarto === null ? 'var(--s-reserve)' : 'var(--s-still)', fontWeight: 700 }}>
                     {scarto === null ? '—' : `${scarto > 0 ? '+' : ''}${scarto.toFixed(2)}`}
                   </span>

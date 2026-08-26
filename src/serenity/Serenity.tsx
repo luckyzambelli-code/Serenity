@@ -1649,7 +1649,12 @@ export default function Serenity() {
    * App.tsx: si retrodata di quanto tempo è passato da `speechEndMs` (in `performance.now()`,
    * lo stesso orologio usato per calcolarlo), non oltre 3s (un valore fuori scala è un errore
    * di misura, non tre secondi di silenzio veri). */
-  const statoVoce = useVoiceItem({
+  // ⚠️ Il valore di ritorno (stato "in ascolto"/"assente") non ha più un posto in resa da
+  // quando l'item si scrive direttamente in `PistaCiclo` (v. la nota lì) — un `<input>`
+  // sempre visibile non ha bisogno di un suggerimento per dire che si può scrivere. L'hook
+  // resta chiamato TALE E QUALE: è lui che riempie `item` con la trascrizione, un effetto
+  // di cui questo componente ha ancora bisogno, solo non più mostrato a chi ascolta.
+  const _statoVoce = useVoiceItem({
     // In pausa (automatica O manuale) niente ascolto — stessa regola di App.tsx
     // (`handlePause` ferma esplicitamente il riconoscimento).
     active: aperta && !pausata,
@@ -2078,10 +2083,7 @@ export default function Serenity() {
   if (configAperto) {
     return (
       <main style={{ height: '100%' }}>
-        <PannelloConfig onChiudi={() => setConfigAperto(false)}
-          needleTrim={needleTrim} setNeedleTrim={setNeedleTrim}
-          needleInertia={needleInertia} setNeedleInertia={setNeedleInertia}
-          museOk={museOk} />
+        <PannelloConfig onChiudi={() => setConfigAperto(false)} />
       </main>
     );
   }
@@ -2598,6 +2600,14 @@ export default function Serenity() {
               onProceed={a => avviaSedutaConProntezza(a)}
               onCancel={a => avviaSedutaConProntezza(a)}
               onPhase={p => { metabolicPhaseRef.current = p; }}
+              needleTrim={{
+                trim: needleTrim, setTrim: setNeedleTrim,
+                inertia: needleInertia, setInertia: setNeedleInertia,
+                labelSection: t('drawer_needle_trim') as string,
+                labelSensitivity: t('trim_sensitivity') as string,
+                labelInertia: t('trim_inertia') as string,
+                labelCentering: t('trim_centering') as string,
+              }}
             />
             </div>
           );
@@ -2855,13 +2865,24 @@ export default function Serenity() {
                 color: 'var(--s-ink-faint)', fontSize: 'var(--s-fs-lg)', lineHeight: 1, padding: 2,
               }}>×</button>
             </div>
+            {/* ⚠️ SEGNALATO: « la police de caractère dans Journal deve essere la stessa che nel
+                resto dell'applicazione, per uniformità e meno bianca — è troppo visibile e
+                disturba (in DARK), mentre in LIGHT va bene ». Era `--s-mono` — l'UNICA zona
+                dell'app a usarlo per il testo corrente (le altre lo riservano a numeri/orari,
+                v. il timestamp accanto), mentre tutto il resto (Assessment, PistaCiclo,
+                SuggerimentoCiclo…) usa `--s-sans`. Non un colore sbagliato — `--s-ink` è già
+                tarato per contrasto in ENTRAMBI i temi (v. `tokens.css`) — ma un font MONOSPAZIO
+                ha più inchiostro per carattere di un sans-serif alla STESSA dimensione e
+                colore: più "pieno", quindi percepito più chiaro/acceso su un fondo scuro. Lo
+                stesso colore, nel font di tutto il resto, si legge già più discreto — la
+                doppia richiesta (uniformità + meno bianco) risolta da un solo cambio, non due. */}
             <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
               {[...journal.logs]
                 .filter(l => !(avvio.solo && (l.speaker === 'Aud' || l.speaker === 'PC')))
                 .sort((a, b) => (a.time ?? 0) - (b.time ?? 0))
                 .reverse()
                 .map((log, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 8, fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.4 }}>
+                  <div key={i} style={{ display: 'flex', gap: 8, fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.4 }}>
                     <span style={{ color: 'var(--s-ink-faint)', width: 38, flexShrink: 0 }}>
                       {(log.time || 0).toFixed(1)}s
                     </span>
@@ -4454,7 +4475,7 @@ export default function Serenity() {
             ? <PistaProcedimento nome={procedimentoAttivo.nome} comandi={procedimentoAttivo.comandi}
                 onChiudi={() => setProcedimentoAttivo(null)} lang={lang} />
             : <PistaCiclo mode={mode} phase={faseCiclo} lang={lang}
-                item={item} itemPlaceholder={t('ser_item_placeholder') as string}
+                item={item} setItem={setItem} itemPlaceholder={t('ser_item_placeholder') as string}
                 spiegazione={spiegazioneCiclo} onDichiaraDetto={dichiaraItemDetto}>
                 {bottoniCiclo}
               </PistaCiclo>
@@ -4467,12 +4488,20 @@ export default function Serenity() {
             sotto il quadrante). Due posti diversi per la STESSA cosa, a due passi di distanza
             uno dall'altro: da qui la sensazione di uno spazio isolato, senza un perché visibile.
             Ora un solo posto, sempre lo stesso: quando NESSUN metodo è armato, questa fascia
-            (stessa larghezza/riga di `PistaCiclo`, stesso posto sotto il perno) mostra il
-            campo item e i quattro cerchi dei metodi; appena armato, `PistaCiclo` (sopra) prende
-            il suo posto — mai i due insieme, mai una fascia vuota che segnala "manca qualcosa".
-            Nessuna riga di logica toccata: stesso `item`/`setItem`, stesso `journal.addLog`
-            sull'Invio, stessa voce (`statoVoce`), stesse quattro chiamate
-            (`armCycle`/`armMirror`/`setToneAttivo`) — solo spostate qui dalla barra laterale. */}
+            (stessa larghezza/riga di `PistaCiclo`, stesso posto sotto il perno) mostra i
+            quattro cerchi dei metodi; appena armato, `PistaCiclo` (sopra) prende il suo posto
+            — mai i due insieme, mai una fascia vuota che segnala "manca qualcosa".
+            ⚠️ IL CAMPO ITEM, TOLTO DI QUI — segnalato: « quando non ho armato nessun ciclo
+            appare sempre ECRIS OU DIS L'ITEM, se scrivi non lo prende e poi non serve. Deve
+            apparire quando armi un ciclo. Tanto se vuoi un item lo scrivi in R&I o
+            ASSESSMENT ». Vero, e il « non lo prende » aveva una causa precisa: premere Invio
+            qui chiamava `setItem('')` SUBITO dopo averlo loggato — svuotava il campo prima
+            ancora che l'auditor potesse cliccare CONTACT/NULL/MIRROR/TONE, che a quel punto
+            lo trovava già vuoto e ripartiva in modalità voce come se non fosse mai stato
+            scritto. Tolto — l'item si scrive ora DENTRO `PistaCiclo`, un `<input>` vero al
+            posto del vecchio `<span>` di sola lettura (v. la nota lì), disponibile appena un
+            metodo è armato: non prima, perché prima l'auditor ha già R&I/ASSESSMENT per
+            annotare un item, un terzo posto per la stessa cosa non aggiungeva nulla. */}
         {!senzaMisura && aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && !procedimentoAttivo && (
           <div style={{
             width: 'min(96%, 2200px)', maxWidth: '100%', flexShrink: 0,
@@ -4480,45 +4509,6 @@ export default function Serenity() {
             alignItems: 'center', justifyContent: 'center',
             rowGap: 10, columnGap: 24,
           }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0 }}>
-              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', letterSpacing: '0.1em',
-                            textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
-                {LC('scrivi o dì l\'item', 'écris ou dis l\'item', 'type or say the item', 'escribe o di el ítem', 'skriv eller säg item')}
-              </span>
-              <input
-                className="s-glass"
-                value={item}
-                onChange={e => setItem(e.target.value)}
-                placeholder={t('ser_item_placeholder') as string}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && item.trim()) {
-                    journal.addLog({ speaker: 'Aud', text: item.trim(), time: sessionClock.now(), type: 'normal' });
-                    setItem('');
-                  }
-                }}
-                style={{
-                  borderRadius: 999, background: 'var(--s-disc)',
-                  outline: 'none', fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
-                  padding: '6px 14px', width: 220,
-                }}
-              />
-            </div>
-            {(statoVoce === 'in-ascolto' || statoVoce === 'assente') && (
-              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)', flexShrink: 0 }}>
-                {statoVoce === 'in-ascolto'
-                  ? <span className="ser-pulse">🎙 {LC('in ascolto', 'à l\'écoute', 'listening', 'escuchando', 'lyssnar')}</span>
-                  : <span title={LC(
-                      'controlla Preferenze di Sistema → Privacy e Sicurezza → Microfono/Riconoscimento vocale: il permesso va concesso a "Serenity" separatamente da "Equilibrium"',
-                      'vérifie Réglages Système → Confidentialité et sécurité → Micro/Reconnaissance vocale : la permission doit être accordée à « Serenity » séparément d\'« Equilibrium »',
-                      'check System Settings → Privacy & Security → Microphone/Speech Recognition: the permission must be granted to "Serenity" separately from "Equilibrium"',
-                      'revisa Ajustes del Sistema → Privacidad y seguridad → Micrófono/Reconocimiento de voz: el permiso debe concederse a "Serenity" por separado de "Equilibrium"',
-                      'kontrollera Systeminställningar → Sekretess och säkerhet → Mikrofon/Taligenkänning: behörigheten måste ges till "Serenity" separat från "Equilibrium"') as string}>
-                      {LC('🎙 voce non disponibile — scrivi l\'item', 'la voix n\'est pas disponible — écris l\'item',
-                        'voice not available — type the item', 'la voz no está disponible — escribe el ítem',
-                        'rösten är inte tillgänglig — skriv item')}
-                    </span>}
-              </span>
-            )}
             {([
               { k: 'contact', hue: 'var(--s-still)', label: 'CONTACT', Icona: Crosshair,
                 onClick: () => cycles.armCycle('charge') },

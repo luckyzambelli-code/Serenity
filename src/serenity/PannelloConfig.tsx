@@ -67,23 +67,12 @@ const etichetta: React.CSSProperties = {
   color: 'var(--s-ink-soft)', marginBottom: 10, display: 'block',
 };
 
-export function PannelloConfig({ onChiudi, needleTrim = 0, setNeedleTrim = () => {}, needleInertia = 50, setNeedleInertia = () => {}, museOk = false }: {
+export function PannelloConfig({ onChiudi }: {
   onChiudi: () => void;
-  /** ── LA TARATURA DELL'AGO EEG — segnalata assente nell'audit funzionale completo (« toutes
-   *  les fonctions... calibrations »). Lo stesso `needleTrim`/`needleInertia` del cassetto TRIM
-   *  di App.tsx, scritti sullo stesso `runtime/NeedleEngine` condiviso — vivono in
-   *  `Serenity.tsx` (che possiede l'effetto che li applica al motore), qui solo la manopola.
-   *  Opzionali: `Avvio.tsx` monta lo stesso pannello PRIMA che una seduta esista (nessun ago
-   *  vivo da tarare ancora) — senza queste cinque prop la sezione resta chiusa (`museOk`
-   *  default `false`), non un campo rotto. */
-  needleTrim?: number;
-  setNeedleTrim?: (v: number) => void;
-  needleInertia?: number;
-  setNeedleInertia?: (v: number) => void;
-  /** In App.tsx questa manopola compare SOLO col Muse collegato — è la sensibilità del SUO
-   *  ago, mostrarla senza dire di chi confonderebbe con quella del meter (che ha la sua, nel
-   *  cassetto del meter in intestazione). */
-  museOk?: boolean;
+  /** ⚠️ `needleTrim`/`setNeedleTrim`/`needleInertia`/`setNeedleInertia`/`museOk` vivevano qui —
+   *  la taratura dell'ago EEG, tolta e spostata dentro `MetabolicCheck` (v. la nota più giù,
+   *  dov'era la sezione): l'ago non è mai a schermo dentro CONFIG, regolare la manopola non
+   *  mostrava mai il suo effetto. */
 }) {
   const { t } = useI18n();
   // Le chiavi di `config_mod_*` arrivano da una LISTA (come in `ConfigDrawer` di EQUILIBRIUM),
@@ -250,47 +239,18 @@ export function PannelloConfig({ onChiudi, needleTrim = 0, setNeedleTrim = () =>
           </div>
         </div>
 
-        {/* ── LA TARATURA DELL'AGO EEG — segnalata assente nell'audit funzionale completo:
-            « toutes les fonctions... calibrations » — il cassetto TRIM di App.tsx (sensibilità
-            + inerzia dell'ago MUSE) non aveva NESSUN referente qui: l'ago restava sempre alla
-            taratura di fabbrica. Stesse due manopole, stesso motore condiviso
-            (`runtime/NeedleEngine`, l'effetto che le applica vive in `Serenity.tsx`), stessa
-            gamma (−10…+10 · 0…100) — solo col Muse collegato, come in App.tsx: è la SUA
-            sensibilità, mostrarla senza dire di chi confonderebbe col meter. */}
-        {museOk && (
-          <div>
-            <span style={etichetta}>{tt('drawer_needle_trim')}</span>
-            <div style={{ display: 'grid', gap: 18 }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-soft)', marginBottom: 4 }}>
-                  <span>{tt('trim_sensitivity')}</span>
-                  <span style={{ fontFamily: 'var(--s-mono)' }}>
-                    {needleTrim > 0 ? '+' : ''}{needleTrim} {needleTrim <= -5 ? 'LOW' : needleTrim <= 0 ? 'CENTER' : 'HIGH'}
-                  </span>
-                </div>
-                <input
-                  type="range" min={-10} max={10} step={1} value={needleTrim}
-                  onChange={e => setNeedleTrim(Number(e.target.value))}
-                  style={{ width: '100%', accentColor: 'var(--s-ink)', cursor: 'pointer' }}
-                />
-                <div style={{ fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)', lineHeight: 1.5, marginTop: 4 }}>
-                  {tt('trim_centering')}
-                </div>
-              </div>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-soft)', marginBottom: 4 }}>
-                  <span>{tt('trim_inertia')}</span>
-                  <span style={{ fontFamily: 'var(--s-mono)' }}>{needleInertia}</span>
-                </div>
-                <input
-                  type="range" min={0} max={100} step={1} value={needleInertia}
-                  onChange={e => setNeedleInertia(Number(e.target.value))}
-                  style={{ width: '100%', accentColor: 'var(--s-ink)', cursor: 'pointer' }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+        {/* ── LA TARATURA DELL'AGO EEG, TOLTA DA QUI — segnalato: « in config devi togliere
+            NEEDLE TRIM e devi aggiungerlo quando fai il test col MUSE per il respiro, in modo
+            da avere una logica. Deve potersi vedere l'ago come reagisce quando regoli Needle
+            trim MUSE ». Vero: qui l'ago non è nemmeno a schermo (CONFIG è un pannello a tutta
+            pagina, l'arco resta sotto — v. la nota della sezione MODULI qui sopra), quindi
+            regolare la manopola non mostrava MAI il suo effetto — l'esatto contrario di una
+            taratura, che si fa guardando quel che si tara. `MetabolicCheck` (il respiro guidato
+            del MUSE, `Serenity.tsx`) è il momento giusto: l'ago è a schermo, ATTIVO, e la
+            manopola può stare lì SENZA il velo a tutto schermo che lo coprirebbe — v. la nota
+            su `serenityNeedleTrim` in quel componente. Stesse due manopole, stesso motore
+            (`runtime/NeedleEngine`), nessuna logica persa — solo spostate dove il loro effetto
+            si vede davvero. */}
 
       </div>
     </section>

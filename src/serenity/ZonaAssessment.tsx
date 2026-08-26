@@ -332,20 +332,27 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
                         indicare: niente ancora da confermare. */}
                     {onIndica && !inAttesa && (
                       it.indica === undefined ? (
+                        // ⚠️ SEGNALATO: « in assessment OUI/NON deve avere l'indicazione di
+                        // cosa è ». Erano `t('ri_yes')`/`t('ri_no')` nudi ("Sì"/"No", "Oui"/
+                        // "Non"…) — il significato ("indica al preclear?") viveva SOLO nel
+                        // `title`, un tooltip che si vede solo passandoci sopra col mouse, non
+                        // leggendo la riga. Stessa frase che lo stato GIÀ deciso mostra due
+                        // righe più giù (`✓ indica`/`✗ non indica`, v. sotto) — non un'aggiunta
+                        // scelta qui, il RIUSO di un testo che nel componente esisteva già.
                         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                           <button onClick={() => onIndica(it.id, true)} title={t('ri_indicates') as string} style={{
                             border: '1px solid var(--s-still)', borderRadius: 999, padding: '2px 9px',
                             background: 'transparent', cursor: 'pointer', fontSize: 'var(--s-fs-micro)',
                             color: 'var(--s-still)', fontFamily: 'var(--s-sans)',
                           }}>
-                            {t('ri_yes')}
+                            ✓ {t('ri_indicates')}
                           </button>
                           <button onClick={() => onIndica(it.id, false)} title={t('ri_does_not_indicate') as string} style={{
                             border: '1px solid var(--s-ink-ghost)', borderRadius: 999, padding: '2px 9px',
                             background: 'transparent', cursor: 'pointer', fontSize: 'var(--s-fs-micro)',
                             color: 'var(--s-ink-faint)', fontFamily: 'var(--s-sans)',
                           }}>
-                            {t('ri_no')}
+                            ✗ {t('ri_does_not_indicate')}
                           </button>
                         </span>
                       ) : (

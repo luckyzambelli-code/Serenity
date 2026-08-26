@@ -74,13 +74,30 @@ import { SuggerimentoCiclo } from './SuggerimentoCiclo';
  * riceve già): `*.say_item`, per qualunque metodo. `onDichiaraDetto` resta l'UNICA vera azione
  * (chiama `dichiaraItemDetto`, il motore) — il resto (testo che pulsa, taglia, posizione) è
  * solo resa.
- */
-export function PistaCiclo({ mode, phase, lang, item, itemPlaceholder, spiegazione, onDichiaraDetto, children }: {
+ *
+ * ── L'ITEM ORA SI PUÒ SCRIVERE, PER TUTTI E QUATTRO I METODI — segnalato: « in TONE dice
+ * "Écris ou dis la résistance" ma non puoi scriverlo. Negli altri cicli anche non si può
+ * scrivere, invece si deve, l'auditor potrebbe volerlo scrivere. Questo permette di
+ * calcolarne la carica? ». Vero su tutti i punti: era uno `<span>` di sola lettura (mostrava
+ * `item`, mai lo cambiava) mentre il testo stesso invitava a scriverlo — un invito a vuoto.
+ * Diventa un `<input>` vero, per CONTACT/NULL/MIRROR/TONE indistintamente (nessuna
+ * distinzione di logica fra metodi, solo il segnaposto cambia già da sé via
+ * `itemPlaceholder`): scrivere e premere Invio chiama `setItem` (lo STESSO stato che la voce
+ * riempie già, `Serenity.tsx`) — sì, calcola la carica esattamente come un item detto a voce,
+ * perché per il motore (`useContactNullCycle`/`useMirrorCycle`/`useToneCycle`) è la STESSA
+ * variabile, letta allo stesso modo qualunque sia la sua origine. Se il ciclo sta ancora
+ * aspettando che l'item sia dato (`diItem`), premere Invio chiama ANCHE `onDichiaraDetto` —
+ * lo stesso gesto del bottone "l'item è stato detto" qui accanto, per non dover premere
+ * DUE cose per una sola dichiarazione quando si è già scritto il testo giusto. */
+export function PistaCiclo({ mode, phase, lang, item, setItem, itemPlaceholder, spiegazione, onDichiaraDetto, children }: {
   mode: SessionMode;
   phase: SessionPhase;
   lang: string;
   /** L'item dato per questo ciclo — stringa vuota se non ancora dato. */
   item: string;
+  /** Scrive l'item (o la resistenza, in TONE) — lo stesso `setItem` di `Serenity.tsx`, la
+   *  STESSA variabile che la voce riempie: scriverlo qui vale quanto dirlo a voce. */
+  setItem: (v: string) => void;
   /** Il segnaposto da mostrare al posto dell'item, finché non è stato dato. */
   itemPlaceholder: string;
   /** Comando/come/avviso del tempo REALE in corso — lo stesso `spiegazioneCiclo` che la barra
@@ -216,14 +233,26 @@ export function PistaCiclo({ mode, phase, lang, item, itemPlaceholder, spiegazio
       </div>
       {/* ── L'ITEM — segnalato: « niente più dei cicli riprodotto in alto a sinistra ». Era in
           `testataCiclo`, nella barra comandi; stessa resa (`--s-serif`/`--s-fs-lg`), qui
-          sotto l'intestazione invece che accanto al badge. */}
-      <span style={{
-        fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-lg)', color: 'var(--s-ink)',
-        padding: '0 10px',
-        flexShrink: 0, whiteSpace: 'nowrap',
-      }}>
-        {item || itemPlaceholder}
-      </span>
+          sotto l'intestazione invece che accanto al badge.
+          ⚠️ ORA SCRIVIBILE — v. la nota in cima al file. Un `<input>`, non più uno `<span>` di
+          sola lettura: stessa resa (`--s-serif`/`--s-fs-lg`), larghezza che segue il testo
+          (`ch` sul valore o sul segnaposto, mai più corta di 6 caratteri) invece di una
+          larghezza fissa — un `<input>` a taglia fissa o tronca l'item lungo o lascia un vuoto
+          enorme per uno corto. */}
+      <input
+        value={item}
+        onChange={e => setItem(e.target.value)}
+        placeholder={itemPlaceholder}
+        onKeyDown={e => {
+          if (e.key === 'Enter' && diItem) onDichiaraDetto();
+        }}
+        style={{
+          fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-lg)', color: 'var(--s-ink)',
+          padding: '0 10px', border: 'none', borderBottom: '1px solid var(--s-ink-ghost)',
+          background: 'none', outline: 'none',
+          flexShrink: 0, width: `${Math.max(6, (item || itemPlaceholder).length)}ch`,
+        }}
+      />
       {/* ── « DÌ L'ITEM… » / « L'HO DETTA » — segnalato: « devono stare a sinistra coi
           comandi, per tutti i cicli ». TONE dice "la resistenza", gli altri tre "l'item" —
           stessa distinzione che facevano le tre copie nella barra comandi. */}
