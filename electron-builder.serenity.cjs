@@ -40,7 +40,12 @@ module.exports = {
   directories: b.directories,
   files: b.files,
   asarUnpack: b.asarUnpack || [],
-  mac: b.mac,
+  // ⚠️ L'ICONA, NON PIÙ CONDIVISA — segnalato: « cambia l'icona dell'applicazione SERENITY
+  // con questa immagine » (la testa/cervello in wireframe, `build/icon-serenity.icns`,
+  // generato da `Ondes.png` fornito dall'utente). Prima `mac: b.mac` prendeva l'icona di
+  // EQUILIBRIUM (il quadrante "STATIC Meter") tale e quale: le due applicazioni sono
+  // distinte anche nel Dock/Launchpad ora, non solo nell'interfaccia.
+  mac: { ...b.mac, icon: 'build/icon-serenity.icns' },
   extraResources: b.extraResources || [],
   // ⚠️ L'ENTRATA SI SCRIVE, non si indovina. Prima `main.cjs` la deduceva da `app.getName()`,
   // che su macOS può venire dall'Info.plist e su un'altra piattaforma dal package.json: una

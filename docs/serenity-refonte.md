@@ -5032,6 +5032,97 @@ EQUILIBRIUM 2.0.225, SERENITY 3.0.118.
 
 ---
 
+## Giro (26/08/2026) — l'icona di SERENITY; `agoEeg` non confondeva più le boîtes col MUSE; TONE arma in un click; History PDF apribile per davvero
+
+**L'icona.** Arrivata come file (`~/Downloads/Fonds/Ondes.png`, una testa/cervello in wireframe
+dorato su nero) — prima bloccata perché l'allegato in chat non dava un percorso su disco.
+Composta in un badge circolare 1024×1024 (Pillow: gradiente radiale, anello sottile, bagliore
+ambrato dietro i nodi accesi), nel nero neutro di SERENITY (`--s-ground` scuro, `#17181a`),
+NON il blu navy dell'icona di EQUILIBRIUM — la sua identità, non una copia. Iconset generato con
+`sips`, `.icns` con `iconutil`, collegato in `electron-builder.serenity.cjs` con un override
+mirato (`mac: { ...b.mac, icon: 'build/icon-serenity.icns' }`) — EQUILIBRIUM non tocca.
+
+**`agoEeg` confondeva ThetaReadyCheck con MetabolicCheck.** Segnalato: « quando fai il test MUSE
+resta su METER » (il SELETTORE lo diceva, il vero ago era già quello giusto — v. sotto) e,
+separatamente: « quando faccio la prova dello squeeze l'ago si freeze ». Stessa causa profonda:
+`metabolicOpen` è UNA variabile che apre DUE schermate diverse in sequenza (prima
+`ThetaReadyCheck`, la stretta delle boîtes; poi `MetabolicCheck`, il respiro del MUSE) — ma
+`agoEeg = metabolicOpen ? true : ...` forzava l'ago EEG per TUTTO `metabolicOpen`, comprese le
+boîtes. Durante lo squeeze test l'ago disegnato era quindi quello del MUSE (fermo, senza
+segnale) invece di quello del Meter (che si sarebbe mosso con la stretta vera) — non un vero
+"freeze" del motore, l'ago SBAGLIATO. Aggiunta `inThetaReadyCheck` (la STESSA condizione che
+sceglie quale dei due componenti montare) per restringere il forzato EEG alla sola metà giusta.
+Di riflesso, anche il selettore MUSE/METER/DEUX sotto l'arco (che leggeva `agoScelto`, la
+preferenza persistita, mai il forzato) è stato nascosto durante `metabolicOpen`: mostrava
+"METER" sopra un ago che nel frattempo era EEG — fuorviante, e comunque senza effetto essendo il
+forzato a vincere sempre.
+
+**TONE arma in un click, come gli altri tre.** Segnalato: « le cicle TONE contrairement aux
+autres demande d'appuyer sur un bouton pour donner l'item. ENLEVE LE ». Vero: `armCycle`/
+`armMirror` (CONTACT/NULL/MIRROR) armano E aprono la cattura dell'item nello stesso click; il
+cerchio TONE apriva solo il pannello e aspettava un secondo click, "DAI L'ITEM"
+(`tone.localizzaTone()`) — la stessa asimmetria esiste in App.tsx (non un'invenzione di questa
+sessione), ma qui è un'esplicita richiesta di non riprodurla. Il click sul cerchio ora arma E
+localizza insieme; il selettore del tono di partenza SENZA meter (prima dentro la fase
+"locate", ormai irraggiungibile) si è spostato PRIMA, accanto al cerchio TONE stesso — si sceglie
+da dove si parte, poi si clicca, non il contrario.
+
+**History — i PDF SERENITY erano invisibili per una ragione strutturale, non intermittente.**
+Segnalato di nuovo dopo un giro in cui non si era riprodotto il bug (« il est toujours
+impossible de visualiser les pdf de History »). Trovate DUE cause, una dentro l'altra:
+1. `HistoryModal.openPdf` provava PRIMA un `blob:` locale (`URL.createObjectURL`, IndexedDB) e
+   solo come ultima spiaggia l'URL del server. Un `blob:` è registrato per PROCESSO di
+   rendering — la finestra figlia che Electron apre per il "View" (`setWindowOpenHandler` in
+   `main.cjs`, corretto in un giro precedente per PERMETTERE la navigazione) gira in un processo
+   suo (`overrideBrowserWindowOptions` lo costringe), quindi il blob creato nella finestra
+   principale non esiste più lì: la navigazione veniva concessa, la pagina restava vuota o
+   rotta — nessun errore visibile, solo "non si vede niente". Invertito l'ordine: si prova PRIMA
+   l'URL del server locale (`serverSessionPdfUrl`, una risorsa di rete vera — `api-routes.cjs`
+   la serve con `Content-Type: application/pdf` — senza scope di processo), il blob resta
+   l'ultima spiaggia per quando il server non risponde affatto.
+2. Ma il server non aveva MAI un PDF SERENITY da servire: `PostSessionReport.tsx` (App.tsx)
+   carica il PDF sul server locale a ogni chiusura seduta (commento "FIX HISTORY-PDF", un bug
+   già trovato e corretto lì UNA VOLTA) — quel caricamento non era mai stato portato al
+   salvataggio di SERENITY (`Serenity.tsx`, dentro `chiudi()`), che scriveva SOLO in IndexedDB.
+   Aggiunta la stessa chiamata (`serverSaveSessionPdf`, stesso schema `dataUri.split(',')[1]`)
+   dopo il salvataggio locale. Le due cause insieme spiegano perché il fix precedente (il
+   permesso della finestra) non fosse bastato: anche permettendo la finestra, o il blob era
+   cross-processo (causa 1) o il server non aveva nulla comunque (causa 2) — serviva risolvere
+   entrambe. Non verificabile in questo sandbox (serve il server locale + l'app Electron vera,
+   non il solo dev server Vite) — da controllare nella prossima seduta chiusa e riaperta da
+   History.
+
+**Tre cose più piccole, stesso giro.**
+- **Lo scivolo con/senza ago, misurato non indovinato.** 190px (un giro fa) bastava con
+  margine a rivendere; misurato dal vivo (`getBoundingClientRect`, stesso font/peso/corpo)
+  sulle dieci etichette × cinque lingue, la più lunga è "without needle" (EN, 91px reali) —
+  148px la contiene con solo un margine minimo, non uno spazio vuoto vero.
+- **Lo stesso scivolo, raggiungibile ANCHE a ciclo armato.** Segnalato: « quando sono in ciclo
+  armato devo poter passare da ago a senza ago ». Viveva nella barra amministrativa che sparisce
+  tutta insieme appena un metodo si arma (`modalitaCiclo`) — ma è l'UNICA di quelle scelte che
+  ha senso rifare MENTRE l'ago sta reagendo, non solo prima. Spostato fuori da quel blocco,
+  resta l'unica eccezione.
+- **OBIETTIVO/STATO FISICO/R-FACTOR sparisce DEL TUTTO dopo 10s**, non più una maniglia al suo
+  posto. Segnalato: « elle n'est pas utile qu'elle reste pendant la seance » — la maniglia
+  cliccabile (per riaprire la riga) era proprio l'ingombro lamentato, una riga che si
+  trasformava in un'altra riga invece di sparire. I tre campi restano scritti nello stato/nel
+  rapporto, solo non più a vista; nessun modo di riaprirli a seduta in corso.
+
+`tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo, nessun errore, due import
+spenti tolti — `exactLevelName`/`levelName`, non più usati dopo aver spostato il selettore di
+TONE), `vitest run` 639/639. Verificato dal vivo nel browser: TONE arma e localizza in un click
+solo (screenshot: "0 → +40 en cours…" appare subito, nessun secondo bottone); lo squeeze test
+mostra l'ago giusto (Meter, non EEG) dietro la carta di prontezza; lo scivolo ago/senza-ago resta
+visibile e funzionante a ciclo CONTACT armato (screenshot prima/dopo il click); OBIETTIVO ecc.
+sparisce senza lasciare nulla al suo posto dopo 10s. Il fix di History non è verificabile senza
+il server locale + Electron vero. `git status`: `src/serenity/Serenity.tsx`,
+`src/components/HistoryModal.tsx`, `src/components/ToneDial.tsx`, `src/session/useToneCycle.ts`,
+`electron-builder.serenity.cjs`, `build/icon-serenity.icns`, `build/icon-serenity.iconset/*`.
+
+EQUILIBRIUM 2.0.226, SERENITY 3.0.119.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

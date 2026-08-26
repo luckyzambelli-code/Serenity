@@ -142,25 +142,37 @@ export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps
   const allSelected = filteredSessions.length > 0 && filteredSessions.every(s => selected.has(s.id));
 
   const openPdf = async (s: SessionSummary) => {
-    // 1. Try local IndexedDB
+    // ⚠️ BUG TROVATO — segnalato di nuovo: « il est toujours impossible de visualiser les
+    // pdf de History ». La prima volta (v. `main.cjs`, `setWindowOpenHandler`) si era
+    // corretto SOLO il permesso di aprire una finestra figlia per un URL `blob:` — restava
+    // rotto lo stesso: un `blob:` creato QUI (nel renderer della finestra PRINCIPALE) non è
+    // leggibile in un'ALTRA finestra Electron — `URL.createObjectURL` è registrato per
+    // processo di rendering, e `overrideBrowserWindowOptions` (nello stesso handler)
+    // costringe la finestra figlia in un processo suo — la navigazione veniva CONCESSA
+    // ma il blob non esisteva più dall'altra parte: una finestra vuota o rotta, non un
+    // errore visibile. Verificato in dev tools nel browser (dove funzionava, stesso
+    // processo — perché lì non c'era mai stato il bug). L'URL del SERVER LOCALE
+    // (`serverSessionPdfUrl`, `api-routes.cjs` lo serve con `Content-Type: application/pdf`)
+    // è una risorsa di rete VERA, non uno scope di processo — la si apre DIRETTAMENTE, senza
+    // passare da un blob: nessun cross-process, funziona in qualunque finestra. Il server
+    // locale (`server-core.cjs`) gira SEMPRE nell'app Electron: si prova PRIMA lui, non più
+    // per ultimo — la copia IndexedDB (via blob, cross-process nella stessa maniera) resta
+    // solo l'ultima spiaggia, per quando il server non risponde affatto.
+    const serverUp = await isServerAvailable();
+    if (serverUp) {
+      const resp = await fetch(serverSessionPdfUrl(s.id), { method: 'HEAD' });
+      if (resp.ok) { window.open(serverSessionPdfUrl(s.id), '_blank'); return; }
+    }
+    // Ultima spiaggia: nessun server raggiungibile — il blob resta l'unico modo, e in
+    // quel caso window.open lo apre nella STESSA finestra/processo se non risulta
+    // bloccato (vero in un browser normale; in Electron senza server è un caso limite,
+    // non il flusso comune — il server locale c'è sempre quando l'app è quella vera).
     const local = await getSessionPdfAsync(s.id);
     if (local) {
       const url = URL.createObjectURL(await pdfToBlob(local));
       window.open(url, '_blank');
       setTimeout(() => URL.revokeObjectURL(url), 60000);
       return;
-    }
-    // 2. Try server API (shared between Chrome + Electron)
-    const serverUp = await isServerAvailable();
-    if (serverUp) {
-      const resp = await fetch(serverSessionPdfUrl(s.id));
-      if (resp.ok) {
-        const blob = await resp.blob();
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        setTimeout(() => URL.revokeObjectURL(url), 60000);
-        return;
-      }
     }
     alert(L('PDF non disponibile.', 'PDF non disponible.', 'PDF unavailable.', 'PDF no disponible.', 'PDF ej tillgänglig.'));
   };

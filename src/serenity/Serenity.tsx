@@ -57,7 +57,7 @@ import { MirrorDial } from '../components/MirrorDial';
 import { useToneCycle } from '../session/useToneCycle';
 import { ToneDial } from '../components/ToneDial';
 import { ToneColumn } from '../components/ToneColumn';
-import { TONE_LABELS, exactLevelName, levelName } from '../engine/toneLevels';
+import { TONE_LABELS } from '../engine/toneLevels';
 import {
   loadHistory as loadCanTests, saveHistory as saveCanTests, addTest as addCanTest,
   testedToday, type PcCanHistory,
@@ -67,7 +67,7 @@ import { sessionRecorder } from '../engine/SessionRecorder';
 import { sessionRecord, cycleRecord, fnRecord, itemRecord, chiaveItem } from '../engine/corpus';
 import { corpusWrite, corpusAvailable } from '../lib/corpusWriter';
 import { getProfiles, getPcProfiles, saveSession, saveSessionPdf, saveSessionPdfAsync, getAllProcessusFiles, getSessionsByProfile } from '../lib/storage';
-import { isServerAvailable, serverGetProcessusList, serverProcessusUrl } from '../lib/serverStorage';
+import { isServerAvailable, serverGetProcessusList, serverProcessusUrl, serverSaveSessionPdf } from '../lib/serverStorage';
 import { ProcessusModal, type ProcessusEntry } from '../components/ProcessusModal';
 import { costruisciRiepilogo, generaPdf, type SerenityReportInput } from './sessionReport';
 import { Avvio } from './Avvio';
@@ -1310,10 +1310,24 @@ export default function Serenity() {
    * MUSE, punto: non serve nemmeno `museOk` a guardia (se il MUSE non è ancora connesso,
    * `MetabolicCheck` mostra la sua attesa, non il quadrante — mostrare qui l'EEG "spento"
    * invece del Meter "acceso" da una prova precedente resta comunque la lettura onesta di cosa
-   * questo schermo sta chiedendo). */
+   * questo schermo sta chiedendo).
+   *
+   * ⚠️ BUG TROVATO — segnalato: « quando faccio la prova dello squeeze l'ago si freeze ».
+   * `metabolicOpen` non copre SOLO `MetabolicCheck` (il test del MUSE): la STESSA variabile
+   * apre ANCHE `ThetaReadyCheck` (la stretta/il respiro delle boîtes — v. il render,
+   * `{metabolicOpen && (() => { if (meterC && !thetaReadyDone) return <ThetaReadyCheck/>; ...
+   * return <MetabolicCheck/>; })()}`), che gira PRIMA quando il meter è collegato. Forzare
+   * `agoEeg=true` su TUTTO `metabolicOpen` costringeva l'ago EEG anche durante la stretta
+   * delle lattine — uno strumento che durante quella prova non riceve nulla, quindi resta
+   * fermo dov'era: non un vero "freeze" del motore, l'ago giusto (quello del Meter, che infatti
+   * SI muove — `theta.testPeakOffset` lo dimostra) semplicemente non era quello disegnato.
+   * `inThetaReadyCheck`, sotto, è la STESSA condizione che decide quale dei due componenti
+   * montare — quando è lei a girare, l'ago resta quello del Meter; il forzato EEG scatta solo
+   * per l'ALTRA metà di `metabolicOpen`, il test del MUSE vero e proprio. */
   const cicloEegInCorso = cycles.cycleArmed || mirror.mirrorArmed;
+  const inThetaReadyCheck = metabolicOpen && meterC && !thetaReadyDone;
   const agoEeg = toneAttivo ? false
-    : metabolicOpen ? true
+    : metabolicOpen && !inThetaReadyCheck ? true
     : cicloEegInCorso ? museOk
     : museOk && meterC ? agoScelto === 'eeg'
     : museOk;
@@ -2072,6 +2086,23 @@ export default function Serenity() {
         try {
           const pdf = await generaPdf(input, k => t(k as never) as string, LC);
           try { await saveSessionPdfAsync(riepilogo.id, pdf); } catch { saveSessionPdf(riepilogo.id, pdf); }
+          // ⚠️ BUG TROVATO — segnalato: « il est toujours impossible de visualiser les pdf
+          // de History ». Stesso bug già corretto UNA VOLTA in App.tsx (v. il commento
+          // "FIX HISTORY-PDF" in `PostSessionReport.tsx`), mai portato qui: il PDF finiva
+          // SOLO nell'IndexedDB locale, mai sul server locale (`serverSaveSessionPdf`,
+          // `api-routes.cjs`). `HistoryModal.openPdf` ora prova PRIMA l'URL del server (una
+          // risorsa di rete vera, apribile in qualunque finestra Electron senza il problema
+          // dei `blob:` cross-processo — v. la sua nota) — ma senza QUESTA riga il server
+          // non aveva mai nulla da servire per una seduta SERENITY, quindi cadeva SEMPRE sul
+          // blob rotto: la stessa causa, con un sintomo diverso da quello di App.tsx a suo
+          // tempo (lì mancava fra dispositivi diversi, qui mancava anche sullo stesso). */
+          try {
+            if (await isServerAvailable()) {
+              const raw = pdf.split(',')[1] || '';
+              const fname = `${(input.pcName || 'session').replace(/[^\w-]+/g, '_')}_${riepilogo.id}.pdf`;
+              await serverSaveSessionPdf(riepilogo.id, fname, raw);
+            }
+          } catch (srvErr) { console.warn('[SERENITY] upload PDF al server fallito (resta locale)', srvErr); }
         } catch (e) { console.error('[SERENITY] generazione PDF fallita', e); }
       })();
     } catch (e) {
@@ -2233,27 +2264,13 @@ export default function Serenity() {
           `chiudiTone`/`resetTone`), stesso testo dei tre tempi. */}
       {aperta && toneAttivo && (
         <>
-          {tone.tonePhase === 'locate' && (
-            <>
-              {!tone.toneHasMeter && (
-                <select value={tone.toneAssessed} onChange={e => tone.setToneAssessed(Number(e.target.value))}
-                  style={{
-                    border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
-                    outline: 'none', fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
-                    cursor: 'pointer', padding: '2px 4px',
-                  }}>
-                  {TONE_LABELS.map(v => (
-                    <option key={v} value={v}>
-                      {v > 0 ? `+${v}` : v} · {levelName(exactLevelName(v) ?? '', lang)}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <button className="s-glass s-glass-btn" onClick={() => tone.localizzaTone()} style={pillBtn('var(--s-ink-soft)')}>
-                {t('ser_arm_contact') /* stesso gesto/testo di App.tsx: "DAI L'ITEM" */}
-              </button>
-            </>
-          )}
+          {/* ⚠️ « DAI L'ITEM » NON STA PIÙ QUI — segnalato: « le cicle TONE demande d'appuyer
+              sur un bouton [...] ENLEVE LE ». Il click sul cerchio TONE (sopra, v. la sua nota)
+              arma E localizza nello stesso gesto: `tonePhase` passa da 'locate' a 'raise'
+              PRIMA che questo componente si riveda a schermo, quindi questo ramo non è più
+              raggiunto in condizioni normali — tolto, non lasciato morto. Il valore di
+              partenza senza meter si sceglie ORA prima del click (v. il selettore accanto al
+              cerchio TONE), non più qui dopo. */}
           {/* ⚠️ IN CORSO O RAGGIUNTO — segnalato: « mette i due valori [...] ma come auditor
               non si sà se è già stato ottenuto, inganna averli tutti e due indicati ». Prima
               questa scritta era IDENTICA nelle due fasi (stesso `+40` in `--s-reserve`, colore
@@ -3060,7 +3077,30 @@ export default function Serenity() {
           trasparenti" trovata altrove in questo file — un elemento invisibile che ruba il clic
           prima che arrivi a chi dovrebbe riceverlo. */}
       <header ref={headerRef} style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 14, rowGap: 10, position: 'relative', zIndex: 10 }}>
-        {/* ── MODALITÀ CICLO, LA BARRA AMMINISTRATIVA SPARISCE — v. la nota su `modalitaCiclo`.
+        {/* ── LA VISTA SENZA AGO — UNICA ECCEZIONE, ANCHE A CICLO ARMATO — segnalato: « quando
+            sono in ciclo armato devo poter passare da ago a senza ago ». Tutto il resto della
+            barra amministrativa qui sotto sparisce a `modalitaCiclo` (decisioni prese una
+            volta, mai bisogno di guardarle con un ago che sta reagendo) — ma proprio QUESTA
+            scelta è l'opposto: è COME guardare l'ago che sta reagendo, quindi deve restare
+            raggiungibile mentre il ciclo è in corso, non solo prima o dopo. Spostata fuori dal
+            blocco `{!modalitaCiclo && (...)}` apposta, stesso componente (`BottoneCiclico`)
+            di `SelettoreTema` qui accanto. `Compass` per la vista con l'ago (la sua metafora
+            naturale: un ago che punta), `Layers` per quella senza (bande di colore impilate).
+            Le etichette dicono "con ago"/"senza ago", non parole nude — chi legge sa già cosa
+            sta guardando. Larghezza misurata (non indovinata) sulle dieci etichette × cinque
+            lingue: la più lunga è "without needle" (EN, 91px reali) + 14 (padding lontano
+            dalla manopola) + 36 (la manopola stessa) = 141; 148 lascia solo un margine minimo
+            di sicurezza per la resa dei font fra sistemi diversi. */}
+        <BottoneCiclico
+          opzioni={[
+            { k: 'ago' as const, label: LC('con ago', 'avec aiguille', 'with needle', 'con aguja', 'med nål') as string, icona: <Compass size={18} strokeWidth={1.8} aria-hidden="true" /> },
+            { k: 'zone' as const, label: LC('senza ago', 'sans aiguille', 'without needle', 'sin aguja', 'utan nål') as string, icona: <Layers size={18} strokeWidth={1.8} aria-hidden="true" /> },
+          ]}
+          selezionato={vistaSenzaAgo ? 'zone' : 'ago'}
+          onChange={k => setVistaSenzaAgo(k === 'zone')}
+          larghezzaScivolo={148}
+        />
+        {/* ── MODALITÀ CICLO, IL RESTO DELLA BARRA AMMINISTRATIVA SPARISCE — v. la nota sopra.
             Logo/crediti, tema, lingua, storico, processus, l'assetto: decisi una volta, mai
             bisogno di guardarli con un ago che sta reagendo. Nulla di questo è tolto per
             davvero — l'intero blocco torna intatto appena il ciclo si chiude (`ANNULLA` o un
@@ -3095,33 +3135,6 @@ export default function Serenity() {
             alle quattro domande d'avvio. Stessi due selettori di `Avvio.tsx`, condivisi da
             `Impostazioni.tsx`: qui restano visibili per tutta la seduta, non solo prima. */}
         <SelettoreTema />
-        {/* ── LA VISTA SENZA AGO — chiesto: « bottone slide per scegliere, come per LIGHT DARK ».
-            STESSO componente di `SelettoreTema` qui accanto (`BottoneCiclico`, lo scivolo di
-            vetro), non un secondo stile inventato — solo due tappe diverse. `Compass` per la
-            vista con l'ago (la sua metafora naturale: un ago che punta), `Layers` per quella
-            senza (bande di colore impilate) — nessuna delle due già in uso altrove in questa
-            barra, per non confondersi con EP/COMMANDS/Processus.
-            ⚠️ SEGNALATO: « il bottone non è esplicito ». Le due tappe dicevano "ago"/"zone" —
-            due sostantivi nudi, che non dicono QUALE dei due si vede ORA né cosa succede al
-            clic. Diventano "con ago"/"senza ago" — le STESSE parole della richiesta originale
-            (« una vista... in cui non mostri l'ago »), non una parafrasi: leggendo l'etichetta
-            si sa già cosa si sta guardando, non solo con quale icona.
-            ⚠️ SEGNALATO DI NUOVO: « deve mostrare in intero ogni lingua, in francese ad esempio
-            è tagliata la parola ». `minLarghezza` (sotto) non serve a niente QUI — lo scivolo a
-            due tappe di `BottoneCiclico` ha una larghezza FISSA (124px, tarata su "chiaro"/
-            "scuro") che quel prop non tocca affatto; "avec aiguille"/"sans aiguille" (13
-            caratteri) non ci stava. `larghezzaScivolo`, il prop nuovo fatto apposta (v. la sua
-            nota in `BottoneCiclico.tsx`) — `SelettoreTema` qui accanto non lo passa, resta
-            tale e quale. */}
-        <BottoneCiclico
-          opzioni={[
-            { k: 'ago' as const, label: LC('con ago', 'avec aiguille', 'with needle', 'con aguja', 'med nål') as string, icona: <Compass size={18} strokeWidth={1.8} aria-hidden="true" /> },
-            { k: 'zone' as const, label: LC('senza ago', 'sans aiguille', 'without needle', 'sin aguja', 'utan nål') as string, icona: <Layers size={18} strokeWidth={1.8} aria-hidden="true" /> },
-          ]}
-          selezionato={vistaSenzaAgo ? 'zone' : 'ago'}
-          onChange={k => setVistaSenzaAgo(k === 'zone')}
-          larghezzaScivolo={190}
-        />
         <SelettoreLingua />
         {/* ── STORICO E PROCESSUS, DOPO IL BOTTONE LINGUA — segnalato: « les boutons History et
             Processus après le bouton langue ». Stavano subito dopo il numero di versione, PRIMA
@@ -3968,29 +3981,13 @@ export default function Serenity() {
             una riga sola, i campi divisi in parti uguali (`flex:1` ciascuno). Il campo
             "processo" non c'è più (v. la nota sullo stato, sopra — tolto, ridondante col
             bottone Procedimenti accanto a EP).
-            ⚠️ SPARISCONO DOPO 10 SECONDI, SE RIEMPITI — segnalato: « per liberare
-            l'interfaccia ». `campiSessioneNascosti` (sopra, col suo `useEffect`) decide se
-            questa riga si vede: quando è vero, una piccola maniglia (come il "chiuso" di
-            `PistaCiclo`) prende il suo posto — un clic la riporta, e restando poi APERTA (il
-            conto alla rovescia non ha un secondo giro automatico: chi la riapre l'ha fatto per
-            guardarla o correggerla, non per essere interrotto di nuovo dieci secondi dopo). */}
-        {aperta && campiSessioneNascosti && (
-          <button type="button" onClick={() => setCampiSessioneNascosti(false)}
-            title={LC('mostra obiettivo, stato fisico, r-factor', 'afficher objectif, état physique, r-factor',
-              'show objective, physical state, r-factor', 'mostrar objetivo, estado físico, r-factor',
-              'visa mål, fysiskt tillstånd, r-factor') as string}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-              border: '1px solid var(--s-ink-ghost)', borderRadius: 999, padding: '4px 10px',
-              background: 'none', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)',
-              fontWeight: 700, letterSpacing: '0.06em', color: 'var(--s-ink-faint)',
-              alignSelf: 'flex-start', width: 'min(96%, 2200px)', maxWidth: '100%',
-            }}>
-            {LC('obiettivo · stato fisico · r-factor', 'objectif · état physique · r-factor',
-              'objective · physical state · r-factor', 'objetivo · estado físico · r-factor',
-              'mål · fysiskt tillstånd · r-factor')}
-          </button>
-        )}
+            ⚠️ SPARISCE DEL TUTTO DOPO 10 SECONDI, SE RIEMPITA — segnalato di nuovo: « fais la
+            disparaitre completement [...] elle n'est pas utile qu'elle reste pendant la
+            seance ». Prima, scaduto il conto alla rovescia, restava una piccola maniglia
+            cliccabile al suo posto (per poterla riaprire) — proprio quella maniglia era
+            l'ingombro segnalato: una riga si trasformava in un'altra riga, non spariva. Ora
+            `campiSessioneNascosti` non lascia più NULLA al suo posto: i tre campi restano
+            comunque scritti (nello stato, nel rapporto) — solo non più a vista. */}
         {aperta && !campiSessioneNascosti && (
           <div style={{
             display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 20,
@@ -4608,8 +4605,18 @@ export default function Serenity() {
           {/* ⚠️ MAI IN "SENZA AGO" — segnalato: « quando abbiamo senza ago, non devi mostrare
               MUSE/METER DEUX ». Stessa ragione di NEEDLE LIGHT qui sopra: questa è la scelta
               di QUALE ago guardare — senza nessun ago disegnato (`VistaSenzaAgo`), la scelta
-              non ha più un oggetto. */}
-          {museOk && meterC && !vistaSenzaAgo && (
+              non ha più un oggetto.
+              ⚠️ MAI DURANTE `metabolicOpen` — segnalato di nuovo: « quando fai il test MUSE
+              resta su METER e non vedi l'ago del MUSE ». Il vero ago disegnato è già forzato
+              su EEG in quella schermata (`agoEeg = metabolicOpen ? true : ...`, sopra), ma
+              `selezionato` qui sotto legge `agoScelto` — la preferenza PERSISTITA da una
+              seduta all'altra, mai quella forzata — quindi se l'auditor aveva scelto METER
+              l'ultima volta (o l'ha appena provato con le boîtes, il passo PRIMA di questo),
+              il selettore continuava a dire "METER" sopra un ago che nel frattempo era già
+              quello del MUSE: fuorviante, e per di più CLICCABILE senza effetto (il forzato
+              vince comunque). Durante il test del MUSE non c'è più una scelta da fare — si
+              nasconde, come NEEDLE LIGHT/MUSE-METER-DEUX in vista senza ago. */}
+          {museOk && meterC && !vistaSenzaAgo && !metabolicOpen && (
             <div style={{
               position: 'absolute', left: '50%', bottom: 12, transform: 'translateX(-50%)', zIndex: 4,
             }}>
@@ -4721,7 +4728,16 @@ export default function Serenity() {
                 onClick: () => cycles.armCycle('null') },
               { k: 'mirror', hue: 'var(--s-reserve)', label: 'MIRROR', Icona: FlipHorizontal2,
                 onClick: () => mirror.armMirror() },
-              { k: 'tone', hue: 'var(--s-tone-hue)', label: 'TONE', Icona: AudioWaveform, onClick: () => setToneAttivo(true) },
+              // ⚠️ TONE ARMAVA IN DUE TEMPI, GLI ALTRI TRE IN UNO — segnalato: « le cicle TONE
+              // contrairement aux autres demande d'appuyer sur un bouton pour donner l'item.
+              // ENLEVE LE et fais comme pour les autres cycles ». `armCycle`/`armMirror` (sopra)
+              // armano E aprono la cattura dell'item nello STESSO click; TONE apriva solo il
+              // pannello (`setToneAttivo(true)`) e aspettava un secondo click, "DAI L'ITEM"
+              // (`tone.localizzaTone()`, sotto in `tonePhase==='locate'`) — la stessa asimmetria
+              // esiste anche in App.tsx (non un'invenzione di questa sessione), ma qui è
+              // un'esplicita richiesta di NON riprodurla. Un click solo, come gli altri tre.
+              { k: 'tone', hue: 'var(--s-tone-hue)', label: 'TONE', Icona: AudioWaveform,
+                onClick: () => { setToneAttivo(true); tone.localizzaTone(); } },
             ]).map(c => (
               <div key={c.k} style={{ display: 'grid', justifyItems: 'center', gap: 4, flexShrink: 0 }}>
                 <button className="s-glass s-glass-btn" onClick={c.onClick} title={c.label} style={{
@@ -4735,6 +4751,25 @@ export default function Serenity() {
                   fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
                   color: c.hue,
                 }}>{c.label}</span>
+                {/* ── DA DOVE SI PARTE SENZA METER — spostato QUI, PRIMA del click su TONE
+                    (v. la nota sul suo `onClick`, sopra): armare in un click solo vuol dire
+                    che non c'è più una fase di transito in cui scegliere. Ron: il legame
+                    tono↔ohm è arbitrario, senza strumento la sorgente è quel che il preclear
+                    dichiara — e allora si dà PRIMA, non durante. Col meter non compare: lo
+                    propone la misura, come sempre. */}
+                {c.k === 'tone' && !tone.toneHasMeter && (
+                  <select value={tone.toneAssessed} onChange={e => tone.setToneAssessed(Number(e.target.value))}
+                    title={LC('Dove sta il preclear adesso sulla scala', 'Où est le préclair maintenant sur l\'échelle', 'Where the preclear is now on the scale', 'Dónde está el preclear ahora en la escala', 'Var preclearen är nu på skalan') as string}
+                    style={{
+                      marginTop: 2, maxWidth: 96, borderRadius: 6, border: '1px solid var(--s-ink-ghost)',
+                      background: 'var(--s-disc)', outline: 'none', cursor: 'pointer',
+                      fontFamily: 'var(--s-mono)', fontSize: 10, color: 'var(--s-ink-soft)', padding: '2px 3px',
+                    }}>
+                    {TONE_LABELS.map(v => (
+                      <option key={v} value={v}>{v > 0 ? `+${v}` : v}</option>
+                    ))}
+                  </select>
+                )}
               </div>
             ))}
           </div>
