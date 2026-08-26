@@ -221,9 +221,39 @@ export function VistaSenzaAgo({ armed = true, cycleKind = 'charge', nullPhase = 
           {armed && effId !== 'neutral' ? labelOf(effId) : L('in attesa', 'en attente', 'waiting', 'en espera', 'väntar')}
         </span>
         {armed && (
-          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: textFaint, fontVariantNumeric: 'tabular-nums' }}>
-            {L('velocità', 'vitesse', 'speed', 'velocidad', 'hastighet')} {velRatio.toFixed(2)}× {wordVel}{arrowVel}
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginTop: 4 }}>
+            <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: textFaint, fontVariantNumeric: 'tabular-nums' }}>
+              {L('velocità', 'vitesse', 'speed', 'velocidad', 'hastighet')} {velRatio.toFixed(2)}× {wordVel}{arrowVel}
+            </span>
+            {/* ── LA VELOCITÀ, ANCHE COME BARRA — segnalato: « la vitesse deve essere una barra
+                slide ». Il numero da solo si legge, ma va CERCATO; una barra si vede — una
+                pista a tre zone (lento/normale/veloce, gli stessi limiti di `stVel` sopra,
+                nessuna soglia reinventata qui) con un cursore che scorre. Il colore del
+                cursore riusa i DUE segnali che già hanno questo significato altrove in
+                SERENITY (`tokens.css`, « i tre segnali »): `--s-alive` ("qualcosa sta
+                accadendo sull'ago") per veloce, `--s-reserve` ("non sostenibile") per lento —
+                non due tinte nuove, gli stessi due segnali usati per il loro significato vero. */}
+            <div style={{ position: 'relative', width: 200, height: 8 }}>
+              <div style={{
+                position: 'absolute', inset: 0, borderRadius: 999, overflow: 'hidden',
+                display: 'flex', background: 'var(--s-disc-sunk)',
+              }}>
+                <div style={{ flex: '0.85', background: 'color-mix(in srgb, var(--s-reserve) 35%, transparent)' }} />
+                <div style={{ flex: '0.30', background: 'color-mix(in srgb, var(--s-ink-faint) 25%, transparent)' }} />
+                <div style={{ flex: '0.85', background: 'color-mix(in srgb, var(--s-alive) 35%, transparent)' }} />
+              </div>
+              <div style={{
+                position: 'absolute', top: '50%',
+                left: `${Math.max(0, Math.min(100, ((velRatio - 0.4) / (1.8 - 0.4)) * 100))}%`,
+                transform: 'translate(-50%, -50%)',
+                width: 16, height: 16, borderRadius: '50%',
+                background: stVel === 'fast' ? 'var(--s-alive)' : stVel === 'slow' ? 'var(--s-reserve)' : textCol,
+                border: `2px solid ${isLightTheme ? '#ffffff' : '#04101c'}`,
+                boxShadow: '0 0 6px rgba(0,0,0,0.35)',
+                transition: 'left 0.3s ease',
+              }} />
+            </div>
+          </div>
         )}
       </div>
     </div>

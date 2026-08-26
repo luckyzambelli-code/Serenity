@@ -204,9 +204,28 @@ export function MetabolicCheck({ lang, meterAlreadyCalibrated = false, museConne
       // ai suoi lati mentre si regola la manopola.
       background: needleTrim ? 'rgba(0,0,0,0.28)' : 'rgba(0,0,0,0.8)',
       backdropFilter: needleTrim ? 'none' : 'blur(10px)', WebkitBackdropFilter: needleTrim ? 'none' : 'blur(10px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, sans-serif' }}>
+      display: 'flex', alignItems: 'center',
+      // ⚠️ SEGNALATO DI NUOVO: « on ne voit pas bien l'aiguille, rend la fenetre plus
+      // transparente ou deplace la ». Il velo più chiaro (sopra) non bastava — la CARTA
+      // stessa, centrata sull'INTERO schermo, cade proprio sopra al perno dell'ago (il
+      // pannello dell'arco è più a destra del centro pieno, per via della barra laterale
+      // EP/COMMANDS che gli toglie ~320px a sinistra: il centro VERO dello schermo è quindi
+      // più a sinistra del centro VERO dell'arco). Spostata la carta a sinistra
+      // (`justifyContent:'flex-start'`, un margine) invece che al centro: cade nella fascia
+      // che la barra laterale già occupa, l'arco resta scoperto sulla sua destra.
+      justifyContent: needleTrim ? 'flex-start' : 'center',
+      paddingLeft: needleTrim ? 48 : 0,
+      fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ width: 460, maxWidth: '92vw', borderRadius: 18, padding: '28px 30px',
-        background: 'linear-gradient(160deg, rgba(40,40,46,0.96), rgba(26,26,30,0.94))', backdropFilter: 'blur(24px) saturate(1.2)', WebkitBackdropFilter: 'blur(24px) saturate(1.2)',
+        // Stessa richiesta, seconda metà: « plus transparente ». La carta restava quasi
+        // opaca (0.96/0.94) — scesa a 0.88/0.86 SOLO con `needleTrim`: il testo resta
+        // leggibile (il fondo dietro è comunque scuro, il velo appena sopra), ma un po'
+        // dell'arco/ago dietro la carta stessa traspare, non solo ai suoi lati.
+        background: needleTrim
+          ? 'linear-gradient(160deg, rgba(40,40,46,0.88), rgba(26,26,30,0.86))'
+          : 'linear-gradient(160deg, rgba(40,40,46,0.96), rgba(26,26,30,0.94))',
+        backdropFilter: needleTrim ? 'blur(16px) saturate(1.2)' : 'blur(24px) saturate(1.2)',
+        WebkitBackdropFilter: needleTrim ? 'blur(16px) saturate(1.2)' : 'blur(24px) saturate(1.2)',
         border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 24px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.10)', color: 'rgba(240,246,255,0.95)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: '0.02em' }}>{L.title}</div>

@@ -207,12 +207,14 @@ export async function generaPdf(
   y += 12;
 
   // ── LE METRICHE ───────────────────────────────────────────────────────────────────────
+  // ⚠️ Segnalato: « nel report togli la percentuale della massa ». Erano quattro caselle
+  // (massa/Total TA/F-N/EP) — tolta la prima, le altre tre si allargano per riempire la
+  // stessa riga (`tileW` ricalcolata su 3 colonne, non più 4) invece di lasciare un vuoto.
   panelHeader(t('report_summary_section'));
-  const tileW = (pageW - 28 - 3 * 4) / 4;
-  metricTile(14, y, tileW, LC('massa', 'masse', 'mass', 'masa', 'massa'), `${Math.round(input.mass)}%`, ACCENT);
-  metricTile(14 + tileW + 4, y, tileW, t('total_ta'), input.totalTa.toFixed(2), [86, 156, 214]);
-  metricTile(14 + 2 * (tileW + 4), y, tileW, 'F/N', String(contaFn(sessionRecorder.reactions)), [52, 211, 153]);
-  metricTile(14 + 3 * (tileW + 4), y, tileW,
+  const tileW = (pageW - 28 - 2 * 4) / 3;
+  metricTile(14, y, tileW, t('total_ta'), input.totalTa.toFixed(2), [86, 156, 214]);
+  metricTile(14 + tileW + 4, y, tileW, 'F/N', String(contaFn(sessionRecorder.reactions)), [52, 211, 153]);
+  metricTile(14 + 2 * (tileW + 4), y, tileW,
     LC('EP', 'EP', 'EP', 'EP', 'EP'), input.epValidated ? '✓' : '-',
     input.epValidated ? [52, 211, 153] : [148, 163, 184]);
   y += 15 + 8;

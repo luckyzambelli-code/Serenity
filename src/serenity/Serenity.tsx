@@ -2915,13 +2915,14 @@ export default function Serenity() {
                 colore: più "pieno", quindi percepito più chiaro/acceso su un fondo scuro. Lo
                 stesso colore, nel font di tutto il resto, si legge già più discreto — la
                 doppia richiesta (uniformità + meno bianco) risolta da un solo cambio, non due.
-                ⚠️ SEGNALATO DI NUOVO: « la police... più in grigio per non disturbare la vista »
-                — il cambio di font da solo non bastava ancora: `--s-ink` (l'inchiostro PIENO,
-                pensato per titoli/etichette, non per un intero giornale da scorrere) restava
-                comunque il colore più acceso della scala. Sceso a `--s-ink-soft` — un gradino
-                più tenue, la stessa taratura di contrasto (v. `tokens.css`) usata altrove per
-                il testo CORRENTE (non un'invenzione qui), non `--s-ink-faint` (quello resta per
-                le righe SYS, già volutamente le più smorzate di tutte). */}
+                ⚠️ SEGNALATO DI NUOVO due volte: « la police... più in grigio per non disturbare
+                la vista ». Il cambio di font (primo giro) e la discesa a `--s-ink-soft`
+                (secondo giro) non bastavano ancora — sceso di un gradino ulteriore, a
+                `--s-ink-faint`: lo STESSO grigio già usato per le righe SYS, per il timestamp
+                accanto, per l'etichetta del pulsante ✕ qui sopra — non più un colore a parte
+                per il testo "importante" (Aud/PC) contro quello "di sistema": tutto il
+                giornale allo stesso grigio discreto, la voce di chi parla resta comunque
+                distinguibile dal grassetto (`<b>AUD:</b>`/`<b>PC:</b>`), non dal colore. */}
             <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
               {[...journal.logs]
                 .filter(l => !(avvio.solo && (l.speaker === 'Aud' || l.speaker === 'PC')))
@@ -2935,7 +2936,7 @@ export default function Serenity() {
                     <span style={{
                       color: log.type === 'retracted' ? 'var(--s-reserve)'
                         : log.type === 'meter' ? 'var(--s-reserve)'
-                        : log.speaker === 'SYS' ? 'var(--s-ink-faint)' : 'var(--s-ink-soft)',
+                        : 'var(--s-ink-faint)',
                       fontWeight: (log.type === 'highlight' || log.type === 'success') ? 700 : 400,
                     }}>
                       {log.speaker && log.speaker !== 'NEEDLE' && (
@@ -3013,15 +3014,20 @@ export default function Serenity() {
             vetro), non un secondo stile inventato — solo due tappe diverse. `Compass` per la
             vista con l'ago (la sua metafora naturale: un ago che punta), `Layers` per quella
             senza (bande di colore impilate) — nessuna delle due già in uso altrove in questa
-            barra, per non confondersi con EP/COMMANDS/Processus. */}
+            barra, per non confondersi con EP/COMMANDS/Processus.
+            ⚠️ SEGNALATO: « il bottone non è esplicito ». Le due tappe dicevano "ago"/"zone" —
+            due sostantivi nudi, che non dicono QUALE dei due si vede ORA né cosa succede al
+            clic. Diventano "con ago"/"senza ago" — le STESSE parole della richiesta originale
+            (« una vista... in cui non mostri l'ago »), non una parafrasi: leggendo l'etichetta
+            si sa già cosa si sta guardando, non solo con quale icona. */}
         <BottoneCiclico
           opzioni={[
-            { k: 'ago' as const, label: LC('ago', 'aiguille', 'needle', 'aguja', 'nål') as string, icona: <Compass size={18} strokeWidth={1.8} aria-hidden="true" /> },
-            { k: 'zone' as const, label: LC('zone', 'zones', 'zones', 'zonas', 'zoner') as string, icona: <Layers size={18} strokeWidth={1.8} aria-hidden="true" /> },
+            { k: 'ago' as const, label: LC('con ago', 'avec aiguille', 'with needle', 'con aguja', 'med nål') as string, icona: <Compass size={18} strokeWidth={1.8} aria-hidden="true" /> },
+            { k: 'zone' as const, label: LC('senza ago', 'sans aiguille', 'without needle', 'sin aguja', 'utan nål') as string, icona: <Layers size={18} strokeWidth={1.8} aria-hidden="true" /> },
           ]}
           selezionato={vistaSenzaAgo ? 'zone' : 'ago'}
           onChange={k => setVistaSenzaAgo(k === 'zone')}
-          minLarghezza={80}
+          minLarghezza={120}
         />
         <SelettoreLingua />
         {/* ── STORICO E PROCESSUS, DOPO IL BOTTONE LINGUA — segnalato: « les boutons History et
@@ -4589,6 +4595,25 @@ export default function Serenity() {
             alignItems: 'center', justifyContent: 'center',
             rowGap: 10, columnGap: 24,
           }}>
+            {/* ⚠️ SEGNALATO: « i bottoni dei cicli devono essere meglio differenziati senza
+                essere troppo vistosi ». Tre dei quattro usavano già `--s-still`/`--s-alive`/
+                `--s-reserve` — I TRE SEGNALI del sistema (v. `tokens.css`: « tre e non dieci,
+                un linguaggio di colore che l'auditor deve ricordare è un linguaggio che non
+                guarderà »). TONE restava `hue: null` — nessun colore affatto, lo stesso grigio
+                spento di un bottone "niente di speciale": non "meno vistoso" degli altri tre,
+                semplicemente MENO RICONOSCIBILE, l'opposto di quel che serviva. Dargli uno dei
+                tre segnali esistenti gli avrebbe rubato un significato che quel segnale porta
+                altrove (vivo/quiete/riserva sono stati, non nomi di metodo) — una QUARTA
+                tinta, `--s-tone-hue`, locale a questi quattro cerchi (non un ottavo colore nel
+                sistema, non usata altrove): stessa desaturazione/luminosità delle altre tre
+                (una via di mezzo fra `--s-reserve` e `--s-alive` sulla ruota, non un colore
+                acceso nuovo) — appartiene alla STESSA famiglia quieta, non la rompe.
+                ⚠️ « meglio differenziati » anche per i primi tre: prima SOLO il bordo (2px)
+                portava la tinta — a un'occhiata veloce sui quattro cerchi vicini, bordi sottili
+                di colori tenui si confondono. Aggiunta una tinta di FONDO leggerissima
+                (`color-mix`, 12%) oltre al bordo — la stessa idea già usata altrove in
+                SERENITY per marcare "questa zona/stato ha un colore" senza riempirla a tinta
+                unita: più superficie colorata senza alzare la saturazione di un solo grado. */}
             {([
               { k: 'contact', hue: 'var(--s-still)', label: 'CONTACT', Icona: Crosshair,
                 onClick: () => cycles.armCycle('charge') },
@@ -4596,19 +4621,19 @@ export default function Serenity() {
                 onClick: () => cycles.armCycle('null') },
               { k: 'mirror', hue: 'var(--s-reserve)', label: 'MIRROR', Icona: FlipHorizontal2,
                 onClick: () => mirror.armMirror() },
-              { k: 'tone', hue: null, label: 'TONE', Icona: AudioWaveform, onClick: () => setToneAttivo(true) },
+              { k: 'tone', hue: 'var(--s-tone-hue)', label: 'TONE', Icona: AudioWaveform, onClick: () => setToneAttivo(true) },
             ]).map(c => (
               <div key={c.k} style={{ display: 'grid', justifyItems: 'center', gap: 4, flexShrink: 0 }}>
                 <button className="s-glass s-glass-btn" onClick={c.onClick} title={c.label} style={{
                   width: 54, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: `1.5px solid ${c.hue ?? 'var(--s-ink-ghost)'}`, cursor: 'pointer',
-                  borderRadius: '50%', background: 'var(--s-disc)', color: c.hue ?? 'var(--s-ink-soft)',
+                  border: `1.5px solid ${c.hue}`, cursor: 'pointer',
+                  borderRadius: '50%', background: `color-mix(in srgb, ${c.hue} 12%, var(--s-disc))`, color: c.hue,
                 }}>
                   <c.Icona size={22} strokeWidth={1.8} aria-hidden="true" />
                 </button>
                 <span style={{
                   fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
-                  color: c.hue ?? 'var(--s-ink-faint)',
+                  color: c.hue,
                 }}>{c.label}</span>
               </div>
             ))}

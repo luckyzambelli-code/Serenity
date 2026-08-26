@@ -4784,6 +4784,90 @@ EQUILIBRIUM 2.0.221, SERENITY 3.0.115.
 
 ---
 
+## Giro (26/08/2026) — l'ago visibile nel test MUSE; la velocità a barra; i bottoni dei cicli differenziati; la massa tolta dal report
+
+**Segnalato**:
+
+1. « dans le test del MUSE on ne voit pas bien l'aiguille, rend la fenetre plus transparente ou
+   deplace la »
+2. « dans le journal rend la police de caractere plus grise »
+3. « la valeur dans TON n'arrete pas de monter et descendre sur l'echelle. on doit revoir les
+   calculs, montre moi et on decide quoi faire »
+4. « Les boutons des cicles doivent etre mieux differencies sans etre trop voyants »
+5. « La vista zones: Il bottone non è esplicito, la vitesse deve essere una barra slide »
+6. « Nel report togli la percentuale della massa et non vedo più il testo della verbalizzazione
+   poichè anbce nel journal non appare »
+
+**1) L'ago, visibile durante il SUO test — di nuovo.** Il velo esterno era già stato
+schiarito in un giro precedente (`needleTrim`, `rgba(0,0,0,0.28)` senza sfocatura) — non
+bastava: la CARTA stessa (460px, quasi opaca, centrata sull'INTERO schermo) cadeva proprio
+sopra il perno dell'arco. Il centro vero dello schermo NON è il centro vero dell'arco: la
+barra laterale EP/COMMANDS toglie ~320px a sinistra, spostando il centro dell'arco a destra
+del centro pieno. Corretto in due mosse: la carta si sposta a sinistra
+(`justifyContent:'flex-start'`, un margine) invece di restare centrata — cade nella fascia già
+occupata dalla barra laterale, l'arco resta scoperto sulla sua destra — e la carta stessa
+scende di opacità (0.96/0.94 → 0.88/0.86) e di sfocatura (24px → 16px) SOLO con `needleTrim`:
+un po' dell'arco traspare anche dietro di lei, non solo ai suoi lati.
+
+**2) Il Journal, ancora più grigio.** Due giri fa il font (mono→sans), un giro fa il colore
+(`--s-ink`→`--s-ink-soft`) — non bastava ancora. Sceso a `--s-ink-faint`, lo STESSO grigio già
+usato per le righe SYS/il timestamp/l'etichetta ✕: tutto il giornale a un solo grigio
+discreto, la voce di chi parla resta distinguibile dal grassetto, non dal colore.
+
+**3) TONE — la scala che oscilla: TROVATO, da decidere insieme.** Verificato
+`engine/toneScale.ts`/`session/useToneCycle.ts`: col MUSE, `toneOraMuse` chiama
+`toneFromDelta(toneAtStart, qLAllaPartenza, qLAdesso, escursione=1)` — la carica EEG corrente
+(`d.qL`, "predicted/display", non ulteriormente lisciata qui) entra CRUDA, senza nessuna
+attenuazione fra un tick e l'altro, in una formula che moltiplica lo scarto per `2×40/1 = 80`:
+un rumore anche piccolo su `qL` (frazioni di unità — plausibile per un segnale EEG dal vivo)
+diventa un salto di diversi punti sulla scala −40…+40. Confronto: `engine/MirrorCycle.ts`, che
+fa un calcolo simile (carica istantanea → valore 1–10 mostrato) MA lo fa passare da uno
+`smoothQ` (media mobile) prima di mostrarlo — TONE non ha l'equivalente sul ramo MUSE. Non
+toccato: la scala è terreno clinico, la richiesta esplicita è « decide[re] insieme cosa fare »
+prima di cambiare una formula che l'auditor legge come dato vero.
+
+**4) I quattro cerchi CONTACT/NULL/MIRROR/TONE, differenziati.** Tre usavano già i TRE SEGNALI
+del sistema (`--s-still`/`--s-alive`/`--s-reserve`, v. `tokens.css` — « tre e non dieci, un
+linguaggio che l'auditor deve ricordare è un linguaggio che non guarderà »); TONE restava
+`hue: null`, lo stesso grigio spento di un bottone senza nulla di speciale — non "meno
+vistoso", solo MENO RICONOSCIBILE. Dargli uno dei tre segnali gli avrebbe rubato un
+significato che porta altrove (stati, non nomi di metodo): una QUARTA tinta locale,
+`--s-tone-hue` (stessa desaturazione/luminosità delle altre tre, a metà strada sulla ruota fra
+`--s-reserve` e `--s-alive` — non un colore acceso nuovo, non un quinto segnale del sistema,
+usata SOLO per questi quattro cerchi). Aggiunta anche una tinta di FONDO leggerissima
+(`color-mix`, 12%) a tutti e quattro, oltre al bordo — più superficie colorata, stessa
+saturazione tenue.
+
+**5) La vista senza ago — il bottone e la velocità.** Le due tappe dicevano "ago"/"zone" —
+sostantivi nudi, che non dicono QUALE vista si vede ora. Diventano "con ago"/"senza ago" — le
+stesse parole della richiesta originale. La velocità (numero + parola) resta, MA affiancata da
+una barra a tre zone (lento/normale/veloce, gli stessi limiti già usati per `wordVel`) con un
+cursore che scorre — colorato riusando `--s-alive`/`--s-reserve` per il loro significato VERO
+(qualcosa accade / non sostenibile), non due tinte nuove.
+
+**6) Il report — la massa tolta, la verbalizzazione indagata.** Rimossa la casella "massa"
+dalle quattro metriche del PDF (`sessionReport.ts`) — le altre tre (Total TA/F-N/EP) si
+allargano su tre colonne invece di lasciare un vuoto. La verbalizzazione mancante nel Journal
+(non solo nel report, che la legge da lì): verificato `useVoiceItem`/`onTranscript` in
+`Serenity.tsx` — la pipeline che scrive la trascrizione nel giornale è intatta, non toccata da
+nessuna modifica recente. Non riproducibile qui: il riconoscimento vocale ha bisogno di un
+microfono vero, assente in questo ambiente sandbox (« camera and microphone access... blocked
+» a ogni sessione di verifica di questo giro). Resta un punto aperto — non un fix silenzioso
+su qualcosa che non si è potuto vedere accadere.
+
+**Verificato in browser** (`senzaMisura` forzato temporaneamente, tolto subito dopo): vista
+zone con l'etichetta "con ago"/"senza ago" leggibile; ciclo CONTACT armato con la barra della
+velocità (tre zone, cursore al centro su "1.00× normale"); i quattro cerchi CONTACT/NULL/
+MIRROR/TONE ciascuno con bordo E fondo distinti, TONE non più grigio spento.
+
+`tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo, nessun errore), `vitest run`
+639/639. `git status`: `src/serenity/Serenity.tsx`, `src/serenity/VistaSenzaAgo.tsx`,
+`src/serenity/tokens.css`, `src/serenity/sessionReport.ts`, `src/components/MetabolicCheck.tsx`.
+
+EQUILIBRIUM 2.0.222, SERENITY 3.0.116.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

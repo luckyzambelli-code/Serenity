@@ -119,6 +119,16 @@
   --s-still:   #8aa694;
   --s-reserve: #b8a179;
 
+  /* ── UNA QUARTA TINTA, MA NON UN QUARTO SEGNALE — segnalato: « i bottoni dei cicli devono
+     essere meglio differenziati senza essere troppo vistosi ». I quattro cerchi CONTACT/
+     NULL/MIRROR/TONE (`Serenity.tsx`) usano i tre segnali sopra come IDENTITÀ del metodo, non
+     come stato — un uso diverso da quello per cui esistono (vivo/quiete/riserva sono eventi,
+     non nomi propri). TONE restava senza colore per non usarne uno a sproposito; questa è la
+     stessa desaturazione/luminosità delle tre sopra, una tinta a metà strada sulla ruota fra
+     `--s-reserve` (caldo) e `--s-alive` (freddo) — appartiene alla stessa famiglia quieta, non
+     un quarto segnale del sistema: usata SOLO lì, mai per uno stato. */
+  --s-tone-hue: #a88ca8;
+
   /* ── I TEMPI ─────────────────────────────────────────────────────────────────────────────
      Lenti apposta. Un cerchio che compare in 90 ms è un lampo alla periferia; in 600 ms è un
      cambiamento di cui ci si accorge senza esserne interrotti. */
@@ -266,6 +276,8 @@
   --s-alive:   #8fa0ba;
   --s-still:   #9db9a7;
   --s-reserve: #c9ac7c;
+  /* Stessa quarta tinta di `:root` (v. la nota lì), luminosità alzata come le tre sopra. */
+  --s-tone-hue: #b89cb8;
 
   /* Vedi la nota su `--sm-chip-bg` in `:root` — stessa idea, verso scuro. */
   --sm-chip-bg:    var(--s-disc-sunk);
