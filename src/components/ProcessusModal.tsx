@@ -275,47 +275,61 @@ export function ProcessusModal({
             Diversi dai PDF sopra: non un file da aprire in un iframe, ma un testo strutturato
             (`~/EQUILIBRIUM/COMANDI/Procedimenti/*.txt`, un comando per riga) da versare,
             selezionandolo, nello spazio comandi dei cicli. `procedimenti !== undefined` è la
-            guardia: `undefined` (EQUILIBRIUM, che non passa la prop) non disegna nulla qui. */}
+            guardia: `undefined` (EQUILIBRIUM, che non passa la prop) non disegna nulla qui.
+            ⚠️ MESSA IN EVIDENZA — segnalato: « il Bottone Processus... deve aprire processus in
+            generale, ma mettere in evidenza la zona Processu Command ». Il bottone accanto a EP
+            (rinominato COMMANDS, v. `Serenity.tsx`) apre questo STESSO modale generale, PDF
+            compresi — non un secondo popup — ma chi arriva da lì cerca quasi sempre questa
+            sezione, non l'archivio PDF sotto. Prima era un blocco fra tanti, stesso bordo
+            sottile (`border-b`) del resto: ora una card a sé, fondo/bordo dell'accento invece
+            del grigio neutro, un lieve alone (`boxShadow`) — la stessa lingua visiva che già
+            marca "selezionato"/"attivo" altrove nel modale (v. `chipStyle`, sopra), non un
+            colore nuovo inventato qui. */}
         {procedimenti !== undefined && (
           <div className="px-6 py-4 border-b flex flex-col gap-2" style={{ borderColor: th.divider }}>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold tracking-[0.35em] uppercase" style={{ color: th.accent }}>
-                ◆ {L('COMANDI PROCEDIMENTI', 'COMMANDES DE PROCÉDÉS', 'PROCEDURES COMMANDS', 'COMANDOS DE PROCEDIMIENTOS', 'PROCEDURKOMMANDON')}
-              </span>
-              {onApriCartellaProcedimenti && (
-                <button onClick={onApriCartellaProcedimenti}
-                  title={L('apri (o crea) la cartella dei procedimenti', 'ouvrir (ou créer) le dossier des procédés',
-                    'open (or create) the procedures folder', 'abrir (o crear) la carpeta de procedimientos',
-                    'öppna (eller skapa) mappen med procedurer') as string}
-                  className="text-[10px] font-mono tracking-widest uppercase px-2.5 py-1 rounded-full transition-all"
-                  style={{ border: `1px solid ${th.accentBorder}`, color: th.textDim, background: 'transparent' }}>
-                  {L('apri cartella', 'ouvrir le dossier', 'open folder', 'abrir carpeta', 'öppna mapp')}
-                </button>
+            <div className="rounded-xl px-4 py-3 flex flex-col gap-2" style={{
+              background: th.accentSoft, border: `1.5px solid ${th.accent}`,
+              boxShadow: lt ? '0 0 0 1px rgba(8,145,178,0.08)' : '0 0 16px rgba(255,255,255,0.10)',
+            }}>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold tracking-[0.35em] uppercase" style={{ color: th.accent, textShadow: lt ? 'none' : '0 0 10px rgba(255,255,255,0.4)' }}>
+                  ◆ {L('COMANDI PROCEDIMENTI', 'COMMANDES DE PROCÉDÉS', 'PROCEDURES COMMANDS', 'COMANDOS DE PROCEDIMIENTOS', 'PROCEDURKOMMANDON')}
+                </span>
+                {onApriCartellaProcedimenti && (
+                  <button onClick={onApriCartellaProcedimenti}
+                    title={L('apri (o crea) la cartella dei procedimenti', 'ouvrir (ou créer) le dossier des procédés',
+                      'open (or create) the procedures folder', 'abrir (o crear) la carpeta de procedimientos',
+                      'öppna (eller skapa) mappen med procedurer') as string}
+                    className="text-[10px] font-mono tracking-widest uppercase px-2.5 py-1 rounded-full transition-all"
+                    style={{ border: `1px solid ${th.accent}`, color: th.accent, background: 'transparent' }}>
+                    {L('apri cartella', 'ouvrir le dossier', 'open folder', 'abrir carpeta', 'öppna mapp')}
+                  </button>
+                )}
+              </div>
+              {procedimenti.length === 0 ? (
+                <p className="text-[11px] font-mono" style={{ color: th.text }}>
+                  {L('nessun procedimento — un file .txt per procedimento, un comando per riga',
+                    'aucun procédé — un fichier .txt par procédé, une commande par ligne',
+                    'no procedures — one .txt file per procedure, one command per line',
+                    'ningún procedimiento — un archivo .txt por procedimiento, un comando por línea',
+                    'inga procedurer — en .txt-fil per procedur, ett kommando per rad')}
+                </p>
+              ) : (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {procedimenti.map(p => (
+                    <button key={p.nome} onClick={() => onSelectProcedimento?.(p)}
+                      title={`${p.comandi.length} ${L('comandi', 'commandes', 'commands', 'comandos', 'kommandon')}`}
+                      className="px-3.5 py-1.5 rounded-full text-[11px] font-mono tracking-widest uppercase transition-all flex items-center gap-1.5"
+                      style={{ border: `1px solid ${th.accent}`, background: lt ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.08)', color: th.text }}>
+                      ▸ {p.nome}
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: lt ? 'rgba(8,145,178,0.12)' : 'rgba(255,255,255,0.15)' }}>
+                        {p.comandi.length}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
-            {procedimenti.length === 0 ? (
-              <p className="text-[11px] font-mono" style={{ color: th.textDim }}>
-                {L('nessun procedimento — un file .txt per procedimento, un comando per riga',
-                  'aucun procédé — un fichier .txt par procédé, une commande par ligne',
-                  'no procedures — one .txt file per procedure, one command per line',
-                  'ningún procedimiento — un archivo .txt por procedimiento, un comando por línea',
-                  'inga procedurer — en .txt-fil per procedur, ett kommando per rad')}
-              </p>
-            ) : (
-              <div className="flex items-center gap-2 flex-wrap">
-                {procedimenti.map(p => (
-                  <button key={p.nome} onClick={() => onSelectProcedimento?.(p)}
-                    title={`${p.comandi.length} ${L('comandi', 'commandes', 'commands', 'comandos', 'kommandon')}`}
-                    className="px-3.5 py-1.5 rounded-full text-[11px] font-mono tracking-widest uppercase transition-all flex items-center gap-1.5"
-                    style={{ border: `1px solid ${th.accentBorder}`, background: th.accentSoft, color: th.textDim }}>
-                    ▸ {p.nome}
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: lt ? 'rgba(8,145,178,0.12)' : 'rgba(255,255,255,0.15)' }}>
-                      {p.comandi.length}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         )}
 

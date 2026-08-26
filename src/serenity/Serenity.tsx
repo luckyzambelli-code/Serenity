@@ -689,12 +689,23 @@ export default function Serenity() {
    *  un ago che smette di leggere senza che l'interfaccia lo dica. `disconnected` per il MUSE
    *  (non `'searching'`: un tentativo in corso non è ancora un "niente", non deve attivare il
    *  gruppo di controllo sotto i piedi di chi sta provando a riconnettersi). Solo `aperta`: fuori
-   *  seduta la scelta si fa nel pannello dedicato, non da un effetto silenzioso. */
+   *  seduta la scelta si fa nel pannello dedicato, non da un effetto silenzioso.
+   *  ⚠️ BUG TROVATO DI NUOVO — segnalato: « quando scelgo SENZA STRUMENTI e poi scelgo METER,
+   *  senza strumenti non si deseleziona ». La stessa cura data al MUSE (escludere `'searching'`)
+   *  mancava per il METER: cliccare la pillola METER chiama `setSenzaStrumenti(false)` PRIMA di
+   *  `theta.connect()` (v. più giù), ma questo effetto girava sulla `meterC` (vero SOLO a
+   *  connessione riuscita, mai durante il tentativo) — nella finestra fra il clic e la
+   *  connessione vera (`theta.status === 'connecting'`), `meterC` è ancora `false`: la
+   *  condizione tornava vera e questo effetto rimetteva `senzaStrumenti` a `true` un istante
+   *  dopo che l'utente l'aveva appena spento, prima ancora che il METER avesse il tempo di
+   *  collegarsi — la pillola SENZA STRUMENTI restava accesa per sempre, la connessione la
+   *  trovava già "vinta". Aggiunto `theta.status !== 'connecting'`, lo stesso trattamento del
+   *  MUSE: un tentativo del METER in corso non è ancora un "niente" nemmeno lui. */
   useEffect(() => {
-    if (aperta && !senzaStrumenti && muse.museConnection === 'disconnected' && !meterC) {
+    if (aperta && !senzaStrumenti && muse.museConnection === 'disconnected' && !meterC && theta.status !== 'connecting') {
       setSenzaStrumenti(true);
     }
-  }, [aperta, senzaStrumenti, muse.museConnection, meterC]);
+  }, [aperta, senzaStrumenti, muse.museConnection, meterC, theta.status]);
   /** ── LA PAUSA CHE SCEGLIE L'AUDITOR — segnalata assente: App.tsx la offre sempre (barra
    *  laterale, Play/Pause/Square), qui c'era solo quella automatica. Stesso gesto di
    *  `handlePause`/`handleResume`: registra nel giornale, ferma/riprende l'orologio (via
@@ -2753,7 +2764,17 @@ export default function Serenity() {
             intestazione (stessa icona `BookOpen`, stesso `onClick={() =>
             setProcessusAperto(true)}`, stesso contatore `processusPdfs.length`) — una
             scorciatoia in più durante la seduta, non una funzione nuova: PROCESSUS resta
-            raggiungibile anche da lassù, per chi lo cerca lì. */}
+            raggiungibile anche da lassù, per chi lo cerca lì.
+            ⚠️ CHIAMALO COMMANDS — segnalato: « il Bottone Processus devi chiamarlo COMMANDS
+            e deve aprire processus in generale, ma mettere in evidenza la zona Processu
+            Command ». L'etichetta "procedimenti"/"processes" (tradotta via `LC`, come il resto
+            di SERENITY) non diceva perché questo bottone esiste QUI, vicino a EP, e non solo
+            in intestazione: non un secondo elenco di PDF, la scorciatoia diretta ai comandi di
+            un procedimento. "COMMANDS", fissa in maiuscolo come "EP"/"TONE" (mai tradotta — un
+            nome proprio della funzione, non una frase), lo dice. Il click resta lo stesso
+            (`setProcessusAperto(true)`, l'intero modale PROCESSUS, PDF compresi) — solo la
+            sezione COMANDI PROCEDIMENTI dentro di lui si fa notare di più (v. `ProcessusModal`,
+            il suo stesso `procedimenti !== undefined`). */}
         {aperta && (
         <div style={{
           display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 10, width: 272,
@@ -2783,7 +2804,7 @@ export default function Serenity() {
             <button
               className="s-glass s-glass-btn"
               onClick={() => setProcessusAperto(true)}
-              title={t('processus_modal_title') as string} style={{
+              title="COMMANDS" style={{
                 position: 'relative', width: 54, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', border: '1.5px solid var(--s-ink-ghost)', borderRadius: '50%',
                 background: 'var(--s-disc)', color: 'var(--s-ink-soft)',
@@ -2801,7 +2822,7 @@ export default function Serenity() {
             <span style={{
               fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
               color: 'var(--s-ink-faint)',
-            }}>{LC('procedimenti', 'procédés', 'processes', 'procedimientos', 'procedurer')}</span>
+            }}>COMMANDS</span>
           </div>
         )}
         </div>

@@ -4452,6 +4452,64 @@ EQUILIBRIUM 2.0.217, SERENITY 3.0.111.
 
 ---
 
+## Settantottesimo giro (26/08/2026) — il bottone Processus diventa COMMANDS; il METER non deseleziona più SENZA STRUMENTI
+
+**Segnalato**: « Allora il Bottone Processus devi chiamarlo COMMANDS e deve aprire processus
+in generale, ma mettere in evidenza la zona Processu Command. Quando scielgo SENZA STRUMENTI
+e poi scelgo METER, senza strumenti non si deseleziona. »
+
+Due correzioni indipendenti.
+
+**1) Il bottone accanto a EP si chiama COMMANDS.** L'etichetta era "procedimenti"/"processes"
+(tradotta via `LC`, come il resto di SERENITY) — non diceva perché questo bottone esiste QUI,
+vicino a EP, invece che solo in intestazione: non un secondo elenco di PDF, la scorciatoia
+diretta ai comandi di un procedimento. "COMMANDS", fissa in maiuscolo come "EP"/"TONE" (mai
+tradotta — un nome proprio della funzione, non una frase). Il click resta lo stesso
+(`setProcessusAperto(true)`, l'intero modale PROCESSUS generale, PDF compresi — non un
+popup diverso, esattamente come richiesto). Dentro il modale, la sezione COMANDI PROCEDIMENTI
+(già SERENITY-only, `ProcessusModal.tsx`) ora si fa notare: prima un blocco fra tanti con lo
+stesso bordo sottile grigio del resto, ora una card a sé con fondo e bordo dell'accento e un
+lieve alone — la stessa lingua visiva che il modale usa già per "selezionato"/"attivo"
+altrove, non un colore inventato apposta. Non tocca EQUILIBRIUM: la sezione resta dietro
+`procedimenti !== undefined`, `undefined` per App.tsx come sempre.
+
+**2) BUG TROVATO — il METER non usciva più dal gruppo di controllo.** Un effetto esistente
+(giro precedente all'attuale, commento « quando disattivi il METER e/o il MUSE... il bottone
+NO INSTRUMENT deve attivarsi ») rimette `senzaStrumenti` a `true` quando, a seduta aperta,
+nessuno strumento risulta collegato — la cura necessaria perché disconnettere l'ultimo
+strumento riattivi da sé il gruppo di controllo. Per il MUSE l'effetto già escludeva
+`'searching'` (un tentativo in corso non è un "niente"); per il METER mancava lo stesso
+riguardo: la condizione leggeva solo `meterC` (vero SOLO a connessione RIUSCITA, mai durante
+il tentativo). Cliccare la pillola METER chiama `setSenzaStrumenti(false)` prima di
+`theta.connect()` — ma nella finestra fra il clic e la connessione vera, `meterC` è ancora
+`false`: l'effetto tornava vero un istante dopo che l'utente l'aveva appena spento, prima
+ancora che il METER avesse il tempo di collegarsi. La pillola SENZA STRUMENTI restava accesa
+per sempre. Aggiunto `theta.status !== 'connecting'` alla condizione (e alle dipendenze
+dell'effetto) — verificato nel sorgente che `ThetaMeterHid.connect()` chiama
+`setStatus('connecting')` in modo SINCRONO, prima di qualunque `await`: nello stesso giro di
+React che applica `setSenzaStrumenti(false)`, `theta.status` è già `'connecting'`, quindi
+l'effetto non retrocede più — stessa cura già data al MUSE, stavolta anche per lui.
+
+**Verificato**: `tsc`/riga di sorgente per `setStatus('connecting')` (sincrona, confermata);
+in browser il bottone COMMANDS apre PROCESSUS con la sezione COMANDI PROCEDIMENTI in evidenza.
+Il verso del bug (METER veramente collegato) non è riproducibile in questo ambiente sandbox —
+nessun Theta-Meter fisico, e `navigator.hid.requestDevice()` apre un vero selettore nativo del
+sistema operativo che blocca la pagina finché non lo si chiude a mano (confermato dal vivo: un
+tentativo di clic ha aperto per davvero quel selettore, la pagina è rimasta bloccata finché non
+è stato premuto Escape) — CONFERMA che il codice tenta una connessione reale, non un
+segnaposto, ma rende impossibile osservare qui la finestra `'connecting'` millisecondo per
+millisecondo. La correzione si appoggia quindi sulla lettura sincrona del sorgente
+(`setStatus('connecting')` prima dell'`await`, `onStatus` collegato a un `setState` diretto,
+nessun giro asincrono in mezzo) più che su una riproduzione visiva dal vivo — stesso schema già
+verificato e funzionante per il MUSE.
+
+`tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo, nessun errore), `vitest run`
+639/639. `git status`: `src/serenity/Serenity.tsx`, `src/components/ProcessusModal.tsx`.
+
+EQUILIBRIUM 2.0.218, SERENITY 3.0.112.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i
