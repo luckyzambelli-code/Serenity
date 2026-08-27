@@ -227,7 +227,7 @@ app.on('before-quit', () => { if (_sttProc) { try { _sttProc.kill('SIGKILL'); } 
 
 function startLocalServer() {
   return new Promise((resolve, reject) => {
-    const { server } = createAppServer({ port: PORT, distDir: DIST_DIR });
+    const { server } = createAppServer({ port: PORT, distDir: DIST_DIR, entry: ENTRY });
     _httpServer = server;
 
     server.on('error', (err) => {
@@ -236,7 +236,7 @@ function startLocalServer() {
         server.close();
         freePort(PORT);
         setTimeout(() => {
-          const { server: server2 } = createAppServer({ port: PORT, distDir: DIST_DIR });
+          const { server: server2 } = createAppServer({ port: PORT, distDir: DIST_DIR, entry: ENTRY });
           _httpServer = server2;
           server2.on('error', (err2) => { reject(err2); });
           server2.listen(PORT, '0.0.0.0', () => {

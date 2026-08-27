@@ -191,7 +191,7 @@ function stopTunnel() {
 function getTunnelUrl() { return _tunnelUrl; }
 
 // ── App factory ───────────────────────────────────────────────────────────────
-function createAppServer({ port, distDir }) {
+function createAppServer({ port, distDir, entry = 'index.html' }) {
   const app    = express();
   const server = http.createServer(app);
 
@@ -288,11 +288,21 @@ function createAppServer({ port, distDir }) {
   });
 
   // 3. Static files + SPA fallback
+  //
+  // ⚠️ SEGNALATO: « fai in modo che 127.0.0.1:7893 sia SERENITY ». La radice "/" e i due
+  // ripieghi qui sotto scrivevano `index.html` a mano — SEMPRE EQUILIBRIUM, anche quando il
+  // server che gira è quello di SERENITY (main.cjs lo capisce già, e naviga la SUA finestra
+  // su `/${ENTRY}` — v. `win.loadURL`, sotto — ma qualunque ALTRO client, un browser aperto
+  // sulla porta nuda o un dispositivo remoto sul tunnel, riceveva comunque EQUILIBRIUM). Ora
+  // `entry` arriva da chi crea il server (lo stesso `ENTRY` che main.cjs già calcola da
+  // `SM_ENTRY`/`package.json.smEntry`) — la radice segue DAVVERO quale app sta girando,
+  // invece di darla per scontata.
   const _distRoot = path.resolve(distDir);
+  const _entryFile = '/' + entry.replace(/^\/+/, '');
   app.use((req, res) => {
     let urlPath = (req.url || '/').split('?')[0];
     try { urlPath = decodeURIComponent(urlPath); } catch (_) { /* keep raw */ }
-    if (urlPath === '/') urlPath = '/index.html';
+    if (urlPath === '/') urlPath = _entryFile;
     // SECURITY (A1): confine resolution to distDir. req.url is NOT normalised by
     // Node, so '../' (raw or %2e-encoded) would otherwise escape distDir and read
     // arbitrary files — and this server is reachable from the public Cloudflare
@@ -300,7 +310,7 @@ function createAppServer({ port, distDir }) {
     // anything that escapes falls through to the SPA index (never leaks a file).
     const file = path.resolve(_distRoot, '.' + path.posix.normalize('/' + urlPath.replace(/\\/g, '/')));
     if (file !== _distRoot && !file.startsWith(_distRoot + path.sep)) {
-      fs.readFile(path.join(_distRoot, 'index.html'), (_e, b) => {
+      fs.readFile(path.join(_distRoot, entry), (_e, b) => {
         if (_e) { res.status(404).end(); return; }
         res.set({ 'Content-Type': 'text/html; charset=utf-8',
                   'Cross-Origin-Opener-Policy': 'same-origin',
@@ -311,7 +321,7 @@ function createAppServer({ port, distDir }) {
 
     fs.readFile(file, (err, buf) => {
       if (err) {
-        fs.readFile(path.join(distDir, 'index.html'), (_e, b) => {
+        fs.readFile(path.join(distDir, entry), (_e, b) => {
           if (_e) { res.status(404).end(); return; }
           res.set({ 'Content-Type': 'text/html; charset=utf-8',
                     'Cross-Origin-Opener-Policy': 'same-origin',

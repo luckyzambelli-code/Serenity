@@ -20,6 +20,13 @@ const { createAppServer, getLanIp } = require('./server-core.cjs');
 
 const PORT     = 7893;
 const DIST_DIR = path.join(__dirname, 'dist');
+// ⚠️ SEGNALATO: « fai in modo che 127.0.0.1:7893 sia SERENITY ». Questo script non calcolava
+// mai un ENTRY (a differenza di `main.cjs`, che legge `SM_ENTRY`/`package.json.smEntry`) — la
+// radice "/" del server (v. `server-core.cjs`, ora parametrizzata) cadeva sempre su
+// `index.html`, cioè EQUILIBRIUM, qualunque cosa si stesse davvero testando. Qui il default è
+// SERENITY (è la porta che questo script pubblicizza per "apri Chrome e prova" — v. l'intestazione
+// del file), non EQUILIBRIUM: `SM_ENTRY=index.html node server.cjs` resta la via per l'altro verso.
+const ENTRY = process.env.SM_ENTRY || 'serenity.html';
 
 // Proactively free the port before binding (handles fast restarts)
 try {
@@ -32,7 +39,7 @@ try {
   }
 } catch (_) { /* port was already free */ }
 
-const { server } = createAppServer({ port: PORT, distDir: DIST_DIR });
+const { server } = createAppServer({ port: PORT, distDir: DIST_DIR, entry: ENTRY });
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
@@ -49,7 +56,7 @@ server.on('error', (err) => {
 server.listen(PORT, '0.0.0.0', () => {
   const lanIp = getLanIp();
   console.log('');
-  console.log('  Static Meter — Chrome server ready');
+  console.log(`  Static Meter — Chrome server ready (${ENTRY === 'serenity.html' ? 'SERENITY' : 'EQUILIBRIUM'})`);
   console.log(`  → Local:    http://127.0.0.1:${PORT}`);
   console.log(`  → Réseau:   http://${lanIp}:${PORT}  ← LAN: partager au participant`);
   console.log('');
