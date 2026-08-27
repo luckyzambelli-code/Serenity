@@ -25,11 +25,18 @@ import { LAYER } from '../ui/layers';
  * ⚠️ La guida ha la SUA lingua, scelta dentro di lei: non si passa `lang` all'iframe. Sono due
  * scelte diverse — quella dell'interfaccia e quella del documento — e legarle vorrebbe dire
  * togliere la seconda.
- */
-export function GuideModal({ onClose, lang }: { onClose: () => void; lang: string }) {
+ *
+ * ── DUE GUIDE, NON UNA — segnalato: « rifai il GUIDE per SERENITY... aggiornando il tutto ed
+ * il nome con SERENITY ». Fino a qui SERENITY montava questo stesso componente ma con SRC
+ * cablato su `/guide/EQUILIBRIUM-manuale.html` — mostrava la guida DI EQUILIBRIUM, col suo
+ * stesso nome nel titolo e nel bottone "torna a", anche da dentro SERENITY. `app` (default
+ * 'equilibrium', il comportamento di prima invariato per App.tsx) sceglie ora il file E il
+ * nome giusti — `scripts/copy-guide.cjs` copia entrambi i manuali ad ogni build. */
+export function GuideModal({ onClose, lang, app = 'equilibrium' }: { onClose: () => void; lang: string; app?: 'equilibrium' | 'serenity' }) {
   const L = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang, it, fr, en, es, sv);
   const [mancante, setMancante] = useState(false);
-  const SRC = '/guide/EQUILIBRIUM-manuale.html';
+  const NOME = app === 'serenity' ? 'SERENITY' : 'EQUILIBRIUM';
+  const SRC = app === 'serenity' ? '/guide/SERENITY-manuale.html' : '/guide/EQUILIBRIUM-manuale.html';
 
   /**
    * ESC CHIUDE — e senza questo il bottone prometteva una scorciatoia che non esisteva.
@@ -65,7 +72,7 @@ export function GuideModal({ onClose, lang }: { onClose: () => void; lang: strin
           <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 700,
                          letterSpacing: '0.2em', textTransform: 'uppercase',
                          color: 'rgba(240,246,255,0.9)' }}>
-            {L('Guida', 'Guide', 'Guide', 'Guía', 'Guide')} · EQUILIBRIUM
+            {L('Guida', 'Guide', 'Guide', 'Guía', 'Guide')} · {NOME}
           </span>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {/* A TUTTO SCHERMO, in una finestra a parte: la guida è lunga, e leggerla mentre si
@@ -86,9 +93,9 @@ export function GuideModal({ onClose, lang }: { onClose: () => void; lang: strin
                 di dove si torna, e l'ESC è scritto sopra — chi cerca un'uscita cerca prima
                 quello. */}
             <button type="button" onClick={onClose}
-              title={L('Torna a EQUILIBRIUM — o premi ESC', 'Retour à EQUILIBRIUM — ou touche ESC',
-                       'Back to EQUILIBRIUM — or press ESC', 'Volver a EQUILIBRIUM — o pulsa ESC',
-                       'Tillbaka till EQUILIBRIUM — eller ESC')}
+              title={L(`Torna a ${NOME} — o premi ESC`, `Retour à ${NOME} — ou touche ESC`,
+                       `Back to ${NOME} — or press ESC`, `Volver a ${NOME} — o pulsa ESC`,
+                       `Tillbaka till ${NOME} — eller ESC`)}
               style={{ height: 32, padding: '0 14px', borderRadius: 8, cursor: 'pointer',
                        display: 'flex', alignItems: 'center', gap: 7,
                        fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 700,
@@ -114,7 +121,7 @@ export function GuideModal({ onClose, lang }: { onClose: () => void; lang: strin
                  'Guiden finns inte i denna kopia av appen.')}
             </span>
             <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'rgba(226,238,255,0.6)' }}>
-              ~/Downloads/Guide Static Meter/EQUILIBRIUM-manuale.html
+              ~/Downloads/Guide Static Meter/{NOME}-manuale.html
             </span>
             <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, lineHeight: 1.5,
                            maxWidth: 460, color: 'rgba(226,238,255,0.55)' }}>
@@ -128,7 +135,7 @@ export function GuideModal({ onClose, lang }: { onClose: () => void; lang: strin
         ) : (
           <iframe
             src={SRC}
-            title="EQUILIBRIUM"
+            title={NOME}
             onError={() => setMancante(true)}
             onLoad={(e) => {
               // Un 404 servito come pagina d'errore carica lo stesso: si guarda se dentro c'è

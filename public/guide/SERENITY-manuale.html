@@ -1,4 +1,4 @@
-<title>EQUILIBRIUM — Manuel complet</title>
+<title>SERENITY — Manuel complet</title>
 <style>
   :root{
     --bg:#0c1018; --panel:#121824; --card:#111622; --ink:#e8eef8; --muted:#95a0b5;
@@ -123,9 +123,9 @@
   <nav>
     <div class="brand">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a10 10 0 1 0 0-20" fill="none" stroke="var(--ok)" stroke-width="2.4"/><circle cx="12" cy="12" r="2.3" fill="var(--warn)"/><path d="M12 12 4.8 5.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      <h1>EQUILIBRIUM</h1>
+      <h1>SERENITY</h1>
     </div>
-    <div class="ver">v1.0.377</div>
+    <div class="ver">v3.0.130</div>
     <div class="langs" role="group" aria-label="Langue / Lingua / Language">
       <button data-lang="fr" aria-pressed="true">FR</button>
       <button data-lang="it" aria-pressed="false">IT</button>
@@ -138,15 +138,24 @@
 
 <script>
 /* ═══════════════════════════════════════════════════════════════════════
-   EQUILIBRIUM — contenu du manuel, PARTIE 1 : navigation, helpers, tutoriel.
+   SERENITY — contenu du manuel, PARTIE 1 : navigation, helpers, tutoriel.
    Trilingue FR / IT / EN. Les TERMES D'AUDITION restent en ANGLAIS partout.
-   Tout le contenu est VÉRIFIÉ sur le code source (v1.0.377).
+   Tout le contenu est VÉRIFIÉ sur le code source (v3.0.130).
+   ── D'OÙ VIENT CE FICHIER ────────────────────────────────────────────────
+   Refait d'après EQUILIBRIUM-manuale.html — même moteur, même contenu vérifié sur le
+   même code source (les deux applications le partagent, v. le module CORPUS), avec ce
+   qui change VRAIMENT à l'écran dans SERENITY : le sélecteur de méthode (cinq cercles,
+   pas des pastilles de texte), le bouton AVEC/SANS AIGUILLE, la vue sans aiguille
+   (VistaSenzaAgo), la piste d'un ciclo à la fois (PistaCiclo), et le cinquième cycle,
+   TRUTH — qui n'existe pas encore dans le manuel d'EQUILIBRIUM à ce jour.
    ═══════════════════════════════════════════════════════════════════════ */
 /* ── VERSIONE DESCRITTA DA QUESTO MANUALE ────────────────────────────────────────────────
    Una riga sola, e la sola da cambiare: prima il numero stava scritto a mano TRE volte a piè
    di pagina (una per lingua) ed era rimasto a 2.0.19 per sessanta build. Questo file è
-   autonomo — non legge `package.json` — quindi va aggiornato a mano, ma adesso in un posto. */
-const VERSIONE = "2.0.234";
+   autonomo — non legge `package.json` — quindi va aggiornato a mano, ma adesso in un posto.
+   ⚠️ QUESTO È IL NUMERO DI SERENITY (`serenityVersion` in package.json), non quello di
+   EQUILIBRIUM: le due app hanno versioni indipendenti, anche se escono dallo stesso codice. */
+const VERSIONE = "3.0.130";
 
 let LANG = "fr";
 const tr = o => (o && typeof o === "object" && !Array.isArray(o)) ? (o[LANG] ?? o.en) : o;
@@ -168,10 +177,10 @@ const TABLE = (heads, rows) => () =>
    nom exact du fichier à créer. C'est là que tu déposes tes captures. */
 const SHOT = (file, cap, small) => () =>
   `<figure class="shot${small ? " sm" : ""}">
-     <img src="docs/guide-screenshots/${file}" alt="${tr(cap)}"
+     <img src="docs/guide-screenshots-serenity/${file}" alt="${tr(cap)}"
           onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
           onload="this.nextElementSibling.style.display='none'">
-     <div class="ph"><span class="cam">▣</span><b>docs/guide-screenshots/${file}</b><i>${tr(cap)}</i></div>
+     <div class="ph"><span class="cam">▣</span><b>docs/guide-screenshots-serenity/${file}</b><i>${tr(cap)}</i></div>
    </figure>`;
 
 /* ── étiquettes d'interface ── */
@@ -195,21 +204,21 @@ const UI = {
   L_note:   { fr: "À noter", it: "Da notare", en: "Note" },
   L_warn:   { fr: "Attention", it: "Attenzione", en: "Warning" },
   L_ok:     { fr: "Bon à savoir", it: "Buono a sapersi", en: "Good to know" },
-  /* ⚠️ BUG TROVATO (rifacendo il manuale per SERENITY) — `NOTE("info", UI.L_info, ...)`
-   * compare cinque volte in questo file, ma `L_info` non era mai stato dichiarato: le cinque
-   * note "info" mostravano l'etichetta "UNDEFINED" invece di un testo vero. Aggiunta qui la
-   * chiave mancante, con lo stesso testo di `L_note` (le note "info" e "note" erano già
-   * visivamente la stessa cosa, solo con nomi di tono diversi in `NOTE(...)`). */
+  /* ⚠️ BUG TROVATO (nel file ORIGINALE di EQUILIBRIUM, non introdotto qui) — `NOTE("info",
+   * UI.L_info, ...)` compariva già cinque volte, ma `L_info` non era mai stato dichiarato: le
+   * cinque note "info" mostravano l'etichetta "UNDEFINED" invece di un testo vero. Aggiunta
+   * qui la chiave mancante, con lo stesso testo di `L_note` (le note "info" e "note" erano
+   * già visivamente la stessa cosa, solo con nomi di tono diversi in `NOTE(...)`). */
   L_info:   { fr: "À noter", it: "Da notare", en: "Note" },
   shotHow:  { fr: "Vos captures d'écran", it: "Le tue schermate", en: "Your screenshots" },
-  shotTxt:  { fr: `Chaque cadre pointillé attend <strong>une capture d'écran</strong>. Créez le dossier <code>docs/guide-screenshots/</code> à côté de ce fichier HTML et déposez-y vos images en respectant le nom indiqué dans le cadre. Elles apparaîtront automatiquement à la place du cadre.`,
-              it: `Ogni riquadro tratteggiato attende <strong>una schermata</strong>. Crea la cartella <code>docs/guide-screenshots/</code> accanto a questo file HTML e mettici le immagini rispettando il nome indicato nel riquadro. Appariranno automaticamente al posto del riquadro.`,
-              en: `Each dashed frame is waiting for <strong>a screenshot</strong>. Create the folder <code>docs/guide-screenshots/</code> next to this HTML file and drop your images in, using the filename shown in the frame. They will replace the frame automatically.` },
+  shotTxt:  { fr: `Chaque cadre pointillé attend <strong>une capture d'écran</strong>. Créez le dossier <code>docs/guide-screenshots-serenity/</code> à côté de ce fichier HTML et déposez-y vos images en respectant le nom indiqué dans le cadre. Elles apparaîtront automatiquement à la place du cadre.`,
+              it: `Ogni riquadro tratteggiato attende <strong>una schermata</strong>. Crea la cartella <code>docs/guide-screenshots-serenity/</code> accanto a questo file HTML e mettici le immagini rispettando il nome indicato nel riquadro. Appariranno automaticamente al posto del riquadro.`,
+              en: `Each dashed frame is waiting for <strong>a screenshot</strong>. Create the folder <code>docs/guide-screenshots-serenity/</code> next to this HTML file and drop your images in, using the filename shown in the frame. They will replace the frame automatically.` },
 };
 
 /* ═══════════════ TUTORIEL PAS À PAS ═══════════════ */
 const STEPS = [
-  { n: 1, t: { fr: "Lancer EQUILIBRIUM", it: "Avviare EQUILIBRIUM", en: "Launch EQUILIBRIUM" },
+  { n: 1, t: { fr: "Lancer SERENITY", it: "Avviare SERENITY", en: "Launch SERENITY" },
     d: { fr: `Ouvrez l'application. L'écran d'accueil apparaît ; la barre d'outils verticale (sidebar) est à gauche.`,
          it: `Apri l'applicazione. Compare la schermata iniziale; la barra verticale (sidebar) è a sinistra.`,
          en: `Open the application. The start screen appears; the vertical toolbar (sidebar) is on the left.` },
@@ -570,24 +579,33 @@ const MODULES_CORE = [
         en:`The preclear's voice is captured <strong>twice</strong>: clearly by their phone (close mic), and faintly by the Mac's own mic, which might write it into the journal labelled "Auditor". The app drops the duplicate — first by comparing the <strong>texts</strong>, then, when in doubt, the <strong>energy</strong> of the two mics: the phone is close to the preclear, the Mac close to the auditor, and that is what tells them apart. The duplicate is never dropped on energy alone: talking at the same time must not erase an auditor line.`})]},
 
 /* ───────────────────────── VUES DU CADRAN ───────────────────────── */
-{ id:"m-vues", grp:"dial", t:{fr:"Les trois vues du cadran",it:"Le tre viste del quadrante",en:"The three dial views"},
+{ id:"m-vues", grp:"dial", t:{fr:"Choisir la méthode — cinq cercles, pas un sélecteur",it:"Scegliere il metodo — cinque cerchi, non un selettore",en:"Choosing the method — five circles, not a selector"},
   role:[
-    P({fr:`Un sélecteur unique, en haut à gauche, bascule entre trois façons de regarder la même aiguille.`,
-        it:`Un selettore unico, in alto a sinistra, commuta tra tre modi di guardare lo stesso ago.`,
-        en:`A single selector, top-left, switches between three ways of looking at the same needle.`}),
-    TABLE({fr:["Vue","Ce qu'elle montre"],it:["Vista","Cosa mostra"],en:["View","What it shows"]},[
-      {fr:["AGO","L'aiguille seule, épurée — rien qui distraie."],it:["AGO","Solo l'ago, essenziale — niente che distragga."],en:["AGO","The needle alone, clean — nothing distracting."]},
-      {fr:["AGO +","L'aiguille avec sa traînée, les libellés de réaction et l'arc du cycle en cours."],it:["AGO +","L'ago con la scia, le etichette di reazione e l'arco del ciclo in corso."],en:["AGO +","The needle with its trail, reaction labels and the running cycle's arc."]},
-      {fr:["MIRROR","L'échelle 1–10 de la méthode du double (voir plus bas)."],it:["MIRROR","La scala 1–10 del metodo del doppio (vedi sotto)."],en:["MIRROR","The 1–10 scale of the doubling method (see below)."]}]),
-    NOTE("info",UI.L_note,{fr:`<strong>La couleur de la traînée dit l'ÉTAT DE LA CHARGE, pas la force de la lecture.</strong> <strong style="color:#ff5a5a">Rouge</strong> = CONTACT (charge présente) · <strong style="color:#37e0ff">cyan</strong> = DISSOLUTION (relâchement en cours) · <strong>blanc-cyan</strong> = AS-IS (la signature a disparu). Dégradé du clair (au SET) au foncé (à la pointe), dans la même teinte.|De la lecture, la traînée dit l'ÉPAISSEUR et le halo : plus la chute est longue, plus la traînée est large. La couleur ne revient dépendre de la position de l'aiguille (cyan → jaune → rouge) que lorsqu'il n'y a <em>aucune</em> charge en cours.|Vaut aussi en <strong>MIRROR</strong>, qui affiche la même traînée.`,
-        it:`<strong>Il colore della scia dice lo STATO DELLA CARICA, non la forza della lettura.</strong> <strong style="color:#ff5a5a">Rosso</strong> = CONTACT (carica presente) · <strong style="color:#37e0ff">ciano</strong> = DISSOLUZIONE (rilascio in corso) · <strong>bianco-ciano</strong> = AS-IS (la firma è sparita). Sfuma dal chiaro (al SET) allo scuro (in punta), nella stessa tinta.|Della lettura la scia dice lo SPESSORE e l'alone: più lunga è la caduta, più grossa è la scia. Il colore torna a dipendere dalla posizione dell'ago (ciano → giallo → rosso) soltanto quando non c'è <em>nessuna</em> carica in corso.|Vale anche in <strong>MIRROR</strong>, che mostra la stessa scia.`,
-        en:`<strong>The trail's colour says the CHARGE STATE, not the strength of the read.</strong> <strong style="color:#ff5a5a">Red</strong> = CONTACT (charge present) · <strong style="color:#37e0ff">cyan</strong> = DISSOLUTION (release under way) · <strong>white-cyan</strong> = AS-IS (the signature is gone). It shades from light (at SET) to dark (at the tip), in the same hue.|What the trail says about the read is its THICKNESS and glow: the longer the fall, the wider the trail. The colour only goes back to depending on needle position (cyan → yellow → red) when there is <em>no</em> charge under way at all.|Also true in <strong>MIRROR</strong>, which shows the same trail.`}),
-    SHOT("vues-selecteur.png",{fr:"Le sélecteur AGO / AGO + / MIRROR",it:"Il selettore AGO / AGO + / MIRROR",en:"The AGO / AGO + / MIRROR selector"},1)],
-  on:[ P({fr:`Cliquez simplement sur le nom de la vue voulue.`,it:`Basta cliccare sul nome della vista desiderata.`,en:`Just click the name of the view you want.`})],
-  off:[ P({fr:`Le sélecteur reste toujours affiché : il faut pouvoir changer de vue à tout instant.`,it:`Il selettore resta sempre visibile: si deve poter cambiare vista in qualsiasi momento.`,en:`The selector is always shown: you must be able to switch views at any moment.`})],
-  in:[ P({fr:`Les trois vues partagent <strong>la même aiguille</strong> et le même signal — seul l'habillage change. Passer de l'une à l'autre en pleine séance ne perturbe ni la mesure ni le cycle en cours.`,
-        it:`Le tre viste condividono <strong>lo stesso ago</strong> e lo stesso segnale — cambia solo la veste. Passare dall'una all'altra in piena seduta non disturba né la misura né il ciclo in corso.`,
-        en:`All three views share <strong>the same needle</strong> and the same signal — only the dressing changes. Switching mid-session disturbs neither the measurement nor the running cycle.`})]},
+    P({fr:`SERENITY n'a pas de sélecteur textuel en haut à gauche comme EQUILIBRIUM : au repos, sous l'arc, <strong>cinq cercles</strong> proposent les cinq méthodes — <span class="tag en">CONTACT</span>, <span class="tag en">NULL</span>, <span class="tag en">MIRROR</span>, <span class="tag en">TONE</span> et <span class="tag en">TRUTH</span> (le protocole de Ron — voir plus bas, une section à part). Un clic sur un cercle <strong>arme</strong> cette méthode dans le même geste : pas d'étape intermédiaire.`,
+        it:`SERENITY non ha un selettore testuale in alto a sinistra come EQUILIBRIUM: a riposo, sotto l'arco, <strong>cinque cerchi</strong> propongono i cinque metodi — <span class="tag en">CONTACT</span>, <span class="tag en">NULL</span>, <span class="tag en">MIRROR</span>, <span class="tag en">TONE</span> e <span class="tag en">TRUTH</span> (il protocollo di Ron — vedi sotto, una sezione a parte). Un clic su un cerchio <strong>arma</strong> quel metodo nello stesso gesto: nessun passo intermedio.`,
+        en:`SERENITY has no text selector top-left like EQUILIBRIUM: at rest, below the arc, <strong>five circles</strong> offer the five methods — <span class="tag en">CONTACT</span>, <span class="tag en">NULL</span>, <span class="tag en">MIRROR</span>, <span class="tag en">TONE</span> and <span class="tag en">TRUTH</span> (Ron's protocol — see below, a section of its own). Clicking a circle <strong>arms</strong> that method in the same gesture: no in-between step.`}),
+    TABLE({fr:["Cercle","Ce qu'il arme"],it:["Cerchio","Cosa arma"],en:["Circle","What it arms"]},[
+      {fr:["CONTACT","Le cycle CONTACT → DISSOLUTION → AS-IS."],it:["CONTACT","Il ciclo CONTACT → DISSOLUTION → AS-IS."],en:["CONTACT","The CONTACT → DISSOLUTION → AS-IS cycle."]},
+      {fr:["NULL","Le cycle NULL → RISE → CLEAR READ."],it:["NULL","Il ciclo NULL → RISE → CLEAR READ."],en:["NULL","The NULL → RISE → CLEAR READ cycle."]},
+      {fr:["MIRROR","La méthode du double de Ron."],it:["MIRROR","Il metodo del doppio di Ron."],en:["MIRROR","Ron's doubling method."]},
+      {fr:["TONE","La montée au ton 40."],it:["TONE","La salita al tono 40."],en:["TONE","The rise to tone 40."]},
+      {fr:["TRUTH","Le protocole « What about this is the truth? » de Ron — voir la section dédiée plus bas."],it:["TRUTH","Il protocollo « What about this is the truth? » di Ron — vedi la sezione dedicata più sotto."],en:["TRUTH","Ron's \"What about this is the truth?\" protocol — see the dedicated section below."]}]),
+    SHOT("vues-cinq-cercles.png",{fr:"Les cinq cercles au repos, sous l'arc",it:"I cinque cerchi a riposo, sotto l'arco",en:"The five circles at rest, below the arc"},1)],
+  on:[ P({fr:`Cliquez simplement le cercle voulu — un seul clic, comme pour les quatre autres. (Cela n'a pas toujours été le cas : TONE demandait autrefois un second clic pour « donner l'item » ; ce n'est plus vrai, par cohérence avec les quatre autres.)`,
+        it:`Basta cliccare il cerchio voluto — un clic solo, come per gli altri quattro. (Non è sempre stato così: TONE un tempo chiedeva un secondo clic per « dare l'item »; non è più vero, per coerenza con gli altri quattro.)`,
+        en:`Just click the circle you want — one click, like the other four. (This was not always true: TONE used to ask for a second click to "give the item"; it no longer does, for consistency with the other four.)`})],
+  off:[ P({fr:`La piste du cycle en cours (voir plus bas) porte un bouton <span class="tag">ANNULER</span> qui referme la méthode et rend les cinq cercles. Un cycle armé remplace les cercles — les deux ne sont jamais montrés ensemble.`,
+        it:`La pista del ciclo in corso (vedi sotto) porta un pulsante <span class="tag">ANNULLA</span> che richiude il metodo e ridà i cinque cerchi. Un ciclo armato sostituisce i cerchi — i due non si mostrano mai insieme.`,
+        en:`The running cycle's track (see below) carries a <span class="tag">CANCEL</span> button that closes the method and brings the five circles back. An armed cycle replaces the circles — the two are never shown together.`})],
+  in:[ P({fr:`Les cinq méthodes partagent <strong>la même aiguille</strong> et le même signal — seule la lecture change. Chaque cercle porte sa propre teinte discrète (une identité, pas un état) pour qu'on les distingue d'un coup d'œil sans qu'aucune ne saute aux yeux plus que les autres.`,
+        it:`I cinque metodi condividono <strong>lo stesso ago</strong> e lo stesso segnale — cambia solo la lettura. Ogni cerchio porta la sua tinta discreta (un'identità, non uno stato) perché si distinguano a colpo d'occhio senza che nessuno salti agli occhi più degli altri.`,
+        en:`All five methods share <strong>the same needle</strong> and the same signal — only the reading changes. Each circle carries its own quiet tint (an identity, not a state) so they can be told apart at a glance without any one standing out more than the others.`}),
+    NOTE("info",UI.L_note,{fr:`<strong>La couleur de la traînée dit l'ÉTAT DE LA CHARGE, pas la force de la lecture.</strong> <strong style="color:#ff5a5a">Rouge</strong> = CONTACT (charge présente) · <strong style="color:#37e0ff">cyan</strong> = DISSOLUTION (relâchement en cours) · <strong>blanc-cyan</strong> = AS-IS (la signature a disparu). Dégradé du clair (au SET) au foncé (à la pointe), dans la même teinte.|La couleur ne revient dépendre de la position de l'aiguille (cyan → jaune → rouge) que lorsqu'il n'y a <em>aucune</em> charge en cours.`,
+        it:`<strong>Il colore della scia dice lo STATO DELLA CARICA, non la forza della lettura.</strong> <strong style="color:#ff5a5a">Rosso</strong> = CONTACT (carica presente) · <strong style="color:#37e0ff">ciano</strong> = DISSOLUZIONE (rilascio in corso) · <strong>bianco-ciano</strong> = AS-IS (la firma è sparita). Sfuma dal chiaro (al SET) allo scuro (in punta), nella stessa tinta.|Il colore torna a dipendere dalla posizione dell'ago (ciano → giallo → rosso) soltanto quando non c'è <em>nessuna</em> carica in corso.`,
+        en:`<strong>The trail's colour says the CHARGE STATE, not the strength of the read.</strong> <strong style="color:#ff5a5a">Red</strong> = CONTACT (charge present) · <strong style="color:#37e0ff">cyan</strong> = DISSOLUTION (release under way) · <strong>white-cyan</strong> = AS-IS (the signature is gone). It shades from light (at SET) to dark (at the tip), in the same hue.|The colour only goes back to depending on needle position (cyan → yellow → red) when there is <em>no</em> charge under way at all.`}),
+    P({fr:`Passer d'une méthode à l'autre en pleine séance ferme d'abord proprement celle qui tournait — jamais deux méthodes armées à la fois.`,
+        it:`Passare da un metodo all'altro in piena seduta chiude prima pulitamente quello in corso — mai due metodi armati insieme.`,
+        en:`Switching methods mid-session first closes the running one cleanly — never two methods armed at once.`})]},
 
 /* ───────────────────────── AIGUILLE / RÉACTIONS ───────────────────────── */
 { id:"m-aiguille", grp:"dial", t:{fr:"L'aiguille et ses réactions",it:"L'ago e le sue reazioni",en:"The needle and its reactions"},
@@ -631,7 +649,17 @@ const MODULES_CORE = [
         en:`<strong>The selector locks the other way too.</strong> During the cans' two tests — the squeeze and the breath — the <strong>METER</strong> needle is imposed: those tests set the <em>METER's sensitivity</em> by watching where <em>its</em> needle lands relative to the one-third mark. Doing them with the MUSE on screen would mean calibrating one instrument while watching another — a mistake you cannot see, since the needle moves either way.`}),
     NOTE("info",UI.L_info,{fr:`Le <strong>journal</strong> dit maintenant de quelle aiguille vient chaque réaction : « ⊙ MUSE · Long Fall », « ⊙ METER · Fall ». Avant, seules les réactions du MUSE y étaient écrites — et avec le METER à l'écran, tout semblait venir de ce qu'on regardait. Les réactions du METER s'écrivent en outre dans la <strong style="color:#f59e0b">couleur de son aiguille</strong> : on reconnaît la source sans lire le sigle.`,
         it:`Il <strong>journal</strong> dice ora da quale ago viene ogni reazione: « ⊙ MUSE · Long Fall », « ⊙ METER · Fall ». Prima ci finivano solo le reazioni del MUSE — e col METER sullo schermo tutto sembrava venire da ciò che si guardava. Le reazioni del METER si scrivono inoltre nel <strong style="color:#f59e0b">colore del suo ago</strong>: si riconosce la sorgente senza leggere la sigla.`,
-        en:`The <strong>journal</strong> now says which needle each reaction came from: "⊙ MUSE · Long Fall", "⊙ METER · Fall". Before, only the MUSE's reactions were written there — and with the METER on screen everything looked like it came from what you were watching. METER reactions are moreover written in <strong style="color:#f59e0b">their needle's colour</strong>: you recognise the source without reading the tag.`})]},
+        en:`The <strong>journal</strong> now says which needle each reaction came from: "⊙ MUSE · Long Fall", "⊙ METER · Fall". Before, only the MUSE's reactions were written there — and with the METER on screen everything looked like it came from what you were watching. METER reactions are moreover written in <strong style="color:#f59e0b">their needle's colour</strong>: you recognise the source without reading the tag.`}),
+    H4({fr:"AVEC ou SANS AIGUILLE — propre à SERENITY",it:"CON o SENZA AGO — proprio di SERENITY",en:"WITH or WITHOUT NEEDLE — specific to SERENITY"}),
+    P({fr:`Un bouton, sous <strong>NEEDLE LIGHT</strong> en haut à gauche de l'arc, dit ce qu'un clic <em>changerait</em> — pas l'état actuel. Il affiche <span class="tag en">SANS AIGUILLE</span> quand l'aiguille est <strong>montrée</strong> (cliquer la cacherait), et <span class="tag en">AVEC AIGUILLE</span> quand elle est <strong>cachée</strong> (cliquer la ferait revenir). Sans aiguille, elle disparaît de l'arc — remplacée par les <strong>trois bandes de couleur</strong> CONTACT / DISSOLUTION / AS-IS (ou CONTACT / DISSOLUTION / EQUILIBRIUM pour NULL) et la vitesse de libération en barre. Le signal continue d'être mesuré et le cycle continue d'avancer exactement pareil : rien n'est perdu, seul le dessin change.`,
+        it:`Un pulsante, sotto <strong>NEEDLE LIGHT</strong> in alto a sinistra dell'arco, dice cosa <em>cambierebbe</em> un clic — non lo stato attuale. Mostra <span class="tag en">SENZA AGO</span> quando l'ago è <strong>mostrato</strong> (cliccare lo nasconderebbe), e <span class="tag en">CON AGO</span> quando è <strong>nascosto</strong> (cliccare lo farebbe tornare). Senza ago, sparisce dall'arco — sostituito dalle <strong>tre bande di colore</strong> CONTACT / DISSOLUTION / AS-IS (o CONTACT / DISSOLUTION / EQUILIBRIUM per NULL) e dalla velocità di liberazione a barra. Il segnale continua a essere misurato e il ciclo continua ad avanzare esattamente uguale: non si perde nulla, cambia solo il disegno.`,
+        en:`A button, under <strong>NEEDLE LIGHT</strong> top-left of the arc, states what a click <em>would change</em> — not the current state. It reads <span class="tag en">WITHOUT NEEDLE</span> when the needle is <strong>shown</strong> (clicking would hide it), and <span class="tag en">WITH NEEDLE</span> when it is <strong>hidden</strong> (clicking would bring it back). Without the needle, it disappears from the arc — replaced by the <strong>three colour bands</strong> CONTACT / DISSOLUTION / AS-IS (or CONTACT / DISSOLUTION / EQUILIBRIUM for NULL) and release speed as a bar. The signal keeps being measured and the cycle keeps advancing exactly the same: nothing is lost, only the drawing changes.`}),
+    NOTE("ok",UI.L_ok,{fr:`Quand aucun cycle n'est armé et que l'aiguille est cachée, les trois bandes ne restent pas figées : elles <strong>respirent</strong> doucement, l'une après l'autre, comme le ferait une vraie aiguille au repos — un signe de vie discret, là où trois bandes plates auraient pu ressembler à un écran éteint.`,
+        it:`Quando nessun ciclo è armato e l'ago è nascosto, le tre bande non restano ferme: <strong>respirano</strong> piano, una dopo l'altra, come farebbe un ago vero a riposo — un segno di vita discreto, dove tre bande piatte sarebbero potute sembrare uno schermo spento.`,
+        en:`When no cycle is armed and the needle is hidden, the three bands do not sit still: they <strong>breathe</strong> gently, one after another, as a real needle would at rest — a quiet sign of life, where three flat bands could have looked like a dead screen.`}),
+    NOTE("warn",UI.L_warn,{fr:`<strong>MIRROR, TONE et TRUTH ont leur propre cadran</strong> et ne suivent pas les trois bandes de couleur — leurs échelles (1–10, −40…+40, la confiance du candidat) ne s'y traduisent pas. Sans aiguille, ces trois méthodes montrent leur cadran habituel, simplement sans le trait de l'aiguille elle-même.`,
+        it:`<strong>MIRROR, TONE e TRUTH hanno un proprio quadrante</strong> e non seguono le tre bande di colore — le loro scale (1–10, −40…+40, la fiducia del candidato) non ci si traducono. Senza ago, questi tre metodi mostrano il loro quadrante abituale, semplicemente senza il tratto dell'ago vero e proprio.`,
+        en:`<strong>MIRROR, TONE and TRUTH have their own dial</strong> and do not follow the three colour bands — their scales (1–10, −40…+40, candidate confidence) do not translate onto them. Without the needle, these three methods show their usual dial, simply without the needle's own stroke.`})]},
 
 /* ───────────────────────── TONE ARM ───────────────────────── */
 { id:"m-ta", grp:"dial", t:{fr:"Tone Arm (TA) & Total TA",it:"Tone Arm (TA) & Total TA",en:"Tone Arm (TA) & Total TA"},
@@ -800,6 +828,50 @@ const MODULES_REST = [
         it:`Senza THETA-METER la scala passa dal TA ricostruito e il quadrante scrive un <strong>≈</strong>: i valori sono <strong>relativi</strong>, non ohm.`,
         en:`Without the THETA-METER the scale goes through the reconstructed TA and the dial writes a <strong>≈</strong>: values are <strong>relative</strong>, not ohms.`})]},
 
+/* ───────────────────────── TRUTH ───────────────────────── */
+{ id:"m-truth", grp:"dial", t:{fr:"TRUTH — le protocole de Ron (nouveau)",it:"TRUTH — il protocollo di Ron (nuovo)",en:"TRUTH — Ron's protocol (new)"},
+  role:[
+    NOTE("note",UI.L_note,{fr:`<strong>Cinquième méthode, propre à SERENITY.</strong> Elle n'existe pas encore dans EQUILIBRIUM au moment où ces lignes sont écrites.`,
+        it:`<strong>Quinto metodo, proprio di SERENITY.</strong> Non esiste ancora in EQUILIBRIUM al momento in cui queste righe sono scritte.`,
+        en:`<strong>Fifth method, specific to SERENITY.</strong> It does not yet exist in EQUILIBRIUM at the time these lines are written.`}),
+    P({fr:`D'après le protocole décrit par Ron : localiser un <strong>R/I</strong> (Rock Item / Instrument-Response — un point de résistance) par n'importe quel procédé, puis demander <em>« What about this is the truth? »</em>, répété jusqu'à ce qu'<strong>un R/I supplémentaire</strong> émerge — le signe que la recherche sur celui-ci est arrivée à son terme. On demande alors <em>« Return to present time! »</em>.<br><strong>Le point qui a motivé cette méthode</strong> : ce qui se lisait comme une chute (un « fall ») était souvent en réalité un <strong>accord</strong> — la vérité du préclear qui affleure, pas une décharge de charge au sens de CONTACT ou NULL. TRUTH ne mesure donc pas la même chose que les quatre autres méthodes : elle cherche un <strong>moment de reconnaissance</strong>, pas une dissolution.`,
+        it:`Secondo il protocollo descritto da Ron: localizzare un <strong>R/I</strong> (Rock Item / Instrument-Response — un punto di resistenza) con un procedimento qualunque, poi chiedere <em>« What about this is the truth? »</em>, ripetuto finché non emerge <strong>un ulteriore R/I</strong> — il segno che la ricerca su di esso è arrivata al termine. Si chiede allora <em>« Return to present time! »</em>.<br><strong>Il punto che ha motivato questo metodo</strong>: ciò che si leggeva come una caduta (un « fall ») era spesso in realtà un <strong>accordo</strong> — la verità del preclear che affiora, non una scarica di carica nel senso di CONTACT o NULL. TRUTH non misura quindi la stessa cosa degli altri quattro metodi: cerca un <strong>momento di riconoscimento</strong>, non una dissoluzione.`,
+        en:`After the protocol described by Ron: locate an <strong>R/I</strong> (Rock Item / Instrument-Response — a point of resistance) by any process, then ask <em>"What about this is the truth?"</em>, repeated until <strong>a further R/I</strong> emerges — the sign that the search on this one has reached its end. You then ask <em>"Return to present time!"</em>.<br><strong>The point behind this method</strong>: what read as a fall was often actually an <strong>agreement</strong> — the preclear's truth surfacing, not a discharge of charge in the CONTACT or NULL sense. TRUTH therefore does not measure the same thing as the other four methods: it looks for a <strong>moment of recognition</strong>, not a dissolution.`}),
+    SHOT("truth-cercle.png",{fr:"Le cercle TRUTH, après TONE",it:"Il cerchio TRUTH, dopo TONE",en:"The TRUTH circle, after TONE"},1)],
+  on:[ P({fr:`Cliquez le cercle <span class="tag en">TRUTH</span> (le cinquième, après TONE). Comme les quatre autres, un seul clic : le R/I s'écrit dans le champ (à la voix, comme partout, ou en le tapant) et le cycle passe au temps « demande ».`,
+        it:`Clicca il cerchio <span class="tag en">TRUTH</span> (il quinto, dopo TONE). Come gli altri quattro, un clic solo: il R/I si scrive nel campo (a voce, come ovunque, o scrivendolo) e il ciclo passa al tempo « chiedi ».`,
+        en:`Click the <span class="tag en">TRUTH</span> circle (the fifth, after TONE). Like the other four, one click: the R/I is written into the field (aloud, as everywhere else, or typed) and the cycle moves to the "ask" beat.`}),
+    NOTE("info",UI.L_info,{fr:`<strong>L'ASSESSMENT s'allume tout seul</strong>, et reste allumé plus longtemps que pour les autres méthodes : localiser un R/I, par la procédure même de Ron, <strong>est</strong> une recherche — cela reste vrai pendant tout le temps où l'on chercher un R/I supplémentaire, pas seulement au premier instant.`,
+        it:`<strong>L'ASSESSMENT si accende da sé</strong>, e resta acceso più a lungo che negli altri metodi: localizzare un R/I, per la procedura stessa di Ron, <strong>è</strong> una ricerca — resta vero per tutto il tempo in cui si cerca un R/I ulteriore, non solo al primo istante.`,
+        en:`<strong>ASSESSMENT turns itself on</strong>, and stays on longer than for the other methods: locating an R/I, by Ron's own procedure, <strong>is</strong> a search — that stays true for as long as you are looking for a further R/I, not just at the first instant.`})],
+  off:[ P({fr:`<span class="tag">ANNULER</span> referme le R/I sans le valider et rend les cinq cercles — comme pour les quatre autres méthodes.`,
+        it:`<span class="tag">ANNULLA</span> richiude il R/I senza validarlo e ridà i cinque cerchi — come per gli altri quattro metodi.`,
+        en:`<span class="tag">CANCEL</span> closes the R/I without validating it and brings the five circles back — as for the other four methods.`})],
+  in:[
+    H4({fr:"Les temps du cycle",it:"I tempi del ciclo",en:"The cycle's beats"}),
+    UL({fr:[`<strong>① R/I.</strong> Localisé par n'importe quel procédé — écrivez-le ou dites-le, puis cliquez TRUTH.`,
+            `<strong>② DEMANDE.</strong> <em>« What about this is the truth? »</em> — redonnée autant de fois qu'il le faut, le nombre de passes reste affiché.`,
+            `<strong>Candidat proposé.</strong> Quand la charge se comporte comme un accord qui affleure (et non une chute qui se poursuit), l'app le <strong>propose</strong> — un badge apparaît avec un pourcentage de confiance. <strong>Ce n'est jamais l'app qui décide</strong> : vous <span class="tag">confirmez</span> ou vous dites <span class="tag">ce n'est pas ça</span>, et dans les deux cas la demande continue.`,
+            `<strong>R/I supplémentaire trouvé.</strong> Un bouton à part, disponible à tout moment de la demande : la recherche sur ce R/I est terminée. Le cycle passe à <em>« Return to present time! »</em>, écrite à l'écran comme la question précédente.`,
+            `<strong>Clore le R/I.</strong> Une fois la question posée, ce bouton enregistre le R/I — avec le nombre de demandes et chaque vérité confirmée en chemin — et rend les cinq cercles pour le suivant.`],
+        it:[`<strong>① R/I.</strong> Localizzato con un procedimento qualunque — scrivilo o dillo, poi clicca TRUTH.`,
+            `<strong>② CHIEDI.</strong> <em>« What about this is the truth? »</em> — ridata quante volte serve, il numero di passate resta a schermo.`,
+            `<strong>Candidato proposto.</strong> Quando la carica si comporta come un accordo che affiora (e non una caduta che continua), l'app lo <strong>propone</strong> — compare un badge con una percentuale di fiducia. <strong>Non è mai l'app a decidere</strong>: tu <span class="tag">confermi</span> o dici <span class="tag">non è questo</span>, e in entrambi i casi la domanda continua.`,
+            `<strong>R/I supplementare trovato.</strong> Un bottone a parte, disponibile in qualunque momento della domanda: la ricerca su questo R/I è finita. Il ciclo passa a <em>« Return to present time! »</em>, scritta a schermo come la domanda precedente.`,
+            `<strong>Chiudi il R/I.</strong> Una volta posta la domanda, questo bottone registra il R/I — col numero di domande e ogni verità confermata lungo la strada — e ridà i cinque cerchi per il prossimo.`],
+        en:[`<strong>① R/I.</strong> Located by any process — write or say it, then click TRUTH.`,
+            `<strong>② ASK.</strong> <em>"What about this is the truth?"</em> — given again as many times as needed, the number of passes stays on screen.`,
+            `<strong>Candidate proposed.</strong> When the charge behaves like an agreement surfacing (not a fall that keeps going), the app <strong>proposes</strong> it — a badge appears with a confidence percentage. <strong>The app never decides</strong>: you <span class="tag">confirm</span> or say <span class="tag">not this</span>, and either way the asking continues.`,
+            `<strong>Further R/I found.</strong> A separate button, available at any point while asking: the search on this R/I is done. The cycle moves to <em>"Return to present time!"</em>, written on screen like the previous question.`,
+            `<strong>Close the R/I.</strong> Once that question is asked, this button records the R/I — with the number of asks and every truth confirmed along the way — and brings the five circles back for the next one.`]}),
+    NOTE("warn",UI.L_warn,{fr:`<strong>Un candidat proposé n'est jamais un événement confirmé.</strong> Le moteur regarde la charge et propose — il ne déclare jamais lui-même une vérité trouvée. C'est délibéré : autrement TRUTH retomberait dans le piège que le protocole met en garde contre, celui de coder « vérité = chute du signal » plutôt que de laisser le <strong>protocole</strong> l'interpréter.`,
+        it:`<strong>Un candidato proposto non è mai un evento confermato.</strong> Il motore guarda la carica e propone — non dichiara mai da solo una verità trovata. È deliberato: altrimenti TRUTH ricadrebbe nella trappola contro cui il protocollo mette in guardia, quella di codificare « verità = caduta del segnale » invece di lasciare che sia il <strong>protocollo</strong> a interpretarla.`,
+        en:`<strong>A proposed candidate is never a confirmed event.</strong> The engine watches the charge and proposes — it never declares a found truth on its own. This is deliberate: otherwise TRUTH would fall into the trap the protocol itself warns against, hard-coding "truth = signal drop" instead of letting the <strong>protocol</strong> interpret it.`}),
+    NOTE("note",UI.L_note,{fr:`Comme pour TONE, ce calcul est encore <strong>récent et non éprouvé</strong> sur un grand nombre de séances réelles — les seuils qui décident qu'un candidat mérite d'être proposé continueront d'être resserrés à mesure que des séances vraies s'accumulent.`,
+        it:`Come per TONE, questo calcolo è ancora <strong>recente e non collaudato</strong> su un gran numero di sedute vere — le soglie che decidono se un candidato merita di essere proposto continueranno a stringersi man mano che si accumulano sedute vere.`,
+        en:`As with TONE, this calculation is still <strong>recent and unproven</strong> across a large number of real sessions — the thresholds deciding when a candidate deserves to be proposed will keep being tightened as real sessions accumulate.`}),
+    SHOT("truth-candidat.png",{fr:"Un candidat proposé, avec sa confiance",it:"Un candidato proposto, con la sua fiducia",en:"A proposed candidate, with its confidence"})]},
+
 /* ───────────────────────── ASSESSMENT ───────────────────────── */
 { id:"m-assessment", grp:"dial", t:{fr:"ASSESSMENT & R&I — la liste, et ce qu'elle indique",it:"ASSESSMENT & R&I — la lista, e cosa indica",en:"ASSESSMENT & R&I — the list, and what it indicates"},
   role:[
@@ -917,14 +989,19 @@ const MODULES_REST = [
       {fr:["⊙ / ◎","Les réactions de l'aiguille et les événements de cycle (CONTACT, NULL, MIRROR, ASSESSMENT)."],it:["⊙ / ◎","Le reazioni dell'ago e gli eventi di ciclo (CONTACT, NULL, MIRROR, ASSESSMENT)."],en:["⊙ / ◎","Needle reactions and cycle events (CONTACT, NULL, MIRROR, ASSESSMENT)."]},
       {fr:["SYS","Les messages techniques : connexion MUSE, contact des électrodes, diagnostics."],it:["SYS","I messaggi tecnici: connessione MUSE, contatto elettrodi, diagnostica."],en:["SYS","Technical messages: MUSE connection, electrode contact, diagnostics."]}]),
     SHOT("journal-panneau.png",{fr:"Le journal pendant une séance",it:"Il journal durante una seduta",en:"The journal during a session"})],
-  on:[ P({fr:`Cochez <strong>📋 Journal</strong> dans CONFIG.`,it:`Spunta <strong>📋 Journal</strong> in CONFIG.`,en:`Tick <strong>📋 Journal</strong> in CONFIG.`})],
-  off:[ P({fr:`Décochez la case, ou réduisez le panneau par son en-tête pour le garder à portée sans qu'il prenne de place.`,
-        it:`Togli la spunta, o riduci il pannello dalla sua intestazione per tenerlo a portata senza occupare spazio.`,
-        en:`Untick the box, or collapse the panel from its header to keep it handy without taking space.`})],
+  on:[ P({fr:`En SERENITY, pas de case CONFIG : le bouton <strong>📖</strong> de la barre du haut ouvre et ferme le panneau, posé sur le côté gauche de l'écran.`,
+        it:`In SERENITY, nessuna spunta in CONFIG: il pulsante <strong>📖</strong> della barra in alto apre e chiude il pannello, posato sul lato sinistro dello schermo.`,
+        en:`In SERENITY there is no CONFIG box: the <strong>📖</strong> button in the top bar opens and closes the panel, set on the left side of the screen.`})],
+  off:[ P({fr:`Re-cliquez le même bouton <strong>📖</strong>, ou la croix dans l'en-tête du panneau.`,
+        it:`Riclicca lo stesso pulsante <strong>📖</strong>, o la croce nell'intestazione del pannello.`,
+        en:`Click the same <strong>📖</strong> button again, or the cross in the panel's header.`})],
   in:[
     P({fr:`Le journal s'écrit en continu et part <strong>tel quel</strong> dans le rapport et le PDF. Les réactions de l'aiguille y sont inscrites avec un espacement minimum, pour qu'on puisse les distinguer les unes des autres plutôt que d'avoir un flot illisible.`,
         it:`Il journal si scrive di continuo e finisce <strong>così com'è</strong> nel rapporto e nel PDF. Le reazioni dell'ago vi sono iscritte con una spaziatura minima, così si distinguono l'una dall'altra invece di essere un flusso illeggibile.`,
         en:`The journal writes continuously and goes <strong>as is</strong> into the report and the PDF. Needle reactions are logged with a minimum spacing so they can be told apart instead of forming an unreadable stream.`}),
+    NOTE("warn",UI.L_warn,{fr:`<strong>Le panneau à l'écran ne montre QUE ce qui a été dit</strong> (Aud/PC) — pas les réactions de l'aiguille, pas les messages techniques : trop d'information nuisait à sa lisibilité en séance. Les réactions manquantes n'ont pas disparu : elles restent dans l'archive et le <strong>PDF du rapport</strong> les montre en entier, transcription, réactions et ton compris.`,
+        it:`<strong>Il pannello a schermo mostra SOLO ciò che è stato detto</strong> (Aud/PC) — non le reazioni dell'ago, non i messaggi tecnici: troppa informazione nuoceva alla leggibilità in seduta. Le reazioni mancanti non sono sparite: restano nell'archivio e il <strong>PDF del rapporto</strong> le mostra per intero, trascrizione, reazioni e tono compresi.`,
+        en:`<strong>The on-screen panel shows ONLY what was said</strong> (Aud/PC) — not needle reactions, not technical messages: too much information hurt its readability in session. The missing reactions have not disappeared: they stay in the archive, and the <strong>report PDF</strong> shows them in full, transcript, reactions and tone included.`}),
     NOTE("ok",UI.L_ok,{fr:`Une séance interrompue (coupure, fermeture accidentelle) est <strong>récupérable</strong> : l'app en garde une copie de secours et vous propose de la reprendre au prochain lancement.`,
         it:`Una seduta interrotta (interruzione, chiusura accidentale) è <strong>recuperabile</strong>: l'app ne conserva una copia di scorta e ti propone di riprenderla al lancio successivo.`,
         en:`An interrupted session (crash, accidental close) is <strong>recoverable</strong>: the app keeps a backup copy and offers to resume it at the next launch.`})]},
@@ -1051,9 +1128,12 @@ const MODULES_REST = [
 /* ───────────────────────── DÉPANNAGE ───────────────────────── */
 { id:"m-corpus", grp:"end", t:{fr:"CORPUS — l'archive pour l'IA",it:"CORPUS — l'archivio per l'IA",en:"CORPUS — the archive for the AI"},
   role:[
-    P({fr:`À côté des rapports, EQUILIBRIUM écrit une <strong>archive d'expérience</strong> destinée à une IA : ce que font les deux aiguilles par rapport aux cycles d'audition, le temps de réaction de chacune, la quantité de charge, la concordance des F/N, et — si l'auditeur l'a indiqué — le <strong>procédé</strong> qui tournait. Le but est qu'un EQUILIBRIUM neuf puisse hériter de l'expérience accumulée dès sa première connexion.`,
-        it:`Accanto ai rapporti, EQUILIBRIUM scrive un <strong>archivio di esperienza</strong> destinato a un'IA: cosa fanno i due aghi rispetto ai cicli di auditing, il tempo di reazione di ciascuno, la quantità di carica, la concordanza degli F/N e — se l'auditor l'ha indicato — il <strong>procedimento</strong> che stava girando. Lo scopo è che un EQUILIBRIUM nuovo possa ereditare l'esperienza accumulata già alla prima connessione.`,
-        en:`Alongside the reports, EQUILIBRIUM writes an <strong>experience archive</strong> meant for an AI: what the two needles do relative to the auditing cycles, each one's reaction time, the amount of charge, the F/N concordance, and — if the auditor indicated it — the <strong>process</strong> that was running. The aim is that a fresh EQUILIBRIUM can inherit the accumulated experience from its first connection.`}),
+    P({fr:`À côté des rapports, SERENITY écrit une <strong>archive d'expérience</strong> destinée à une IA : ce que font les deux aiguilles par rapport aux cycles d'audition, le temps de réaction de chacune, la quantité de charge, la concordance des F/N, et — si l'auditeur l'a indiqué — le <strong>procédé</strong> qui tournait. Le but est qu'un SERENITY neuf puisse hériter de l'expérience accumulée dès sa première connexion.`,
+        it:`Accanto ai rapporti, SERENITY scrive un <strong>archivio di esperienza</strong> destinato a un'IA: cosa fanno i due aghi rispetto ai cicli di auditing, il tempo di reazione di ciascuno, la quantità di carica, la concordanza degli F/N e — se l'auditor l'ha indicato — il <strong>procedimento</strong> che stava girando. Lo scopo è che un SERENITY nuovo possa ereditare l'esperienza accumulata già alla prima connessione.`,
+        en:`Alongside the reports, SERENITY writes an <strong>experience archive</strong> meant for an AI: what the two needles do relative to the auditing cycles, each one's reaction time, the amount of charge, the F/N concordance, and — if the auditor indicated it — the <strong>process</strong> that was running. The aim is that a fresh SERENITY can inherit the accumulated experience from its first connection.`}),
+    NOTE("info",UI.L_note,{fr:`<strong>Le dossier s'appelle toujours <code>EQUILIBRIUM/corpus/</code></strong>, même dans SERENITY — ce n'est pas un oubli. Les deux applications partagent le <strong>même moteur</strong> et écrivent dans la <strong>même archive</strong> : une séance conduite dans SERENITY et une conduite dans EQUILIBRIUM s'y retrouvent ensemble, comme si c'était le même logiciel — parce qu'en dessous, c'en est un.`,
+        it:`<strong>La cartella si chiama sempre <code>EQUILIBRIUM/corpus/</code></strong>, anche in SERENITY — non è una dimenticanza. Le due applicazioni condividono lo <strong>stesso motore</strong> e scrivono nello <strong>stesso archivio</strong>: una seduta condotta in SERENITY e una condotta in EQUILIBRIUM ci finiscono insieme, come se fosse lo stesso programma — perché sotto, lo è.`,
+        en:`<strong>The folder is still called <code>EQUILIBRIUM/corpus/</code></strong>, even in SERENITY — that is not an oversight. The two applications share the <strong>same engine</strong> and write to the <strong>same archive</strong>: a session run in SERENITY and one run in EQUILIBRIUM end up there together, as if they were the same program — because underneath, they are.`}),
     NOTE("ok",UI.L_ok,{fr:`Aucun <strong>nom</strong>, aucune <strong>parole prononcée</strong>, aucun <strong>contenu d'item</strong> n'y entre. Uniquement des nombres, des temps, et le nom du procédé — qui est technique, pas personnel. Le fichier peut donc se copier, se fusionner et se donner à un modèle sans emporter quoi que ce soit de privé.`,
         it:`Nessun <strong>nome</strong>, nessuna <strong>parola detta</strong>, nessun <strong>contenuto d'item</strong> ci entra. Solo numeri, tempi e il nome del procedimento — che è tecnico, non personale. Il file si può quindi copiare, fondere e dare a un modello senza portarsi dietro nulla di privato.`,
         en:`No <strong>names</strong>, no <strong>spoken words</strong>, no <strong>item content</strong> goes in. Only numbers, times and the process name — which is technical, not personal. The file can therefore be copied, merged and fed to a model without carrying anything private.`})],
@@ -1166,13 +1246,13 @@ function buildDoc(){
   }
 
   h += `<div class="end">${tr({
-    fr:`EQUILIBRIUM v${VERSIONE} — usage réservé à l'audition. Ce n'est pas un dispositif médical. Sans le THETA-METER, toutes les valeurs sont RELATIVES : le MUSE ne mesure ni ohms ni milliohms, et le TA est reconstruit. Avec le THETA-METER branché, le TA est une résistance réellement mesurée, taraudée avec l'artefact physique. Ce manuel décrit le fonctionnement réel du logiciel ; en cas de divergence avec l'écran, c'est l'écran qui fait foi.`,
-    it:`EQUILIBRIUM v${VERSIONE} — uso riservato all'auditing. Non è un dispositivo medico. Senza il THETA-METER tutti i valori sono RELATIVI: il MUSE non misura né ohm né milliohm, e il TA è ricostruito. Col THETA-METER collegato, il TA è una resistenza realmente misurata, tarata con l'artefatto fisico. Questo manuale descrive il funzionamento reale del software; in caso di divergenza con lo schermo, fa fede lo schermo.`,
-    en:`EQUILIBRIUM v${VERSIONE} — for auditing use. It is not a medical instrument. Without the THETA-METER all values are RELATIVE: the MUSE measures neither ohms nor milliohms, and the TA is reconstructed. With the THETA-METER connected, the TA is a genuinely measured resistance, calibrated with the physical artifact. This manual describes the software's real behaviour; if it diverges from the screen, the screen is authoritative.`})}</div>`;
+    fr:`SERENITY v${VERSIONE} — usage réservé à l'audition. Ce n'est pas un dispositif médical. Sans le THETA-METER, toutes les valeurs sont RELATIVES : le MUSE ne mesure ni ohms ni milliohms, et le TA est reconstruit. Avec le THETA-METER branché, le TA est une résistance réellement mesurée, taraudée avec l'artefact physique. Ce manuel décrit le fonctionnement réel du logiciel ; en cas de divergence avec l'écran, c'est l'écran qui fait foi.`,
+    it:`SERENITY v${VERSIONE} — uso riservato all'auditing. Non è un dispositivo medico. Senza il THETA-METER tutti i valori sono RELATIVI: il MUSE non misura né ohm né milliohm, e il TA è ricostruito. Col THETA-METER collegato, il TA è una resistenza realmente misurata, tarata con l'artefatto fisico. Questo manuale descrive il funzionamento reale del software; in caso di divergenza con lo schermo, fa fede lo schermo.`,
+    en:`SERENITY v${VERSIONE} — for auditing use. It is not a medical instrument. Without the THETA-METER all values are RELATIVE: the MUSE measures neither ohms nor milliohms, and the TA is reconstructed. With the THETA-METER connected, the TA is a genuinely measured resistance, calibrated with the physical artifact. This manual describes the software's real behaviour; if it diverges from the screen, the screen is authoritative.`})}</div>`;
 
   document.getElementById("doc").innerHTML = h;
   document.documentElement.lang = LANG;
-  document.title = "EQUILIBRIUM — " + tr(UI.sub);
+  document.title = "SERENITY — " + tr(UI.sub);
 }
 
 function render(){ buildNav(); buildDoc(); }

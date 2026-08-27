@@ -3939,7 +3939,7 @@ export default function Serenity() {
             ultimo elemento: tutto il resto si accoda a sinistra, il vuoto va tutto a destra. */}
         <span style={{ flex: 1 }} />
       </header>
-      {guidaAperta && <GuideModal lang={lang} onClose={() => setGuidaAperta(false)} />}
+      {guidaAperta && <GuideModal lang={lang} app="serenity" onClose={() => setGuidaAperta(false)} />}
       {creditiAperti && (
         <CreditsModal onClose={() => setCreditiAperti(false)}
           appName="SERENITY" appVersion={__SERENITY_VERSION__} />

@@ -5478,6 +5478,47 @@ la sola lettura del codice, al giro precedente, aveva mancato.
 
 ---
 
+## Giro (27/08/2026, notte, 3) — la GUIDA di SERENITY, rifatta per davvero
+
+Chiesto: « rifai il GUIDE per SERENITY, puoi utilizzare quello di EQUILIBRIUM, ma cambiando le
+cose che sono state cambiate ed aggiornando il tutto ed il nome con SERENITY ». Prima SERENITY
+montava `GuideModal` con `SRC` cablato su `/guide/EQUILIBRIUM-manuale.html` — mostrava LA
+GUIDA DI EQUILIBRIUM, col suo nome scritto ovunque ("GUIDE · EQUILIBRIUM", "Torna a
+EQUILIBRIUM"), anche aperta da dentro SERENITY.
+
+- **Un secondo file**, `~/Downloads/Guide Static Meter/SERENITY-manuale.html`, copiato da
+  EQUILIBRIUM-manuale.html (stesso motore di rendering, stesso contenuto tecnico VERIFICATO
+  sul codice — formule TA↔tono, fisica del MUSE/THETA-METER, tutto identico perché lo È) e poi
+  riscritto dove SERENITY è DAVVERO diversa: il selettore di metodo (cinque cerchi cliccabili
+  invece di pastiglie di testo), il bottone CON/SENZA AGO e la vista senza ago (le tre bande
+  colorate che "respirano"), la pista di un ciclo alla volta, il pannello JOURNAL (che a
+  schermo mostra solo Aud/PC — il resto va nel PDF), e un **nuovo modulo TRUTH** — il
+  protocollo di Ron, che non esiste ancora nel manuale di EQUILIBRIUM.
+- `scripts/copy-guide.cjs` copia ora **due** guide, ciascuna con la propria cartella di
+  screenshot (`guide-screenshots` per EQUILIBRIUM, `guide-screenshots-serenity` per SERENITY
+  — nomi diversi apposta: le due app condividono la cartella dei manuali, e senza questo uno
+  screenshot mancante in una avrebbe potuto mostrare per sbaglio quello dell'altra).
+- `GuideModal.tsx` accetta ora un `app?: 'equilibrium' | 'serenity'` (default invariato) che
+  sceglie il file E il nome giusti ovunque compaiono — titolo, bottone di chiusura, messaggio
+  "guida assente". `Serenity.tsx` passa `app="serenity"`.
+- ⚠️ **Bug trovato per caso**, non introdotto qui: `NOTE("info", UI.L_info, ...)` compariva
+  cinque volte nel file ORIGINALE di EQUILIBRIUM, ma `L_info` non era mai stato dichiarato —
+  le cinque note "info" mostravano l'etichetta "UNDEFINED" invece di un testo vero, anche nel
+  manuale già distribuito. Corretto in ENTRAMBI i file (la chiave mancante, stesso testo di
+  `L_note`).
+- Il percorso reale `~/EQUILIBRIUM/corpus/` (l'archivio CORPUS, condiviso dalle due app,
+  hardcoded in `main.cjs`) resta scritto così anche nel manuale di SERENITY — cambiarlo
+  sarebbe stato scrivere un percorso falso — con una nota che spiega perché.
+
+**Verificato dal vivo**: aperta la guida da dentro SERENITY (icona "?"), intestazione "GUIDE ·
+SERENITY", bottone "Retour à l'app", contenuto e nav coi nuovi moduli, in tutte e tre le
+lingue (FR/IT/EN, verificato lo switch). Aperta anche da EQUILIBRIUM per la controprova: mostra
+ancora "GUIDE · EQUILIBRIUM" col suo contenuto originale, nessuna regressione.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 0 errori.
+
+---
+
 ## Giro (27/08/2026, notte, 2) — TRUTH: l'assessment si accendeva e si spegneva nello stesso istante
 
 Segnalato: « il faut activer l'assessment, car on doit trouver un R&I ». `truth.locateRI()`
