@@ -707,6 +707,40 @@ export const TONE_AMBIENT_MIN = 0.01;
 export const TONE_SIGMA_SPAN = 8;
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════
+// TRUTH — il ciclo del protocollo di Ron (v. docs/truth-cycle-proposal.md)
+// ═══════════════════════════════════════════════════════════════════════════════════════════
+/**
+ * ⚠️ TUTTE LE MANOPOLE QUI SOTTO SONO DICHIARATE NON VERIFICATE — nessuna seduta reale con
+ * questo ciclo esiste ancora da cui misurarle. Sono scritte con lo stesso principio appena
+ * corretto per TONE nello stesso giro (v. `TONE_AMBIENT_ALPHA` sopra): normalizzate
+ * sull'ampiezza-ambiente della PERSONA, non soglie assolute uguali per chiunque — così un
+ * numero sbagliato è "poco sensibile/troppo sensibile per tutti allo stesso modo", non
+ * "funziona per una persona e mai per un'altra", che è l'errore già fatto (e corretto) col
+ * primo TONE.
+ */
+/** Alfa dell'EMA sul segnale/velocità/accelerazione — stessa scala di `TONE_SMOOTH`/
+ *  `MIRROR_SMOOTH` (0.15), non una taratura nuova inventata qui. */
+export const TRUTH_SMOOTH = 0.15;
+/** Alfa dell'EMA sull'ampiezza-ambiente — stessa scala di `TONE_AMBIENT_ALPHA` (molto più
+ *  lenta dello smoothing: l'ambiente è un tratto della persona, non del tick). */
+export const TRUTH_AMBIENT_ALPHA = 0.01;
+/** Quante "ampiezze-ambiente" al secondo di calo contano come D(t) — un calo più rapido del
+ *  semplice respiro/rumore della persona. */
+export const TRUTH_DROP_SIGMA = 3;
+/** Sotto quante "ampiezze-ambiente" di accelerazione il calo si considera ASSESTATO (P(t),
+ *  insieme a D(t)) invece che ancora in caduta libera. */
+export const TRUTH_SETTLE_SIGMA = 2;
+/** Pesi del punteggio di fiducia C(t) = w_d·D + w_p·P + w_q·Q + w_coh·coh. Sommano a 1: un
+ *  candidato "pieno" (tutti i flag accesi, coerenza massima) vale confidenza 1. */
+export const TRUTH_W_D = 0.30;
+export const TRUTH_W_P = 0.35;
+export const TRUTH_W_Q = 0.15;
+export const TRUTH_W_COH = 0.20;
+/** Sopra questa confidenza un candidato viene PROPOSTO all'auditor (mai promosso da solo a
+ *  evento — v. la nota di testa in `truthScale.ts`). */
+export const TRUTH_CANDIDATE_THRESHOLD = 0.6;
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════
 // INTEGRITÀ DEL SEGNALE
 // ═══════════════════════════════════════════════════════════════════════════════════════════
 /**

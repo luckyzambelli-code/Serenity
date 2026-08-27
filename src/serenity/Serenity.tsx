@@ -915,6 +915,24 @@ export default function Serenity() {
     journal.addLog({ speaker: 'NEEDLE', time: tSec,
       text: `◎ R&I · ${testo} → ${etichettaEsito}`,
       type: scelta && scelta !== 'NULL' ? 'success' : 'normal' });
+    // ⚠️ BUG TROVATO — segnalato: « in tone l'item ne s'inscrit pas alors qu'il apparaît dans
+    // ASSESSMENT ». Un item dato con R&I · Manuel non passa MAI per `journal.logs` con
+    // `speaker:'Aud'` — scrive solo in ASSESSMENT (sopra) e una riga di sistema
+    // (`speaker:'NEEDLE'`, appena sopra): i tre `useEffect` che aspettano l'item di CONTACT/
+    // MIRROR/TONE (poco più su in questo stesso file) guardano SOLO `journal.logs` con
+    // `speaker==='Aud'` — non lo vedono mai, qualunque ciclo sia armato e in attesa. La
+    // segnalazione parlava di TONE, ma la stessa causa vale per tutti e tre: notificato qui,
+    // direttamente, lo stesso gesto di quegli effetti.
+    if (cycles.cycleAwaitItemRef.current && cycles.cycleArmedRef.current) {
+      cycles.cycleAwaitItemRef.current = false;
+      cycles.itemDettato(testo);
+    } else if (mirror.mirrorAwaitItemRef.current && mirror.mirrorArmedRef.current) {
+      mirror.mirrorAwaitItemRef.current = false;
+      mirror.itemDettato(testo);
+    } else if (tone.toneAwaitItemRef.current) {
+      tone.toneAwaitItemRef.current = false;
+      setItem(testo);
+    }
   };
   /**
    * Quella parola è già stata DETTA in seduta? E che cosa fece l'ago in quel momento?

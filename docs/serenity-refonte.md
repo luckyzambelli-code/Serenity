@@ -5478,6 +5478,43 @@ la sola lettura del codice, al giro precedente, aveva mancato.
 
 ---
 
+## Giro (27/08/2026, sera) — R&I · Manuel non arrivava al ciclo; il motore TRUTH
+
+Cominciato il ciclo TRUTH (v. `docs/truth-cycle-proposal.md`) subito dopo il "vai" — scritti e
+provati `engine/truthScale.ts` (vettore di stato S/Ṡ/S̈, i tre flag D/P/Q normalizzati
+sull'ampiezza-ambiente della persona come nel fix TONE del giro precedente, il punteggio di
+fiducia, mai un candidato promosso da solo a evento — 13 test nuovi, tutti verdi) e
+`session/useTruthCycle.ts` (la FSM a sei stati, i gesti dell'auditor). **Non ancora agganciato
+all'interfaccia** — `SessionMode`/`MODE_SPEC`/`PistaCiclo`/`cycleSteps` restano com'erano:
+integrarli tocca App.tsx (dove nasce ogni funzione, per principio dimensionale) su parecchi
+punti, e a metà lavoro sono arrivate tre segnalazioni dal vivo che hanno avuto la precedenza —
+il motore resta pronto, inerte, per il prossimo giro dedicato.
+
+1. **« in tone l'item ne s'inscrit pas alors qu'il apparaît dans ASSESSMENT ».** Causa trovata
+   e riprodotta dal vivo (non solo per lettura di codice): `aggiungiItemManuale` — il
+   gestore di R&I · Manuel — scrive l'item SOLO in `assessItems` e in una riga di sistema
+   (`speaker:'NEEDLE'`); i tre `useEffect` che aspettano l'item di CONTACT/NULL/MIRROR/TONE
+   guardano `journal.logs` con `speaker==='Aud'`, che R&I · Manuel non tocca MAI. Un item
+   dato così appariva quindi in ASSESSMENT ma non arrivava MAI al ciclo armato, qualunque
+   fosse — non solo TONE, lo stesso vale per CONTACT/NULL/MIRROR. Corretto notificando
+   direttamente il ciclo in attesa dentro `aggiungiItemManuale`. **Verificato dal vivo**: item
+   "la trahison" dato con R&I · Manuel su CONTACT armato → il campo item si riempie, la pista
+   avanza a "② MOCK-UP".
+2. **« SANS AIGUILLE tu dois montrer les lumières dans l'ARC, autrement on dirait que cela ne
+   marche pas ».** Il respiro idle (dato lo scorso giro) si accendeva solo a `!armed` — un
+   ciclo appena armato, prima che qualcosa reagisca (`effId==='neutral'`), restava
+   COMPLETAMENTE immobile: nessuna banda "attiva" (nessuna eguaglia `cur`) e nessun respiro
+   (perché `armed` è vero). Esteso a `!armed || effId==='neutral'`. **Verificato dal vivo**
+   (via DOM): le tre bande hanno `animation: vsaIdleGlow` attiva con CONTACT armato e senza
+   ago, sfasate di 1,1s l'una dall'altra.
+
+`tsc --noEmit` pulito, `vitest run` 652/652 (13 nuovi per `truthScale.ts`), `npm run lint` 0
+errori (313 warning, invariati).
+
+EQUILIBRIUM 2.0.234, SERENITY 3.0.127.
+
+---
+
 ## Giro (27/08/2026) — TONE: la scala si tara da sé; MIRROR spiegato; l'arco cresce col ciclo
 
 Cinque segnalazioni arrivate durante la verifica del giro precedente, mentre si stava per

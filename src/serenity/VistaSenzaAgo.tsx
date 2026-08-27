@@ -205,7 +205,16 @@ export function VistaSenzaAgo({ armed = true, cycleKind = 'charge', nullPhase = 
             // respiro, più lento, più sottile (fra `dimOp` e un terzo più chiaro), sfasato di
             // un terzo di ciclo per banda (`idx * 1.1s`) così le tre non si accendono e
             // spengono insieme come UN lampeggio, ma si rincorrono come una luce che scorre.
-            const idleStyle = !armed ? ({
+            // ⚠️ SEGNALATO DI NUOVO: « SANS AIGUILLE tu dois montrer les lumières dans l'ARC
+            // autrement on dirait que cela ne marche pas ». La condizione `!armed` (sopra)
+            // bastava a schermo inattivo, ma un ciclo APPENA armato — prima che qualunque
+            // cosa reagisca — resta con `effId==='neutral'` (v. la sua nota più sotto): `cur`
+            // vale -1, nessuna banda risulta `active`, e senza il respiro l'arco resta
+            // completamente immobile ANCHE a ciclo in corso, che è esattamente quel che
+            // sembra "rotto". Il respiro vale ogni volta che non c'è nulla da inseguire
+            // davvero — armato o no, purché la zona sia ancora neutra — non solo a schermo
+            // inattivo.
+            const idleStyle = (!armed || effId === 'neutral') ? ({
               '--vsa-idle-lo': dimOp, '--vsa-idle-hi': Math.min(1, dimOp * 1.8),
               animation: `vsaIdleGlow 3.4s ease-in-out ${idx * 1.1}s infinite`,
             } as React.CSSProperties) : undefined;
