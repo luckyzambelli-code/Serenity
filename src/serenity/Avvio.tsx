@@ -369,8 +369,15 @@ export function Avvio({ onPronto, onRichiama }: {
                     fontFamily: 'var(--s-sans)', color: 'var(--s-ink)',
                   }}>
                     <span style={{ fontSize: 'var(--s-fs-base)', fontWeight: 600 }}>{cfg.nome}</span>
+                    {/* ⚠️ `· cfg.lingua.toUpperCase()`, in coda — segnalato: « nella
+                        configurazione registrata deve apparire... anche la lingua scelta ».
+                        Auditor/PC/strumenti c'erano già; la lingua no, perché non veniva
+                        nemmeno salvata (v. `salvaConfigurazione`/`richiamaConfigurazione` in
+                        `Serenity.tsx`). Facoltativa (`cfg.lingua &&`): le configurazioni
+                        salvate prima di questo giro non ce l'hanno, e non devono mostrare un
+                        "· undefined" al posto della lingua che non hanno mai registrato. */}
                     <span style={{ fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)', marginLeft: 6 }}>
-                      {nomeProfilo(liste.a, cfg.avvio.auditorId)}{chi ? ` · ${chi}` : ''}{strumento ? ` · ${strumento}` : ''}
+                      {nomeProfilo(liste.a, cfg.avvio.auditorId)}{chi ? ` · ${chi}` : ''}{strumento ? ` · ${strumento}` : ''}{cfg.lingua ? ` · ${cfg.lingua.toUpperCase()}` : ''}
                     </span>
                   </button>
                   {/* ⚠️ Segnalato: « vorrei una ICONA accanto a ogni saved per sopprimerla » — la

@@ -45,9 +45,20 @@ import { pick5 } from '../i18n5';
  * garantiva che fosse ancora DENTRO la parte visibile del contenitore (`overflowY:'auto'`,
  * un'altezza limitata) — con molti comandi, scorrere con le frecce poteva mettere a fuoco una
  * riga già fuori dallo scorrimento corrente, invisibile finché non si scorreva anche a mano.
- * `righeRef` (un ref per riga) + un `useEffect` su `[fuoco]` che chiama
- * `scrollIntoView({block:'nearest'})`: sposta lo scorrimento SOLO se la riga a fuoco non è già
- * visibile (`'nearest'`, non `'center'` — non salta a metà pista per un comando già in vista).
+ * `righeRef` (un ref per riga) + un `useEffect` su `[fuoco]` che chiama `scrollIntoView`.
+ *
+ * ⚠️ DA 'nearest' A 'center' — segnalato: « quando fai apparire i comandi, la frase in
+ * lettura deve restare a metà altezza per vedere in piccolo le domande prima e quelle dopo ».
+ * `'nearest'` spostava lo scorrimento SOLO quanto bastava a far rientrare la riga — una riga
+ * già dentro la finestra (magari proprio al bordo) non si spostava affatto, e l'auditor
+ * poteva ritrovarsi il comando a fuoco in cima o in fondo, senza contesto sopra O sotto.
+ * `'center'` lo tiene SEMPRE a metà: le domande vicine restano leggibili (più piccole, per la
+ * dissolvenza già in uso) sia prima che dopo, qualunque sia la posizione nella lista. Per
+ * poterlo centrare per davvero serve uno SPAZIO CON UN BORDO (altrimenti "centrare" non vuol
+ * dire niente: cresce e basta) — il contenitore riprende un tetto d'altezza (`maxHeight`,
+ * sotto), stavolta non per la ragione del vecchio bug (« spazio troppo basso, larghezza
+ * stretta costringeva a scorrere anche il testo » — quella si è risolta allargando la
+ * LARGHEZZA, non c'entra con l'altezza) ma apposta per dare al centraggio un centro vero.
  */
 export function PistaProcedimento({ nome, comandi, onChiudi, lang }: {
   nome: string;
@@ -68,7 +79,7 @@ export function PistaProcedimento({ nome, comandi, onChiudi, lang }: {
   // Il comando a fuoco resta sempre dentro la parte visibile del contenitore — v. la nota
   // sopra. `'nearest'`: sposta lo scorrimento SOLO quanto serve, mai più del necessario.
   useEffect(() => {
-    righeRef.current[fuoco]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    righeRef.current[fuoco]?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [fuoco]);
   if (!comandi.length) return null;
 
@@ -78,50 +89,21 @@ export function PistaProcedimento({ nome, comandi, onChiudi, lang }: {
 
   return (
     <div
-      ref={contenitoreRef}
-      tabIndex={0}
-      onKeyDown={e => {
-        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); vaia(1); }
-        else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); vaia(-1); }
-      }}
-      onWheel={e => {
-        // Cooldown breve: un trackpad manda molti eventi per un solo gesto di scorrimento —
-        // senza freno la pista salterebbe più di un comando a ogni "tacca".
-        const ora = Date.now();
-        if (ora - ultimoScroll < 220) return;
-        if (Math.abs(e.deltaY) < 4) return;
-        setUltimoScroll(ora);
-        vaia(e.deltaY > 0 ? 1 : -1);
-      }}
       style={{
-        // ⚠️ Segnalato DI NUOVO: « non uno spazio dedicato così poco alto da dover scroll —
-        // metti il tutto sotto il perno dell'ago al fine da vedere bene IN LARGHEZZA il
-        // tutto ». Il tetto precedente (`min(50vh,420px)`, con scorrimento) era esattamente
-        // quello: uno spazio basso che obbligava a scorrere per leggere le indicazioni.
-        // Corretto nella direzione chiesta — LARGHEZZA, non altezza: `width` allargata a
-        // 2200 (lo stesso tetto di `PistaCiclo`, il pannello del quadrante) così il testo
-        // `--s-serif` di ogni comando va a capo molto meno spesso, e serve MENO altezza in
-        // totale per lo stesso contenuto. Nessun `maxHeight`/`overflowY` più: il tutto sta
-        // nel flusso naturale della colonna, alla sua taglia vera — niente da scorrere per
-        // vederlo. Lo scorrimento a rotellina/frecce (`onWheel`/`onKeyDown`, sopra) resta:
-        // non serve più a raggiungere una riga tagliata via da un contenitore troppo basso,
-        // resta comunque comodo per saltare fra i comandi senza dover cliccare ciascuno.
         width: 'min(96%, 2200px)', maxWidth: '100%', flexShrink: 0,
         display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-        gap: 12, pointerEvents: 'auto', outline: 'none',
+        gap: 12, pointerEvents: 'auto',
       }}>
       <div style={{
-        // ⚠️ BUG TROVATO — segnalato: « la prima linea dei comandi di qualsiasi procedimento è
-        // sempre sovrastata dal titolo e dal bottone FERMER ». `position:'sticky', top:0`
-        // restava da quando questa intestazione doveva restare visibile DURANTE lo scorrimento
-        // INTERNO di questo componente (`overflowY:'auto'`, tolto in un giro precedente — v. la
-        // nota sopra "non uno spazio dedicato così poco alto da dover scroll"). Senza uno
-        // scorrimento proprio, `sticky` cerca il primo ANTENATO che scorre — che ora è
-        // `gruppoBasso`, in `Serenity.tsx` (`overflow:'auto'` quando il contenuto supera il
-        // terzo riservato) — e SI INCOLLA lì: l'intestazione restava fissa in cima a QUELLA
-        // scatola mentre i comandi veri scorrevano SOTTO di lei, sempre coperti. Tolto
-        // `position`/`top`: l'intestazione torna un normale primo figlio nel flusso, non più
-        // sovrapposta a nulla.
+        // ⚠️ BUG TROVATO DI NUOVO — segnalato: « quando scroll sui comandi, il bottone fermer
+        // scompare, deve essere visibile ». Un giro fa questa intestazione era già stata tolta
+        // da `position:sticky` (si incollava all'antenato SBAGLIATO, coprendo la prima riga) —
+        // ma restava comunque dentro lo STESSO contenitore che ora scorre (v. sotto, per il
+        // centraggio del comando a fuoco): scorrendo, FERMER scorreva via CON la lista, invece
+        // di restarci sopra. L'intestazione è ora un FRATELLO del contenitore scorrevole, non
+        // più un suo primo figlio — fuori da quel che scorre, per costruzione, non serve più
+        // nessun `sticky`.
+        width: '100%', boxSizing: 'border-box',
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '3px 4px 3px 10px', borderRadius: 999,
         background: 'color-mix(in srgb, var(--s-ground) 68%, transparent)',
@@ -151,6 +133,34 @@ export function PistaProcedimento({ nome, comandi, onChiudi, lang }: {
           {etichettaChiudi}
         </button>
       </div>
+      {/* ── LA LISTA, IN UNA FINESTRA CON UN CENTRO VERO — v. la nota in cima al file sul
+          passaggio da `'nearest'` a `'center'`. `maxHeight` le dà un bordo entro cui
+          "centrare" vuol dire qualcosa; `overflowY:'auto'` la rende scorrevole DA SOLA — FERMER
+          (sopra, ora un fratello, non un figlio) non ne fa più parte e non scorre con lei. */}
+      <div
+        ref={contenitoreRef}
+        tabIndex={0}
+        onKeyDown={e => {
+          if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); vaia(1); }
+          else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); vaia(-1); }
+        }}
+        onWheel={e => {
+          // Cooldown breve: un trackpad manda molti eventi per un solo gesto di scorrimento —
+          // senza freno la pista salterebbe più di un comando a ogni "tacca".
+          const ora = Date.now();
+          if (ora - ultimoScroll < 220) return;
+          if (Math.abs(e.deltaY) < 4) return;
+          setUltimoScroll(ora);
+          vaia(e.deltaY > 0 ? 1 : -1);
+        }}
+        style={{
+          width: '100%', maxHeight: '52vh', overflowY: 'auto', outline: 'none',
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12,
+          // Un po' di spazio SOPRA e SOTTO il primo/ultimo comando: senza, "centrare" il primo
+          // o l'ultimo comando li spingerebbe contro il bordo della finestra invece che a
+          // vera metà altezza, perché non c'è nessuno spazio oltre loro da centrare dentro.
+          paddingTop: '20vh', paddingBottom: '20vh',
+        }}>
       {comandi.map((c, i) => {
         const distanza = Math.abs(i - fuoco);
         const inFuoco = i === fuoco;
@@ -202,6 +212,7 @@ export function PistaProcedimento({ nome, comandi, onChiudi, lang }: {
           </button>
         );
       })}
+      </div>
     </div>
   );
 }

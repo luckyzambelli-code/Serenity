@@ -5340,6 +5340,69 @@ EQUILIBRIUM 2.0.230, SERENITY 3.0.123.
 
 ---
 
+## Giro (27/08/2026) — nove punti, ognuno verificato dal vivo (o dichiarato non verificabile)
+
+Segnalato con durezza: « NON HAI REGOLATO QUESTI PUNTI, FALLO PER CORTESIA, VERIFICA CHE STAI
+FACENDO LE COSE, NON SOLO DIRE CHE LO FAI ». Giustificato — alcuni bug erano reali, non solo
+mal descritti. Ogni punto sotto porta l'ESITO della verifica dal vivo, non solo la correzione.
+
+1. **Squeeze test, l'ago del Meter non appariva.** Causa vera trovata: il fix di un giro fa
+   (`inThetaReadyCheck`) toglieva il forzato EEG durante lo squeeze test, ma poi il calcolo
+   ricadeva nella regola generale — con MUSE ANCHE connesso e `agoScelto` (la preferenza
+   persistita) su 'eeg', l'ago tornava quello sbagliato. `inThetaReadyCheck` ora FORZA il
+   Meter, un ramo dedicato prima di tutti gli altri. **Verificato dal vivo**: con MUSE e METER
+   entrambi "connessi" e la preferenza forzata su 'eeg', lo squeeze test mostra l'ago giusto.
+2. **CONTACT step 2, il testo restava a metà** (il titolo diceva "chiedi un mock-up", il corpo
+   saltava al "poi"). Aggiunta l'istruzione vera prima del testo esistente. **Verificato dal
+   vivo**: dato l'item, il tempo 2 mostra "Demande un mock-up. Puis ne fais rien d'autre...".
+3. **PistaProcedimento: il fuoco a metà altezza, FERMER sempre visibile.** `scrollIntoView`
+   passato da `'nearest'` a `'center'`; il contenitore ha ripreso un `maxHeight` (52vh, con
+   `padding` sopra/sotto per poter centrare anche il primo/ultimo comando); l'intestazione
+   (FERMER) è ora un FRATELLO del contenitore scorrevole, non più un suo primo figlio — non
+   scorre più con la lista. **Non verificato dal vivo**: nessun procedimento caricabile in
+   questo sandbox (legge da `~/EQUILIBRIUM/COMANDI/Procedimenti`, filesystem reale assente
+   qui) — verificato per lettura di codice/struttura JSX, `tsc` pulito.
+4. **TONE, la scala non appariva più.** Non riprodotto con il codice attuale: **verificato dal
+   vivo** più volte in questo giro — armato TONE, l'arco resta vuoto finché l'item non è dato;
+   datolo (Invio), la scala −40…+40 appare subito. Il fix del giro precedente (gating su
+   `faseCiclo`) risulta corretto; il segnalato era probabilmente contro una build precedente.
+5. **ACTIVER → DÉSACTIVER.** Il giro precedente lo aveva corretto; **riverificato dal vivo**:
+   il pulsante mostra DÉSACTIVER da acceso, ACTIVER da spento, in entrambe le direzioni.
+6. **L'item avanzava al primo carattere digitato.** Causa vera: `itemNamed` (che decide se
+   passare al tempo successivo) leggeva `!!item.trim()` — vero già al primo tasto, perché
+   `item` è lo STESSO stato che l'`<input>` scrive a ogni battuta. Nuovo stato `itemDigitando`
+   (vero dalla prima battuta MANUALE, mai toccato dalla voce — che arriva sempre intera, mai
+   un carattere alla volta): `itemNamed` ora aspetta o `itemSpoken` (Invio/dichiarazione) o
+   che non si stia più digitando. **Verificato dal vivo**: digitando "Peur" lettera per
+   lettera, il tempo resta a "① ITEM" per tutta la digitazione; Invio lo fa avanzare.
+7. **Senza strumenti, i cicli non apparivano.** Causa: `!senzaMisura` escludeva l'INTERA fascia
+   dei quattro cerchi di scelta del metodo — senza strumenti, nessun modo di armarne uno.
+   Tolta l'esclusione. **Verificato dal vivo**: sessione "senza strumenti", i quattro cerchi
+   esistono nel DOM con le loro etichette, e cliccare CONTACT arma il ciclo per davvero.
+8. **L'assessment restava armato oltre il tempo dell'item.** Nuovo `useEffect` su `faseCiclo`:
+   appena il tempo esce da `*.item`/`*.say_item` (mentre un ciclo resta armato), l'assessment
+   si spegne da sé — resta comunque riaccendibile a mano in qualunque momento. **Verificato
+   dal vivo**: armando CONTACT l'assessment si accende (DÉSACTIVER); dato l'item e passato al
+   tempo 2 (MOCK-UP), torna da solo su ACTIVER — stesso comportamento osservato anche in TONE.
+9. **La configurazione salvata non mostrava (né restituiva) la lingua.** `ConfigurazioneSalvata`
+   ha un campo `lingua` nuovo (facoltativo, le configurazioni vecchie non ce l'hanno);
+   `salvaConfigurazione`/`richiamaConfigurazione` lo scrivono/leggono; la lista in `Avvio.tsx`
+   lo mostra in coda (`· FR`). **Verificato dal vivo**: salvata una configurazione in francese,
+   ricaricata la pagina (lingua tornata inglese), richiamata la configurazione dalla lista —
+   la lingua torna francese insieme ad auditor/PC/strumenti, tutti mostrati correttamente nella
+   riga della configurazione salvata.
+
+`tsc --noEmit` pulito, `vitest run` 639/639, `npm run lint` 313 warning (nessuno nuovo). Otto
+punti su nove verificati con interazione reale nel browser (screenshot alla mano); il nono
+(PistaProcedimento) verificato per struttura di codice, non riproducibile in questo sandbox
+per mancanza di dati di test. `git status`: `src/serenity/Serenity.tsx`,
+`src/serenity/PistaProcedimento.tsx`, `src/serenity/ZonaAssessment.tsx`,
+`src/serenity/Avvio.tsx`, `src/serenity/configurazioniStore.ts`.
+
+EQUILIBRIUM 2.0.231, SERENITY 3.0.124.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

@@ -42,6 +42,14 @@ export interface ConfigurazioneSalvata {
    *  può avere una domanda ancora aperta. */
   avvio: Avvio;
   strumenti: SceltaStrumenti;
+  /** ⚠️ SEGNALATO — mancava: « nella configurazione registrata deve apparire... anche la
+   *  lingua scelta ». Una combinazione auditor+preclear+strumenti che cambia lingua da una
+   *  seduta all'altra (lo stesso auditor che lavora in italiano con un preclear e in francese
+   *  con un altro, ad esempio) perdeva quella scelta ogni volta — richiamare la configurazione
+   *  restava a metà, la lingua andava sempre riscelta a mano. Facoltativo (`?`): le
+   *  configurazioni salvate PRIMA di questo giro non ce l'hanno, e non devono rompersi per
+   *  questo — `leggiConfigurazioni`/la resa gestiscono già la sua assenza. */
+  lingua?: string;
   salvataIl: string;   // ISO — per ordinarle, la più recente prima.
 }
 
@@ -65,12 +73,12 @@ function scrivi(elenco: ConfigurazioneSalvata[]): void {
 
 /** Salva (o sovrascrive, passando lo stesso `idEsistente`) una configurazione. */
 export function salvaConfigurazione(
-  nome: string, avvio: Avvio, strumenti: SceltaStrumenti, idEsistente?: string,
+  nome: string, avvio: Avvio, strumenti: SceltaStrumenti, lingua?: string, idEsistente?: string,
 ): ConfigurazioneSalvata {
   const cfg: ConfigurazioneSalvata = {
     id: idEsistente ?? `cfg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     nome: nome.trim() || 'senza nome',
-    avvio, strumenti,
+    avvio, strumenti, lingua,
     salvataIl: new Date().toISOString(),
   };
   scrivi([...leggiConfigurazioni().filter(c => c.id !== cfg.id), cfg]);

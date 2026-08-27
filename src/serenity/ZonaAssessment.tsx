@@ -180,14 +180,19 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
             border: 'none', borderRadius: 10, background: 'transparent', cursor: 'pointer',
             padding: '2px 2px', fontFamily: 'var(--s-sans)',
           }}>
-          {!attivo && (
-            <span style={{
-              fontSize: 'var(--s-fs-micro)', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700,
-              color: 'var(--s-ink-faint)',
-            }}>
-              {LC('attiva', 'activer', 'activate', 'activar', 'aktivera')}
-            </span>
-          )}
+          {/* ⚠️ LA SCRITTA C'ERA SOLO SPENTA — segnalato: « quando schiacci ACTIVER, si deve
+              vedere DESACTIVER ». Prima, da accesa, non restava NESSUNA parola (solo
+              l'anello) — chi guardava non sapeva più cosa avrebbe fatto il click. Ora la
+              scritta resta SEMPRE, e cambia parola con lo stato: esattamente la stessa
+              logica del pallino appena sotto (pieno/vuoto), non una seconda invenzione. */}
+          <span style={{
+            fontSize: 'var(--s-fs-micro)', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700,
+            color: attivo ? 'var(--s-still)' : 'var(--s-ink-faint)',
+          }}>
+            {attivo
+              ? LC('disattiva', 'désactiver', 'deactivate', 'desactivar', 'inaktivera')
+              : LC('attiva', 'activer', 'activate', 'activar', 'aktivera')}
+          </span>
           {/* ── L'INTERRUTTORE — un anello: pieno e colorato se `attivo`, vuoto se no. Stessa
               famiglia visiva dei pallini di stato della pillola strumenti in `Serenity.tsx`,
               non un'invenzione a sé. */}

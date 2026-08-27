@@ -243,7 +243,7 @@ function Divisore() {
  *  (`noReadSignal`, il chip « recharging » del NULL). */
 
 export default function Serenity() {
-  const { t, lang } = useI18n();
+  const { t, lang, setLang } = useI18n();
   /** LC — le stesse cinque lingue di App.tsx, stesso helper (`i18n5`, non un secondo). Serve
    *  ai moduli condivisi (`useChargeEngine`'s deps non lo usa direttamente, ma sarà necessario
    *  quando la fase 6 monterà i cicli — vedi la nota più sotto). */
@@ -1125,6 +1125,22 @@ export default function Serenity() {
    * (`itemSpoken`/`dichiaraItemDetto`), non una variante nuova.
    */
   const [itemSpoken, setItemSpoken] = useState(false);
+  /** ── SCRIVERE L'ITEM NON DEVE FAR AVANZARE AL PRIMO TASTO — segnalato: « in tutti i cicli
+   *  quando cominci a scrivere l'item, alla prima lettera passa già al punto seguente. Deve
+   *  aspettare la fine della scritta ». La causa: `itemNamed` (sotto) leggeva `!!item.trim()`
+   *  — vero già al PRIMO carattere digitato, perché `item` è LO STESSO stato che l'`<input>`
+   *  di `PistaCiclo` scrive a ogni tasto (`onChange`). Per la voce va bene così: una
+   *  trascrizione arriva SEMPRE intera (mai un carattere alla volta) — è SOLO la digitazione
+   *  manuale ad aver bisogno di un "non ancora, sto ancora scrivendo".
+   *  `itemDigitando`: vero DALLA prima battuta manuale, falso appena `item` si svuota (nuovo
+   *  ciclo/nuova resistenza — v. l'effetto sotto) o appena l'auditor CONFERMA (Invio, che
+   *  chiama `dichiaraItemDetto` sotto — la stessa via già cablata in `PistaCiclo`, mai
+   *  toccata). La voce non lo tocca MAI: `cycles.itemDettato`/`mirror.itemDettato`/il
+   *  `setItem` di TONE scrivono `item` direttamente, non passano da qui — restano quindi
+   *  "non digitando", cioè immediatamente validi, come sempre. */
+  const [itemDigitando, setItemDigitando] = useState(false);
+  useEffect(() => { if (!item.trim()) setItemDigitando(false); }, [item]);
+  const setItemManuale = (v: string) => { setItemDigitando(true); setItem(v); };
   /** Il lag di Ron (Δt*) — segnalato assente dalla revisione (« l'arco rappresenta i cicli »):
    *  serviva anche a QUESTO, non solo a un numero. `onLagMeasured` era un no-op — il motore lo
    *  calcolava comunque (vive in `lagMeter`, dentro il ciclo), semplicemente nessuno lo leggeva
@@ -1335,11 +1351,21 @@ export default function Serenity() {
    * SI muove — `theta.testPeakOffset` lo dimostra) semplicemente non era quello disegnato.
    * `inThetaReadyCheck`, sotto, è la STESSA condizione che decide quale dei due componenti
    * montare — quando è lei a girare, l'ago resta quello del Meter; il forzato EEG scatta solo
-   * per l'ALTRA metà di `metabolicOpen`, il test del MUSE vero e proprio. */
+   * per l'ALTRA metà di `metabolicOpen`, il test del MUSE vero e proprio.
+   *
+   * ⚠️ BUG TROVATO DI NUOVO — segnalato: « inizio session, test squeeze e non appare l'ago
+   * del meter ». Il fix precedente FALLIVA quando ANCHE il MUSE risultava connesso: fuori da
+   * `metabolicOpen && !inThetaReadyCheck`, il calcolo cadeva nella regola generale
+   * (`museOk && meterC ? agoScelto === 'eeg' : ...`) — se `agoScelto` (la preferenza
+   * PERSISTITA da una seduta precedente) valeva 'eeg', l'ago tornava quello del MUSE anche
+   * durante lo squeeze test, esattamente come prima di quel fix. `inThetaReadyCheck` deve
+   * FORZARE il Meter, non solo "non forzare l'EEG" — un ramo dedicato, prima di tutti gli
+   * altri, invece di lasciarlo ricadere nella priorità generale. */
   const cicloEegInCorso = cycles.cycleArmed || mirror.mirrorArmed;
   const inThetaReadyCheck = metabolicOpen && meterC && !thetaReadyDone;
   const agoEeg = toneAttivo ? false
-    : metabolicOpen && !inThetaReadyCheck ? true
+    : inThetaReadyCheck ? false
+    : metabolicOpen ? true
     : cicloEegInCorso ? museOk
     : museOk && meterC ? agoScelto === 'eeg'
     : museOk;
@@ -1530,14 +1556,33 @@ export default function Serenity() {
     hasInstrument: muse.museConnection === 'connected' || meterC,
     preflightOpen: false, epWindowOpen: ep.epWindowOpen, reportOpen: false,
     mode, cycleArmed: cycles.cycleArmed, asIsPending: cycles.asIsPending, nullPhase: cycles.nullPhase,
-    itemNamed: !!item.trim() || itemSpoken,
+    // ⚠️ `!itemDigitando`, non solo `!!item.trim()` — v. la nota su `itemDigitando`, sopra:
+    // senza, il ciclo avanzava al PRIMO carattere digitato, prima che l'auditor avesse finito
+    // di scrivere.
+    itemNamed: (!!item.trim() && !itemDigitando) || itemSpoken,
     mirrorArmed: mirror.mirrorArmed, mirrorLocked: mirror.mirrorDisp.locked, mirrorReached: mirror.mirrorDisp.reached,
     tonePhase: tone.tonePhase,
   }), [showSplash, aperta, muse.museConnection, meterC, ep.epWindowOpen, mode, cycles.cycleArmed, cycles.asIsPending,
-       cycles.nullPhase, item, itemSpoken, mirror.mirrorArmed, mirror.mirrorDisp.locked, mirror.mirrorDisp.reached,
+       cycles.nullPhase, item, itemDigitando, itemSpoken, mirror.mirrorArmed, mirror.mirrorDisp.locked, mirror.mirrorDisp.reached,
        tone.tonePhase]);
 
   const chargePhaseNow = useMetric(m => m.chargePhase);
+
+  /** ── SI DISATTIVA ANCHE PASSANDO ALLA STEP SUCCESSIVA — segnalato: « quando si arma un
+   *  ciclo, l'assessment si arma, ma passando alla step successiva deve disattivarsi, poiché
+   *  quello che si dice non è più un assessment ». L'effetto sopra (`[mode]`) la accende/
+   *  spegne solo alle DUE estremità del ciclo (armato/libero) — dentro lo stesso ciclo, `mode`
+   *  non cambia mai, quindi restava accesa per tutti i tempi successivi (MOCK-UP, AS-IS,
+   *  RAISE...) anche se quel che si dice lì non è più l'item da valutare. `faseCiclo`
+   *  distingue i tempi "si sta ancora dando l'item" (`*.item`/`*.say_item`) dagli altri —
+   *  appena si esce da quei due, se un ciclo è ancora armato, l'assessment si spegne da sé.
+   *  Resta comunque riaccendibile a mano in qualunque momento (nessuna guardia tolta): un
+   *  nuovo tempo la spegne di nuovo solo se e quando IL TEMPO STESSO cambia ancora, non
+   *  subito dopo un tocco manuale. */
+  useEffect(() => {
+    const inFaseItem = faseCiclo.endsWith('.item') || faseCiclo.endsWith('.say_item');
+    if (mode !== 'free' && !inFaseItem) setAssessAttivo(false);
+  }, [faseCiclo, mode]);
 
   /**
    * ── « A CHE PUNTO SONO, E COSA DEVO FARE » — segnalata assente: « riproduci la logica dei
@@ -1845,6 +1890,7 @@ export default function Serenity() {
    */
   const dichiaraItemDetto = () => {
     setItemSpoken(true);
+    setItemDigitando(false);   // confermato: non è più "ancora in scrittura"
     cycles.cycleAwaitItemRef.current = false;
     mirror.mirrorAwaitItemRef.current = false;
     tone.toneAwaitItemRef.current = false;
@@ -2048,6 +2094,13 @@ export default function Serenity() {
     setAvvio(cfg.avvio);
     setConnSel(cfg.strumenti);
     setSenzaStrumenti(cfg.strumenti.none);
+    // ⚠️ SEGNALATO — mancava: « nella configurazione registrata deve apparire... anche la
+    // lingua scelta ». Richiamarla restituiva auditor/PC/strumenti ma MAI la lingua — anche
+    // salvandola (v. `salvaConfigurazione`, sopra), senza restituirla qui la seduta ripartiva
+    // sempre nell'ultima lingua usata, non in quella della combinazione richiamata.
+    // `cfg.lingua` è opzionale (le configurazioni salvate PRIMA di questo giro non ce l'hanno):
+    // senza, si lascia la lingua corrente tale e quale, non un default indovinato a caso.
+    if (cfg.lingua) setLang(cfg.lingua as Parameters<typeof setLang>[0]);
     if (!cfg.strumenti.none) {
       if (cfg.strumenti.muse) muse.handleConnectMuse();
       if (cfg.strumenti.theta) theta.connect();
@@ -2579,7 +2632,7 @@ export default function Serenity() {
                   // il gesto naturale dopo aver scritto un nome, invece di dover trovare il
                   // piccolo bottone testuale accanto (che resta, per chi preferisce il mouse).
                   onKeyDown={e => { if (e.key === 'Enter' && nomeConfigDaSalvare.trim()) {
-                    salvaConfigurazione(nomeConfigDaSalvare, avvio, connSel); setConfigSalvata(true);
+                    salvaConfigurazione(nomeConfigDaSalvare, avvio, connSel, lang); setConfigSalvata(true);
                   } }}
                   placeholder={LC('nome di questa configurazione…', 'nom de cette configuration…',
                     'name for this configuration…', 'nombre de esta configuración…', 'namn för denna konfiguration…') as string}
@@ -2591,7 +2644,7 @@ export default function Serenity() {
                 />
                 <button
                   disabled={!nomeConfigDaSalvare.trim()}
-                  onClick={() => { salvaConfigurazione(nomeConfigDaSalvare, avvio, connSel); setConfigSalvata(true); }}
+                  onClick={() => { salvaConfigurazione(nomeConfigDaSalvare, avvio, connSel, lang); setConfigSalvata(true); }}
                   style={{
                     border: 'none', background: 'none', cursor: nomeConfigDaSalvare.trim() ? 'pointer' : 'default',
                     opacity: nomeConfigDaSalvare.trim() ? 1 : 0.4,
@@ -2619,7 +2672,7 @@ export default function Serenity() {
                   // (nominare + aprire). Ora basta scrivere il nome — aprire la seduta la
                   // salva DA SÉ, senza bisogno di trovare e premere "enregistrer" a parte.
                   if (nomeConfigDaSalvare.trim()) {
-                    salvaConfigurazione(nomeConfigDaSalvare, avvio, connSel);
+                    salvaConfigurazione(nomeConfigDaSalvare, avvio, connSel, lang);
                   }
                   const nessuno = connSel.none;
                   setScegliStrumento(false);
@@ -3339,7 +3392,7 @@ export default function Serenity() {
                             onChange={e => { setNomeConfigDaSalvare(e.target.value); setConfigSalvata(false); }}
                             onKeyDown={e => { if (e.key === 'Enter' && nomeConfigDaSalvare.trim()) {
                               salvaConfigurazione(nomeConfigDaSalvare, avvio,
-                                { muse: museOk, theta: meterC, none: senzaStrumenti || (!museOk && !meterC) });
+                                { muse: museOk, theta: meterC, none: senzaStrumenti || (!museOk && !meterC) }, lang);
                               setConfigSalvata(true);
                             } }}
                             placeholder={LC('nome di questa configurazione…', 'nom de cette configuration…',
@@ -3354,7 +3407,7 @@ export default function Serenity() {
                             disabled={!nomeConfigDaSalvare.trim()}
                             onClick={() => {
                               salvaConfigurazione(nomeConfigDaSalvare, avvio,
-                                { muse: museOk, theta: meterC, none: senzaStrumenti || (!museOk && !meterC) });
+                                { muse: museOk, theta: meterC, none: senzaStrumenti || (!museOk && !meterC) }, lang);
                               setConfigSalvata(true);
                             }}
                             style={{
@@ -4773,7 +4826,7 @@ export default function Serenity() {
             ? <PistaProcedimento nome={procedimentoAttivo.nome} comandi={procedimentoAttivo.comandi}
                 onChiudi={() => setProcedimentoAttivo(null)} lang={lang} />
             : <PistaCiclo mode={mode} phase={faseCiclo} lang={lang}
-                item={item} setItem={setItem} itemPlaceholder={t('ser_item_placeholder') as string}
+                item={item} setItem={setItemManuale} itemPlaceholder={t('ser_item_placeholder') as string}
                 spiegazione={spiegazioneCiclo} onDichiaraDetto={dichiaraItemDetto}>
                 {bottoniCiclo}
               </PistaCiclo>
@@ -4800,7 +4853,15 @@ export default function Serenity() {
             posto del vecchio `<span>` di sola lettura (v. la nota lì), disponibile appena un
             metodo è armato: non prima, perché prima l'auditor ha già R&I/ASSESSMENT per
             annotare un item, un terzo posto per la stessa cosa non aggiungeva nulla. */}
-        {!senzaMisura && aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && !procedimentoAttivo && (
+        {/* ⚠️ ANCHE SENZA STRUMENTI — segnalato: « senza strumenti non appaiono i cicli, invece
+            devono apparire ». `!senzaMisura` qui escludeva TUTTA questa fascia — quindi anche
+            i quattro cerchi di scelta del metodo — proprio nel caso "séance sans instruments"
+            dove servono di più: senza di loro, l'auditor non aveva ALCUN modo di armare un
+            ciclo (il blocco "senza strumenti" poco sopra mostra solo le SCRITTE di un ciclo
+            già armato, `bottoniCiclo` — vuoto finché nessuno lo è). Tolta l'esclusione: i
+            cerchi restano identici (`armCycle`/`armMirror`/`setToneAttivo`, mai toccati),
+            semplicemente raggiungibili anche senza MUSE/METER connessi. */}
+        {aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && !procedimentoAttivo && (
           <div style={{
             width: 'min(96%, 2200px)', maxWidth: '100%', flexShrink: 0,
             display: 'flex', flexDirection: 'row', flexWrap: 'wrap',
