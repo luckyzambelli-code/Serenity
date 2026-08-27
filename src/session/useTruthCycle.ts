@@ -20,6 +20,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { TruthSignalTracker, truthFlags, truthConfidence, isCandidate, type TruthPhase } from '../engine/truthScale';
+import { TRUTH_CANDIDATE_HOLD_S } from '../engine/tuning';
 
 /** Un evento TRUTH confermato DENTRO lo stesso R/I — Ron continua a chiedere dopo ognuno,
  *  finché non emerge un ulteriore R/I: più di uno per ciclo è la norma, non l'eccezione. */
@@ -82,6 +83,15 @@ export function useTruthCycle(d: TruthCycleDeps) {
   if (trackerRef.current === null) trackerRef.current = new TruthSignalTracker();
   const tracker = trackerRef.current;
   const lastTickSecRef = useRef<number | null>(null);
+  /** ── L'HOLD DEL CANDIDATO — segnalato dal vivo: « apparaît fugace une phrase que je
+   *  n'arrive pas à lire ». Senza tenuta, un solo campione rumoroso che sfiora la soglia
+   *  bastava a far comparire E sparire il badge "candidato" nello stesso tick — illeggibile
+   *  per costruzione, non un difetto del testo. Stessa disciplina già in uso per TONE/MIRROR
+   *  (`TONE_HOLD_S`, il "turnover" di `MirrorCycle`): un cambio di stato deve REGGERE per un
+   *  po' prima di mostrarsi, in ENTRAMBE le direzioni (candidato proposto E ritirato) — non
+   *  solo una, altrimenti resterebbe lampante uscire dallo stato quanto entrarci. */
+  const truthCandSinceRef = useRef<number | null>(null);
+  const truthDismissSinceRef = useRef<number | null>(null);
 
   const truthCyclesRef = useRef<TruthCycleRecord[]>([]);
   const truthNRef = useRef(0);
@@ -94,6 +104,7 @@ export function useTruthCycle(d: TruthCycleDeps) {
    *  `dichiaraItemDetto`). */
   const locateRI = useCallback(() => {
     tracker.reset();
+    truthCandSinceRef.current = null; truthDismissSinceRef.current = null;
     lastTickSecRef.current = null;
     setTruthDisp(DISP_ZERO);
     setTruthRepeats(0);
@@ -128,13 +139,31 @@ export function useTruthCycle(d: TruthCycleDeps) {
     const confidence = truthConfidence(flags, vec.coh);
     if (pushUi) setTruthDisp({ confidence, d: flags.d, p: flags.p, q: flags.q });
     // ── S2 → S3, MAI S3 → S4 DA SOLO — v. la nota di testa: un candidato è una PROPOSTA,
-    // l'evento resta un gesto dell'auditor (`confermaVerita`, sotto).
-    if (truthPhaseRef.current === 'questioning' && isCandidate(confidence)) {
-      setTruthPhase('candidate');
-    } else if (truthPhaseRef.current === 'candidate' && !isCandidate(confidence)) {
-      // Il candidato non ha retto — non era la stessa disciplina di "hold" di TONE/MIRROR
-      // (nessun dato reale ancora per tararla): torna semplicemente in ascolto.
-      setTruthPhase('questioning');
+    // l'evento resta un gesto dell'auditor (`confermaVerita`, sotto). V. la nota su
+    // `truthCandSinceRef`/`truthDismissSinceRef`: né la promozione né il ritiro sono
+    // immediati — devono REGGERE `TRUTH_CANDIDATE_HOLD_S` prima di contare per davvero.
+    if (truthPhaseRef.current === 'questioning') {
+      truthDismissSinceRef.current = null;
+      if (isCandidate(confidence)) {
+        if (truthCandSinceRef.current === null) truthCandSinceRef.current = nowSec;
+        else if (nowSec - truthCandSinceRef.current >= TRUTH_CANDIDATE_HOLD_S) {
+          truthCandSinceRef.current = null;
+          setTruthPhase('candidate');
+        }
+      } else {
+        truthCandSinceRef.current = null;
+      }
+    } else if (truthPhaseRef.current === 'candidate') {
+      truthCandSinceRef.current = null;
+      if (!isCandidate(confidence)) {
+        if (truthDismissSinceRef.current === null) truthDismissSinceRef.current = nowSec;
+        else if (nowSec - truthDismissSinceRef.current >= TRUTH_CANDIDATE_HOLD_S) {
+          truthDismissSinceRef.current = null;
+          setTruthPhase('questioning');
+        }
+      } else {
+        truthDismissSinceRef.current = null;
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -161,7 +190,7 @@ export function useTruthCycle(d: TruthCycleDeps) {
    *  arrivata al suo termine naturale (v. la procedura di Ron in testa al file). */
   const trovatoUlterioreRI = useCallback(() => {
     setTruthPhase('return_present');
-    d.log(`○ TRUTH — ${d.LC('ulteriore R/I trovato · pronto per "Return to present time"', 'further R/I trouvé · prêt pour « Return to present time »', 'further R/I found · ready for "Return to present time"', 'further R/I encontrado · listo para "Return to present time"', 'ytterligare R/I hittat · redo för "Return to present time"')}`, 'normal');
+    d.log(`○ TRUTH — ${d.LC('ulteriore R/I trovato · pronto per il ritorno al tempo presente', 'R/I supplémentaire trouvé · prêt pour le retour au temps présent', 'further R/I found · ready for return to present time', 'R/I adicional encontrado · listo para el retorno al tiempo presente', 'ytterligare R/I hittat · redo för återgång till nutid')}`, 'normal');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [d.LC]);
 
@@ -173,7 +202,7 @@ export function useTruthCycle(d: TruthCycleDeps) {
       tStartSec: truthStartSecRef.current, tEndSec: d.nowSec(),
       repeats: truthRepeats, events: truthEvents, furtherRiFound: true,
     });
-    d.log(`✓ TRUTH — ${d.LC('R/I chiuso · return to present time', 'R/I clos · return to present time', 'R/I closed · return to present time', 'R/I cerrado · return to present time', 'R/I stängt · return to present time')} (×${truthRepeats}, ${truthEvents.length} ${d.LC('verità', 'vérités', 'truths', 'verdades', 'sanningar')})`, 'success');
+    d.log(`✓ TRUTH — ${d.LC('R/I chiuso · tornato al tempo presente', 'R/I clos · retour au temps présent', 'R/I closed · returned to present time', 'R/I cerrado · retorno al tiempo presente', 'R/I stängt · återgått till nutid')} (×${truthRepeats}, ${truthEvents.length} ${d.LC('verità', 'vérités', 'truths', 'verdades', 'sanningar')})`, 'success');
     setTruthPhase('idle');
     setTruthDisp(DISP_ZERO);
     setTruthRepeats(0);
@@ -181,6 +210,7 @@ export function useTruthCycle(d: TruthCycleDeps) {
     d.setAuditingQuestion('');
     d.setItemSpoken(false);
     tracker.reset();
+    truthCandSinceRef.current = null; truthDismissSinceRef.current = null;
     lastTickSecRef.current = null;
     truthAwaitItemRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -195,6 +225,7 @@ export function useTruthCycle(d: TruthCycleDeps) {
     d.setAuditingQuestion('');
     d.setItemSpoken(false);
     tracker.reset();
+    truthCandSinceRef.current = null; truthDismissSinceRef.current = null;
     lastTickSecRef.current = null;
     truthAwaitItemRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps

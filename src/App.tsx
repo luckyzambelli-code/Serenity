@@ -845,6 +845,7 @@ export default function App() {
     cycleAwaitItemRef.current = false;
     mirrorAwaitItemRef.current = false;
     toneAwaitItemRef.current = false;
+    truthAwaitItemRef.current = false;
   };
   // ── CYCLE NULL (miroir du cycle charge) — engine/NullCycleStateMachine ────────
   // À l'assessment, si l'item ne lit PAS dans la fenêtre du comm lag → l'item est NULL. On lève
@@ -3228,8 +3229,29 @@ export default function App() {
   const {
     truthPhase, truthDisp, truthRepeats, truthEvents,
     locateRI, askTruth, confermaVerita, scartaCandidato, trovatoUlterioreRI, chiudiTruth, resetTruth,
-    truthCyclesRef,
+    truthCyclesRef, truthAwaitItemRef, truthLogCursorRef,
   } = truth;
+
+  // ── TRUTH : R/I DETTATO ──────────────────────────────────────────────────────────────────
+  // Stessa cosa dei tre effetti sopra (CONTACT/NULL, TONE), per il R/I. `locateRI()` ancora già
+  // l'istante — qui si riempie soltanto l'etichetta di quale fosse il R/I.
+  useEffect(() => {
+    if (!truthAwaitItemRef.current) return;
+    const cursor = truthLogCursorRef.current;
+    if (logs.length <= cursor) return;
+    for (let i = cursor; i < logs.length; i++) {
+      const e = logs[i];
+      if (e.speaker === 'Aud' && isAssessableItem(e.text)) {
+        const txt = e.text.trim();
+        truthAwaitItemRef.current = false;
+        setAuditingQuestion(txt);
+        logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE',
+          text: `◈ TRUTH — R/I · ${txt}`, type: 'normal' });
+        break;
+      }
+    }
+    truthLogCursorRef.current = logs.length;
+  }, [logs]);
 
   // ⚠️ QUI L'ASSESSMENT SI ACCENDEVA DA SÉ nelle fasi « positivo o negativo? » e « quante
   // divisioni? », che ERANO un assessment. Quelle fasi non ci sono più: i comandi di Ron sono

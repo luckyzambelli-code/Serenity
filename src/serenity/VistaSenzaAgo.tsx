@@ -214,9 +214,15 @@ export function VistaSenzaAgo({ armed = true, cycleKind = 'charge', nullPhase = 
             // sembra "rotto". Il respiro vale ogni volta che non c'è nulla da inseguire
             // davvero — armato o no, purché la zona sia ancora neutra — non solo a schermo
             // inattivo.
+            // ⚠️ SEGNALATO UNA TERZA VOLTA — verificato dal vivo che l'animazione è applicata
+            // (DOM: `animation: vsaIdleGlow` presente sulle tre bande, nessun cycle armato,
+            // senza ago), ma l'escursione (0,22→0,40) è probabilmente troppo debole per
+            // leggersi come "vivo" al primo sguardo, a differenza di un ago vero che trema
+            // visibilmente. Alzata a 0,22→0,57 (moltiplicatore 1.8→2.6) e il giro da 3.4s a
+            // 2.6s: più veloce e più ampia, senza diventare un lampeggio che distrae.
             const idleStyle = (!armed || effId === 'neutral') ? ({
-              '--vsa-idle-lo': dimOp, '--vsa-idle-hi': Math.min(1, dimOp * 1.8),
-              animation: `vsaIdleGlow 3.4s ease-in-out ${idx * 1.1}s infinite`,
+              '--vsa-idle-lo': dimOp, '--vsa-idle-hi': Math.min(1, dimOp * 2.6),
+              animation: `vsaIdleGlow 2.6s ease-in-out ${idx * 0.85}s infinite`,
             } as React.CSSProperties) : undefined;
             return (
               <path key={id} d={aseg(do0, do1, R)} stroke={colorOf(id)} strokeWidth={CORE}

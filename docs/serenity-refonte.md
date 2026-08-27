@@ -5478,6 +5478,53 @@ la sola lettura del codice, al giro precedente, aveva mancato.
 
 ---
 
+## Giro (27/08/2026, notte) — TRUTH: l'item non si scriveva, tutto era in inglese, il candidato lampeggiava
+
+Segnalato subito dopo aver agganciato TRUTH all'interfaccia: « le cicle TRUTH n'est pas
+clair — l'item dit ne s'inscrit pas, tout est en anglais peu importe la langue choisie,
+apparaît fugace une phrase que je n'arrive pas à lire ». Tre bug reali, distinti, tutti
+verificati dal vivo (non solo per lettura di codice).
+
+1. **L'item detto non si scriveva.** TRUTH era stato agganciato al motore/al cerchio/alla
+   pista, ma il QUARTO pezzo — l'`useEffect` che legge `journal.logs` e scrive DAVVERO il R/I
+   detto a voce nel campo — non era mai stato scritto (esisteva per CONTACT/NULL/MIRROR/TONE,
+   mancava per TRUTH). `truthAwaitItemRef`/`truthLogCursorRef` restavano accesi per sempre,
+   senza nessuno a leggerli: il R/I restava "in attesa" a vita, `itemNamed` restava falso, la
+   pista non avanzava mai oltre "① R/I". Aggiunto l'effetto mancante in `Serenity.tsx` E in
+   `App.tsx` (che non ce l'aveva nemmeno lui), più il ramo TRUTH mancante nel dispatcher di
+   R&I · Manuel e in `dichiaraItemDetto`. **Verificato dal vivo**: R/I "la culpabilité" dato
+   via R&I · Manuel su TRUTH armato → il campo si riempie, la pista avanza a "② DEMANDE".
+2. **Tutto in inglese, qualunque lingua scelta.** Causa banale ma reale: `LC(it, fr, en, es,
+   sv)` — nello scrivere le battute di Ron ("What about this is the truth?", "Return to
+   present time!") ho messo la STESSA citazione inglese in TUTTE E CINQUE le posizioni invece
+   di tradurla in ciascuna lingua — quindi lo slot FRANCESE, letto in seduta FR, restituiva
+   testo inglese. Tradotte per davvero in italiano/francese/spagnolo/svedese (le battute di
+   Ron restano fra « », come già per TONE, ma nella lingua della seduta). **Verificato dal
+   vivo, in francese**: « Qu'y a-t-il de vrai là-dedans ? » e « Retourne au temps présent ! »
+   compaiono ora nella pista.
+3. **Il candidato lampeggiava, illeggibile.** `trackTruth` promuoveva/ritirava lo stato
+   "candidato" al primo campione che attraversava la soglia, in ENTRAMBE le direzioni — un
+   solo campione rumoroso a cavallo della soglia bastava a far comparire e sparire il badge
+   nello stesso tick, prima che un occhio umano potesse leggerlo. Aggiunta una tenuta
+   (`TRUTH_CANDIDATE_HOLD_S`, 0,6s) in entrambe le direzioni — stessa disciplina già in uso
+   per TONE (`TONE_HOLD_S`)/MIRROR (il turnover), qui più lunga perché il tempo deve bastare
+   anche a LEGGERE la frase, non solo a scartare il rumore. Non verificabile dal vivo in
+   questo sandbox (serve un segnale EEG reale rumoroso) — corretta per costruzione, resta da
+   confermare in seduta vera.
+
+Approfittato del giro per riverificare da capo (con MUSE forzato via debug temporaneo) « quando
+nessun ciclo è armato e si è senza ago, l'arco deve vivere come con l'ago » — segnalato una
+terza volta. Confermato via DOM che l'animazione `vsaIdleGlow` è davvero applicata in questo
+esatto scenario nel codice attuale: il sospetto è che il DMG provato fosse precedente al fix.
+Alzata comunque l'escursione (0,22→0,40 diventa 0,22→0,57) e accorciato il giro (3,4s→2,6s):
+più viva a vedersi, indipendentemente dalla causa del rapporto.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 0 errori.
+
+EQUILIBRIUM non toccato in questo giro — solo SERENITY.
+
+---
+
 ## Giro (27/08/2026, sera) — R&I · Manuel non arrivava al ciclo; il motore TRUTH
 
 Cominciato il ciclo TRUTH (v. `docs/truth-cycle-proposal.md`) subito dopo il "vai" — scritti e

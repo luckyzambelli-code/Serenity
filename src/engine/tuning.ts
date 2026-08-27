@@ -745,6 +745,14 @@ export const TRUTH_W_COH = 0.20;
 /** Sopra questa confidenza un candidato viene PROPOSTO all'auditor (mai promosso da solo a
  *  evento — v. la nota di testa in `truthScale.ts`). */
 export const TRUTH_CANDIDATE_THRESHOLD = 0.6;
+/** ── QUANTO DEVE REGGERE, IN ENTRAMBE LE DIREZIONI — segnalato dal vivo: « apparaît fugace
+ *  une phrase que je n'arrive pas à lire ». Senza tenuta, un solo campione rumoroso sopra
+ *  soglia bastava a far comparire E sparire il badge "candidato" nello stesso tick —
+ *  illeggibile per costruzione. Non solo la PROMOZIONE (S2→S3) ma anche il RITIRO (S3→S2)
+ *  devono reggere questo tanto prima di contare — un valore via via più lungo di
+ *  `TONE_HOLD_S`/`MIRROR`'s turnover (0.15s): lì basta non confondere rumore con movimento
+ *  vero, qui il tempo deve bastare anche a un umano per LEGGERE la frase prima che cambi. */
+export const TRUTH_CANDIDATE_HOLD_S = 0.6;
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════
 // INTEGRITÀ DEL SEGNALE

@@ -933,6 +933,9 @@ export default function Serenity() {
     } else if (tone.toneAwaitItemRef.current) {
       tone.toneAwaitItemRef.current = false;
       setItem(testo);
+    } else if (truth.truthAwaitItemRef.current) {
+      truth.truthAwaitItemRef.current = false;
+      setItem(testo);
     }
   };
   /**
@@ -1694,17 +1697,17 @@ export default function Serenity() {
                  'Lo que parecía una caída podría ser un acuerdo — la verdad del PC que aflora. Confirma si lo es, si no sigue preguntando.',
                  'Det som såg ut som ett fall kan vara en överenskommelse — PC:s sanning som stiger upp. Bekräfta om så är fallet, fortsätt annars fråga.') };
       if (faseCiclo === 'truth.return_present') return {
-        titolo: LC('ULTERIORE R/I TROVATO', 'FURTHER R/I TROUVÉ', 'FURTHER R/I FOUND', 'FURTHER R/I ENCONTRADO', 'YTTERLIGARE R/I HITTAT'), fatto: true,
-        comando: LC('« Return to present time! »', '« Return to present time ! »', '« Return to present time! »', '« Return to present time! »', '« Return to present time! »'),
+        titolo: LC('ULTERIORE R/I TROVATO', 'R/I SUPPLÉMENTAIRE TROUVÉ', 'FURTHER R/I FOUND', 'R/I ADICIONAL ENCONTRADO', 'YTTERLIGARE R/I HITTAT'), fatto: true,
+        comando: LC('« Ritorna al tempo presente! »', '« Retourne au temps présent ! »', '« Return to present time! »', '« ¡Vuelve al tiempo presente! »', '« Återvänd till nutid! »'),
         come: LC('Chiedilo, poi chiudi il R/I.', 'Demande-le, puis clos le R/I.', 'Ask it, then close the R/I.', 'Pregúntalo, luego cierra el R/I.', 'Fråga det, stäng sedan R/I.') };
       // ri_located/questioning: si sta chiedendo, si può ripetere finché non emerge un
       // ulteriore R/I — ripetizione È il processo, come « raise this to tone forty ».
       return {
         titolo: `2 · ${LC('CHIEDI', 'DEMANDE', 'ASK', 'PREGUNTA', 'FRÅGA')}`
           + (truth.truthRepeats > 0 ? ` · ×${truth.truthRepeats}` : ''),
-        comando: LC('« Cos\'è la verità su questo? »', '« What about this is the truth? »',
-                    '« What about this is the truth? »', '« What about this is the truth? »',
-                    '« What about this is the truth? »'),
+        comando: LC('« Cos\'è la verità su questo? »', '« Qu\'y a-t-il de vrai là-dedans ? »',
+                    '« What about this is the truth? »', '« ¿Qué hay de verdad en esto? »',
+                    '« Vad är sanningen med det här? »'),
         come: LC('Ridallo finché non emerge un ulteriore R/I.',
                  'Redonne-le jusqu\'à ce qu\'un R/I supplémentaire émerge.',
                  'Give it again until a further R/I emerges.',
@@ -1970,11 +1973,35 @@ export default function Serenity() {
   }, [journal.logs, tone]);
 
   /**
-   * « L'ITEM È STATO DETTO » — il gesto di ripiego, per tutti e quattro i cicli, quando la
+   * ⚠️ BUG TROVATO — segnalato: « le cicle TRUTH n'est pas clair : l'item dit ne s'inscrit pas ».
+   * Causa vera: TRUTH era stato agganciato all'interfaccia (motore, cerchio, pista) ma questo
+   * QUARTO effetto — quello che scrive DAVVERO il R/I detto a voce nel campo — non era mai
+   * stato scritto. `locateRI()` (in `useTruthCycle.ts`) accende `truthAwaitItemRef` e segna il
+   * cursore esattamente come gli altri tre, ma senza QUESTO effetto nessuno lo leggeva mai:
+   * il R/I restava per sempre "in attesa", `itemNamed` restava falso, la pista non avanzava
+   * mai oltre "1 · DAI IL R/I" — la stessa causa, non ancora collegata per TRUTH.
+   */
+  useEffect(() => {
+    if (!truth.truthAwaitItemRef.current) return;
+    const cursore = truth.truthLogCursorRef.current;
+    if (journal.logs.length <= cursore) return;
+    for (let i = cursore; i < journal.logs.length; i++) {
+      const riga = journal.logs[i];
+      if (riga.speaker === 'Aud' && isAssessableItem(riga.text)) {
+        truth.truthAwaitItemRef.current = false;
+        setItem(riga.text.trim());
+        break;
+      }
+    }
+    truth.truthLogCursorRef.current = journal.logs.length;
+  }, [journal.logs, truth]);
+
+  /**
+   * « L'ITEM È STATO DETTO » — il gesto di ripiego, per tutti e cinque i cicli, quando la
    * trascrizione non c'è (microfono negato, Whisper assente) o l'auditor preferisce scriverlo
-   * dopo. Stessa forma di App.tsx (`dichiaraItemDetto`): si spengono tutti e tre gli
-   * `*AwaitItemRef` insieme, perché il gesto è uno solo e lo stato del ciclo dice già quale dei
-   * tre sta aspettando.
+   * dopo. Stessa forma di App.tsx (`dichiaraItemDetto`): si spengono tutti gli `*AwaitItemRef`
+   * insieme, perché il gesto è uno solo e lo stato del ciclo dice già quale dei cinque sta
+   * aspettando.
    */
   const dichiaraItemDetto = () => {
     setItemSpoken(true);
@@ -1982,6 +2009,7 @@ export default function Serenity() {
     cycles.cycleAwaitItemRef.current = false;
     mirror.mirrorAwaitItemRef.current = false;
     tone.toneAwaitItemRef.current = false;
+    truth.truthAwaitItemRef.current = false;
   };
 
   /**
@@ -2719,7 +2747,7 @@ export default function Serenity() {
                 </button>
               )}
               <button className="s-glass s-glass-btn" onClick={() => truth.trovatoUlterioreRI()} style={pillBtn('var(--s-reserve)')}>
-                {LC('ulteriore R/I trovato', 'further R/I trouvé', 'further R/I found', 'further R/I encontrado', 'ytterligare R/I hittat')}
+                {LC('ulteriore R/I trovato', 'R/I supplémentaire trouvé', 'further R/I found', 'R/I adicional encontrado', 'ytterligare R/I hittat')}
               </button>
             </>
           )}
