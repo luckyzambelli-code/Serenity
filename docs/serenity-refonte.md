@@ -5123,6 +5123,46 @@ EQUILIBRIUM 2.0.226, SERENITY 3.0.119.
 
 ---
 
+## Giro (27/08/2026) — con ago/senza ago sotto NEEDLE LIGHT, stessa pillola
+
+Segnalato: « tu as deplacè avec et sans aiguille en haut a gauche. Mets le maintenant sous
+NEEDLE LIGHT, exactement avec la meme forme et la meme logique, plutot que un bouton slide ».
+Lo scivolo `BottoneCiclico` (due tappe, manopola che scorre) è tolto dall'header; al suo posto,
+nell'angolo in alto a sinistra DELL'ARCO — lo stesso angolo di `taRef`, subito sotto NEEDLE
+LIGHT — una pillola IDENTICA nella forma (bordo sottile `--s-ink-ghost`, fondo trasparente,
+stesso font/dimensione) e nella logica (un solo bottone, un click che cambia stato, un pallino
+pieno/vuoto invece di due icone che scorrono). Stessa condizione di NEEDLE LIGHT (un ago da
+vedere, non MIRROR/TONE) ma SENZA la sua esclusione `!vistaSenzaAgo` — quel bottone è lui
+stesso il comando per uscire dalla vista senza ago, nasconderlo lì bloccherebbe l'auditor senza
+via di ritorno. Tolti gli import ormai inutilizzati (`Compass`/`Layers`, le icone dello
+scivolo; `BottoneCiclico` stesso, non più chiamato direttamente da `Serenity.tsx`).
+
+**Segnalato in parallelo, non ancora risolto**: « le journal ne inscrit plus le texte et
+n'apparait meme pas dans Assessment », dentro un ciclo armato. Riletta tutta la catena
+(`onTranscript` → `journal.addLog` → il filtro di resa → l'effetto che alimenta Assessment,
+`assessAttivo` compreso) senza trovare una causa nel codice — né in questo giro né nei due
+precedenti, che non toccano quella catena. Non riproducibile in questo sandbox (serve un
+microfono vero). In attesa di un dettaglio in più dall'utente (l'interruttore ASSESSMENT era
+attivo? il microfono risultava in ascolto?) prima di intervenire alla cieca.
+
+`tsc --noEmit` pulito, `vitest run` 639/639, `npm run lint` 313 warning (nessuno nuovo).
+Verificato dal vivo: la pillola compare sotto NEEDLE LIGHT, stessa forma, il click passa da
+"○ with needle" a "● without needle" mostrando `VistaSenzaAgo` — NEEDLE LIGHT sparisce insieme
+(nessun ago da illuminare), esattamente come nella vecchia posizione. `git status`:
+`src/serenity/Serenity.tsx`.
+
+**Trovato per strada, non un bug**: `public/guide/EQUILIBRIUM-manuale.html` (dentro il repo)
+NON è la sorgente — `scripts/copy-guide.cjs` lo SOVRASCRIVE a ogni `npm run build`/`dist:*` da
+`~/Downloads/Guide Static Meter/EQUILIBRIUM-manuale.html`, la vera sorgente (fuori dal repo per
+scelta esplicita, v. il commento in testa allo script). I `VERSIONE = "..."` scritti a mano
+nella copia interna in due giri precedenti di questa sessione sparivano silenziosamente al
+build successivo — corretto ORA nella sorgente vera; da qui in avanti aggiornarla LÌ, non nel
+repo.
+
+EQUILIBRIUM 2.0.227, SERENITY 3.0.120.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

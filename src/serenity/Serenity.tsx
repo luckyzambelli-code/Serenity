@@ -45,7 +45,6 @@ import { CycleStatusBar } from '../components/CycleStatusBar';
 import { PistaCiclo } from './PistaCiclo';
 import { PistaProcedimento } from './PistaProcedimento';
 import { VistaSenzaAgo } from './VistaSenzaAgo';
-import { BottoneCiclico } from './BottoneCiclico';
 import { listaProcedimenti, apriCartellaProcedimenti, type Procedimento } from '../lib/procedimenti';
 import { ThetaReadyCheck } from '../components/ThetaReadyCheck';
 import { MetabolicCheck } from '../components/MetabolicCheck';
@@ -87,7 +86,7 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, SlidersHorizontal, Brain, Compass, Layers } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, SlidersHorizontal, Brain } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
@@ -3077,29 +3076,14 @@ export default function Serenity() {
           trasparenti" trovata altrove in questo file — un elemento invisibile che ruba il clic
           prima che arrivi a chi dovrebbe riceverlo. */}
       <header ref={headerRef} style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 14, rowGap: 10, position: 'relative', zIndex: 10 }}>
-        {/* ── LA VISTA SENZA AGO — UNICA ECCEZIONE, ANCHE A CICLO ARMATO — segnalato: « quando
-            sono in ciclo armato devo poter passare da ago a senza ago ». Tutto il resto della
-            barra amministrativa qui sotto sparisce a `modalitaCiclo` (decisioni prese una
-            volta, mai bisogno di guardarle con un ago che sta reagendo) — ma proprio QUESTA
-            scelta è l'opposto: è COME guardare l'ago che sta reagendo, quindi deve restare
-            raggiungibile mentre il ciclo è in corso, non solo prima o dopo. Spostata fuori dal
-            blocco `{!modalitaCiclo && (...)}` apposta, stesso componente (`BottoneCiclico`)
-            di `SelettoreTema` qui accanto. `Compass` per la vista con l'ago (la sua metafora
-            naturale: un ago che punta), `Layers` per quella senza (bande di colore impilate).
-            Le etichette dicono "con ago"/"senza ago", non parole nude — chi legge sa già cosa
-            sta guardando. Larghezza misurata (non indovinata) sulle dieci etichette × cinque
-            lingue: la più lunga è "without needle" (EN, 91px reali) + 14 (padding lontano
-            dalla manopola) + 36 (la manopola stessa) = 141; 148 lascia solo un margine minimo
-            di sicurezza per la resa dei font fra sistemi diversi. */}
-        <BottoneCiclico
-          opzioni={[
-            { k: 'ago' as const, label: LC('con ago', 'avec aiguille', 'with needle', 'con aguja', 'med nål') as string, icona: <Compass size={18} strokeWidth={1.8} aria-hidden="true" /> },
-            { k: 'zone' as const, label: LC('senza ago', 'sans aiguille', 'without needle', 'sin aguja', 'utan nål') as string, icona: <Layers size={18} strokeWidth={1.8} aria-hidden="true" /> },
-          ]}
-          selezionato={vistaSenzaAgo ? 'zone' : 'ago'}
-          onChange={k => setVistaSenzaAgo(k === 'zone')}
-          larghezzaScivolo={148}
-        />
+        {/* ── LA VISTA SENZA AGO — SPOSTATA SOTTO NEEDLE LIGHT — segnalato: « tu as deplacè
+            avec et sans aiguille en haut a gauche. Mets le maintenant sous NEEDLE LIGHT,
+            exactement avec la meme forme et la meme logique, plutot que un bouton slide ».
+            Non vive più qui nell'header (v. l'angolo in alto a sinistra DELL'ARCO, accanto a
+            `taRef`, per il bottone vero — stesso posto di NEEDLE LIGHT, non l'header). Restava
+            raggiungibile a ciclo armato ANCHE prima di questo spostamento (quell'angolo non è
+            mai stato dentro `{!modalitaCiclo && (...)}`) — la stessa proprietà si eredita
+            spostandosi lì, non si perde. */}
         {/* ── MODALITÀ CICLO, IL RESTO DELLA BARRA AMMINISTRATIVA SPARISCE — v. la nota sopra.
             Logo/crediti, tema, lingua, storico, processus, l'assetto: decisi una volta, mai
             bisogno di guardarli con un ago che sta reagendo. Nulla di questo è tolto per
@@ -4312,6 +4296,35 @@ export default function Serenity() {
                   color: showTrailPref ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
                 }}>
                 {showTrailPref ? '● ' : '○ '}NEEDLE LIGHT
+              </button>
+            )}
+            {/* ── CON AGO / SENZA AGO — SOTTO NEEDLE LIGHT, STESSA FORMA — segnalato: « tu as
+                deplacè avec et sans aiguille en haut a gauche. Mets le maintenant sous NEEDLE
+                LIGHT, exactement avec la meme forme et la meme logique, plutot que un bouton
+                slide ». Non più uno scivolo a due tappe (`BottoneCiclico`): la STESSA pillola
+                di NEEDLE LIGHT qui sopra — bordo sottile, fondo trasparente, un pallino pieno/
+                vuoto invece di due icone — e la STESSA logica, un click che cambia stato
+                invece di una manopola che scorre. Stessa condizione di NEEDLE LIGHT (un ago da
+                vedere, non MIRROR/TONE che hanno il loro quadrante) — SENZA `!vistaSenzaAgo`:
+                quella esclusione ha senso per NEEDLE LIGHT (niente scia da accendere in vista
+                senza ago) ma non per QUESTO bottone, che è lui stesso il comando per uscirne —
+                nascondendolo proprio lì l'auditor resterebbe bloccato senza modo di tornare
+                indietro. */}
+            {(agoEeg || meterC) && !mirror.mirrorArmed && !toneAttivo && (
+              <button type="button" onClick={() => setVistaSenzaAgo(v => !v)}
+                title={LC('con ago / senza ago — la vista del quadrante', 'avec aiguille / sans aiguille — la vue du cadran',
+                          'with needle / without needle — the dial view', 'con aguja / sin aguja — la vista del cuadrante',
+                          'med nål / utan nål — visningen av urtavlan') as string}
+                style={{
+                  pointerEvents: 'auto', marginTop: 2, borderRadius: 999, cursor: 'pointer',
+                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
+                  padding: '3px 9px', background: 'transparent',
+                  border: '1px solid var(--s-ink-ghost)',
+                  color: vistaSenzaAgo ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
+                }}>
+                {vistaSenzaAgo
+                  ? `● ${LC('senza ago', 'sans aiguille', 'without needle', 'sin aguja', 'utan nål')}`
+                  : `○ ${LC('con ago', 'avec aiguille', 'with needle', 'con aguja', 'med nål')}`}
               </button>
             )}
           </div>
