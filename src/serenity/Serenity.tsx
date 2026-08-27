@@ -5084,7 +5084,7 @@ export default function Serenity() {
             width: 'min(96%, 2200px)', maxWidth: '100%', flexShrink: 0,
             display: 'flex', flexDirection: 'row', flexWrap: 'wrap',
             alignItems: 'center', justifyContent: 'center',
-            rowGap: 10, columnGap: 24,
+            rowGap: 10, columnGap: 18,
           }}>
             {/* ⚠️ SEGNALATO: « i bottoni dei cicli devono essere meglio differenziati senza
                 essere troppo vistosi ». Tre dei quattro usavano già `--s-still`/`--s-alive`/
@@ -5129,12 +5129,18 @@ export default function Serenity() {
                 onClick: () => truth.locateRI() },
             ]).map(c => (
               <div key={c.k} style={{ display: 'grid', justifyItems: 'center', gap: 4, flexShrink: 0 }}>
+                {/* ⚠️ 50px, non più 54 — segnalato: « non vedo il 5 ciclo ». Con TRUTH il quinto
+                    cerchio, cinque a 54px (+ i gap) non stavano più in una riga sola nella
+                    colonna centrale a schermi non larghissimi: `flexWrap` (sul contenitore,
+                    sopra) mandava il quinto da solo su una seconda riga, dove leggeva come un
+                    elemento perso invece che "il quinto metodo accanto agli altri". Un taglio
+                    piccolo (54→50px, gap 24→18) basta a farceli stare tutti e cinque insieme. */}
                 <button className="s-glass s-glass-btn" onClick={c.onClick} title={c.label} style={{
-                  width: 54, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 50, height: 50, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   border: `1.5px solid ${c.hue}`, cursor: 'pointer',
                   borderRadius: '50%', background: `color-mix(in srgb, ${c.hue} 12%, var(--s-disc))`, color: c.hue,
                 }}>
-                  <c.Icona size={22} strokeWidth={1.8} aria-hidden="true" />
+                  <c.Icona size={20} strokeWidth={1.8} aria-hidden="true" />
                 </button>
                 <span style={{
                   fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
