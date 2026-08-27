@@ -112,7 +112,13 @@ export function useTruthCycle(d: TruthCycleDeps) {
     truthStartSecRef.current = d.nowSec();
     truthLogCursorRef.current = d.logLength();
     truthAwaitItemRef.current = !d.auditingQuestion.trim();
-    if (truthAwaitItemRef.current) d.ensureAssessmentOn();
+    // ⚠️ SEGNALATO — « il faut activer l'assessment, car on doit trouver un R&I ». Negli
+    // altri quattro cicli l'assessment si accende SOLO quando manca l'item (si aspetta la
+    // voce, v. sopra): lì l'item è già SAPUTO, va solo registrato. TRUTH è diverso fin dalla
+    // prima riga della procedura di Ron — « locate an R/I via any process »: localizzare NON
+    // è registrare un R/I già trovato, è la RICERCA stessa, e la ricerca è esattamente quel
+    // che l'assessment fa. Si accende sempre, non solo a campo vuoto.
+    d.ensureAssessmentOn();
     d.setItemSpoken(false);
     setTruthPhase('ri_located');
     d.log(`◎ ${d.LC('TRUTH — R/I localizzato', 'TRUTH — R/I localisé', 'TRUTH — R/I located', 'TRUTH — R/I localizado', 'TRUTH — R/I lokaliserat')} ${d.auditingQuestion.trim() ? '· ' + d.auditingQuestion.trim() : ''}`, 'normal');

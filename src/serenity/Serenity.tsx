@@ -1626,7 +1626,17 @@ export default function Serenity() {
    *  nuovo tempo la spegne di nuovo solo se e quando IL TEMPO STESSO cambia ancora, non
    *  subito dopo un tocco manuale. */
   useEffect(() => {
-    const inFaseItem = faseCiclo.endsWith('.item') || faseCiclo.endsWith('.say_item');
+    // ⚠️ BUG TROVATO — segnalato: « il faut activer l'assessment, car on doit trouver un
+    // R&I ». `truth.locateRI()` accende l'assessment (`ensureAssessmentOn`), ma QUESTO
+    // stesso effetto la spegneva nello stesso istante: le fasi di TRUTH si chiamano
+    // `truth.ri`/`truth.say_ri` (il R/I, non un "item" come negli altri quattro cicli — v.
+    // `sessionPhase.ts`), quindi `inFaseItem` non le riconosceva mai come "si sta ancora
+    // dando l'item", e la spegneva subito dopo averla accesa. Per TRUTH è anche PIÙ vero che
+    // per gli altri: localizzare il R/I (« locate an R/I via any process ») è di per sé una
+    // ricerca — l'assessment resta accesa per tutto il tempo in cui non si è ancora chiuso
+    // il R/I, non solo al primo tempo.
+    const inFaseItem = faseCiclo.endsWith('.item') || faseCiclo.endsWith('.say_item')
+      || faseCiclo.endsWith('.ri') || faseCiclo.endsWith('.say_ri') || faseCiclo === 'truth.questioning';
     if (mode !== 'free' && !inFaseItem) setAssessAttivo(false);
   }, [faseCiclo, mode]);
 

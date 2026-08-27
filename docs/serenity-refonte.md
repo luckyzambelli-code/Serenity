@@ -5478,6 +5478,35 @@ la sola lettura del codice, al giro precedente, aveva mancato.
 
 ---
 
+## Giro (27/08/2026, notte, 2) — TRUTH: l'assessment si accendeva e si spegneva nello stesso istante
+
+Segnalato: « il faut activer l'assessment, car on doit trouver un R&I ». `truth.locateRI()`
+chiama già `ensureAssessmentOn()` (come CONTACT/NULL/MIRROR/TONE quando l'item non è ancora
+dato) — ma un ALTRO effetto la spegneva nello stesso istante: quello che disattiva
+l'assessment appena si esce dai tempi "si sta ancora dando l'item" (`*.item`/`*.say_item`).
+Le fasi di TRUTH si chiamano `truth.ri`/`truth.say_ri` (il R/I, non un "item" come negli altri
+quattro — v. `sessionPhase.ts`), quindi quell'effetto non le riconosceva MAI come "si sta
+ancora dando l'item": la spegneva subito. Esteso il controllo a `*.ri`/`*.say_ri` e a
+`truth.questioning` — per TRUTH è anche più giusto che per gli altri: « locate an R/I via any
+process » è di per sé una ricerca, l'assessment ha senso restare accesa per tutto il tempo in
+cui il R/I non è ancora chiuso, non solo al primo tempo. **Verificato dal vivo**: armato
+TRUTH, il pannello passa da "ACTIVER"/"capture désactivée" a "DÉSACTIVER"/"à l'écoute...".
+
+Riguardato anche « Dans History... tout vibre et saute et on ne peut pas choisir de tout
+sélectionner ». Il buon segno: i PDF ora si vedono (il fix del giro precedente ha tenuto). Il
+checkbox "Tout sélectionner" — verificato dal vivo che la sua LOGICA è corretta: cliccato
+direttamente sul suo elemento, i quattro checkbox (generale + tre sedute) sono passati tutti a
+`checked: true`. Non trovata invece nessuna causa di "vibrazione" nel codice (nessun
+`setInterval`, nessun ciclo di re-render, console pulita) — non riprodotta in due schermate
+consecutive con solo tre sedute di prova. Resta aperto: serve sapere se, cliccando "Tout
+sélectionner" nell'app vera, non succede NIENTE (visivamente) o se serve più di un clic — con
+tre tentativi già fatti su questa stessa segnalazione senza trovare altro, un quarto a
+indovinare rischia di sprecare il giro invece di risolverlo.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 0 errori.
+
+---
+
 ## Giro (27/08/2026, notte) — TRUTH: l'item non si scriveva, tutto era in inglese, il candidato lampeggiava
 
 Segnalato subito dopo aver agganciato TRUTH all'interfaccia: « le cicle TRUTH n'est pas
