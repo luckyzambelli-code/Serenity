@@ -5403,6 +5403,81 @@ EQUILIBRIUM 2.0.231, SERENITY 3.0.124.
 
 ---
 
+## Giro (27/08/2026) — il bug vero dietro "TONE non appare"; il journal nel PDF; Tout sélectionner rigiudicato
+
+Cinque punti nuovi, più due segnalati a parte durante lo stesso giro. Di nuovo con verifica dal
+vivo, non solo lettura di codice — e stavolta la verifica dal vivo ha trovato un bug REALE che
+la sola lettura del codice, al giro precedente, aveva mancato.
+
+1. **MIRROR: la carica iniziale ottenuta col MUSE non appariva.** `mirrorCycle.liveQ` (un campo
+   pubblico del motore, mai letto fuori da lì) esposto come `mirrorDisp.liveR` (stessa
+   conversione 1–10 di `valueR`). Un indicatore "MUSE x.x" pulsante compare ora accanto ai
+   pulsanti manuali, prima del blocco. **Verificato dal vivo**: MIRROR armato con MUSE
+   "connesso", la riga "MUSE 0.0" appare nel pannello "combien de charge ?".
+2. **TONE: la scala non appariva — segnalato una seconda volta, stavolta un bug vero.** Il giro
+   precedente aveva concluso "non riprodotto" perché il test era stato fatto CON ago. Il bug
+   viveva nel percorso SENZA ago, e non dove sembrava: non in `ToneDial` (che già sapeva
+   disegnare l'arco senza la lancetta, tramite `hasMeter`), ma nella condizione di montaggio di
+   `<QuantumSphere>` — l'ago DI BASE. Quella condizione escludeva `vistaSenzaAgo` SOLO quando
+   `!mirror.mirrorArmed && !toneAttivo`, apposta per non spegnere del tutto l'arco di sfondo in
+   MIRROR/TONE (che non hanno una `VistaSenzaAgo` sostitutiva) — ma restando montato,
+   `QuantumSphere` continuava a disegnare la lancetta vera e propria, ignara di `vistaSenzaAgo`.
+   Risultato osservato dal vivo: in TONE senza ago, prima ancora che l'item fosse dato, un ago
+   ambra restava comunque visibile sull'arco — e una volta corretto quel primo strato, il
+   secondo bug (la condizione di montaggio di `ToneDial` stesso, `&& !vistaSenzaAgo`, che
+   toglieva l'INTERO quadrante invece della sola lancetta) sarebbe comunque rimasto a nascondere
+   la scala una volta dato l'item. Corretti entrambi: `ToneDial` monta sempre quando l'item è
+   dato (con `hasMeter={!vistaSenzaAgo && tone.toneMisurato}`, non più con l'intera vista
+   condizionata), e `QuantumSphere` spegne le sue due sorgenti di lancetta
+   (`thetaOffset`/`showEegNeedle`) con `!vistaSenzaAgo`, indipendentemente da MIRROR/TONE.
+   **Verificato dal vivo, prima/dopo**: TONE armato senza ago, item non ancora dato — PRIMA una
+   lancetta ambra era comunque visibile sull'arco; ricaricato con la correzione, l'arco resta
+   vuoto (solo le fasce colorate, nessuna lancetta). Dato l'item ("colpa"), la scala −40…+80 in
+   arco concentrico E la colonna verticale (`ToneColumn`, coi nomi dei livelli) appaiono
+   entrambe, sempre senza alcuna lancetta disegnata.
+3. **"Nessun ciclo armato" scriveva EN ATTENTE.** Tolto qualunque testo di riserva dal centro
+   della vista senza ago quando `effId === 'neutral'` (nessun ciclo). **Verificato dal vivo**:
+   sessione senza ago, nessun ciclo armato, il centro dell'arco non mostra alcuna scritta.
+4. **Senza ago, l'arco doveva animarsi come con l'ago quando nessun ciclo è armato.** Nuova
+   animazione CSS `vsaIdleGlow` (respiro dell'opacità, 3.4s, sfalsata di 1.1s per fascia) sulle
+   tre bande di zona quando `!armed`. **Verificato dal vivo**: ispezionato lo stile calcolato
+   delle tre `<path>` di zona a ciclo non armato — tutte e tre portano
+   `animation: 3.4s ease-in-out ... infinite vsaIdleGlow`, con ritardo 0s/1.1s/2.2s.
+5. **"Il bottone di chiusura dei comandi non appare".** Trovate DUE cose diverse sotto lo stesso
+   nome: il pannello "PROCESSUS" (l'elenco dei procedimenti disponibili) ha già una ✕ ben
+   visibile in alto a destra — **verificato dal vivo**, nessun problema lì. `PistaProcedimento`
+   (la vista del procedimento IN CORSO, con FERMER) era già stata ristrutturata il giro
+   precedente perché lo scorrimento non la nascondesse — resta **non verificabile dal vivo** in
+   questo sandbox (nessun procedimento `.txt` caricabile, serve un filesystem reale). Se il
+   segnalato riguarda quest'ultima, serve conferma con dati veri per continuare a cercare.
+6. **Il journal nel PDF di HISTORY, con trascritto/reazioni/tono.** `SerenityReportInput` non
+   aveva alcun campo journal — gap reale, non un bug. Aggiunto `journal?: JournalLineInput[]`
+   (stesso `LogEntry` di `TranscriptLog.tsx`, con una `reaction` in più) e una sezione PDF
+   dedicata (monospazio, colore per chi parla, tono in tag, reazione in viola) — stesso
+   linguaggio visivo della sezione transcript di `generateTextPdf` (App.tsx). `Serenity.tsx`
+   costruisce l'elenco da `journal.logs` con la STESSA `computeInstantRead` che il pannello
+   Journal a schermo già usa "sulla parola" (nessuna seconda logica di lettura inventata). **Non
+   verificato dal vivo per intero**: `tsc` pulito e la sezione è cablata nel percorso di
+   chiusura seduta, ma generare e riaprire un vero PDF di History dentro questo sandbox non è
+   stato provato in questo giro — la logica di lettura (`computeInstantRead`) è la stessa già
+   verificata dal vivo nei giri precedenti per il pannello Journal a schermo.
+7. **"In HISTORY non si può scegliere TOUT SELECTIONNER".** Non riprodotto: **verificato dal
+   vivo**, click sul checkbox master → le tre checkbox (master + due sedute) passano a
+   `checked:true`, entrambe le schede prendono la classe di selezione
+   (`border-red-400 bg-red-50/30`), e il bottone di eliminazione multipla appare con il conteggio
+   corretto ("2"). Il primo tentativo di verifica in questo stesso giro aveva mostrato uno stato
+   vuoto — causa trovata: il server di sviluppo Vite di questo sandbox si riavvia da solo a
+   intervalli (osservato nei suoi log, non legato a nessuna azione qui), un riavvio in mezzo a
+   un'interazione azzera lo stato React e sembra "il click non ha fatto nulla". Un problema
+   dell'ambiente di anteprima, non dell'app pacchettizzata (che non ha un server Vite con
+   ricaricamento a caldo) — batchando click e lettura del DOM in una sola chiamata atomica il
+   comportamento corretto si è visto in modo ripetibile.
+
+`tsc --noEmit` pulito, `npm run lint` 313 warning (nessuno nuovo, 0 errori). File toccati:
+`src/serenity/Serenity.tsx`, `src/serenity/sessionReport.ts`.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

@@ -2175,6 +2175,24 @@ export default function Serenity() {
             items: righe.map(r => ({ item: r.item, reaction: r.reaction ?? 'NULL', time: r.time, beforeMs: r.beforeMs })),
           }));
         })(),
+        // ── IL JOURNAL NEL PDF — segnalato: « Fai apparire il journal nel PDF di HISTORI con
+        // tutto il trascritto, le reazioni ed il tono ». Tutte le righe (non filtrate a
+        // Aud/PC come il pannello a schermo: qui "tutto" significa anche AGO/SYS), con la
+        // STESSA `computeInstantRead` che quel pannello già usa "sulla parola" — nessuna
+        // seconda logica di lettura inventata qui, solo il dato in più nell'input.
+        journal: journal.logs.map(l => ({
+          time: l.time,
+          speaker: l.speaker,
+          text: l.text,
+          tone: l.tone,
+          reaction: (l.speaker === 'Aud' || l.speaker === 'PC') && (museOk || meterC)
+            ? (() => {
+                const r = computeInstantRead(shownReadsRef.current, l.time ?? 0, -Infinity, Infinity,
+                  agoEegRef.current ? 'eeg' : 'theta').read;
+                return r && r !== 'NULL' && r !== READ_NON_MISURATO ? r : undefined;
+              })()
+            : undefined,
+        })),
         cansTest: {
           hasMeter: meterC,
           done: testedToday(canHistory, Date.now()),
@@ -2436,11 +2454,27 @@ export default function Serenity() {
               <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)', marginRight: 6 }}>
                 {LC('quanta carica?', 'combien de charge ?', 'how much charge?', '¿cuánta carga?', 'hur mycket laddning?')}
               </span>
+              {/* ⚠️ LA LETTURA VERA, COL MUSE, PRIMA DEL BLOCCO — segnalato: « in MIRROR deve
+                  apparire col MUSE la carica ottenuta iniziale ». Prima, in attesa che
+                  `mirrorCycle` si blocchi da sé, questo schermo mostrava SOLO i dieci
+                  bottoni — nessun segno che il MUSE stesse leggendo qualcosa. `mirrorDisp.liveR`
+                  (v. la sua nota in `useMirrorCycle.ts`) è la carica VERA, in diretta, sulla
+                  stessa scala 1–10 dei bottoni accanto — pulsante finché non si blocca da
+                  sola (o l'auditor sceglie a mano, che resta sempre possibile). Solo col MUSE:
+                  senza, non c'è nessuna lettura da mostrare, i bottoni restano l'unica via. */}
+              {museOk && (
+                <span className="animate-pulse" style={{
+                  fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', fontWeight: 700,
+                  color: 'var(--s-alive)', marginRight: 10,
+                }}>
+                  MUSE {mirror.mirrorDisp.liveR.toFixed(1)}
+                </span>
+              )}
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => (
                 <button key={v} onClick={() => {
                   mirror.mirrorCycle.setManualValue(v);
                   mirror.setMirrorDisp({ contactQ: mirror.mirrorCycle.contactQ, dischargeQ: 0,
-                    locked: true, reached: false, valueR: mirror.mirrorCycle.valueR });
+                    locked: true, reached: false, valueR: mirror.mirrorCycle.valueR, liveR: mirror.mirrorCycle.valueR });
                 }} style={{
                   border: 'none', cursor: 'pointer', borderRadius: 999, width: 26, height: 26,
                   fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', fontWeight: 700,
@@ -2459,7 +2493,7 @@ export default function Serenity() {
               <button className="s-glass s-glass-btn" onClick={() => {
                 mirror.mirrorCycle.declareReached();
                 mirror.setMirrorDisp({ contactQ: mirror.mirrorCycle.contactQ, dischargeQ: mirror.mirrorCycle.dischargeQ,
-                  locked: true, reached: true, valueR: mirror.mirrorCycle.valueR });
+                  locked: true, reached: true, valueR: mirror.mirrorCycle.valueR, liveR: mirror.mirrorCycle.valueR });
               }} style={pillBtn('var(--s-still)')}>
                 {LC('doppio raggiunto', 'double atteint', 'double reached', 'doble alcanzado', 'dubbeln nådd')}
               </button>
@@ -4475,8 +4509,20 @@ export default function Serenity() {
                immobile, disegnato sopra il suo. App.tsx lo mostra SOLO quando è lui il
                principale (`agoPrincipale === 'theta'`, la sua nota: « un ago solo »): stessa
                esclusività qui, con `agoEeg` al posto di `agoPrincipale`. */
-            thetaOffset={meterC && !agoEeg ? theta.offset : null}
-            showEegNeedle={agoEeg}
+            /* ⚠️ BUG TROVATO E CORRETTO — stessa famiglia del bug appena sopra in `ToneDial`:
+               segnalato di nuovo, « IN TONE... NON É PRESENTE » (e per estensione MIRROR),
+               la vera causa a monte era QUI. La condizione di montaggio di `QuantumSphere`
+               (poco più su) esclude `vistaSenzaAgo` SOLO quando `!mirror.mirrorArmed &&
+               !toneAttivo` — apposta, perché in MIRROR/TONE non esiste una `VistaSenzaAgo`
+               sostitutiva (le loro scale non sono CONTACT/DISSOLUTION/AS-IS) e l'arco di
+               sfondo deve restare. Ma restando MONTATO, disegnava anche l'AGO — con
+               `!agoEeg`/`agoEeg` che non sapevano nulla di `vistaSenzaAgo`, l'ago tornava
+               visibile proprio nei due cicli dove "senza ago" doveva valere di più. Ora
+               entrambe le sorgenti dell'ago si spengono con `!vistaSenzaAgo`: l'arco/le
+               fasce restano (nessuna vista alternativa da inventare), solo la lancetta
+               sparisce — lo stesso principio di `hasMeter` in `ToneDial`/`MirrorDial`. */
+            thetaOffset={meterC && !agoEeg && !vistaSenzaAgo ? theta.offset : null}
+            showEegNeedle={agoEeg && !vistaSenzaAgo}
             /* ── IL BERSAGLIO DELLA PROVA, SULL'ARCO — segnalato: « lors du test de pression
                et souffle, tu dois mettre la ligne pour le tir de l'arc comme dans equilibrium ».
                `QuantumSphere` sa già disegnarlo (la linea tratteggiata verde a un terzo di
@@ -4570,7 +4616,19 @@ export default function Serenity() {
                 sostituirlo: il calcolo dietro (MIRROR: la sola carica EEG; TONE: MUSE se
                 connesso, altrimenti il TA del Meter — v. `useToneCycle.ts`, non toccato)
                 continua tale e quale, solo senza disegnarne il quadrante. La guida testuale
-                di `PistaCiclo` resta comunque a schermo, invariata. */}
+                di `PistaCiclo` resta comunque a schermo, invariata.
+                ⚠️ BUG TROVATO E CORRETTO — segnalato di nuovo: « IN TONE FAI APPARIRE LA
+                SCALA DEL TONO... NON É PRESENTE ». La riga sopra descriveva l'intento giusto
+                ("nascondere l'ago, non sostituirlo") ma il codice, per TONE, faceva l'esatto
+                contrario: `!vistaSenzaAgo` era nella CONDIZIONE DI MONTAGGIO di
+                `<ToneDial>`/`<ToneColumn>` (sotto), non nel loro prop `hasMeter` — senza ago
+                l'intero quadrante TONO spariva (cade nel ramo `toneAttivo ? null` più giù),
+                non solo l'ago. `ToneDial`/`ToneColumn` however GIÀ distinguono i due: il loro
+                prop `hasMeter` disegna/non disegna SOLO la lancetta misurata (v.
+                `ToneDial.tsx` riga ~152, `{hasMeter && (...)}`) — l'arco, le tacche, la riga
+                gialla del "dove si è fermato" e la colonna verticale restano SEMPRE, con o
+                senza `hasMeter`. La scala non è mai stata invisibile "senza ago" per un
+                calcolo mancante: era il componente intero a non montare. */}
             {mirror.mirrorArmed ? (
               vistaSenzaAgo ? null : (
               <MirrorDial
@@ -4584,16 +4642,18 @@ export default function Serenity() {
                 lang={lang}
               />
               )
-            ) : toneAttivo && (faseCiclo === 'tone.raise' || faseCiclo === 'tone.done') && !vistaSenzaAgo ? (
+            ) : toneAttivo && (faseCiclo === 'tone.raise' || faseCiclo === 'tone.done') ? (
               <>
-                {/* ⚠️ `hasMeter={tone.toneMisurato}`, non `tone.toneHasMeter` — v. la nota in
-                    `useToneCycle.ts`. Con la priorità « MUSE se c'è, altrimenti Meter,
-                    altrimenti dichiarato », `toneHasMeter` resta vero solo col Theta-Meter: un
-                    ciclo guidato dal solo MUSE avrebbe lasciato il quadrante VUOTO
-                    (`ToneDial`/`ToneColumn` non disegnano nulla se `hasMeter` è falso). */}
+                {/* ⚠️ `hasMeter={!vistaSenzaAgo && tone.toneMisurato}`, non `tone.toneHasMeter`
+                    (nota di sempre — v. `useToneCycle.ts`: con la priorità « MUSE se c'è,
+                    altrimenti Meter, altrimenti dichiarato », `toneHasMeter` resta vero solo
+                    col Theta-Meter) — E ora anche `!vistaSenzaAgo`: "senza ago" deve nascondere
+                    SOLO la lancetta disegnata, non farla apparire di nuovo qui. L'arco, le
+                    tacche e la riga gialla restano comunque (`hasMeter` false non svuota più
+                    il quadrante — v. la nota sopra al ramo). */}
                 <ToneDial
                   tone={tone.toneOra ?? 0}
-                  hasMeter={tone.toneMisurato}
+                  hasMeter={!vistaSenzaAgo && tone.toneMisurato}
                   approx
                   located={tone.toneAtStart}
                   phase={tone.tonePhase}
@@ -4648,23 +4708,19 @@ export default function Serenity() {
                 </div>
               </>
             ) : toneAttivo ? (
-              // ⚠️ TONE ARMATO MA SENZA QUADRANTE — due ragioni possibili, stesso "niente
-              // disegnato qui":
-              // 1. RESISTENZA NON ANCORA DATA — segnalato: « quando il ciclo TONE non è
-              //    armato, non si deve mostrare il livello della scala del tono ». Un click sul
-              //    cerchio TONE localizza subito (v. la sua nota, `onClick` più giù) —
-              //    `toneAttivo` diventa vero PRIMA che l'auditor abbia detto la resistenza, e
-              //    `faseCiclo` lo sa già (resta `'tone.say_item'`, non `'tone.raise'`, finché
-              //    `itemNamed` è falso — v. `deriveCyclePhase` in `sessionPhase.ts`, non
-              //    toccato qui) — un numero calcolato su una resistenza senza nome non deve
-              //    apparire "già in corso".
-              // 2. "SENZA AGO" SCELTO — segnalato: « nel ciclo TONE... se si sceglie senza ago
-              //    non deve apparire [l'ago] ». Il calcolo (MUSE se connesso, altrimenti il TA
-              //    del Meter) continua comunque dietro le quinte — solo il disegno dell'ago
-              //    sparisce, non il numero che alimenta `PistaCiclo`/il Journal.
-              // In NESSUNO dei due casi un arco diverso prende il posto di `ToneDial` (né
-              // `ClearDial`, vocabolario sbagliato per TONE): l'indicazione di cosa fare resta
-              // comunque a schermo, in `PistaCiclo` (mai gestita qui).
+              // ⚠️ TONE ARMATO MA SENZA QUADRANTE — UNA SOLA RAGIONE ORA (era due: la seconda,
+              // "senza ago scelto", è stato il bug appena corretto qui sopra — "senza ago" non
+              // deve più togliere il quadrante intero, solo la lancetta dentro `ToneDial`).
+              // RESISTENZA NON ANCORA DATA — segnalato: « quando il ciclo TONE non è armato,
+              // non si deve mostrare il livello della scala del tono ». Un click sul cerchio
+              // TONE localizza subito (v. la sua nota, `onClick` più giù) — `toneAttivo`
+              // diventa vero PRIMA che l'auditor abbia detto la resistenza, e `faseCiclo` lo sa
+              // già (resta `'tone.say_item'`, non `'tone.raise'`, finché `itemNamed` è falso —
+              // v. `deriveCyclePhase` in `sessionPhase.ts`, non toccato qui) — un numero
+              // calcolato su una resistenza senza nome non deve apparire "già in corso".
+              // Nessun arco diverso prende il posto di `ToneDial` (né `ClearDial`, vocabolario
+              // sbagliato per TONE): l'indicazione di cosa fare resta comunque a schermo, in
+              // `PistaCiclo` (mai gestita qui).
               null
             ) : vistaSenzaAgo ? null : (
               // ⚠️ `ClearDial` (l'anello sottile concentrico all'ago) non ha più motivo di

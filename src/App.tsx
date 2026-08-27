@@ -3471,7 +3471,7 @@ export default function App() {
             onClick={() => {
               mirrorCycle.setManualValue(v);
               setMirrorDisp({ contactQ: mirrorCycle.contactQ, dischargeQ: 0,
-                              locked: true, reached: false, valueR: mirrorCycle.valueR });
+                              locked: true, reached: false, valueR: mirrorCycle.valueR, liveR: mirrorCycle.valueR });
             }}
             style={{ width: 40, height: 40, borderRadius: 10, cursor: 'pointer',
               fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 800,
@@ -3488,7 +3488,7 @@ export default function App() {
         {riga(btn(LC('DOPPIO RAGGIUNTO', 'DOUBLE ATTEINT', 'DOUBLE REACHED', 'DOBLE ALCANZADO', 'DUBBELN NÅDD'), () => {
           mirrorCycle.declareReached();
           setMirrorDisp({ contactQ: mirrorCycle.contactQ, dischargeQ: mirrorCycle.dischargeQ,
-                          locked: true, reached: true, valueR: mirrorCycle.valueR });
+                          locked: true, reached: true, valueR: mirrorCycle.valueR, liveR: mirrorCycle.valueR });
         }, '#34d399'))}
       </>;
       // (c) OTTENUTO — si valida e si riparte.

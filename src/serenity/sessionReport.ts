@@ -53,6 +53,19 @@ export interface AssessCycleInput {
   items: Array<{ item: string; reaction: string; time: number; beforeMs?: number }>;
 }
 
+/** Una riga del `journal.logs` di Serenity.tsx — STESSO `LogEntry` di `TranscriptLog.tsx`
+ *  (App.tsx), con un campo in più: `reaction`, già calcolata dal chiamante con
+ *  `computeInstantRead` (la stessa lettura che il pannello Journal a schermo mostra
+ *  "sulla parola" — v. la nota accanto al suo `.map` in Serenity.tsx). `sessionReport.ts`
+ *  non ricalcola nulla: stampa quel che gli arriva, come per le tabelle per-ciclo. */
+export interface JournalLineInput {
+  time: number;
+  speaker?: 'Aud' | 'PC' | 'SYS' | 'NEEDLE';
+  text: string;
+  tone?: { label: 'calm' | 'neutral' | 'tense' | 'stressed'; pitch: number; energy: number };
+  reaction?: string;
+}
+
 export interface SerenityReportInput {
   id: string;
   profileId: string;
@@ -82,6 +95,10 @@ export interface SerenityReportInput {
   mirrorCycles?: MirrorRecord[];
   toneCycles?: ToneCycleRecord[];
   assessCycles?: AssessCycleInput[];
+  /** Segnalato: « Fai apparire il journal nel PDF di HISTORI con tutto il trascritto, le
+   *  reazioni ed il tono ». Tutte le righe di `journal.logs` (non solo Aud/PC — "tutto" —
+   *  v. `JournalLineInput`). */
+  journal?: JournalLineInput[];
   cansTest?: {
     hasMeter: boolean; done: boolean; config: 'two-cans' | 'solo-can'; soloOffset: number; taMargin: number;
   };
@@ -424,6 +441,45 @@ export async function generaPdf(
       }
       setRGB([40, 40, 40]); y += 4;
     }
+  }
+
+  // ── JOURNAL — segnalato: « Fai apparire il journal nel PDF di HISTORI con tutto il
+  // trascritto, le reazioni ed il tono ». Stesso linguaggio visivo della sezione transcript
+  // di `generateTextPdf` (App.tsx/PostSessionReport.tsx): monospazio compatto, colore per
+  // chi parla, tono in un piccolo tag, reazione se c'è — solo che qui la reazione arriva
+  // GIÀ calcolata dal chiamante (`computeInstantRead`, la stessa fonte del pannello Journal
+  // a schermo di Serenity.tsx): questa sezione stampa, non ricalcola.
+  if (input.journal && input.journal.length > 0) {
+    ensureSpace(18);
+    panelHeader(LC('giornale', 'journal', 'journal', 'diario', 'journal'));
+    const tsX = 16, bodyX = 32, lineH = 3.8, maxW = pageW - bodyX - 14;
+    const speakerColor = (sp?: string): [number, number, number] =>
+      sp === 'Aud' ? [21, 94, 160] : sp === 'PC' ? [168, 88, 20] :
+      sp === 'NEEDLE' ? [180, 120, 20] : [140, 140, 140];
+    const speakerLabel = (sp?: string) =>
+      sp === 'Aud' ? 'AUD' : sp === 'PC' ? 'PC' : sp === 'NEEDLE' ? 'AGO' : 'SYS';
+    for (const l of input.journal) {
+      ensureSpace(8);
+      const col = speakerColor(l.speaker);
+      pdf.setFont('courier', 'bold'); pdf.setFontSize(7.2); setRGB([14, 116, 144]);
+      pdf.text(`[${(l.time ?? 0).toFixed(1)}s]`, tsX, y);
+      pdf.setFont('courier', l.speaker === 'Aud' ? 'bold' : 'normal'); setRGB(col);
+      let line = `${speakerLabel(l.speaker)}: ${ascii(String(l.text || '')).replace(/\s+/g, ' ').trim()}`;
+      if (l.tone) line += `  [${ascii(t(`tone_${l.tone.label}`)).toUpperCase()}]`;
+      const split = pdf.splitTextToSize(line || '-', maxW);
+      for (let j = 0; j < split.length; j++) {
+        ensureSpace(6);
+        pdf.text(split[j], bodyX, y);
+        y += lineH;
+      }
+      if (l.reaction) {
+        ensureSpace(6);
+        pdf.setFont('courier', 'bold'); setRGB([168, 85, 247]);
+        pdf.text(`-> ${ascii(l.reaction)}`, bodyX, y);
+        y += lineH;
+      }
+    }
+    y += 4; setRGB(INK); pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10);
   }
 
   // ── QUEL CHE MANCA ANCORA — dichiarato nel PDF stesso, non solo nel changelog: onesto

@@ -25,7 +25,7 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
-import { MirrorCycle } from '../engine/MirrorCycle';
+import { MirrorCycle, mirrorReading } from '../engine/MirrorCycle';
 
 /** Un ciclo MIRROR concluso, come finisce nel rapporto e nel PDF.
  *  READ = picco incontrato (1–10), DOUBLE = il suo doppio, `erased` = doppio raggiunto. */
@@ -46,9 +46,18 @@ export interface MirrorDisp {
   locked: boolean;
   reached: boolean;
   valueR: number;
+  /** ⚠️ SEGNALATO — « in MIRROR deve apparire col MUSE la carica ottenuta iniziale ». Prima
+   *  del blocco (`locked===false`) lo schermo mostrava SOLO i dieci bottoni "quanta carica?"
+   *  — nessun segno che il MUSE stesse leggendo qualcosa, l'auditor doveva scegliere a mano
+   *  come se lo strumento non ci fosse, anche quand'era collegato e stava per bloccare da
+   *  solo. `liveR` è `mirrorCycle.liveQ` (v. `MirrorCycle.ts` — un campo PUBBLICO, già
+   *  aggiornato a ogni campione, mai letto fuori dal motore) convertito sulla stessa scala
+   *  1–10 di `valueR` (`mirrorReading`, la stessa funzione, non una seconda formula) — la
+   *  lettura VERA, in diretta, prima ancora che si blocchi. */
+  liveR: number;
 }
 
-const DISP_ZERO: MirrorDisp = { contactQ: 0, dischargeQ: 0, locked: false, reached: false, valueR: 0 };
+const DISP_ZERO: MirrorDisp = { contactQ: 0, dischargeQ: 0, locked: false, reached: false, valueR: 0, liveR: 0 };
 
 /** Quel che il ciclo ha bisogno di sapere dal resto della seduta. */
 export interface MirrorCycleDeps {
@@ -180,7 +189,8 @@ export function useMirrorCycle(d: MirrorCycleDeps) {
     if (!mirrorArmedRef.current) return;
     mirrorCycle.update(q, nowSec);
     if (pushUi) setMirrorDisp({ contactQ: mirrorCycle.contactQ, dischargeQ: mirrorCycle.dischargeQ,
-      locked: mirrorCycle.locked, reached: mirrorCycle.reached, valueR: mirrorCycle.valueR });
+      locked: mirrorCycle.locked, reached: mirrorCycle.reached, valueR: mirrorCycle.valueR,
+      liveR: mirrorReading(mirrorCycle.liveQ) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

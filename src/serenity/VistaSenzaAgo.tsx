@@ -159,6 +159,7 @@ export function VistaSenzaAgo({ armed = true, cycleKind = 'charge', nullPhase = 
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
       <style>{`
         @keyframes vsaPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+        @keyframes vsaIdleGlow { 0%, 100% { opacity: var(--vsa-idle-lo); } 50% { opacity: var(--vsa-idle-hi); } }
       `}</style>
       <svg viewBox={`0 0 ${VW} ${VH}`} width="100%" height="100%" style={{ display: 'block' }}>
         <defs>
@@ -188,18 +189,31 @@ export function VistaSenzaAgo({ armed = true, cycleKind = 'charge', nullPhase = 
           <path d={band(-1, 1, R - CORE / 2 - 10, R + CORE / 2 + 10)} fill={isLightTheme ? 'rgba(15,23,42,0.06)' : 'rgba(0,0,0,0.38)'} />
           <path d={aseg(-1, 1, R + CORE / 2 + 10)} fill="none" stroke={isLightTheme ? 'rgba(15,23,42,0.12)' : 'rgba(255,255,255,0.14)'} strokeWidth="2.5" />
           <path d={aseg(-1, 1, R - CORE / 2 - 10)} fill="none" stroke={isLightTheme ? 'rgba(15,23,42,0.18)' : 'rgba(0,0,0,0.5)'} strokeWidth="2.5" />
-          {IDS.map(id => {
+          {IDS.map((id, idx) => {
             const [o0, o1] = SEG_OF[id];
             const do0 = o0 <= -0.999 ? o0 : o0 + GAP;
             const do1 = o1 >= 0.999 ? o1 : o1 - GAP;
             const active = cur === ORDER_OF[id], done = cur > ORDER_OF[id];
             const dimOp = isLightTheme ? 0.4 : 0.22;
             const doneOp = isLightTheme ? 0.75 : 0.55;
+            // ⚠️ A RIPOSO, L'ARCO RESPIRA — segnalato: « quando nessun ciclo è armato, se
+            // siamo in senza ago, anima l'arco con le luci come quando hai l'ago ». Un ago
+            // vero non sta MAI fermo per davvero — un filo di rumore biologico lo fa
+            // tremolare anche a riposo, un segno di vita che questa vista (tre bande piatte,
+            // niente da inseguire) non aveva. Non il `vsaPulse` già in uso (quello segna "è
+            // QUESTA la zona attiva", un significato preciso da non confondere) — un secondo
+            // respiro, più lento, più sottile (fra `dimOp` e un terzo più chiaro), sfasato di
+            // un terzo di ciclo per banda (`idx * 1.1s`) così le tre non si accendono e
+            // spengono insieme come UN lampeggio, ma si rincorrono come una luce che scorre.
+            const idleStyle = !armed ? ({
+              '--vsa-idle-lo': dimOp, '--vsa-idle-hi': Math.min(1, dimOp * 1.8),
+              animation: `vsaIdleGlow 3.4s ease-in-out ${idx * 1.1}s infinite`,
+            } as React.CSSProperties) : undefined;
             return (
               <path key={id} d={aseg(do0, do1, R)} stroke={colorOf(id)} strokeWidth={CORE}
                 fill="none" strokeLinecap="round"
                 opacity={active ? 1 : done ? doneOp : dimOp}
-                style={active ? { animation: `vsaPulse ${pulseS}s ease-in-out infinite` } : undefined}
+                style={active ? { animation: `vsaPulse ${pulseS}s ease-in-out infinite` } : idleStyle}
                 filter={active || done ? 'url(#vsa-seg-glow)' : undefined} />
             );
           })}
@@ -219,13 +233,20 @@ export function VistaSenzaAgo({ armed = true, cycleKind = 'charge', nullPhase = 
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
         fontFamily: 'var(--s-sans)', textAlign: 'center', pointerEvents: 'none',
       }}>
-        <span style={{
-          fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-hero)', fontWeight: 700,
-          color: armed && effId !== 'neutral' ? activeCol : textFaint,
-          letterSpacing: '0.02em',
-        }}>
-          {armed && effId !== 'neutral' ? labelOf(effId) : L('in attesa', 'en attente', 'waiting', 'en espera', 'väntar')}
-        </span>
+        {/* ⚠️ NIENTE QUANDO NON È ARMATO — segnalato: « quando non è armato nessun ciclo non
+            scrivere EN ATTENTE, non scrivere nulla ». Prima, a riposo, questo era l'UNICA
+            scritta a schermo dentro l'arco — un'etichetta che non diceva niente di nuovo (i
+            quattro cerchi dei metodi, appena sotto, dicono già "nessun ciclo scelto" da soli)
+            e riempiva uno spazio che dovrebbe restare silenzioso finché non c'è davvero
+            qualcosa da dire. */}
+        {armed && effId !== 'neutral' && (
+          <span style={{
+            fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-hero)', fontWeight: 700,
+            color: activeCol, letterSpacing: '0.02em',
+          }}>
+            {labelOf(effId)}
+          </span>
+        )}
         {armed && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginTop: 4 }}>
             <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: textFaint, fontVariantNumeric: 'tabular-nums' }}>
