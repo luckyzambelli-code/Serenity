@@ -1631,7 +1631,14 @@ export default function Serenity() {
         come: LC('Tornato alla base. Valida inscrivendo i VGI\'s — sì o no, sei tu a dirlo.', 'Revenu à la base. Valide en inscrivant les VGI\'s — oui ou non, c\'est toi qui le dis.', 'Back to base. Validate by recording the VGI\'s — yes or no, you say it.', 'Vuelto a la base. Valida inscribiendo los VGI\'s — sí o no, lo dices tú.', 'Tillbaka till basen. Validera genom att skriva in VGI\'s — ja eller nej, du säger det.') };
       return {
         titolo: LC('2 · CHIEDI UN MOCK-UP', '2 · DEMANDE UN MOCK-UP', '2 · ASK FOR A MOCK-UP', '2 · PIDE UN MOCK-UP', '2 · BE OM EN MOCK-UP'),
-        come: LC('Il tempo non è imposto: ogni preclear ha il suo. Il cronometro è solo indicativo.', 'Le temps n\'est pas imposé : chaque préclair a le sien. Le chrono est indicatif.', 'The time is not imposed: each preclear has their own. The clock is only indicative.', 'El tiempo no se impone: cada preclear tiene el suyo. El cronómetro es indicativo.', 'Tiden är inte given: varje preclear har sin. Klockan är bara vägledande.') };
+        // ⚠️ SEGNALATO — stessa correzione già fatta per CONTACT: il titolo diceva già "chiedi
+        // un mock-up", il corpo saltava dritto a una nota sul tempo senza mai scrivere
+        // l'istruzione vera.
+        come: LC('Chiedi un mock-up. Il tempo non è imposto: ogni preclear ha il suo. Il cronometro è solo indicativo.',
+                 'Demande un mock-up. Le temps n\'est pas imposé : chaque préclair a le sien. Le chrono est indicatif.',
+                 'Ask for a mock-up. The time is not imposed: each preclear has their own. The clock is only indicative.',
+                 'Pide un mock-up. El tiempo no se impone: cada preclear tiene el suyo. El cronómetro es indicativo.',
+                 'Be om en mock-up. Tiden är inte given: varje preclear har sin. Klockan är bara vägledande.') };
     }
     if (faseCiclo === 'contact.item' || mode === 'free') return {
       titolo: LC('1 · DAI L\'ITEM', '1 · DONNE L\'ITEM', '1 · GIVE THE ITEM', '1 · DA EL ÍTEM', '1 · GE ITEM'),
@@ -4348,13 +4355,23 @@ export default function Serenity() {
                 slide ». Non più uno scivolo a due tappe (`BottoneCiclico`): la STESSA pillola
                 di NEEDLE LIGHT qui sopra — bordo sottile, fondo trasparente, un pallino pieno/
                 vuoto invece di due icone — e la STESSA logica, un click che cambia stato
-                invece di una manopola che scorre. Stessa condizione di NEEDLE LIGHT (un ago da
-                vedere, non MIRROR/TONE che hanno il loro quadrante) — SENZA `!vistaSenzaAgo`:
-                quella esclusione ha senso per NEEDLE LIGHT (niente scia da accendere in vista
-                senza ago) ma non per QUESTO bottone, che è lui stesso il comando per uscirne —
-                nascondendolo proprio lì l'auditor resterebbe bloccato senza modo di tornare
-                indietro. */}
-            {(agoEeg || meterC) && !mirror.mirrorArmed && !toneAttivo && (
+                invece di una manopola che scorre.
+                ⚠️ ORA ANCHE IN MIRROR E TONE — segnalato: « la scritta con o senza ago deve
+                apparire anche nel ciclo MIRROR e TONE ». Prima esclusa lì (`!mirror.mirrorArmed
+                && !toneAttivo`, tolto) perché quei due quadranti non rispettavano ancora
+                `vistaSenzaAgo` — ora che LO fanno (v. `MirrorDial`/`ToneDial` più giù), il
+                bottone deve poterli raggiungere quanto gli altri due metodi.
+                ⚠️ LA PAROLA DICE L'AZIONE, NON LO STATO — segnalato: « quando scrivi SENZA AGO
+                devi mostrare l'ago, così il bottone indica cosa puoi cambiare ». Prima la
+                parola descriveva la vista ATTUALE ("WITHOUT NEEDLE" quando l'ago era già
+                nascosto) — comodo da leggere ma diverso da come i bottoni-comando di SERENITY
+                si leggono altrove (il testo dice SEMPRE cosa succede al click, mai lo stato
+                presente): ora "WITHOUT NEEDLE" compare quando l'ago è ANCORA visibile (click →
+                lo nasconde), "WITH NEEDLE" quando è già nascosto (click → lo rimostra). Il
+                pallino resta lo stato vero (pieno = ago visibile adesso, vuoto = nascosto) —
+                le due cose insieme si leggono come "● [è acceso] — click per: WITHOUT NEEDLE
+                [spegnerlo]", non più contraddittorie. */}
+            {(agoEeg || meterC) && (
               <button type="button" onClick={() => setVistaSenzaAgo(v => !v)}
                 title={LC('con ago / senza ago — la vista del quadrante', 'avec aiguille / sans aiguille — la vue du cadran',
                           'with needle / without needle — the dial view', 'con aguja / sin aguja — la vista del cuadrante',
@@ -4366,13 +4383,7 @@ export default function Serenity() {
                   border: '1px solid var(--s-ink-ghost)',
                   color: vistaSenzaAgo ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
                 }}>
-                {/* ⚠️ MAIUSCOLO E FISSO IN INGLESE — segnalato: « scrivi WITH NEEDLE in
-                    maiuscolo come per il NEEDLE LIGHT ». NEEDLE LIGHT non si traduce mai (v.
-                    sopra, `{showTrailPref ? '● ' : '○ '}NEEDLE LIGHT`, un unico letterale in
-                    tutte le lingue) — la stessa forma per QUESTO bottone vuol dire la stessa
-                    scelta, non solo lo stesso font: due nomi di comando, non due frasi
-                    tradotte. */}
-                {vistaSenzaAgo ? '● WITHOUT NEEDLE' : '○ WITH NEEDLE'}
+                {vistaSenzaAgo ? '○ WITH NEEDLE' : '● WITHOUT NEEDLE'}
               </button>
             )}
           </div>
@@ -4495,7 +4506,20 @@ export default function Serenity() {
               all'ago, per lo stesso motivo. */}
           {!(senzaMisura && aperta) && (
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+            {/* ⚠️ MIRROR E TONE RISPETTANO ORA "SENZA AGO" — segnalato: « il bottone con o
+                senza ago deve apparire anche in MIRROR e TONE » (implica: deve avere un
+                effetto anche lì) e, per TONE esplicitamente: « se si sceglie senza ago non
+                deve apparire [l'ago] ». Prima i due quadranti ignoravano del tutto
+                `vistaSenzaAgo` (scelta esplicita di un giro precedente: le loro scale non
+                sono CONTACT/DISSOLUTION/AS-IS, nessuna vista alternativa costruita per loro)
+                — quella scelta resta (nessun quadrante nuovo inventato qui), ma ora "senza
+                ago" per loro vuol dire semplicemente NASCONDERE il disegno dell'ago, non
+                sostituirlo: il calcolo dietro (MIRROR: la sola carica EEG; TONE: MUSE se
+                connesso, altrimenti il TA del Meter — v. `useToneCycle.ts`, non toccato)
+                continua tale e quale, solo senza disegnarne il quadrante. La guida testuale
+                di `PistaCiclo` resta comunque a schermo, invariata. */}
             {mirror.mirrorArmed ? (
+              vistaSenzaAgo ? null : (
               <MirrorDial
                 armed={mirror.mirrorArmed}
                 valueR={mirror.mirrorDisp.valueR}
@@ -4506,7 +4530,8 @@ export default function Serenity() {
                 isLightTheme={isLightTheme}
                 lang={lang}
               />
-            ) : toneAttivo && (faseCiclo === 'tone.raise' || faseCiclo === 'tone.done') ? (
+              )
+            ) : toneAttivo && (faseCiclo === 'tone.raise' || faseCiclo === 'tone.done') && !vistaSenzaAgo ? (
               <>
                 {/* ⚠️ `hasMeter={tone.toneMisurato}`, non `tone.toneHasMeter` — v. la nota in
                     `useToneCycle.ts`. Con la priorità « MUSE se c'è, altrimenti Meter,
@@ -4570,19 +4595,23 @@ export default function Serenity() {
                 </div>
               </>
             ) : toneAttivo ? (
-              // ⚠️ TONE ARMATO MA SENZA RESISTENZA ANCORA DATA — segnalato: « quando il ciclo
-              // TONE non è armato, non si deve mostrare il livello della scala del tono ».
-              // Un click sul cerchio TONE localizza subito (v. la sua nota, `onClick` più giù)
-              // — `toneAttivo` diventa vero PRIMA che l'auditor abbia detto la resistenza, e
-              // `faseCiclo` lo sa già (resta `'tone.say_item'`, non `'tone.raise'`, finché
-              // `itemNamed` è falso — v. `deriveCyclePhase` in `sessionPhase.ts`, non toccato
-              // qui). Prima di questo giro l'arco mostrava comunque `ToneDial` con un livello
-              // vero (`tone.toneOra`), calcolato su una resistenza che non ha ancora nome — un
-              // numero che sembrava già "in corso" quando in realtà si stava solo aspettando
-              // la voce. Niente disegnato qui finché quel nome non arriva: né `ToneDial` (che
-              // avrebbe la vocabolario sbagliato per TONE se sostituito da `ClearDial`), né un
-              // arco qualunque al suo posto — l'indicazione di cosa fare resta comunque a
-              // schermo, in `PistaCiclo` (mai gestita qui).
+              // ⚠️ TONE ARMATO MA SENZA QUADRANTE — due ragioni possibili, stesso "niente
+              // disegnato qui":
+              // 1. RESISTENZA NON ANCORA DATA — segnalato: « quando il ciclo TONE non è
+              //    armato, non si deve mostrare il livello della scala del tono ». Un click sul
+              //    cerchio TONE localizza subito (v. la sua nota, `onClick` più giù) —
+              //    `toneAttivo` diventa vero PRIMA che l'auditor abbia detto la resistenza, e
+              //    `faseCiclo` lo sa già (resta `'tone.say_item'`, non `'tone.raise'`, finché
+              //    `itemNamed` è falso — v. `deriveCyclePhase` in `sessionPhase.ts`, non
+              //    toccato qui) — un numero calcolato su una resistenza senza nome non deve
+              //    apparire "già in corso".
+              // 2. "SENZA AGO" SCELTO — segnalato: « nel ciclo TONE... se si sceglie senza ago
+              //    non deve apparire [l'ago] ». Il calcolo (MUSE se connesso, altrimenti il TA
+              //    del Meter) continua comunque dietro le quinte — solo il disegno dell'ago
+              //    sparisce, non il numero che alimenta `PistaCiclo`/il Journal.
+              // In NESSUNO dei due casi un arco diverso prende il posto di `ToneDial` (né
+              // `ClearDial`, vocabolario sbagliato per TONE): l'indicazione di cosa fare resta
+              // comunque a schermo, in `PistaCiclo` (mai gestita qui).
               null
             ) : vistaSenzaAgo ? null : (
               // ⚠️ `ClearDial` (l'anello sottile concentrico all'ago) non ha più motivo di

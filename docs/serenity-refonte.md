@@ -5281,6 +5281,65 @@ EQUILIBRIUM 2.0.229, SERENITY 3.0.122.
 
 ---
 
+## Giro (27/08/2026) — le etichette di zona sotto le barre; MIRROR/TONE rispettano "senza ago"; il bottone dice l'azione; TONE ritarato una terza volta
+
+**Le etichette CONTACT/DISSOLUTION/AS-IS (e NULL/RISE/EQUILIBRIUM), sotto l'ultima barra.**
+Segnalato: « mettile sotto la barra di dissoluzione per non confondersi con quelle dell'arco »
+(e, per NULL, sotto la velocità). Correvano CURVE lungo la banda (`textPath`, tolto insieme al
+suo `<defs>` in `VistaSenzaAgo.tsx`) — la stessa informazione della grande scritta centrale,
+ripetuta una seconda volta e più lenta da leggere proprio dove l'occhio legge già i colori
+dell'arco. Ora una riga piatta sotto l'ultima barra (dissoluzione se c'è, altrimenti la
+velocità), la zona attiva piena e in grassetto, le altre smorzate — stessa opacità
+"quieta"/"fatta" già in uso sull'arco, nessuna scala nuova.
+
+**MIRROR e TONE rispettano ora "senza ago".** Segnalato: « la scritta con o senza ago deve
+apparire anche in MIRROR e TONE » e, per TONE: « se si sceglie senza ago non deve apparire ».
+Prima i due quadranti ignoravano `vistaSenzaAgo` per scelta esplicita di un giro passato (le
+loro scale non sono CONTACT/DISSOLUTION/AS-IS) — quella scelta resta (nessun quadrante nuovo
+inventato per loro), ma "senza ago" ora vuol dire anche per loro NASCONDERE il disegno
+dell'ago: il calcolo dietro (MIRROR: la sola carica EEG; TONE: MUSE se connesso, altrimenti il
+TA del Meter) continua tale e quale, invariato in `useToneCycle.ts`/`MirrorCycle.ts` — solo il
+quadrante resta vuoto, la guida testuale di `PistaCiclo` resta comunque a schermo.
+
+**Il bottone con/senza ago dice l'azione, non lo stato.** Segnalato: « quando scrivi SENZA AGO
+devi mostrare l'ago, così il bottone indica cosa puoi cambiare ». La parola sul bottone
+descriveva la vista ATTUALE ("WITHOUT NEEDLE" quando l'ago era già nascosto) — invertita:
+"WITHOUT NEEDLE" compare quando l'ago è ANCORA visibile (il click lo nasconderebbe), "WITH
+NEEDLE" quando è già nascosto (il click lo rimostrerebbe) — il pallino resta lo stato vero
+(pieno = ago visibile adesso).
+
+**TONE, terza taratura.** Segnalato: « ora il calcolo è troppo severo, la scala non si muove »
+— il tentativo precedente (guadagno a un quarto + tenuta di 300ms) aveva corretto "salta
+subito a +40" ma esagerato nell'altra direzione. `TONE_MUSE_ESCURSIONE` scende da 4 a 2 (a
+metà strada fra l'1 troppo sensibile e il 4 troppo severo, il primo punto fra i due mai
+provato), `TONE_HOLD_S` da 0.3 a 0.15 (la stessa scala di tempo di `TONE_SMOOTH`, non il
+doppio — tre freni sommati, media mobile + guadagno basso + tenuta lunga, bastavano a
+immobilizzare un segnale già debole). ⚠️ Ancora una stima, non una misura verificata — resta
+da guardare sulle prossime sedute vere.
+
+**Testi CONTACT/NULL completati** — la step 2 di NULL ("2 · CHIEDI UN MOCK-UP") aveva la
+stessa lacuna già corretta per CONTACT nel giro precedente: il titolo diceva "chiedi un
+mock-up", il corpo saltava dritto a una nota sul tempo. Aggiunta l'istruzione vera prima del
+testo esistente.
+
+**Segnalato, non ancora risolto**: History non mostra il bottone View e non permette la
+selezione per cancellare. Verificato dal vivo con una sessione fresca in questo sandbox: View,
+il PDF e la selezione (checkbox, "Tout sélect.", il cestino con il conteggio) funzionano tutti
+correttamente — non riprodotto. Il sospetto più concreto: `pdfMap[session.id]` risulta falso
+per le sessioni REALI dell'utente (né IndexedDB né server hanno un PDF per loro, magari salvate
+con build precedenti a un giro di questa sessione) — ma senza vederle non è verificabile da qui.
+
+`tsc --noEmit` pulito, `vitest run` 639/639, `npm run lint` 313 warning (nessuno nuovo).
+Verificato dal vivo: le etichette piatte compaiono sotto la barra giusta; il bottone con/senza
+ago mostra "WITH NEEDLE"/"WITHOUT NEEDLE" invertiti come richiesto; lo squeeze test continua a
+riportare da sé su "con ago". Il calcolo TONE non verificabile senza un vero segnale EEG.
+`git status`: `src/serenity/Serenity.tsx`, `src/serenity/VistaSenzaAgo.tsx`,
+`src/engine/tuning.ts`.
+
+EQUILIBRIUM 2.0.230, SERENITY 3.0.123.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

@@ -167,12 +167,6 @@ export function VistaSenzaAgo({ armed = true, cycleKind = 'charge', nullPhase = 
             <feGaussianBlur stdDeviation="5" result="b2" />
             <feMerge><feMergeNode in="b1" /><feMergeNode in="b2" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
-          <filter id="vsa-text-glow" x="-60%" y="-60%" width="220%" height="220%">
-            <feDropShadow dx="0" dy="0" stdDeviation="7" floodColor={isLightTheme ? '#ffffff' : '#04101c'} floodOpacity="0.9" />
-          </filter>
-          {IDS.map(id => (
-            <path key={`vsa-lp-${id}`} id={`vsa-lbl-${id}`} d={aseg(SEG_OF[id][0], SEG_OF[id][1], R - 74)} fill="none" />
-          ))}
         </defs>
         {/* ⚠️ SEGNALATO — CONTRASTO IN LIGHT: le tre zone a riposo (nessun ciclo armato) erano
             quasi invisibili in tema chiaro. Due cause, la STESSA famiglia di bug già trovata
@@ -209,15 +203,6 @@ export function VistaSenzaAgo({ armed = true, cycleKind = 'charge', nullPhase = 
                 filter={active || done ? 'url(#vsa-seg-glow)' : undefined} />
             );
           })}
-          {IDS.map(id => (
-            <text key={`t-${id}`} fill={textCol} filter="url(#vsa-text-glow)"
-              fontSize="30" fontWeight={cur === ORDER_OF[id] ? 800 : 500}
-              opacity={cur === ORDER_OF[id] ? 1 : (isLightTheme ? 0.65 : 0.5)}>
-              <textPath href={`#vsa-lbl-${id}`} startOffset="50%" textAnchor="middle" style={{ letterSpacing: '0.14em' }}>
-                {labelOf(id)}
-              </textPath>
-            </text>
-          ))}
           {armed && effId !== 'neutral' && (
             <circle cx={dot.x.toFixed(1)} cy={dot.y.toFixed(1)} r="15" fill={activeCol}
               filter="url(#vsa-seg-glow)"
@@ -318,6 +303,33 @@ export function VistaSenzaAgo({ armed = true, cycleKind = 'charge', nullPhase = 
                 </div>
               </div>
             )}
+            {/* ── LE ETICHETTE DI ZONA, SOTTO L'ULTIMA BARRA — segnalato: « le scritte
+                DISSOLUZIONE, CONTATTO, AS-IS mettile sotto la barra di dissoluzione per non
+                confondersi con quelle dell'arco » (e per NULL: « anche qui le scritte sotto
+                la barra velocità »). Prima i tre nomi correvano CURVI lungo la banda stessa
+                (`textPath`, tolto sopra) — la STESSA informazione della grande scritta al
+                centro (`labelOf(effId)`, qui sopra) ripetuta una seconda volta, curva e quindi
+                più lenta da leggere, proprio dove l'occhio legge già l'arco a colori. Una riga
+                sola, piatta, sotto l'ultima barra (dissoluzione se c'è — CONTACT —, altrimenti
+                la velocità — NULL, che non ne ha una sua): la zona attiva piena e in grassetto,
+                le altre due smorzate — stessa opacità "quieta"/"fatta" già usata sull'arco
+                (`dimOp`/`doneOp`), non una scala nuova inventata qui. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
+              {IDS.map(id => {
+                const active = cur === ORDER_OF[id], done = cur > ORDER_OF[id];
+                const dimOp = isLightTheme ? 0.4 : 0.22;
+                const doneOp = isLightTheme ? 0.75 : 0.55;
+                return (
+                  <span key={`lbl-${id}`} style={{
+                    fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', letterSpacing: '0.1em',
+                    fontWeight: active ? 800 : 600, color: colorOf(id),
+                    opacity: active ? 1 : done ? doneOp : dimOp,
+                  }}>
+                    {labelOf(id)}
+                  </span>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
