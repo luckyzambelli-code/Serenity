@@ -28,7 +28,7 @@ import {
   TONE_TARGET, toneFromTa, toneFromDelta, reachedTop, ToneLocator,
   type TonePhase, type ToneLocateAnchor, type ToneWitness,
 } from '../engine/toneScale';
-import { TONE_SMOOTH } from '../engine/tuning';
+import { TONE_SMOOTH, TONE_MUSE_ESCURSIONE, TONE_HOLD_S } from '../engine/tuning';
 import { TA_MAX } from '../engine/thetaTaScale';
 import { taToTwoCans, toneMargin, withMargin, type PcCanHistory } from '../engine/canTest';
 import type { ElectrodeConfig } from '../engine/thetaSetup';
@@ -169,6 +169,14 @@ export function useToneCycle(d: ToneCycleDeps) {
   const qLSmoothRef = useRef(0);
   const taSmoothRef = useRef<number | null>(null);
   const toneHighRef = useRef<number | null>(null);
+  /** ── IL CANDIDATO IN TENUTA — v. `TONE_HOLD_S` in `tuning.ts`. Segnalato: « il MUSE porta
+   *  subito a tono 40 »: il ratchet sopra prendeva per buono QUALUNQUE nuovo massimo, un solo
+   *  campione fuori posto bastava a bloccarlo lassù per sempre. Un nuovo massimo diventa
+   *  `toneHighRef` (il pavimento garantito) solo dopo essere rimasto il più alto per
+   *  `TONE_HOLD_S` di fila — prima di allora è solo un CANDIDATO, non ancora promosso: se nel
+   *  frattempo il grezzo scende sotto di lui, il candidato scompare senza aver mai contato,
+   *  ed è esattamente quel che deve succedere a un colpo isolato. */
+  const toneCandidateRef = useRef<{ value: number; sinceS: number } | null>(null);
 
   // ── IL TA RIPORTATO ALLE DUE LATTINE ─────────────────────────────────────────────────────
   // « Che fa fede sono le DUE LATTINE ». Con una lattina sola la resistenza è un'altra, e più
@@ -230,7 +238,7 @@ export function useToneCycle(d: ToneCycleDeps) {
    * si applica quando è il MUSE a guidare.
    */
   const toneOraMuse = toneAtStart !== null && toneQAtStartRef.current !== null
-    ? toneFromDelta(toneAtStart, toneQAtStartRef.current, qLSmoothRef.current, 1)
+    ? toneFromDelta(toneAtStart, toneQAtStartRef.current, qLSmoothRef.current, TONE_MUSE_ESCURSIONE)
     : null;
   const toneOraGrezzo = d.hasMuse && toneOraMuse !== null
     ? toneOraMuse
@@ -250,11 +258,30 @@ export function useToneCycle(d: ToneCycleDeps) {
   const toneOra = toneAtStart === null
     ? toneOraGrezzo
     : (() => {
-        const alto = toneHighRef.current === null
-          ? toneOraGrezzo
-          : Math.max(toneOraGrezzo, toneHighRef.current);
-        toneHighRef.current = alto;
-        return alto;
+        // ── UN NUOVO MASSIMO CONTA SOLO DOPO AVER RETTO — v. `TONE_HOLD_S`/`toneCandidateRef`,
+        // sopra. Non il grezzo direttamente nel ratchet (come prima): un CANDIDATO che deve
+        // restare il più alto per `TONE_HOLD_S` di fila prima di diventare il nuovo pavimento
+        // garantito (`toneHighRef`). Un colpo isolato non regge abbastanza e sparisce da solo.
+        const now = d.nowSec();
+        const confermato = toneHighRef.current;
+        if (confermato === null || toneOraGrezzo > confermato) {
+          const cand = toneCandidateRef.current;
+          if (!cand || toneOraGrezzo > cand.value) {
+            // massimo nuovo (più alto di qualunque candidato in prova): il cronometro riparte da qui.
+            toneCandidateRef.current = { value: toneOraGrezzo, sinceS: now };
+          } else if (now - cand.sinceS >= TONE_HOLD_S) {
+            // ha retto abbastanza: promosso a pavimento garantito.
+            toneHighRef.current = cand.value;
+            toneCandidateRef.current = null;
+          }
+        } else {
+          // il grezzo è tornato sotto il pavimento già confermato: nessun candidato in corso da
+          // tenere — un eventuale colpo isolato più su non ha retto, e non deve restare in prova.
+          toneCandidateRef.current = null;
+        }
+        // Prima di qualunque conferma (avvio della salita) si mostra il grezzo: non c'è ancora
+        // un pavimento da garantire, e aspettare la prima conferma lascerebbe lo schermo fermo.
+        return toneHighRef.current ?? toneOraGrezzo;
       })();
   /** Il secondo sguardo per la colonna (`ToneColumn`'s `toneEeg`) — quando il MUSE È già il
    *  cursore primario (sopra) è la STESSA lettura: la colonna mostra il trattino "EEG" solo se
@@ -337,6 +364,7 @@ export function useToneCycle(d: ToneCycleDeps) {
     setToneAtStart(null); setToneAnchor(null); setToneFired([]);
     toneTaAtStartRef.current = null; toneQAtStartRef.current = null;
     toneHighRef.current = null; taSmoothRef.current = null;   // niente "punto più alto" residuo
+    toneCandidateRef.current = null;   // né un candidato in prova rimasto a metà
     setToneRipetizioni(0);   // il conto è di QUESTA resistenza, e la resistenza cambia.
     // Il campo si svuota: una resistenza nuova non porta l'etichetta di quella di prima.
     d.setAuditingQuestion('');
@@ -370,6 +398,7 @@ export function useToneCycle(d: ToneCycleDeps) {
     // Una localizzazione nuova è una resistenza nuova: nessun "punto più alto" di quella di
     // prima le resta appiccicato — riparte dalla SUA origine (v. `toneHighRef`, sopra).
     toneHighRef.current = null;
+    toneCandidateRef.current = null;
     toneStartSecRef.current = d.nowSec();   // il ciclo comincia QUI, non al comando 2
     // Premuto col campo VUOTO, la prima parola dell'auditor diventa l'item — come negli altri
     // tre cicli. Senza, in TONE si poteva solo scrivere: e scrivere vuol dire staccare gli

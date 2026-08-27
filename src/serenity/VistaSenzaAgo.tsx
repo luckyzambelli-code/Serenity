@@ -263,6 +263,40 @@ export function VistaSenzaAgo({ armed = true, cycleKind = 'charge', nullPhase = 
                 );
               })()}
             </div>
+            {/* ── LA DISSOLUZIONE (CONTACT), STESSA BARRA — segnalato: « la percentuale di
+                dissoluzione in contact mettila sotto la velocità con lo stesso design di
+                barra di progressione ». `pct` (sopra) è la STESSA percentuale che già muove
+                il puntino sulla banda DISSOLUTION — non un secondo calcolo, solo una seconda
+                resa dello stesso numero, come lo era la barra della velocità rispetto alla
+                sua cifra. Una sola pista (non tre zone: qui non c'è "lento/normale/veloce",
+                solo "quanto manca") che si riempie da sinistra, stesso colore pieno + bagliore
+                impilato della barra sopra.
+                ⚠️ SOLO CONTACT — la NULL avrebbe bisogno di una "ricarica" concettualmente
+                opposta (quanto la resistenza è RISALITA dopo il mock-up, non quanto è caduta
+                da un picco) e nessuna metrica del genere esiste ancora nel codice
+                (`tzoneStore.cycleDissolved` misura solo una discesa da un picco): riusarla
+                per NULL con lo stesso segno avrebbe detto l'opposto di quel che chiede
+                l'etichetta. Lasciata fuori finché non c'è un numero vero da mostrarle. */}
+            {!isNull && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: textFaint, fontVariantNumeric: 'tabular-nums' }}>
+                  {L('dissoluzione', 'dissolution', 'dissolution', 'disolución', 'upplösning')} {Math.round(pct * 100)}%
+                </span>
+                <div style={{ position: 'relative', width: 200, height: 10 }}>
+                  <div style={{
+                    position: 'absolute', inset: 0, borderRadius: 999, overflow: 'hidden',
+                    background: 'var(--s-disc-sunk)',
+                  }} />
+                  <div style={{
+                    position: 'absolute', top: 0, bottom: 0, left: 0,
+                    width: `${Math.max(2, Math.min(100, pct * 100))}%`,
+                    borderRadius: 999, background: 'var(--s-still)',
+                    boxShadow: '0 0 3px var(--s-still), 0 0 10px var(--s-still), 0 0 18px color-mix(in srgb, var(--s-still) 70%, transparent)',
+                    transition: 'width 0.3s ease',
+                  }} />
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

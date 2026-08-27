@@ -5163,6 +5163,69 @@ EQUILIBRIUM 2.0.227, SERENITY 3.0.120.
 
 ---
 
+## Giro (27/08/2026) — i cicli a prova di stupido: una schermata per tempo, i comandi separati; TONE ricalibrato
+
+**WITH/WITHOUT NEEDLE in maiuscolo** — segnalato: « scrivi WHIT NEEDLE in maiuscolo come per
+il NEEDLE LIGHT ». NEEDLE LIGHT non si traduce mai, un solo letterale in ogni lingua — la
+pillola con/senza ago (giro precedente) ora fa lo stesso: `WITH NEEDLE`/`WITHOUT NEEDLE`,
+fissi, non più `LC(...)`.
+
+**I cicli, decomposti — `PistaCiclo.tsx`.** Segnalato: « le indicazioni siano a prova di
+stupido: decomporre ogni step in una schermata... scritte più in grande... la step seguente
+resta indicata come ora... ANNULER/DECLARE AS-IS/il numero di cicli ora disturbano, separateli
+ma accessibili ». Tre righe, non più una sola fusa insieme:
+1. **Riga 1, invariata**: intestazione del metodo, item scrivibile, "dì l'item…", e la fila dei
+   tempi numerati (1 ITEM · 2 MOCK-UP · 3 AS-IS) — la stessa di sempre, nessuna nota lì cambiata.
+2. **Riga 2, nuova — "lo schermo"**: `SuggerimentoCiclo` (comando/come/avviso) in un blocco
+   TUTTO SUO, fondo proprio più marcato (48%, contro il 30% di quando era un gruppo fra tanti)
+   e un bordo che lo stacca. La sua taglia interna è salita da `--s-fs-lg`/`--s-fs-base` a
+   `--s-fs-hero`/`--s-fs-lg` (`SuggerimentoCiclo.tsx`) — la stessa taglia dei titoli a schermo
+   intero (Avvio, Connessione, EP), non più "titoli minori".
+3. **Riga 3, nuova — i comandi, separati**: `children` (ANNULLA, valida/dichiara, il contatore
+   "N · M AS-IS") in una fascia propria, sotto un bordo (`borderTop`), più piccola/discreta —
+   NON un cassetto da aprire (un cassetto sarebbe MENO accessibile, non di più): restano
+   cliccabili esattamente come prima, solo non più mescolati con la frase grande che l'auditor
+   deve leggere mentre conduce.
+
+**La dissoluzione (CONTACT), stessa barra della velocità.** `VistaSenzaAgo.tsx`: sotto la
+barra della velocità, una seconda barra — stessa resa (pista scavata + riempimento pieno con
+bagliore impilato), la STESSA percentuale che già muove il puntino sulla banda DISSOLUTION
+(`tzoneStore.cycleDissolved`, nessun secondo calcolo). **La "ricarica" per NULL, lasciata
+fuori**: concettualmente è l'OPPOSTO (quanto la resistenza è risalita dopo il mock-up, non
+quanto è caduta da un picco) e nessuna metrica del genere esiste ancora nel codice — riusare
+`cycleDissolved` con lo stesso segno avrebbe detto l'opposto di quel che l'etichetta
+promette. Da riprendere quando c'è un numero vero da mostrarle.
+
+**TONE — il MUSE non salta più a +40 in un colpo.** Segnalato: « il MUSE porta subito a tono
+40. rivediamo come lo calcoliamo » — deciso « entrambe » le correzioni proposte:
+1. **Il guadagno era troppo alto**: `toneFromDelta` riceveva un'escursione di `1` per `qL`
+   (quoziente di carica 0..1) — uno spostamento anche modesto, moltiplicato per l'intera scala
+   (80 divisioni), bastava a superare il fondo scala in un tick. `TONE_MUSE_ESCURSIONE = 4`
+   (nuova, `tuning.ts`) porta il guadagno a un quarto — ⚠️ non una misura verificata sul campo,
+   un punto di partenza dichiarato tale, da stringere/allargare guardando le prossime sedute.
+2. **Il picco doveva reggere un istante**: il ratchet (« solo sale », deciso in un giro
+   precedente) prendeva per buono QUALUNQUE nuovo massimo — un colpo isolato bastava a
+   bloccare il tono lassù per sempre. `TONE_HOLD_S = 0.3` (nuova) richiede che un nuovo massimo
+   resti il più alto per 300ms di fila prima di essere promosso a pavimento garantito
+   (`toneCandidateRef`, `useToneCycle.ts`) — la stessa idea già provata in `MirrorCycle.ts` per
+   distinguere un contatto vero dal rumore, applicata qui a un singolo campione fuori posto.
+
+**Segnalato, ancora non risolto**: il journal che non scrive più il testo dentro un ciclo
+armato (giro precedente). In attesa della risposta dell'utente su ASSESSMENT/microfono prima
+di intervenire alla cieca.
+
+`tsc --noEmit` pulito, `vitest run` 639/639, `npm run lint` 313 warning (nessuno nuovo).
+Verificato dal vivo: CONTACT armato mostra le tre righe separate (schermo grande, comandi
+sotto un bordo), la barra dissoluzione compare sotto la velocità in vista senza ago,
+WITH/WITHOUT NEEDLE in maiuscolo fisso. Il calcolo TONE non verificabile dal vivo senza un
+vero segnale EEG. `git status`: `src/serenity/Serenity.tsx`, `src/serenity/PistaCiclo.tsx`,
+`src/serenity/SuggerimentoCiclo.tsx`, `src/serenity/VistaSenzaAgo.tsx`,
+`src/session/useToneCycle.ts`, `src/engine/tuning.ts`.
+
+EQUILIBRIUM 2.0.228, SERENITY 3.0.121.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

@@ -17,8 +17,8 @@ import React from 'react';
  * `Serenity.tsx → PistaCiclo.tsx → (di nuovo) Serenity.tsx`, un'importazione circolare che
  * il bundler non accetterebbe.
  *
- * `comando` (la citazione, `--s-fs-lg`) / "come" (spiegazione, `--s-fs-base`) / `avviso`
- * (ambra, `--s-fs-base`) — nessuna logica qui: il TESTO lo decide `spiegazioneCiclo` in
+ * `comando` (la citazione, `--s-fs-hero`) / "come" (spiegazione, `--s-fs-lg`) / `avviso`
+ * (ambra, `--s-fs-lg`) — nessuna logica qui: il TESTO lo decide `spiegazioneCiclo` in
  * `Serenity.tsx`, questo componente lo mostra soltanto.
  *
  * ⚠️ `maxWidth` — segnalato insieme allo spostamento di `PistaCiclo` sotto il quadrante («
@@ -28,24 +28,32 @@ import React from 'react';
  * tutto: `comando`/`come`/`avviso` restano tre frasi DIVERSE (citazione, spiegazione,
  * avviso), e vanno lette come tre righe distinte anche in una fascia larga, non fuse in
  * un'unica riga lunghissima che le confonderebbe.
+ *
+ * ⚠️ TAGLIA PORTATA A `--s-fs-hero` — segnalato: « nei cicli le indicazioni siano a prova di
+ * stupido: decomporre ogni step in una schermata, per rendere l'indicazione chiara e le
+ * scritte più in grande ». Questo È il testo che l'auditor guarda mentre conduce (v. la nota
+ * di apertura) — portarlo alla taglia dei titoli a schermo intero (`--s-fs-hero`, 28px, la
+ * stessa dei pannelli Avvio/Connessione/EP) invece della taglia "titoli minori" di prima
+ * (`--s-fs-lg`) è la differenza fra leggerlo di sfuggita e leggerlo a colpo d'occhio.
+ * `PistaCiclo` gli dà ora un blocco tutto suo, separato dai bottoni (v. la nota lì).
  */
 export function SuggerimentoCiclo({ comando, come, avviso, fatto = false }: {
   comando?: string | null; come: string; avviso?: string | null; fatto?: boolean;
 }) {
   return (
-    <span style={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: 760 }}>
+    <span style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 900, textAlign: 'center' }}>
       {comando && (
-        <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-lg)', lineHeight: 1.35,
-                      color: fatto ? 'var(--s-still)' : 'var(--s-ink-soft)' }}>
+        <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-hero)', lineHeight: 1.3,
+                      color: fatto ? 'var(--s-still)' : 'var(--s-ink)' }}>
           {comando}
         </span>
       )}
-      <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', lineHeight: 1.4,
+      <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-lg)', lineHeight: 1.4,
                     color: fatto ? 'var(--s-still)' : 'var(--s-ink-faint)' }}>
         {come}
       </span>
       {avviso && (
-        <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', fontWeight: 700,
+        <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-lg)', fontWeight: 700,
                       color: 'var(--s-reserve)' }}>
           {avviso}
         </span>

@@ -632,6 +632,34 @@ export const TONE_LOCATE_RISE_RATIO = 1.35;
  */
 export const TONE_SMOOTH = 0.15;
 
+/**
+ * ── TONE COL MUSE SALTAVA SUBITO A +40 — segnalato: « il MUSE porta subito a tono 40.
+ * rivediamo come lo calcoliamo ». Due correzioni, decise insieme (« entrambe »), non una:
+ *
+ *   1. IL GUADAGNO ERA TROPPO ALTO. `toneOraMuse` (`useToneCycle.ts`) passava a
+ *      `toneFromDelta` un'« escursione » di `1` — cioè: uno spostamento di `d.qL` (un
+ *      quoziente di carica 0..1, mai tarato su una scala) da 0 a 1 per intero vale l'INTERA
+ *      scala del tono (80 divisioni). Nella pratica `qL` si muove di frazioni modeste anche
+ *      per una reazione vera — con un'escursione di 1 anche quella frazione, moltiplicata per
+ *      80, superava il fondo scala in un solo tick. `TONE_MUSE_ESCURSIONE` (sotto) alza
+ *      l'escursione a 4: la stessa formula, un quarto del guadagno di prima. ⚠️ NON UNA MISURA
+ *      VERIFICATA sul campo (nessun log EEG reale sotto mano per tararla) — un punto di
+ *      partenza ragionevole, da stringere o allargare guardando le prossime sedute vere.
+ *   2. IL PICCO DOVEVA REGGERE UN ISTANTE. Il ratchet (v. `TONE_SMOOTH`, sopra) prendeva per
+ *      buono QUALUNQUE nuovo massimo, anche un solo campione fuori posto — bastava un colpo
+ *      isolato per bloccare il tono lassù per sempre, esattamente il sintomo lamentato.
+ *      `TONE_HOLD_S` (sotto) è la stessa idea già provata in `MirrorCycle.ts` (un contatto non
+ *      conta finché non si distingue dal rumore): un nuovo massimo diventa il nuovo minimo
+ *      garantito SOLO dopo essere rimasto in cima per questo tanto — un colpo isolato scompare
+ *      da solo prima di essere promosso, un movimento vero (che nel frattempo resta il più alto
+ *      per più tick di fila) supera la soglia e sale per davvero.
+ */
+export const TONE_MUSE_ESCURSIONE = 4;
+/** V. la nota sopra — quanto deve reggere un nuovo massimo prima di essere promosso a "punto
+ *  più alto raggiunto". Stessa scala di tempo di `MIRROR_CONTACT_WINDOW_S`, ma più corta: lì
+ *  si aspetta un contatto/rilascio intero, qui basta scartare un singolo campione di rumore. */
+export const TONE_HOLD_S = 0.3;
+
 // ═══════════════════════════════════════════════════════════════════════════════════════════
 // INTEGRITÀ DEL SEGNALE
 // ═══════════════════════════════════════════════════════════════════════════════════════════

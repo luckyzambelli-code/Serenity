@@ -4322,9 +4322,13 @@ export default function Serenity() {
                   border: '1px solid var(--s-ink-ghost)',
                   color: vistaSenzaAgo ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
                 }}>
-                {vistaSenzaAgo
-                  ? `● ${LC('senza ago', 'sans aiguille', 'without needle', 'sin aguja', 'utan nål')}`
-                  : `○ ${LC('con ago', 'avec aiguille', 'with needle', 'con aguja', 'med nål')}`}
+                {/* ⚠️ MAIUSCOLO E FISSO IN INGLESE — segnalato: « scrivi WITH NEEDLE in
+                    maiuscolo come per il NEEDLE LIGHT ». NEEDLE LIGHT non si traduce mai (v.
+                    sopra, `{showTrailPref ? '● ' : '○ '}NEEDLE LIGHT`, un unico letterale in
+                    tutte le lingue) — la stessa forma per QUESTO bottone vuol dire la stessa
+                    scelta, non solo lo stesso font: due nomi di comando, non due frasi
+                    tradotte. */}
+                {vistaSenzaAgo ? '● WITHOUT NEEDLE' : '○ WITH NEEDLE'}
               </button>
             )}
           </div>

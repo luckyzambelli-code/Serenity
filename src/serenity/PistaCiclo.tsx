@@ -166,6 +166,17 @@ export function PistaCiclo({ mode, phase, lang, item, setItem, itemPlaceholder, 
       // sola, andando a capo fra un gruppo e l'altro (`flexWrap:'wrap'`) solo se lo spazio
       // davvero non basta, mai a metà frase.
       width: 'min(96%, 2200px)', maxWidth: '100%', flexShrink: 0,
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      gap: 14,
+    }}>
+    {/* ── RIGA 1 — INTESTAZIONE, ITEM, TEMPI: INVARIATA — segnalato: « la step seguente deve
+        essere indicata come ora, per cui la prima linea del ciclo con 1, 2,... resta ». Questo
+        gruppo (nome del metodo, l'item scrivibile, il "dì l'item…", la fila dei tempi numerati)
+        è esattamente quello di prima — nessuna delle sue note sotto è cambiata, solo il
+        CONTENITORE attorno (sopra: era `flexDirection:'row'` per tutto, ora è la riga UNO di
+        tre, non più l'unica). */}
+    <div style={{
       display: 'flex', flexDirection: 'row', flexWrap: 'wrap',
       alignItems: 'center', justifyContent: 'center',
       rowGap: 10, columnGap: 20,
@@ -308,36 +319,42 @@ export function PistaCiclo({ mode, phase, lang, item, setItem, itemPlaceholder, 
           );
         })}
       </div>
-      {/* ── LE INDICAZIONI — segnalato: « le indicazioni, e non solo gli step, devono stare
-          coi comandi ». `SuggerimentoCiclo` (comando/come/avviso), lo stesso componente che
-          prima viveva nella barra comandi — segue SEMPRE il tempo reale (`spiegazione`), mai
-          il `fuoco` di preview (v. la nota in cima al file). `pointerEvents:'auto'`: è testo,
-          non un bottone, ma resta sopra un fondo proprio per staccarsi dall'arco come i tempi
-          qui sopra. Nessun `flexShrink:0`: è il gruppo più lungo (una frase intera, non
-          un'etichetta) — se qualcosa deve cedere spazio o andare a capo per primo, è lui. */}
-      <div style={{
-        padding: '4px 10px', pointerEvents: 'auto', borderRadius: 14,
-        background: 'color-mix(in srgb, var(--s-ground) 30%, transparent)',
-      }}>
-        <SuggerimentoCiclo {...spiegazione} />
-      </div>
-      {/* ── I BOTTONI VERI — segnalato: « tutte le indicazioni devono essere coi comandi ed
-          anche i bottoni », poi: « il più possibile le scritte su una riga ». `children`, non
-          calcolati qui (v. la nota sulla prop): `flexDirection:'row'`, non più `'column'` — i
-          bottoni si affiancano invece di impilarsi; `flexWrap` interno resta, per i gruppi
-          davvero larghi (i dieci bottoni del valore in MIRROR, il selettore + bottone di
-          TONE) che possono superare pure i 1400px disponibili. Niente più `width:'100%'`: su
-          una riga che deve stare AFFIANCO agli altri gruppi, forzare la piena larghezza
-          avrebbe spinto ogni altro gruppo su una riga propria — l'esatto opposto della
-          richiesta. */}
-      {children && (
-        <div style={{
-          display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8,
-          pointerEvents: 'auto', flexShrink: 0,
-        }}>
-          {children}
-        </div>
-      )}
     </div>
+    {/* ── RIGA 2 — LO SCHERMO DEL TEMPO IN CORSO — segnalato: « decomporre ogni step in una
+        schermata per rendere l'indicazione chiara e le scritte più in grande ». Prima
+        `SuggerimentoCiclo` era un gruppo fra tanti nella STESSA riga dei bottoni — un blocco
+        di testo comprimibile come gli altri, alla stessa taglia. Ora ha una riga TUTTA SUA,
+        un fondo proprio più marcato (48% invece di 30%: deve leggersi come "lo schermo",
+        non come un'etichetta fra le altre) e un bordo sottile che lo stacca — la sua taglia
+        interna è già cresciuta in `SuggerimentoCiclo.tsx` (`--s-fs-hero`, v. la nota lì).
+        `pointerEvents:'auto'`: è testo, non un bottone, ma resta sopra un fondo proprio per
+        staccarsi dall'arco sotto — stessa ragione di prima, un fondo più deciso adesso. */}
+    <div style={{
+      padding: '20px 32px', pointerEvents: 'auto', borderRadius: 20, width: '100%',
+      display: 'flex', justifyContent: 'center',
+      background: 'color-mix(in srgb, var(--s-ground) 48%, transparent)',
+      border: '1px solid var(--s-zone-border)',
+    }}>
+      <SuggerimentoCiclo {...spiegazione} />
+    </div>
+    {/* ── RIGA 3 — I COMANDI, SEPARATI DALLO SCHERMO MA RAGGIUNGIBILI — segnalato: « le
+        indicazioni di ANNULLER, DECLARE AS-IS ecc. nonché il numero di cicli ora disturbano la
+        chiarezza di cosa sta succedendo durante il ciclo. Bisognerebbe che siano separate
+        dalle scritte, ma accessibili ». Non nascosti (un cassetto da aprire sarebbe MENO
+        accessibile di adesso, non di più) — solo spostati FUORI dal blocco "schermo" qui
+        sopra, in una fascia propria più piccola/discreta: taglia dei bottoni invariata
+        (`children`, calcolati in `Serenity.tsx`, non toccati), ma senza più condividere la
+        riga con la frase grande che l'auditor deve leggere mentre conduce — le due cose non
+        si confondono più a colpo d'occhio. */}
+    {children && (
+      <div style={{
+        display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center',
+        gap: 8, pointerEvents: 'auto', flexShrink: 0, width: '100%',
+        paddingTop: 10, borderTop: '1px solid var(--s-zone-border)',
+      }}>
+        {children}
+      </div>
+    )}
+  </div>
   );
 }
