@@ -5226,6 +5226,61 @@ EQUILIBRIUM 2.0.228, SERENITY 3.0.121.
 
 ---
 
+## Giro (27/08/2026) — lo squeeze test rivuole l'ago; testi CONTACT/NULL/MIRROR completati; la dissoluzione solo sale; TONE non mostra la scala prima dell'item
+
+**Lo squeeze test riporta da solo il selettore su CON AGO.** Segnalato: « se il selettore è su
+SENZA AGO il test dello squeeze resta disponibile ma non si vede l'ago ». `vistaSenzaAgo`
+persiste da una seduta all'altra — se l'ultima scelta era "senza ago", `ThetaReadyCheck` (la
+stretta delle boîtes) restava raggiungibile ma l'ago vero, che deve muoversi di un terzo di
+quadrante, restava nascosto dietro `VistaSenzaAgo`. Un nuovo `useEffect` (`Serenity.tsx`) lo
+riporta su "con ago" UN COLPO SOLO quando quello schermo si apre (`metabolicOpen && meterC &&
+!thetaReadyDone`) — non un blocco permanente, l'auditor resta libero di tornare a "senza ago"
+dopo. Verificato dal vivo: con "senza ago" impostato da una sessione precedente, aprendo una
+seduta con le boîtes il selettore passa da sé a "con ago" e l'ago appare.
+
+**Tre testi completati, dove finivano su un "poi" senza aver detto il "prima".** In CONTACT,
+NULL e MIRROR il titolo del tempo diceva già cosa fare ("2 · CHIEDI UN MOCK-UP", "4 · PORTA AL
+DOPPIO X.X") ma il corpo del testo (`spiegazioneCiclo.come`) saltava dritto al "poi non fare
+altro" senza mai scrivere l'istruzione vera:
+- CONTACT, step 2: "Chiedi un mock-up. Poi non fare altro..." (prima: solo "Poi non fare
+  altro...").
+- MIRROR, step 4: "Porta il valore al suo doppio. Valore X.X — il metodo del doppio di Ron..."
+  (prima: solo "Valore X.X — ..."). Segnalato insieme: la step "valore" (③ CONTATTO DELLA
+  CARICA) resta nella fila numerata (non toccata, per la regola "la fila resta") ma è lei
+  stessa a spiegare perché l'istruzione vera va scritta QUI, nel tempo del doppio.
+- NULL, `comeSenzaAgo` (la frase mostrata in seduta "senza strumenti", non "senza ago" — le
+  due sono diverse, v. la nota nel codice): mancava la frase che la versione CON strumenti
+  aveva già per `null.rise` ("Il mock-up sta creando massa. Aspetta il ritorno alla base:
+  quello è l'EQUILIBRIUM.") — chi testa senza hardware reale (la scelta più comune per evitare
+  il selettore nativo MUSE/METER, bloccante) vedeva un'altra frase, mai questa.
+
+**La dissoluzione (CONTACT) ora sale sola e arriva a 100% solo all'AS-IS.** Segnalato: « la
+barra deve indicare 100% solo quando ottenuto AS-IS... falla progredire in modo che salga, mai
+che scenda ». `VistaSenzaAgo.tsx`: lo stesso ratchet già provato per TONE (« la vediamo solo
+salire ») applicato al rapporto di dissoluzione — `dissHighRef` tiene il massimo raggiunto DA
+QUESTO ciclo (si azzera solo quando un ciclo nuovo arma), il 100% pieno resta riservato al vero
+AS-IS (`effId==='asis'`, la stessa condizione che fa pulsare il puntino a fondo banda) — prima
+di allora il massimo visibile è 99%, anche se la misura grezza avesse già toccato zero per un
+istante.
+
+**TONE non mostra più un livello prima che la resistenza abbia un nome.** Segnalato: « l'item
+dato a voce non si scrive... per cui il ciclo non si arma. Quando il ciclo TONE non è armato,
+non si deve mostrare il livello della scala del tono ». Causa trovata: il click in un colpo
+solo sul cerchio TONE (giro precedente) localizza SUBITO — `toneAttivo` diventa vero prima che
+l'auditor abbia detto la resistenza, ma `ToneDial`/`ToneColumn` (l'arco) si montavano sulla
+sola condizione `toneAttivo`, ignorando che `faseCiclo` restava `'tone.say_item'` (non
+`'tone.raise'`) finché `itemNamed` era falso — la STESSA informazione che già guidava
+correttamente il testo, mai letta dall'arco. Ora l'arco resta vuoto (`null`) finché `faseCiclo`
+non passa a `'tone.raise'`/`'tone.done'` — verificato dal vivo: armato TONE, l'arco resta senza
+scala finché non si dà l'item; datolo, la scala −40…+40 appare subito.
+
+`tsc --noEmit` pulito, `vitest run` 639/639, `npm run lint` 313 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx`, `src/serenity/VistaSenzaAgo.tsx`.
+
+EQUILIBRIUM 2.0.229, SERENITY 3.0.122.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

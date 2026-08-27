@@ -1259,6 +1259,19 @@ export default function Serenity() {
   useEffect(() => {
     try { localStorage.setItem('serenity_vista_senza_ago', vistaSenzaAgo ? '1' : '0'); } catch { /* noop */ }
   }, [vistaSenzaAgo]);
+  /** ── LO SQUEEZE TEST VUOLE L'AGO — segnalato: « quando si inizia una session se il
+   *  selettore è su SENZA AGO il test dello squeeze resta disponibile ma non si vede l'ago,
+   *  devi portare il selettore automaticamente su CON AGO ». `vistaSenzaAgo` persiste da una
+   *  seduta all'altra (sopra) — se l'ultima scelta era "senza ago", `ThetaReadyCheck` (la
+   *  stretta delle boîtes, montato quando `metabolicOpen && meterC && !thetaReadyDone` — v. la
+   *  IIFE del render) resta comunque raggiungibile, ma l'ago che deve muoversi di un terzo di
+   *  quadrante è nascosto dietro `VistaSenzaAgo`. UN COLPO SOLO quando quello schermo si apre,
+   *  non un blocco permanente: l'auditor resta libero di tornare a "senza ago" a test finito
+   *  (o anche durante, se preferisce — questo effetto non lo rimette a posto una seconda
+   *  volta finché le sue dipendenze non cambiano di nuovo). */
+  useEffect(() => {
+    if (metabolicOpen && meterC && !thetaReadyDone) setVistaSenzaAgo(false);
+  }, [metabolicOpen, meterC, thetaReadyDone]);
   /** ── « DUE » — segnalato: « manca anche la vista in MUSE/METER di ENTRAMBI ». La terza
    *  voce del selettore di App.tsx (`reazioniViste`): l'ago resta quello del Meter (misurato,
    *  non ricostruito — `setAgoScelto('theta')` quando si sceglie DUE, stessa regola di
@@ -1592,7 +1605,16 @@ export default function Serenity() {
         come: LC('Lo smaltito ha raggiunto il doppio. Valida e riparti con un altro item.', 'Le déchargé a atteint le double. Valide et repars avec un autre item.', 'The discharged reached the double. Validate and go on with another item.', 'Lo descargado alcanzó el doble. Valida y sigue con otro ítem.', 'Det urladdade nådde dubbeln. Validera och fortsätt med ett annat item.') };
       return {
         titolo: `4 · ${LC('PORTA AL DOPPIO', 'MÈNE AU DOUBLE', 'TAKE IT TO THE DOUBLE', 'LLEVA AL DOBLE', 'FÖR TILL DUBBELN')} ${(2 * mirror.mirrorDisp.valueR).toFixed(1)}`,
-        come: LC(`Valore ${mirror.mirrorDisp.valueR.toFixed(1)} — il metodo del doppio di Ron. Non fare altro: si smaltisce da sé.`, `Valeur ${mirror.mirrorDisp.valueR.toFixed(1)} — la méthode du double de Ron. Ne fais rien d'autre : ça se décharge tout seul.`, `Value ${mirror.mirrorDisp.valueR.toFixed(1)} — Ron's doubling method. Do nothing else: it discharges by itself.`, `Valor ${mirror.mirrorDisp.valueR.toFixed(1)} — el método del doble de Ron. No hagas nada más: se descarga solo.`, `Värde ${mirror.mirrorDisp.valueR.toFixed(1)} — Rons dubbelmetod. Gör inget annat: det laddas ur av sig självt.`) };
+        // ⚠️ SEGNALATO — il titolo già diceva "porta al doppio X.X", ma il corpo saltava
+        // dritto alla descrizione ("Valore X.X — il metodo...") senza mai dirlo come
+        // ISTRUZIONE: la step "valore" (poco sopra) resta inutile una volta qui, proprio
+        // perché QUESTO tempo dovrebbe bastare da solo a dire cosa fare — stessa correzione
+        // già fatta per CONTACT, poco sopra.
+        come: LC(`Porta il valore al suo doppio. Valore ${mirror.mirrorDisp.valueR.toFixed(1)} — il metodo del doppio di Ron. Non fare altro: si smaltisce da sé.`,
+                 `Mène la valeur à son double. Valeur ${mirror.mirrorDisp.valueR.toFixed(1)} — la méthode du double de Ron. Ne fais rien d'autre : ça se décharge tout seul.`,
+                 `Take the value to its double. Value ${mirror.mirrorDisp.valueR.toFixed(1)} — Ron's doubling method. Do nothing else: it discharges by itself.`,
+                 `Lleva el valor a su doble. Valor ${mirror.mirrorDisp.valueR.toFixed(1)} — el método del doble de Ron. No hagas nada más: se descarga solo.`,
+                 `För värdet till sin dubbel. Värde ${mirror.mirrorDisp.valueR.toFixed(1)} — Rons dubbelmetod. Gör inget annat: det laddas ur av sig självt.`) };
     }
     if (cycles.cycleKind === 'null' && cycles.cycleArmed) {
       if (faseCiclo === 'null.item') return {
@@ -1622,7 +1644,15 @@ export default function Serenity() {
       come: LC('La firma della carica è collassata e l\'F/N è arrivato. Proposto: validi tu, mai l\'app.', 'La signature de la charge s\'est effondrée et la F/N est là. Proposé : c\'est toi qui valides, jamais l\'app.', 'The charge signature has collapsed and the F/N is here. Proposed: you validate, never the app.', 'La firma de la carga colapsó y llegó la F/N. Propuesto: validas tú, nunca la app.', 'Laddningens signatur har kollapsat och F/N är här. Föreslaget: du validerar, aldrig appen.') };
     return {
       titolo: LC('2 · CHIEDI UN MOCK-UP', '2 · DEMANDE UN MOCK-UP', '2 · ASK FOR A MOCK-UP', '2 · PIDE UN MOCK-UP', '2 · BE OM EN MOCK-UP'),
-      come: LC('Poi non fare altro: il ciclo avanza da sé fino all\'AS-IS.', 'Puis ne fais rien d\'autre : le cycle avance tout seul jusqu\'à l\'AS-IS.', 'Then do nothing else: the cycle advances by itself to the AS-IS.', 'Luego no hagas nada más: el ciclo avanza solo hasta el AS-IS.', 'Gör sedan inget mer: cykeln går själv fram till AS-IS.'),
+      // ⚠️ SEGNALATO — mancava l'istruzione VERA prima del « poi non fare altro »: il titolo
+      // già diceva "chiedi un mock-up", ma la frase saltava dritta a "poi" senza mai dire
+      // COSA viene prima di quel "poi" — lo stesso testo, senza ago (`comeSenzaAgo`,
+      // `case 'contact.mockup'`, poco sopra), lo diceva già per intero.
+      come: LC('Chiedi un mock-up. Poi non fare altro: il ciclo avanza da sé fino all\'AS-IS.',
+               'Demande un mock-up. Puis ne fais rien d\'autre : le cycle avance tout seul jusqu\'à l\'AS-IS.',
+               'Ask for a mock-up. Then do nothing else: the cycle advances by itself to the AS-IS.',
+               'Pide un mock-up. Luego no hagas nada más: el ciclo avanza solo hasta el AS-IS.',
+               'Be om en mock-up. Gör sedan inget mer: cykeln går själv fram till AS-IS.'),
       avviso: cycles.noReadSignal
         ? LC('sembra NULL — nessuna lettura nella finestra', 'semble NULL — aucune lecture dans la fenêtre', 'looks NULL — no read in the window', 'parece NULL — ninguna lectura en la ventana', 'ser NULL ut — ingen avläsning i fönstret')
         : chargePhaseNow === 'discharge'
@@ -1656,12 +1686,26 @@ export default function Serenity() {
                   'Type it or say it, then press: we work on what does not react.',
                   'Escríbelo o dilo, luego pulsa: se trabaja sobre lo que no reacciona.',
                   'Skriv eller säg det, tryck sedan: man arbetar på det som inte reagerar.');
-      case 'null.mockup': case 'null.rise':
+      // ⚠️ SEGNALATO — mancava qui il testo che `spiegazioneCiclo.come` già dice per
+      // `null.rise` (« Il mock-up sta creando massa. Aspetta il ritorno alla base: quello è
+      // l'EQUILIBRIUM »): questa funzione (`comeSenzaAgo`) è quella VERAMENTE mostrata quando
+      // la seduta è « senza strumenti » — non `vistaSenzaAgo` (la preferenza visiva, con lo
+      // strumento comunque collegato), la scelta fatta all'apertura seduta. Chi testa senza
+      // hardware reale sceglie spesso "senza strumenti" apposta (evita il selettore nativo
+      // MUSE/METER, bloccante in questo genere di verifica) — è QUESTA la frase che vedeva,
+      // non quella con l'ago.
+      case 'null.mockup':
         return LC('Chiedi un mock-up. Ci riesce → EQUILIBRIUM. Non ci riesce → NON RICARICA.',
                   'Demande un mock-up. Il y arrive → EQUILIBRIUM. Il n\'y arrive pas → NE RECHARGE PAS.',
                   'Ask for a mock-up. He can → EQUILIBRIUM. He can\'t → NO RECHARGING.',
                   'Pide un mock-up. Lo logra → EQUILIBRIUM. No lo logra → NO RECARGA.',
                   'Be om en mock-up. Klarar → EQUILIBRIUM. Klarar inte → LADDAR INTE.');
+      case 'null.rise':
+        return LC('Il mock-up sta creando massa. Aspetta il ritorno alla base: quello è l\'EQUILIBRIUM.',
+                  'Le mock-up crée de la masse. Attends le retour à la base : c\'est ça l\'EQUILIBRIUM.',
+                  'The mock-up is creating mass. Wait for the return to base: that is the EQUILIBRIUM.',
+                  'El mock-up está creando masa. Espera el retorno a la base: eso es el EQUILIBRIUM.',
+                  'Mock-upen skapar massa. Vänta på återgången till basen: det är EQUILIBRIUM.');
       case 'contact.say_item': case 'null.say_item':
         return LC('Dì l\'item adesso: la prima parola che dici diventa l\'item.',
                   'Dis l\'item maintenant : le premier mot que tu dis devient l\'item.',
@@ -4462,7 +4506,7 @@ export default function Serenity() {
                 isLightTheme={isLightTheme}
                 lang={lang}
               />
-            ) : toneAttivo ? (
+            ) : toneAttivo && (faseCiclo === 'tone.raise' || faseCiclo === 'tone.done') ? (
               <>
                 {/* ⚠️ `hasMeter={tone.toneMisurato}`, non `tone.toneHasMeter` — v. la nota in
                     `useToneCycle.ts`. Con la priorità « MUSE se c'è, altrimenti Meter,
@@ -4525,6 +4569,21 @@ export default function Serenity() {
                   />
                 </div>
               </>
+            ) : toneAttivo ? (
+              // ⚠️ TONE ARMATO MA SENZA RESISTENZA ANCORA DATA — segnalato: « quando il ciclo
+              // TONE non è armato, non si deve mostrare il livello della scala del tono ».
+              // Un click sul cerchio TONE localizza subito (v. la sua nota, `onClick` più giù)
+              // — `toneAttivo` diventa vero PRIMA che l'auditor abbia detto la resistenza, e
+              // `faseCiclo` lo sa già (resta `'tone.say_item'`, non `'tone.raise'`, finché
+              // `itemNamed` è falso — v. `deriveCyclePhase` in `sessionPhase.ts`, non toccato
+              // qui). Prima di questo giro l'arco mostrava comunque `ToneDial` con un livello
+              // vero (`tone.toneOra`), calcolato su una resistenza che non ha ancora nome — un
+              // numero che sembrava già "in corso" quando in realtà si stava solo aspettando
+              // la voce. Niente disegnato qui finché quel nome non arriva: né `ToneDial` (che
+              // avrebbe la vocabolario sbagliato per TONE se sostituito da `ClearDial`), né un
+              // arco qualunque al suo posto — l'indicazione di cosa fare resta comunque a
+              // schermo, in `PistaCiclo` (mai gestita qui).
+              null
             ) : vistaSenzaAgo ? null : (
               // ⚠️ `ClearDial` (l'anello sottile concentrico all'ago) non ha più motivo di
               // esistere in questa vista: `VistaSenzaAgo`, montata sopra al posto

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useMetric } from '../store/metricsStore';
 import { useTZone } from '../store/tzoneStore';
 import { chargeStateById, type ChargeStateId } from '../lib/chargeState';
@@ -95,7 +95,7 @@ export function VistaSenzaAgo({ armed = true, cycleKind = 'charge', nullPhase = 
   const velRatio = useMetric(m => m.velRatio);
   const { cyclePeakQ } = useTZone();
   const qLNow = useMetric(m => m.qL);
-  const pct = cyclePeakQ > 0.001 ? Math.max(0, Math.min(1, (cyclePeakQ - Math.max(0, qLNow)) / cyclePeakQ)) : 0;
+  const pctGrezzo = cyclePeakQ > 0.001 ? Math.max(0, Math.min(1, (cyclePeakQ - Math.max(0, qLNow)) / cyclePeakQ)) : 0;
 
   const isNull = cycleKind === 'null';
   const IDS: string[] = isNull ? (NULL_IDS as string[]) : (PHASES as string[]);
@@ -109,6 +109,27 @@ export function VistaSenzaAgo({ armed = true, cycleKind = 'charge', nullPhase = 
     : (t(chargeStateById(id as ChargeId).labelKey as never) as string);
   const effId: string = isNull ? (armed ? nullPhase : 'neutral') : (armed ? phase : 'neutral');
   const cur = armed ? (ORDER_OF[effId] ?? -1) : -1;
+
+  /** ── LA DISSOLUZIONE, SOLO SALE E ARRIVA A 100% SOLO ALL'AS-IS — segnalato: « la barra con
+   *  la percentuale deve indicare 100% solo quando ottenuto as-is... falla progredire in modo
+   *  che salga, mai che scenda ». `pctGrezzo` (sopra) è un RAPPORTO istantaneo (picco vs
+   *  adesso): può oscillare avanti e indietro col rumore della lettura — esattamente quel che
+   *  la richiesta vuole evitare, la stessa famiglia di correzione già fatta per TONE (« la
+   *  vediamo solo salire »). `dissHighRef` tiene il massimo raggiunto DA QUESTO ciclo; si
+   *  azzera solo quando un ciclo NUOVO arma (`armed` passa da falso a vero), mai a metà. Il
+   *  100% pieno resta riservato al vero AS-IS (`effId==='asis'`, la STESSA condizione che fa
+   *  pulsare il puntino a fondo banda) — prima di allora il massimo visibile è 99%, cosa che
+   *  fa capire che manca ancora l'ultimo passo anche se la misura grezza avesse già toccato
+   *  zero per un istante. */
+  const dissHighRef = useRef(0);
+  const eraArmatoRef = useRef(false);
+  useEffect(() => {
+    if (armed && !eraArmatoRef.current) dissHighRef.current = 0;   // nuovo ciclo: si riparte da zero
+    eraArmatoRef.current = armed;
+  }, [armed]);
+  if (pctGrezzo > dissHighRef.current) dissHighRef.current = pctGrezzo;
+  const allAsIs = !isNull && effId === 'asis';
+  const pct = allAsIs ? 1 : Math.min(0.99, dissHighRef.current);
 
   // Lo stesso puntino di avanzamento di `ClearDial` — STESSA lettura del dato, non un secondo
   // calcolo: scorre nella DISSOLUTION col blow-down (pct), salta a fine banda e pulsa
