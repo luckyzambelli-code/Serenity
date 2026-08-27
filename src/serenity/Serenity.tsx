@@ -1644,7 +1644,18 @@ export default function Serenity() {
         come: LC('La prima parola che dici diventa l\'item, e la misura riparte da lì.', 'Le premier mot que tu dis devient l\'item, et la mesure repart de là.', 'The first word you say becomes the item, and the measure restarts there.', 'La primera palabra que digas se vuelve el ítem, y la medida reinicia allí.', 'Det första ordet du säger blir item, och mätningen börjar om där.') };
       if (!mirror.mirrorDisp.locked) return {
         titolo: LC('3 · CONTATTO DELLA CARICA', '3 · CONTACT DE LA CHARGE', '3 · CONTACTING THE CHARGE', '3 · CONTACTO DE LA CARGA', '3 · KONTAKT MED LADDNINGEN'),
-        come: LC('Aspetta: il valore 1–10 si fissa da sé quando la lettura si è girata.', 'Attends : la valeur 1–10 se fige d\'elle-même quand la lecture s\'est retournée.', 'Wait: the 1–10 value fixes itself once the read has turned over.', 'Espera: el valor 1–10 se fija solo cuando la lectura se ha girado.', 'Vänta: värdet 1–10 fäster av sig självt när avläsningen vänt.') };
+        // ⚠️ SEGNALATO — quotata parola per parola: « la valeur 1–10 se fige d'elle-même quand
+        // la lecture s'est retournée n'est pas clair ». "si è girata"/"s'est retournée" è
+        // gergo del segnale (il picco superato e la lettura che ridiscende), non un'immagine
+        // chiara per chi legge senza sapere come funziona il calcolo dentro. Riscritta su DUE
+        // cose, non una: COSA succede in termini fisici (il picco passa, non "si gira"), E che
+        // i dieci bottoni qui sotto restano una scelta valida — prima "aspetta" e dieci
+        // bottoni cliccabili fianco a fianco lasciavano capire che aspettare fosse LA sola via.
+        come: LC('Si blocca da sé un attimo dopo il picco della carica — oppure scegli tu il valore qui sotto.',
+                 'Elle se verrouille toute seule juste après le pic de la charge — ou choisis toi-même la valeur ci-dessous.',
+                 'It locks itself just after the charge peaks — or pick the value yourself below.',
+                 'Se bloquea sola justo después del pico de la carga — o elige tú el valor abajo.',
+                 'Den låser sig själv strax efter laddningens topp — eller välj värdet själv nedan.') };
       if (mirror.mirrorDisp.reached) return {
         titolo: LC('OTTENUTO', 'OBTENU', 'OBTAINED', 'OBTENIDO', 'UPPNÅTT'), fatto: true,
         come: LC('Lo smaltito ha raggiunto il doppio. Valida e riparti con un altro item.', 'Le déchargé a atteint le double. Valide et repars avec un autre item.', 'The discharged reached the double. Validate and go on with another item.', 'Lo descargado alcanzó el doble. Valida y sigue con otro ítem.', 'Det urladdade nådde dubbeln. Validera och fortsätt med ett annat item.') };
@@ -2486,6 +2497,25 @@ export default function Serenity() {
             </div>
           ) : !mirror.mirrorDisp.reached ? (
             <>
+              {/* ⚠️ SEGNALATO: « la valeur 1–10 se fige d'elle-même quand la lecture s'est
+                  retournée n'est pas clair dans MIRROR ». Il blocco è voluto (v. la nota su
+                  `locked`/`turnedOver` in `MirrorCycle.ts`: il valore si ferma appena il picco
+                  passa, non al massimo di sempre) — quel che mancava era DIRLO. Prima questa
+                  riga passava dritta dal valore "vivo" (i dieci bottoni) al valore bloccato
+                  senza una parola sul perché si è fermato: un numero che smette di muoversi,
+                  senza spiegazione, si legge come un guasto. Un piccolo 🔒 con la frase basta a
+                  chiudere il dubbio, senza aggiungere un secondo pannello. */}
+              <span style={{
+                fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
+                color: 'var(--s-ink-faint)', marginRight: 8, display: 'inline-flex', alignItems: 'center', gap: 3,
+              }} title={LC(
+                'il valore si è bloccato da sé: la lettura ha superato il picco ed è tornata indietro',
+                'la valeur s\'est verrouillée toute seule : la lecture a dépassé le pic et est revenue en arrière',
+                'the value locked itself: the reading passed its peak and turned back',
+                'el valor se bloqueó solo: la lectura pasó su pico y regresó',
+                'värdet låste sig självt: avläsningen passerade sin topp och vände tillbaka')}>
+                🔒 {LC('bloccato', 'verrouillé', 'locked', 'bloqueado', 'låst')}
+              </span>
               <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
                 {LC('portalo al doppio', 'mène-le au double', 'take it to the double', 'llévalo al doble', 'för det till dubbeln')}
                 {' — '}{mirror.mirrorDisp.valueR.toFixed(0)} → {(2 * mirror.mirrorDisp.valueR).toFixed(0)}
@@ -4093,9 +4123,18 @@ export default function Serenity() {
             tutto lo spazio — il terzo riservato non è mai vuoto sprecato quando non serve. */}
         {(() => {
           const comandiSottoAgo = aperta && !senzaMisura;
+          // ⚠️ SEGNALATO: « quand on a le CYCLE en bas l'arc est petit, baisse la position des
+          // CICLES pour agrandir l'arc ». Il due-terzi/un-terzo (sopra) era FISSO, uguale a
+          // schermo inattivo (i quattro cerchi di scelta, poche righe) e a ciclo ARMATO (tutta
+          // la `PistaCiclo` — testo del tempo, ANNULLER/DECLARE AS-IS, conteggio: molto più
+          // alta). Un ciclo attivo riceve ora tre quarti invece di due terzi — l'arco cresce
+          // proprio quando prima si sentiva più piccolo, perché il gruppo basso gliene cedeva
+          // di meno, non di più: non era un errore percettivo, il rapporto non teneva conto se
+          // sotto ci fosse poco o molto da mostrare.
+          const cicloAttivo = cycles.cycleArmed || mirror.mirrorArmed || toneAttivo || procedimentoAttivo;
           return (
         <>
-        <div style={{ flex: comandiSottoAgo ? '2 1 0%' : '1 1 0%', minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+        <div style={{ flex: comandiSottoAgo ? (cicloAttivo ? '3 1 0%' : '2 1 0%') : '1 1 0%', minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
         {/* ── OBIETTIVO / STATO FISICO / R-FACTOR — segnalato di nuovo: « devono essere
             presenti in alto in larghezza ». Vivevano infilati nell'angolo in alto a sinistra
             del pannello dell'ago, un campo per riga — spostati in cima a questa stessa colonna

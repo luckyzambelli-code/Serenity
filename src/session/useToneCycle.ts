@@ -28,7 +28,7 @@ import {
   TONE_TARGET, toneFromTa, toneFromDelta, reachedTop, ToneLocator,
   type TonePhase, type ToneLocateAnchor, type ToneWitness,
 } from '../engine/toneScale';
-import { TONE_SMOOTH, TONE_MUSE_ESCURSIONE, TONE_HOLD_S } from '../engine/tuning';
+import { TONE_SMOOTH, TONE_HOLD_S, TONE_AMBIENT_ALPHA, TONE_AMBIENT_MIN, TONE_SIGMA_SPAN } from '../engine/tuning';
 import { TA_MAX } from '../engine/thetaTaScale';
 import { taToTwoCans, toneMargin, withMargin, type PcCanHistory } from '../engine/canTest';
 import type { ElectrodeConfig } from '../engine/thetaSetup';
@@ -168,6 +168,14 @@ export function useToneCycle(d: ToneCycleDeps) {
    *  `localizzaTone`, mai durante la stessa salita). */
   const qLSmoothRef = useRef(0);
   const taSmoothRef = useRef<number | null>(null);
+  /** ── L'AMPIEZZA-AMBIENTE DI QUESTA PERSONA — v. la nota su `TONE_AMBIENT_ALPHA`/
+   *  `TONE_SIGMA_SPAN` in `tuning.ts`. Una EMA (molto lenta) di quanto `d.qL` si scosta dalla
+   *  sua stessa media (`qLSmoothRef`): non "quanto vale adesso", ma "quanto tipicamente
+   *  oscilla QUESTA persona quando non sta succedendo niente di speciale" — lo stesso ruolo di
+   *  `ambientQ` dentro `ToneLocator`, qui esteso a ogni tick invece che al solo istante del
+   *  clic su LOCALIZZA. Non si azzera mai al cambio ciclo/localizzazione (a differenza di
+   *  `toneHighRef`): è un tratto della persona, non di UNA resistenza. */
+  const qLAmbientDevRef = useRef(0);
   const toneHighRef = useRef<number | null>(null);
   /** ── IL CANDIDATO IN TENUTA — v. `TONE_HOLD_S` in `tuning.ts`. Segnalato: « il MUSE porta
    *  subito a tono 40 »: il ratchet sopra prendeva per buono QUALUNQUE nuovo massimo, un solo
@@ -205,6 +213,11 @@ export function useToneCycle(d: ToneCycleDeps) {
   qLRef.current = d.qL;
   // Le due medie mobili, aggiornate a ogni render come `qLRef` — v. la nota su `TONE_SMOOTH`.
   qLSmoothRef.current = qLSmoothRef.current * (1 - TONE_SMOOTH) + d.qL * TONE_SMOOTH;
+  // ── L'AMBIENTE, SEMPRE IN AGGIORNAMENTO — v. la nota su `qLAmbientDevRef` sopra e su
+  // `TONE_AMBIENT_ALPHA` in `tuning.ts`. Quanto lo scarto di ADESSO si allontana dalla media
+  // (`Math.abs`, non con segno: interessa L'AMPIEZZA del rumore, non la sua direzione).
+  qLAmbientDevRef.current = qLAmbientDevRef.current * (1 - TONE_AMBIENT_ALPHA)
+    + Math.abs(d.qL - qLSmoothRef.current) * TONE_AMBIENT_ALPHA;
   if (taCorretto !== null) {
     taSmoothRef.current = taSmoothRef.current === null
       ? taCorretto
@@ -237,8 +250,13 @@ export function useToneCycle(d: ToneCycleDeps) {
    * sguardo" a cursore primario). Il margine delle lattine resta specifico del Theta-Meter: non
    * si applica quando è il MUSE a guidare.
    */
+  // ── L'ESCURSIONE NON È PIÙ UN NUMERO FISSO — v. la nota grande su `TONE_AMBIENT_ALPHA` in
+  // `tuning.ts`: un'escursione fissa andava bene per una persona e traboccava per un'altra.
+  // Qui si ricalcola A OGNI TICK sull'ampiezza-ambiente di QUESTA persona (`qLAmbientDevRef`,
+  // con un pavimento `TONE_AMBIENT_MIN` per non dividere per (quasi) zero).
+  const toneEscursioneDinamica = Math.max(TONE_AMBIENT_MIN, qLAmbientDevRef.current) * TONE_SIGMA_SPAN;
   const toneOraMuse = toneAtStart !== null && toneQAtStartRef.current !== null
-    ? toneFromDelta(toneAtStart, toneQAtStartRef.current, qLSmoothRef.current, TONE_MUSE_ESCURSIONE)
+    ? toneFromDelta(toneAtStart, toneQAtStartRef.current, qLSmoothRef.current, toneEscursioneDinamica)
     : null;
   const toneOraGrezzo = d.hasMuse && toneOraMuse !== null
     ? toneOraMuse

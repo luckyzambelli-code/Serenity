@@ -114,8 +114,22 @@ export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps
   }), [sessions, dateFilter, pcFilter, auditorFilter, processFilter, objectiveFilter, itemFilter, activeProfile]);
 
   // Check which sessions have stored PDFs — local IndexedDB OR server
+  //
+  // ⚠️ BUG TROVATO — segnalato di nuovo: « on ne peux pas voir les PDF ». Il PDF di SERENITY
+  // (`Serenity.tsx`, `chiudi()`) si genera e si salva in un `void (async () => {...})()`
+  // "spara e dimentica", DOPO che lo schermo è già tornato a quello pre-seduta — dove il
+  // bottone History è subito cliccabile. Con un journal ora incluso nel PDF (più testo da
+  // scrivere) quella finestra si è allungata: aprendo History nei primi istanti dopo aver
+  // chiuso una seduta, QUESTO effetto girava una volta sola, non trovava ancora nulla (né
+  // IndexedDB né server, entrambi scritti più tardi), e la sessione restava "senza PDF" per
+  // tutta la vita del pannello — riaprirlo era l'unico modo di vederlo comparire. Un NUOVO
+  // controllo, mai fatto prima: per le sedute chiuse da MENO di un minuto e ancora senza PDF
+  // trovato, si RIPROVA una volta dopo 2,5s — abbastanza per lasciare finire la generazione,
+  // senza trasformare questo in un polling continuo per le sedute vecchie (che non hanno un
+  // PDF davvero, non tornerebbero mai a girarci intorno inutilmente).
   useEffect(() => {
     let mounted = true;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
     (async () => {
       const serverUp = await isServerAvailable();
       const map: Record<string, boolean> = {};
@@ -133,9 +147,28 @@ export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps
           }
         } catch { map[s.id] = false; }
       }));
-      if (mounted) setPdfMap(map);
+      if (!mounted) return;
+      setPdfMap(map);
+      const stillMissing = sessions.filter(s => !map[s.id] && (Date.now() - s.date) < 60_000);
+      if (stillMissing.length) {
+        retryTimer = setTimeout(async () => {
+          if (!mounted) return;
+          const up2 = await isServerAvailable();
+          const patch: Record<string, boolean> = {};
+          await Promise.all(stillMissing.map(async s => {
+            try {
+              if (await getSessionPdfAsync(s.id)) { patch[s.id] = true; return; }
+              if (up2) {
+                const resp = await fetch(serverSessionPdfUrl(s.id), { method: 'HEAD' });
+                if (resp.ok) patch[s.id] = true;
+              }
+            } catch { /* resta quel che c'era */ }
+          }));
+          if (mounted && Object.keys(patch).length) setPdfMap(prev => ({ ...prev, ...patch }));
+        }, 2500);
+      }
     })();
-    return () => { mounted = false; };
+    return () => { mounted = false; if (retryTimer) clearTimeout(retryTimer); };
   }, [sessions]);
 
   const pdfCount   = Object.values(pdfMap).filter(Boolean).length;

@@ -5478,6 +5478,72 @@ la sola lettura del codice, al giro precedente, aveva mancato.
 
 ---
 
+## Giro (27/08/2026) — TONE: la scala si tara da sé; MIRROR spiegato; l'arco cresce col ciclo
+
+Cinque segnalazioni arrivate durante la verifica del giro precedente, mentre si stava per
+cominciare il ciclo TRUTH — messo in pausa per queste, standard nel dare priorità a un bug
+appena riscontrato dal vivo rispetto a una funzione nuova non ancora cominciata.
+
+1. **TONE, il quarto « salta subito a 40 ».** Tre round di taratura pura (`TONE_MUSE_ESCURSIONE`
+   1→4→2, `TONE_HOLD_S` 0.3→0.15) non erano bastati — segnalato di nuovo, stavolta con le
+   parole giuste: « il faut revoir les calculs », non ritarare un numero. Causa vera: un'unica
+   escursione FISSA per chiunque non può reggere, perché l'ampiezza di rumore di `d.qL` varia
+   da persona a persona — quel che è ragionevole per uno fa traboccare la scala per un altro.
+   Sostituita con un'escursione DINAMICA, calcolata a ogni tick sull'ampiezza-ambiente della
+   PERSONA in seduta (`qLAmbientDevRef`, una EMA lentissima di quanto `d.qL` si scosta dalla
+   propria media — la stessa idea già in uso in `ToneLocator.ambientQ`, estesa da "un istante"
+   a "ogni tick"): un movimento di UNA ampiezza-ambiente vale una divisione (10 punti),
+   qualunque sia il rumore naturale di chi si sta auditando. Nuove manopole in `tuning.ts`:
+   `TONE_AMBIENT_ALPHA`, `TONE_AMBIENT_MIN`, `TONE_SIGMA_SPAN` — dichiaratamente ANCORA non
+   misurate su dati EEG reali, ma un'ipotesi più robusta (si adatta da sé) della precedente
+   (sperare che un numero fisso vada bene per chiunque).
+2. **MIRROR, « la valeur 1–10 se fige d'elle-même... n'est pas clair ».** Non un bug nel
+   blocco (che è voluto — v. `MirrorCycle.turnedOver`): la frase CITATA dall'utente era
+   proprio il testo di `PistaCiclo`, tempo "CONTATTO DELLA CARICA" — "si è girata"/"s'est
+   retournée" è gergo del segnale, non un'immagine chiara per chi non sa come funziona il
+   calcolo. Riscritta su cosa succede in termini fisici (il picco passa) E che i dieci
+   pulsanti restano una scelta valida (prima "aspetta" accanto a dieci bottoni cliccabili
+   lasciava intendere che aspettare fosse l'unica via). Aggiunto anche un piccolo badge
+   « 🔒 bloccato » quando il valore si è fermato — in `Serenity.tsx` E nel `MirrorDial.tsx`
+   condiviso, così vale anche per App.tsx. **Verificato dal vivo**: la nuova frase compare
+   parola per parola nel tempo "VALEUR" di MIRROR.
+3. **« Quand on a le CYCLE en bas l'arc est petit, baisse la position des CICLES ».** Il
+   rapporto due-terzi/un-terzo fra l'arco e la zona comandi era FISSO, uguale a schermo
+   inattivo (quattro cerchi, poche righe) e a ciclo ARMATO (tutta la `PistaCiclo`, molto più
+   alta) — non un errore percettivo: il gruppo basso non cedeva più spazio quando ne
+   occupava di più. Un ciclo attivo (`cycles.cycleArmed`/`mirror.mirrorArmed`/`toneAttivo`/
+   `procedimentoAttivo`) riceve ora tre quarti invece di due terzi. **Verificato dal vivo**:
+   arco visibilmente più grande con MIRROR armato rispetto a schermo inattivo, stesso
+   viewport.
+4. **Il journal nel PDF di History.** Il campo era stato aggiunto il giro scorso (`tsc`
+   pulito) ma mai fatto passare per davvero attraverso `generaPdf`. **Verificato stavolta con
+   uno script diretto** (fuori dal browser, `generaPdf` chiamato con un `SerenityReportInput`
+   sintetico): il testo AUD e PC compare nel PDF generato, non solo nel tipo TypeScript.
+5. **« TU AS ENCORE LE MEME PROBLEME AVEC HISTORY... on ne peux pas voir les PDF ».** Il
+   codice di apertura (server locale prima, poi IndexedDB, `main.cjs` che apre entrambi in
+   una finestra vera) risultava corretto a rileggerlo — ma `chiudi()` genera E salva il PDF
+   in un `void (async () => {...})()` "spara e dimentica", DOPO che lo schermo è già tornato
+   a quello pre-seduta, dove History è subito raggiungibile. Con il journal ora incluso
+   (più testo da scrivere) quella finestra si è allungata: aprendo History nei primi istanti
+   dopo una seduta, il controllo "ha un PDF?" di `HistoryModal` girava una volta sola, non
+   trovava ancora nulla, e la sessione restava segnata "senza PDF" per tutta la vita del
+   pannello. Aggiunto un RITENTATIVO: per le sedute chiuse da meno di un minuto e ancora
+   senza PDF trovato, un secondo controllo dopo 2,5s. **Non è stato possibile riprodurre il
+   sintomo esatto dell'utente in questo sandbox** (nessun Electron reale, nessun modo di
+   aprire la finestra del PDF come nell'app pacchettizzata) — questa resta la causa più
+   concreta trovata rileggendo il codice, non una riproduzione dal vivo del bug riportato:
+   se il sintomo persiste nella prossima DMG, serve sapere SE il pannello mostra "PDF non
+   disponibile" (nessun file trovato) o se il file si trova ma la finestra non si apre (un
+   problema diverso, più vicino al primo bug già risolto una volta).
+
+`tsc --noEmit` pulito, `vitest run` 639/639, `npm run lint` 313 warning (nessuno nuovo). Il
+ciclo TRUTH (v. `docs/truth-cycle-proposal.md`) resta il prossimo passo, ripreso subito dopo
+questo giro.
+
+EQUILIBRIUM 2.0.233, SERENITY 3.0.126.
+
+---
+
 ## Il principio dimensionale — regola per le fasi 6, 7, 8
 
 Dettato il 16/08/2026, dopo che il quadrante era stato rifatto due volte — prima con i

@@ -666,6 +666,46 @@ export const TONE_MUSE_ESCURSIONE = 2;
  *  più oltre alla media mobile, non due sovrapposti. */
 export const TONE_HOLD_S = 0.15;
 
+/**
+ * ── TONE COL MUSE, IL QUARTO TENTATIVO — segnalato ancora: « à TONE on est toujours à 40 tout
+ * de suite, il faut revoir les calculs ». Tre round di questa stessa sessione avevano già
+ * ritoccato SOLO `TONE_MUSE_ESCURSIONE`/`TONE_HOLD_S` (1→4→2 per l'escursione, 0.3→0.15 per
+ * l'hold) — un NUMERO diverso ogni volta per LA STESSA FORMULA, e la formula stessa è il
+ * problema: `toneFromDelta` divide lo spostamento di `d.qL` per un'escursione FISSA, uguale
+ * per chiunque. `d.qL` (0..1) ha un'ampiezza di rumore diversa da persona a persona — la
+ * STESSA escursione che per uno è ragionevole, per un altro (segnale naturalmente più mosso)
+ * fa traboccare la scala alla prima oscillazione: nessuna costante fissa può andare bene per
+ * tutti insieme, ed è per questo che «troppo sensibile»/«non si muove» si sono alternati senza
+ * mai stabilizzarsi. LA VERA CORREZIONE — chiesta esplicitamente («revoir les calculs», non
+ * «retarare i numeri») — è cambiare la MISURA, non il numero: invece di un'escursione fissa,
+ * ci si tara sul RUMORE AMBIENTE di QUESTA persona, esattamente come già fa `ToneLocator` con
+ * `ambientQ`/`TONE_LOCATE_RISE_RATIO` per decidere QUANDO localizzare — la stessa idea, estesa
+ * ad ogni tick invece che al solo istante del clic. Un movimento di UN'ampiezza-ambiente vale
+ * `TONE_STEP` (una divisione, 10 punti): chi è naturalmente più mosso ha bisogno di uno
+ * spostamento più grande per la stessa divisione — SI CALIBRA DA SÉ, non serve indovinare un
+ * numero buono per chiunque. ⚠️ ANCORA NON MISURATO su dati EEG reali (nessuna seduta vera
+ * sotto mano per confrontare "un'ampiezza-ambiente" a un vero movimento intenzionale) — resta
+ * un'ipotesi PIÙ ROBUSTA della precedente (si adatta alla persona invece di sperare che il
+ * numero fisso vada bene), non ancora una misura verificata: se la scala risultasse ancora
+ * troppo o poco sensibile, la manopola da girare è `TONE_SIGMA_SPAN`, non più `_ESCURSIONE`
+ * (lasciata qui inutilizzata solo come nota storica di cosa si è già provato).
+ */
+/** Quanto lentamente si aggiorna la stima del rumore ambiente di QUESTA persona (alfa
+ *  dell'EMA). Molto più lento di `TONE_SMOOTH` (0.15): l'ambiente è un tratto della persona,
+ *  non qualcosa che deve inseguire il tick — se si aggiornasse in fretta, un movimento vero
+ *  finirebbe per allargare l'ambiente e "nascondere" sé stesso. */
+export const TONE_AMBIENT_ALPHA = 0.01;
+/** Pavimento minimo dell'ampiezza-ambiente. Senza, una persona MOLTO ferma (deviazione quasi
+ *  zero) produrrebbe un'escursione dinamica vicina a zero → sensibilità infinita → la scala
+ *  esploderebbe al primo respiro. Valore di sicurezza, non una misura. */
+export const TONE_AMBIENT_MIN = 0.01;
+/** Quante "ampiezze-ambiente" di movimento valgono l'INTERA scala (80 punti, 8 divisioni da
+ *  10). A 8: un movimento di UNA ampiezza-ambiente = UNA divisione (`TONE_STEP`) — la
+ *  proporzione più semplice possibile, non un numero scelto a caso. Più alto = scala meno
+ *  sensibile (serve un movimento più grande per la stessa divisione); più basso = più
+ *  sensibile. */
+export const TONE_SIGMA_SPAN = 8;
+
 // ═══════════════════════════════════════════════════════════════════════════════════════════
 // INTEGRITÀ DEL SEGNALE
 // ═══════════════════════════════════════════════════════════════════════════════════════════

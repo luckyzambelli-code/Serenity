@@ -141,6 +141,19 @@ export const MirrorDial = React.memo(function MirrorDial({
           {L('valore item → doppio · smaltito', 'valeur item → double · déchargé', 'item value → double · discharged', 'valor ítem → doble · descargado', 'itemvärde → dubbel · urladdat')} {pct}%
         </text>
       )}
+      {/* ⚠️ SEGNALATO: « la valeur 1–10 se fige d'elle-même quand la lecture s'est retournée
+          n'est pas clair dans MIRROR ». Il numero (sopra) passa da "in movimento" a fermo nello
+          stesso istante in cui `locked` diventa vero — senza una parola, sembra un guasto. Una
+          riga sola spiega il perché: qui, sul quadrante condiviso, così vale anche per
+          App.tsx, non solo per il pannello di prosa di SERENITY (che ha la sua stessa nota). */}
+      {armed && locked && !reached && (
+        <text x={PX} y={PY - 210} textAnchor="middle" dominantBaseline="middle"
+          fontSize={12} fontWeight={600} fill={dim} opacity={0.75}>
+          🔒 {L('bloccato al picco: la lettura è tornata indietro', 'verrouillé au pic : la lecture est revenue en arrière',
+                'locked at the peak: the reading turned back', 'bloqueado en el pico: la lectura regresó',
+                'låst vid toppen: avläsningen vände tillbaka')}
+        </text>
+      )}
 
       {/* (c) CIBLE ATTEINTE → OBTENU */}
       {armed && reached && (
