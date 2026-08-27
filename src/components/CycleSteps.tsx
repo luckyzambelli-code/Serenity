@@ -59,6 +59,9 @@ export function CycleSteps({ mode, phase, lang, compact = false, scala = 1 }: {
     // « raise this to tone forty », ridato finché la reazione non si spegne — la pista dice
     // dove si va, cioè +40.
     tone40:      L('TONO 40', 'TON 40', 'TONE 40', 'TONO 40', 'TON 40'),
+    // TRUTH — due tempi come TONE, uno per comando di Ron: localizzare il R/I, poi chiedere.
+    ri:          'R/I',
+    ask_truth:   L('CHIEDI', 'DEMANDE', 'ASK', 'PREGUNTA', 'FRÅGA'),
   };
 
   const fatto  = isLightTheme ? 'rgba(58,58,64,0.55)'  : 'rgba(226,238,255,0.45)';

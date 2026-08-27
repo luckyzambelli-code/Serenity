@@ -695,6 +695,12 @@ export const TONE_HOLD_S = 0.15;
  *  non qualcosa che deve inseguire il tick — se si aggiornasse in fretta, un movimento vero
  *  finirebbe per allargare l'ambiente e "nascondere" sé stesso. */
 export const TONE_AMBIENT_ALPHA = 0.01;
+/** Quanti campioni usare per una MEDIA CUMULATIVA vera prima di passare alla EMA lenta (sopra)
+ *  — v. la nota grande in `useToneCycle.ts`, « TONE. sempre su TONO 40 »: un'EMA che parte da
+ *  zero è distorta verso il basso per i primi ~1/alfa campioni, ed è proprio lì che TONE
+ *  risultava iper-sensibile. La media cumulativa non ha questa distorsione: converge da
+ *  subito alla media vera di quel che si è visto, per quanto poco. */
+export const TONE_AMBIENT_WARMUP_N = 30;
 /** Pavimento minimo dell'ampiezza-ambiente. Senza, una persona MOLTO ferma (deviazione quasi
  *  zero) produrrebbe un'escursione dinamica vicina a zero → sensibilità infinita → la scala
  *  esploderebbe al primo respiro. Valore di sicurezza, non una misura. */

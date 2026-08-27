@@ -108,6 +108,7 @@ import { useSessionJournal } from './session/useSessionJournal';
 import { useMuseConnection } from './hooks/useMuseConnection';
 import { useToneCycle } from './session/useToneCycle';
 import { useMirrorCycle } from './session/useMirrorCycle';
+import { useTruthCycle } from './session/useTruthCycle';
 import { useContactNullCycle, type CycleTick } from './session/useContactNullCycle';
 // Del motore del TONE all'interfaccia resta il solo bersaglio, che si SCRIVE (« → +40 »).
 // Il calcolo — conversioni, locatore, testimoni — è passato tutto in `session/useToneCycle`.
@@ -256,9 +257,10 @@ export default function App() {
   const [mnaAperto, setMnaAperto] = useState(false);
   // La vista del quadrante non si sceglie più: DISCENDE dal modo. Tutto il codice a valle
   // continua a leggere `viewMode` senza sapere che ora è derivato.
-  const viewMode: 'needle' | 'needle_pure' | 'mirror' | 'tone' =
+  const viewMode: 'needle' | 'needle_pure' | 'mirror' | 'tone' | 'truth' =
     mode === 'mirror' ? 'mirror'
     : mode === 'tone' ? 'tone'
+    : mode === 'truth' ? 'truth'
     : showTrailPref ? 'needle' : 'needle_pure';
   const viewModeRef = useRef(viewMode); viewModeRef.current = viewMode;
   // MIRROR (metodo di Ron: « double the instant charge to erase it ») — 3ª vista, cosa A PARTE.
@@ -268,6 +270,8 @@ export default function App() {
   const trackMirrorRef = useRef<(q: number, nowSec: number, pushUi: boolean) => void>(() => {});
   /** Il locatore del ciclo TONE, alimentato dal worker EEG. Vedi `useToneCycle.trackTone`. */
   const trackToneRef = useRef<(q: number, nowSec: number) => void>(() => {});
+  /** Il tracker del ciclo TRUTH, alimentato dal worker EEG. Vedi `useTruthCycle.trackTruth`. */
+  const trackTruthRef = useRef<(q: number, nowSec: number, hasInstrument: boolean, fnNow: boolean, pushUi: boolean) => void>(() => {});
   // E per il TONE la stessa coppia sta in `session/useToneCycle`: la resistenza si dà a voce
   // come ogni altro item, ma è il ciclo a saperlo, non l'interfaccia.
   // ── ASSESSMENT (bouton « ASSESSMENT », même nom dans toutes les langues) — l'auditeur donne des
@@ -2996,7 +3000,7 @@ export default function App() {
     primePhaseRef, mnaSessionRef, primeCaptured,
     needleReactionKeyRef, needleReactionRef, needleVirtualRef,
     shownReadsRef, ultimoItemSecRef,
-    trackCycleRef, trackMirrorRef, trackToneRef, cycleArmedRef,
+    trackCycleRef, trackMirrorRef, trackToneRef, trackTruthRef, cycleArmedRef,
     logBufferRef, pendingEegFnRef,
     epWindowOpenRef, epWindowHasOpenedRef, epWindowTimerRef,
     setEpWindowOpen, setAsIsnessState, setIsFnActive,
@@ -3205,6 +3209,28 @@ export default function App() {
   } = mirror;
   const mirrorItemDettato = mirror.itemDettato;
 
+  /**
+   * ── E IL CICLO TRUTH, ALLO STESSO MODO — v. docs/truth-cycle-proposal.md ────────────────
+   * Quinto pezzo. `qL`/`hasMuse`/`hasTheta`/F/N non sono qui dentro (v. la nota su
+   * `TruthCycleDeps`): arrivano come parametri diretti di `trackTruth`, alimentato dal worker
+   * EEG tramite `trackTruthRef` (v. `useChargeEngine.ts`), non come prop lette a freddo.
+   */
+  const truth = useTruthCycle({
+    auditingQuestion, setAuditingQuestion,
+    setItemSpoken,
+    nowSec: () => timeRef.current,
+    logLength: () => logsRef.current.length,
+    log: (text, type) => logBufferRef.current.push({ time: timeRef.current, speaker: 'NEEDLE', text, type }),
+    ensureAssessmentOn: () => { if (!assessActiveRef.current) toggleAssessment(); },
+    LC,
+  });
+  trackTruthRef.current = truth.trackTruth;
+  const {
+    truthPhase, truthDisp, truthRepeats, truthEvents,
+    locateRI, askTruth, confermaVerita, scartaCandidato, trovatoUlterioreRI, chiudiTruth, resetTruth,
+    truthCyclesRef,
+  } = truth;
+
   // ⚠️ QUI L'ASSESSMENT SI ACCENDEVA DA SÉ nelle fasi « positivo o negativo? » e « quante
   // divisioni? », che ERANO un assessment. Quelle fasi non ci sono più: i comandi di Ron sono
   // due, e nessuno dei due si conduce enunciando risposte da far reagire. Il modulo si accende
@@ -3236,10 +3262,10 @@ export default function App() {
     mode, cycleArmed, asIsPending, nullPhase,
     mirrorArmed, itemNamed: !!auditingQuestion.trim() || itemSpoken,
     mirrorLocked: mirrorDisp.locked, mirrorReached: mirrorDisp.reached,
-    tonePhase,
+    tonePhase, truthPhase,
   }), [showSplash, sessionState, instruments.muse, instruments.theta, metabolicOpen,
        epWindowOpen, showReport, mode, cycleArmed, asIsPending, nullPhase, mirrorArmed,
-       auditingQuestion, itemSpoken, mirrorDisp.locked, mirrorDisp.reached, tonePhase]);
+       auditingQuestion, itemSpoken, mirrorDisp.locked, mirrorDisp.reached, tonePhase, truthPhase]);
 
 
 
@@ -6473,6 +6499,8 @@ export default function App() {
                         title: LC('MIRROR — metodo del doppio (Ron)', 'MIRROR — méthode du double (Ron)', 'MIRROR — the doubling method (Ron)', 'MIRROR — método del doble (Ron)', 'MIRROR — dubbelmetoden (Ron)') },
                       tone: { lbl: 'TONE SCALE',
                         title: LC('TONE SCALE — la scala del tono di Ron (−40…+40)', 'TONE SCALE — l\'échelle des tons de Ron (−40…+40)', 'TONE SCALE — Ron\'s tone scale (−40…+40)', 'TONE SCALE — la escala del tono de Ron (−40…+40)', 'TONE SCALE — Rons tonskala (−40…+40)') },
+                      truth: { lbl: 'TRUTH',
+                        title: LC('TRUTH — il protocollo di Ron: localizza il R/I, chiedi cos\'è la verità', 'TRUTH — le protocole de Ron : localise le R/I, demande ce qui est la vérité', 'TRUTH — Ron\'s protocol: locate the R/I, ask what is the truth', 'TRUTH — el protocolo de Ron: localiza el R/I, pregunta qué es la verdad', 'TRUTH — Rons protokoll: lokalisera R/I, fråga vad som är sanningen') },
                       // APERTO, non « libero ». « Libero » suonava come « senza regole »; il modo
                       // è invece EQUILIBRIUM che gira SENZA SEQUENZA CICLICA PREDEFINITA — l'ago,
                       // l'assessment e l'R&I ci sono tutti, manca solo il ciclo che li incatena.
@@ -6483,7 +6511,7 @@ export default function App() {
                     const active = mode === m;
                     // Cambiando metodo NON si porta dietro il ciclo di prima: si chiude, altrimenti
                     // resterebbe armato dietro un quadrante che non lo mostra più.
-                    const vai = () => { if (cycleArmed) finalizeCycle(false); if (mirrorArmed) stopMirror(); resetTone(); setMode(m); };
+                    const vai = () => { if (cycleArmed) finalizeCycle(false); if (mirrorArmed) stopMirror(); resetTone(); resetTruth(); setMode(m); };
                     return (
                       <button key={m} type="button" onClick={vai} title={seg.title}
                         // ── MONOCROMO: IL METODO NON È UN COLORE ────────────────────────

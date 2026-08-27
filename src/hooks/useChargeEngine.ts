@@ -81,7 +81,7 @@ import type { MnaSession } from './useMnaModule';
 import type { PrimePhase, Zone as PrimeZone } from '../lib/primeFreqEngine';
 
 type SessionStateId = 'idle' | 'running' | 'paused' | 'ended';
-type ViewMode = 'needle' | 'needle_pure' | 'mirror' | 'tone';
+type ViewMode = 'needle' | 'needle_pure' | 'mirror' | 'tone' | 'truth';
 type AsIsnessState = 'persist' | 'as-is' | 'fn' | 'ep';
 
 /**
@@ -136,6 +136,7 @@ export interface ChargeEngineDeps {
   trackCycleRef: MutableRefObject<(t: CycleTick) => void>;
   trackMirrorRef: MutableRefObject<(q: number, nowSec: number, pushUi: boolean) => void>;
   trackToneRef: MutableRefObject<(q: number, nowSec: number) => void>;
+  trackTruthRef: MutableRefObject<(q: number, nowSec: number, hasInstrument: boolean, fnNow: boolean, pushUi: boolean) => void>;
   cycleArmedRef: MutableRefObject<boolean>;
 
   // ── giornale + F/N in sospeso — code condivise con App.tsx ────────────────────────────────
@@ -428,6 +429,16 @@ export function useChargeEngine(d: ChargeEngineDeps): void {
         // hasStableAlphaFn: alpha et theta stables en dB (valeurs réelles MUSE)
         const alphaThetaRatio = alphaPow / Math.max(thetaPow, 1e-12);
         const hasStableAlphaFn = alphaThetaRatio >= 0.8 && alphaThetaRatio <= 1.5 && qL > 0.95;
+
+        // ── CICLO TRUTH (protocollo di Ron) — vista a parte, come MIRROR/TONE. Legge la
+        // STESSA carica EEG (nessuna pipeline nuova, v. `truthScale.ts`); l'F/N è lo stesso
+        // flag già pronto per il classificatore qui sopra (`fnWithHysteresis ||
+        // hasStableAlphaFn`), non un secondo calcolo.
+        if (d.viewModeRef.current === 'truth') {
+          d.trackTruthRef.current(_validSignal ? qL : 0, d.timeRef.current,
+            d.instrumentsRef.current.muse || d.instrumentsRef.current.theta,
+            (fnWithHysteresis || hasStableAlphaFn) && _validSignal, pushUi);
+        }
 
         // ── Sensitivity / trim factor ─────────────────────────────────────────
         // FIX H-03: read via refs to avoid stale closure in worker.onmessage

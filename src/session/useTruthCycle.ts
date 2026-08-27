@@ -48,15 +48,16 @@ export interface TruthDisp {
 }
 const DISP_ZERO: TruthDisp = { confidence: 0, d: false, p: false, q: false };
 
-/** Quel che il ciclo ha bisogno di sapere dal resto della seduta. */
+/** Quel che il ciclo ha bisogno di sapere dal resto della seduta.
+ *
+ *  ⚠️ NIENTE `qL`/`hasMuse`/`hasTheta`/`fnNow` QUI — a differenza di `ToneCycleDeps`. Quei
+ *  campi cambiano molte volte al secondo, e leggerli come prop dentro un `useCallback` a
+ *  dipendenze vuote (`trackTruth`, sotto) catturerebbe un valore VECCHIO — lo stesso bug già
+ *  trovato e corretto per TONE (`qLRef`/`toneMeasuredRef`, v. la nota in `useToneCycle.ts`).
+ *  Qui si evita alla radice: il valore vero arriva come PARAMETRO di `trackTruth`, ad ogni
+ *  chiamata del chiamante (che quel valore live ce l'ha per davvero), non come prop letta a
+ *  freddo dentro la closure. */
 export interface TruthCycleDeps {
-  /** La carica EEG in questo istante — la STESSA `d.qL` di CONTACT/NULL/MIRROR/TONE, nessuna
-   *  pipeline di segnale nuova (v. la nota di testa in `truthScale.ts`). */
-  qL: number;
-  hasMuse: boolean;
-  hasTheta: boolean;
-  /** F/N sull'ago in gioco — un secondo testimone per P(t), non un flag nuovo da inventare. */
-  fnNow: boolean;
   /** Il R/I in lavorazione — stesso campo `auditingQuestion` degli altri tre cicli. */
   auditingQuestion: string;
   setAuditingQuestion: (s: string) => void;

@@ -54,6 +54,7 @@ import { useContactNullCycle } from '../session/useContactNullCycle';
 import { useMirrorCycle } from '../session/useMirrorCycle';
 import { MirrorDial } from '../components/MirrorDial';
 import { useToneCycle } from '../session/useToneCycle';
+import { useTruthCycle } from '../session/useTruthCycle';
 import { ToneDial } from '../components/ToneDial';
 import { ToneColumn } from '../components/ToneColumn';
 import { TONE_LABELS } from '../engine/toneLevels';
@@ -86,7 +87,7 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, SlidersHorizontal, Brain } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, SlidersHorizontal, Brain, Lightbulb } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
@@ -1041,16 +1042,19 @@ export default function Serenity() {
    *  === 'mirror'`, in `useChargeEngine.ts`) non chiamava MAI `trackMirrorRef`/`trackToneRef`:
    *  il valore restava per sempre manuale. Segnalato: « In MIrror il valore non vien mai
    *  indicato in automatico ». */
-  const viewModeRef = useRef<'needle' | 'needle_pure' | 'mirror' | 'tone'>('needle');
+  const viewModeRef = useRef<'needle' | 'needle_pure' | 'mirror' | 'tone' | 'truth'>('needle');
   const instrumentsRef = useRef({ muse: false, theta: false });
   useEffect(() => { instrumentsRef.current = { muse: muse.museConnection === 'connected', theta: meterC }; });
   /** Nessuno slider di sensibilità in SERENITY ancora — lo stesso valore di default di
    *  App.tsx (nessun binding UI neanche là: "1.0 = default"). */
   const sensitivityRef = useRef(1.0);
 
-  /** Non ancora MIRROR/TONE in SERENITY — placeholder onesti, mai armati. */
+  /** I gestori vengono assegnati più sotto (`trackMirrorRef.current = mirror.trackMirror`,
+   *  ecc.) DOPO che i rispettivi hook esistono — il ref serve già ORA perché
+   *  `useChargeEngine` (anche lui sotto) lo riceve una volta sola. */
   const trackMirrorRef = useRef<(q: number, nowSec: number, pushUi: boolean) => void>(() => {});
   const trackToneRef = useRef<(q: number, nowSec: number) => void>(() => {});
+  const trackTruthRef = useRef<(q: number, nowSec: number, hasInstrument: boolean, fnNow: boolean, pushUi: boolean) => void>(() => {});
   /** `useContactNullCycle` (sotto) scrive qui il suo `trackCycle` DOPO essere stato creato —
    *  il ref esiste già ora perché `useChargeEngine` (anche lui sotto) lo riceve una volta sola. */
   const trackCycleRef = useRef<(t: never) => void>(() => {});
@@ -1239,7 +1243,7 @@ export default function Serenity() {
     primePhaseRef, mnaSessionRef, primeCaptured,
     needleReactionKeyRef, needleReactionRef, needleVirtualRef,
     shownReadsRef, ultimoItemSecRef,
-    trackCycleRef, trackMirrorRef, trackToneRef, cycleArmedRef: cycles.cycleArmedRef,
+    trackCycleRef, trackMirrorRef, trackToneRef, trackTruthRef, cycleArmedRef: cycles.cycleArmedRef,
     logBufferRef: journal.logBufferRef, pendingEegFnRef,
     epWindowOpenRef, epWindowHasOpenedRef: ep.epWindowHasOpenedRef,
     epWindowTimerRef: ep.epWindowTimerRef,
@@ -1506,20 +1510,41 @@ export default function Serenity() {
   trackToneRef.current = tone.trackTone;
 
   /**
+   * ── E IL CICLO TRUTH, ALLO STESSO MODO — v. docs/truth-cycle-proposal.md ────────────────
+   * `qL`/F/N non sono nei suoi deps (v. la nota su `TruthCycleDeps`): arrivano come parametri
+   * diretti di `trackTruth`, alimentato dal worker EEG via `trackTruthRef` più sopra.
+   */
+  const truth = useTruthCycle({
+    auditingQuestion: item, setAuditingQuestion: setItem,
+    setItemSpoken,
+    nowSec: () => sessionClock.now(),
+    logLength: () => journal.logs.length,
+    log: (text, type) => journal.addLog({ speaker: 'SYS', text, time: sessionClock.now(), type }),
+    ensureAssessmentOn: attivaAssessment,
+    LC,
+  });
+  trackTruthRef.current = truth.trackTruth;
+
+  /**
    * ── IL METODO IN CORSO, IN UN VALORE SOLO ────────────────────────────────────────────────
    * `engine/sessionMode.ts` — lo stesso tipo che App.tsx usa per `mode`. Qui non c'è un
-   * selettore persistente: si RICAVA da quale dei quattro è armato/attivo (la stessa
+   * selettore persistente: si RICAVA da quale dei cinque è armato/attivo (la stessa
    * esclusività reciproca già scritta nei bottoni del piede di pagina), invece di tenerne una
-   * seconda copia in uno state a parte.
+   * seconda copia in uno state a parte. TRUTH non ha un `xAttivo` a sé come TONE: la sua
+   * stessa FSM (`truthPhase !== 'idle'`) è già quel segnale, non serve una seconda variabile
+   * che potrebbe disallinearsi da lei.
    */
   const mode: SessionMode = toneAttivo ? 'tone'
+    : truth.truthPhase !== 'idle' ? 'truth'
     : mirror.mirrorArmed ? 'mirror'
     : cycles.cycleArmed ? (cycles.cycleKind === 'null' ? 'null' : 'contact')
     : 'free';
-  /** Stessa derivazione di App.tsx (`viewMode`, righe 259-262 di App.tsx) — il worker EEG deve
-   *  sapere se siamo in MIRROR/TONE per alimentare `trackMirrorRef`/`trackToneRef`, non solo
-   *  l'ago. V. la nota sul ref più sopra: prima di questa riga restava sempre 'needle'. */
-  viewModeRef.current = mode === 'mirror' ? 'mirror' : mode === 'tone' ? 'tone' : showTrailPref ? 'needle' : 'needle_pure';
+  /** Stessa derivazione di App.tsx (`viewMode`, righe 259-263 di App.tsx) — il worker EEG deve
+   *  sapere se siamo in MIRROR/TONE/TRUTH per alimentare `trackMirrorRef`/`trackToneRef`/
+   *  `trackTruthRef`, non solo l'ago. V. la nota sul ref più sopra: prima di questa riga
+   *  restava sempre 'needle'. */
+  viewModeRef.current = mode === 'mirror' ? 'mirror' : mode === 'tone' ? 'tone' : mode === 'truth' ? 'truth'
+    : showTrailPref ? 'needle' : 'needle_pure';
   /** ── MODALITÀ CICLO — segnalato: « quando si comincia un ciclo mi piacerebbe che sparisse
    *  tutto quello non necessario e che alla fine riapparisse ». Confermato dopo una proposta
    *  scritta (cosa sparisce, cosa resta, e perché): scatta SOLO a ciclo armato/in corso — non
@@ -1579,10 +1604,10 @@ export default function Serenity() {
     // di scrivere.
     itemNamed: (!!item.trim() && !itemDigitando) || itemSpoken,
     mirrorArmed: mirror.mirrorArmed, mirrorLocked: mirror.mirrorDisp.locked, mirrorReached: mirror.mirrorDisp.reached,
-    tonePhase: tone.tonePhase,
+    tonePhase: tone.tonePhase, truthPhase: truth.truthPhase,
   }), [showSplash, aperta, muse.museConnection, meterC, ep.epWindowOpen, mode, cycles.cycleArmed, cycles.asIsPending,
        cycles.nullPhase, item, itemDigitando, itemSpoken, mirror.mirrorArmed, mirror.mirrorDisp.locked, mirror.mirrorDisp.reached,
-       tone.tonePhase]);
+       tone.tonePhase, truth.truthPhase]);
 
   const chargePhaseNow = useMetric(m => m.chargePhase);
 
@@ -1652,6 +1677,39 @@ export default function Serenity() {
                  'No more reaction: serenity of beingness. Validated by you.',
                  'Ya no reacciona: serenidad del ser. Validado por ti.',
                  'Ingen reaktion kvar: varandets stillhet. Validerat av dig.') };
+    }
+    if (truth.truthPhase !== 'idle') {
+      if (faseCiclo === 'truth.ri' || faseCiclo === 'truth.say_ri') return {
+        titolo: LC('1 · DAI IL R/I', '1 · DONNE LE R/I', '1 · GIVE THE R/I', '1 · DA EL R/I', '1 · GE R/I'),
+        come: LC('Localizzato con un processo qualunque. Scrivilo o dillo a voce, poi premi.',
+                 'Localisé avec un procédé quelconque. Écris-le ou dis-le, puis appuie.',
+                 'Located with any process. Type it or say it, then press.',
+                 'Localizado con cualquier proceso. Escríbelo o dilo, luego pulsa.',
+                 'Lokaliserat med valfri process. Skriv eller säg det, tryck sedan.') };
+      if (truth.truthPhase === 'candidate') return {
+        titolo: LC('CANDIDATO PROPOSTO', 'CANDIDAT PROPOSÉ', 'CANDIDATE PROPOSED', 'CANDIDATO PROPUESTO', 'KANDIDAT FÖRESLAGEN'),
+        come: LC('Quel che sembrava una caduta potrebbe essere un accordo — la verità del PC che affiora. Conferma se lo è, altrimenti continua a chiedere.',
+                 'Ce qui semblait une chute pourrait être un accord — la vérité du PC qui émerge. Confirme si c\'est le cas, sinon continue à demander.',
+                 'What looked like a fall might be an agreement — the PC\'s truth surfacing. Confirm if it is, otherwise keep asking.',
+                 'Lo que parecía una caída podría ser un acuerdo — la verdad del PC que aflora. Confirma si lo es, si no sigue preguntando.',
+                 'Det som såg ut som ett fall kan vara en överenskommelse — PC:s sanning som stiger upp. Bekräfta om så är fallet, fortsätt annars fråga.') };
+      if (faseCiclo === 'truth.return_present') return {
+        titolo: LC('ULTERIORE R/I TROVATO', 'FURTHER R/I TROUVÉ', 'FURTHER R/I FOUND', 'FURTHER R/I ENCONTRADO', 'YTTERLIGARE R/I HITTAT'), fatto: true,
+        comando: LC('« Return to present time! »', '« Return to present time ! »', '« Return to present time! »', '« Return to present time! »', '« Return to present time! »'),
+        come: LC('Chiedilo, poi chiudi il R/I.', 'Demande-le, puis clos le R/I.', 'Ask it, then close the R/I.', 'Pregúntalo, luego cierra el R/I.', 'Fråga det, stäng sedan R/I.') };
+      // ri_located/questioning: si sta chiedendo, si può ripetere finché non emerge un
+      // ulteriore R/I — ripetizione È il processo, come « raise this to tone forty ».
+      return {
+        titolo: `2 · ${LC('CHIEDI', 'DEMANDE', 'ASK', 'PREGUNTA', 'FRÅGA')}`
+          + (truth.truthRepeats > 0 ? ` · ×${truth.truthRepeats}` : ''),
+        comando: LC('« Cos\'è la verità su questo? »', '« What about this is the truth? »',
+                    '« What about this is the truth? »', '« What about this is the truth? »',
+                    '« What about this is the truth? »'),
+        come: LC('Ridallo finché non emerge un ulteriore R/I.',
+                 'Redonne-le jusqu\'à ce qu\'un R/I supplémentaire émerge.',
+                 'Give it again until a further R/I emerges.',
+                 'Vuelve a darlo hasta que emerja un R/I adicional.',
+                 'Ge det igen tills ett ytterligare R/I dyker upp.') };
     }
     if (mirror.mirrorArmed) {
       if (faseCiclo === 'mirror.item') return {
@@ -1741,7 +1799,8 @@ export default function Serenity() {
         : null };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [faseCiclo, toneAttivo, tone.tonePhase, tone.toneRipetizioni, mirror.mirrorArmed, mirror.mirrorDisp,
-      cycles.cycleKind, cycles.cycleArmed, cycles.noReadSignal, chargePhaseNow, mode, lang]);
+      cycles.cycleKind, cycles.cycleArmed, cycles.noReadSignal, chargePhaseNow, mode, lang,
+      truth.truthPhase, truth.truthRepeats]);
   /**
    * ── « COME » SENZA AGO — portato parola per parola da App.tsx (`comeSenzaAgo`), per la
    * stessa ragione qui: `spiegazioneCiclo.come` (sopra) nomina spesso l'AGO stesso (« l'ago
@@ -2618,6 +2677,52 @@ export default function Serenity() {
               taAtNullStart={cycles.taAtNullStart}
             />
           </div>
+        </>
+      )}
+      {/* ── TRUTH, ATTIVO — v. docs/truth-cycle-proposal.md. Localizza il R/I → chiedi «What
+          about this is the truth?» finché non emerge un ulteriore R/I → return to present.
+          Un candidato proposto dal motore (v. `truthDisp`) NON è mai un evento confermato da
+          solo — conferma/scarta restano gesti dell'auditor, mai automatici. */}
+      {aperta && truth.truthPhase !== 'idle' && (
+        <>
+          <button className="s-glass s-glass-btn" onClick={() => truth.resetTruth()} style={pillBtn('var(--s-ink-ghost)')}>
+            {t('cancel')}
+          </button>
+          {truth.truthPhase === 'return_present' ? (
+            <button className="s-glass s-glass-btn" onClick={() => truth.chiudiTruth()} style={pillBtn('var(--s-still)')}>
+              {LC('chiudi il R/I', 'clore le R/I', 'close the R/I', 'cerrar el R/I', 'stäng R/I')}
+            </button>
+          ) : (
+            <>
+              {truth.truthPhase === 'candidate' && (
+                <>
+                  {/* ── IL CANDIDATO — una PROPOSTA del motore, mai un evento da solo (v. la
+                      nota di testa in `truthScale.ts`). L'auditor conferma o scarta. */}
+                  <span style={{
+                    fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
+                    color: 'var(--s-truth-hue)', padding: '5px 10px',
+                  }}>
+                    {LC('candidato', 'candidat', 'candidate', 'candidato', 'kandidat')} · {(truth.truthDisp.confidence * 100).toFixed(0)}%
+                  </span>
+                  <button className="s-glass s-glass-btn" onClick={() => truth.confermaVerita()} style={pillBtn('var(--s-still)')}>
+                    {LC('conferma verità', 'confirme vérité', 'confirm truth', 'confirma verdad', 'bekräfta sanning')}
+                  </button>
+                  <button className="s-glass s-glass-btn" onClick={() => truth.scartaCandidato()} style={pillBtn('var(--s-ink-faint)')}>
+                    {LC('non è questo', 'ce n\'est pas ça', 'not this', 'no es esto', 'inte det här')}
+                  </button>
+                </>
+              )}
+              {truth.truthPhase !== 'candidate' && (
+                <button className="s-glass s-glass-btn" onClick={() => truth.askTruth()} style={pillBtn('var(--s-alive)')}>
+                  {LC('chiedi', 'demande', 'ask', 'pregunta', 'fråga')}
+                  {truth.truthRepeats > 0 ? ` · ×${truth.truthRepeats}` : ''}
+                </button>
+              )}
+              <button className="s-glass s-glass-btn" onClick={() => truth.trovatoUlterioreRI()} style={pillBtn('var(--s-reserve)')}>
+                {LC('ulteriore R/I trovato', 'further R/I trouvé', 'further R/I found', 'further R/I encontrado', 'ytterligare R/I hittat')}
+              </button>
+            </>
+          )}
         </>
       )}
     </>
@@ -4974,7 +5079,7 @@ export default function Serenity() {
             già armato, `bottoniCiclo` — vuoto finché nessuno lo è). Tolta l'esclusione: i
             cerchi restano identici (`armCycle`/`armMirror`/`setToneAttivo`, mai toccati),
             semplicemente raggiungibili anche senza MUSE/METER connessi. */}
-        {aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && !procedimentoAttivo && (
+        {aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && truth.truthPhase === 'idle' && !procedimentoAttivo && (
           <div style={{
             width: 'min(96%, 2200px)', maxWidth: '100%', flexShrink: 0,
             display: 'flex', flexDirection: 'row', flexWrap: 'wrap',
@@ -5017,6 +5122,11 @@ export default function Serenity() {
               // un'esplicita richiesta di NON riprodurla. Un click solo, come gli altri tre.
               { k: 'tone', hue: 'var(--s-tone-hue)', label: 'TONE', Icona: AudioWaveform,
                 onClick: () => { setToneAttivo(true); tone.localizzaTone(); } },
+              // TRUTH — il protocollo di Ron (v. docs/truth-cycle-proposal.md). Un click solo,
+              // come gli altri quattro: `locateRI()` arma E apre la cattura del R/I nello
+              // stesso gesto (campo vuoto → si aspetta la voce, come tutti gli altri).
+              { k: 'truth', hue: 'var(--s-truth-hue)', label: 'TRUTH', Icona: Lightbulb,
+                onClick: () => truth.locateRI() },
             ]).map(c => (
               <div key={c.k} style={{ display: 'grid', justifyItems: 'center', gap: 4, flexShrink: 0 }}>
                 <button className="s-glass s-glass-btn" onClick={c.onClick} title={c.label} style={{

@@ -22,10 +22,10 @@
 
 import type { ReadSrc } from './instantRead';
 
-export type SessionMode = 'contact' | 'null' | 'mirror' | 'tone' | 'free';
+export type SessionMode = 'contact' | 'null' | 'mirror' | 'tone' | 'truth' | 'free';
 
-/** L'ordine in cui compaiono nel selettore: i due cicli, i due metodi di Ron, poi il libero. */
-export const SESSION_MODES: readonly SessionMode[] = ['contact', 'null', 'mirror', 'tone', 'free'] as const;
+/** L'ordine in cui compaiono nel selettore: i due cicli, i tre metodi di Ron, poi il libero. */
+export const SESSION_MODES: readonly SessionMode[] = ['contact', 'null', 'mirror', 'tone', 'truth', 'free'] as const;
 
 export interface ModeSpec {
   /** L'ago che il METODO impone, o null se la scelta resta all'auditor. */
@@ -61,6 +61,13 @@ export const MODE_SPEC: Record<SessionMode, ModeSpec> = {
   null:    { needle: 'eeg',   needsEeg: true,  arms: true  },
   mirror:  { needle: 'eeg',   needsEeg: true,  arms: true  },
   tone:    { needle: 'theta', needsEeg: false, arms: false },
+  // TRUTH — v. docs/truth-cycle-proposal.md. Legge la STESSA carica EEG di CONTACT/NULL/
+  // MIRROR (nessuna pipeline di segnale nuova). `arms:true`: anche TRUTH si arma dando l'item
+  // (qui il R/I) — ma la FSM resta guidata dai gesti dell'auditor (localizza/chiedi/conferma/
+  // further R/I/return to present), mai da un avanzamento automatico: solo la PROPOSTA del
+  // candidato usa l'EEG da sola, mai la conferma dell'evento (v. `useTruthCycle.ts`). Senza
+  // EEG il ciclo funziona lo stesso — semplicemente senza la proposta automatica.
+  truth:   { needle: 'eeg',   needsEeg: true,  arms: true  },
   free:    { needle: null,    needsEeg: false, arms: false },
 };
 

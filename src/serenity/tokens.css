@@ -128,6 +128,11 @@
      `--s-reserve` (caldo) e `--s-alive` (freddo) — appartiene alla stessa famiglia quieta, non
      un quarto segnale del sistema: usata SOLO lì, mai per uno stato. */
   --s-tone-hue: #a88ca8;
+  /* ── UNA QUINTA TINTA, PER TRUTH — stessa famiglia quieta delle quattro sopra (v. la nota su
+     `--s-tone-hue`), non un sesto segnale. Posizionata fra `--s-reserve` (caldo, tan) e
+     `--s-tone-hue` (freddo, viola) sulla ruota: un terracotta smorzato, distinto da tutti e
+     quattro senza uscire dalla stessa desaturazione/luminosità. */
+  --s-truth-hue: #b8927e;
 
   /* ── I TEMPI ─────────────────────────────────────────────────────────────────────────────
      Lenti apposta. Un cerchio che compare in 90 ms è un lampo alla periferia; in 600 ms è un
@@ -278,6 +283,8 @@
   --s-reserve: #c9ac7c;
   /* Stessa quarta tinta di `:root` (v. la nota lì), luminosità alzata come le tre sopra. */
   --s-tone-hue: #b89cb8;
+  /* Stessa quinta tinta di `:root` (v. la nota lì), luminosità alzata come le altre. */
+  --s-truth-hue: #c9a08c;
 
   /* Vedi la nota su `--sm-chip-bg` in `:root` — stessa idea, verso scuro. */
   --sm-chip-bg:    var(--s-disc-sunk);

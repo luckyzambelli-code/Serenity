@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { SESSION_MODES, MODE_SPEC, availableModes, fallbackMode, cycleIsAutomatic } from '../sessionMode';
 
 describe('i modi di seduta', () => {
-  it('sono cinque, e i cicli vengono prima dei metodi di Ron', () => {
-    expect([...SESSION_MODES]).toEqual(['contact', 'null', 'mirror', 'tone', 'free']);
+  it('sono sei, e i cicli vengono prima dei metodi di Ron', () => {
+    expect([...SESSION_MODES]).toEqual(['contact', 'null', 'mirror', 'tone', 'truth', 'free']);
   });
 
   it('ognuno ha la sua riga: nessun modo senza specifica', () => {
@@ -93,7 +93,7 @@ describe('I CICLI CI SONO SEMPRE — l ago decide solo chi li spinge', () => {
   });
 
   it('senza NIENTE cade il solo LIBERO: « solo l ago » senza ago non mostra niente', () => {
-    expect(availableModes(false, false)).toEqual(['contact', 'null', 'mirror', 'tone']);
+    expect(availableModes(false, false)).toEqual(['contact', 'null', 'mirror', 'tone', 'truth']);
   });
 });
 

@@ -119,7 +119,7 @@ export function PistaCiclo({ mode, phase, lang, item, setItem, itemPlaceholder, 
   // Stessa condizione dei tre punti di chiamata tolti dalla barra comandi: armato, ma l'item
   // (la resistenza, in TONE) non è ancora stato dato a voce o dichiarato a mano.
   const diItem = phase === 'tone.say_item' || phase === 'mirror.say_item'
-    || phase === 'contact.say_item' || phase === 'null.say_item';
+    || phase === 'contact.say_item' || phase === 'null.say_item' || phase === 'truth.say_ri';
 
   // Il fuoco manuale (clic su un tempo diverso da quello reale) si spegne da sé appena il ciclo
   // avanza davvero — mai restare a leggere un tempo vecchio mentre l'audit è già oltre.
@@ -139,11 +139,13 @@ export function PistaCiclo({ mode, phase, lang, item, setItem, itemPlaceholder, 
     double:      L('DOPPIO', 'DOUBLE', 'DOUBLE', 'DOBLE', 'DUBBEL'),
     obtained:    L('OTTENUTO', 'OBTENU', 'OBTAINED', 'OBTENIDO', 'UPPNÅTT'),
     tone40:      L('TONO 40', 'TON 40', 'TONE 40', 'TONO 40', 'TON 40'),
+    ri:          'R/I',
+    ask_truth:   L('CHIEDI', 'DEMANDE', 'ASK', 'PREGUNTA', 'FRÅGA'),
   };
   // Il nome del metodo, l'unico che il titolo dell'intestazione può avere qui — `mode` lo
   // dice già da sé, `free` non ci arriva mai (`steps.length` sarebbe 0, si esce sopra).
   const TITOLO_METODO: Record<SessionMode, string> = {
-    contact: 'CONTACT', null: 'NULL', mirror: 'MIRROR', tone: 'TONE', free: '',
+    contact: 'CONTACT', null: 'NULL', mirror: 'MIRROR', tone: 'TONE', truth: 'TRUTH', free: '',
   };
   const titoloRileggi = L('fatto — clic per rileggerlo', 'fait — clic pour le relire',
     'done — click to reread it', 'hecho — clic para releerlo', 'klart — klicka för att läsa igen') as string;

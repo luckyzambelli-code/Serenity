@@ -21,6 +21,7 @@ const base: PhaseSignals = {
   mirrorLocked: false,
   mirrorReached: false,
   tonePhase: 'locate',
+  truthPhase: 'idle',
 };
 const s = (o: Partial<PhaseSignals>): PhaseSignals => ({ ...base, ...o });
 

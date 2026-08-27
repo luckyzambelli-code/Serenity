@@ -96,8 +96,9 @@ describe('il ritorno al primo tempo', () => {
 describe('ogni ID ha un posto', () => {
   it('nessun ID orfano fra quelli dichiarati', () => {
     const usati = new Set<StepId>(SESSION_MODES.flatMap(m => stepsOf(m)));
-    // i tre di CONTACT + equilibrium + i tre propri di MIRROR + tone40. `item` è condiviso
-    // da tutti e quattro i metodi, e si conta una volta sola.
-    expect(usati.size).toBe(8);
+    // i tre di CONTACT + equilibrium + i tre propri di MIRROR + tone40 + ri/ask_truth. `item`
+    // è condiviso da CONTACT/NULL/MIRROR/TONE, e si conta una volta sola; TRUTH ha il proprio
+    // primo tempo (`ri`), non condiviso — il R/I non è un item come gli altri.
+    expect(usati.size).toBe(10);
   });
 });

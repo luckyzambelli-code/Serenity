@@ -26,7 +26,8 @@ export type StepId =
   | 'item' | 'mockup' | 'asis'                    // CONTACT
   | 'equilibrium'                                  // NULL (item · mockup · equilibrium)
   | 'value' | 'double' | 'obtained'                // MIRROR (item · value · double · obtained)
-  | 'tone40';                                      // TONE (item · tono 40)
+  | 'tone40'                                        // TONE (item · tono 40)
+  | 'ri' | 'ask_truth';                             // TRUTH (r/i · chiedi la verità)
 
 /**
  * I tempi di ciascun metodo, nell'ordine di Ron.
@@ -41,6 +42,13 @@ const STEPS: Record<SessionMode, StepId[]> = {
   // TONE ne ha DUE, uno per comando di Ron — « locate resistance » e « raise this to tone
   // forty ». Erano quattro: segno e ampiezza erano un assessment che i comandi non prevedono.
   tone:    ['item', 'tone40'],
+  // TRUTH ne ha DUE come TONE, un tempo per comando: localizzare il R/I, poi chiedere « what
+  // about this is the truth? » — ridato finché non emerge un ulteriore R/I (v.
+  // `useTruthCycle.ts`). `ri_located`/`questioning`/`candidate`/`truth_event` sono tutte
+  // ancora il SECONDO tempo (si sta chiedendo): la pista non ha bisogno di un tempo a sé per
+  // "un candidato è stato proposto", che resta uno stato della FSM, non un gesto nuovo
+  // dell'auditor da annunciare come tempo — stessa scelta già fatta per `null.rise`.
+  truth:   ['ri', 'ask_truth'],
   free:    [],   // APERTO non ha sequenza: è il suo senso.
 };
 
@@ -83,6 +91,12 @@ export function currentStep(phase: SessionPhase, mode: SessionMode): number {
     case 'tone.say_item':     return 0;
     case 'tone.raise':        return 1;
     case 'tone.done':         return 1;   // compiuto: resta acceso l'ultimo, non se ne inventa un terzo
+    // TRUTH — `say_ri` è ancora il tempo del R/I: non è stato detto. `questioning` copre la
+    // FSM fine (ri_located/questioning/candidate/truth_event, v. `sessionPhase.ts`).
+    case 'truth.ri':             return 0;
+    case 'truth.say_ri':         return 0;
+    case 'truth.questioning':    return 1;
+    case 'truth.return_present': return 1;
     default:                  return -1;
   }
 }
@@ -90,4 +104,4 @@ export function currentStep(phase: SessionPhase, mode: SessionMode): number {
 /** Il ciclo è finito? Serve a spuntare l'ultimo tempo invece di lasciarlo « in corso ». */
 export const stepDone = (phase: SessionPhase): boolean =>
   phase === 'contact.asis' || phase === 'null.equilibrium'
-  || phase === 'mirror.reached' || phase === 'tone.done';
+  || phase === 'mirror.reached' || phase === 'tone.done' || phase === 'truth.return_present';

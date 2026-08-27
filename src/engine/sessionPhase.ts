@@ -29,6 +29,7 @@
 import type { SessionMode } from './sessionMode';
 import type { NullStateId } from './NullCycleStateMachine';
 import type { TonePhase } from './toneScale';
+import type { TruthPhase } from './truthScale';
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════
 // LE FASI
@@ -82,8 +83,25 @@ export type TonePhaseId =
   | 'tone.raise'
   | 'tone.done';
 
+/**
+ * TRUTH — il protocollo di Ron (v. docs/truth-cycle-proposal.md). Due tempi, come TONE: si
+ * localizza il R/I, poi si chiede « what about this is the truth? » finché non emerge un
+ * ulteriore R/I. `ri_located`/`questioning`/`candidate`/`truth_event` (la FSM fine di
+ * `useTruthCycle.ts`) sono TUTTE ancora il secondo tempo per la pista — un candidato proposto
+ * dal motore non è un gesto nuovo dell'auditor da annunciare come tempo a sé, stessa scelta
+ * già fatta per `null.rise`.
+ */
+export type TruthPhaseId =
+  | 'truth.ri'
+  /** Premuto col campo VUOTO: si aspetta che il R/I sia detto. Come negli altri quattro. */
+  | 'truth.say_ri'
+  /** Localizzato, in domanda — copre ri_located/questioning/candidate/truth_event insieme. */
+  | 'truth.questioning'
+  /** Un ulteriore R/I è emerso: pronto per "return to present time". */
+  | 'truth.return_present';
+
 export type SessionPhase =
-  | CrossPhase | ContactPhase | NullPhaseId | MirrorPhase | TonePhaseId
+  | CrossPhase | ContactPhase | NullPhaseId | MirrorPhase | TonePhaseId | TruthPhaseId
   | 'free';   // solo l'ago, nessun ciclo
 
 /** Le fasi in cui un ciclo è in corso — utile ai moduli che devono sparire solo lì. */
@@ -91,12 +109,13 @@ export const isCyclePhase = (p: SessionPhase): boolean =>
   p.includes('.') || p === 'free';
 
 /** La famiglia di appartenenza, per le regole che valgono per tutto un ciclo. */
-export const phaseFamily = (p: SessionPhase): 'contact' | 'null' | 'mirror' | 'tone' | 'free' | 'cross' =>
+export const phaseFamily = (p: SessionPhase): 'contact' | 'null' | 'mirror' | 'tone' | 'truth' | 'free' | 'cross' =>
   p === 'free' ? 'free'
   : p.startsWith('contact.') ? 'contact'
   : p.startsWith('null.')    ? 'null'
   : p.startsWith('mirror.')  ? 'mirror'
   : p.startsWith('tone.')    ? 'tone'
+  : p.startsWith('truth.')   ? 'truth'
   : 'cross';
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════
@@ -142,6 +161,9 @@ export interface PhaseSignals {
 
   // ── TONE ─────────────────────────────────────────────────────────────────────────────────
   tonePhase:      TonePhase;
+
+  // ── TRUTH ────────────────────────────────────────────────────────────────────────────────
+  truthPhase:     TruthPhase;
 }
 
 /**
@@ -200,6 +222,14 @@ export function derivePhase(s: PhaseSignals): SessionPhase {
  * visibile. Il testo prende dunque la scala di ciclo; lo schermo prenderà `derivePhase`.
  */
 export function deriveCyclePhase(s: PhaseSignals): SessionPhase {
+  // ── TRUTH : localizza il R/I → chiedi finché non emerge un ulteriore R/I ─────────────────
+  if (s.mode === 'truth') {
+    if (s.truthPhase === 'idle')            return 'truth.ri';
+    if (!s.itemNamed)                        return 'truth.say_ri';
+    if (s.truthPhase === 'return_present')   return 'truth.return_present';
+    return 'truth.questioning';   // ri_located/questioning/candidate/truth_event: stesso tempo
+  }
+
   // ── TONE : dai l'item → portalo a tono 40 ────────────────────────────────────────────────
   if (s.mode === 'tone') {
     if (s.tonePhase === 'locate')    return 'tone.item';
