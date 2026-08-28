@@ -28,7 +28,7 @@ import {
   TONE_TARGET, toneFromTa, toneFromDelta, reachedTop, ToneLocator,
   type TonePhase, type ToneLocateAnchor, type ToneWitness,
 } from '../engine/toneScale';
-import { TONE_SMOOTH, TONE_HOLD_S, TONE_AMBIENT_ALPHA, TONE_AMBIENT_MIN, TONE_SIGMA_SPAN, TONE_AMBIENT_WARMUP_N } from '../engine/tuning';
+import { TONE_SMOOTH, TONE_HOLD_S, TONE_MUSE_ESCURSIONE } from '../engine/tuning';
 import { TA_MAX } from '../engine/thetaTaScale';
 import { taToTwoCans, toneMargin, withMargin, type PcCanHistory } from '../engine/canTest';
 import type { ElectrodeConfig } from '../engine/thetaSetup';
@@ -168,17 +168,6 @@ export function useToneCycle(d: ToneCycleDeps) {
    *  `localizzaTone`, mai durante la stessa salita). */
   const qLSmoothRef = useRef(0);
   const taSmoothRef = useRef<number | null>(null);
-  /** ── L'AMPIEZZA-AMBIENTE DI QUESTA PERSONA — v. la nota su `TONE_AMBIENT_ALPHA`/
-   *  `TONE_SIGMA_SPAN` in `tuning.ts`. Una EMA (molto lenta) di quanto `d.qL` si scosta dalla
-   *  sua stessa media (`qLSmoothRef`): non "quanto vale adesso", ma "quanto tipicamente
-   *  oscilla QUESTA persona quando non sta succedendo niente di speciale" — lo stesso ruolo di
-   *  `ambientQ` dentro `ToneLocator`, qui esteso a ogni tick invece che al solo istante del
-   *  clic su LOCALIZZA. Non si azzera mai al cambio ciclo/localizzazione (a differenza di
-   *  `toneHighRef`): è un tratto della persona, non di UNA resistenza. */
-  const qLAmbientDevRef = useRef(0);
-  /** Quanti campioni hanno già contribuito alla stima dell'ambiente — v. la nota sul
-   *  "riscaldamento" qui sotto, dove serve. */
-  const qLAmbientNRef = useRef(0);
   const toneHighRef = useRef<number | null>(null);
   /** ── IL CANDIDATO IN TENUTA — v. `TONE_HOLD_S` in `tuning.ts`. Segnalato: « il MUSE porta
    *  subito a tono 40 »: il ratchet sopra prendeva per buono QUALUNQUE nuovo massimo, un solo
@@ -216,31 +205,6 @@ export function useToneCycle(d: ToneCycleDeps) {
   qLRef.current = d.qL;
   // Le due medie mobili, aggiornate a ogni render come `qLRef` — v. la nota su `TONE_SMOOTH`.
   qLSmoothRef.current = qLSmoothRef.current * (1 - TONE_SMOOTH) + d.qL * TONE_SMOOTH;
-  // ── L'AMBIENTE, SEMPRE IN AGGIORNAMENTO — v. la nota su `qLAmbientDevRef` sopra e su
-  // `TONE_AMBIENT_ALPHA` in `tuning.ts`. Quanto lo scarto di ADESSO si allontana dalla media
-  // (`Math.abs`, non con segno: interessa L'AMPIEZZA del rumore, non la sua direzione).
-  //
-  // ⚠️ BUG TROVATO — segnalato di nuovo, dopo il fix precedente: « TONE. sempre su TONO 40 ».
-  // L'EMA parte da uno scarto SEMINATO A ZERO (`qLAmbientDevRef = useRef(0)`): un'EMA con alfa
-  // piccolo (0.01) impiega circa 1/alfa campioni — ~100, diversi secondi a un ciclo tipico —
-  // per allontanarsi davvero dal suo seme. Finché non ci è arrivata, `qLAmbientDevRef.current`
-  // resta vicinissimo a zero, l'escursione dinamica (`Math.max(TONE_AMBIENT_MIN, ...)  *
-  // TONE_SIGMA_SPAN`) resta vicina al solo pavimento di sicurezza (0.01×8 = 0,08) — MINUSCOLA
-  // — e QUALUNQUE variazione normale di `qL` divisa per un numero così piccolo sfonda la scala
-  // in un colpo: esattamente "sempre a 40", proprio nei primi secondi in cui l'auditor prova
-  // TONE per la prima volta in una seduta. Non bastava spostare IL PESO del calcolo
-  // sull'ambiente (fix precedente, corretto in sé) se l'ambiente stesso parte da una stima
-  // sistematicamente troppo bassa. Corretto con una MEDIA CUMULATIVA vera per i primi
-  // `TONE_AMBIENT_WARMUP_N` campioni (nessuna distorsione verso un seme a zero, converge da
-  // subito alla media REALE di quel poco che si è visto) — solo dopo passa alla EMA lenta, per
-  // seguire la persona nel tempo senza restare congelata sul primissimo respiro.
-  qLAmbientNRef.current += 1;
-  const scartoOra = Math.abs(d.qL - qLSmoothRef.current);
-  if (qLAmbientNRef.current <= TONE_AMBIENT_WARMUP_N) {
-    qLAmbientDevRef.current += (scartoOra - qLAmbientDevRef.current) / qLAmbientNRef.current;
-  } else {
-    qLAmbientDevRef.current = qLAmbientDevRef.current * (1 - TONE_AMBIENT_ALPHA) + scartoOra * TONE_AMBIENT_ALPHA;
-  }
   if (taCorretto !== null) {
     taSmoothRef.current = taSmoothRef.current === null
       ? taCorretto
@@ -273,13 +237,20 @@ export function useToneCycle(d: ToneCycleDeps) {
    * sguardo" a cursore primario). Il margine delle lattine resta specifico del Theta-Meter: non
    * si applica quando è il MUSE a guidare.
    */
-  // ── L'ESCURSIONE NON È PIÙ UN NUMERO FISSO — v. la nota grande su `TONE_AMBIENT_ALPHA` in
-  // `tuning.ts`: un'escursione fissa andava bene per una persona e traboccava per un'altra.
-  // Qui si ricalcola A OGNI TICK sull'ampiezza-ambiente di QUESTA persona (`qLAmbientDevRef`,
-  // con un pavimento `TONE_AMBIENT_MIN` per non dividere per (quasi) zero).
-  const toneEscursioneDinamica = Math.max(TONE_AMBIENT_MIN, qLAmbientDevRef.current) * TONE_SIGMA_SPAN;
+  // ── L'ESCURSIONE TORNA A ESSERE UN NUMERO FISSO — segnalato: « le calcul doit être porté sur
+  // le fait que TONE_SIGMA_SPAN ne soit pas 8, mais un numéro certain arbitraire (comme indiqué
+  // par Ron pour le TA et les Ohms) qui permette de visualiser la montée et reste dans le
+  // range ». Il sistema ad ampiezza-ambiente (v. `TONE_AMBIENT_ALPHA`/`TONE_SIGMA_SPAN` in
+  // `tuning.ts`, ora INUTILIZZATE — lasciate come nota storica) provava a calibrarsi DA SÉ su
+  // ogni persona — l'idea era più robusta in teoria, ma tre round di tuning non l'hanno mai
+  // portata a un punto stabile, e il difetto del seme a zero l'aveva anche resa peggio del
+  // sistema fisso che sostituiva. Richiesto esplicitamente il ritorno a UN NUMERO SOLO, uguale
+  // per chiunque — esattamente come `TA_MAX`/`taClear` per il Meter: Ron non calibra la scala
+  // del TA sul rumore di ciascun preclear, usa una scala fissa per tutti. `TONE_MUSE_ESCURSIONE`
+  // (v. `tuning.ts`) è quel numero per `d.qL` — non validato su EEG reali (dichiarato), ma
+  // fisso e riproducibile, nello stesso spirito.
   const toneOraMuse = toneAtStart !== null && toneQAtStartRef.current !== null
-    ? toneFromDelta(toneAtStart, toneQAtStartRef.current, qLSmoothRef.current, toneEscursioneDinamica)
+    ? toneFromDelta(toneAtStart, toneQAtStartRef.current, qLSmoothRef.current, TONE_MUSE_ESCURSIONE)
     : null;
   const toneOraGrezzo = d.hasMuse && toneOraMuse !== null
     ? toneOraMuse

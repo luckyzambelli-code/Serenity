@@ -5995,3 +5995,47 @@ montait pas) — à confirmer après cette build avant d'aller plus loin.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/Serenity.tsx`, `src/serenity/sessionReport.ts`.
+
+---
+
+## Giro (28/08/2026, 4) — TRUTH montrait NULL/RISE/EQUILIBRIUM, TONE_MUSE_ESCURSIONE fixe (retour), PDF trop espacé
+
+**TRUTH montrait littéralement l'arc de NULL.** Segnalato : « dans TRUTH tu as laissé NULL
+RISE EQUILIBRIUM, cela n'est pas bon ». Cause : `ClearDial` n'a jamais eu de branche pour
+TRUTH — un cinquième métode qui n'existe même pas dans EQUILIBRIUM, où ce composant est né.
+Le ternaire de montage (`Serenity.tsx`) ne trouvait aucune condition vraie et tombait dans le
+ramo par défaut — le MÊME `<ClearDial cycleKind={cycles.cycleKind}>` du cycle CONTACT/NULL,
+avec SES étiquettes. Troisième `cycleKind` ajouté (`'truth'`), trois segments propres —
+ACCORD → VÉRITÉ → TEMPS PRÉSENT, TRADUITS dans les cinq langues (demande explicite — pas des
+termes fixes comme CONTACT/NULL). Les trois tappe collassano la FSM comme le fait déjà
+`sessionPhase.ts` pour le texte (ri_located→ACCORD, questioning/candidate/truth_event→un seul
+VÉRITÉ, return_present→TEMPS PRÉSENT) — même raison : candidate/questioning oscillent par
+construction, les faire correspondre à deux étiquettes différentes aurait fait voir à l'arc
+la même régression tout juste corrigée dans le texte le giro précédent. Toujours monté avec
+ou sans aiguille (même correction que MIRROR) : `VistaSenzaAgo` n'a pas de branche TRUTH dont
+se "répéter", donc le cacher aurait fait disparaître l'unique vue que TRUTH a.
+
+**TONE_MUSE_ESCURSIONE, retour à un nombre fixe.** Segnalato : « le calcul doit être porté sur
+le fait que TONE_SIGMA_SPAN ne soit pas 8, mais un numéro certain arbitraire (comme indiqué
+par Ron pour le TA et les Ohms) qui permette de visualiser la montée et reste dans le range ».
+Le système ad ampiezza-ambiente (trois round de tuning, jamais stabilisé) abandonné : Ron ne
+calibre pas la scala du TA sur le bruit de chaque preclear (`TA_MAX`/`taClear` sont fixes pour
+tout le monde) — même logique appliquée ici. `TONE_MUSE_ESCURSIONE` repasse à une constante
+simple, valeur 3 (entre 2, encore trop sensible, et 4, jamais assez — le seul point entre les
+deux jamais essayé comme valeur isolée). Les constantes `TONE_AMBIENT_*`/`TONE_SIGMA_SPAN`
+restent dans `tuning.ts` marquées ABANDONNÉES, comme note historique.
+
+**Le PDF trop espacé — pas une police, un glyphe manquant.** Segnalato : « change la police de
+caractère pour SYS et AIG, elle est trop espacée. Utilise la même que pour le transcript ».
+C'était déjà la même police (`courier`) — le vrai coupable : les lignes AGO/NEEDLE portent
+« → » et « ◎ » dans leur texte, hors du jeu Latin-1/WinAnsi des polices standard de jsPDF. Un
+glyphe manquant corrompt le calcul de crénage de TOUTE la ligne, pas seulement de ce caractère
+— d'où l'espacement large lettre par lettre, visible SEULEMENT sur les lignes qui contenaient
+ces symboles. `ascii()` (dans `sessionReport.ts`) enlevait déjà les accents (NFD) mais pas ces
+symboles — étendu pour les remplacer par des équivalents ASCII (→ « -> », ◎ « * », etc.).
+**Vérifié en direct** : script autonome, PDF avant/après relu — la ligne "AIG: R&I · colere ->
+Fall" s'affiche maintenant compacte, exactement comme SYS/AUD.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/components/ClearDial.tsx`, `src/engine/tuning.ts`, `src/serenity/Serenity.tsx`,
+`src/serenity/sessionReport.ts`, `src/session/useToneCycle.ts`.

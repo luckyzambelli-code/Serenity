@@ -3,6 +3,7 @@ import { useMetric } from '../store/metricsStore';
 import { useTZone } from '../store/tzoneStore';
 import { chargeStateById, type ChargeStateId } from '../lib/chargeState';
 import { useI18n } from '../i18n';
+import { pick5 } from '../i18n5';
 
 /**
  * ClearDial — a thin SECOND ARC concentric with the needle quadrant (user request).
@@ -53,13 +54,47 @@ const NULL_LABEL: Record<string, string> = { null: 'NULL', rise: 'RISE', clear_r
 const NULL_DARK: Record<string, string> = { null: '#94a3b8', rise: '#fbbf24', clear_read: '#d6ffff' };
 const NULL_LIGHT: Record<string, string> = { null: '#64748b', rise: '#b45309', clear_read: '#0e7490' };
 
-export const ClearDial = React.memo(function ClearDial({ armed = true, asIsPending = false, manualReady = false, asIsFalse = false, asIsIO = 0, onValidate, deltaStar = 0, deltaStarN = 0, isLightTheme = false, cycleKind = 'charge', nullPhase = 'neutral' }: {
+// ── CYCLE TRUTH (SERENITY) : ACCORD → VÉRITÉ → TEMPS PRÉSENT ──────────────────
+// ⚠️ TROVATO — segnalato: « dans TRUTH tu as laissé NULL RISE EQUILIBRIUM, cela n'est pas
+// bon ». `ClearDial` non aveva mai un ramo per TRUTH (un metodo che non esiste in
+// EQUILIBRIUM, dove questo componente è nato): quando armato, il ternario di montaggio in
+// `Serenity.tsx` non trovava nessuna condizione vera per lui e cadeva nel ramo di DEFAULT —
+// lo stesso `<ClearDial>` del ciclo NULL, con le SUE etichette, mai pensate per TRUTH.
+// Terzo `cycleKind`, stesso schema di 'null': tre segmenti, ID/etichette/colori propri.
+// Le tre tappe collassano la FSM di `useTruthCycle.ts` (idle→ri_located→questioning⇄
+// candidate→truth_event→return_present) come già fa `sessionPhase.ts` per il testo — la
+// STESSA ragione: candidate/questioning oscillano avanti e indietro per costruzione
+// (v. `truthCandSinceRef`/`truthDismissSinceRef`), farli corrispondere a DUE tappe diverse
+// dell'arco avrebbe fatto vedere all'arco la STESSA regressione appena corretta nel testo.
+// ACCORD = R/I localizzato, non ancora chiesto; VÉRITÉ = tutto il tempo attivo (chiedere/
+// candidato/verità confermata, un solo blocco); TEMPS PRÉSENT = tornato al presente.
+// A differenza di NULL/CONTACT, le etichette sono TRADOTTE (richiesto esplicitamente) — non
+// termini tecnici fissi come "F/N"/"NEEDLE LIGHT": `truthLabelOf` prende `lang`, sotto.
+export type TruthDialId = 'neutral' | 'accord' | 'verite' | 'temps_present';
+const TRUTH_PHASES: TruthDialId[] = ['accord', 'verite', 'temps_present'];
+const TRUTH_ORDER: Record<string, number> = { neutral: -1, accord: 0, verite: 1, temps_present: 2 };
+const TRUTH_SEG: Record<string, [number, number]> = { accord: [-1, -1 / 3], verite: [-1 / 3, 1 / 3], temps_present: [1 / 3, 1] };
+const TRUTH_DARK: Record<string, string> = { accord: '#f9a8d4', verite: '#f472b6', temps_present: '#fff0f7' };
+const TRUTH_LIGHT: Record<string, string> = { accord: '#9d174d', verite: '#be185d', temps_present: '#831843' };
+const truthLabelOf = (id: string, lang: string): string => pick5(lang,
+  id === 'accord' ? 'ACCORDO' : id === 'verite' ? 'VERITÀ' : id === 'temps_present' ? 'TEMPO PRESENTE' : id,
+  id === 'accord' ? 'ACCORD' : id === 'verite' ? 'VÉRITÉ' : id === 'temps_present' ? 'TEMPS PRÉSENT' : id,
+  id === 'accord' ? 'AGREEMENT' : id === 'verite' ? 'TRUTH' : id === 'temps_present' ? 'PRESENT TIME' : id,
+  id === 'accord' ? 'ACUERDO' : id === 'verite' ? 'VERDAD' : id === 'temps_present' ? 'TIEMPO PRESENTE' : id,
+  id === 'accord' ? 'ÖVERENSKOMMELSE' : id === 'verite' ? 'SANNING' : id === 'temps_present' ? 'NUTID' : id);
+
+export const ClearDial = React.memo(function ClearDial({ armed = true, asIsPending = false, manualReady = false, asIsFalse = false, asIsIO = 0, onValidate, deltaStar = 0, deltaStarN = 0, isLightTheme = false, cycleKind = 'charge', nullPhase = 'neutral', truthDialPhase = 'neutral', lang = 'it' }: {
   armed?: boolean; asIsPending?: boolean; asIsFalse?: boolean; asIsIO?: number; onValidate?: () => void; deltaStar?: number; deltaStarN?: number;
   manualReady?: boolean;
   isLightTheme?: boolean;
-  /** Le dial suit le CYCLE CHOISI : 'charge' (CONTACT→DISCHARGE→AS-IS) ou 'null' (NULL→RISE→EQUILIBRIUM). */
-  cycleKind?: 'charge' | 'null';
+  /** Le dial suit le CYCLE CHOISI : 'charge' (CONTACT→DISCHARGE→AS-IS), 'null' (NULL→RISE→
+   *  EQUILIBRIUM) ou 'truth' (ACCORD→VÉRITÉ→TEMPS PRÉSENT, propre à SERENITY). */
+  cycleKind?: 'charge' | 'null' | 'truth';
   nullPhase?: NullDialId;
+  truthDialPhase?: TruthDialId;
+  /** Langue des étiquettes TRUTH — les seules traduites (v. la note ci-dessus). Ignoré pour
+   *  'charge'/'null', qui restent des termes fixes comme partout ailleurs. */
+  lang?: string;
 }) {
   const { t } = useI18n();
   const phase = useMetric(m => m.chargePhase);
@@ -73,23 +108,28 @@ export const ClearDial = React.memo(function ClearDial({ armed = true, asIsPendi
   // AS-IS PROBABILE éliminé (choix utilisateur) : validation seulement sur l'AS-IS CONFIRMÉ.
   void manualReady;
   const manualOk = false;
-  // ── Le dial suit le CYCLE CHOISI (charge ou null) ──
+  // ── Le dial suit le CYCLE CHOISI (charge, null ou truth) ──
   const isNullCycle = cycleKind === 'null';
-  const validatable = pending && !isNullCycle; // le cycle null a sa propre fin (EQUILIBRIUM + VGI's)
+  const isTruthCycle = cycleKind === 'truth';
+  const validatable = pending && !isNullCycle && !isTruthCycle; // null/truth ont leur propre fin
   const effPhase: ChargeStateId = validatable ? 'asis' : (armed ? phase : 'neutral');
   // Phase colour — bright chargeState in DARK, dark variant in LIGHT (readable on light bg).
   const phaseColorOf = (id: ChargeStateId): string => isLightTheme ? (LIGHT_PHASE[id] ?? '#475569') : chargeStateById(id).color;
   // Vue UNIFIÉE : mêmes 3 segments, jeu d'ids/étiquettes/couleurs selon le cycle.
-  const IDS: string[] = isNullCycle ? (NULL_PHASES as string[]) : (PHASES as string[]);
-  const SEG_OF: Record<string, [number, number]> = isNullCycle ? NULL_SEG : SEG;
-  const ORDER_OF: Record<string, number> = isNullCycle ? NULL_ORDER : (ORDER as Record<string, number>);
+  const IDS: string[] = isNullCycle ? (NULL_PHASES as string[]) : isTruthCycle ? (TRUTH_PHASES as string[]) : (PHASES as string[]);
+  const SEG_OF: Record<string, [number, number]> = isNullCycle ? NULL_SEG : isTruthCycle ? TRUTH_SEG : SEG;
+  const ORDER_OF: Record<string, number> = isNullCycle ? NULL_ORDER : isTruthCycle ? TRUTH_ORDER : (ORDER as Record<string, number>);
   const colorOf = (id: string): string => isNullCycle
     ? ((isLightTheme ? NULL_LIGHT[id] : NULL_DARK[id]) ?? '#64748b')
+    : isTruthCycle
+    ? ((isLightTheme ? TRUTH_LIGHT[id] : TRUTH_DARK[id]) ?? '#64748b')
     : phaseColorOf(id as ChargeStateId);
   const labelOf = (id: string): string => isNullCycle
     ? (NULL_LABEL[id] ?? id)
+    : isTruthCycle
+    ? truthLabelOf(id, lang)
     : (t(chargeStateById(id as ChargeStateId).labelKey as any) as string);
-  const effId: string = isNullCycle ? (armed ? nullPhase : 'neutral') : effPhase;
+  const effId: string = isNullCycle ? (armed ? nullPhase : 'neutral') : isTruthCycle ? (armed ? truthDialPhase : 'neutral') : effPhase;
   const phaseCol = armed && effId !== 'neutral' ? colorOf(effId) : (isLightTheme ? '#94a3b8' : '#64748b');
   const cur = armed ? (ORDER_OF[effId] ?? -1) : -1;
   // progress dot position + pulse:
@@ -103,6 +143,8 @@ export const ClearDial = React.memo(function ClearDial({ armed = true, asIsPendi
   let dotPulse = false;
   if (isNullCycle) {
     if (effId === 'clear_read') dotPulse = true;
+  } else if (isTruthCycle) {
+    if (effId === 'temps_present') dotPulse = true;
   } else if (effPhase === 'discharge') { const [a, b] = SEG.discharge; dotOff = a + (b - a) * frac; }
   else if (effPhase === 'asis') {
     if (pending && !asIsFalse) { dotOff = 1; dotPulse = true; }

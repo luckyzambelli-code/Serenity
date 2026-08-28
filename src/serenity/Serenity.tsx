@@ -5019,6 +5019,30 @@ export default function Serenity() {
               // sbagliato per TONE): l'indicazione di cosa fare resta comunque a schermo, in
               // `PistaCiclo` (mai gestita qui).
               null
+            ) : truth.truthPhase !== 'idle' ? (
+              // ⚠️ TROVATO — segnalato: « dans TRUTH tu as laissé NULL RISE EQUILIBRIUM, cela
+              // n'est pas bon ». TRUTH non aveva MAI un ramo qui: il ternario cadeva dritto nel
+              // ramo di default sotto — lo stesso `<ClearDial cycleKind={cycles.cycleKind}>`
+              // del ciclo CONTACT/NULL, con le SUE etichette (mai pensate per un quinto metodo
+              // che non esiste nemmeno in EQUILIBRIUM, dove `ClearDial` è nato). Terzo
+              // `cycleKind` in `ClearDial.tsx` (v. la sua nota): ACCORD → VÉRITÉ → TEMPS
+              // PRÉSENT, tradotto — non termini fissi come CONTACT/NULL.
+              // Sempre montato, con o senza ago: `ClearDial` non disegna un ago (proprio come
+              // `MirrorDial`, v. la sua stessa correzione più sopra) — `VistaSenzaAgo` non ha
+              // un ramo TRUTH da cui "ripetersi", quindi qui nascondere sotto `vistaSenzaAgo`
+              // farebbe SPARIRE l'unica vista che TRUTH ha, esattamente il difetto già corretto
+              // per MIRROR.
+              <ClearDial
+                armed
+                cycleKind="truth"
+                truthDialPhase={
+                  truth.truthPhase === 'ri_located' ? 'accord'
+                  : truth.truthPhase === 'return_present' ? 'temps_present'
+                  : 'verite'   // questioning/candidate/truth_event — un solo blocco, v. la nota
+                }
+                isLightTheme={isLightTheme}
+                lang={lang}
+              />
             ) : vistaSenzaAgo ? null : (
               // ⚠️ `ClearDial` (l'anello sottile concentrico all'ago) non ha più motivo di
               // esistere in questa vista: `VistaSenzaAgo`, montata sopra al posto

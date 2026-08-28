@@ -642,12 +642,17 @@ export const TONE_SMOOTH = 0.15;
  *      scala del tono (80 divisioni): anche una frazione modesta, moltiplicata per 80,
  *      superava il fondo scala in un tick (« porta subito a tono 40 »). Alzata a 4 (un quarto
  *      del guadagno) per correggerlo — ma quarto era TROPPO: « la scala non si muove più »,
- *      il sintomo opposto. `TONE_MUSE_ESCURSIONE` ora vale 2 — a metà strada fra i due
- *      estremi provati, non un capriccio: 1 lasciava passare il rumore, 4 filtrava anche il
- *      movimento vero, 2 è il primo punto fra i due mai provato. ⚠️ ANCORA NON UNA MISURA
- *      VERIFICATA sul campo (nessun log EEG reale sotto mano per tararla) — resta da stringere
- *      o allargare guardando le prossime sedute vere, con più pazienza del "tutto o niente"
- *      dei primi due tentativi.
+ *      il sintomo opposto. Poi 2 — ancora troppo sensibile (« à TONE on est toujours à 40 »,
+ *      due giri più tardi). Il tentativo di rimpiazzarlo con un sistema che si tarasse da sé
+ *      sul rumore-ambiente di ciascuno (v. la nota storica più giù, `TONE_AMBIENT_ALPHA`) non
+ *      si è mai stabilizzato in tre round — e la richiesta esplicita è stata di TORNARE a un
+ *      numero fisso: « un numéro certain arbitraire, comme indiqué par Ron pour le TA et les
+ *      Ohms » (Ron non calibra la scala del TA sul rumore di ciascun preclear: `TA_MAX`/
+ *      `taClear` sono fissi per chiunque). `TONE_MUSE_ESCURSIONE` vale ora 3 — il punto fra 2
+ *      (troppo sensibile) e 4 (per niente sensibile) mai ancora provato come valore singolo,
+ *      non un capriccio. ⚠️ ANCORA NON UNA MISURA VERIFICATA sul campo (nessun log EEG reale
+ *      sotto mano per tararla) — resta da stringere o allargare guardando le prossime sedute
+ *      vere, con la stessa pazienza già chiesta la prima volta.
  *   2. IL PICCO DOVEVA REGGERE UN ISTANTE, MA NON TROPPO A LUNGO. Il ratchet (v.
  *      `TONE_SMOOTH`, sopra) prendeva per buono QUALUNQUE nuovo massimo, anche un solo
  *      campione fuori posto — bastava un colpo isolato per bloccare il tono lassù per sempre.
@@ -660,56 +665,38 @@ export const TONE_SMOOTH = 0.15;
  *      immobilizzarlo — dimezzato a 0.15s, la STESSA scala di tempo di `TONE_SMOOTH` invece
  *      del doppio.
  */
-export const TONE_MUSE_ESCURSIONE = 2;
+export const TONE_MUSE_ESCURSIONE = 3;
 /** V. la nota sopra — quanto deve reggere un nuovo massimo prima di essere promosso a "punto
  *  più alto raggiunto". Stessa scala di tempo di `TONE_SMOOTH`, non il doppio: un freno in
  *  più oltre alla media mobile, non due sovrapposti. */
 export const TONE_HOLD_S = 0.15;
 
 /**
- * ── TONE COL MUSE, IL QUARTO TENTATIVO — segnalato ancora: « à TONE on est toujours à 40 tout
- * de suite, il faut revoir les calculs ». Tre round di questa stessa sessione avevano già
- * ritoccato SOLO `TONE_MUSE_ESCURSIONE`/`TONE_HOLD_S` (1→4→2 per l'escursione, 0.3→0.15 per
- * l'hold) — un NUMERO diverso ogni volta per LA STESSA FORMULA, e la formula stessa è il
- * problema: `toneFromDelta` divide lo spostamento di `d.qL` per un'escursione FISSA, uguale
- * per chiunque. `d.qL` (0..1) ha un'ampiezza di rumore diversa da persona a persona — la
- * STESSA escursione che per uno è ragionevole, per un altro (segnale naturalmente più mosso)
- * fa traboccare la scala alla prima oscillazione: nessuna costante fissa può andare bene per
- * tutti insieme, ed è per questo che «troppo sensibile»/«non si muove» si sono alternati senza
- * mai stabilizzarsi. LA VERA CORREZIONE — chiesta esplicitamente («revoir les calculs», non
- * «retarare i numeri») — è cambiare la MISURA, non il numero: invece di un'escursione fissa,
- * ci si tara sul RUMORE AMBIENTE di QUESTA persona, esattamente come già fa `ToneLocator` con
- * `ambientQ`/`TONE_LOCATE_RISE_RATIO` per decidere QUANDO localizzare — la stessa idea, estesa
- * ad ogni tick invece che al solo istante del clic. Un movimento di UN'ampiezza-ambiente vale
- * `TONE_STEP` (una divisione, 10 punti): chi è naturalmente più mosso ha bisogno di uno
- * spostamento più grande per la stessa divisione — SI CALIBRA DA SÉ, non serve indovinare un
- * numero buono per chiunque. ⚠️ ANCORA NON MISURATO su dati EEG reali (nessuna seduta vera
- * sotto mano per confrontare "un'ampiezza-ambiente" a un vero movimento intenzionale) — resta
- * un'ipotesi PIÙ ROBUSTA della precedente (si adatta alla persona invece di sperare che il
- * numero fisso vada bene), non ancora una misura verificata: se la scala risultasse ancora
- * troppo o poco sensibile, la manopola da girare è `TONE_SIGMA_SPAN`, non più `_ESCURSIONE`
- * (lasciata qui inutilizzata solo come nota storica di cosa si è già provato).
+ * ── TONE COL MUSE, IL QUARTO TENTATIVO (ABBANDONATO) — segnalato allora: « à TONE on est
+ * toujours à 40 tout de suite, il faut revoir les calculs ». L'idea (sotto, `TONE_AMBIENT_*`):
+ * invece di un'escursione fissa uguale per chiunque, tararsi sul RUMORE AMBIENTE di QUESTA
+ * persona — chi è naturalmente più mosso avrebbe avuto bisogno di uno spostamento più grande
+ * per la stessa divisione, SI CALIBRA DA SÉ invece di indovinare un numero buono per tutti.
+ *
+ * ⚠️ RITORNO AL NUMERO FISSO — segnalato di nuovo, ancora « toujours à 40 » anche con questo
+ * sistema (un difetto di seme a zero nell'EMA lo aveva pure aggravato nei primi secondi), e
+ * poi richiesto ESPLICITAMENTE di tornare a un numero fisso: « un numéro certain arbitraire,
+ * comme indiqué par Ron pour le TA et les Ohms » — Ron non calibra la scala del TA sul rumore
+ * di ciascun preclear (`TA_MAX`/`taClear` sono fissi per chiunque), e tre round di tuning su
+ * questo sistema "intelligente" non si sono mai stabilizzati meglio dei tentativi fissi.
+ * `TONE_MUSE_ESCURSIONE` (sopra) è di nuovo la sola manopola — le costanti qui sotto restano
+ * SOLO come nota storica di cosa si è già provato, non più lette da `useToneCycle.ts`.
  */
-/** Quanto lentamente si aggiorna la stima del rumore ambiente di QUESTA persona (alfa
- *  dell'EMA). Molto più lento di `TONE_SMOOTH` (0.15): l'ambiente è un tratto della persona,
- *  non qualcosa che deve inseguire il tick — se si aggiornasse in fretta, un movimento vero
- *  finirebbe per allargare l'ambiente e "nascondere" sé stesso. */
+/** ABBANDONATA — v. la nota sopra. Quanto lentamente si aggiornava la stima del rumore
+ *  ambiente di QUESTA persona (alfa dell'EMA). */
 export const TONE_AMBIENT_ALPHA = 0.01;
-/** Quanti campioni usare per una MEDIA CUMULATIVA vera prima di passare alla EMA lenta (sopra)
- *  — v. la nota grande in `useToneCycle.ts`, « TONE. sempre su TONO 40 »: un'EMA che parte da
- *  zero è distorta verso il basso per i primi ~1/alfa campioni, ed è proprio lì che TONE
- *  risultava iper-sensibile. La media cumulativa non ha questa distorsione: converge da
- *  subito alla media vera di quel che si è visto, per quanto poco. */
+/** ABBANDONATA — quanti campioni per una media cumulativa vera prima di passare all'EMA lenta
+ *  (sopra), per non partire distorta verso un seme a zero. */
 export const TONE_AMBIENT_WARMUP_N = 30;
-/** Pavimento minimo dell'ampiezza-ambiente. Senza, una persona MOLTO ferma (deviazione quasi
- *  zero) produrrebbe un'escursione dinamica vicina a zero → sensibilità infinita → la scala
- *  esploderebbe al primo respiro. Valore di sicurezza, non una misura. */
+/** ABBANDONATA — pavimento minimo dell'ampiezza-ambiente, per non dividere per (quasi) zero. */
 export const TONE_AMBIENT_MIN = 0.01;
-/** Quante "ampiezze-ambiente" di movimento valgono l'INTERA scala (80 punti, 8 divisioni da
- *  10). A 8: un movimento di UNA ampiezza-ambiente = UNA divisione (`TONE_STEP`) — la
- *  proporzione più semplice possibile, non un numero scelto a caso. Più alto = scala meno
- *  sensibile (serve un movimento più grande per la stessa divisione); più basso = più
- *  sensibile. */
+/** ABBANDONATA — quante "ampiezze-ambiente" di movimento valevano l'INTERA scala (80 punti,
+ *  8 divisioni da 10). */
 export const TONE_SIGMA_SPAN = 8;
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════

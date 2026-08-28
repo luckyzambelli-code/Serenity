@@ -168,7 +168,16 @@ const ACCENT: [number, number, number] = [34, 150, 200];
 const INK: [number, number, number] = [28, 38, 56];
 /** Toglie gli accenti — jsPDF/helvetica è Latin-1, non ha i glifi di certi segni tipografici;
  *  stessa scelta di App.tsx (`ascii`, in `generateTextPdf`). */
-const ascii = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+// ⚠️ TROVATO — segnalato: « change la police de caractère dans le PDF pour SYS et AIG, elle
+// est trop espacée ». Non era il font (già lo stesso `courier` del transcript): le righe AGO
+// portano nel loro testo « → » (freccia) e « ◎ » (il pallino di apertura del R&I), fuori dal
+// set Latin-1/WinAnsi dei font standard di jsPDF (Helvetica/Courier) — un glifo mancante
+// corrompe il calcolo della crenatura per l'INTERA riga, non solo per quel carattere: da qui
+// lo spaziamento largo fra ogni lettera (visibile solo sulle righe AGO, le uniche a contenere
+// questi due simboli). `ascii()` toglieva già gli accenti (NFD) ma non questi due simboli —
+// esteso qui, non solo per le righe AGO: qualunque testo passi da questa funzione ne beneficia.
+const ascii = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replace(/→/g, '->').replace(/◎/g, '*').replace(/○/g, 'o').replace(/✓/g, 'v');
 const durata = (sec: number) => `${Math.floor(sec / 60)}m ${String(Math.max(0, Math.round(sec)) % 60).padStart(2, '0')}s`;
 
 /**
