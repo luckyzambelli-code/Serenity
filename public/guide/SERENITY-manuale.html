@@ -54,6 +54,16 @@
   en grand (§4), le mock-up de NULL simplifié en BASIC (§4), la teinte ambre du bouton fermer
   (§8). Chaque section pratique garde son emplacement de capture — une nouvelle ajoutée pour
   HELP, les autres réutilisent celles déjà en place (le nouveau texte y tient).
+
+  ── MIS À JOUR ENCORE (28/08/2026, tone étendu) ──────────────────────────────────────────────
+  Segnalato : « nel TONE c'è sotto la scala del tono, devi mettere anche la denominazione con i
+  numeri, devi dare la scala espansa ». Le menu du cercle TONE sans instruments montrait
+  seulement les treize chiffres de la colonne verticale, sans nom — EQUILIBRIUM, lui, donnait
+  déjà le nom à côté (`App.tsx`, le même menu) : SERENITY avait pris du retard sur sa propre
+  doctrine (« reproduire la logique d'EQUILIBRIUM »). Corrigé dans les deux apps ensemble, et
+  élargi en même temps à l'échelle entière (`TONE_LEVELS`, soixante-deux niveaux) — un menu
+  déroulant n'a pas le problème de chevauchement qui limitait la colonne dessinée à treize.
+  Note ajoutée en §4.
 -->
 <style>
   :root{
@@ -339,6 +349,11 @@
     <span data-l="it">TRUTH mostra in grande a che punto sei — ACCORDO (il R/I non è ancora chiesto), VERITÀ (in corso di richiesta), TEMPO PRESENTE (il R/I è chiuso) — sopra l'arco e nel titolo grande del ciclo.</span>
     <span data-l="en">TRUTH shows in large text where you are — ACCORD/AGREEMENT (the R/I isn't asked yet), VÉRITÉ/TRUTH (asking in progress), TEMPS PRÉSENT/PRESENT TIME (the R/I is closed) — above the arc and in the cycle's big title.</span>
   </div>
+  <div class="note info">
+    <span data-l="fr">TONE sans instruments : le menu déroulant sous le cercle TONE (pour déclarer où en est le préclair) donne maintenant l'échelle entière — soixante-deux niveaux, chacun avec son nom traduit à côté du chiffre, pas seulement les treize repères écrits sur la colonne verticale.</span>
+    <span data-l="it">TONE senza strumenti: il menu a tendina sotto il cerchio TONE (per dichiarare dove sta il preclear) dà ora la scala intera — sessantadue livelli, ciascuno col suo nome tradotto accanto al numero, non solo i tredici punti scritti sulla colonna verticale.</span>
+    <span data-l="en">TONE without instruments: the drop-down menu under the TONE circle (to declare where the preclear is) now gives the whole scale — sixty-two levels, each with its translated name next to the number, not just the thirteen points written on the vertical column.</span>
+  </div>
   <div class="shot">
     <img src="docs/guide-screenshots-serenity/cinq-methodes.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" onload="this.nextElementSibling.style.display='none'">
     <div class="cap" style="display:block">
@@ -473,7 +488,7 @@
 </div>
 <span class="ver">SERENITY <span id="v"></span></span>
 <script>
-const VERSIONE = "3.0.140";
+const VERSIONE = "3.0.141";
 document.getElementById('v').textContent = VERSIONE;
 function setLang(l){
   document.body.setAttribute('data-lang', l);

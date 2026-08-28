@@ -6229,3 +6229,37 @@ guide : 3.0.140.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/Serenity.tsx`, `public/guide/SERENITY-manuale.html` (rigenerato).
+
+---
+
+## Giro (28/08/2026, 10) — TONE : scala espansa e denominazione nel menu senza strumenti
+
+**Il menu di dichiarazione TONE, senza nome accanto al numero.** Segnalato : « nel TONE c'è
+sotto la scala del tono, devi mettere anche la denominazione con i numeri, devi dare la scala
+espansa ». Il `<select>` sotto il cerchio TONE (dove il preclear/auditor dichiara la posizione
+sulla scala quando non c'è meter) mostrava solo i tredici numeri di `TONE_LABELS` — quelli
+scritti sulla colonna verticale, ridotti apposta per non accavallarsi nel disegno SVG. Il
+`<select>` GEMELLO in EQUILIBRIUM (`App.tsx`, stesso ruolo) mostrava già « numero · nome »:
+SERENITY era rimasta indietro sulla propria dottrina — riprodurre la logica di EQUILIBRIUM
+([[serenity_reproduce_equilibrium_logic]]).
+
+Corretto in ENTRAMBE le app (non solo SERENITY: è la stessa select, la stessa funzione, e la
+dottrina vale nei due sensi — un divario fra le due non è mai voluto). Non solo il nome: la
+scala data è ora quella INTERA, `TONE_LEVELS` (sessantadue livelli, non più i tredici di
+`TONE_LABELS`) — un menu a tendina non è un disegno con un bordo da cui i nomi escono, quindi
+il vincolo che limita la colonna verticale a tredici etichette non si applica qui. La colonna
+disegnata (`ToneColumn.tsx`) NON è toccata: i suoi tredici punti restano quelli, con la stessa
+motivazione documentata contro l'accavallamento — non era quello il posto segnalato, e
+comunque un ritocco lì rischierebbe di disfare una correzione già presa con cura in un giro
+precedente.
+
+**Verificato in diretto**: sessione senza strumenti aperta, ciclo TONE — il menu mostra
+"0 · Mort du corps" di default (FR), e via DOM sono confermate 62 opzioni da "+40 · Sérénité
+de l'être" a "-40 · Échec total", ciascuna col nome tradotto accanto al numero.
+
+**Il guide, aggiornato.** Nuova nota `.note.info` in §4 (dopo quella su TRUTH), versione guide
+3.0.140 → 3.0.141.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/App.tsx`, `src/serenity/Serenity.tsx`, `public/guide/SERENITY-manuale.html`
+(rigenerato).

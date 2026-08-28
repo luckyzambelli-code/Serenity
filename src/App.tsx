@@ -96,7 +96,7 @@ import { taAccumulator } from './engine/TaAccumulator';
 import { MirrorDial } from './components/MirrorDial';
 import { ToneDial } from './components/ToneDial';
 import { ToneColumn } from './components/ToneColumn';
-import { TONE_LABELS, exactLevelName, levelName } from './engine/toneLevels';
+import { TONE_LEVELS, levelName } from './engine/toneLevels';
 import {
   loadHistory as loadCanTests, saveHistory as saveCanTests, addTest as addCanTest,
   toneMargin, withMargin, taToTwoCans, testedToday,
@@ -6192,7 +6192,13 @@ export default function App() {
                             Ron: il legame tono↔ohm è arbitrario, conta il TONO. Senza
                             strumento la sorgente è quel che il preclear dichiara più l'obnosi
                             dell'auditor — e allora il punto di partenza si dà a mano, qui,
-                            prima di cominciare. Col meter non compare: lo propone la misura. */}
+                            prima di cominciare. Col meter non compare: lo propone la misura.
+                            ⚠️ SCALA ESPANSA — segnalato: « devi mettere anche la denominazione
+                            con i numeri, devi dare la scala espansa ». Prima solo i tredici di
+                            `TONE_LABELS` (quelli scritti sulla colonna, ridotti apposta per non
+                            accavallarsi nel disegno — v. `toneLevels.ts`). Un `<select>` non è
+                            un disegno: qui il vincolo non vale, e si dà la scala INTERA,
+                            `TONE_LEVELS` — sessantadue livelli, ognuno già col suo nome. */}
                         {locabile && !toneHasMeter && (
                           <select value={toneAssessed}
                             onChange={(e) => setToneAssessed(Number(e.target.value))}
@@ -6201,9 +6207,9 @@ export default function App() {
                               maxWidth: 200, padding: '0 8px', fontFamily: 'monospace', fontSize: 12, fontWeight: 700,
                               background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.3)',
                               color: 'rgba(235,244,255,0.85)' }}>
-                            {TONE_LABELS.map(v => (
-                              <option key={v} value={v}>
-                                {v > 0 ? `+${v}` : `${v}`} · {levelName(exactLevelName(v) ?? '', lang)}
+                            {TONE_LEVELS.map(l => (
+                              <option key={l.tone} value={l.tone}>
+                                {l.tone > 0 ? `+${l.tone}` : `${l.tone}`} · {levelName(l.name, lang)}
                               </option>
                             ))}
                           </select>
