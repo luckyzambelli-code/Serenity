@@ -87,7 +87,7 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, SlidersHorizontal, Brain, Lightbulb } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, SlidersHorizontal, Brain, Lightbulb, StickyNote } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
@@ -192,6 +192,64 @@ const LetturaVelocita = React.memo(function LetturaVelocita({ t }: { t: (k: stri
     </span>
   );
 });
+
+/**
+ * AiutoOverlay — LA MODALITÀ HELP, A POST-IT.
+ *
+ * ── PERCHÉ ESISTE ───────────────────────────────────────────────────────────────────────────
+ * Segnalato: « vorrei che cliccando su HELP appaiano sui bottoni e zone le spiegazioni di cosa
+ * sono, sotto forma di post-it ». Bozzetto mostrato con due varianti (tutti insieme vs uno per
+ * volta al passaggio) — scelta esplicita: « option A », tutti insieme con un solo click.
+ *
+ * ── PERCHÉ `data-help`, NON UN COMPONENTE CHE AVVOLGE OGNI BOTTONE ─────────────────────────
+ * I controlli da spiegare sono sparsi per migliaia di righe (barra in alto, i cinque cerchi,
+ * CONFIG...). Avvolgere ciascuno in un contenitore `position:relative` + un componente
+ * post-it sarebbe stata una modifica invasiva ripetuta decine di volte. Invece: un attributo
+ * `data-help="testo"` in più su ogni bottone già esistente (una riga, il testo quasi sempre
+ * già scritto per il suo `title` — non un'invenzione), e QUESTO componente, montato una sola
+ * volta, che li trova tutti da solo (`querySelectorAll('[data-help]')`) e disegna un post-it
+ * sotto ciascuno, in un livello `position:fixed` sopra tutto. Aggiungere una spiegazione a un
+ * bottone nuovo, domani, vuol dire aggiungere un attributo — non toccare questo componente.
+ *
+ * ── RICALCOLO, NON OSSERVAZIONE ─────────────────────────────────────────────────────────────
+ * Le posizioni cambiano poco (resize, scroll) — un intervallo blando (400ms) invece di un
+ * `ResizeObserver` per bottone: più semplice, e la differenza non si vede a occhio per
+ * un'etichetta che deve solo restare vicina al suo bottone, non seguirlo pixel a pixel.
+ */
+function AiutoOverlay({ attivo }: { attivo: boolean }) {
+  const [postIt, setPostIt] = useState<{ x: number; y: number; text: string }[]>([]);
+  useEffect(() => {
+    if (!attivo) { setPostIt([]); return; }
+    const ricalcola = () => {
+      const nodi = Array.from(document.querySelectorAll<HTMLElement>('[data-help]'));
+      setPostIt(nodi.map(n => {
+        const r = n.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.bottom, text: n.getAttribute('data-help') || '' };
+      }).filter(p => p.text));
+    };
+    ricalcola();
+    window.addEventListener('resize', ricalcola);
+    window.addEventListener('scroll', ricalcola, true);
+    const id = window.setInterval(ricalcola, 400);
+    return () => { window.removeEventListener('resize', ricalcola); window.removeEventListener('scroll', ricalcola, true); window.clearInterval(id); };
+  }, [attivo]);
+  if (!attivo) return null;
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 400, pointerEvents: 'none' }}>
+      {postIt.map((p, i) => (
+        <div key={i} style={{
+          position: 'fixed', left: p.x, top: p.y + 6, transform: 'translateX(-50%)',
+          maxWidth: 168, padding: '7px 10px', borderRadius: 3,
+          background: '#fde68a', color: '#78350f', fontSize: 11, fontWeight: 600,
+          lineHeight: 1.35, textAlign: 'center', fontFamily: 'var(--s-sans)',
+          boxShadow: '2px 3px 8px rgba(0,0,0,0.35)',
+        }}>
+          {p.text}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 /** ── L'INTEGRITÀ BIOMETRICA — segnalata assente nell'audit funzionale completo: « toutes les
  *  fonctions... METER/MUSE ». `runtime/SmoothingEngine`'s `integrityTracker` è condiviso e già
@@ -302,6 +360,11 @@ export default function Serenity() {
   const [configAperto, setConfigAperto] = useState(false);
   /** LA GUIDA — segnalata assente nell'audit funzionale completo. `GuideModal`, autosufficiente. */
   const [guidaAperta, setGuidaAperta] = useState(false);
+  /** ── HELP A POST-IT — v. `AiutoOverlay`, sopra. Un bottone A SÉ, diverso da GUIDE: quello
+   *  apre il manuale intero (un documento a parte); questo mostra spiegazioni BREVI direttamente
+   *  SOPRA i controlli della schermata attuale, senza lasciarla. Due bisogni diversi, due
+   *  bottoni — sovrapporli sullo stesso avrebbe reso ambiguo cosa aspettarsi da un click. */
+  const [helpAttivo, setHelpAttivo] = useState(false);
   /** I CREDITI — si aprono dal logo, come in App.tsx. `CreditsModal`, autosufficiente. */
   const [creditiAperti, setCreditiAperti] = useState(false);
   /** LO STORICO — segnalato: « il Report post session non ci sia più in Serenity, solo il PDF
@@ -540,9 +603,18 @@ export default function Serenity() {
    *  che l'abbia chiesto — la stessa riga della prima, non la seconda. Qui solo la sincronia del
    *  modulo biometrico, la parte SENZA ambiguità. */
   const espertoAttivo = avvio?.esperto;
+  /**
+   * ⚠️ ESTESO — segnalato: « semplificare al massimo BASIC »; scelti esplicitamente MNA,
+   * Santé Système e i numeri esatti (v. `LetturaTotalTa`/`LetturaVelocita`, sopra). MNA e
+   * Santé Système sono pannelli DIAGNOSTICI — utili a chi vuole vedere tutto, non al minimo
+   * per seguire una seduta — e già avevano un interruttore in `moduleVis`, semplicemente mai
+   * legato al livello. Stessa forma di `biometric`: una PREFERENZA scritta all'apertura del
+   * livello, sempre riaccendibile a mano da CONFIG — la scelta resta dell'auditor.
+   */
   useEffect(() => {
     if (espertoAttivo === undefined) return;
-    setModuleVis(v => (v.biometric === espertoAttivo ? v : { ...v, biometric: espertoAttivo }));
+    setModuleVis(v => (v.biometric === espertoAttivo && v.mna === espertoAttivo && v.health === espertoAttivo)
+      ? v : { ...v, biometric: espertoAttivo, mna: espertoAttivo, health: espertoAttivo });
   }, [espertoAttivo, setModuleVis]);
   // Segnalato: « nessuno sfondo » — la STESSA preferenza di EQUILIBRIUM, applicata alla
   // superficie di SERENITY con un velo (`--s-veil`) invece del vetro scuro di EQUILIBRIUM:
@@ -3334,7 +3406,9 @@ export default function Serenity() {
             <button
               className="s-glass s-glass-btn"
               onClick={() => setProcessusAperto(true)}
-              title="COMMANDS" style={{
+              title="COMMANDS" data-help={LC('carica un file di comandi da seguire', 'charge un fichier de commandes à suivre',
+                'loads a commands file to follow', 'carga un archivo de comandos a seguir',
+                'laddar en kommandofil att följa') as string} style={{
                 position: 'relative', width: 54, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', border: '1.5px solid var(--s-ink-ghost)', borderRadius: '50%',
                 background: 'var(--s-disc)', color: 'var(--s-ink-soft)',
@@ -3546,7 +3620,7 @@ export default function Serenity() {
             l'archivio CORPUS) per questo auditor; `processusPdfs.length`, lo stato già in
             mano. Un pallino in alto a destra sul bottone, come un contatore di notifiche —
             assente (nessun numero) quando l'archivio è vuoto, per non gridare uno zero. */}
-        <button className="s-glass s-glass-btn" onClick={() => setHistoryAperto(true)} title={t('sidebar_history') as string} style={{
+        <button className="s-glass s-glass-btn" onClick={() => setHistoryAperto(true)} title={t('sidebar_history') as string} data-help={t('sidebar_history') as string} style={{
           position: 'relative', cursor: 'pointer', padding: 8, borderRadius: 999,
           background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
         }}>
@@ -3563,7 +3637,7 @@ export default function Serenity() {
             ) : null;
           })()}
         </button>
-        <button className="s-glass s-glass-btn" onClick={() => setProcessusAperto(true)} title={t('processus_modal_title') as string} style={{
+        <button className="s-glass s-glass-btn" onClick={() => setProcessusAperto(true)} title={t('processus_modal_title') as string} data-help={t('processus_modal_title') as string} style={{
           position: 'relative', cursor: 'pointer', padding: 8, borderRadius: 999,
           background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
         }}>
@@ -3624,6 +3698,9 @@ export default function Serenity() {
               className="s-glass-btn"
               onClick={() => setAssettoAperto(v => !v)}
               title={LC('assetto della seduta — livello, e chi audita', 'réglages de la séance — niveau, et qui audite',
+                'session setup — level, and who is auditing', 'ajustes de la sesión — nivel, y quién audita',
+                'sessionsinställningar — nivå, och vem som auditerar') as string}
+              data-help={LC('assetto della seduta — livello, e chi audita', 'réglages de la séance — niveau, et qui audite',
                 'session setup — level, and who is auditing', 'ajustes de la sesión — nivel, y quién audita',
                 'sessionsinställningar — nivå, och vem som auditerar') as string}
               style={{
@@ -3830,7 +3907,7 @@ export default function Serenity() {
               {strumenti.map(s => {
                 const clic = (modalitaCiclo && s.connesso) ? undefined : s.onClick;
                 return (
-                <button key={s.key} className="s-glass-btn" onClick={clic} title={s.title}
+                <button key={s.key} className="s-glass-btn" onClick={clic} title={s.title} data-help={s.title}
                   style={{
                     position: 'relative', border: 'none', background: 'transparent',
                     cursor: clic ? 'pointer' : 'default', padding: 6, borderRadius: 999,
@@ -3949,7 +4026,7 @@ export default function Serenity() {
         <>
         <Divisore />
         {/* CONFIG — raggiungibile in ogni momento, come il cassetto di EQUILIBRIUM. */}
-        <button className="s-glass s-glass-btn" onClick={() => setConfigAperto(true)} title={t('config') as string} style={{
+        <button className="s-glass s-glass-btn" onClick={() => setConfigAperto(true)} title={t('config') as string} data-help={t('config') as string} style={{
           cursor: 'pointer', padding: 8, borderRadius: 999,
           background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
         }}>
@@ -4017,6 +4094,19 @@ export default function Serenity() {
         }}>
           <HelpCircle size={32} strokeWidth={1.6} />
         </button>
+        {/* ── HELP A POST-IT — v. la nota su `AiutoOverlay`/`helpAttivo`, sopra. Bottone A SÉ,
+            accanto a GUIDE ma diverso: un click mostra/nasconde le spiegazioni brevi sopra i
+            controlli di QUESTA schermata, senza aprire nulla sopra di lei. */}
+        <button className="s-glass s-glass-btn" onClick={() => setHelpAttivo(v => !v)}
+          title={LC('spiegazioni sui bottoni', 'explications sur les boutons', 'explanations on the buttons',
+                    'explicaciones en los botones', 'förklaringar på knapparna') as string}
+          style={{
+            cursor: 'pointer', padding: 8, borderRadius: 999,
+            background: helpAttivo ? 'var(--s-reserve)' : 'var(--s-disc)',
+            display: 'flex', color: helpAttivo ? '#1c1408' : 'var(--s-ink-soft)',
+          }}>
+          <StickyNote size={32} strokeWidth={1.6} />
+        </button>
         </>
         )}
         {/* ── LO SPAZIO VUOTO, ORA IN FONDO — segnalato: « les boutons de haut doivent être
@@ -4027,6 +4117,7 @@ export default function Serenity() {
         <span style={{ flex: 1 }} />
       </header>
       {guidaAperta && <GuideModal lang={lang} app="serenity" onClose={() => setGuidaAperta(false)} />}
+      <AiutoOverlay attivo={helpAttivo} />
       {creditiAperti && (
         <CreditsModal onClose={() => setCreditiAperti(false)}
           appName="SERENITY" appVersion={__SERENITY_VERSION__} />
@@ -4611,12 +4702,25 @@ export default function Serenity() {
                   <LetturaTA />
                 </span>
                 <LetturaFase t={t} />
-                <span title={t('total_ta') as string}>
-                  <LetturaTotalTa override={meterC ? theta.totalTa : null} bodyMotion={theta.bodyMotion} />
-                </span>
-                <span title={t('mental_processing_velocity') as string}>
-                  <LetturaVelocita t={t} />
-                </span>
+                {/* ⚠️ ORA DIETRO EXPERT — segnalato: « semplificare al massimo BASIC »,
+                    « numeri esatti (TA, %, velocità) ». Il TOTAL TA cumulativo e la velocità
+                    sono un secondo livello di lettura (quanto in TUTTO, non quanto ORA) —
+                    utile a chi legge il rapporto, non indispensabile a chi sta solo seguendo
+                    la seduta. `LetturaTA`/`LetturaFase` sopra (il bisogno DI ADESSO) restano
+                    sempre visibili in entrambi i livelli: non sono "un numero in più", sono
+                    la lettura stessa. Reversione esplicita della nota precedente qui sopra
+                    (« sempre visibili... una scelta esplicita di un giro precedente ») — la
+                    richiesta di oggi la sostituisce apposta. */}
+                {espertoAttivo && (
+                  <>
+                    <span title={t('total_ta') as string}>
+                      <LetturaTotalTa override={meterC ? theta.totalTa : null} bodyMotion={theta.bodyMotion} />
+                    </span>
+                    <span title={t('mental_processing_velocity') as string}>
+                      <LetturaVelocita t={t} />
+                    </span>
+                  </>
+                )}
               </div>
             )}
             {reazioniViste === 'both' && meterC && agoEeg === false && museOk && (
@@ -4692,9 +4796,13 @@ export default function Serenity() {
                     un'invenzione SERENITY, un'etichetta isolata senza il contesto per capirla.
                     Stessa regola di sempre: riprodurre EQUILIBRIUM, non inventare una lettura
                     che lui stesso non mostra mai. */}
-                <span title={t('total_ta') as string}>
-                  <LetturaTotalTa override={theta.totalTa} bodyMotion={theta.bodyMotion} />
-                </span>
+                {/* ⚠️ ORA DIETRO EXPERT — v. la stessa nota sull'altro ramo (ago EEG), poco
+                    più sopra: « semplificare al massimo BASIC », « numeri esatti ». */}
+                {espertoAttivo && (
+                  <span title={t('total_ta') as string}>
+                    <LetturaTotalTa override={theta.totalTa} bodyMotion={theta.bodyMotion} />
+                  </span>
+                )}
               </div>
             )}
             {/* ── NEEDLE LIGHT — segnalato: « manca la possibilità di mettere/togliere la
@@ -5266,10 +5374,19 @@ export default function Serenity() {
                 unita: più superficie colorata senza alzare la saturazione di un solo grado. */}
             {([
               { k: 'contact', hue: 'var(--s-still)', label: 'CONTACT', Icona: Crosshair,
+                desc: LC('contatto diretto con la carica dell\'item', 'contact direct avec la charge de l\'item',
+                  'direct contact with the item\'s charge', 'contacto directo con la carga del ítem',
+                  'direktkontakt med objektets laddning') as string,
                 onClick: () => { confermaItemSePresente(); cycles.armCycle('charge'); } },
               { k: 'null', hue: 'var(--s-alive)', label: 'NULL', Icona: Scale,
+                desc: LC('ciclo speculare: NULL → RISE → EQUILIBRIUM', 'cycle miroir : NULL → RISE → EQUILIBRIUM',
+                  'mirror cycle: NULL → RISE → EQUILIBRIUM', 'ciclo espejo: NULL → RISE → EQUILIBRIUM',
+                  'spegelcykel: NULL → RISE → EQUILIBRIUM') as string,
                 onClick: () => { confermaItemSePresente(); cycles.armCycle('null'); } },
               { k: 'mirror', hue: 'var(--s-reserve)', label: 'MIRROR', Icona: FlipHorizontal2,
+                desc: LC('raddoppia il valore fino ad annullarlo', 'double la valeur jusqu\'à l\'annuler',
+                  'doubles the value until it cancels out', 'duplica el valor hasta anularlo',
+                  'fördubblar värdet tills det upphävs') as string,
                 onClick: () => { confermaItemSePresente(); mirror.armMirror(); } },
               // ⚠️ TONE ARMAVA IN DUE TEMPI, GLI ALTRI TRE IN UNO — segnalato: « le cicle TONE
               // contrairement aux autres demande d'appuyer sur un bouton pour donner l'item.
@@ -5280,11 +5397,17 @@ export default function Serenity() {
               // esiste anche in App.tsx (non un'invenzione di questa sessione), ma qui è
               // un'esplicita richiesta di NON riprodurla. Un click solo, come gli altri tre.
               { k: 'tone', hue: 'var(--s-tone-hue)', label: 'TONE', Icona: AudioWaveform,
+                desc: LC('porta la resistenza al tono 40', 'mène la résistance au ton 40',
+                  'raises the resistance to tone 40', 'lleva la resistencia al tono 40',
+                  'för motståndet till ton 40') as string,
                 onClick: () => { confermaItemSePresente(); setToneAttivo(true); tone.localizzaTone(); } },
               // TRUTH — il protocollo di Ron (v. docs/truth-cycle-proposal.md). Un click solo,
               // come gli altri quattro: `locateRI()` arma E apre la cattura del R/I nello
               // stesso gesto (campo vuoto → si aspetta la voce, come tutti gli altri).
               { k: 'truth', hue: 'var(--s-truth-hue)', label: 'TRUTH', Icona: Lightbulb,
+                desc: LC('localizza un R/I fino alla verità', 'localise un R/I jusqu\'à la vérité',
+                  'locates an R/I until the truth', 'localiza un R/I hasta la verdad',
+                  'lokaliserar en R/I till sanningen') as string,
                 onClick: () => { confermaItemSePresente(); truth.locateRI(); } },
             ]).map(c => (
               <div key={c.k} style={{ display: 'grid', justifyItems: 'center', gap: 4, flexShrink: 0 }}>
@@ -5294,7 +5417,7 @@ export default function Serenity() {
                     sopra) mandava il quinto da solo su una seconda riga, dove leggeva come un
                     elemento perso invece che "il quinto metodo accanto agli altri". Un taglio
                     piccolo (54→50px, gap 24→18) basta a farceli stare tutti e cinque insieme. */}
-                <button className="s-glass s-glass-btn" onClick={c.onClick} title={c.label} style={{
+                <button className="s-glass s-glass-btn" onClick={c.onClick} title={c.label} data-help={c.desc} style={{
                   width: 50, height: 50, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   border: `1.5px solid ${c.hue}`, cursor: 'pointer',
                   borderRadius: '50%', background: `color-mix(in srgb, ${c.hue} 12%, var(--s-disc))`, color: c.hue,

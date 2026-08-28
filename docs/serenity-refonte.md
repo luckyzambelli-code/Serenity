@@ -6039,3 +6039,37 @@ Fall" s'affiche maintenant compacte, exactement comme SYS/AUD.
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/components/ClearDial.tsx`, `src/engine/tuning.ts`, `src/serenity/Serenity.tsx`,
 `src/serenity/sessionReport.ts`, `src/session/useToneCycle.ts`.
+
+---
+
+## Giro (28/08/2026, 5) — BASIC vraiment simplifié, HELP à post-it
+
+**BASIC, enfin simplifié pour de vrai.** Segnalato : « cosa proponi per semplificare al
+massimo l'interfaccia BASIC? ». Prima, `espertoAttivo` gouvernait UNE seule chose
+(`moduleVis.biometric`) — le reste (MNA, Santé Système, Total TA cumulatif, vitesse) restait
+identique en BASIC et EXPERT. Étendu : MNA et Santé Système suivent maintenant le même
+interrupteur (toujours ré-allumables depuis CONFIG — le choix reste à l'auditeur), et les
+lectures Total TA/vitesse (secondaires — "combien en tout", pas "combien maintenant") sont
+cachées en BASIC. `LetturaTA`/`LetturaFase` (le besoin DE MAINTENANT) restent visibles dans
+les deux niveaux : ce n'est pas un chiffre en plus, c'est la lecture elle-même. Reste ouvert
+(proposé, pas encore choisi) : cams désactivées hors séance à distance, panneaux latéraux
+repliés par défaut, sélecteur MUSE/METER/AUCUN réduit à un point d'état, un bandeau-guide
+permanent même à vide.
+
+**HELP à post-it — implémenté, option A choisie (« tous ensemble, un seul clic »).** Nouveau
+bouton, à côté de GUIDE mais différent (celui-ci ouvre le manuel entier ailleurs ; celui-ci
+montre des explications courtes SUR l'écran actuel, sans le quitter). Mécanisme : un attribut
+`data-help="texte"` sur chaque bouton à expliquer (le texte est presque toujours déjà celui du
+`title` existant — pas une invention) et un seul composant (`AiutoOverlay`) qui les trouve
+tous seul (`querySelectorAll`) et dessine un post-it sous chacun, dans une couche
+`position:fixed`. Ajouter une explication à un bouton demain = ajouter un attribut, pas
+toucher ce composant. Couvre pour l'instant : Historique, Processus, réglages de séance,
+MUSE/METER/SANS INSTRUMENTS, CONFIG, COMMANDS, et les cinq cercles de méthode (nouvelles
+courtes descriptions écrites pour eux, les autres réutilisent un texte déjà existant).
+**Vérifié en direct** : clic sur HELP, les post-it apparaissent bien sous les boutons de la
+barre et sous COMMANDS. Limite connue, non corrigée : les cinq cercles sont proches du bord
+bas de l'écran — dans une petite fenêtre leur post-it peut sortir de l'écran (pas de logique
+"retourne au-dessus si pas de place" pour l'instant).
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx`.
