@@ -31,16 +31,20 @@
  * pubblica il PDF e chi conta gli episodi F/N, ricopiata parola per parola da
  * `PostSessionReport.tsx` (fusione delle micro-interruzioni sotto 1s in un solo episodio).
  *
- * ── QUEL CHE RESTA FUORI, DI PROPOSITO ─────────────────────────────────────────────────────
- * Il grafico Q_L (un `<AreaChart>` di recharts, catturato come immagine) e il pannello MNA —
- * due pezzi visivi, non tabellari, che richiedono la loro stessa macchina di cattura: restano
- * dichiarati aperti, non finti con un disegno inventato qui.
+ * ── IL GRAFICO Q_L E L'MNA — AGGIUNTI (28/08/2026) ─────────────────────────────────────────
+ * Segnalato: « ajoute aussi le Graphique Q_L et MNA ». Erano dichiarati apertamente assenti,
+ * per un presunto ostacolo che rileggendo `PostSessionReport.tsx` (App.tsx) non si è
+ * confermato: NON sono un'immagine di un `<AreaChart>` di recharts catturata — sono disegnati
+ * con le primitive `jsPDF` (rettangoli/linee/testo), esattamente come le altre tabelle di
+ * questo file. Portati parola per parola, stessa fonte dati (`sessionRecorder.chart` per il
+ * grafico, `mnaSessionRef.current`/`MnaSession` — identico per forma — per l'MNA).
  *
  * @see docs/serenity-refonte.md
  */
 
 import { jsPDF } from 'jspdf';
 import { sessionRecorder } from '../engine/SessionRecorder';
+import { fmtIm } from '../lib/utils';
 import type { SessionSummary } from '../lib/storage';
 import type { ArmedCycle } from '../session/useContactNullCycle';
 import type { MirrorRecord } from '../session/useMirrorCycle';
@@ -101,6 +105,18 @@ export interface SerenityReportInput {
   journal?: JournalLineInput[];
   cansTest?: {
     hasMeter: boolean; done: boolean; config: 'two-cans' | 'solo-can'; soloOffset: number; taMargin: number;
+  };
+  /** ── MNA — stessa forma di `MnaSession` (`hooks/useMnaModule.ts`), la fotografia di fine
+   *  seduta del pannello MNA a schermo. Facoltativo: assente/vuoto per chi non ha mai aperto
+   *  il modulo in quella seduta — la sezione, sotto, non si stampa in quel caso (v. la stessa
+   *  guardia già usata da `PostSessionReport.tsx`, `mnaData.cycles > 0 || imHistory.length`). */
+  mnaData?: {
+    cycles: number;
+    imHistory: number[];
+    peakIm: number;
+    finalZone: string;
+    totalCopies: number;
+    phaseLog: Array<{ phase: string; t: number }>;
   };
 }
 
@@ -443,6 +459,140 @@ export async function generaPdf(
     }
   }
 
+  // ── IL GRAFICO Q_L — segnalato: « ajoute aussi le Graphique Q_L et MNA », dichiarato
+  // apertamente assente in testa a questo file da quando il PDF esiste. Portato TALE E QUALE
+  // da `PostSessionReport.tsx` (App.tsx) — disegnato a primitive `jsPDF` (rettangoli/linee/
+  // testo), NON un'immagine catturata da un `<AreaChart>`: nessuna "macchina di cattura" in
+  // più da costruire, la nota precedente presumeva un ostacolo che la lettura del sorgente
+  // vero non conferma. `sessionRecorder.chart` è LO STESSO singleton già letto altrove in
+  // questo file (`maxEtaDaChart`) — non un secondo calcolo. Salta senza strumenti, come in
+  // App.tsx: senza un ago non c'è una lettura Q_L da disegnare.
+  if (!input.noInstruments) {
+    const chart = sessionRecorder.chart;
+    ensureSpace(46);
+    y += 2;
+    panelHeader(t('report_ql_chart'));
+    const graphX = 18, graphY = y, graphW = pageW - 36, graphH = 34;
+    const maxTime = chart.length > 0 ? (chart[chart.length - 1]?.time || 0) : 0;
+    pdf.setFillColor(248, 250, 252);
+    pdf.rect(graphX, graphY, graphW, graphH, 'F');
+    pdf.setDrawColor(205, 214, 223);
+    pdf.rect(graphX, graphY, graphW, graphH);
+    pdf.setDrawColor(226, 232, 240);
+    for (let gy = 1; gy <= 3; gy++) {
+      const yy = graphY + (graphH * gy) / 4;
+      pdf.line(graphX, yy, graphX + graphW, yy);
+    }
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(7);
+    const tickCount = 5;
+    for (let i = 0; i <= tickCount; i++) {
+      const tx = graphX + (graphW * i) / tickCount;
+      const sec = Math.round((maxTime * i) / tickCount);
+      pdf.setDrawColor(210, 218, 226);
+      pdf.line(tx, graphY, tx, graphY + graphH);
+      setRGB([100, 116, 139]);
+      pdf.text(`${sec}s`, tx - 3, graphY + graphH + 4);
+    }
+    pdf.setDrawColor(234, 179, 8);
+    const thresholdY = graphY + graphH * (1 - 0.7);
+    pdf.line(graphX, thresholdY, graphX + graphW, thresholdY);
+    setRGB([202, 138, 4]);
+    pdf.text('F/N 0.7', graphX + graphW - 18, thresholdY - 1);
+    if (chart.length > 1) {
+      pdf.setDrawColor(34, 197, 94);
+      for (let i = 1; i < chart.length; i++) {
+        const prev = Math.max(0, Math.min(1, chart[i - 1]?.qL ?? 0));
+        const curr = Math.max(0, Math.min(1, chart[i]?.qL ?? 0));
+        const x1 = graphX + ((i - 1) / (chart.length - 1)) * graphW;
+        const x2 = graphX + (i / (chart.length - 1)) * graphW;
+        const y1 = graphY + (1 - prev) * graphH;
+        const y2 = graphY + (1 - curr) * graphH;
+        pdf.line(x1, y1, x2, y2);
+      }
+    }
+    y += graphH + 9;
+    setRGB(INK); pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10);
+  }
+
+  // ── MNA (MODULAZIONE NEURO-ACUSTICA) — stessa richiesta di sopra. `input.mnaData` è la
+  // fotografia di `mnaSessionRef.current` (Serenity.tsx) — LO STESSO oggetto che il pannello
+  // MNA a schermo legge (`hooks/useMnaModule.ts`), non un secondo calcolo. Si stampa solo se
+  // il modulo è stato davvero usato in questa seduta (stessa guardia di App.tsx).
+  const mnaData = input.mnaData;
+  if (mnaData && (mnaData.cycles > 0 || mnaData.imHistory.length > 0)) {
+    ensureSpace(40);
+    y += 2;
+    panelHeader(t('mna_report_title'), [86, 207, 225]);
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10); setRGB([40, 40, 40]);
+    const mnaMetrics: Array<[string, string, [number, number, number]]> = [
+      [t('mna_report_cycles'), String(mnaData.cycles), [86, 207, 225]],
+      [t('mna_report_peak_im'), fmtIm(mnaData.peakIm), [232, 193, 112]],
+      [t('mna_report_zone'), mnaData.finalZone || '-', [255, 155, 61]],
+      [t('mna_report_copies'), String(mnaData.totalCopies), [167, 139, 250]],
+    ];
+    ensureSpace(16);
+    {
+      const gap = 3, x0 = 18, tw = (pageW - 36 - gap * 3) / 4;
+      mnaMetrics.forEach(([label, value, accent], i) => metricTile(x0 + i * (tw + gap), y, tw, label, value, accent));
+      y += 16;
+    }
+    if (mnaData.phaseLog.length > 1) {
+      y += 2;
+      const phaseRgb: Record<string, [number, number, number]> = {
+        CAPTURE: [86, 207, 225], SONIFY: [232, 193, 112], CLEAN: [255, 155, 61], HARMONICS: [167, 139, 250],
+      };
+      const log = mnaData.phaseLog;
+      const durSec = log.map((e, i) => (log[i + 1] ? Math.max(0, (log[i + 1].t - e.t) / 1000) : 0));
+      const cyc: Array<Array<{ phase: string; dur: number }>> = [];
+      log.forEach((e, i) => {
+        if (e.phase === 'CAPTURE' || cyc.length === 0) cyc.push([]);
+        cyc[cyc.length - 1].push({ phase: e.phase, dur: durSec[i] });
+      });
+      ensureSpace(8 + cyc.length * 8 + 8);
+      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9); setRGB([60, 80, 120]);
+      pdf.text(`>${t('report_mna_phases_log')} :`, 20, y);
+      y += 5;
+      const labelW = 8, barX = 22 + labelW, barW = pageW - 44 - labelW, barH = 5.5;
+      for (let ci = 0; ci < cyc.length; ci++) {
+        const segs = cyc[ci];
+        const total = segs.reduce((a, b) => a + b.dur, 0) || 1;
+        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(7); setRGB([86, 150, 180]);
+        pdf.text(`#${ci + 1}`, 22, y + barH / 2 + 1.2);
+        pdf.setFillColor(235, 235, 235); pdf.rect(barX, y, barW, barH, 'F');
+        let cx = barX;
+        for (const seg of segs) {
+          if (seg.dur <= 0) continue;
+          const segW = (seg.dur / total) * barW;
+          const c = phaseRgb[seg.phase] || [71, 85, 105];
+          pdf.setFillColor(c[0], c[1], c[2]); pdf.rect(cx, y, segW, barH, 'F');
+          if (segW > 12) {
+            setRGB([255, 255, 255]); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(5.5);
+            pdf.text(`${Math.round(seg.dur)}s`, cx + segW / 2, y + barH / 2 + 1.3, { align: 'center' as const });
+          }
+          cx += segW;
+        }
+        pdf.setDrawColor(205, 205, 205); pdf.rect(barX, y, barW, barH);
+        y += barH + 2.5;
+      }
+      pdf.setFontSize(6.8);
+      let lx = barX;
+      for (const ph of Object.keys(phaseRgb)) {
+        const c = phaseRgb[ph];
+        pdf.setFont('helvetica', 'bold');
+        const itemW = 3.5 + pdf.getTextWidth(ph) + 6;
+        if (lx + itemW > pageW - 20) { lx = barX; y += 4.5; }
+        pdf.setFillColor(c[0], c[1], c[2]); pdf.rect(lx, y - 2, 2.4, 2.4, 'F');
+        setRGB([60, 60, 60]);
+        pdf.text(ph, lx + 3.5, y);
+        lx += itemW;
+      }
+      pdf.setFont('helvetica', 'normal'); setRGB([40, 40, 40]);
+      y += 4;
+    }
+    y += 4;
+    setRGB(INK); pdf.setFontSize(10);
+  }
+
   // ── JOURNAL — segnalato: « Fai apparire il journal nel PDF di HISTORI con tutto il
   // trascritto, le reazioni ed il tono ». Stesso linguaggio visivo della sezione transcript
   // di `generateTextPdf` (App.tsx/PostSessionReport.tsx): monospazio compatto, colore per
@@ -453,14 +603,35 @@ export async function generaPdf(
     ensureSpace(18);
     panelHeader(LC('giornale', 'journal', 'journal', 'diario', 'journal'));
     const tsX = 16, bodyX = 32, lineH = 3.8, maxW = pageW - bodyX - 14;
-    const speakerColor = (sp?: string): [number, number, number] =>
+    // ⚠️ CORRETTO — segnalato: « les indications de l'aiguille doivent être traduites,
+    // notamment en français tu écrit AGO pour aiguille [...] écrit normalement mais avec une
+    // couleur qui correspond à CONTACT/DISSOLUTION/AS-IS (gris pour AS-IS) ». Due difetti
+    // distinti, corretti insieme: (1) 'AGO' era un letterale italiano fisso, scritto anche nei
+    // PDF in francese/inglese/spagnolo/svedese — ora `LC()`, come ogni altra scritta del
+    // rapporto. (2) TUTTE le righe AGO (NEEDLE) portavano lo STESSO ambra piatto — nessuna
+    // lettura si distingueva da un'altra. `l.reaction` (quando presente — la lettura calcolata
+    // al momento, la stessa di `computeInstantRead`) sceglie ora uno dei TRE colori delle zone
+    // di carica dell'app (`chargeState.ts`, `LIGHT_PHASE`: contact/discharge/asis) — le stesse
+    // usate dall'arco e da `VistaSenzaAgo`, adattate a un fondo bianco. AS-IS→GRIGIO, come
+    // chiesto esplicitamente (il suo colore vero, quasi bianco a schermo scuro / verde-acqua a
+    // schermo chiaro, sarebbe stato illeggibile o fuorviante su carta). SYS diventa NERO vero
+    // (era un grigio chiaro, "SYS NOIR" richiesto esplicitamente).
+    const NEEDLE_CONTACT: [number, number, number] = [179, 64, 42];      // #b3402a — LIGHT_PHASE.contact
+    const NEEDLE_DISSOLUTION: [number, number, number] = [21, 122, 74];  // #157a4a — LIGHT_PHASE.discharge
+    const NEEDLE_ASIS: [number, number, number] = [120, 120, 120];       // grigio, richiesto esplicitamente
+    const needleColor = (r?: string): [number, number, number] =>
+      r === 'F/N (Floating)' || r === 'F/N' ? NEEDLE_DISSOLUTION :
+      (r === 'Fall' || r === 'Long Fall' || r === 'LF Blow Down' || r === 'SF' || r === 'Dirty Needle') ? NEEDLE_CONTACT :
+      NEEDLE_ASIS;
+    const speakerColor = (sp?: string, reaction?: string): [number, number, number] =>
       sp === 'Aud' ? [21, 94, 160] : sp === 'PC' ? [168, 88, 20] :
-      sp === 'NEEDLE' ? [180, 120, 20] : [140, 140, 140];
+      sp === 'NEEDLE' ? needleColor(reaction) : [0, 0, 0];
     const speakerLabel = (sp?: string) =>
-      sp === 'Aud' ? 'AUD' : sp === 'PC' ? 'PC' : sp === 'NEEDLE' ? 'AGO' : 'SYS';
+      sp === 'Aud' ? 'AUD' : sp === 'PC' ? 'PC'
+      : sp === 'NEEDLE' ? LC('AGO', 'AIG', 'NDL', 'AGU', 'NÅL') : 'SYS';
     for (const l of input.journal) {
       ensureSpace(8);
-      const col = speakerColor(l.speaker);
+      const col = speakerColor(l.speaker, l.reaction);
       pdf.setFont('courier', 'bold'); pdf.setFontSize(7.2); setRGB([14, 116, 144]);
       pdf.text(`[${(l.time ?? 0).toFixed(1)}s]`, tsX, y);
       pdf.setFont('courier', l.speaker === 'Aud' ? 'bold' : 'normal'); setRGB(col);
@@ -481,18 +652,6 @@ export async function generaPdf(
     }
     y += 4; setRGB(INK); pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10);
   }
-
-  // ── QUEL CHE MANCA ANCORA — dichiarato nel PDF stesso, non solo nel changelog: onesto
-  // anche per chi legge il PDF senza aver letto docs/serenity-refonte.md.
-  ensureSpace(20);
-  pdf.setFont('helvetica', 'italic'); pdf.setFontSize(8); setRGB([150, 158, 170]);
-  pdf.text(ascii(LC(
-    'Il grafico Q_L e il pannello MNA non sono ancora in questo rapporto.',
-    'Le graphique Q_L et le panneau MNA ne sont pas encore dans ce rapport.',
-    'The Q_L chart and the MNA panel are not in this report yet.',
-    'El gráfico Q_L y el panel MNA aún no están en este informe.',
-    'Q_L-diagrammet och MNA-panelen finns inte i denna rapport än.')),
-    14, pageH - 12);
 
   return pdf.output('datauristring');
 }

@@ -1184,7 +1184,27 @@ export default function Serenity() {
    *  `setItem` di TONE scrivono `item` direttamente, non passano da qui — restano quindi
    *  "non digitando", cioè immediatamente validi, come sempre. */
   const [itemDigitando, setItemDigitando] = useState(false);
-  useEffect(() => { if (!item.trim()) setItemDigitando(false); }, [item]);
+  /**
+   * ⚠️ BUG TROVATO — segnalato: « dans TRUTH parfois ça avance d'une step et ça revient en
+   * arrière ». `itemNamed` (sotto) è ricalcolato AD OGNI RENDER da `item`/`itemDigitando`/
+   * `itemSpoken` — nessuna memoria di "è già stato dato una volta". `sessionPhase.ts`
+   * (`deriveCyclePhase`) legge `!itemNamed` per decidere se mostrare "*.say_item"/"say_ri",
+   * INCONDIZIONATAMENTE, qualunque sia il vero stato del ciclo (`truthPhase`/`tonePhase`/
+   * `nullPhase`/`mirrorLocked` possono essere già ben oltre). Se il R/I (o l'item) viene
+   * TOCCATO di nuovo più tardi nello stesso ciclo — una correzione, un refresh dell'`<input>`
+   * che rialza `itemDigitando` — `itemNamed` torna falso PER UN ISTANTE, e la schermata
+   * retrocede a "dì l'item"/"dì il R/I" anche se il motore è già a "questioning" o oltre: un
+   * passo avanti (il motore c'è già stato) che sembra un passo indietro (lo schermo torna a
+   * chiederlo). Riproducibile in teoria per tutti e cinque i cicli, segnalato per TRUTH (dove
+   * il R/I resta a schermo — e quindi toccabile — per tutta la durata del ciclo, a differenza
+   * degli altri quattro dove l'item si scrive una volta sola all'inizio).
+   * La cura: una volta che `itemNamed` grezzo È STATO vero una volta in QUESTO ciclo, resta
+   * vero — non ridiventa mai falso finché il campo non si svuota per davvero (nuovo ciclo/
+   * nuova resistenza, la STESSA condizione che già azzera `itemDigitando` qui sotto). Una
+   * "conferma" non si ritira perché l'auditor ha ritoccato il testo.
+   */
+  const itemConfirmedRef = useRef(false);
+  useEffect(() => { if (!item.trim()) { setItemDigitando(false); itemConfirmedRef.current = false; } }, [item]);
   const setItemManuale = (v: string) => { setItemDigitando(true); setItem(v); };
   /**
    * ⚠️ BUG TROVATO — segnalato: « dans TONE parfois l'item n'est pas inscrit dans le cycle et
@@ -1641,6 +1661,11 @@ export default function Serenity() {
    * `null.equilibrium` (traguardo raggiunto): è la base per il badge del ciclo e per l'avviso
    * « dì l'item… » qui sotto — invece di ricomporre la stessa risposta da quattro booleani.
    */
+  // ⚠️ STICKY — v. la nota grande su `itemConfirmedRef`, sopra: una volta vero in QUESTO
+  // ciclo, `itemNamed` non deve più tornare falso solo perché il campo è ritoccato più tardi.
+  const itemNamedGrezzo = (!!item.trim() && !itemDigitando) || itemSpoken;
+  if (itemNamedGrezzo) itemConfirmedRef.current = true;
+  const itemNamed = itemConfirmedRef.current || itemNamedGrezzo;
   const faseCiclo = useMemo(() => deriveCyclePhase({
     splashOpen: showSplash, sessionState: aperta ? 'running' : 'idle',
     hasInstrument: muse.museConnection === 'connected' || meterC,
@@ -1649,7 +1674,7 @@ export default function Serenity() {
     // ⚠️ `!itemDigitando`, non solo `!!item.trim()` — v. la nota su `itemDigitando`, sopra:
     // senza, il ciclo avanzava al PRIMO carattere digitato, prima che l'auditor avesse finito
     // di scrivere.
-    itemNamed: (!!item.trim() && !itemDigitando) || itemSpoken,
+    itemNamed,
     mirrorArmed: mirror.mirrorArmed, mirrorLocked: mirror.mirrorDisp.locked, mirrorReached: mirror.mirrorDisp.reached,
     tonePhase: tone.tonePhase, truthPhase: truth.truthPhase,
   }), [showSplash, aperta, muse.museConnection, meterC, ep.epWindowOpen, mode, cycles.cycleArmed, cycles.asIsPending,
@@ -2353,12 +2378,21 @@ export default function Serenity() {
         // Aud/PC come il pannello a schermo: qui "tutto" significa anche AGO/SYS), con la
         // STESSA `computeInstantRead` che quel pannello già usa "sulla parola" — nessuna
         // seconda logica di lettura inventata qui, solo il dato in più nell'input.
+        //
+        // ⚠️ 'NEEDLE' AGGIUNTO — segnalato: « les indications de l'aiguille... une couleur qui
+        // correspond à CONTACT/DISSOLUTION/AS-IS ». `sessionReport.ts` sceglie il colore di
+        // ogni riga AGO proprio da questo campo `reaction` — restava fuori dal calcolo
+        // (condizione ferma a Aud/PC), quindi era SEMPRE `undefined` per l'unico tipo di riga
+        // che ne aveva davvero bisogno: ogni riga AGO cadeva nel colore di ripiego (grigio
+        // AS-IS), qualunque fosse la lettura vera. Stessa `computeInstantRead` sullo stesso
+        // istante — l'esito è lo stesso già mostrato a schermo quando la riga fu scritta
+        // (`aggiungiItemManuale`, `scelta`), non un secondo calcolo.
         journal: journal.logs.map(l => ({
           time: l.time,
           speaker: l.speaker,
           text: l.text,
           tone: l.tone,
-          reaction: (l.speaker === 'Aud' || l.speaker === 'PC') && (museOk || meterC)
+          reaction: (l.speaker === 'Aud' || l.speaker === 'PC' || l.speaker === 'NEEDLE') && (museOk || meterC)
             ? (() => {
                 const r = computeInstantRead(shownReadsRef.current, l.time ?? 0, -Infinity, Infinity,
                   agoEegRef.current ? 'eeg' : 'theta').read;
@@ -2373,6 +2407,12 @@ export default function Serenity() {
           soloOffset: theta.setup.offsets?.['solo-can'] ?? 0,
           taMargin: 0,
         },
+        // ── IL GRAFICO Q_L E L'MNA — segnalato: « ajoute aussi le Graphique Q_L et MNA ».
+        // Dichiarati apertamente assenti in testa a `sessionReport.ts` da quando il PDF di
+        // SERENITY esiste — non un dimenticato, un "non ancora fatto" scritto a chiare lettere.
+        // `mnaSessionRef.current` è LO STESSO oggetto che il pannello MNA a schermo legge — non
+        // un secondo calcolo, la fotografia di fine seduta di quel che c'era già.
+        mnaData: mnaSessionRef.current,
       };
       const riepilogo = costruisciRiepilogo(input);
       saveSession(riepilogo);
@@ -4877,7 +4917,18 @@ export default function Serenity() {
                 senza `hasMeter`. La scala non è mai stata invisibile "senza ago" per un
                 calcolo mancante: era il componente intero a non montare. */}
             {mirror.mirrorArmed ? (
-              vistaSenzaAgo ? null : (
+              // ⚠️ BUG TROVATO — segnalato: « dans MIRROR sans aiguille les indications du
+              // nombre, de l'avancement etc n'apparaissent pas ». `vistaSenzaAgo ? null : (...)`
+              // faceva sparire TUTTO `MirrorDial` — non solo un ago, perché MIRROR non ne
+              // disegna uno: a differenza di `ToneDial` (una vera lancetta su un quadrante),
+              // `MirrorDial` è INTERAMENTE testo e progresso (il valore 1–10, il ×2 da
+              // raggiungere, l'anello di avanzamento, "🔒 bloccato", "OTTENUTO") — non c'è
+              // nessun disegno d'ago lì dentro da nascondere (v. la nota in testa al file:
+              // "juste dans la bande de l'aiguille" è solo il raggio scelto, non un ago vero).
+              // La nota qui sopra spiegava l'intento giusto per TONE (nascondere SOLO l'ago,
+              // non l'intero quadrante) ma per MIRROR non era mai stato applicato — restava il
+              // vecchio `null`, ereditato da prima che quell'intento fosse scritto. Si monta
+              // sempre, con o senza ago: non c'è nulla in lui che dipenda dalla scelta.
               <MirrorDial
                 armed={mirror.mirrorArmed}
                 valueR={mirror.mirrorDisp.valueR}
@@ -4888,7 +4939,6 @@ export default function Serenity() {
                 isLightTheme={isLightTheme}
                 lang={lang}
               />
-              )
             ) : toneAttivo && (faseCiclo === 'tone.raise' || faseCiclo === 'tone.done') ? (
               <>
                 {/* ⚠️ `hasMeter={!vistaSenzaAgo && tone.toneMisurato}`, non `tone.toneHasMeter`

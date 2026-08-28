@@ -5938,3 +5938,60 @@ cadre pointillé si le fichier n'existe pas) après chaque section pratique (§1
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 324 warning (nessuno nuovo).
 `git status`: `main.cjs`, `src/serenity/Serenity.tsx`, `src/serenity/PistaProcedimento.tsx`,
 `public/guide/SERENITY-manuale.html` (rigenerato).
+
+---
+
+## Giro (28/08/2026, 3) — MIRROR sans aiguille montrait `null`, `itemNamed` sticky (TRUTH), le PDF traduit et coloré, Q_L + MNA ajoutés
+
+**MIRROR sans aiguille — même défaut que TONE, jamais corrigé.** Segnalato : « dans MIRROR
+sans aiguille les indications du nombre, de l'avancement etc n'apparaissent pas ». Le rond
+armé montait `vistaSenzaAgo ? null : <MirrorDial/>` — `null`, pas un ago caché. `MirrorDial`
+ne dessine d'ailleurs AUCUN ago (à la différence de `ToneDial`) : il est entièrement texte et
+progression (valeur 1–10, ×2 à atteindre, anneau, "🔒 bloqué", "OBTENU") — rien à cacher.
+Corrigé : montage toujours, avec ou sans aiguille.
+
+**TRUTH avance puis recule — trouvé, structurel, touche les cinq cycles.** Segnalato : « dans
+TRUTH parfois ça avance d'une step et ça revient en arrière ». `itemNamed` (la garde partagée
+par les cinq cycles dans `sessionPhase.ts`) était recalculée à CHAQUE rendu depuis `item`/
+`itemDigitando`/`itemSpoken` — aucune mémoire de « déjà donné une fois ». Si le champ est
+retouché plus tard dans le MÊME cycle (une correction, un ré-affichage qui relève
+`itemDigitando`), `itemNamed` repasse fugitivement à faux et l'écran recule à "dis le R/I"
+même si le moteur (`truthPhase`) est déjà à "questioning" ou plus loin. TRUTH est le plus
+exposé : le R/I reste à l'écran (donc touchable) pendant tout le cycle, contrairement aux
+quatre autres où l'item ne se donne qu'une fois au début. Corrigé avec un flag sticky
+(`itemConfirmedRef`) : une fois vrai dans ce cycle, `itemNamed` ne redevient plus jamais faux
+avant que le champ soit vraiment vidé (nouveau cycle/nouvelle résistance).
+
+**Le PDF de History — AGO traduit, couleurs par zone, Q_L et MNA ajoutés.** Trois demandes
+réunies :
+1. *Traduction* — 'AGO' était un littéral italien fixe, même dans un PDF en français/anglais/
+   espagnol/suédois. `LC('AGO','AIG','NDL','AGU','NÅL')`.
+2. *Couleurs* — SYS passe au noir vrai (était gris clair). Les lignes AIG (NEEDLE) portaient
+   TOUTES le même ambre plat — corrigé pour piocher une des trois couleurs de zone de charge
+   de l'app (`chargeState.ts`/`LIGHT_PHASE` : contact/dissolution, AS-IS forcé au gris comme
+   demandé explicitement) selon `l.reaction`. Ce champ n'était en fait JAMAIS rempli pour les
+   lignes NEEDLE (`Serenity.tsx`, condition arrêtée à Aud/PC) — élargi, sinon la couleur
+   n'aurait jamais pu être la bonne.
+3. *Q_L + MNA* — dichiarati apertamente assenti dans ce même fichier, pour un obstacle supposé
+   (« nécessitent leur propre machine de capture ») qui ne se confirme pas à la relecture de
+   `PostSessionReport.tsx` : ni l'un ni l'autre n'est une image capturée d'un composant React —
+   les deux sont dessinés à coups de primitives `jsPDF` (rectangles/lignes/texte), portés mot
+   pour mot. Q_L lit `sessionRecorder.chart` (même singleton déjà utilisé ailleurs dans ce
+   fichier) ; MNA lit `mnaSessionRef.current` (même forme que `MnaSession`, aucun second calcul).
+   **Vérifié en direct** : script autonome (`generaPdf` appelé hors navigateur avec un input
+   synthétique incluant les trois types de lecture), PDF relu — 'AIG' apparaît en français,
+   les trois couleurs sont bien celles attendues (rouge/vert/gris), le graphique Q_L et le
+   panneau MNA (4 tuiles + barre de phases CAPTURE/SONIFY/CLEAN/HARMONICS) s'affichent
+   correctement.
+
+**Non traité ce giro, par manque de cible claire** : « la transparence doit aussi agir sur les
+écritures, pas uniquement sur les boutons ». Une recherche de fonds opaques sur les panneaux
+de texte (Journal/Assessment/PistaCiclo) n'a rien trouvé d'évident — `--s-zone-bg: transparent`
+existe déjà pour ces zones en thème clair (giro précédent), et le commentaire à côté explique
+pourquoi le thème sombre garde volontairement un fond opaque. Il est possible que ce
+signalement décrive en fait le symptôme MIRROR ci-dessus (« les indications n'apparaissent
+pas » ressemble à « pas transparent » vu de l'extérieur, alors que le composant entier ne se
+montait pas) — à confirmer après cette build avant d'aller plus loin.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx`, `src/serenity/sessionReport.ts`.
