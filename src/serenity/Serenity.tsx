@@ -229,7 +229,7 @@ const POSTIT_W = 168, POSTIT_H = 44;
  * righe sono già occupate scende a quella dopo. Un gruppo fitto di bottoni finisce così su
  * più righe impilate invece che sovrapposto nello stesso rettangolo.
  */
-function impila(grezzi: { x: number; y: number; text: string }[]): { x: number; y: number; text: string }[] {
+function impila(grezzi: { x: number; y: number; text: string }[]): { x: number; yBottone: number; y: number; text: string }[] {
   const ordinati = [...grezzi].sort((a, b) => a.x - b.x);
   const righeOccupate: Array<Array<{ min: number; max: number }>> = [];
   return ordinati.map(p => {
@@ -237,11 +237,11 @@ function impila(grezzi: { x: number; y: number; text: string }[]): { x: number; 
     let riga = 0;
     while (righeOccupate[riga]?.some(o => min < o.max + 6 && max > o.min - 6)) riga++;
     (righeOccupate[riga] ??= []).push({ min, max });
-    return { ...p, y: p.y + riga * POSTIT_H };
+    return { ...p, yBottone: p.y, y: p.y + riga * POSTIT_H };
   });
 }
 function AiutoOverlay({ attivo }: { attivo: boolean }) {
-  const [postIt, setPostIt] = useState<{ x: number; y: number; text: string }[]>([]);
+  const [postIt, setPostIt] = useState<{ x: number; yBottone: number; y: number; text: string }[]>([]);
   useEffect(() => {
     if (!attivo) { setPostIt([]); return; }
     const ricalcola = () => {
@@ -262,15 +262,39 @@ function AiutoOverlay({ attivo }: { attivo: boolean }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 400, pointerEvents: 'none' }}>
       {postIt.map((p, i) => (
-        <div key={i} style={{
-          position: 'fixed', left: p.x, top: p.y + 6, transform: 'translateX(-50%)',
-          maxWidth: POSTIT_W, padding: '7px 10px', borderRadius: 3,
-          background: '#fde68a', color: '#78350f', fontSize: 11, fontWeight: 600,
-          lineHeight: 1.35, textAlign: 'center', fontFamily: 'var(--s-sans)',
-          boxShadow: '2px 3px 8px rgba(0,0,0,0.35)',
-        }}>
-          {p.text}
-        </div>
+        <React.Fragment key={i}>
+          {/* ⚠️ AGGIUNTO — segnalato: « i post-it non sono posizionati correttamente, devi
+              mettere un qualcosa che li collega alla zona che spiegano ». Un post-it "impilato"
+              (`impila`, sopra: righe successive per non sovrapporsi ai vicini) può finire
+              lontano dal suo bottone — senza un segno, non si capisce più QUALE bottone spiega.
+              Una lineetta verticale sottile dal vero bordo del bottone (`p.yBottone`) fino al
+              post-it (`p.y`) quando sono stati separati (`p.y > p.yBottone`, cioè impilato su
+              una riga successiva) — un filo, non una freccia elaborata: basta a dire "questo
+              qui sotto parla di quel bottone lassù". */}
+          {p.y > p.yBottone && (
+            <div style={{
+              position: 'fixed', left: p.x - 1, top: p.yBottone, width: 2, height: p.y - p.yBottone,
+              background: 'rgba(253,230,138,0.55)',
+            }} />
+          )}
+          {/* Il "codino" — un piccolo triangolo che punta verso il bottone, come nei fumetti:
+              collega il post-it al SUO punto (che sia appena sotto il bottone, o in fondo alla
+              lineetta quando impilato più in basso) senza bisogno di leggere le coordinate. */}
+          <div style={{
+            position: 'fixed', left: p.x - 5, top: p.y, width: 0, height: 0,
+            borderLeft: '5px solid transparent', borderRight: '5px solid transparent',
+            borderBottom: '5px solid #fde68a',
+          }} />
+          <div style={{
+            position: 'fixed', left: p.x, top: p.y + 5, transform: 'translateX(-50%)',
+            maxWidth: POSTIT_W, padding: '7px 10px', borderRadius: 3,
+            background: '#fde68a', color: '#78350f', fontSize: 11, fontWeight: 600,
+            lineHeight: 1.35, textAlign: 'center', fontFamily: 'var(--s-sans)',
+            boxShadow: '2px 3px 8px rgba(0,0,0,0.35)',
+          }}>
+            {p.text}
+          </div>
+        </React.Fragment>
       ))}
     </div>
   );
@@ -4550,7 +4574,21 @@ export default function Serenity() {
             chiusa, o `senzaMisura`) il gruppo basso si azzera (`'0 0 0%'`) e l'ago riprende
             tutto lo spazio — il terzo riservato non è mai vuoto sprecato quando non serve. */}
         {(() => {
-          const comandiSottoAgo = aperta && !senzaMisura;
+          // ⚠️ BUG TROVATO — segnalato: « senza strumenti scrive "scegli un metodo" ma non si
+          // vede nulla ». `&& !senzaMisura` qui azzerava lo spazio di `gruppoBasso` (sotto,
+          // `flex:'0 0 0%'`) ogni volta che `senzaMisura` era vero — una scelta corretta
+          // QUANDO fu scritta (senza strumenti, `gruppoBasso` non mostrava altro che il testo
+          // di `spiegazioneCiclo`, già duplicato nell'overlay assoluto "DONNE L'ITEM" più giù,
+          // quindi zero spazio non toglieva nulla). Da quando i cinque cerchi di scelta metodo
+          // vivono DENTRO `gruppoBasso` e restano visibili anche senza strumenti (giro
+          // precedente: « senza strumenti non appaiono i cicli, invece devono apparire »),
+          // quella premessa non vale più — zero spazio per un contenitore con dentro cinque
+          // cerchi veri vuol dire che straboccano sotto di lui, sotto il bordo dello schermo
+          // (verificato dal vivo: `document.body.scrollHeight` 1056px contro un
+          // `window.innerHeight` di 720px — i cerchi esistevano nel DOM, invisibili). `aperta`
+          // da solo, senza la condizione su `senzaMisura`: `gruppoBasso` riceve sempre la sua
+          // quota quando la seduta è aperta, che ci siano strumenti o no.
+          const comandiSottoAgo = aperta;
           // ⚠️ SEGNALATO: « quand on a le CYCLE en bas l'arc est petit, baisse la position des
           // CICLES pour agrandir l'arc ». Il due-terzi/un-terzo (sopra) era FISSO, uguale a
           // schermo inattivo (i quattro cerchi di scelta, poche righe) e a ciclo ARMATO (tutta
@@ -5444,7 +5482,19 @@ export default function Serenity() {
               armava uno (`spiegazioneCiclo`, il testo che guida DURANTE un ciclo, non
               esiste ancora qui: nessun metodo è scelto). Una riga sola, la stessa idea
               di `spiegazioneCiclo` ma per il momento PRIMA di tutti gli altri: dice cosa
-              fare anche quando non c'è ancora niente in corso. */}
+              fare anche quando non c'è ancora niente in corso.
+              ⚠️ BUG TROVATO — segnalato: « senza strumenti scrive "scegli un metodo" ma non
+              si vede nulla ». `!senzaMisura` qui, aggiunto SUBITO dopo: senza strumenti
+              questo intero gruppo (riga + cinque cerchi) vive nel FLUSSO normale del
+              documento, sotto il blocco `senzaMisura && aperta` (poco più su) che invece è
+              `position:absolute` — quel blocco mostra GIÀ la sua propria guida grande
+              ("DONNE L'ITEM" ecc., `spiegazioneCiclo`), quindi la riga qui sarebbe stata
+              doppia anche a schermo pieno. Verificato dal vivo: `document.body.scrollHeight`
+              (1096px) superava `window.innerHeight` (720px) — la riga in più, sommata al
+              resto, spingeva i cinque cerchi sotto al bordo visibile, invisibili benché
+              presenti nel DOM. Con strumenti (dove non c'è il blocco `senzaMisura` a
+              contendersi lo spazio) la riga resta, verificata correttamente a schermo. */}
+          {!senzaMisura && (
           <span style={{
             width: '100%', textAlign: 'center', flexShrink: 0,
             fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', fontWeight: 600,
@@ -5453,6 +5503,7 @@ export default function Serenity() {
             {LC('scegli un metodo qui sotto', 'choisis une méthode ci-dessous', 'choose a method below',
                 'elige un método aquí abajo', 'välj en metod nedan')}
           </span>
+          )}
           <div style={{
             width: 'min(96%, 2200px)', maxWidth: '100%', flexShrink: 0,
             display: 'flex', flexDirection: 'row', flexWrap: 'wrap',

@@ -6114,3 +6114,40 @@ cercles à l'ouverture d'une séance, avant tout choix de méthode. CAM 2 non v�
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/Serenity.tsx`.
+
+---
+
+## Giro (28/08/2026, 7) — le vrai bug derrière « senza strumenti, les cercles ne se voient pas » ; les post-it reliés à leur bouton
+
+**Senza strumenti — les cinq cercles étaient là, invisibles sous le bord de l'écran.**
+Segnalato : « senza strumenti scrive "scegli un metodo" ma non si vede nulla ». Pas mon ajout
+de la ligne-guide (giro précédent) qui causait ça — juste 40px de plus sur un problème déjà
+là. Vrai coupable, trouvé en mesurant en direct (`document.body.scrollHeight` 1096px contre
+`window.innerHeight` 720px, `body{overflow:hidden}` — toute l'appli est un viewport FIXE, sans
+scroll, par choix délibéré) : `comandiSottoAgo = aperta && !senzaMisura` mettait `gruppoBasso`
+(le conteneur qui héberge les cinq cercles) à `flex:'0 0 0%'` — zéro espace réservé — chaque
+fois que `senzaMisura` était vrai. Correct quand cette ligne fut écrite : sans instruments,
+`gruppoBasso` ne montrait alors RIEN d'autre que le texte de `spiegazioneCiclo`, déjà dupliqué
+dans l'overlay absolu « DONNE L'ITEM » à côté — zéro espace ne retirait rien. Depuis qu'un giro
+précédent a rendu les cinq cercles visibles aussi sans instruments (« senza strumenti non
+appaiono i cicli, invece devono apparire »), cette prémisse ne tient plus : zéro espace pour
+un conteneur avec cinq vrais cercles dedans veut dire qu'ils débordent SOUS lui, sous le bord
+de l'écran — présents dans le DOM, invisibles à l'auditor. `comandiSottoAgo = aperta`, sans la
+condition sur `senzaMisura` : `gruppoBasso` reçoit toujours sa part. **Vérifié en direct,
+avant/après** : `scrollHeight` 1096px → 720px (exactement égal à `innerHeight`, plus aucun
+débordement), les cinq cercles bien visibles avec leurs étiquettes sous « DONNE L'ITEM ». La
+ligne-guide elle-même reste réservée au cas AVEC instruments (redondante avec « DONNE L'ITEM »
+sinon) — pas restaurée en `senzaMisura`.
+
+**Les post-it HELP — reliés à leur bouton.** Segnalato : « i post-it non sono posizionati
+correttamente, devi mettere un qualcosa che li collega alla zona che spiegano ». `impila()`
+(giro précédent, contre le chevauchement) pousse certains post-it plusieurs rangées plus bas
+que leur bouton — sans un signe, plus moyen de savoir LEQUEL de plusieurs boutons proches un
+post-it éloigné explique. Ajouté : une lineetta verticale fine entre le vrai bord du bouton et
+le post-it quand ils ont été séparés par l'empilement, et un petit codino (triangle, comme une
+bulle de bande dessinée) qui pointe vers le haut sur chaque post-it. **Vérifié en direct** :
+les post-it de MUSE/METER/SANS INSTRUMENTS (empilés en escalier) sont maintenant chacun reliés
+par un fil visible à leur propre bouton.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx`.
