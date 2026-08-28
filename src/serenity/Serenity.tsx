@@ -677,10 +677,23 @@ export default function Serenity() {
    * sono un calcolo derivato (`cam2Mostrata`, sotto) che si aggiorna da solo col cambiare della
    * seduta (remota o no) — scriverle qui le confonderebbe con una scelta persistita.
    */
+  /**
+   * ⚠️ BUG TROVATO — segnalato di nuovo: « la MNA in basic non deve apparire ». La guardia
+   * `if (espertoAttivo === undefined) return;` lasciava intatta la preferenza VECCHIA
+   * (persistita in `localStorage`, magari `true` da mesi di seduta EXPERT) ogni volta che
+   * `avvio?.esperto` non era un booleano ESATTO — e `esperto` (v. `flussoAvvio.ts`) parte da
+   * `null`, non da `undefined`: una CONFIGURAZIONE SALVATA scritta prima che questo campo
+   * esistesse, o ricreata da un percorso che non lo valorizza, restava `null`/`undefined` per
+   * sempre, la guardia usciva subito, e MNA restava acceso qualunque livello si scegliesse
+   * dopo. Tolta la guardia: qualunque cosa che non sia `true` per davvero (`false`, `null`,
+   * `undefined`) conta come BASIC — sicuro anche PRIMA che l'auditor abbia risposto, perché
+   * questi moduli si vedono solo a seduta aperta (`aperta && moduleVis.X`), e la seduta non si
+   * apre prima che le quattro domande dell'avvio siano finite.
+   */
   useEffect(() => {
-    if (espertoAttivo === undefined) return;
-    setModuleVis(v => (v.biometric === espertoAttivo && v.mna === espertoAttivo && v.health === espertoAttivo && v.journal === espertoAttivo)
-      ? v : { ...v, biometric: espertoAttivo, mna: espertoAttivo, health: espertoAttivo, journal: espertoAttivo });
+    const esperto = espertoAttivo === true;
+    setModuleVis(v => (v.biometric === esperto && v.mna === esperto && v.health === esperto && v.journal === esperto)
+      ? v : { ...v, biometric: esperto, mna: esperto, health: esperto, journal: esperto });
   }, [espertoAttivo, setModuleVis]);
   // Segnalato: « nessuno sfondo » — la STESSA preferenza di EQUILIBRIUM, applicata alla
   // superficie di SERENITY con un velo (`--s-veil`) invece del vetro scuro di EQUILIBRIUM:
@@ -1899,8 +1912,19 @@ export default function Serenity() {
                  'Ingen reaktion kvar: varandets stillhet. Validerat av dig.') };
     }
     if (truth.truthPhase !== 'idle') {
+      // ⚠️ AGGIUNTO — segnalato: « in TRUTH devi far vedere in più grande dove siamo nel ciclo
+      // con ACCORDO, VERITA TEMPO PRESENTE ». Le STESSE tre tappe appena aggiunte all'arco
+      // (`ClearDial.tsx`, `cycleKind:'truth'`, giro precedente) — qui si ripetono davanti al
+      // `titolo`, che è il testo più grande a schermo (`PistaCiclo`/l'overlay "senza strumenti").
+      // Non un'invenzione nuova: le stesse tre parole, le stesse tre lingue, un secondo posto
+      // dove si leggono — quello che l'auditor guarda di più mentre conduce.
+      // `return_present` esce prima con un `titolo` proprio (sotto): qui `tappa` serve solo
+      // ai tre rami restanti, tutti "ACCORDO" (R/I non ancora chiesto) o "VERITÀ" (in corso).
+      const tappa = (faseCiclo === 'truth.ri' || faseCiclo === 'truth.say_ri')
+        ? LC('ACCORDO', 'ACCORD', 'AGREEMENT', 'ACUERDO', 'ÖVERENSKOMMELSE')
+        : LC('VERITÀ', 'VÉRITÉ', 'TRUTH', 'VERDAD', 'SANNING');
       if (faseCiclo === 'truth.ri' || faseCiclo === 'truth.say_ri') return {
-        titolo: LC('1 · DAI IL R/I', '1 · DONNE LE R/I', '1 · GIVE THE R/I', '1 · DA EL R/I', '1 · GE R/I'),
+        titolo: `${tappa} · ` + LC('1 · DAI IL R/I', '1 · DONNE LE R/I', '1 · GIVE THE R/I', '1 · DA EL R/I', '1 · GE R/I'),
         // ⚠️ SEGNALATO — « Localise un ITEM avec un procédé quelconque » invece del
         // participio passato: un'ISTRUZIONE all'auditor (che fare adesso), non la
         // descrizione di uno stato già avvenuto. Stessa correzione nelle cinque lingue.
@@ -1910,20 +1934,21 @@ export default function Serenity() {
                  'Localiza un ÍTEM con cualquier procedimiento. Escríbelo o dilo, luego pulsa.',
                  'Lokalisera ett ITEM med valfri process. Skriv eller säg det, tryck sedan.') };
       if (truth.truthPhase === 'candidate') return {
-        titolo: LC('CANDIDATO PROPOSTO', 'CANDIDAT PROPOSÉ', 'CANDIDATE PROPOSED', 'CANDIDATO PROPUESTO', 'KANDIDAT FÖRESLAGEN'),
+        titolo: `${tappa} · ` + LC('CANDIDATO PROPOSTO', 'CANDIDAT PROPOSÉ', 'CANDIDATE PROPOSED', 'CANDIDATO PROPUESTO', 'KANDIDAT FÖRESLAGEN'),
         come: LC('Quel che sembrava una caduta potrebbe essere un accordo — la verità del PC che affiora. Conferma se lo è, altrimenti continua a chiedere.',
                  'Ce qui semblait une chute pourrait être un accord — la vérité du PC qui émerge. Confirme si c\'est le cas, sinon continue à demander.',
                  'What looked like a fall might be an agreement — the PC\'s truth surfacing. Confirm if it is, otherwise keep asking.',
                  'Lo que parecía una caída podría ser un acuerdo — la verdad del PC que aflora. Confirma si lo es, si no sigue preguntando.',
                  'Det som såg ut som ett fall kan vara en överenskommelse — PC:s sanning som stiger upp. Bekräfta om så är fallet, fortsätt annars fråga.') };
       if (faseCiclo === 'truth.return_present') return {
-        titolo: LC('ULTERIORE R/I TROVATO', 'R/I SUPPLÉMENTAIRE TROUVÉ', 'FURTHER R/I FOUND', 'R/I ADICIONAL ENCONTRADO', 'YTTERLIGARE R/I HITTAT'), fatto: true,
+        titolo: LC('TEMPO PRESENTE', 'TEMPS PRÉSENT', 'PRESENT TIME', 'TIEMPO PRESENTE', 'NUTID')
+          + ' · ' + LC('ULTERIORE R/I TROVATO', 'R/I SUPPLÉMENTAIRE TROUVÉ', 'FURTHER R/I FOUND', 'R/I ADICIONAL ENCONTRADO', 'YTTERLIGARE R/I HITTAT'), fatto: true,
         comando: LC('« Ritorna al tempo presente! »', '« Retourne au temps présent ! »', '« Return to present time! »', '« ¡Vuelve al tiempo presente! »', '« Återvänd till nutid! »'),
         come: LC('Chiedilo, poi chiudi il R/I.', 'Demande-le, puis clos le R/I.', 'Ask it, then close the R/I.', 'Pregúntalo, luego cierra el R/I.', 'Fråga det, stäng sedan R/I.') };
       // ri_located/questioning: si sta chiedendo, si può ripetere finché non emerge un
       // ulteriore R/I — ripetizione È il processo, come « raise this to tone forty ».
       return {
-        titolo: `2 · ${LC('CHIEDI', 'DEMANDE', 'ASK', 'PREGUNTA', 'FRÅGA')}`
+        titolo: `${tappa} · 2 · ${LC('CHIEDI', 'DEMANDE', 'ASK', 'PREGUNTA', 'FRÅGA')}`
           + (truth.truthRepeats > 0 ? ` · ×${truth.truthRepeats}` : ''),
         comando: LC('« Cos\'è la verità su questo? »', '« Qu\'y a-t-il de vrai là-dedans ? »',
                     '« What about this is the truth? »', '« ¿Qué hay de verdad en esto? »',
@@ -2057,8 +2082,19 @@ export default function Serenity() {
       // hardware reale sceglie spesso "senza strumenti" apposta (evita il selettore nativo
       // MUSE/METER, bloccante in questo genere di verifica) — è QUESTA la frase che vedeva,
       // non quella con l'ago.
+      // ⚠️ SEMPLIFICATO IN BASIC — segnalato: « in NULL in basic non devi fare apparire
+      // RECHARGE TA se senza strumenti ». La diramazione "ci riesce/non ci riesce" con
+      // l'etichetta tecnica "NON RICARICA" è un dettaglio per chi già conosce il ciclo NULL —
+      // in BASIC basta il gesto (chiedere il mock-up), l'esito lo giudica l'auditor a voce,
+      // non serve nominare qui un esito che potrebbe non verificarsi mai in quella seduta.
       case 'null.mockup':
-        return LC('Chiedi un mock-up. Ci riesce → EQUILIBRIUM. Non ci riesce → NON RICARICA.',
+        // `!== true`, non `=== false` — v. la nota grande su `espertoAttivo`/`moduleVis` più
+        // sotto (« la MNA in basic non deve apparire »): una configurazione salvata senza
+        // questo campo (`null`/`undefined`) deve leggersi come BASIC, non come EXPERT.
+        return espertoAttivo !== true
+          ? LC('Chiedi un mock-up.', 'Demande un mock-up.', 'Ask for a mock-up.',
+               'Pide un mock-up.', 'Be om en mock-up.')
+          : LC('Chiedi un mock-up. Ci riesce → EQUILIBRIUM. Non ci riesce → NON RICARICA.',
                   'Demande un mock-up. Il y arrive → EQUILIBRIUM. Il n\'y arrive pas → NE RECHARGE PAS.',
                   'Ask for a mock-up. He can → EQUILIBRIUM. He can\'t → NO RECHARGING.',
                   'Pide un mock-up. Lo logra → EQUILIBRIUM. No lo logra → NO RECARGA.',
@@ -3373,9 +3409,18 @@ export default function Serenity() {
               {orologio(tempo)}
             </span>
           </div>
+          {/* ⚠️ SEGNALATO — « il bottone chiudi la session fallo più verso il giallo, ma poco
+              vistoso ». Solo quando DICE "chiudi la seduta" (`aperta` vero — chiudere è il
+              gesto che conta, aprire no): una tinta di `--s-reserve` (lo stesso ambra tenue
+              già usato per "il dato c'è ma non è sostenibile", il terzo dei tre segnali del
+              sistema — v. `tokens.css`) leggerissima sul fondo, un bordo appena percettibile
+              — non un rosso d'allarme, un giallo SUSSURRATO: si nota se lo cerchi, non salta
+              agli occhi. Aprire una seduta resta il vetro neutro di sempre. */}
           <button className="s-glass s-glass-btn" onClick={aperta ? chiudi : apri} style={{
             flex: 1, minWidth: 0, cursor: 'pointer', pointerEvents: 'auto',
-            background: 'var(--s-disc)', color: 'var(--s-ink)',
+            background: aperta ? 'color-mix(in srgb, var(--s-reserve) 14%, var(--s-disc))' : 'var(--s-disc)',
+            border: aperta ? '1px solid color-mix(in srgb, var(--s-reserve) 35%, transparent)' : 'none',
+            color: 'var(--s-ink)',
             borderRadius: 16, padding: '12px 8px',
             fontSize: 'var(--s-fs-sm)', letterSpacing: '0.06em', textTransform: 'uppercase',
             fontFamily: 'var(--s-sans)', lineHeight: 1.25, textAlign: 'center',
@@ -3677,9 +3722,27 @@ export default function Serenity() {
             filter: isLightTheme ? 'none' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.45)) brightness(1.05)',
           }} />
         </button>
-        <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-xl)', letterSpacing: '0.14em' }}>
-          SERENITY
-        </span>
+        {/* ⚠️ AGGIUNTO — segnalato: « fai apparire sotto SERENITY, vicino al logo, se
+            l'interfaccia è BASIC o EXPERT ». `espertoAttivo` (sopra, `avvio?.esperto`) è già
+            la stessa fonte che decide MNA/Santé Système/numeri esatti — qui si legge soltanto,
+            non un secondo stato. `!== true` conta come BASIC (stessa regola robusta della nota
+            grande su `espertoAttivo`/`moduleVis`: una configurazione ancora senza questo campo
+            si legge come BASIC, non come EXPERT). Non mostrata prima che l'avvio esista
+            (`avvio` nullo, le quattro domande non ancora finite) — dire "BASIC" prima che sia
+            davvero deciso sarebbe un'informazione inventata. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-xl)', letterSpacing: '0.14em' }}>
+            SERENITY
+          </span>
+          {avvio && (
+            <span style={{
+              fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
+              letterSpacing: '0.12em', color: 'var(--s-ink-faint)',
+            }}>
+              {espertoAttivo === true ? 'EXPERT' : LC('BASIC', 'BASIQUE', 'BASIC', 'BÁSICO', 'BASIC')}
+            </span>
+          )}
+        </div>
         <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)' }}>
           {__SERENITY_VERSION__}
         </span>
@@ -3985,7 +4048,10 @@ export default function Serenity() {
           // funzione di CONNETTERE non sparisce mai, si raggiunge in un click in più soltanto
           // finché non si è già cliccato una volta. In EXPERT la fila resta sempre intera,
           // come prima di questa modifica.
-          if (espertoAttivo === false && !strumentiEspansi) {
+          // `!== true`, non `=== false` — v. la nota su `espertoAttivo`/`moduleVis` (« la MNA
+          // in basic non deve apparire »): una configurazione salvata senza questo campo
+          // (`null`/`undefined`) deve leggersi come BASIC.
+          if (espertoAttivo !== true && !strumentiEspansi) {
             const ordinePriorita: Record<string, number> = { connesso: 0, errore: 1, cercando: 2, spento: 3, 'in-attesa': 4 };
             const statoAggregato = strumenti.reduce((peggiore, s) =>
               ordinePriorita[s.stato] < ordinePriorita[peggiore] ? s.stato : peggiore, 'in-attesa');
@@ -5433,7 +5499,16 @@ export default function Serenity() {
             involucro `flex:1 column` che li impila: nessuna misura, nessun ref, nessun `top`
             calcolato — il flusso normale della colonna lo mette esattamente dove serve, senza
             poter mai finire tagliato via da un contenitore che non lo aspettava. */}
-        {!senzaMisura && (
+        {/* ⚠️ BUG TROVATO — segnalato: « senza strumenti i comandi di COMMANDS non appaiono ».
+            `!senzaMisura` avvolgeva l'INTERO ramo, `PistaProcedimento` compreso — corretto per
+            `PistaCiclo` (la sua guida, senza strumenti, la dà il pannello assoluto "DONNE
+            L'ITEM" qui sopra, mostrarlo due volte sarebbe stato ridondante) ma sbagliato per
+            `PistaProcedimento`: un procedimento è testo puro letto dall'auditor, senza alcun
+            legame con MUSE/METER — nascondersi senza strumenti gli toglieva l'unico posto in
+            cui vivere, proprio quando "senza strumenti" è la scelta più comune per chi segue
+            un procedimento a voce. `procedimentoAttivo ||` in più: quando un procedimento è
+            scelto, si mostra SEMPRE; altrimenti resta la stessa regola di prima per `PistaCiclo`. */}
+        {(procedimentoAttivo || !senzaMisura) && (
           procedimentoAttivo
             ? <PistaProcedimento nome={procedimentoAttivo.nome} comandi={procedimentoAttivo.comandi}
                 onChiudi={() => setProcedimentoAttivo(null)} lang={lang} />

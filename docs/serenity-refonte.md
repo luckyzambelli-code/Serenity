@@ -6151,3 +6151,46 @@ par un fil visible à leur propre bouton.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/Serenity.tsx`.
+
+---
+
+## Giro (28/08/2026, 8) — BASIC/EXPERT fiable pour de vrai, COMMANDS sans instruments, TRUTH étiqueté en grand
+
+**Le vrai bug derrière « la MNA en basic ne s'affiche toujours pas ».** `espertoAttivo` vient
+de `avvio?.esperto`, qui part de `null` (`flussoAvvio.ts`) — PAS `undefined`. L'effet qui lie
+MNA/Santé Système/Journal/biométrie au niveau sortait tout de suite sur `if (espertoAttivo ===
+undefined) return;` : une configuration sauvegardée sans ce champ (créée avant qu'il existe,
+ou restaurée par un chemin qui ne le remplit pas) restait `null`/`undefined` pour toujours, la
+garde sortait, et la préférence PERSISTÉE (potentiellement `true` depuis des mois d'usage
+EXPERT) ne se corrigeait jamais. Garde retirée : tout ce qui n'est pas `true` littéral compte
+comme BASIC — sûr même avant que l'auditor réponde, ces modules ne se voyant qu'à séance
+ouverte. Même correction appliquée par cohérence à deux autres endroits qui comparaient
+`=== false` au lieu de `!== true` (le texte simplifié de NULL sans instruments, le sélecteur
+d'instruments réduit).
+
+**COMMANDS n'affichait rien sans instruments.** Segnalato : « senza strumenti i comandi di
+COMMANDS non appaiono ». `!senzaMisura` enveloppait tout le bloc, `PistaProcedimento` compris
+— correct pour `PistaCiclo` (sa guidance sans instruments vient de l'overlay séparé « DONNE
+L'ITEM ») mais pas pour un procédé, texte pur sans aucun lien avec MUSE/METER. Ajouté
+`procedimentoAttivo ||` : un procédé s'affiche toujours quand il est choisi, `PistaCiclo`
+garde sa règle d'avant. Non vérifiable en direct dans ce bac à sable (`COMANDI/Procedimenti`
+se lit par IPC Electron, pas par le serveur HTTP que ce sandbox peut atteindre) — corrigé par
+lecture de code, pas par reproduction.
+
+**TRUTH — ACCORDO/VÉRITÉ/TEMPO PRESENTE en grand.** Les mêmes trois étiquettes ajoutées à
+l'arc (giro précédent) préfixent maintenant le `titolo` de `spiegazioneCiclo` — le texte le
+plus grand à l'écran pendant un cycle, celui que l'auditor regarde en conduisant.
+
+**Le bouton fermer la séance, teinté ambre discret.** Segnalato : « più verso il giallo, ma
+poco vistoso ». `color-mix` avec `--s-reserve` (le même ambre tenue du troisième signal du
+système) à 14% de fond + un bordo à 35% — seulement quand le bouton dit "fermer" (`aperta`),
+jamais quand il dit "ouvrir".
+
+**BASIC/EXPERT visible sous SERENITY.** Segnalato : « fai apparire sotto SERENITY... se
+l'interfaccia è BASIC o EXPERT ». Une deuxième ligne, petite, sous le nom — même source
+(`espertoAttivo`), rien de nouveau à maintenir. Cachée avant que `avvio` existe (les quatre
+questions pas encore finies). **Vérifié en direct** : "EXPERT" apparaît sous SERENITY pour une
+configuration sauvegardée de niveau expert.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx`.
