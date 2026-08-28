@@ -45,6 +45,15 @@
   Comme avant : `docs/guide-screenshots-serenity/<fichier>.png` — si le fichier n'existe pas,
   un cadre en pointillés à la place, avec la légende. Rien ne casse si les captures ne sont
   pas encore prises.
+
+  ── MIS À JOUR (28/08/2026) ──────────────────────────────────────────────────────────────────
+  Segnalato : « aggiorna la GUIDE di SERENITY ed includi lo spazio per le screenshot ». Ajouté
+  depuis la première version : ce que BASIC cache réellement (§1, MNA/Santé Système/chiffres
+  secondaires), le bouton HELP à post-it (§2, nouvelle capture dédiée), le sélecteur
+  d'instruments réduit à un point en BASIC (§2), TRUTH qui montre ACCORD/VÉRITÉ/TEMPS PRÉSENT
+  en grand (§4), le mock-up de NULL simplifié en BASIC (§4), la teinte ambre du bouton fermer
+  (§8). Chaque section pratique garde son emplacement de capture — une nouvelle ajoutée pour
+  HELP, les autres réutilisent celles déjà en place (le nouveau texte y tient).
 -->
 <style>
   :root{
@@ -172,10 +181,15 @@
     </li>
   </ol>
   <div class="note info">
-    <span data-l="fr">Ces trois choix se changent après coup : le profil et le "seul/préclair" dans la barre du haut, le niveau dans CONFIG.</span>
-    <span data-l="it">Queste tre scelte si cambiano anche dopo: il profilo e "solo/preclear" nella barra in alto, il livello in CONFIG.</span>
-    <span data-l="en">All three choices can be changed later: the profile and "alone/preclear" in the top bar, the level in CONFIG.</span>
+    <span data-l="fr">Ces trois choix se changent après coup : le profil et le "seul/préclair" dans la barre du haut, le niveau dans CONFIG. Le niveau choisi s'affiche en petit sous "SERENITY", en haut à gauche.</span>
+    <span data-l="it">Queste tre scelte si cambiano anche dopo: il profilo e "solo/preclear" nella barra in alto, il livello in CONFIG. Il livello scelto compare in piccolo sotto "SERENITY", in alto a sinistra.</span>
+    <span data-l="en">All three choices can be changed later: the profile and "alone/preclear" in the top bar, the level in CONFIG. The chosen level shows in small print under "SERENITY", top left.</span>
   </div>
+  <p>
+    <span data-l="fr"><b>Ce que Basique cache</b> (toujours réactivable depuis CONFIG) : le panneau MNA, le panneau Santé Système, et les chiffres exacts secondaires (Total TA cumulé, vitesse) — l'aiguille/les bandes et la lecture du moment restent visibles dans les deux niveaux.</span>
+    <span data-l="it"><b>Cosa nasconde Basico</b> (sempre riaccendibile da CONFIG): il pannello MNA, il pannello Santé Système, e i numeri esatti secondari (Total TA cumulativo, velocità) — l'ago/le bande e la lettura del momento restano visibili in entrambi i livelli.</span>
+    <span data-l="en"><b>What Basic hides</b> (always re-enabled from CONFIG): the MNA panel, the Santé Système panel, and secondary exact numbers (cumulative Total TA, velocity) — the needle/bands and the current reading stay visible at both levels.</span>
+  </p>
   <div class="shot">
     <img src="docs/guide-screenshots-serenity/premier-lancement.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" onload="this.nextElementSibling.style.display='none'">
     <div class="cap" style="display:block">
@@ -210,15 +224,18 @@
     <tr data-l="fr"><td>profil · seul/préclair</td><td>rouvre les 3 questions du premier lancement.</td></tr>
     <tr data-l="it"><td>profilo · solo/preclear</td><td>riapre le 3 domande del primo avvio.</td></tr>
     <tr data-l="en"><td>profile · alone/preclear</td><td>reopens the 3 first-launch questions.</td></tr>
-    <tr data-l="fr"><td>MUSE / METER / SANS INSTRUMENTS</td><td>connecte le casque MUSE, le Theta‑Meter USB, ou choisit de travailler sans aucun des deux.</td></tr>
-    <tr data-l="it"><td>MUSE / METER / SENZA STRUMENTI</td><td>collega il casco MUSE, il Theta‑Meter USB, oppure sceglie di lavorare senza nessuno dei due.</td></tr>
-    <tr data-l="en"><td>MUSE / METER / NO INSTRUMENTS</td><td>connects the MUSE headset, the USB Theta‑Meter, or chooses to work with neither.</td></tr>
+    <tr data-l="fr"><td>MUSE / METER / SANS INSTRUMENTS</td><td>connecte le casque MUSE, le Theta‑Meter USB, ou choisit de travailler sans aucun des deux. En Basique, ces trois boutons se replient en un seul point d'état — un clic dessus les déplie, et ils restent dépliés.</td></tr>
+    <tr data-l="it"><td>MUSE / METER / SENZA STRUMENTI</td><td>collega il casco MUSE, il Theta‑Meter USB, oppure sceglie di lavorare senza nessuno dei due. In Basico questi tre pulsanti si riducono a un solo pallino di stato — un clic li apre, e restano aperti.</td></tr>
+    <tr data-l="en"><td>MUSE / METER / NO INSTRUMENTS</td><td>connects the MUSE headset, the USB Theta‑Meter, or chooses to work with neither. In Basic, these three buttons collapse into a single status dot — one click expands them, and they stay expanded.</td></tr>
     <tr data-l="fr"><td>⚙️ CONFIG</td><td>réglages avancés (niveau d'affichage, calibration, etc.).</td></tr>
     <tr data-l="it"><td>⚙️ CONFIG</td><td>impostazioni avanzate (livello di visualizzazione, calibrazione, ecc.).</td></tr>
     <tr data-l="en"><td>⚙️ CONFIG</td><td>advanced settings (display level, calibration, etc.).</td></tr>
     <tr data-l="fr"><td>? Guide</td><td>cette page.</td></tr>
     <tr data-l="it"><td>? Guida</td><td>questa pagina.</td></tr>
     <tr data-l="en"><td>? Guide</td><td>this page.</td></tr>
+    <tr data-l="fr"><td>🗒️ Help</td><td>affiche/cache un post-it d'explication sous chaque bouton de l'écran actuel — différent de Guide, qui ouvre le manuel entier.</td></tr>
+    <tr data-l="it"><td>🗒️ Help</td><td>mostra/nasconde un post-it di spiegazione sotto ogni pulsante della schermata attuale — diverso da Guida, che apre il manuale intero.</td></tr>
+    <tr data-l="en"><td>🗒️ Help</td><td>shows/hides an explanation post-it under every button on the current screen — different from Guide, which opens the whole manual.</td></tr>
   </table>
   <div class="shot">
     <img src="docs/guide-screenshots-serenity/barre-du-haut.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" onload="this.nextElementSibling.style.display='none'">
@@ -226,6 +243,14 @@
       <span data-l="fr">[capture à venir] — la barre du haut, tous les boutons</span>
       <span data-l="it">[schermata in arrivo] — la barra in alto, tutti i pulsanti</span>
       <span data-l="en">[screenshot pending] — the top bar, every button</span>
+    </div>
+  </div>
+  <div class="shot">
+    <img src="docs/guide-screenshots-serenity/help-postit.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" onload="this.nextElementSibling.style.display='none'">
+    <div class="cap" style="display:block">
+      <span data-l="fr">[capture à venir] — mode Help actif, les post-it sous les boutons</span>
+      <span data-l="it">[schermata in arrivo] — modalità Help attiva, i post-it sotto i pulsanti</span>
+      <span data-l="en">[screenshot pending] — Help mode active, post-its under the buttons</span>
     </div>
   </div>
 
@@ -265,13 +290,13 @@
       <td>automatically once the read is done, or CLOSE.</td></tr>
 
     <tr data-l="fr"><td><span class="dot" style="background:#a3e635"></span>NULL</td>
-      <td>arme le cycle NULL → RISE → CLEAR READ, avec ses propres étapes affichées.</td>
+      <td>arme le cycle NULL → RISE → CLEAR READ, avec ses propres étapes affichées. En Basique, la demande de mock-up reste simple ("demande un mock-up") ; en Expert elle nomme aussi l'issue technique ("NE RECHARGE PAS").</td>
       <td>en suivant les étapes jusqu'au bout, ou FERMER.</td></tr>
     <tr data-l="it"><td><span class="dot" style="background:#a3e635"></span>NULL</td>
-      <td>arma il ciclo NULL → RISE → CLEAR READ, con le sue tappe mostrate.</td>
+      <td>arma il ciclo NULL → RISE → CLEAR READ, con le sue tappe mostrate. In Basico la richiesta di mock-up resta semplice ("chiedi un mock-up"); in Esperto nomina anche l'esito tecnico ("NON RICARICA").</td>
       <td>seguendo le tappe fino in fondo, oppure CHIUDI.</td></tr>
     <tr data-l="en"><td><span class="dot" style="background:#a3e635"></span>NULL</td>
-      <td>arms the NULL → RISE → CLEAR READ cycle, with its own steps shown.</td>
+      <td>arms the NULL → RISE → CLEAR READ cycle, with its own steps shown. In Basic, the mock-up request stays plain ("ask for a mock-up"); in Expert it also names the technical outcome ("NO RECHARGING").</td>
       <td>by following the steps through, or CLOSE.</td></tr>
 
     <tr data-l="fr"><td><span class="dot" style="background:#818cf8"></span>MIRROR</td>
@@ -308,6 +333,11 @@
     <span data-l="fr">TRUTH : un candidat proposé n'est jamais validé tout seul — c'est toujours toi qui clôtures.</span>
     <span data-l="it">TRUTH: un candidato proposto non viene mai validato da solo — sei sempre tu a chiudere.</span>
     <span data-l="en">TRUTH: a proposed candidate is never validated on its own — you always close it.</span>
+  </div>
+  <div class="note info">
+    <span data-l="fr">TRUTH montre en grand où tu en es — ACCORD (le R/I n'est pas encore demandé), VÉRITÉ (en cours de demande), TEMPS PRÉSENT (le R/I est clos) — au-dessus de l'arc et dans le grand titre du cycle.</span>
+    <span data-l="it">TRUTH mostra in grande a che punto sei — ACCORDO (il R/I non è ancora chiesto), VERITÀ (in corso di richiesta), TEMPO PRESENTE (il R/I è chiuso) — sopra l'arco e nel titolo grande del ciclo.</span>
+    <span data-l="en">TRUTH shows in large text where you are — ACCORD/AGREEMENT (the R/I isn't asked yet), VÉRITÉ/TRUTH (asking in progress), TEMPS PRÉSENT/PRESENT TIME (the R/I is closed) — above the arc and in the cycle's big title.</span>
   </div>
   <div class="shot">
     <img src="docs/guide-screenshots-serenity/cinq-methodes.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" onload="this.nextElementSibling.style.display='none'">
@@ -378,9 +408,9 @@
 
   <h2 id="fermer"><span data-l="fr">8. Fermer la séance</span><span data-l="it">8. Chiudere la seduta</span><span data-l="en">8. Closing the session</span></h2>
   <p>
-    <span data-l="fr">Le bouton <b>fermer la séance</b> (barre du haut) termine la séance et génère le rapport PDF automatiquement — pas de bouton "exporter" à part.</span>
-    <span data-l="it">Il pulsante <b>chiudi la seduta</b> (barra in alto) termina la seduta e genera il rapporto PDF automaticamente — nessun pulsante "esporta" a parte.</span>
-    <span data-l="en">The <b>close the session</b> button (top bar) ends the session and generates the PDF report automatically — no separate "export" button.</span>
+    <span data-l="fr">Le bouton <b>fermer la séance</b> (barre du haut, teinté ambre discret pour se distinguer d'"ouvrir") termine la séance et génère le rapport PDF automatiquement — pas de bouton "exporter" à part.</span>
+    <span data-l="it">Il pulsante <b>chiudi la seduta</b> (barra in alto, tinta ambra discreta per distinguersi da "apri") termina la seduta e genera il rapporto PDF automaticamente — nessun pulsante "esporta" a parte.</span>
+    <span data-l="en">The <b>close the session</b> button (top bar, subtly amber-tinted to stand apart from "open") ends the session and generates the PDF report automatically — no separate "export" button.</span>
   </p>
   <div class="note info">
     <span data-l="fr">Le PDF peut prendre quelques secondes à se préparer (surtout avec un long Journal). S'il n'apparaît pas tout de suite dans l'Historique, rouvre le panneau un instant après.</span>
@@ -443,7 +473,7 @@
 </div>
 <span class="ver">SERENITY <span id="v"></span></span>
 <script>
-const VERSIONE = "3.0.131";
+const VERSIONE = "3.0.140";
 document.getElementById('v').textContent = VERSIONE;
 function setLang(l){
   document.body.setAttribute('data-lang', l);

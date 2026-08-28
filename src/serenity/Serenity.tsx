@@ -2131,6 +2131,20 @@ export default function Serenity() {
                   'Validate and go on with another item.',
                   'Valida y sigue con otro ítem.',
                   'Validera och fortsätt med ett annat item.');
+      // ⚠️ BUG TROVATO — segnalato: « senza strumenti ti dice di dire o scrivere un item IN
+      // TRUTH ma non c'è la zona testo ». Mancava qui il caso di TRUTH — `comeSenzaAgo`
+      // tornava `null` per lui, e il ramo "senza strumenti" ripiegava sul testo NORMALE di
+      // `spiegazioneCiclo.come` (« Scrivilo o dillo a voce, poi premi »), che presuppone il
+      // campo item DENTRO `PistaCiclo` — MAI montato senza strumenti (v. la nota sul blocco
+      // assoluto "DONNE L'ITEM", qui sopra). Non basta dire "scrivilo o dillo" senza dire
+      // DOVE: senza `PistaCiclo` l'unica casella scritta è "R&I · Manuel" nel pannello
+      // Assessment (a destra) — nominata esplicitamente, non lasciata sottintesa.
+      case 'truth.ri': case 'truth.say_ri':
+        return LC('Dillo ad alta voce, o scrivilo nel campo "R&I · Manuel" a destra, poi premi.',
+                  'Dis-le à voix haute, ou écris-le dans le champ « R&I · Manuel » à droite, puis appuie.',
+                  'Say it out loud, or type it in the "R&I · Manual" field on the right, then press.',
+                  'Dilo en voz alta, o escríbelo en el campo "R&I · Manual" a la derecha, luego pulsa.',
+                  'Säg det högt, eller skriv det i fältet "R&I · Manuellt" till höger, tryck sedan.');
       default:
         return null;   // TONE è assessment puro: il suo testo va già bene così com'è.
     }
@@ -4198,19 +4212,30 @@ export default function Serenity() {
             />
           </>
         )}
-        {/* CONFIG/Guida — nascosti in modalità ciclo, come il resto della barra amministrativa
-            (v. `modalitaCiclo`): non sono azioni da fare a metà lettura. Tornano appena il
-            ciclo si chiude. */}
-        {!modalitaCiclo && (
-        <>
+        {/* ⚠️ BUG TROVATO — segnalato: « il bottone CONFIG deve apparire anche in BASIC per
+            poter attivare dei moduli se necessario ». Viveva DENTRO `{!modalitaCiclo && (...)}»
+            insieme al resto della barra amministrativa — spariva a ciclo armato, qualunque
+            fosse il livello. Il SUO stesso commento originale (« raggiungibile in ogni momento,
+            come il cassetto di EQUILIBRIUM ») non era più vero da quando quel wrapper l'ha
+            inglobato: proprio in BASIC, dove MNA/Santé Système/numeri restano spenti finché
+            non li si riaccende da CONFIG, restare bloccati fuori da CONFIG durante una seduta
+            in corso toglie l'unico modo di cambiarli. Portato fuori dal wrapper — sempre
+            montato, a qualunque `modalitaCiclo`, come dice il suo stesso commento. Guida/
+            assistente IA restano dentro: sono strumenti di lettura, non un cassetto di
+            preferenze da riaprire al volo. */}
         <Divisore />
-        {/* CONFIG — raggiungibile in ogni momento, come il cassetto di EQUILIBRIUM. */}
         <button className="s-glass s-glass-btn" onClick={() => setConfigAperto(true)} title={t('config') as string} data-help={t('config') as string} style={{
           cursor: 'pointer', padding: 8, borderRadius: 999,
           background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
         }}>
           <Settings size={32} strokeWidth={1.6} />
         </button>
+        {/* Guida/assistente IA — nascosti in modalità ciclo, come il resto della barra
+            amministrativa (v. `modalitaCiclo`): non sono azioni da fare a metà lettura.
+            Tornano appena il ciclo si chiude. CONFIG, sopra, non fa più parte di questo
+            gruppo (v. la nota lì). */}
+        {!modalitaCiclo && (
+        <>
         {/* ── L'ASSISTENTE IA, DIETRO UN'ICONA — v. la nota su `aiAperto`, sopra. Segnalato di
             nuovo: « porta l'icona dopo config e prima di guide » — qui, non più dopo Guide
             (posizione di un giro precedente). Un'icona sola (`Brain`, la stessa che
@@ -5548,6 +5573,10 @@ export default function Serenity() {
             già armato, `bottoniCiclo` — vuoto finché nessuno lo è). Tolta l'esclusione: i
             cerchi restano identici (`armCycle`/`armMirror`/`setToneAttivo`, mai toccati),
             semplicemente raggiungibili anche senza MUSE/METER connessi. */}
+        {/* ⚠️ SEGNALATO E RITIRATO — provato un `|| senzaMisura` per mostrare i cerchi anche a
+            procedimento aperto (« nasconde i bottoni dei cicli »), poi corretto dall'auditor
+            stesso: « lasci stare, è giusto ». Un procedimento aperto prende il posto di
+            `PistaCiclo` di proposito — la stessa esclusività vale con o senza strumenti. */}
         {aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && truth.truthPhase === 'idle' && !procedimentoAttivo && (
           <>
           {/* ── LA RIGA-GUIDA, ANCHE A RIPOSO — segnalato: « una riga-guida sempre in cima

@@ -6194,3 +6194,38 @@ configuration sauvegardée de niveau expert.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/Serenity.tsx`.
+
+---
+
+## Giro (28/08/2026, 9) — CONFIG toujours accessible, TRUTH sans zone de texte, guide mis à jour
+
+**CONFIG disparaissait pendant un cycle, en BASIC comme en EXPERT.** Segnalato : « il bottone
+CONFIG deve apparire anche in BASIC per poter attivare dei moduli se necessario ». Il vivait
+dans `{!modalitaCiclo && (...)}`, le même wrapper que Guide/l'assistant IA — son propre
+commentaire disait pourtant « raggiungibile in ogni momento, come il cassetto di EQUILIBRIUM »,
+plus vrai depuis que ce wrapper l'a englobé. Justement en BASIC, où MNA/Santé Système/chiffres
+restent éteints tant qu'on ne les rallume pas depuis CONFIG, rester bloqué hors de CONFIG
+pendant une séance en cours retirait le seul moyen de les changer. Sorti du wrapper — toujours
+monté, quel que soit `modalitaCiclo`. **Vérifié en direct** : CONFIG reste dans la barre après
+avoir armé CONTACT (Guide/Help disparaissent bien, comme prévu).
+
+**TRUTH sans instruments — l'instruction parlait d'une case qui n'existe pas ici.** Segnalato :
+« senza strumenti ti dice di dire o scrivere un item IN TRUTH ma non c'è la zona testo ».
+`comeSenzaAgo` (le texte vraiment affiché sans instruments) n'avait aucun cas pour TRUTH — il
+retombait sur le texte NORMAL de `spiegazioneCiclo.come` (« Scrivilo... »), qui suppose le
+champ item de `PistaCiclo` — jamais monté sans instruments. Ajouté le cas manquant, nommant
+EXPLICITEMENT où écrire pour de vrai : le champ « R&I · Manuel » du panneau Assessment.
+
+**Essai retiré** : un `|| senzaMisura` pour garder les cinq cercles visibles même processus
+ouvert (« nasconde i bottoni dei cicli ») — l'auditor a confirmé après coup que cacher les
+cercles pendant un processus est le comportement voulu, essai annulé.
+
+**Le guide, mis à jour.** Segnalato : « aggiorna la GUIDE di SERENITY ed includi lo spazio per
+le screenshot ». Ce que BASIC cache pour de vrai (§1), le bouton HELP avec sa propre capture
+dédiée (§2, nouvelle), le sélecteur d'instruments réduit en BASIC (§2), TRUTH et ses trois
+étapes en grand (§4), le mock-up de NULL simplifié en BASIC (§4), la teinte ambre du bouton
+fermer (§8). Toutes les sections pratiques gardent leur emplacement de capture. Version du
+guide : 3.0.140.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx`, `public/guide/SERENITY-manuale.html` (rigenerato).
