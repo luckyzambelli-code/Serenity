@@ -936,6 +936,26 @@ export default function Serenity() {
     } else if (truth.truthAwaitItemRef.current) {
       truth.truthAwaitItemRef.current = false;
       setItem(testo);
+    } else if (!cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && truth.truthPhase === 'idle' && !item.trim()) {
+      // ⚠️ BUG TROVATO — segnalato: « dans TONE parfois l'item n'est pas inscrit dans le cycle
+      // et il ne démarre pas, même si on l'écrit ; mais si on annule et on redémarre... ça
+      // marche ». Riprodotto dal vivo: scrivere la resistenza QUI (R&I · Manuel) PRIMA di
+      // armare un ciclo cadeva in NESSUNO dei quattro rami sopra (nessun *AwaitItemRef è
+      // ancora acceso — non si è ancora cliccato un cerchio) — restava solo nell'assessment,
+      // MAI scritto in `item`. Il ciclo armato subito dopo trovava il campo vuoto, entrava in
+      // attesa (`awaitItemRef = true`), e restava bloccato per sempre: R&I · Manuel non scrive
+      // MAI un `speaker:'Aud'` (v. sopra), quindi l'effetto che aspetta non lo vede né prima né
+      // dopo — nessun riarmo lo avrebbe risolto da solo (a differenza della voce, che quello sì
+      // lo scrive). Scrivere QUI, subito, nel campo condiviso: qualunque cerchio si clicchi
+      // dopo lo trova già pieno, esattamente come se fosse stato scritto nel suo campo proprio.
+      //
+      // ⚠️ SOLO A CICLO LIBERO E CAMPO VUOTO — non un `else` incondizionato: R&I · Manuel resta
+      // scrivibile PER TUTTA la seduta (v. la nota grande più sopra, « sempre scrivibili »),
+      // anche a metà di un ciclo già oltre il suo tempo "dai l'item" (MOCK-UP, RAISE...). In
+      // quel caso `item` è già l'item DI QUEL CICLO — sovrascriverlo con un'osservazione
+      // successiva lo scambierebbe con una resistenza diversa a metà lavorazione. La condizione
+      // qui riproduce ESATTAMENTE il caso segnalato (nessun metodo ancora armato) e nessun altro.
+      setItem(testo);
     }
   };
   /**
@@ -1166,6 +1186,30 @@ export default function Serenity() {
   const [itemDigitando, setItemDigitando] = useState(false);
   useEffect(() => { if (!item.trim()) setItemDigitando(false); }, [item]);
   const setItemManuale = (v: string) => { setItemDigitando(true); setItem(v); };
+  /**
+   * ⚠️ BUG TROVATO — segnalato: « dans TONE parfois l'item n'est pas inscrit dans le cycle et
+   * il ne démarre pas, même si on l'écrit ; mais si on annule et on redémarre... ça marche ».
+   * Causa vera, e vale per TUTTI E CINQUE i cicli (non solo TONE — `itemNamed`, sopra, è la
+   * STESSA guardia condivisa da `sessionPhase.ts` per contact/null/mirror/tone/truth):
+   * scrivere l'item A MANO alza `itemDigitando` (giusto: non far avanzare il ciclo al primo
+   * carattere), ma finché non si preme Invio (`dichiaraItemDetto`, sotto) o non si svuota il
+   * campo, resta `true` — PER SEMPRE, anche dopo aver cliccato il cerchio del ciclo. Il ciclo
+   * si ARMA comunque (i motori dei cinque cicli guardano `d.auditingQuestion.trim()` diretto,
+   * non `itemNamed`), ma la SCHERMATA resta bloccata sul tempo "1 · DAI L'ITEM"/"say_item"
+   * (`sessionPhase.ts`, `!s.itemNamed → '*.say_item'`) — sembra che l'item non sia mai stato
+   * dato e il ciclo non sia mai partito, anche se dietro le quinte lo È.
+   * Perché soprattutto TONE: da quando arma in un click solo (v. la nota sul cerchio TONE, più
+   * giù), scrivere l'item PRIMA di cliccare — invece di cliccare, poi scrivere, poi Invio — è
+   * il gesto più naturale, e proprio quello che salta l'Invio.
+   * Perché « annule et redémarre » lo sistema: ANNULLA svuota il campo (`setAuditingQuestion
+   * ('')` in ciascun `resetX`), l'effetto qui sopra vede `!item.trim()` e rimette
+   * `itemDigitando` a `false` — la volta dopo (con l'item riscritto, o rimasto uguale) la
+   * guardia è già spenta.
+   * La cura, qui: cliccare un cerchio per armare un ciclo È un Invio implicito — se il campo
+   * ha già del testo, si conta come confermato nello stesso gesto, invece di aspettare un
+   * tasto che l'auditor non ha ragione di pensare necessario.
+   */
+  const confermaItemSePresente = () => { if (item.trim()) setItemDigitando(false); };
   /** Il lag di Ron (Δt*) — segnalato assente dalla revisione (« l'arco rappresenta i cicli »):
    *  serviva anche a QUESTO, non solo a un numero. `onLagMeasured` era un no-op — il motore lo
    *  calcolava comunque (vive in `lagMeter`, dentro il ciclo), semplicemente nessuno lo leggeva
@@ -5148,11 +5192,11 @@ export default function Serenity() {
                 unita: più superficie colorata senza alzare la saturazione di un solo grado. */}
             {([
               { k: 'contact', hue: 'var(--s-still)', label: 'CONTACT', Icona: Crosshair,
-                onClick: () => cycles.armCycle('charge') },
+                onClick: () => { confermaItemSePresente(); cycles.armCycle('charge'); } },
               { k: 'null', hue: 'var(--s-alive)', label: 'NULL', Icona: Scale,
-                onClick: () => cycles.armCycle('null') },
+                onClick: () => { confermaItemSePresente(); cycles.armCycle('null'); } },
               { k: 'mirror', hue: 'var(--s-reserve)', label: 'MIRROR', Icona: FlipHorizontal2,
-                onClick: () => mirror.armMirror() },
+                onClick: () => { confermaItemSePresente(); mirror.armMirror(); } },
               // ⚠️ TONE ARMAVA IN DUE TEMPI, GLI ALTRI TRE IN UNO — segnalato: « le cicle TONE
               // contrairement aux autres demande d'appuyer sur un bouton pour donner l'item.
               // ENLEVE LE et fais comme pour les autres cycles ». `armCycle`/`armMirror` (sopra)
@@ -5162,12 +5206,12 @@ export default function Serenity() {
               // esiste anche in App.tsx (non un'invenzione di questa sessione), ma qui è
               // un'esplicita richiesta di NON riprodurla. Un click solo, come gli altri tre.
               { k: 'tone', hue: 'var(--s-tone-hue)', label: 'TONE', Icona: AudioWaveform,
-                onClick: () => { setToneAttivo(true); tone.localizzaTone(); } },
+                onClick: () => { confermaItemSePresente(); setToneAttivo(true); tone.localizzaTone(); } },
               // TRUTH — il protocollo di Ron (v. docs/truth-cycle-proposal.md). Un click solo,
               // come gli altri quattro: `locateRI()` arma E apre la cattura del R/I nello
               // stesso gesto (campo vuoto → si aspetta la voce, come tutti gli altri).
               { k: 'truth', hue: 'var(--s-truth-hue)', label: 'TRUTH', Icona: Lightbulb,
-                onClick: () => truth.locateRI() },
+                onClick: () => { confermaItemSePresente(); truth.locateRI(); } },
             ]).map(c => (
               <div key={c.k} style={{ display: 'grid', justifyItems: 'center', gap: 4, flexShrink: 0 }}>
                 {/* ⚠️ 50px, non più 54 — segnalato: « non vedo il 5 ciclo ». Con TRUTH il quinto

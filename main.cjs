@@ -315,9 +315,19 @@ function createWindow() {
     // the Chromium PDF plugin. FIX: previously blob:/data: fell through to
     // shell.openExternal → macOS replied "no application configured to open the
     // URL blob:…" and the History PDF never opened.
+    //
+    // ⚠️ BUG TROVATO — segnalato: « quand j'appuie sur view du PDF... il me dit que aucune
+    // appli pour ouvrir about:blank ». Causa: `HistoryModal.openPdf` (giro precedente, fix
+    // per il window.open perso dopo un await) apre ORA una finestra VUOTA subito nel click
+    // (`window.open('', '_blank')`, url `about:blank`) per non perdere il gesto dell'utente,
+    // e le dà l'indirizzo vero solo dopo. `about:blank` non è né `isLocal` né `isInline` —
+    // cadeva anche lei in `shell.openExternal`, che su `about:blank` non ha un'app di
+    // sistema a cui appoggiarsi. Aggiunta come terzo caso ammesso: è una finestra APERTA DA
+    // NOI, non un link esterno cliccato dall'utente.
     const isLocal  = url.startsWith(`http://127.0.0.1:${PORT}`) || url.startsWith('http://localhost:' + PORT);
     const isInline = url.startsWith('blob:') || url.startsWith('data:');
-    if (isLocal || isInline) {
+    const isBlank  = url === 'about:blank';
+    if (isLocal || isInline || isBlank) {
       return {
         action: 'allow',
         overrideBrowserWindowOptions: {

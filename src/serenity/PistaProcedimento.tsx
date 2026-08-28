@@ -100,13 +100,26 @@ export function PistaProcedimento({ nome, comandi, onChiudi, lang }: {
         // da `position:sticky` (si incollava all'antenato SBAGLIATO, coprendo la prima riga) —
         // ma restava comunque dentro lo STESSO contenitore che ora scorre (v. sotto, per il
         // centraggio del comando a fuoco): scorrendo, FERMER scorreva via CON la lista, invece
-        // di restarci sopra. L'intestazione è ora un FRATELLO del contenitore scorrevole, non
-        // più un suo primo figlio — fuori da quel che scorre, per costruzione, non serve più
-        // nessun `sticky`.
+        // di restarci sopra. L'intestazione è diventata un FRATELLO del contenitore scorrevole
+        // (non più un suo primo figlio) — bastava finché l'UNICO scorrimento in gioco era
+        // quello interno alla lista dei comandi.
+        //
+        // ⚠️ BUG TROVATO UNA TERZA VOLTA — segnalato: « le bouton FERMER est invisible car il
+        // faut scroller vers le haut EN DEHORS de commandes, ce n'est pas naturel ». Un secondo
+        // scorrimento, più esterno (la pagina/il pannello che contiene TUTTO `PistaProcedimento`,
+        // quando `comandiSottoAgo` è falso o quel contenitore stesso trabocca): essere un
+        // "fratello" bastava contro lo scorrimento INTERNO, non contro QUESTO. `position:
+        // 'sticky', top: 0` risolve entrambi insieme, senza dover sapere quale antenato scorre
+        // davvero: si aggancia al PIÙ VICINO scorrevole, quale che sia — la lista dei comandi
+        // se è lei a scorrere, la pagina intera se è lei. Non lo stesso bug di prima (quello era
+        // sticky DENTRO la lista, sopra la prima riga vera): qui è sticky FUORI da essa, un
+        // fratello che segue lo scorrimento invece di ignorarlo.
+        position: 'sticky', top: 0, zIndex: 2,
         width: '100%', boxSizing: 'border-box',
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '3px 4px 3px 10px', borderRadius: 999,
         background: 'color-mix(in srgb, var(--s-ground) 68%, transparent)',
+        backdropFilter: 'blur(6px)',
       }}>
         <span style={{
           fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,

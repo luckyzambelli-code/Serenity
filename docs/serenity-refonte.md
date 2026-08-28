@@ -5875,3 +5875,66 @@ mode d'emploi s'affiche, bascule EN fonctionne, retour à l'app fonctionne.
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/components/HistoryModal.tsx`, `src/serenity/Serenity.tsx`,
 `src/serenity/VistaSenzaAgo.tsx`, `public/guide/SERENITY-manuale.html` (rigenerato).
+
+---
+
+## Giro (28/08/2026, 2) — le vrai bug de TONE (R&I · Manuel avant d'armer), about:blank cassé par le giro précédent, FERMER sticky dans Processus, captures dans le guide
+
+**Régression trouvée dans mon propre giro précédent** : segnalato « quand j'appuie sur view du
+PDF... il me dit que aucune appli pour ouvrir about:blank ». Le fix précédent d'`openPdf`
+(ouvrir une fenêtre vide `window.open('', '_blank')` tout de suite dans le clic, pour garder le
+geste utilisateur) ouvre une URL `about:blank` — ni `isLocal` ni `isInline` dans
+`setWindowOpenHandler` (`main.cjs`), donc elle tombait dans `shell.openExternal('about:blank')`,
+et macOS n'a pas d'app par défaut pour ce schéma. Ajouté un troisième cas `isBlank = url ===
+'about:blank'`. Corrigé, pas encore reconstruit en DMG au moment d'écrire cette ligne.
+
+**Le vrai bug de TONE — reproduit et corrigé, pas seulement de la tuning.** Segnalato : « dans
+TONE parfois l'item n'est pas inscrit dans le cycle et il ne démarre pas, même si on l'écrit ;
+mais si on annule et on redémarre le cycle, ça marche avec l'item dit auparavant ». Reproduit
+en direct : écrire la résistance dans **R&I · Manuel AVANT d'armer** TONE (un geste tout à fait
+naturel — c'est la seule case de saisie manuelle visible avant d'avoir cliqué un cercle) laissait
+le cycle bloqué pour toujours sur « DIS LA RÉSISTANCE », même si le texte apparaissait bien dans
+le panneau R&I · Manuel. Cause : le gestionnaire de R&I · Manuel (`aggiungiItemManuale`,
+`Serenity.tsx`) ne pousse le texte dans le champ partagé `item` QUE si un cycle est DÉJÀ en
+attente (`*AwaitItemRef`) — avant d'armer, aucun ne l'est, donc rien n'était écrit ; le cycle
+armé juste après trouvait le champ vide, entrait lui-même en attente, et restait bloqué pour
+toujours car R&I · Manuel n'écrit JAMAIS dans `journal.logs` avec `speaker:'Aud'` (seul ce que
+l'effet d'attente sait voir) — aucun réarmement seul n'aurait pu s'en sortir, contrairement à
+la voix (qui, elle, écrit bien un 'Aud', et explique pourquoi reparler après annulation
+« marche »). **Corrigé** : un cinquième cas, `else if (!cycleArmed && !mirrorArmed && !toneAttivo
+&& truthPhase==='idle' && !item.trim())`, écrit directement dans `item` — seulement à cycle
+libre et champ vide, pour ne jamais écraser l'item DÉJÀ en cours d'un cycle armé avec une note
+R&I ultérieure. **Vérifié en direct, avant/après** : avant le fix, TONE restait bloqué sur « DIS
+LA RÉSISTANCE » après « colère envers le père » tapé dans R&I · Manuel puis clic sur TONE ; après
+le fix, le même geste passe directement à « MÈNE-LE AU TON 40 ». Vaut pour les cinq cycles (même
+garde partagée), pas seulement TONE.
+
+*(Une seconde piste, `itemDigitando` jamais remis à `false` sans appui sur Invio, a aussi été
+corrigée par précaution dans les cinq boutons d'armement — plausible pour un item tapé dans le
+champ PROPRE de CONTACT/NULL/MIRROR sans presser Invio, mais ce N'ÉTAIT PAS la cause du cas
+reproduit ci-dessus.)*
+
+**« TONE trop souvent déjà à tone 40 ».** Pas de nouveau chiffre magique cette fois — trois
+tours de tuning à l'aveugle (`TONE_MUSE_ESCURSIONE`, `TONE_HOLD_S`, puis la refonte dynamique
+`TONE_AMBIENT_*`) sans données EEG réelles pour calibrer contre. `~/EQUILIBRIUM/corpus/` contient
+de vraies séances (JSON Lines) — reste à analyser les traces `qL` réelles d'une remontée TONE
+pour choisir `TONE_SIGMA_SPAN` sur des chiffres mesurés plutôt que devinés. Pas fait dans ce
+giro (temps), noté pour le prochain.
+
+**FERMER invisible dans Processus.** Segnalato : « il faut scroller vers le haut EN DEHORS de
+commandes, ce n'est pas naturel ». L'en-tête (déjà un frère du conteneur qui scrolle, pas un
+enfant — fix d'un giro précédent contre le scroll INTERNE à la liste) ne protégeait pas contre
+un second scroll, plus extérieur (la page/le panneau qui contient tout `PistaProcedimento`).
+`position: 'sticky', top: 0` s'accroche au plus proche ancêtre qui scroll, quel qu'il soit —
+règle les deux cas sans avoir à savoir lequel scroll vraiment. Pas vérifié en direct (aucun
+fichier de procédure présent dans ce bac à sable pour le reproduire) — pattern CSS standard,
+à confirmer visuellement dans la prochaine build.
+
+**Le guide, une image par point.** Demande explicite : « inclut les images ou la place pour les
+images pour chaque point ». Ajouté un `<div class="shot">` (même dégradation gracieuse en
+cadre pointillé si le fichier n'existe pas) après chaque section pratique (§1, 2, 4–9) — sauté
+§10 (Dépannage), une table de symptômes, pas un écran à capturer.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 324 warning (nessuno nuovo).
+`git status`: `main.cjs`, `src/serenity/Serenity.tsx`, `src/serenity/PistaProcedimento.tsx`,
+`public/guide/SERENITY-manuale.html` (rigenerato).
