@@ -216,16 +216,41 @@ const LetturaVelocita = React.memo(function LetturaVelocita({ t }: { t: (k: stri
  * `ResizeObserver` per bottone: più semplice, e la differenza non si vede a occhio per
  * un'etichetta che deve solo restare vicina al suo bottone, non seguirlo pixel a pixel.
  */
+// Larghezza/altezza presunte di un post-it — servono solo a stimare le sovrapposizioni
+// (v. `impila`, sotto), non sono un valore rigido: `maxWidth` nel disegno resta la stessa.
+const POSTIT_W = 168, POSTIT_H = 44;
+/**
+ * ⚠️ BUG TROVATO — segnalato: « l'HELP sovrappone i post-it e non si legge nulla ». Ogni
+ * post-it si piazzava SEMPRE alla stessa altezza (subito sotto il suo bottone) — due bottoni
+ * vicini (es. MUSE/METER/SANS INSTRUMENTS, tre pillole a un dito di distanza) producevano due
+ * riquadri uno sopra l'altro, illeggibili insieme. `impila` è un ripiano a righe: ordina i
+ * post-it da sinistra a destra, e per ciascuno cerca la prima riga (dall'alto) dove non tocca
+ * un altro già piazzato — se la trova libera resta alla sua altezza naturale, se le prime
+ * righe sono già occupate scende a quella dopo. Un gruppo fitto di bottoni finisce così su
+ * più righe impilate invece che sovrapposto nello stesso rettangolo.
+ */
+function impila(grezzi: { x: number; y: number; text: string }[]): { x: number; y: number; text: string }[] {
+  const ordinati = [...grezzi].sort((a, b) => a.x - b.x);
+  const righeOccupate: Array<Array<{ min: number; max: number }>> = [];
+  return ordinati.map(p => {
+    const min = p.x - POSTIT_W / 2, max = p.x + POSTIT_W / 2;
+    let riga = 0;
+    while (righeOccupate[riga]?.some(o => min < o.max + 6 && max > o.min - 6)) riga++;
+    (righeOccupate[riga] ??= []).push({ min, max });
+    return { ...p, y: p.y + riga * POSTIT_H };
+  });
+}
 function AiutoOverlay({ attivo }: { attivo: boolean }) {
   const [postIt, setPostIt] = useState<{ x: number; y: number; text: string }[]>([]);
   useEffect(() => {
     if (!attivo) { setPostIt([]); return; }
     const ricalcola = () => {
       const nodi = Array.from(document.querySelectorAll<HTMLElement>('[data-help]'));
-      setPostIt(nodi.map(n => {
+      const grezzi = nodi.map(n => {
         const r = n.getBoundingClientRect();
         return { x: r.left + r.width / 2, y: r.bottom, text: n.getAttribute('data-help') || '' };
-      }).filter(p => p.text));
+      }).filter(p => p.text);
+      setPostIt(impila(grezzi));
     };
     ricalcola();
     window.addEventListener('resize', ricalcola);
@@ -239,7 +264,7 @@ function AiutoOverlay({ attivo }: { attivo: boolean }) {
       {postIt.map((p, i) => (
         <div key={i} style={{
           position: 'fixed', left: p.x, top: p.y + 6, transform: 'translateX(-50%)',
-          maxWidth: 168, padding: '7px 10px', borderRadius: 3,
+          maxWidth: POSTIT_W, padding: '7px 10px', borderRadius: 3,
           background: '#fde68a', color: '#78350f', fontSize: 11, fontWeight: 600,
           lineHeight: 1.35, textAlign: 'center', fontFamily: 'var(--s-sans)',
           boxShadow: '2px 3px 8px rgba(0,0,0,0.35)',
@@ -365,6 +390,12 @@ export default function Serenity() {
    *  SOPRA i controlli della schermata attuale, senza lasciarla. Due bisogni diversi, due
    *  bottoni — sovrapporli sullo stesso avrebbe reso ambiguo cosa aspettarsi da un click. */
   const [helpAttivo, setHelpAttivo] = useState(false);
+  /** ── IL SELETTORE STRUMENTI, RIDOTTO A UN PALLINO IN BASIC — v. il suo montaggio, più giù.
+   *  Falso all'apertura: in BASIC le tre pillole MUSE/METER/SENZA STRUMENTI restano un
+   *  pallino solo finché l'auditor non lo tocca — un click lo espande (resta espanso per il
+   *  resto della seduta, niente su/giù continuo). In EXPERT non si guarda mai: la fila intera
+   *  resta come sempre. */
+  const [strumentiEspansi, setStrumentiEspansi] = useState(false);
   /** I CREDITI — si aprono dal logo, come in App.tsx. `CreditsModal`, autosufficiente. */
   const [creditiAperti, setCreditiAperti] = useState(false);
   /** LO STORICO — segnalato: « il Report post session non ci sia più in Serenity, solo il PDF
@@ -611,10 +642,21 @@ export default function Serenity() {
    * legato al livello. Stessa forma di `biometric`: una PREFERENZA scritta all'apertura del
    * livello, sempre riaccendibile a mano da CONFIG — la scelta resta dell'auditor.
    */
+  /**
+   * ⚠️ ESTESO ANCORA — segnalato: « tutti » (le quattro proposte di semplificazione). Il
+   * Journal si aggiunge qui, STESSA forma di MNA/Santé Système: un pannello che riepiloga,
+   * utile a rileggere, non indispensabile momento per momento (il PDF di fine seduta lo
+   * contiene comunque per intero). `moduleVis.ri` (ASSESSMENT + R&I · Manuel) NON è qui,
+   * deliberatamente: è il modo stesso di dare un item a mano quando la voce non c'è — spegnerlo
+   * di default in BASIC toglierebbe una funzione, non un tecnicismo. Le CAM (altra proposta
+   * accettata) restano FUORI da questo effetto apposta: non sono una preferenza da riscrivere,
+   * sono un calcolo derivato (`cam2Mostrata`, sotto) che si aggiorna da solo col cambiare della
+   * seduta (remota o no) — scriverle qui le confonderebbe con una scelta persistita.
+   */
   useEffect(() => {
     if (espertoAttivo === undefined) return;
-    setModuleVis(v => (v.biometric === espertoAttivo && v.mna === espertoAttivo && v.health === espertoAttivo)
-      ? v : { ...v, biometric: espertoAttivo, mna: espertoAttivo, health: espertoAttivo });
+    setModuleVis(v => (v.biometric === espertoAttivo && v.mna === espertoAttivo && v.health === espertoAttivo && v.journal === espertoAttivo)
+      ? v : { ...v, biometric: espertoAttivo, mna: espertoAttivo, health: espertoAttivo, journal: espertoAttivo });
   }, [espertoAttivo, setModuleVis]);
   // Segnalato: « nessuno sfondo » — la STESSA preferenza di EQUILIBRIUM, applicata alla
   // superficie di SERENITY con un velo (`--s-veil`) invece del vetro scuro di EQUILIBRIUM:
@@ -2633,9 +2675,21 @@ export default function Serenity() {
   // con `avvio.distanza`. La riserva di spazio deve seguire la STESSA condizione, altrimenti
   // resterebbe un vuoto morto sopra Santé Système/journal in ogni seduta locale.
   const cam1Mostrata = moduleVis.cam1 && avvio.distanza;
-  const cam2H = !moduleVis.cam2 ? 0 : (cam2Collassata ? 88 : 255);
+  /**
+   * ⚠️ AGGIUNTO — segnalato: « cam nascoste fuori sessione a distanza » (una delle quattro
+   * proposte accettate, « tutti »). CAM 2 (la webcam locale generica) restava SEMPRE visibile
+   * col suo interruttore acceso, anche fuori sessione a distanza — voluto in origine (utile
+   * per un'auto-osservazione anche in locale, v. la nota più giù dove si monta) ma il livello
+   * BASIC deve restare al minimo: in BASIC si vede solo con `avvio.distanza`, ESATTAMENTE come
+   * CAM 1 — in EXPERT resta come sempre (`moduleVis.cam2` da solo decide). Non si tocca
+   * `moduleVis.cam2` stesso: resta la preferenza vera scritta da CONFIG, questo è solo il
+   * calcolo di quando MOSTRARLA — la preferenza dell'auditor non viene mai riscritta di
+   * nascosto da un cambio di livello.
+   */
+  const cam2Mostrata = moduleVis.cam2 && (espertoAttivo !== false || avvio.distanza);
+  const cam2H = !cam2Mostrata ? 0 : (cam2Collassata ? 88 : 255);
   const cam1H = !cam1Mostrata ? 0 : (cam1Collassata ? 88 : 158);
-  const camStackH = (moduleVis.cam2 || cam1Mostrata)
+  const camStackH = (cam2Mostrata || cam1Mostrata)
     ? -8 + Math.max(cam2H, cam1H) + 20
     : 0;
 
@@ -3899,6 +3953,41 @@ export default function Serenity() {
               connesso: true, stato: senzaStrumenti ? 'connesso' : 'in-attesa', title: noneTitolo,
             },
           ];
+          // ⚠️ AGGIUNTO — segnalato: « selettore strumenti ridotto a un pallino di stato »
+          // (una delle quattro proposte accettate, « tutti »). In BASIC, finché l'auditor non
+          // lo tocca, le tre pillole diventano UN pallino solo — non un indicatore muto: resta
+          // un bottone vero, un click lo espande alla fila intera (che poi resta così, niente
+          // riduzione automatica: espandere è una scelta dell'auditor, richiuderla pure). La
+          // funzione di CONNETTERE non sparisce mai, si raggiunge in un click in più soltanto
+          // finché non si è già cliccato una volta. In EXPERT la fila resta sempre intera,
+          // come prima di questa modifica.
+          if (espertoAttivo === false && !strumentiEspansi) {
+            const ordinePriorita: Record<string, number> = { connesso: 0, errore: 1, cercando: 2, spento: 3, 'in-attesa': 4 };
+            const statoAggregato = strumenti.reduce((peggiore, s) =>
+              ordinePriorita[s.stato] < ordinePriorita[peggiore] ? s.stato : peggiore, 'in-attesa');
+            const IconaAggregata = strumenti.find(s => s.stato === statoAggregato)?.icona ?? strumenti[0].icona;
+            return (
+              <button className="s-glass s-glass-btn" onClick={() => setStrumentiEspansi(true)}
+                data-help={LC('strumenti — tocca per scegliere MUSE/METER/senza', 'instruments — touche pour choisir MUSE/METER/sans',
+                  'instruments — tap to choose MUSE/METER/none', 'instrumentos — toca para elegir MUSE/METER/ninguno',
+                  'instrument — tryck för att välja MUSE/METER/inga') as string}
+                title={LC('strumenti — tocca per scegliere', 'instruments — touche pour choisir',
+                  'instruments — tap to choose', 'instrumentos — toca para elegir',
+                  'instrument — tryck för att välja') as string}
+                style={{
+                  position: 'relative', cursor: 'pointer', padding: 7, borderRadius: 999,
+                  background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)', border: 'none',
+                }}>
+                {IconaAggregata}
+                <span aria-hidden="true" style={{
+                  position: 'absolute', top: 4, right: 4, width: 7, height: 7, borderRadius: '50%',
+                  background: COLORE_PUNTO[statoAggregato],
+                  boxShadow: (statoAggregato === 'connesso' || statoAggregato === 'errore')
+                    ? `0 0 0 2px color-mix(in srgb, ${COLORE_PUNTO[statoAggregato]} 25%, transparent)` : 'none',
+                }} />
+              </button>
+            );
+          }
           return (
             <span className="s-glass" style={{
               display: 'flex', alignItems: 'center', gap: 2, background: 'var(--s-disc)',
@@ -4391,13 +4480,13 @@ export default function Serenity() {
           seduta REMOTA lo stesso autoritratto diventa utile (sapere di essere inquadrati per
           la videochiamata, come in Zoom/Meet) — quindi non sparisce del tutto, solo fuori da
           `avvio.distanza`. */}
-      {aperta && (moduleVis.cam2 || cam1Mostrata) && (
+      {aperta && (cam2Mostrata || cam1Mostrata) && (
         <div style={{
           position: 'absolute', top: -8, right: 32, zIndex: 5,
           display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16,
           pointerEvents: 'none',
         }}>
-          {moduleVis.cam2 && (
+          {cam2Mostrata && (
             <CameraCerchio
               dimensione={255}
               dimensioneCollassata={88}
@@ -5347,6 +5436,23 @@ export default function Serenity() {
             cerchi restano identici (`armCycle`/`armMirror`/`setToneAttivo`, mai toccati),
             semplicemente raggiungibili anche senza MUSE/METER connessi. */}
         {aperta && !cycles.cycleArmed && !mirror.mirrorArmed && !toneAttivo && truth.truthPhase === 'idle' && !procedimentoAttivo && (
+          <>
+          {/* ── LA RIGA-GUIDA, ANCHE A RIPOSO — segnalato: « una riga-guida sempre in cima
+              anche a riposo » (una delle quattro proposte accettate, « tutti »). Prima,
+              a ciclo libero, questi cinque cerchi comparivano SENZA una parola sopra —
+              l'unica indicazione era la loro stessa presenza, muta finché non se ne
+              armava uno (`spiegazioneCiclo`, il testo che guida DURANTE un ciclo, non
+              esiste ancora qui: nessun metodo è scelto). Una riga sola, la stessa idea
+              di `spiegazioneCiclo` ma per il momento PRIMA di tutti gli altri: dice cosa
+              fare anche quando non c'è ancora niente in corso. */}
+          <span style={{
+            width: '100%', textAlign: 'center', flexShrink: 0,
+            fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', fontWeight: 600,
+            letterSpacing: '0.02em', color: 'var(--s-ink-faint)', marginBottom: 2,
+          }}>
+            {LC('scegli un metodo qui sotto', 'choisis une méthode ci-dessous', 'choose a method below',
+                'elige un método aquí abajo', 'välj en metod nedan')}
+          </span>
           <div style={{
             width: 'min(96%, 2200px)', maxWidth: '100%', flexShrink: 0,
             display: 'flex', flexDirection: 'row', flexWrap: 'wrap',
@@ -5450,6 +5556,7 @@ export default function Serenity() {
               </div>
             ))}
           </div>
+          </>
         )}
         {/* ── MNA — ORA SOTTO L'ARCO, NON PIÙ SOPRA ─────────────────────────────────────────
             Segnalato: « il MNA portalo sotto la zona ARC, hai spazio ». Stava `position:absolute`

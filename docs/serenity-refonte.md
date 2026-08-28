@@ -6073,3 +6073,44 @@ bas de l'écran — dans une petite fenêtre leur post-it peut sortir de l'écra
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/Serenity.tsx`.
+
+---
+
+## Giro (28/08/2026, 6) — HELP sans chevauchement, les quatre dernières simplifications BASIC
+
+**HELP — les post-it se chevauchaient.** Segnalato tout de suite après le giro précédent :
+« l'HELP sovrappone i post-it e non si legge nulla ». Chaque étiquette se plaçait TOUJOURS à
+la même hauteur (juste sous son bouton) — deux boutons proches (MUSE/METER/SANS INSTRUMENTS,
+trois pilules côte à côte) donnaient deux rectangles superposés. `impila()` : un ripiano à
+rangées — trie les post-it de gauche à droite, et pour chacun cherche la première rangée libre
+(celle où il ne touche personne déjà placé) ; un groupe serré de boutons finit sur plusieurs
+rangées empilées au lieu de se chevaucher. **Vérifié en direct** : tous les post-it de la barre
+sont maintenant lisibles, chacun sur son propre palier.
+
+**Les quatre dernières simplifications BASIC — « tutti ».**
+1. **Journal fermé par défaut en BASIC** — même forme que MNA/Santé Système (l'interrupteur
+   `moduleVis` suit maintenant `espertoAttivo`). `moduleVis.ri` (ASSESSMENT + R&I · Manuel)
+   délibérément LAISSÉ EN DEHORS : c'est la façon même de donner un item à la main quand la
+   voix n'est pas là — l'éteindre par défaut aurait retiré une fonction, pas un tecnicisme.
+2. **CAM 2 cachée hors séance à distance, en BASIC** — même principe déjà en place pour CAM 1
+   (`cam1Mostrata = moduleVis.cam1 && avvio.distanza`) : `cam2Mostrata` dérivée
+   (`moduleVis.cam2 && (espertoAttivo !== false || avvio.distanza)`), la préférence
+   `moduleVis.cam2` elle-même n'est jamais réécrite — seul le calcul de QUAND la montrer
+   change. En EXPERT rien ne change.
+3. **Sélecteur d'instruments réduit à un point d'état, en BASIC** — les trois pilules
+   MUSE/METER/SANS INSTRUMENTS deviennent UN bouton (icône + point de couleur agrégé) tant que
+   l'auditeur ne l'a pas touché ; un clic l'étend à la rangée entière (reste ainsi pour le
+   reste de la séance — pas de réduction automatique). La fonction de connexion ne disparaît
+   jamais, elle demande un clic de plus la première fois seulement.
+4. **Une ligne-guide même au repos** — avant, à cycle libre, les cinq cercles s'affichaient
+   SANS un mot au-dessus. Une ligne, dans les cinq langues (« choisis une méthode ci-dessous »)
+   — visible dans les deux niveaux, pas seulement BASIC : ça ne coûte rien à EXPERT.
+
+**Vérifié en direct, les trois vérifiables sans séance à distance** : niveau BASIC choisi →
+le sélecteur d'instruments montre bien UN point (pas trois) ; « journal · 2 lignes » (fermé,
+muet) au lieu du panneau ouvert ; « choisis une méthode ci-dessous » visible sous les cinq
+cercles à l'ouverture d'une séance, avant tout choix de méthode. CAM 2 non vérifiée en direct
+(pas de séance à distance dans ce bac à sable) — même dérivation que CAM 1, déjà en production.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx`.
