@@ -262,8 +262,17 @@ export function VistaSenzaAgo({ armed = true, cycleKind = 'charge', nullPhase = 
             {labelOf(effId)}
           </span>
         )}
-        {armed && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginTop: 4 }}>
+        {/* ⚠️ SEGNALATO — « les lumières dans l'arc sont maintenant bien présentes, mais écrit
+            en-dessous à quoi elles correspondent ». Il respiro delle bande (v. la nota di
+            `idleStyle`, sotto in questo stesso file) le rende finalmente vive a riposo — ma
+            senza le ETICHETTE (più giù, `IDS.map(...).labelOf`), che prima stavano SOLO dentro
+            questo blocco `armed`, restava un colore acceso senza nome: si vede che "succede
+            qualcosa", non COSA. Le due barre (velocità/dissoluzione) restano armed-only — sono
+            numeri di UN ciclo in corso, non hanno senso a riposo — l'etichetta invece serve
+            SEMPRE, prima ancora che un ciclo esista: `armed` sceglie solo se mostrare le barre
+            sopra le etichette o le etichette da sole. */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginTop: 4 }}>
+          {armed && (<>
             <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: textFaint, fontVariantNumeric: 'tabular-nums' }}>
               {L('velocità', 'vitesse', 'speed', 'velocidad', 'hastighet')} {velRatio.toFixed(2)}× {wordVel}{arrowVel}
             </span>
@@ -339,7 +348,8 @@ export function VistaSenzaAgo({ armed = true, cycleKind = 'charge', nullPhase = 
                 </div>
               </div>
             )}
-            {/* ── LE ETICHETTE DI ZONA, SOTTO L'ULTIMA BARRA — segnalato: « le scritte
+          </>)}
+          {/* ── LE ETICHETTE DI ZONA, SOTTO L'ULTIMA BARRA — segnalato: « le scritte
                 DISSOLUZIONE, CONTATTO, AS-IS mettile sotto la barra di dissoluzione per non
                 confondersi con quelle dell'arco » (e per NULL: « anche qui le scritte sotto
                 la barra velocità »). Prima i tre nomi correvano CURVI lungo la banda stessa
@@ -367,7 +377,6 @@ export function VistaSenzaAgo({ armed = true, cycleKind = 'charge', nullPhase = 
               })}
             </div>
           </div>
-        )}
       </div>
     </div>
   );

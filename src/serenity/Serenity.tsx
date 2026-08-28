@@ -1694,11 +1694,14 @@ export default function Serenity() {
     if (truth.truthPhase !== 'idle') {
       if (faseCiclo === 'truth.ri' || faseCiclo === 'truth.say_ri') return {
         titolo: LC('1 · DAI IL R/I', '1 · DONNE LE R/I', '1 · GIVE THE R/I', '1 · DA EL R/I', '1 · GE R/I'),
-        come: LC('Localizzato con un processo qualunque. Scrivilo o dillo a voce, poi premi.',
-                 'Localisé avec un procédé quelconque. Écris-le ou dis-le, puis appuie.',
-                 'Located with any process. Type it or say it, then press.',
-                 'Localizado con cualquier proceso. Escríbelo o dilo, luego pulsa.',
-                 'Lokaliserat med valfri process. Skriv eller säg det, tryck sedan.') };
+        // ⚠️ SEGNALATO — « Localise un ITEM avec un procédé quelconque » invece del
+        // participio passato: un'ISTRUZIONE all'auditor (che fare adesso), non la
+        // descrizione di uno stato già avvenuto. Stessa correzione nelle cinque lingue.
+        come: LC('Localizza un ITEM con un procedimento qualunque. Scrivilo o dillo a voce, poi premi.',
+                 'Localise un ITEM avec un procédé quelconque. Écris-le ou dis-le, puis appuie.',
+                 'Locate an ITEM with any process. Type it or say it, then press.',
+                 'Localiza un ÍTEM con cualquier procedimiento. Escríbelo o dilo, luego pulsa.',
+                 'Lokalisera ett ITEM med valfri process. Skriv eller säg det, tryck sedan.') };
       if (truth.truthPhase === 'candidate') return {
         titolo: LC('CANDIDATO PROPOSTO', 'CANDIDAT PROPOSÉ', 'CANDIDATE PROPOSED', 'CANDIDATO PROPUESTO', 'KANDIDAT FÖRESLAGEN'),
         come: LC('Quel che sembrava una caduta potrebbe essere un accordo — la verità del PC che affiora. Conferma se lo è, altrimenti continua a chiedere.',

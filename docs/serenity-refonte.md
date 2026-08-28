@@ -5807,3 +5807,71 @@ quadrante di SERENITY (fase 5) legge solo il Theta-Meter USB fisico, non ancora 
 quella pipeline (worker, buffer, badge di qualità del segnale) è materia della fase 6.
 Instradare qui l'EEG remoto senza un ago locale che lo mostri sarebbe un tubo che non arriva
 in nessun posto — il preclear continua comunque a inviarlo, resta solo da agganciarlo.
+
+---
+
+## Giro (28/08/2026) — le etichette sotto le bande a riposo; TRUTH « Localise un ITEM »; le VRAIE cause de History; le guide refait en mode d'emploi
+
+**Les lumières de l'arc SANS AIGUILLE, mais sans légende.** Segnalato : « les lumières dans
+l'arc sont maintenant bien présentes [au repos], mais écris en-dessous à quoi elles
+correspondent ». `VistaSenzaAgo.tsx` : la légende (les noms de zone sous les bandes) était
+DANS le même bloc `{armed && (...)}` que la barre de vitesse et la barre de dissolution —
+correctes pour n'apparaître qu'en cycle armé, mais elles emportaient la légende avec elles.
+Sortie de ce bloc, désormais toujours affichée (en gris, aucune zone "active" au repos,
+`cur === -1`). **Vérifié en direct** : les libellés CONTACT/DISSOLUTION/AS-IS apparaissent
+sous l'arc dès l'écran principal, sans cycle armé.
+
+**TRUTH, le texte du premier temps.** Demande directe, citation exacte fournie : remplacer
+« Localisé avec un procédé quelconque… » (participe passé, décrit un état déjà survenu) par
+« Localise un ITEM avec un procédé quelconque… » (impératif, dit à l'auditeur quoi faire
+maintenant). Corrigé dans les cinq langues de `Serenity.tsx`.
+
+**« TU AS ENCORE LE MEME PROBLEME AVEC HISTORY… mais uniquement dans Electron. »** Le giro
+précédent (v. plus haut, EQUILIBRIUM 2.0.233/SERENITY 3.0.126) avait dû se contenter d'une
+cause plausible « trouvée en relisant le code », faute de pouvoir reproduire le symptôme
+dans ce bac à sable. Cette fois, reproduit pour de vrai — un serveur `server-core.cjs` réel
+(pas le repli IndexedDB du dev Vite) lancé sur le port 7893 avec la vraie base de données de
+l'utilisateur, ouvert dans le navigateur de test. Deux bugs distincts trouvés, tous les deux
+dans `HistoryModal.tsx` (composant PARTAGÉ — la correction vaut pour EQUILIBRIUM aussi) :
+1. **La cause réelle du symptôme rapporté** : l'effet qui charge les séances dépendait de
+   `[activeProfile]` — l'OBJET. Dans `Serenity.tsx`, cet objet vient de
+   `getProfiles().find(...)`, et `getProfiles()` fait un `JSON.parse` frais à CHAQUE rendu du
+   parent (jamais mémoïsé — voulu, pour refléter tout de suite une modification de profil
+   ailleurs) : même contenu, mais une référence NOUVELLE à chaque fois. L'effet repartait
+   donc à chaque rendu du parent — des dizaines par seconde en séance vivante (minuteur,
+   aiguille, polling des instruments). Chaque redémarrage faisait `setSelected(new Set())` :
+   la coche de "Tout sélectionner" disparaissait un instant après être apparue, trop vite
+   pour la voir — d'où « impossible de sélectionner ». Et chaque redémarrage relançait aussi
+   la vérification des PDF (`useEffect([sessions])`, un tableau neuf à chaque fois) : des
+   dizaines de requêtes HEAD s'annulant l'une l'autre (`net::ERR_ABORTED`), le résultat ne se
+   stabilisait jamais — d'où « impossible de voir le PDF ». Pourquoi seulement Electron ?
+   Ce n'est pas vraiment "seulement" — c'est une course que ce bac à sable isolé gagne presque
+   toujours (peu d'autres sources de rendu), et perd presque toujours dans Electron, où MUSE/
+   Theta-Meter/BLE tournent en même temps. **Corrigé** : l'effet dépend maintenant de
+   `activeProfile?.id` (une primitive stable), pas de l'objet. **Vérifié en direct, avant/
+   après** : ~30 requêtes HEAD dupliquées en une fraction de seconde → une seule ; la coche
+   "Tout sélectionner" reste cochée après 2 secondes (avant : revenait décochée).
+2. **Un second bug, trouvé en même temps** : `openPdf` (le bouton "View") est `async`, et
+   `window.open(...)` arrivait après deux `await` — hors de la pile d'appel synchrone du
+   clic. Chromium ne compte plus ça comme un geste utilisateur ; la requête elle-même
+   ressortait `net::ERR_ABORTED` (vérifié), silencieusement, sans erreur visible. Corrigé
+   avec le patron classique : ouvrir la fenêtre vide tout de suite (dans le clic), lui
+   donner l'adresse une fois le PDF localisé. **Non vérifiable dans ce bac à sable** — le
+   panneau lui-même bloque tout `window.open`, y compris celui-ci, indépendamment du geste ;
+   la correction suit la règle standard mais reste à confirmer dans la vraie app.
+
+**Le guide de SERENITY, refait une seconde fois — plus simple, pas plus théorique.**
+Demande explicite : « le guide est trop complexe. Rends-le très simple, pratique […]. Complet,
+exhaustif, mais pas plus long que nécessaire. » Le fichier précédent (28/08, giro de nuit)
+adaptait TEL QUEL le moteur du guide d'EQUILIBRIUM — 24 modules, un "rôle" théorique (la
+doctrine de Ron) avant chaque bouton. Remplacé entièrement : plus de moteur JS générateur de
+HTML, dix sections dans l'ordre réel d'utilisation (premier lancement → écran principal →
+démarrer une séance → les 5 méthodes en un tableau → avec/sans aiguille → journal → processus,
+avec la réponse à « comment j'annule le script des commandes » → fermer la séance → historique
+→ dépannage), trilingue FR/IT/EN par un simple bascule CSS. **1269 lignes/235 Ko → 390 lignes/
+31 Ko.** **Vérifié en direct** : bouton GUIDE de SERENITY → « GUIDE · SERENITY », le nouveau
+mode d'emploi s'affiche, bascule EN fonctionne, retour à l'app fonctionne.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/components/HistoryModal.tsx`, `src/serenity/Serenity.tsx`,
+`src/serenity/VistaSenzaAgo.tsx`, `public/guide/SERENITY-manuale.html` (rigenerato).

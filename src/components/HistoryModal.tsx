@@ -24,6 +24,28 @@ async function pdfToBlob(pdf: string): Promise<Blob> {
 }
 
 export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps) {
+  /** ⚠️ BUG TROVATO — segnalato: « la visibilité des PDF... et TOUT SÉLECTIONNER impossible,
+   *  MAIS UNIQUEMENT DANS ELECTRON ». Verificato dal vivo (server reale su :7893, non la
+   *  fallback IndexedDB del dev Vite): entrambi i sintomi venivano dallo STESSO effetto,
+   *  sotto — dipendeva da `[activeProfile]`, l'OGGETTO. In `Serenity.tsx` quell'oggetto è
+   *  `getProfiles().find(...)`, e `getProfiles()` fa un `JSON.parse` fresco a OGNI render del
+   *  genitore (mai memoizzato — voluto, per riflettere subito una modifica di profilo altrove):
+   *  stesso contenuto, ma un riferimento NUOVO ogni volta. L'effetto sotto lo confrontava per
+   *  riferimento, quindi ripartiva a OGNI render del genitore — decine al secondo in una seduta
+   *  viva (timer, ago, polling strumenti). Ogni ripartenza faceva `setSelected(new Set())`
+   *  (riga poco sotto): la spunta di "Seleziona tutto" spariva un istante dopo essere apparsa,
+   *  troppo in fretta per vederla — sembrava che il click non facesse nulla. E ogni ripartenza
+   *  rifaceva anche `setSessions(local)`, con un array NUOVO che a sua volta ririlanciava il
+   *  controllo PDF poco sotto (`useEffect([sessions])`): decine di HEAD ABORTATI l'uno
+   *  dall'altro, il risultato non si stabilizzava mai — il bottone PDF restava "non trovato".
+   *  Perché SOLO in Electron? Non lo è "solo" — è un giro di corsa che vince quasi sempre in un
+   *  giro di test isolato (poche altre fonti di render), e perde quasi sempre in Electron dove
+   *  girano insieme MUSE/Theta-Meter/BLE e i loro polling: più render del genitore, più
+   *  ripartenze, mai un momento fermo per stabilizzarsi. La cura è qui, non in Serenity.tsx: un
+   *  effetto che serve solo a caricare le sedute DI UN PROFILO deve dipendere dall'ID di quel
+   *  profilo, non dall'oggetto — due profili con lo stesso ID sono la STESSA cosa da caricare,
+   *  anche se il JSON che li descrive è stato riletto da capo. */
+
   const { t } = useI18n();
   /** Cinque lingue, come il resto del programma. */
   const L = (it: string, fr: string, en: string, es: string, sv: string) =>
@@ -96,7 +118,9 @@ export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps
         console.warn('[History] Server merge failed:', e);
       }
     })();
-  }, [activeProfile]);
+    // Dipende dall'ID, non dall'oggetto — vedi la nota sopra la funzione: per riferimento
+    // (`[activeProfile]`) l'effetto ripartiva a ogni render del genitore.
+  }, [activeProfile?.id]);
 
   const filteredSessions = useMemo(() => sessions.filter(s => {
     const iso = new Date(s.date).toISOString().slice(0, 10);
@@ -191,10 +215,27 @@ export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps
     // locale (`server-core.cjs`) gira SEMPRE nell'app Electron: si prova PRIMA lui, non più
     // per ultimo — la copia IndexedDB (via blob, cross-process nella stessa maniera) resta
     // solo l'ultima spiaggia, per quando il server non risponde affatto.
+    //
+    // ⚠️ TERZO BUG TROVATO — segnalato ancora, stesso sintomo. Verificato dal vivo (server
+    // reale, non la finta della sandbox dev): il click chiama QUESTA funzione `async`, e
+    // `window.open` arrivava dopo due `await` — fuori dalla catena sincrona del click. Chromium
+    // (Electron compreso) considera "gesto dell'utente" SOLO ciò che scatta nella stessa pila
+    // di chiamate sincrona del click: un `window.open` oltre un `await` non conta più come
+    // tale, e viene bloccato in silenzio — nessun errore in console, nessuna finestra, la
+    // richiesta di rete stessa risultava ABORTITA (verificato: `net::ERR_ABORTED` sulla GET,
+    // pur con risposta 200 pronta). Ecco perché sembrava "impossibile vedere il PDF" anche
+    // quando il PDF esisteva davvero. La cura è il pattern classico: aprire la finestra VUOTA
+    // SUBITO, nella stessa pila del click (questo conta come gesto), e darle l'indirizzo solo
+    // dopo aver controllato dove si trova il PDF.
+    const finestra = window.open('', '_blank');
     const serverUp = await isServerAvailable();
     if (serverUp) {
       const resp = await fetch(serverSessionPdfUrl(s.id), { method: 'HEAD' });
-      if (resp.ok) { window.open(serverSessionPdfUrl(s.id), '_blank'); return; }
+      if (resp.ok) {
+        if (finestra) finestra.location.href = serverSessionPdfUrl(s.id);
+        else window.open(serverSessionPdfUrl(s.id), '_blank');
+        return;
+      }
     }
     // Ultima spiaggia: nessun server raggiungibile — il blob resta l'unico modo, e in
     // quel caso window.open lo apre nella STESSA finestra/processo se non risulta
@@ -203,10 +244,12 @@ export function HistoryModal({ activeProfile, onClose, lang }: HistoryModalProps
     const local = await getSessionPdfAsync(s.id);
     if (local) {
       const url = URL.createObjectURL(await pdfToBlob(local));
-      window.open(url, '_blank');
+      if (finestra) finestra.location.href = url;
+      else window.open(url, '_blank');
       setTimeout(() => URL.revokeObjectURL(url), 60000);
       return;
     }
+    if (finestra) finestra.close();
     alert(L('PDF non disponibile.', 'PDF non disponible.', 'PDF unavailable.', 'PDF no disponible.', 'PDF ej tillgänglig.'));
   };
 
