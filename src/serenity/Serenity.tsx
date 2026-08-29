@@ -4906,20 +4906,32 @@ export default function Serenity() {
              (la barra laterale e le camere GALLEGGIANO, `position:absolute`: non tolgono
              spazio flex all'arco). Alzato a 2200px — l'`aspectRatio` e `maxHeight:'100%'`
              restano il vero limite su una finestra bassa. */
-          background: 'transparent',
-          /* ⚠️ SOSPETTO DI BUG CHROMIUM — segnalato: « cosa è l'alone bianco dove c'è scritto
-             METER TA, togliLO ». Cercato ovunque nel DOM/CSS di questa app (con l'utente, via
-             DevTools, due volte: il div dell'arco stesso e l'SVG di `QuantumSphere`, entrambi
-             puliti) e persino in incognito (niente estensioni) — l'alone resta, e non
-             corrisponde a NESSUN elemento di questa pagina. Comparso proprio nella versione
-             che ha introdotto LENTILLE (backdrop-filter pesante su molti più bottoni, questo
-             stesso giro): un sospetto concreto è un bug di composizione GPU di Chromium — la
-             sfocatura di elementi vicini che "sanguina" in un pannello trasparente con
-             `overflow:hidden` e nessun livello proprio. `transform:'translateZ(0)'` forza
-             questo pannello sul SUO livello di composizione — il rimedio standard per questa
-             classe di bug, innocuo se la causa è altra (non cambia nulla del disegno). Se non
-             basta, il prossimo passo è disattivare `backdrop-filter` altrove per isolare quale
-             elemento lo causa davvero. */
+          /* ⚠️ TEST DIAGNOSTICO « alone bianco » — `backgroundColor` sulla `BrowserWindow`
+             (main.cjs) non è bastato: l'utente conferma « c'è ancora ». Riprova diretta
+             dell'ipotesi "nessun colore proprio → all'angolo arrotondato trapela quel che sta
+             sotto": qui un vero colore, al posto di `transparent`. `var(--s-ground)` — LO
+             STESSO colore piatto della pagina in entrambi i temi, non un'invenzione — così la
+             resa resta identica a com'era SENZA un wallpaper personalizzato; l'unico costo è
+             che con un wallpaper attivo (CONFIG → "importa la tua immagine") questo pannello
+             torna a coprirlo con un rettangolo pieno, come PRIMA delle due richieste esplicite
+             di renderlo trasparente (v. sotto). Se l'alone sparisce, la causa è confermata e si
+             sceglie poi un compromesso mirato (es. un colore pieno SOLO nel filo dell'angolo,
+             non su tutto il pannello); se resta identico anche così, si esclude anche questa
+             pista e si torna a `transparent`.
+             ⚠️ Segnalato: « il fondo della zona arc deve essere trasparente ». In chiaro era
+             `var(--s-ground)` — LO STESSO colore della pagina, ma un colore PIENO: con uno
+             sfondo personalizzato (CONFIG → "importa la tua immagine") copriva comunque
+             l'immagine con un rettangolo opaco, invece di lasciarla vedere. Trasparente per
+             davvero, ora.
+             ⚠️ SEGNALATO DI NUOVO, stavolta anche per lo scuro: « la zona ARC ha sempre un
+             fondo. NON LO VOGLIO, VOGLIO CHE SIA TRASPARENTE ». In scuro restava apposta un
+             gradiente vero (`#2e2e33`→`#262629`) — la ragione scritta qui sopra per anni («
+             l'ago disegna in colori chiari, pensati per un fondo scuro ») si scopre qui non
+             regge più da sola: `--s-ground` in scuro è `#17181a`, PIÙ scuro del gradiente che
+             lo sostituiva — togliere il gradiente non toglie contrasto all'ago, lo aumenta.
+             Trasparente per davvero in ENTRAMBI i temi, ora — resta solo il filo sottile
+             (`--s-zone-border`) a dire dov'è il quadrante, come le altre zone. */
+          background: 'var(--s-ground)',
           transform: 'translateZ(0)',
           /* ⚠️ Segnalato: « togli l'ombra alla zona ARC AGO ». Restava un'ombra di rilievo
              (`--s-shadow`/`--s-shadow-lift`) ereditata da quando il fondo era pieno — con lo

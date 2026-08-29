@@ -6744,3 +6744,25 @@ proposta (un'altra finestra sovrapposta allo stesso punto dello schermo).
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `main.cjs` (condiviso — entrambi i DMG ricostruiti).
+
+## Giro (successivo) — l'alone bianco: ancora presente, provato un vero sfondo sul pannello dell'arco
+
+**Confermato dall'utente**: « c'è ancora » anche con `backgroundColor` impostato sulla
+`BrowserWindow` — quella pista non basta da sola. Proposta dell'utente stesso, diretta: « E se
+tu mettessi un fondo alla zona dell'arco? Prova. »
+
+**Fatto**: `background:'transparent'` → `background:'var(--s-ground)'` sul pannello dell'arco
+(`Serenity.tsx`). Riprova diretta dell'ipotesi "nessun colore proprio → all'angolo arrotondato
+trapela quel che sta sotto" — se un vero colore lo toglie, la causa è confermata. `--s-ground` è
+lo STESSO colore piatto della pagina in entrambi i temi (non un'invenzione): senza un wallpaper
+personalizzato attivo la resa resta visivamente identica a prima; CON un wallpaper attivo
+(CONFIG → "importa la tua immagine") questo pannello torna a coprirlo con un rettangolo pieno,
+come prima delle due richieste esplicite di renderlo trasparente — un costo noto, accettato per
+la durata del test.
+
+Solo `Serenity.tsx` toccato, nessun file condiviso: un solo DMG questa volta.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+Verifica dal vivo (profilo TEST, Expert): pannello dell'arco visibilmente pieno, nessun errore
+console. In attesa di conferma dall'utente sulla build reale.
+`git status`: `src/serenity/Serenity.tsx`.
