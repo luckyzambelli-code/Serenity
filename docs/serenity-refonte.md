@@ -6766,3 +6766,67 @@ Solo `Serenity.tsx` toccato, nessun file condiviso: un solo DMG questa volta.
 Verifica dal vivo (profilo TEST, Expert): pannello dell'arco visibilmente pieno, nessun errore
 console. In attesa di conferma dall'utente sulla build reale.
 `git status`: `src/serenity/Serenity.tsx`.
+
+## Giro (successivo) — l'alone bianco: indagine dal vivo, esclusi DOM/CSS/SVG/canvas con certezza diretta
+
+**Confermato dall'utente**: « c'è ancora » — con uno SCREENSHOT REALE (Chrome, `127.0.0.1:7893`,
+non l'app Electron impacchettata — un tab di Chrome puntato allo stesso server locale) che per
+la prima volta mostra l'alone chiaramente: un cerchio soffuso bianco/grigio, ~380px, nella metà
+sinistra della zona ARCO, a seduta senza strumenti aperta (« DONNE L'ITEM »). Proposta
+dell'utente: « E se tu mettessi un fondo alla zona dell'arco? Prova. » (v. giro precedente —
+provato, escluso).
+
+**Riprodotto dal vivo, in sandbox, IDENTICO.** Stesso profilo TEST → Expert → seduta senza
+strumenti: lo stesso identico cerchio soffuso compare, stessa posizione, stessa taglia — in un
+Chromium completamente diverso da quello dell'utente. Prova diretta che NON è specifico al Mac
+dell'utente, alla sua GPU, o a un'estensione: è nella pagina stessa, riproducibile ovunque.
+
+**L'indagine più esaustiva finora, con certezza diretta (non per sospetto) — TUTTO escluso:**
+- `document.elementsFromPoint()` — **scartato apposta**: salta gli elementi
+  `pointer-events:none` (che questa app usa OVUNQUE per gli overlay decorativi) — un difetto
+  della tecnica usata finora, non solo un risultato negativo. Sostituito con una scansione
+  diretta di ogni nodo (`querySelectorAll('*')`, 313 elementi in tutta la pagina) filtrata per
+  bounding-box, che non salta nulla.
+- Sfondo, `background-image`, `filter`, `box-shadow` (raggio incluso — nessuno abbastanza
+  esteso da raggiungere quella zona), `mix-blend-mode`, `mask`/`-webkit-mask`,
+  `::before`/`::after` — controllati su OGNI elemento che copre quella regione: zero
+  corrispondenze.
+- `<svg>`, `<canvas>`, `<video>`, `<iframe>`, Shadow DOM, custom elements — zero in tutta la
+  pagina in questo stato preciso (VistaSenzaAgo/QuantumSphere non sono montati quando
+  `senzaMisura && aperta`: verificato leggendo il codice, poi confermato dal vivo — zero
+  `<style>` con le loro `@keyframes`, zero riferimenti a filtri SVG `url(#...)` ovunque nel DOM).
+- **Sopravvive a**: resize della finestra (esclude un residuo di paint/tile cache legato al
+  layout), un ciclo `display:none`→`''` mirato SUL pannello dell'arco stesso (esclude un livello
+  GPU "fantasma" del pannello — se fosse la sua cache, distruggerne e ricreare il nodo
+  l'avrebbe cancellata), rimozione LIVE di `transform:translateZ(0)`, di `overflow:hidden`, di
+  `borderRadius`, del colore di fondo (`var(--s-ground)` → `transparent`) — **nessuno di questi**
+  cambia l'alone di un pixel.
+- **Non sopravvive a**: `document.body.style.visibility='hidden'` (sparisce — dipende dal
+  contenuto della pagina) — ma navigare a `https://example.com` nella STESSA scheda non lo
+  mostra mai (esclude che sia un artefatto del pannello di anteprima stesso, non legato a
+  QUESTA pagina).
+- **Non è la voce**: `useVoiceItem` (riconoscimento vocale, `active: aperta && !pausata`) è
+  attivo esattamente in questo stato — messo in PAUSA dal vivo (`active` passa a falso,
+  `SpeechRecognition` si ferma), l'alone resta identico. Non è il microfono/la sua UI.
+
+**Conclusione onesta**: con ogni tecnica di ispezione DOM/CSS/JS esaurita e ogni proprietà
+sospetta rimossa dal vivo senza il minimo cambiamento, questo non è più "un elemento che non
+troviamo" — è la prova diretta che NESSUN elemento o stile di questa pagina lo disegna. Resta
+una sola spiegazione compatibile con tutte le prove raccolte: qualcosa nella pipeline di
+rendering di Chromium stesso (indipendente da Electron — riproducibile fuori da Electron, in
+un server locale + un tab Chrome qualsiasi; indipendente dalla GPU — test già fatto), oppure
+qualcosa fuori da qualunque browser sul sistema dell'utente. **Il test decisivo che resta, mai
+fatto**: aprire la STESSA sessione (`http://127.0.0.1:7893`) in Safari invece che Chrome. Se
+l'alone c'è ANCHE lì (un motore di rendering del tutto diverso, WebKit non Chromium), la causa è
+di sicuro fuori da qualunque browser — un'utility di terze parti, un filtro colore/accessibilità
+di macOS. Se NON c'è in Safari, è un bug specifico della famiglia Chromium/Electron con questa
+esatta pagina — utile saperlo, ma a quel punto la correzione diventa "aggirare il bug"
+(riscrivere il layout per non toccare qualunque combinazione lo scateni), non più "trovare
+l'elemento colpevole", perché non esiste.
+
+Nessuna modifica di codice applicata in questo giro (solo test dal vivo, mai persistiti) — tranne
+il ripristino di `background:'transparent'` sul pannello dell'arco (il test del giro precedente,
+ormai escluso: nessuna ragione di tenere la regressione sul wallpaper personalizzato).
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx` (solo il ripristino a `transparent`).

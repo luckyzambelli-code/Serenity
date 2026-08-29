@@ -4906,19 +4906,7 @@ export default function Serenity() {
              (la barra laterale e le camere GALLEGGIANO, `position:absolute`: non tolgono
              spazio flex all'arco). Alzato a 2200px — l'`aspectRatio` e `maxHeight:'100%'`
              restano il vero limite su una finestra bassa. */
-          /* ⚠️ TEST DIAGNOSTICO « alone bianco » — `backgroundColor` sulla `BrowserWindow`
-             (main.cjs) non è bastato: l'utente conferma « c'è ancora ». Riprova diretta
-             dell'ipotesi "nessun colore proprio → all'angolo arrotondato trapela quel che sta
-             sotto": qui un vero colore, al posto di `transparent`. `var(--s-ground)` — LO
-             STESSO colore piatto della pagina in entrambi i temi, non un'invenzione — così la
-             resa resta identica a com'era SENZA un wallpaper personalizzato; l'unico costo è
-             che con un wallpaper attivo (CONFIG → "importa la tua immagine") questo pannello
-             torna a coprirlo con un rettangolo pieno, come PRIMA delle due richieste esplicite
-             di renderlo trasparente (v. sotto). Se l'alone sparisce, la causa è confermata e si
-             sceglie poi un compromesso mirato (es. un colore pieno SOLO nel filo dell'angolo,
-             non su tutto il pannello); se resta identico anche così, si esclude anche questa
-             pista e si torna a `transparent`.
-             ⚠️ Segnalato: « il fondo della zona arc deve essere trasparente ». In chiaro era
+          /* ⚠️ Segnalato: « il fondo della zona arc deve essere trasparente ». In chiaro era
              `var(--s-ground)` — LO STESSO colore della pagina, ma un colore PIENO: con uno
              sfondo personalizzato (CONFIG → "importa la tua immagine") copriva comunque
              l'immagine con un rettangolo opaco, invece di lasciarla vedere. Trasparente per
@@ -4930,8 +4918,18 @@ export default function Serenity() {
              regge più da sola: `--s-ground` in scuro è `#17181a`, PIÙ scuro del gradiente che
              lo sostituiva — togliere il gradiente non toglie contrasto all'ago, lo aumenta.
              Trasparente per davvero in ENTRAMBI i temi, ora — resta solo il filo sottile
-             (`--s-zone-border`) a dire dov'è il quadrante, come le altre zone. */
-          background: 'var(--s-ground)',
+             (`--s-zone-border`) a dire dov'è il quadrante, come le altre zone.
+             ⚠️ TEST DIAGNOSTICO « alone bianco » PROVATO E RIPRISTINATO — un giro fa, sostituito
+             con `var(--s-ground)` (un vero colore pieno) per riprovare l'ipotesi "nessun colore
+             proprio → all'angolo arrotondato trapela quel che sta sotto". L'utente conferma
+             dal vivo (screenshot reale): l'alone resta IDENTICO — anche con un vero sfondo
+             pieno sotto. Pista esclusa con certezza; tornato a `transparent` com'era, nessuna
+             ragione di tenere la regressione (niente più wallpaper personalizzato) per un test
+             che non ha funzionato. V. `docs/serenity-refonte.md` per l'indagine dal vivo che
+             segue — ha escluso ANCHE ogni elemento DOM/CSS/SVG/canvas della pagina, con
+             certezza diretta (non per sospetto): rimosso live `transform:translateZ(0)`,
+             `overflow:hidden`, `borderRadius`, il colore di fondo — l'alone non cambia MAI. */
+          background: 'transparent',
           transform: 'translateZ(0)',
           /* ⚠️ Segnalato: « togli l'ombra alla zona ARC AGO ». Restava un'ombra di rilievo
              (`--s-shadow`/`--s-shadow-lift`) ereditata da quando il fondo era pieno — con lo
