@@ -419,18 +419,27 @@ export function SplashScreen({ onDismiss, appName = 'EQUILIBRIUM' }: SplashScree
     animRef.current = requestAnimationFrame(draw);
     // ⚠️ SEGNALATO (SERENITY): « un alone bianco » — comparso in un pannello di App.tsx/
     // Serenity.tsx del tutto pulito (verificato riga per riga con l'utente, via DevTools, più
-    // volte), presente anche in incognito e nell'app impacchettata: mai nessun elemento DOM/CSS
-    // a spiegarlo. Un `<canvas>` non lascia traccia in nessuna delle due ispezioni — è disegnato
-    // a pixel, non con stili — ed è esattamente quel che questo componente disegna (la sfera
-    // cerebrale luminosa). Sospetto: un fantasma dell'ultimo fotogramma, lasciato da Chromium
-    // sul livello di composizione GPU dopo la rimozione del canvas dal DOM (un bug di
-    // compositing noto per questa classe di elementi). Qui si pulisce il canvas per DAVVERO
-    // (l'ultimo fotogramma catturato diventa trasparente, non la sfera) prima che lo smontaggio
-    // lo porti via — innocuo se la causa fosse un'altra, il rimedio giusto se è questa.
+    // volte), presente anche in incognito e nell'app impacchettata, E in Safari (motore di
+    // rendering diverso da Chromium: esclude un bug di compositing specifico di un solo
+    // browser). Mai nessun elemento DOM/CSS a spiegarlo — coerente con un `<canvas>`, che non
+    // lascia traccia in nessuna ispezione DOM/CSS (è disegnato a pixel, non con stili) — ed è
+    // esattamente quel che questo componente disegna (`drawBrain`: gradienti radiali bianchi
+    // concentrici, dal centro pieno al trasparente — la stessa identica forma dell'alone
+    // segnalato). Il tentativo precedente (`ctx.clearRect` prima dello smontaggio) svuota i
+    // PIXEL dell'ultimo fotogramma ma non libera per forza il BUFFER GPU sottostante — un
+    // `<canvas>` texture-backed può restare allocato (e il suo ultimo contenuto "fantasma"
+    // trapelare) finché la sua superficie non viene esplicitamente invalidata. Azzerare
+    // `width`/`height` (sotto) è il modo standard per farlo: forza il browser a scartare e
+    // riallocare il backing store, non solo a ridipingerlo trasparente — un passo più a monte
+    // di `clearRect`, non un suo sostituto (tenuto anche lui: l'ordine — clear, poi azzera le
+    // dimensioni — segue esattamente la sequenza raccomandata per liberare un canvas per
+    // davvero prima che React lo smonti).
     return () => {
       cancelAnimationFrame(animRef.current);
       window.removeEventListener('resize', resize);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.width = 0;
+      canvas.height = 0;
     };
   }, []);
 

@@ -6830,3 +6830,39 @@ ormai escluso: nessuna ragione di tenere la regressione sul wallpaper personaliz
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/Serenity.tsx` (solo il ripristino a `transparent`).
+
+## Giro (successivo) — l'alone bianco: anche in Safari — escluso ANCHE il canvas della SplashScreen
+
+**Confermato dall'utente**: « C'è anche in SAFARI. Per me è molto più semplice di cosa sembra.
+cerca una causa più semplice. » — prova decisiva: due motori di rendering del tutto diversi
+(Chromium E WebKit) mostrano lo stesso identico alone. Questo esclude con certezza qualunque bug
+di compositing specifico di un browser — quel che resta deve essere qualcosa di più semplice, o
+di esterno a qualunque motore di rendering.
+
+**Ripresa l'ipotesi più promettente rimasta**: il canvas della `SplashScreen` (`drawBrain`,
+gradienti radiali bianchi concentrici — la STESSA identica forma dell'alone) era già stato
+sospettato (giro 17) e "corretto" con `ctx.clearRect()` prima dello smontaggio — ma quello
+svuota solo i PIXEL, non libera necessariamente il buffer GPU sottostante. Rinforzato:
+`canvas.width = 0; canvas.height = 0` nella pulizia, il modo standard per forzare il browser a
+scartare il backing store per davvero (non solo ridipingerlo trasparente).
+
+**Verificato dal vivo, in un tab completamente nuovo (mai riusato)**: la SplashScreen gioca
+regolarmente (il suo `requestAnimationFrame` + i timer da 3.8s scattano sempre), lo smontaggio
+con la pulizia rinforzata gira — e l'alone compare comunque, identico, subito dopo. **Anche
+questa pista è esclusa con certezza diretta**, non per sospetto: non un residuo del canvas
+iniziale.
+
+Il fix (`canvas.width/height = 0` allo smontaggio) resta nel codice — libera per bene la memoria
+GPU del canvas, una buona norma a prescindere, costo zero, nessun effetto collaterale — ma NON
+risolve l'alone.
+
+**A questo punto**, con DOM/CSS/SVG/canvas/GPU/browser-engine tutti esclusi con prove dirette, e
+la conferma che succede ANCHE in Safari, l'unica spiegazione compatibile con OGNI prova raccolta
+è che l'alone non è disegnato da NESSUNA pagina web in NESSUN browser — è qualcosa di esterno
+(il sistema, un'altra applicazione, o l'hardware del display). Chiesto all'utente il test più
+diretto possibile: **la finestra del browser, spostata sullo schermo — l'alone si sposta CON la
+finestra (sarebbe legato al contenuto/all'app) o resta FERMO nello stesso punto fisico dello
+schermo (sarebbe esterno a qualunque browser/app)?** In attesa di risposta.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/components/SplashScreen.tsx` (condiviso — entrambi i DMG ricostruiti).
