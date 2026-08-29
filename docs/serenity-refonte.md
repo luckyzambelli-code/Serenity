@@ -6593,3 +6593,25 @@ e si cerca oltre. **In attesa di conferma dal vivo.**
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `main.cjs` (condiviso).
+
+---
+
+## Giro (successivo) — l'alone bianco: pista GPU esclusa, ripristinata l'accelerazione
+
+**Confermato dall'utente**: « c'è sempre » anche con `app.disableHardwareAcceleration()`. La
+pista GPU (compositing) è esclusa quanto le quattro tentate prima (bottone PRESS-START, glow
+SVG, isolamento del livello GPU sull'arco, canvas della SplashScreen). Tolta la riga — nessun
+beneficio, solo il costo di un'interfaccia più lenta (resa software invece che hardware).
+
+**Dove restare, ora che DOM e GPU sono entrambi esclusi con prove dirette.** Riassunto
+completo per chi riprende: l'alone (1) dipende dal contenuto della pagina (sparisce
+nascondendo `<body>`), (2) non è disegnato da NESSUN elemento interrogabile via JS (DOM
+esaustivamente scansionato), (3) non cambia disattivando la GPU. Il prossimo passo utile non è
+più cercare nel codice di quest'app — è capire se l'alone esiste ANCHE FUORI dalla finestra
+dell'app, sullo stesso punto dello schermo, con un'altra finestra sopra. Se sì, la causa è nel
+sistema dell'utente (un'utility di terze parti che disegna overlay, un filtro colore/accessibilità
+di macOS, un problema del pannello stesso) e non in questo repository — nessun'altra modifica
+al codice potrebbe toglierlo.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `main.cjs` (condiviso).
