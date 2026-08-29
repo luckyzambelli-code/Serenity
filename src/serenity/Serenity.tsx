@@ -4881,6 +4881,20 @@ export default function Serenity() {
              spazio flex all'arco). Alzato a 2200px — l'`aspectRatio` e `maxHeight:'100%'`
              restano il vero limite su una finestra bassa. */
           background: 'transparent',
+          /* ⚠️ SOSPETTO DI BUG CHROMIUM — segnalato: « cosa è l'alone bianco dove c'è scritto
+             METER TA, togliLO ». Cercato ovunque nel DOM/CSS di questa app (con l'utente, via
+             DevTools, due volte: il div dell'arco stesso e l'SVG di `QuantumSphere`, entrambi
+             puliti) e persino in incognito (niente estensioni) — l'alone resta, e non
+             corrisponde a NESSUN elemento di questa pagina. Comparso proprio nella versione
+             che ha introdotto LENTILLE (backdrop-filter pesante su molti più bottoni, questo
+             stesso giro): un sospetto concreto è un bug di composizione GPU di Chromium — la
+             sfocatura di elementi vicini che "sanguina" in un pannello trasparente con
+             `overflow:hidden` e nessun livello proprio. `transform:'translateZ(0)'` forza
+             questo pannello sul SUO livello di composizione — il rimedio standard per questa
+             classe di bug, innocuo se la causa è altra (non cambia nulla del disegno). Se non
+             basta, il prossimo passo è disattivare `backdrop-filter` altrove per isolare quale
+             elemento lo causa davvero. */
+          transform: 'translateZ(0)',
           /* ⚠️ Segnalato: « togli l'ombra alla zona ARC AGO ». Restava un'ombra di rilievo
              (`--s-shadow`/`--s-shadow-lift`) ereditata da quando il fondo era pieno — con lo
              sfondo ormai trasparente (v. sopra) un'ombra sotto un riquadro senza fondo si legge

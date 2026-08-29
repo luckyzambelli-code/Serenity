@@ -6489,3 +6489,28 @@ impacchettata — verificabile) per identificare l'elemento esatto.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/tokens.css`, `src/serenity/PannelloMna.tsx`, `src/serenity/Serenity.tsx`.
+
+---
+
+## Giro (29/08/2026, 16) — alone bianco: un tentativo mirato, in attesa di conferma
+
+**Indagine chiusa (per esclusione), non per causa trovata.** Con l'utente, via DevTools:
+ispezionato l'elemento esatto sotto l'alone — risulta il `<div>` dell'arco stesso
+(`background:'transparent'`, `overflow:'hidden'`, nessuna classe) coi suoi due unici figli
+(le letture, vuote qui; il testo "DONNE L'ITEM" centrato) — niente che disegni un alone.
+Ispezionato anche l'`<svg>` di `QuantumSphere`: pulito, `trail_glow`/`needle_glow` mai
+referenziati nel render corrente. Scartato il wallpaper personalizzato (CONFIG è su DEFAULT,
+confermato). Scartate le estensioni Chrome (l'alone resta identico in incognito).
+
+**Un sospetto concreto, testato con un correttivo mirato.** L'alone è comparso esattamente
+nella versione che ha introdotto LENTILLE (`backdrop-filter` pesante su molti più bottoni,
+due giri fa) — coincidenza che punta a un bug di composizione GPU di Chromium: la sfocatura
+di elementi vicini che "sanguina" in un pannello trasparente, senza fondo, senza il proprio
+livello di composizione. Aggiunto `transform:'translateZ(0)'` al pannello dell'arco — il
+rimedio standard per isolare un elemento sul proprio livello GPU, innocuo se la causa fosse
+altra (non tocca il disegno). **In attesa di conferma dal vivo**: se non basta, il prossimo
+passo è disattivare `backdrop-filter` un pezzo alla volta per isolare quale bottone lo causa
+davvero.
+
+`tsc --noEmit` pulito, `vitest run` 652/652.
+`git status`: `src/serenity/Serenity.tsx`.
