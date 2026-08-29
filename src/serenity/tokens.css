@@ -538,7 +538,17 @@ body {
    ENTRAMBI i temi di SERENITY (le loro carte sono `bg-white/60` ecc., v. la nota d'apertura):
    una sola ricetta, quella tarata per il chiaro, senza bisogno di uno sdoppiamento scuro che
    qui non avrebbe niente su cui applicarsi. */
-.ser-history-wrap button, .ser-processus-wrap button {
+/* ⚠️ ESCLUSO IL BOTTONE DI CHIUSURA — segnalato: « la X è nascosta ». Quel bottone (il
+   `GlassCollapseToggle` di EQUILIBRIUM, già ritinto in cerchio con la sua × in
+   `modalCloseButtons.css`) ha una `content:'×'` sul SUO `::after` — lo stesso pseudo-elemento
+   che questa regola usa per la goccia di luce. Le due non si annidano (un elemento ha UN solo
+   `::after`): la regola più specifica di `modalCloseButtons.css` vince sulla `content`, ma
+   qui sotto arriverebbe comunque un `background` radiale bianco aggiuntivo dietro la scritta
+   — sommato al lucido già intenso, la × (colore tenue apposta) si legge sempre meno.
+   `:not(:is(...))`, la STESSA lista di selettori di `modalCloseButtons.css`: quel bottone
+   resta SOLO col suo trattamento dedicato, che già gli dà vetro + rilievo. */
+.ser-history-wrap button:not(:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"])),
+.ser-processus-wrap button:not(:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"])) {
   position: relative; isolation: isolate;
   backdrop-filter: var(--s-glass-blur);
   -webkit-backdrop-filter: var(--s-glass-blur);
@@ -547,13 +557,15 @@ body {
     inset 0 -6px 10px -4px rgba(44, 47, 51, 0.30),
     0 14px 34px rgba(44, 47, 51, 0.26);
 }
-.ser-history-wrap button::before, .ser-processus-wrap button::before {
+.ser-history-wrap button:not(:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"]))::before,
+.ser-processus-wrap button:not(:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"]))::before {
   content: '';
   position: absolute; inset: 0; border-radius: inherit;
   background: radial-gradient(120% 140% at 24% 8%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.16) 38%, rgba(255,255,255,0) 60%);
   pointer-events: none; z-index: 0;
 }
-.ser-history-wrap button::after, .ser-processus-wrap button::after {
+.ser-history-wrap button:not(:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"]))::after,
+.ser-processus-wrap button:not(:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"]))::after {
   content: '';
   position: absolute; top: 10%; left: 16%; width: 26%; height: 34%;
   border-radius: 50%; pointer-events: none; z-index: 0;
@@ -561,6 +573,18 @@ body {
   filter: blur(0.5px);
 }
 .ser-history-wrap button > *, .ser-processus-wrap button > * { position: relative; z-index: 1; }
+
+/* ── TESTO NERO NEI BOTTONI DI PROCESSUS — segnalato: « scrivi all'interno dei bottoni in
+   nero perché in bianco non si vede bene ». Alcuni bottoni di `ProcessusModal` (i chip di
+   tag in sospeso, "ADD ↵", "✕") scrivono `color: rgba(255,255,255,...)` FISSO, in linea —
+   non seguono `th.text`/`lt` (la preferenza di tema) come il resto del file, quindi non si
+   scuriscono mai. Andava bene sul fondo scuro per cui erano stati scritti; sul vetro chiaro
+   di SERENITY (rinforzato ora dal lucido LENTILLE) diventa bianco su quasi-bianco. Non si
+   tocca `ProcessusModal.tsx` (condiviso con EQUILIBRIUM, dove il fondo scuro resta reale) —
+   `!important` batte il `color` in linea, lo stesso escamotage di `modalCloseButtons.css`. */
+.ser-processus-wrap button, .ser-processus-wrap button * {
+  color: var(--s-ink) !important;
+}
 
 /* ── IL TOGGLE SCORREVOLE — segnalato con l'immagine di riferimento esatta: traccia+manopola
    di vetro che scorre, non un bottone che si smonta e rimonta. `BottoneCiclico.tsx` lo usa

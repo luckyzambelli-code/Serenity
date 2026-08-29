@@ -6439,3 +6439,53 @@ Giornale; `.ser-history-wrap button::before` conferma via DOM il nuovo gradiente
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/Serenity.tsx`, `src/serenity/ZonaAssessment.tsx`,
 `src/serenity/tokens.css`.
+
+---
+
+## Giro (29/08/2026, 15) — corretto un mio bug (la X nascosta), testo nero in PROCESSUS, MNA più basso
+
+**Bug mio, dal giro precedente: la X di History/Processus, coperta dal lucido.** Segnalato: « la
+X è nascosta, mettila in primo piano ». Causa: `.ser-history-wrap button::after` (la goccia di
+luce, aggiunta nel giro scorso per LENTILLE) e il `::after` del bottone di chiusura vero
+(`GlassCollapseToggle`, ritinto con una `content:'×'` in `modalCloseButtons.css`, un file già
+esistente prima di questo giro) sono lo STESSO pseudo-elemento sullo STESSO bottone — le due
+regole si sommavano, e il bianco aggiuntivo del lucido anneriva il contrasto già tenue della ×
+(`--s-ink-soft`, un grigio medio, non pensato per competere con altro bianco sopra). Escluso il
+bottone di chiusura dalla regola generica LENTILLE con lo stesso `:not(:is([title=...]))` già
+usato da `modalCloseButtons.css` — il bottone di chiusura resta SOLO col suo trattamento
+dedicato (che già gli dà vetro + rilievo + × leggibile), il resto dei bottoni tiene LENTILLE
+com'era.
+
+**Testo nero nei bottoni di PROCESSUS.** Segnalato: « scrivi all'interno dei bottoni in nero
+perché in bianco non si vede bene ». Alcuni bottoni di `ProcessusModal.tsx` (i chip di tag in
+sospeso, "ADD ↵", "✕") scrivono `color: rgba(255,255,255,...)` fisso in linea, senza seguire
+`th.text`/`lt` come il resto del file — andava bene sul fondo scuro per cui erano stati
+scritti, diventa illeggibile sul vetro chiaro di SERENITY (ancora più chiaro ora, con LENTILLE).
+Non si tocca il file condiviso: `.ser-processus-wrap button, .ser-processus-wrap button *
+{ color: var(--s-ink) !important; }` — lo stesso escamotage `!important` di
+`modalCloseButtons.css`.
+
+**CRONOLOGIA — verificato, non serviva altro.** Segnalato: « metti tutti i bottoni in LENTILLE
+come per PROCESSUS ». La regola generica già copre `.ser-history-wrap button` per intero (ogni
+`<button>` dentro, righe di sessione comprese) — verificato dal vivo su PROCESSUS, che HA
+contenuto reale (35 procedimenti): ogni chip/scheda mostra il lucido. CRONOLOGIA nel test resta
+vuota (« Aucune session passée trouvée »): stessa regola, semplicemente niente ancora da
+mostrarla sopra.
+
+**MNA più basso, per MIRROR.** Segnalato: « in MIRROR quando c'è l'MNA i numeri di quanto
+carica si vedono solo a metà e si deve scrolling, riduci la zona MNA in altezza, che tanto va
+bene lo stesso ». Il suo involucro (`flex:'0 0 auto'`, dal giro scorso) non si restringe MAI
+sotto la sua `minHeight` — in MIRROR, con `gruppoAlto` cresciuto e la tastiera del valore
+manuale già dentro `gruppoBasso`, quei pixel non liberati da nessuno mancavano altrove.
+Ridotti insieme: `minHeight` 180→140 (`Serenity.tsx`), il padding del pannello 12px 18px→8px
+14px e i due `marginTop` fra le righe 10→6 (`PannelloMna.tsx`).
+
+**Alone bianco su METER TA — indagine in corso, con l'utente.** Verificate a fondo e SCARTATE
+con prova diretta (markup incollato dall'utente via DevTools): il `<svg>` di `QuantumSphere`
+(pulito, nessun elemento fuori posto, `trail_glow`/`needle_glow` mai referenziati in questo
+render), il wallpaper personalizzato di CONFIG (confermato dall'utente: è su DEFAULT, nessuna
+immagine). In attesa che l'utente ispezioni l'alone stesso in DevTools (Chrome vero, non l'app
+impacchettata — verificabile) per identificare l'elemento esatto.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/tokens.css`, `src/serenity/PannelloMna.tsx`, `src/serenity/Serenity.tsx`.

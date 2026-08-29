@@ -120,7 +120,14 @@ export function PannelloMna({
     <div style={{
       position: 'absolute', left: 16, right: 16, bottom: 16, zIndex: 6,
       background: 'var(--s-zone-bg)', border: '1px solid var(--s-zone-border)', borderRadius: 18,
-      padding: '12px 18px', pointerEvents: 'auto',
+      /* ⚠️ RIDOTTO — segnalato: « in MIRROR quando c'è l'MNA i numeri di quanto carica si
+         vedono solo a metà e si deve scrolling, riduci la zona MNA in altezza ». In MIRROR
+         `gruppoAlto` cresce (ciclo armato, 3fr) e la tastiera manuale del valore occupa già
+         parte di `gruppoBasso`: il pannello, nel suo involucro a `flex:'0 0 auto'` (v.
+         `Serenity.tsx`, mai ridotto sotto la sua `minHeight`), restava alto quanto sempre.
+         `12px 18px` → `8px 14px` sul contenitore, e i due `marginTop` fra le righe sotto
+         (10→6) tolgono qualche pixel in più: pochi, ma è esattamente lo spazio che mancava. */
+      padding: '8px 14px', pointerEvents: 'auto',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.14em', color: 'var(--s-ink-soft)' }}>
@@ -141,7 +148,7 @@ export function PannelloMna({
         </button>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 22, marginTop: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 22, marginTop: 6 }}>
         {campo(t('mna_im') as string, primeCaptured ? primeIm.toFixed(0) : '—')}
         {campo(t('mna_zone') as string, primeCaptured ? primeZone : '', primeCaptured)}
         {campo(t('mna_fd') as string, primeCaptured ? `${primeFd.toFixed(1)} Hz` : '—')}
@@ -178,7 +185,7 @@ export function PannelloMna({
       </div>
 
       {(primePhase === 'SONIFY' || primePhase === 'CLEAN' || primePhase === 'HARMONICS') && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
           <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.08em', color: 'var(--s-ink-faint)', textTransform: 'uppercase' }}>
             → PRIME {primePStar}
           </span>

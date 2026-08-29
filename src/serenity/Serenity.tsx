@@ -5754,9 +5754,18 @@ export default function Serenity() {
             il suo bordo inferiore cade allo stesso bordo su cui finisce la colonna del
             Giornale, a sinistra — le due colonne condividono la stessa altezza vera.
             `PannelloMna` non è toccato (resta lui a posizionarsi `absolute, left/right:16,
-            bottom:16` dentro questo involucro `position:relative`). */}
+            bottom:16` dentro questo involucro `position:relative`).
+            ⚠️ 140, non più 180 — segnalato: « in MIRROR quando c'è l'MNA i numeri di quanto
+            carica si vedono solo a metà e si deve scrolling, riduci la zona MNA in altezza,
+            che tanto va bene lo stesso ». Questo involucro è `flex:'0 0 auto'`: non si
+            restringe MAI sotto la sua `minHeight`, qualunque cosa succeda sopra di lui — in
+            MIRROR, dove `gruppoAlto` cresce e la tastiera del valore manuale occupa già
+            `gruppoBasso`, quei 40px in più non liberati da nessuno erano esattamente lo
+            spazio che mancava. `PannelloMna` stesso è stato ristretto in parallelo (v. la
+            sua nota, `padding`/`marginTop`) — 140 lascia comunque un margine reale sopra il
+            pannello più stretto, senza sprecare il resto. */}
         {aperta && moduleVis.mna && (
-          <div style={{ position: 'relative', width: '100%', maxWidth: 1400, minHeight: 180, flex: '0 0 auto' }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: 1400, minHeight: 140, flex: '0 0 auto' }}>
             <PannelloMna
               primePhase={primePhase}
               setPrimePhase={setPrimePhase}
