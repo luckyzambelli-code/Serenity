@@ -211,6 +211,11 @@ export function useChargeEngine(d: ChargeEngineDeps): void {
   // dipendenza (`d.xxx`), owned da chi li usa in più di un posto — vedi `ChargeEngineDeps`.
   const lastMetricsUiRef = useRef(0);
   const lastHistoryPushRef = useRef(0);
+  // FIX: dt reale fra un tick METRICS_UPDATE e l'altro, per l'accumulatore di
+  // massa/distanza sotto — il worker gira a ~22Hz (v. commento vicino a
+  // lastHistoryPushRef più sotto), non ai 10Hz che il vecchio dt=0.1s fisso
+  // assumeva: la distanza accumulata risultava gonfiata di ~2,2x.
+  const lastMassTickRef = useRef(0);
 
   // Setup Web Worker — identico a com'era in App.tsx: spawn con retry limitati, respawn su
   // errore, terminate allo smontaggio.
@@ -668,7 +673,17 @@ export function useChargeEngine(d: ChargeEngineDeps): void {
 
         // Distanza SOL = ∫Vsol dt (doc: D = ∫Vsol dt, "Total Processed Distance SOL-Km")
         // massDelta usato internamente per il peso mentale dissolto
-        d.massAccumulatorRef.current += newVSol * 0.1; // Vsol * dt (dt = 0.1s timer tick)
+        // FIX: dt REALE fra un tick e l'altro (misurato via performance.now(), `_nowMs`
+        // già calcolato sopra), non più un dt=0.1s (10Hz) fisso — il worker gira a
+        // ~22Hz (v. commento poco più sotto), quindi il vecchio fisso gonfiava la
+        // distanza accumulata di ~2,2x. Clampato [0, 0.5s]: il primo tick (nessun
+        // riferimento precedente) non accumula nulla, e un salto anomalo dopo una
+        // pausa/tab in background non viene contato come un balzo di distanza.
+        const _dtMass = lastMassTickRef.current > 0
+          ? Math.min(Math.max((_nowMs - lastMassTickRef.current) / 1000, 0), 0.5)
+          : 0;
+        lastMassTickRef.current = _nowMs;
+        d.massAccumulatorRef.current += newVSol * _dtMass; // Vsol * dt (dt reale, misurato)
         if (pushUi) d.setDisplayMass(d.massAccumulatorRef.current); // CONN-68: throttle display
 
         // ── F/N persistence + EP-lock timers ("Regola dei 1,5s") ─────────────
@@ -694,8 +709,14 @@ export function useChargeEngine(d: ChargeEngineDeps): void {
           // T99 : intention causative — uniquement validation EP ou eta exceptionnel sans F/N (release fort)
           // (le test EP au-dessus couvre la plupart des cas T99)
           if (eta > 0.80 && !tracking.isActive) return 'T99';
-          // T60 : équilibre / F/N stable — F/N détecté via tracking interne OU aiguille
-          const fnDetected = tracking.isActive || d.needleReactionRef.current === 'F/N (Floating)';
+          // T60 : équilibre / F/N stable — F/N détecté via tracking interne
+          // FIX: eliminato il fallback su `needleReactionRef.current === 'F/N (Floating)'`
+          // — quell'etichetta è un TESTO di visualizzazione che può restare mostrato per
+          // una finestra di tempo dopo che l'episodio F/N è realmente finito (v.
+          // lastFnShownAtRef sopra), quindi classificava T60 anche quando il segnale vivo
+          // era già sceso. `tracking.isActive` è la fonte autorevole, aggiornata ad ogni
+          // tick da fnTracker.update(qL, ...) appena sopra.
+          const fnDetected = tracking.isActive;
           if (fnDetected && qL >= 0.3) return 'T60';
           // T90 : dissolution de masse (sans F/N, eta moyenne)
           if (qL >= 0.50 && eta >= 0.30) return 'T90';

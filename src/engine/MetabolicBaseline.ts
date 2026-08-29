@@ -35,7 +35,9 @@ export interface MetabAssessment {
 
 // Thresholds — deliberately conservative & documented (no mystique).
 const CONTACT_GOOD = 65, CONAREST_OK = 40;     // electrode contact (0..100)
-const BPM_REST_LO = 50, BPM_REST_HI = 90, BPM_HIGH = 105;
+// FIX: BPM_LOW aggiunta — prima non esisteva nessun limite basso, un bpm
+// implausibilmente basso (rumore/contatto scarso) veniva classificato 'ok'.
+const BPM_LOW = 40, BPM_REST_LO = 50, BPM_REST_HI = 90, BPM_HIGH = 105;
 const AROUSAL_CV_SETTLED = 0.25;               // coeff. of variation of arousal → settled
 const REACT_MIN = 0.12;                        // min relative breath-driven modulation
 
@@ -100,6 +102,10 @@ export class MetabolicBaseline {
     let heart: Rating;
     if (bpmVal == null) { heart = 'na'; reasons.push('metab_reason_nobpm'); }
     else if (bpmVal >= BPM_REST_LO && bpmVal <= BPM_REST_HI) heart = 'good';
+    // FIX: limite basso aggiunto — un bpm sotto BPM_LOW (rumore/contatto scarso,
+    // non un battito vero) non è più classificato 'ok' solo perché non supera
+    // BPM_HIGH.
+    else if (bpmVal < BPM_LOW) { heart = 'poor'; reasons.push('metab_reason_lowbpm'); }
     else if (bpmVal <= BPM_HIGH) { heart = 'ok'; }
     else { heart = 'poor'; reasons.push('metab_reason_highbpm'); }
 

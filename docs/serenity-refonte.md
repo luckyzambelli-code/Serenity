@@ -6615,3 +6615,87 @@ al codice potrebbe toglierlo.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `main.cjs` (condiviso).
+
+## Giro (successivo) — review completa del codice, 10 correzioni
+
+**Segnalato**: « Fai una review completa del codice come se non l'avessi mai analizzato prima
+[...] Individua bug, ridondanze e colli di bottiglia e proponi miglioramenti concreti, mantenendo
+invariato il comportamento previsto dell'app. » — non una diff, tutta l'applicazione: `App.tsx`,
+`Serenity.tsx`, l'engine e gli hook condivisi. Sei angoli di ricerca paralleli (correttezza
+Serenity, correttezza engine/hook condivisi, parità App↔Serenity, riuso, efficienza,
+async/memoria/sicurezza), poi verifica diretta riga per riga dei 10 candidati più gravi. Poi
+« Procedi con tutti e dieci ».
+
+**Corretti (file condivisi — riguardano ANCHE EQUILIBRIUM, entrambi i DMG ricostruiti):**
+
+1. `useChargeEngine.ts` — l'accumulatore di distanza/massa SOL sommava `newVSol * 0.1`
+   (dt fisso, 10Hz) a OGNI tick METRICS_UPDATE, ma il worker gira a ~22Hz (commento già presente
+   nello stesso file, poco più sotto) — la distanza mostrata/salvata nei rapporti era gonfiata di
+   ~2,2×. Ora un dt REALE, misurato con `performance.now()` fra un tick e l'altro (riusa `_nowMs`,
+   già calcolato per il throttle React), clampato [0, 0.5s] per non contare un balzo dopo una
+   pausa/tab in background.
+2. `useChargeEngine.ts` — la zona T60 (`derivedZone`) accettava `needleReactionRef.current ===
+   'F/N (Floating)'` come prova di F/N attivo, ma quell'etichetta è un TESTO visualizzato che
+   resta a schermo per una finestra di tempo dopo che l'episodio è realmente finito
+   (`lastFnShownAtRef`). Tolto il fallback: resta solo `tracking.isActive`, la fonte vera,
+   aggiornata ad ogni tick da `fnTracker.update(qL, ...)`.
+3. `MetabolicBaseline.ts` — il controllo di prontezza classificava `heart='ok'` per QUALUNQUE
+   bpm ≤105, senza limite basso: un bpm implausibile (20, rumore/contatto scarso) passava come
+   "ok" invece di segnalare il problema. Aggiunta `BPM_LOW=40`: sotto quella soglia è `'poor'`
+   (nuova ragione `metab_reason_lowbpm`, non tradotta — come `metab_reason_agitated`/
+   `metab_reason_highbpm`, già esistenti e mai renderizzate: `MetabolicCheck.tsx` filtra solo
+   `contact`/`nobpm`).
+4. `useMuseConnection.ts` — la sottoscrizione a `client.connectionStatus` non veniva mai
+   salvata né smessa (a differenza di eeg/ppg/acc/gyro/telemetry, tutte in `museSubsRef`):
+   sopravviveva alla disconnessione esplicita, e un evento GATT tardivo poteva riscrivere lo
+   stato a `'searching'` subito dopo che l'utente aveva chiesto di scollegare. Ora vive nel suo
+   `connectionStatusSubRef` (fuori da `museSubsRef`, apposta: quello si smonta/riattacca a ogni
+   `wireStreams`, questa sottoscrizione si crea una sola volta per client) e viene smessa in TRE
+   punti: le due disconnessioni esplicite (ricerca annullata, connesso→disconnetti) e quando la
+   riconnessione silenziosa rinuncia dopo i tentativi massimi.
+5. `useRemoteSession.ts` — `avvia()` non aveva nessun token di cancellazione (a differenza del
+   pattern `museTokenRef` già usato per lo stesso genere di attesa in `useMuseConnection`):
+   un `disconnetti()` durante l'attesa di `otteniChiaveServer()`/`networkManager.init()` poteva
+   essere superato dalla stessa promise, che risolve DOPO e fa ricomparire un link di connessione
+   per una seduta già chiusa. Aggiunto `avviaTokenRef`, stesso schema: incrementato all'ingresso
+   di `avvia()` e da `disconnetti()`, controllato prima di applicare il risultato di `init()`.
+
+**Corretti (solo `Serenity.tsx`, nessun impatto su EQUILIBRIUM):**
+
+6. `cam2Mostrata` (riga ~2763) usava `espertoAttivo !== false` — l'UNICA occorrenza del file a
+   trattare `undefined` (una config salvata prima che il campo esistesse) come EXPERT; ogni altro
+   uso nello stesso file (righe 694, 2094 con un commento che lo dichiara esplicitamente, 3756,
+   4068) usa `=== true`/`!== true`, che tratta `undefined` come BASIC. Corretta alla stessa
+   convenzione — una config vecchia non mostra più CAM 2 di sorpresa in una seduta BASIC.
+7. I PDF PROCESSUS (`getAllProcessusFiles()`, percorso IndexedDB) creano un
+   `URL.createObjectURL(blob)` per ciascuno — `App.tsx` li revoca con un effetto dedicato
+   ("FIX B-04"), qui non c'era nessun equivalente: perdita di memoria che cresce con ogni PDF
+   caricato, mai liberata per tutta la vita della finestra. Aggiunto lo STESSO pattern di
+   App.tsx: diff prev→next sull'elenco, revoca solo gli URL usciti dalla lista, più la revoca
+   finale allo smontaggio.
+
+**Esaminati e NON modificati (non erano difetti da correggere):**
+
+8. `senzaStrumenti` che si riattiva da solo a metà seduta (riga ~866) — la divergenza da
+   App.tsx è VERA, ma leggendo il commento sul posto è un comportamento esplicitamente segnalato
+   e corretto due volte su richiesta diretta dell'utente (« quando disattivi il METER e/o il
+   MUSE... il bottone NO INSTRUMENT deve attivarsi »). Non un bug: una scelta UX di SERENITY,
+   diversa da EQUILIBRIUM apposta.
+9. `LetturaVelocita` gated su `agoEeg` invece che sulla connessione MUSE — confermato che il
+   blocco (TA/Fase/TotalTa/Velocità) è gated come UNITÀ su quale ago è primario, e il ramo
+   "meter primario" (`!agoEeg && meterC`, poco più sotto) non ha MAI avuto una lettura di
+   velocità: non un copia-incolla dimenticato, ma un layout a due colonne deliberatamente
+   diverso da App.tsx (dove i due strumenti non condividono un blocco unico). Aggiungerla al
+   ramo meter sarebbe una funzionalità nuova, non richiesta, in una zona già molto tarata a
+   colpi di "segnalato" — lasciata com'è.
+10. `aggiungiItemManuale`/`cercaLetturaPerParola`/`segnaIndicazione` ricopiate a mano da
+    App.tsx, già leggermente divergenti (SERENITY distingue "non misurato" da "NULL" nel
+    Giornale, App.tsx no) — un rischio di manutenzione futura, non un bug oggi: unificarle in un
+    modulo condiviso toccherebbe `App.tsx` per un refactor, non per un fix mirato. Lasciata
+    com'è; da riconsiderare se la duplicazione produce un vero bug.
+
+**Verifica**: `tsc --noEmit` pulito, `npx vitest run` 652/652 verdi, `npm run lint` 325 warning
+(identico alla baseline — l'unico nuovo `useRef<any>` è stato tipizzato
+`{ unsubscribe: () => void } | null` apposta per non alzare il conteggio). Verifica dal vivo
+(profilo TEST, Expert, seduta senza strumenti): nessun errore console, seduta aperta e
+funzionante regolarmente.

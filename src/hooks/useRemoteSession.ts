@@ -96,6 +96,11 @@ export function useRemoteSession(opts: {
   const seqRef          = useRef(0);
   const peerKeyRef      = useRef<string | undefined>(undefined);
   const relayTokenRef   = useRef<string | null>(null);
+  // FIX: token di cancellazione per `avvia()` — stesso pattern di `museTokenRef` in
+  // useMuseConnection. Senza, un `disconnetti()` durante l'attesa di
+  // `otteniChiaveServer()`/`networkManager.init()` poteva essere superato da quella
+  // stessa promise che si risolve DOPO e fa ripartire la connessione appena chiusa.
+  const avviaTokenRef   = useRef(0);
 
   /** GENERA (O RIGENERA) IL LINK — il secondo passo, separato dall'inizializzazione del peer
    *  perché possa fallire e riprovarsi da solo senza rifare tutta la connessione. */
@@ -124,6 +129,10 @@ export function useRemoteSession(opts: {
    *  il link invece di ricominciare tutto da capo. */
   const avvia = useCallback(async () => {
     if (useNetworkStore.getState().peerId) { await generaLink(); return; }
+    // FIX: token catturato all'ingresso — v. avviaTokenRef. Nome diverso da `token`
+    // (già usato più sotto per il relay token generato da `generaToken()`).
+    avviaTokenRef.current++;
+    const avvioToken = avviaTokenRef.current;
     setErrore(null);
     setAppMode('auditor');
     setIsConnected(false);
@@ -149,9 +158,16 @@ export function useRemoteSession(opts: {
 
     try {
       const id = await networkManager.init('auditor', undefined, true);
+      // FIX: se un `disconnetti()` è arrivato mentre si attendeva `init()`, questo
+      // token non è più quello corrente — non si applica una connessione che
+      // l'utente ha già chiuso. `networkManager.disconnect()` (dentro `disconnetti()`)
+      // ha già chiuso la connessione appena aperta da `init()`; qui si evita solo di
+      // farla ricomparire nello store (setPeerId/generaLink).
+      if (avvioToken !== avviaTokenRef.current) return;
       setPeerId(id);
       await generaLink();
     } catch (err: unknown) {
+      if (avvioToken !== avviaTokenRef.current) return;
       setErrore(err instanceof Error ? err.message : String(err));
     }
   }, [generaLink, setAppMode, setIsConnected, setPeerId, setConnectionLink,
@@ -160,6 +176,8 @@ export function useRemoteSession(opts: {
   /** CHIUDE LA CONNESSIONE. Torna 'local': non è più una seduta a distanza finché non se ne
    *  avvia un'altra con `avvia()`. */
   const disconnetti = useCallback(() => {
+    // FIX: invalida qualunque `avvia()` ancora in corso — v. avviaTokenRef.
+    avviaTokenRef.current++;
     try { networkManager.disconnect(); } catch (_) {}
     setIsConnected(false); setPeerId(''); setConnectionLink('');
     setRemoteStream(null); setRemoteMuseConnected(false);

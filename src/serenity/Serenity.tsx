@@ -485,6 +485,28 @@ export default function Serenity() {
       }
     })();
   }, []);
+
+  // FIX: URL dei PDF PROCESSUS (`getAllProcessusFiles()` sopra crea un
+  // `URL.createObjectURL(blob)` per ciascuno, percorso IndexedDB) mai revocati qui —
+  // App.tsx ha un effetto dedicato ("FIX B-04") per lo stesso identico problema, ne
+  // manca l'equivalente qui. Stesso pattern: diff prev→next, revoca solo gli URL
+  // usciti dalla lista (non quelli ancora presenti — revocarli TUTTI ad ogni cambio
+  // spegnerebbe anche i PDF appena aggiunti insieme a un fratello), più la revoca
+  // finale allo smontaggio.
+  const prevProcessusUrlsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const nextUrls = new Set(
+      processusPdfs.map(f => f.url).filter((u): u is string => !!u && u.startsWith('blob:'))
+    );
+    prevProcessusUrlsRef.current.forEach(u => {
+      if (!nextUrls.has(u)) URL.revokeObjectURL(u);
+    });
+    prevProcessusUrlsRef.current = nextUrls;
+  }, [processusPdfs]);
+  useEffect(() => () => {
+    prevProcessusUrlsRef.current.forEach(u => URL.revokeObjectURL(u));
+    prevProcessusUrlsRef.current.clear();
+  }, []);
   /** ── LA TARATURA DELL'AGO EEG — segnalata assente nell'audit funzionale completo: « toutes
    *  les fonctions... calibrations » — App.tsx la tiene nel cassetto TRIM di `SidebarDrawer`
    *  (`needleTrim`/`needleInertia`, scritte dritte sul motore condiviso `runtime/NeedleEngine`,
@@ -2760,7 +2782,11 @@ export default function Serenity() {
    * calcolo di quando MOSTRARLA — la preferenza dell'auditor non viene mai riscritta di
    * nascosto da un cambio di livello.
    */
-  const cam2Mostrata = moduleVis.cam2 && (espertoAttivo !== false || avvio.distanza);
+  // FIX: era `espertoAttivo !== false` — l'UNICA occorrenza del file a trattare
+  // `undefined`/`null` (una config salvata prima che il campo esistesse) come EXPERT.
+  // Ogni altro uso di `espertoAttivo` in questo file usa `=== true`/`!== true`, che
+  // tratta `undefined` come BASIC — allineata alla stessa convenzione.
+  const cam2Mostrata = moduleVis.cam2 && (espertoAttivo === true || avvio.distanza);
   const cam2H = !cam2Mostrata ? 0 : (cam2Collassata ? 88 : 255);
   const cam1H = !cam1Mostrata ? 0 : (cam1Collassata ? 88 : 158);
   const camStackH = (cam2Mostrata || cam1Mostrata)

@@ -99,6 +99,13 @@ export function useMuseConnection(d: MuseConnectionDeps) {
   const telemetrySubscriptionRef = useRef<any>(null);
   /** TUTTE le sottoscrizioni, per poterle smontare e riattaccare alla riconnessione. */
   const museSubsRef = useRef<any[]>([]);
+  /** FIX: sottoscrizione a `connectionStatus` — a differenza delle altre sopra, si crea
+   *  UNA sola volta per client (non ad ogni `wireStreams`), quindi vive in un ref suo,
+   *  fuori da `museSubsRef` (che `wireStreams` smonta e riattacca a ogni riconnessione:
+   *  ci finirebbe dentro solo alla prima connessione e non verrebbe mai ricreata dopo).
+   *  Prima non era mai smessa: sopravviveva alla disconnessione esplicita e poteva
+   *  riscrivere lo stato a 'searching' da un evento GATT tardivo. */
+  const connectionStatusSubRef = useRef<{ unsubscribe: () => void } | null>(null);
   const museTokenRef = useRef(0);
   const museReconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const museDeviceRef = useRef<any>(null);
@@ -221,6 +228,12 @@ export function useMuseConnection(d: MuseConnectionDeps) {
         try { museClientRef.current.disconnect(); } catch (_) {}
         museClientRef.current = null;
       }
+      // FIX: smetti anche la sottoscrizione a connectionStatus — altrimenti sopravvive
+      // alla disconnessione esplicita e un evento GATT tardivo può riscrivere lo stato.
+      if (connectionStatusSubRef.current) {
+        try { connectionStatusSubRef.current.unsubscribe(); } catch (_) {}
+        connectionStatusSubRef.current = null;
+      }
       bleCancel();   // risolve la richiesta Bluetooth pendente nel main (altrimenti resta appesa)
       setMuseConnection('disconnected');
       d.addLog({ time, speaker: 'SYS', text: '⊘ Recherche MUSE annulée.' });
@@ -236,6 +249,12 @@ export function useMuseConnection(d: MuseConnectionDeps) {
       if (museClientRef.current) {
         try { museClientRef.current.disconnect(); } catch (_) {}
         museClientRef.current = null;
+      }
+      // FIX: idem — la sottoscrizione a connectionStatus non era mai nella lista
+      // smessa qui sotto (museSubsRef non la contiene, v. dichiarazione del ref).
+      if (connectionStatusSubRef.current) {
+        try { connectionStatusSubRef.current.unsubscribe(); } catch (_) {}
+        connectionStatusSubRef.current = null;
       }
       // CONN-105: tear down the data-stream subscriptions on explicit disconnect
       museSubsRef.current.forEach(s => { try { s.unsubscribe(); } catch (_) {} });
@@ -420,7 +439,9 @@ export function useMuseConnection(d: MuseConnectionDeps) {
       // Initial wiring of the data streams
       wireStreams(client);
 
-      client.connectionStatus.subscribe(status => {
+      // FIX: salvata nel suo ref (non più "fire and forget") così la disconnessione
+      // esplicita sopra può effettivamente smetterla — v. connectionStatusSubRef.
+      connectionStatusSubRef.current = client.connectionStatus.subscribe(status => {
         // Transmit Muse status to auditor — use ref so mode changes are respected
         if (d.appMode() === 'participant') {
           networkManager.send({ type: 'MUSE_STATUS', connected: !!status }, true);
@@ -482,6 +503,13 @@ export function useMuseConnection(d: MuseConnectionDeps) {
               if (reconnectAttempts < MAX_ATTEMPTS) {
                 museReconnectTimerRef.current = setTimeout(tryReconnect, ATTEMPT_INTERVAL);
               } else {
+                // FIX: la riconnessione silenziosa ha rinunciato — smetti anche
+                // connectionStatus del client ormai morto, altrimenti un suo evento
+                // tardivo può ancora riscrivere lo stato dopo che si è dato per persa.
+                if (connectionStatusSubRef.current) {
+                  try { connectionStatusSubRef.current.unsubscribe(); } catch (_) {}
+                  connectionStatusSubRef.current = null;
+                }
                 setMuseConnection('disconnected');
                 d.setBatteryLevel(null);
                 d.pauseOnLoss();
