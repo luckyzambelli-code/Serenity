@@ -420,10 +420,15 @@ body {
    ultimo — `isolation:isolate` sul contenitore lo tiene dentro i bordi arrotondati senza
    aggiungere un `overflow:hidden` che taglierebbe altro (i cerchi delle camere, per
    esempio, hanno già il loro `overflow:hidden` interno per il video). */
+/* ⚠️ IN CHIARO ERA TROPPO DEBOLE — segnalato: « fai LENTILLE anche in light ». 0,55→0,85: un
+   bianco al 55% su una superficie già chiara (`--s-disc`, quasi bianca anche lei) si perdeva
+   quasi del tutto — la stessa intensità che sul fondo scuro si vedeva benissimo, sul chiaro
+   sparisce perché non c'è contrasto ad accoglierla. In scuro NON si tocca: lì il problema
+   opposto non esiste, era già la lente vista per prima e approvata. */
 .s-glass::before {
   content: '';
   position: absolute; inset: 0; border-radius: inherit;
-  background: radial-gradient(120% 140% at 24% 8%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.08) 40%, rgba(255,255,255,0) 62%);
+  background: radial-gradient(120% 140% at 24% 8%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.16) 38%, rgba(255,255,255,0) 60%);
   pointer-events: none;
   z-index: 0;
 }
@@ -460,11 +465,16 @@ body {
    INTERNA che incurva il lato opposto (`inset 0 -6px 10px -4px` — il "fondo" della lente
    che curva via dalla luce, l'ingrediente che manca a un rilievo piatto), e l'ombra
    esterna di sempre, un poco più profonda per staccarsi meglio dal fondo. */
+/* ⚠️ IN CHIARO, LE STESSE TRE OMBRE RINFORZATE — stessa ragione della nota su `.s-glass::before`:
+   un rilievo tarato per sparire nel buio (dove il contrasto è naturale) si perdeva sulle
+   superfici chiare di SERENITY. Il filo di luce sale (0,55→0,85, si vede solo se è più chiaro
+   di quel che ha sotto), l'ombra che incurva e quella esterna scendono (0,20→0,30 e 0,18→0,26:
+   in chiaro è la ombra SCURA a dover fare il lavoro che in scuro faceva già il bianco). */
 .s-glass-btn {
   box-shadow:
-    inset 0 2px 1px rgba(255, 255, 255, 0.55),
-    inset 0 -6px 10px -4px rgba(44, 47, 51, 0.20),
-    0 14px 34px rgba(44, 47, 51, 0.18);
+    inset 0 2px 1px rgba(255, 255, 255, 0.85),
+    inset 0 -6px 10px -4px rgba(44, 47, 51, 0.30),
+    0 14px 34px rgba(44, 47, 51, 0.26);
   cursor: pointer;
   transition: box-shadow var(--s-slow) cubic-bezier(0.4, 0, 0.2, 1),
               border-color var(--s-slow) var(--s-ease),
@@ -478,9 +488,9 @@ body {
 }
 .s-glass-btn:hover:not(:disabled) {
   box-shadow:
-    inset 0 2px 1px rgba(255, 255, 255, 0.65),
-    inset 0 -6px 10px -4px rgba(44, 47, 51, 0.24),
-    0 18px 42px rgba(44, 47, 51, 0.24);
+    inset 0 2px 1px rgba(255, 255, 255, 0.95),
+    inset 0 -6px 10px -4px rgba(44, 47, 51, 0.36),
+    0 18px 42px rgba(44, 47, 51, 0.32);
 }
 :root[data-tema='scuro'] .s-glass-btn:hover:not(:disabled) {
   box-shadow:
@@ -502,12 +512,55 @@ body {
   content: '';
   position: absolute; top: 10%; left: 16%; width: 26%; height: 34%;
   border-radius: 50%; pointer-events: none; z-index: 0;
-  background: radial-gradient(circle, rgba(255,255,255,0.75), rgba(255,255,255,0) 70%);
+  /* ⚠️ 0,75→0,92 in chiaro — stessa correzione « fai LENTILLE anche in light »: la goccia di
+     luce, sul lucido già rinforzato qui sopra, restava l'ultimo pezzo ancora debole. */
+  background: radial-gradient(circle, rgba(255,255,255,0.92), rgba(255,255,255,0) 70%);
   filter: blur(0.5px);
 }
 :root[data-tema='scuro'] .s-glass-btn::after {
   background: radial-gradient(circle, rgba(255,255,255,0.45), rgba(255,255,255,0) 70%);
 }
+
+/* ── LENTILLE ANCHE IN CRONOLOGIA/PROCESSUS — segnalato: « fai i bottoni LENTILLE anche
+   per CRONOLOGIA, PROCESSUS ». `HistoryModal`/`ProcessusModal` sono componenti CONDIVISI con
+   EQUILIBRIUM (v. la nota su `.ser-history-wrap`/`.ser-processus-wrap` in `Serenity.tsx`) —
+   non si toccano i loro file: cambierebbe anche l'altra applicazione. Gli involucri
+   `.ser-history-wrap`/`.ser-processus-wrap` esistevano già (per la sola taglia dell'overlay);
+   qui si aggiunge SOLO la superficie di vetro ai loro bottoni, per selettore discendente —
+   zero JSX toccato, zero rischio per EQUILIBRIUM (che questi due nomi di classe non li ha
+   mai). I colori dei bottoni (`bg-slate-700`, `bg-cyan-700`, `bg-red-50`…) restano i LORO —
+   dicono "vedi/scarica/elimina", un significato che il vetro non deve cancellare: qui arriva
+   solo il rilievo (lucido decentrato + goccia di luce + le tre ombre), esattamente la STESSA
+   ricetta di `.s-glass-btn` sopra, duplicata per selettore invece che per classe perché la
+   classe non si può scrivere nel file condiviso. */
+/* Le stesse cifre RINFORZATE di `.s-glass-btn` in chiaro qui sopra, non le originali — questi
+   due pannelli (`HistoryModal`/`ProcessusModal`) sono sempre a fondo chiaro/perla, in
+   ENTRAMBI i temi di SERENITY (le loro carte sono `bg-white/60` ecc., v. la nota d'apertura):
+   una sola ricetta, quella tarata per il chiaro, senza bisogno di uno sdoppiamento scuro che
+   qui non avrebbe niente su cui applicarsi. */
+.ser-history-wrap button, .ser-processus-wrap button {
+  position: relative; isolation: isolate;
+  backdrop-filter: var(--s-glass-blur);
+  -webkit-backdrop-filter: var(--s-glass-blur);
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, 0.85),
+    inset 0 -6px 10px -4px rgba(44, 47, 51, 0.30),
+    0 14px 34px rgba(44, 47, 51, 0.26);
+}
+.ser-history-wrap button::before, .ser-processus-wrap button::before {
+  content: '';
+  position: absolute; inset: 0; border-radius: inherit;
+  background: radial-gradient(120% 140% at 24% 8%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.16) 38%, rgba(255,255,255,0) 60%);
+  pointer-events: none; z-index: 0;
+}
+.ser-history-wrap button::after, .ser-processus-wrap button::after {
+  content: '';
+  position: absolute; top: 10%; left: 16%; width: 26%; height: 34%;
+  border-radius: 50%; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle, rgba(255,255,255,0.92), rgba(255,255,255,0) 70%);
+  filter: blur(0.5px);
+}
+.ser-history-wrap button > *, .ser-processus-wrap button > * { position: relative; z-index: 1; }
 
 /* ── IL TOGGLE SCORREVOLE — segnalato con l'immagine di riferimento esatta: traccia+manopola
    di vetro che scorre, non un bottone che si smonta e rimonta. `BottoneCiclico.tsx` lo usa

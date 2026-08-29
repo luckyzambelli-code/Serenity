@@ -6373,3 +6373,69 @@ particolarmente netto in scuro sul bottone grande.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/tokens.css`, `src/serenity/Serenity.tsx`.
+
+---
+
+## Giro (29/08/2026, 14) — MNA allineato al Giornale, LENTILLE in chiaro/CRONOLOGIA/PROCESSUS, bottoni ASSESSMENT più alti
+
+**MNA fuori da `gruppoBasso` — l'arco riprende la sua taglia.** Segnalato: « hai rialzato il
+MNA ma hai ridotto di molto la zona ago, non va bene. Il MNA mettilo in basso allineato con il
+giornale e così aggrandisci l'arco ». Il giro precedente aveva dato a `gruppoBasso` (pista del
+ciclo/scelta metodo) un peso flex fino a 2,4 quando l'MNA era visibile — ma `gruppoBasso`
+contiene anche i cinque cerchi/la pista, quindi ingrandirlo ingrandiva LORO, mentre l'arco
+(`gruppoAlto`) si restringeva davvero per fargli posto: il rimedio sbagliato. Rimedio giusto:
+l'MNA non vive più DENTRO `gruppoBasso` — è ora un TERZO fratello della stessa colonna
+(`flex:'0 0 auto'`, fuori dal conto due-terzi/un-terzo), che essendo l'ULTIMO figlio della
+colonna centrale finisce sullo stesso bordo su cui la colonna del Giornale, a sinistra, finisce
+già (le due colonne condividono la stessa altezza, `alignItems:'stretch'` sulla riga a tre
+colonne). `gruppoAlto`/`gruppoBasso` tornano al loro rapporto di sempre (2:1 a riposo, 3:1 a
+ciclo armato), senza l'MNA a contenderselo.
+
+**LENTILLE, troppo debole in chiaro.** Segnalato: « fai LENTILLE anche in light ». Le cifre del
+giro precedente erano tarate SUL BUIO (dove il bianco del lucido si vede naturalmente bene) e
+si perdevano quasi del tutto sulle superfici già chiare di SERENITY in tema chiaro: bianco al
+55% su un fondo quasi bianco (`--s-disc`) non fa contrasto. Rinforzate SOLO le regole di
+default (il tema chiaro, dato che lo scuro ha il suo `:root[data-tema='scuro']` a parte, mai
+toccato): il lucido 0,55→0,85, la goccia di luce 0,75→0,92, le due ombre scure che incurvano/
+staccano 0,20→0,30 e 0,18→0,26 (in chiaro l'ombra deve fare il lavoro che in scuro faceva già
+il bianco).
+
+**LENTILLE anche in CRONOLOGIA/PROCESSUS.** Segnalato: « fai i bottoni LENTILLE anche per
+CRONOLOGIA, PROCESSUS ». `HistoryModal`/`ProcessusModal` sono componenti CONDIVISI con
+EQUILIBRIUM — non si toccano i loro file (cambierebbe anche l'altra applicazione). Gli
+involucri `.ser-history-wrap`/`.ser-processus-wrap` esistevano già (per la sola taglia
+dell'overlay, un bug di un giro fa): vi si aggiunge ora, per SOLO selettore CSS discendente
+(`.ser-history-wrap button`/`.ser-processus-wrap button`), la stessa ricetta lentille di
+`.s-glass-btn` (lucido decentrato + goccia di luce + tre ombre) — zero JSX condiviso toccato,
+zero rischio per EQUILIBRIUM (che questi due nomi di classe non li ha mai). I colori dei
+bottoni di quei pannelli (view=slate, PDF=cyan, elimina=red) restano i loro: solo il rilievo
+si aggiunge sopra. Una sola ricetta (non scuro/chiaro separati): i due pannelli sono sempre a
+fondo chiaro/perla, in entrambi i temi di SERENITY.
+
+**I bottoni ASSESSMENT/ATTIVA, +1/3 di altezza.** Segnalato: « aumenta di 1/3 l'altezza dei
+bottoni ASSESSMENT e ATTIVA nella zona ASSESSMENT ». Misurati dal vivo (nessuna altezza
+esplicita prima, solo padding+contenuto): 19px e 18px veri. × 4/3 → 25px e 24px, dati come
+`minHeight` (`ZonaAssessment.tsx`).
+
+**Nota aperta, non risolta.** Segnalato anche: « cosa è l'alone bianco dove c'è scritto METER
+TA. TOGLILO ». Cercato a fondo — il bottone PRESS-START (`radial-gradient(circle at 50% 40%...)`,
+104px, ma si smonta quando `aperta`), la scia colorata delle reazioni MUSE/METER
+(`textShadow: 0 0 12px ${alone}`, letteralmente chiamata "alone" ma non bianca per METER e non
+vicino a "METER TA"), lo sfondo dell'arco (tolto, trasparente da un giro precedente),
+`QuantumSphere`/`VistaSenzaAgo` (nessun bagliore bianco fisso) — nessuno corrisponde. Riprodotto
+dal vivo in questo sandbox un alone identico alla descrizione, ma un'analisi DOM/CSS completa
+(elementi reali, pseudo-elementi, SVG, canvas, immagini — tutti interrogati sulla regione esatta
+del bagliore) non ha trovato NESSUN elemento della pagina responsabile: il sospetto forte è che
+sia un artefatto del solo sandbox (la richiesta `getUserMedia` per il microfono, bloccata qui con
+un avviso del browser che il DOM della pagina non vede né controlla) e non un bug reale
+dell'app Electron. Non corretto per non rincorrere un fantasma — serve uno screenshot dall'app
+vera per procedere con sicurezza.
+
+**Verificato in diretto**: tema chiaro, il lucido/la goccia di luce si vedono chiaramente su
+tutti i cerchi/pulsanti (prima quasi invisibili); MNA in fondo, circa allo stesso bordo del
+Giornale; `.ser-history-wrap button::before` conferma via DOM il nuovo gradiente applicato;
+`ASSESSMENT`/`ATTIVA` misurati 25px/24px dopo la modifica (erano 19px/18px).
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx`, `src/serenity/ZonaAssessment.tsx`,
+`src/serenity/tokens.css`.

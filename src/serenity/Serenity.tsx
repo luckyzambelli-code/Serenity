@@ -4645,10 +4645,10 @@ export default function Serenity() {
       <div style={{ display: 'flex', width: '100%', height: '100%', minHeight: 0, alignItems: 'stretch', gap: rightColOpen ? 16 : 0 }}>
         {/* ⚠️ Segnalato: « il MNA portalo sotto la zona ARC, hai spazio ». `flexDirection:'column'`
             qui sotto (era `row`, ininfluente con un solo figlio): l'arco resta centrato come
-            sempre, e MNA — v. più giù, dopo la sua chiusura — diventa un SECONDO figlio impilato
-            sotto di lui invece di un `position:absolute` DENTRO il suo riquadro. Lo spazio c'è
-            perché l'arco (`aspect-ratio`) quasi mai riempie tutta l'altezza di questa colonna:
-            quel che resta sotto, prima vuoto, è dove MNA va ora. */}
+            sempre, e MNA — v. più giù, TERZO figlio di questa colonna dopo `gruppoAlto`/
+            `gruppoBasso` (non più annidato dentro `gruppoBasso`: v. la nota sul suo `flex:'0 0
+            auto'`, più giù, per il perché) — diventa un figlio impilato sotto di loro invece di
+            un `position:absolute` DENTRO il riquadro dell'arco. */}
         <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 16 }}>
         {/* ── L'ULTIMO TERZO IN BASSO, PER I COMANDI — segnalato: « hai ridotto l'ago veramente
             a troppo piccolo. devi utilizzare l'ultimo terzo in basso come altezza per i
@@ -4659,11 +4659,14 @@ export default function Serenity() {
             scalare (uno `flex-shrink` uguale per tutti tolti PIÙ pixel a chi ne aveva di più
             da dare). Due gruppi ora, non più un'unica colonna piatta: `gruppoAlto` (OBIETTIVO
             + striscia reazioni + l'ago, `flex:'2 1 0%'`) e `gruppoBasso` (pista del ciclo/
-            procedimento/scelta metodo + MNA, `flex:'1 1 0%'`) — due terzi/un terzo, DAVVERO,
-            non più una speranza lasciata al flex-shrink. `comandiSottoAgo` decide quanto
-            spazio riservare al gruppo basso: quando non c'è nulla da mostrare lì (seduta
-            chiusa, o `senzaMisura`) il gruppo basso si azzera (`'0 0 0%'`) e l'ago riprende
-            tutto lo spazio — il terzo riservato non è mai vuoto sprecato quando non serve. */}
+            procedimento/scelta metodo, `flex:'1 1 0%'`) — due terzi/un terzo, DAVVERO, non più
+            una speranza lasciata al flex-shrink. MNA (v. più giù) non fa più parte di questo
+            conto — è un terzo fratello a `flex:'0 0 auto'`, fuori dal rapporto due-terzi/un-
+            terzo apposta (segnalato: « hai rialzato il MNA ma hai ridotto di molto la zona
+            ago »). `comandiSottoAgo` decide quanto spazio riservare al gruppo basso: quando non
+            c'è nulla da mostrare lì (seduta chiusa, o `senzaMisura`) il gruppo basso si azzera
+            (`'0 0 0%'`) e l'ago riprende tutto lo spazio — il terzo riservato non è mai vuoto
+            sprecato quando non serve. */}
         {(() => {
           // ⚠️ BUG TROVATO — segnalato: « senza strumenti scrive "scegli un metodo" ma non si
           // vede nulla ». `&& !senzaMisura` qui azzerava lo spazio di `gruppoBasso` (sotto,
@@ -4689,19 +4692,17 @@ export default function Serenity() {
           // di meno, non di più: non era un errore percettivo, il rapporto non teneva conto se
           // sotto ci fosse poco o molto da mostrare.
           const cicloAttivo = cycles.cycleArmed || mirror.mirrorArmed || toneAttivo || procedimentoAttivo;
-          // ⚠️ SEGNALATO: « le MNA se trouve trop en bas et on ne le voit pas entièrement ».
-          // Il rapporto sopra (2:1, o 3:1 a ciclo armato) era tarato SENZA il pannello MNA
-          // dentro `gruppoBasso` — misurato dal vivo: a schermo inattivo `gruppoBasso` riceveva
-          // 181px veri contro 352px di contenuto reale (i cinque cerchi + il pannello MNA), 171px
-          // fuori dalla vista SENZA alcuna barra di scorrimento visibile a dirlo (`overflow:
-          // 'auto'` c'è — v. la nota sotto — ma è una striscia di 6px, invisibile su un fondo
-          // scuro: lo si scopriva solo scorrendo alla cieca, e scorrere nascondeva a sua volta i
-          // cerchi). Quando l'MNA è davvero mostrato, `gruppoBasso` riceve ORA una quota molto
-          // più grande — tolta a `gruppoAlto`, che resta comunque quello con più spazio nei casi
-          // normali (MNA chiuso, la stragrande maggioranza del tempo): l'arco non si riduce mai
-          // per niente, solo quando l'attrezzo che lo giustifica è davvero aperto.
-          const mnaVisibile = aperta && moduleVis.mna;
-          const pesoBasso = mnaVisibile ? 2.4 : 1;
+          // ⚠️ RITIRATO — segnalato: « hai rialzato il MNA ma hai ridotto di molto la zona
+          // ago, non va bene ». Il tentativo precedente (`pesoBasso` fino a 2.4 quando l'MNA
+          // era visibile) rubava spazio a `gruppoAlto` per allargare `gruppoBasso` — ma
+          // `gruppoBasso` porta anche i cinque cerchi/la pista del ciclo, quindi ingrandirlo
+          // ingrandiva loro, non l'MNA, e nel frattempo l'arco (l'unica cosa che l'auditor deve
+          // vedere SEMPRE) si restringeva per davvero. Il rimedio giusto non è una quota più
+          // grande per `gruppoBasso` — è che l'MNA non viva più DENTRO di lui: v. più giù, ora
+          // un terzo fratello di `gruppoAlto`/`gruppoBasso` con la SUA riga (`flex:'0 0 auto'`,
+          // fuori dal conto due-terzi/un-terzo), allineato in basso — lo stesso bordo su cui la
+          // colonna del Giornale, a sinistra, finisce già. `gruppoBasso` torna al suo peso di
+          // sempre.
           return (
         <>
         <div style={{ flex: comandiSottoAgo ? (cicloAttivo ? '3 1 0%' : '2 1 0%') : '1 1 0%', minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
@@ -5525,7 +5526,7 @@ export default function Serenity() {
             il contenuto parte SEMPRE dalla cima del box — la prima riga (l'intestazione, il suo
             bottone di chiusura) è SEMPRE la prima cosa visibile, mai quella scrollata via;
             l'eventuale eccedenza trabocca in basso, dove uno scroll è normale da aspettarsi. */}
-        <div style={{ flex: comandiSottoAgo ? `${pesoBasso} 1 0%` : '0 0 0%', minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 16, overflow: comandiSottoAgo ? 'auto' : 'visible' }}>
+        <div style={{ flex: comandiSottoAgo ? '1 1 0%' : '0 0 0%', minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 16, overflow: comandiSottoAgo ? 'auto' : 'visible' }}>
         {/* ── LA PISTA DEL CICLO, SOTTO IL PUNTO DI ANCORAGGIO DELL'AGO ─────────────────────────
             Segnalato: « i comandi e le indicazioni dei cicli, per più leggibilità, sotto il
             punto di ancoraggio dell'ago, in uno spazio che permetta il più possibile le
@@ -5739,24 +5740,23 @@ export default function Serenity() {
           </div>
           </>
         )}
-        {/* ── MNA — ORA SOTTO L'ARCO, NON PIÙ SOPRA ─────────────────────────────────────────
-            Segnalato: « il MNA portalo sotto la zona ARC, hai spazio ». Stava `position:absolute`
-            DENTRO il riquadro dell'arco (ancorato al SUO fondo, `bottom:16` di `PannelloMna` —
-            v. la nota lì): copriva il quadrante invece di stargli accanto. `PannelloMna` non è
-            toccato (resta lui a posizionarsi `absolute, left/right:16, bottom:16`) — cambia
-            solo DOVE: un involucro `position:relative` qui, fratello dell'arco invece che suo
-            figlio, gli dà un riquadro TUTTO SUO in cui ancorarsi, nello spazio che la colonna
-            (ora `flexDirection:'column'`, sopra) lascia libero sotto l'arco.
-            ⚠️ 180, non più 240 — segnalato: « le MNA se trouve trop en bas et on ne le voit pas
-            entièrement ». `PannelloMna` è `position:absolute, bottom:16` DENTRO questo
-            involucro: misurato dal vivo, il pannello vero (intestazione + campi + bottone) è
-            alto 141px anche nella fase più fitta con la barra di avanzamento; 240 di `minHeight`
-            ne lasciava 80+ vuoti IN CIMA (l'involucro non si restringe mai sotto `minHeight`,
-            e un figlio `absolute` non lo fa crescere) — spazio sprecato che spingeva tutto,
-            pannello compreso, più in basso di quanto servisse. 180 lascia un margine reale
-            (~25px) sopra il pannello più alto misurato, senza sprecare il resto. */}
+        {/* chiude qui `gruppoBasso`. */}
+        </div>
+        {/* ── MNA — TERZO FRATELLO, NON PIÙ FIGLIO DI `gruppoBasso` ──────────────────────────
+            Segnalato: « hai rialzato il MNA ma hai ridotto di molto la zona ago, non va bene.
+            Il MNA mettilo in basso allineato con il giornale e così aggrandisci l'arco ».
+            Viveva DENTRO `gruppoBasso` (v. la nota lì, sopra), che per fargli posto cresceva a
+            spese di `gruppoAlto` — l'arco. Ora un terzo figlio di questa stessa colonna
+            (`flex:'0 0 auto'`: prende solo l'altezza che gli serve DAVVERO, mai una quota
+            pesata) — `gruppoAlto`/`gruppoBasso` tornano al loro rapporto di sempre, senza
+            l'MNA a contenderselo, e l'arco riprende la sua taglia intera. Essendo l'ULTIMO
+            figlio della colonna (`alignItems:'stretch'` sulla riga a tre colonne, più sopra),
+            il suo bordo inferiore cade allo stesso bordo su cui finisce la colonna del
+            Giornale, a sinistra — le due colonne condividono la stessa altezza vera.
+            `PannelloMna` non è toccato (resta lui a posizionarsi `absolute, left/right:16,
+            bottom:16` dentro questo involucro `position:relative`). */}
         {aperta && moduleVis.mna && (
-          <div style={{ position: 'relative', width: '100%', maxWidth: 1400, minHeight: 180, flexShrink: 0 }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: 1400, minHeight: 180, flex: '0 0 auto' }}>
             <PannelloMna
               primePhase={primePhase}
               setPrimePhase={setPrimePhase}
@@ -5789,8 +5789,7 @@ export default function Serenity() {
             />
           </div>
         )}
-        {/* chiude qui `gruppoBasso`, il `<>` e la IIFE che li produce entrambi. */}
-        </div>
+        {/* chiude qui il `<>` e la IIFE che producono `gruppoAlto`/`gruppoBasso`/MNA insieme. */}
         </>
           );
         })()}

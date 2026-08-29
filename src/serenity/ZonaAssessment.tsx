@@ -153,7 +153,9 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
           style={{
             display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1,
             border: 'none', borderRadius: 10, background: 'transparent', cursor: 'pointer',
-            padding: '2px 2px', fontFamily: 'var(--s-sans)', textAlign: 'left',
+            /* ⚠️ +1/3 — segnalato: « aumenta di 1/3 l'altezza dei bottoni ASSESSMENT e ATTIVA ».
+               Misurato dal vivo: 19px veri. 19 × 4/3 ≈ 25. */
+            padding: '2px 2px', minHeight: 25, fontFamily: 'var(--s-sans)', textAlign: 'left',
           }}>
           <span style={{ fontSize: 'var(--s-fs-micro)', color: 'var(--s-ink-ghost)', flexShrink: 0 }}>
             {espansa ? '▾' : '▸'}
@@ -178,7 +180,9 @@ export function ZonaAssessment({ attivo, onToggle, items, LC, dueAghi = false,
           style={{
             display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,
             border: 'none', borderRadius: 10, background: 'transparent', cursor: 'pointer',
-            padding: '2px 2px', fontFamily: 'var(--s-sans)',
+            /* ⚠️ +1/3 — segnalato: « aumenta di 1/3 l'altezza dei bottoni ASSESSMENT e ATTIVA ».
+               Misurato dal vivo: 18px veri. 18 × 4/3 = 24. */
+            padding: '2px 2px', minHeight: 24, fontFamily: 'var(--s-sans)',
           }}>
           {/* ⚠️ LA SCRITTA C'ERA SOLO SPENTA — segnalato: « quando schiacci ACTIVER, si deve
               vedere DESACTIVER ». Prima, da accesa, non restava NESSUNA parola (solo
