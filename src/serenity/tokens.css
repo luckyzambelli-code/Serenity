@@ -574,14 +574,19 @@ body {
 }
 .ser-history-wrap button > *, .ser-processus-wrap button > * { position: relative; z-index: 1; }
 
-/* ── TESTO NERO NEI BOTTONI DI PROCESSUS — segnalato: « scrivi all'interno dei bottoni in
-   nero perché in bianco non si vede bene ». Alcuni bottoni di `ProcessusModal` (i chip di
-   tag in sospeso, "ADD ↵", "✕") scrivono `color: rgba(255,255,255,...)` FISSO, in linea —
-   non seguono `th.text`/`lt` (la preferenza di tema) come il resto del file, quindi non si
-   scuriscono mai. Andava bene sul fondo scuro per cui erano stati scritti; sul vetro chiaro
-   di SERENITY (rinforzato ora dal lucido LENTILLE) diventa bianco su quasi-bianco. Non si
-   tocca `ProcessusModal.tsx` (condiviso con EQUILIBRIUM, dove il fondo scuro resta reale) —
-   `!important` batte il `color` in linea, lo stesso escamotage di `modalCloseButtons.css`. */
+/* ── TESTO NERO NEI BOTTONI DI PROCESSUS ET HISTORY — segnalato: « scrivi all'interno dei
+   bottoni in nero perché in bianco non si vede bene », poi di nuovo per ENTRAMBI i pannelli
+   (« devi anche cambiare il bianco in nero nei bottoni dei PROCESSUS et HISTORY »). Molti
+   bottoni di `ProcessusModal`/`HistoryModal` scrivono un testo chiaro fisso, in linea
+   (`color: rgba(255,255,255,...)`, `text-slate-100`, `text-white`…) — pensato per le LORO
+   coppie fondo/testo originali (fondo scuro pieno, es. `bg-slate-700`), che il lucido
+   LENTILLE aggiunto sopra schiarisce ulteriormente: il testo chiaro sparisce. Non si tocca
+   nessuno dei due file (condivisi con EQUILIBRIUM, dove il fondo scuro resta reale) —
+   `!important` batte il `color` in linea, lo stesso escamotage di `modalCloseButtons.css`.
+   Il bottone di chiusura non è toccato: il suo `::after` (la ×) dichiara il proprio `color`
+   per conto suo, e un valore dichiarato SUL pseudo-elemento vince sempre sull'eredità del
+   genitore, `!important` o no. */
+.ser-history-wrap button, .ser-history-wrap button *,
 .ser-processus-wrap button, .ser-processus-wrap button * {
   color: var(--s-ink) !important;
 }

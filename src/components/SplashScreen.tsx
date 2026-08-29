@@ -417,7 +417,21 @@ export function SplashScreen({ onDismiss, appName = 'EQUILIBRIUM' }: SplashScree
     };
 
     animRef.current = requestAnimationFrame(draw);
-    return () => { cancelAnimationFrame(animRef.current); window.removeEventListener('resize', resize); };
+    // ⚠️ SEGNALATO (SERENITY): « un alone bianco » — comparso in un pannello di App.tsx/
+    // Serenity.tsx del tutto pulito (verificato riga per riga con l'utente, via DevTools, più
+    // volte), presente anche in incognito e nell'app impacchettata: mai nessun elemento DOM/CSS
+    // a spiegarlo. Un `<canvas>` non lascia traccia in nessuna delle due ispezioni — è disegnato
+    // a pixel, non con stili — ed è esattamente quel che questo componente disegna (la sfera
+    // cerebrale luminosa). Sospetto: un fantasma dell'ultimo fotogramma, lasciato da Chromium
+    // sul livello di composizione GPU dopo la rimozione del canvas dal DOM (un bug di
+    // compositing noto per questa classe di elementi). Qui si pulisce il canvas per DAVVERO
+    // (l'ultimo fotogramma catturato diventa trasparente, non la sfera) prima che lo smontaggio
+    // lo porti via — innocuo se la causa fosse un'altra, il rimedio giusto se è questa.
+    return () => {
+      cancelAnimationFrame(animRef.current);
+      window.removeEventListener('resize', resize);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
   }, []);
 
   return (

@@ -6514,3 +6514,42 @@ davvero.
 
 `tsc --noEmit` pulito, `vitest run` 652/652.
 `git status`: `src/serenity/Serenity.tsx`.
+
+---
+
+## Giro (29/08/2026, 17) — l'alone bianco: trovato (probabilmente) — il canvas della SplashScreen
+
+**La caccia, in breve.** Sette test dal vivo con l'utente, ciascuno escludendo una pista: il
+markup della `<section>` (due volte, riga per riga, con l'utente su DevTools — pulito), il
+wallpaper personalizzato (CONFIG su DEFAULT), le estensioni Chrome (identico in incognito),
+l'app impacchettata vera (stesso alone, non solo nel dev-server), gli effetti video di macOS
+(Ritratto/Center Stage, già spenti), la fotocamera stessa (alone presente anche spenta),
+l'isolamento del livello GPU (`transform:translateZ(0)`, tentato sul pannello dell'arco — non
+bastava).
+
+**Il sospetto che spiega TUTTI i "no".** Un `<canvas>` non lascia MAI traccia in un'ispezione
+DOM/CSS — è disegnato a pixel, non con stili — e sopravvive a qualunque test che agisca SOLO
+sulla pagina web (estensioni, wallpaper, istanza browser). `SplashScreen.tsx` (condiviso con
+EQUILIBRIUM, l'animazione dei primi secondi con SERENITY/EQUILIBRIUM scritto) disegna proprio
+questo — una « sfera cerebrale luminosa » su canvas — la stessa forma dell'alone. Sospetto:
+un fantasma dell'ultimo fotogramma, lasciato sul livello di composizione GPU di Chromium dopo
+che il canvas viene rimosso dal DOM allo smontaggio del componente (un bug di compositing non
+raro per questa classe di elementi, e coerente con "presente ovunque, mai nel DOM").
+
+**Il correttivo.** Nella funzione di pulizia del suo `useEffect` (già cancella
+`requestAnimationFrame` e il listener di resize), aggiunto `ctx.clearRect(0,0,canvas.width,
+canvas.height)` — il canvas si svuota per davvero un istante prima di essere portato via: se il
+fantasma di un fotogramma dovesse restare, sarebbe quello di un canvas VUOTO, non della sfera.
+Innocuo se la causa fosse un'altra (non tocca il disegno mentre l'animazione è visibile, in
+NESSUNA delle due app). **In attesa di conferma dal vivo** — a differenza dei tentativi
+precedenti, per vedere l'effetto serve una seduta APERTA DOPO che la SplashScreen si è chiusa
+da sola (i primi ~4 secondi dell'app), non un test in una seduta già aperta.
+
+**Testo nero, anche in HISTORY.** Segnalato di nuovo: « devi anche cambiare il bianco in nero
+nei bottoni dei PROCESSUS et HISTORY, non si vede la scritta ». La regola del giro scorso
+copriva solo `.ser-processus-wrap` — estesa a `.ser-history-wrap` con lo stesso `!important`,
+la stessa esclusione per il bottone di chiusura (il suo `::after` dichiara il proprio `color`,
+mai sovrascritto).
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/components/SplashScreen.tsx` (condiviso), `src/serenity/tokens.css`.
