@@ -64,6 +64,13 @@
   élargi en même temps à l'échelle entière (`TONE_LEVELS`, soixante-deux niveaux) — un menu
   déroulant n'a pas le problème de chevauchement qui limitait la colonne dessinée à treize.
   Note ajoutée en §4.
+
+  ── MIS À JOUR ENCORE (28/08/2026, audit sans cycle) ─────────────────────────────────────────
+  Segnalato : « devi mettere che senza cicli puoi audire normalmente ». Le guide ne disait nulle
+  part qu'armer un cercle n'est PAS obligatoire — `mode === 'free'` (aucun cercle armé) ouvre
+  déjà le panneau Assessment/R&I·Manuel tout seul (`Serenity.tsx`, `setAssessAttivo(mode !==
+  'free')`), et tout ce qui est tapé ou dit s'ajoute au Journal comme toujours. Note ajoutée en
+  §3, juste après « Ouvrir une séance ».
 -->
 <style>
   :root{
@@ -270,6 +277,11 @@
     <span data-l="it">In basso a sinistra: <b>Apri una seduta</b>. Un clic, e il quadrante appare al centro — cinque cerchi, uno per metodo.</span>
     <span data-l="en">Bottom left: <b>Open a session</b>. One click, and the dial appears in the centre — five circles, one per method.</span>
   </p>
+  <div class="note info">
+    <span data-l="fr">Armer un cercle n'est pas obligatoire. Sans aucun cercle armé, tu audites normalement : le panneau <b>Assessment / R&amp;I · Manuel</b> reste disponible pour poser des questions et noter des items, et tout ce qui est écrit ou dit s'ajoute au Journal — les cinq méthodes ne servent qu'aux techniques qui ont besoin de leur propre cadran (lecture en direct, remontée de ton, etc.).</span>
+    <span data-l="it">Armare un cerchio non è obbligatorio. Senza nessun cerchio armato, audisci normalmente: il pannello <b>Assessment / R&amp;I · Manuel</b> resta disponibile per fare domande e annotare item, e tutto quello che viene scritto o detto si aggiunge al Diario — i cinque metodi servono solo alle tecniche che hanno bisogno del proprio quadrante (lettura in diretta, risalita di tono, ecc.).</span>
+    <span data-l="en">Arming a circle isn't mandatory. With no circle armed, you audit normally: the <b>Assessment / R&amp;I · Manuel</b> panel stays available to ask questions and note items, and everything typed or said still adds to the Journal — the five methods are only for techniques that need their own dial (live reading, tone raise, etc.).</span>
+  </div>
   <div class="shot">
     <img src="docs/guide-screenshots-serenity/ecran-principal.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" onload="this.nextElementSibling.style.display='none'">
     <div class="cap" style="display:block">
@@ -488,7 +500,7 @@
 </div>
 <span class="ver">SERENITY <span id="v"></span></span>
 <script>
-const VERSIONE = "3.0.141";
+const VERSIONE = "3.0.142";
 document.getElementById('v').textContent = VERSIONE;
 function setLang(l){
   document.body.setAttribute('data-lang', l);

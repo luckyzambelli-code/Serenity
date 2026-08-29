@@ -6263,3 +6263,29 @@ de l'être" a "-40 · Échec total", ciascuna col nome tradotto accanto al numer
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/App.tsx`, `src/serenity/Serenity.tsx`, `public/guide/SERENITY-manuale.html`
 (rigenerato).
+
+---
+
+## Giro (28/08/2026, 11) — guida: audire senza cicli è normale, non un'eccezione
+
+**Il guide non lo diceva mai.** Segnalato: « devi mettere che senza cicli puoi audire
+normalmente ». Il testo esistente (§3, "Démarrer une séance") passava direttamente da "clic su
+Ouvrir une séance" alla tabella dei 5 metodi, senza mai dire che armare un cerchio NON è un
+passo obbligatorio: `mode === 'free'` (nessun ciclo armato) attiva già da sé il pannello
+Assessment/R&I·Manuel (`Serenity.tsx`, `setAssessAttivo(mode !== 'free')`), e tutto quel che si
+scrive o si dice finisce comunque nel Diario — i 5 metodi servono solo alle tecniche che hanno
+bisogno del proprio quadrante. Aggiunta una nota `.note.info` in §3, subito dopo "Ouvrir une
+séance", prima della schermata del quadrante.
+
+**Cartella screenshot creata.** `~/Downloads/Guide Static Meter/docs/guide-screenshots-serenity/`
+non esisteva ancora — creata, in attesa dei 10 file che l'utente sta preparando (nomi già
+elencati in conversazione, uno per ciascuno dei 10 blocchi `.shot` già cablati nel guide).
+
+**Verificato in diretto**: `public/guide/SERENITY-manuale.html` ricaricato nel browser, la nota
+appare in §3 nel testo esatto atteso.
+
+Versione guide: 3.0.141 → 3.0.142.
+
+`git status`: `src/App.tsx`, `src/serenity/Serenity.tsx`, `public/guide/SERENITY-manuale.html`
+(rigenerato) — nessun file `.ts`/`.tsx` toccato in questo giro oltre alla rigenerazione della
+guida, quindi nessun nuovo `tsc`/`vitest`/`lint` da rilanciare.
