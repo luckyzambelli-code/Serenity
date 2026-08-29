@@ -468,12 +468,12 @@ export const QuantumSphere = React.memo(function QuantumSphere({
           <>
             {/* leggero ALONE rétroéclairé (couleur de charge, diffus) */}
             <path d={arcPath(R_OUT, -1, 1)} fill="none" stroke={stateColor} strokeWidth="12"
-              strokeLinecap="round" opacity={0.32} filter={!isLightTheme ? 'url(#gs)' : undefined}/>
+              strokeLinecap="round" opacity={0.32} filter={undefined /* DIAGNOSTICA ALONE: disattivato temporaneamente */}/>
             {/* RAINURE sombre (solco / incavo) */}
             <path d={arcPath(R_OUT, -1, 1)} fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth="7.5" strokeLinecap="round"/>
             {/* LIGNE LUMINEUSE de la COULEUR DE CHARGE, posée dans le solco */}
             <path d={arcPath(R_OUT, -1, 1)} fill="none" stroke={stateColor} strokeWidth="3.2" strokeLinecap="round"
-              filter={!isLightTheme ? 'url(#gst)' : undefined}/>
+              filter={undefined /* DIAGNOSTICA ALONE: disattivato temporaneamente */}/>
           </>
         ) : (
           <path d={arcPath(R_OUT, -1, 1)} fill="none" stroke={arcStroke} strokeWidth="2"/>
@@ -502,7 +502,7 @@ export const QuantumSphere = React.memo(function QuantumSphere({
           return (
             <line key={side} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
               stroke={limitColor} strokeWidth="3.5" strokeLinecap="round"
-              opacity={0.9} filter={!isLightTheme ? 'url(#gs)' : undefined}/>
+              opacity={0.9} filter={undefined /* DIAGNOSTICA ALONE: disattivato temporaneamente */}/>
           );
         })}
 
@@ -584,7 +584,7 @@ export const QuantumSphere = React.memo(function QuantumSphere({
               strokeWidth={trailWidth * 1.8}
               strokeLinecap="round"
               opacity={trailOpacity * 0.35}
-              filter="url(#trail_glow)"
+              filter={undefined} /* DIAGNOSTICA ALONE: disattivato temporaneamente */
               style={{ transition: 'opacity 1.4s ease-out', pointerEvents: 'none' }}
             />
             {/* Inner sharp bright core */}
@@ -594,7 +594,7 @@ export const QuantumSphere = React.memo(function QuantumSphere({
               strokeWidth={trailWidth * 0.45}
               strokeLinecap="round"
               opacity={trailOpacity * 0.95}
-              filter="url(#trail_glow)"
+              filter={undefined} /* DIAGNOSTICA ALONE: disattivato temporaneamente */
               style={{ transition: 'opacity 1.4s ease-out', pointerEvents: 'none' }}
             />
           </>
@@ -632,11 +632,11 @@ export const QuantumSphere = React.memo(function QuantumSphere({
           <>
             <path d={arcPath(R_MID + 2, Math.min(SET_OFFSET, thetaTrailTo), Math.max(SET_OFFSET, thetaTrailTo))}
               fill="none" stroke={thetaTrailColor} strokeWidth={trailWidth * 1.8} strokeLinecap="round"
-              opacity={thetaTrailOp * 0.30} filter="url(#trail_glow)"
+              opacity={thetaTrailOp * 0.30} filter={undefined} /* DIAGNOSTICA ALONE: disattivato temporaneamente */
               style={{ transition: 'opacity 1.4s ease-out', pointerEvents: 'none' }}/>
             <path d={arcPath(R_MID + 2, Math.min(SET_OFFSET, thetaTrailTo), Math.max(SET_OFFSET, thetaTrailTo))}
               fill="none" stroke={thetaTrailColor} strokeWidth={trailWidth * 0.45} strokeLinecap="round"
-              opacity={thetaTrailOp * 0.9} filter="url(#trail_glow)"
+              opacity={thetaTrailOp * 0.9} filter={undefined} /* DIAGNOSTICA ALONE: disattivato temporaneamente */
               style={{ transition: 'opacity 1.4s ease-out', pointerEvents: 'none' }}/>
           </>
         )}
@@ -667,12 +667,12 @@ export const QuantumSphere = React.memo(function QuantumSphere({
         {showEegNeedle && (<>
         <line x1={PX} y1={PY} x2={tip.x} y2={tip.y}
           stroke={needleColor} strokeWidth={isFN ? 2.5 : 2} strokeLinecap="round"
-          filter={!isLightTheme ? 'url(#needle_glow)' : isFN ? 'url(#gst)' : 'url(#gs)'}
+          filter={undefined /* DIAGNOSTICA ALONE: disattivato temporaneamente */}
           style={{ transition: 'none' }}/>
         <polygon
           points={`${arrowTip.x},${arrowTip.y} ${arrowL.x},${arrowL.y} ${arrowR.x},${arrowR.y}`}
           fill={needleColor}
-          filter={!isLightTheme ? 'url(#needle_glow)' : isFN ? 'url(#gst)' : 'url(#gs)'}/>
+          filter={undefined /* DIAGNOSTICA ALONE: disattivato temporaneamente */}/>
         </>)}
 
         {/* ── Pivot hub ── */}
@@ -684,7 +684,7 @@ export const QuantumSphere = React.memo(function QuantumSphere({
         {/* ── EP Validated ── */}
         {epValidated && (
           <text x={PX} y={460} textAnchor="middle"
-            fill="#4ade80" fontSize="13" fontFamily="monospace" fontWeight="bold" filter="url(#gs)">
+            fill="#4ade80" fontSize="13" fontFamily="monospace" fontWeight="bold" filter={undefined} /* DIAGNOSTICA ALONE */>
             EP VALIDATED
           </text>
         )}

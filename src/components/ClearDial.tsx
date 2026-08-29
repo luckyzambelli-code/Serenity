@@ -204,12 +204,12 @@ export const ClearDial = React.memo(function ClearDial({ armed = true, asIsPendi
             // CONFIRMÉ (choix utilisateur). Le ramo générique ci-dessous s'en charge.
             return <path key={id} d={aseg(do0, do1, CYCLE_R)} stroke={colorOf(id)} strokeWidth={CYCLE_CORE}
               fill="none" strokeLinecap="round" opacity={active ? 0.95 : done ? 0.5 : 0.2}
-              filter={active || done ? 'url(#cd-seg-glow)' : undefined} />;
+              filter={undefined /* DIAGNOSTICA ALONE: disattivato temporaneamente */} />;
           })}
           {/* arc labels — SUIVENT LA COURBE de leur segment (textPath). */}
           {IDS.map((id) => {
             const reHit = !isNullCycle && id === 'contact' && reContact && armed;
-            return <text key={id} fill="rgba(255,255,255,0.9)" filter="url(#cd-glow)"
+            return <text key={id} fill="rgba(255,255,255,0.9)" filter={undefined} /* DIAGNOSTICA ALONE: disattivato temporaneamente */
               fontSize="26" fontWeight="normal" className={reHit ? 'animate-pulse' : undefined}
               opacity={reHit ? 1 : cur === ORDER_OF[id] ? 0.95 : 0.5}>
               <textPath href={`#cd-lbl-${id}`} startOffset="50%" textAnchor="middle" style={{ letterSpacing: '0.12em' }}>
