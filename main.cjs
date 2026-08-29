@@ -258,6 +258,26 @@ function startLocalServer() {
 
 app.commandLine.appendSwitch('enable-features', 'WebBluetooth');
 
+// ── TEST DIAGNOSTICO — « alone bianco » ──────────────────────────────────────────────────────
+// Segnalato di nuovo, dopo quattro tentativi mirati che non l'hanno tolto (bottone PRESS-START,
+// bagliori SVG di QuantumSphere/ClearDial, isolamento del livello GPU sul pannello dell'arco,
+// pulizia del canvas della SplashScreen — tutti verificati e scartati). Indagine RIFATTA da
+// zero in sandbox, dal vivo, riprodotta in una seduta senza strumenti: `document.
+// elementsFromPoint()` in più punti dentro l'alone non trova NULLA (solo `<section>`/`<main>`/
+// `<body>`, vuoti); scansionati tutti gli elementi dentro `<section>` per sfondo/gradiente/
+// ombra/filtro — nessuna corrispondenza; zero `<canvas>`, zero `<svg>` con filtri vicino, zero
+// `<video>`/`<iframe>`/Shadow DOM in tutta la pagina; le due fotocamere disattivate da CONFIG
+// non lo tolgono. MA nascondere `document.body` per intero (`visibility:hidden`) lo fa
+// sparire — dipende dal contenuto della pagina, ma NESSUN elemento della pagina lo disegna:
+// la combinazione che ci si aspetterebbe da un bug di COMPOSITING GPU di Chromium/Electron
+// (un livello "fantasma" che il motore di rendering non riesce a invalidare per bene), non da
+// un errore nel nostro markup/CSS. Spegnere l'accelerazione hardware è il test diagnostico
+// standard per isolare questa classe di bug: se l'alone sparisce, la causa è confermata (e si
+// sceglierà un rimedio mirato, non tenere la GPU spenta per sempre — più lento); se resta
+// identico anche così, la pista GPU è esclusa e si cerca altrove. TOGLIERE questa riga quando
+// il test ha dato una risposta, in un giro dopo.
+app.disableHardwareAcceleration();
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1200,

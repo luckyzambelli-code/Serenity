@@ -6553,3 +6553,43 @@ mai sovrascritto).
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/components/SplashScreen.tsx` (condiviso), `src/serenity/tokens.css`.
+
+---
+
+## Giro (successivo) — l'alone bianco: indagine rifatta da zero, riprodotta dal vivo, DOM escluso con certezza
+
+**Segnalato di nuovo**, dopo il fix del canvas della SplashScreen (non bastava) e un riavvio
+completo del Mac (esclude un fantasma di GPU lasciato da una sessione precedente — un riavvio
+pulito non porta con sé nessuna texture residua). Rifatta l'indagine da zero, in sandbox, MA
+riproducendo l'alone DAL VIVO (profilo TEST, seduta senza strumenti aperta — "solo a seduta
+aperta", confermato dall'utente) prima di cercare, non sulla carta.
+
+**Escluso con certezza, non per sospetto.** Con `document.elementsFromPoint()` in più punti
+dentro l'alone: lo stack è sempre `[SECTION, MAIN, DIV, BODY, HTML]`, niente in mezzo.
+Scansionati TUTTI gli elementi dentro `<section>` (140, uno per uno) per sfondo/gradiente/
+ombra/filtro/outline: nessuna corrispondenza vicino all'alone. Zero `<canvas>` nell'intera
+pagina (la teoria del "fantasma del canvas della SplashScreen" è ora esclusa per davvero: il
+canvas non c'è proprio, la SplashScreen lo rimuove correttamente dal DOM). Zero `<svg>` con
+filtri vicino, zero `<video>`, zero `<iframe>`, zero Shadow DOM in tutto il documento. Zero
+`animation-name` attivo vicino. `::before`/`::after` di `html`/`body`/`#serenity`/`main`/
+`section` tutti vuoti. **Disattivate le due fotocamere da CONFIG (CAM 1 e CAM 2): l'alone
+resta identico** — esclude anche la fotocamera/microfono per davvero, non solo per sospetto
+come nei giri precedenti.
+
+**Il dato che sposta l'indagine.** `document.body.style.visibility = 'hidden'` fa sparire
+l'alone; ripristinare lo fa ricomparire. Dipende quindi dal contenuto della pagina — ma NESSUN
+elemento della pagina, cercato in ogni modo interrogabile da JS, ne è responsabile. Questa
+combinazione (dipende dalla pagina, nessun elemento la disegna) è la firma tipica di un bug di
+COMPOSITING GPU di Chromium/Electron — un livello "fantasma" che il motore non invalida per
+bene quando ridisegna quella regione — non di un errore nel nostro markup/CSS: non c'è più
+niente da cercare lì con lo stesso metodo, i quattro tentativi precedenti (mirati a elementi
+specifici) non potevano funzionare se la causa è a un livello sotto il DOM.
+
+**Test diagnostico: GPU spenta.** `app.disableHardwareAcceleration()` in `main.cjs` (condiviso
+— entrambi i DMG spediti), prima di `app.whenReady()`. Se l'alone sparisce con la GPU spenta,
+la causa è confermata e si sceglie un rimedio mirato (non tenere la GPU spenta per sempre — il
+resto dell'interfaccia diventa più lento); se resta identico, la pista GPU è esclusa anche lei
+e si cerca oltre. **In attesa di conferma dal vivo.**
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `main.cjs` (condiviso).
