@@ -6866,3 +6866,44 @@ schermo (sarebbe esterno a qualunque browser/app)?** In attesa di risposta.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/components/SplashScreen.tsx` (condiviso — entrambi i DMG ricostruiti).
+
+## Giro (successivo) — l'alone bianco: tolto `transform:translateZ(0)` — la teoria del compositor di macOS
+
+**Confermato dall'utente**: la finestra spostata sullo schermo — « si sposta con la finestra ».
+Prova diretta che NON è esterno al browser: è contenuto vero, legato a QUELLA finestra.
+
+**Poi, il test decisivo**: chiesto di aprire l'ispettore e cliccare destro esattamente sull'alone.
+Risposta dell'utente: « Non prende, non si posiziona su nulla nella console, è in arrière plan »
+— e ha incollato l'HTML completo del `<section>` renderizzato dal vivo, sul suo Mac. Confrontato
+riga per riga con quello di questa repo: IDENTICO, nessuna sorpresa — nessun elemento in più,
+nessuno stile diverso. Il click non seleziona nulla perché quel che disegna l'alone sta SOTTO
+tutto il contenuto vero della pagina, in un livello che l'ispettore del browser (che vede solo
+l'albero DOM del SUO motore di rendering) non raggiunge affatto.
+
+**La teoria che tiene insieme OGNI prova raccolta finora**: non un bug di Chromium, non un bug di
+WebKit — il compositing di **macOS stesso** (Core Animation / Window Server), lo strato SOTTO
+entrambi i motori che disegna la finestra vera sullo schermo. Spiega:
+- stesso identico artefatto in Chrome E Safari (condividono lo stesso compositor di sistema);
+- invisibile a QUALUNQUE ispezione DOM/CSS di un motore di rendering (non è lui a disegnarlo);
+- si sposta con la finestra (è il compositor DI QUELLA finestra, non dello schermo);
+- non cambia disattivando l'accelerazione hardware DI CHROMIUM (`app.disableHardwareAcceleration()`,
+  giro precedente) — quel flag spegne la GPU del PROCESSO di rendering di Chromium, non il
+  compositing della finestra che macOS fa comunque, a valle, per disegnarla sullo schermo.
+
+Un solo elemento in tutta l'app chiede esplicitamente il SUO livello di composizione GPU separato
+(`transform:'translateZ(0)'`) — proprio il pannello dell'arco, l'UNICO con
+`background:transparent` + `overflow:hidden` + `borderRadius` insieme. Un livello GPU promosso,
+con angoli arrotondati da ritagliare e nessun colore proprio a riempirlo, è la combinazione da
+manuale per questa classe di artefatto di Core Animation. Aggiunta un giro fa come "rimedio
+standard" mai dimostrato (anzi: il sospetto ora è che sia proprio la CAUSA, non il rimedio) —
+tolta.
+
+⚠️ Nota onesta: le mie prove precedenti ("rimosso live `transform:translateZ(0)`, l'alone non
+cambia") giravano nel sandbox di test di Claude, quasi certamente non macOS — non potevano
+intercettare un bug del compositor DI macOS. Non erano sbagliate, erano cieche a questa pista.
+
+Verifica dal vivo (sandbox, non macOS): nessuna regressione visiva, l'arco è identico. La verifica
+VERA di questo fix può avvenire solo sul Mac dell'utente, dove il difetto esiste per davvero.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx` (solo SERENITY).

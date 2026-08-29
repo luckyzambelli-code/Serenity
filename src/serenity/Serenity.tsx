@@ -4925,12 +4925,24 @@ export default function Serenity() {
              dal vivo (screenshot reale): l'alone resta IDENTICO — anche con un vero sfondo
              pieno sotto. Pista esclusa con certezza; tornato a `transparent` com'era, nessuna
              ragione di tenere la regressione (niente più wallpaper personalizzato) per un test
-             che non ha funzionato. V. `docs/serenity-refonte.md` per l'indagine dal vivo che
-             segue — ha escluso ANCHE ogni elemento DOM/CSS/SVG/canvas della pagina, con
-             certezza diretta (non per sospetto): rimosso live `transform:translateZ(0)`,
-             `overflow:hidden`, `borderRadius`, il colore di fondo — l'alone non cambia MAI. */
+             che non ha funzionato.
+             ⚠️ `transform:'translateZ(0)'` TOLTO — QUESTA riga era il sospetto rimasto. Aggiunta
+             un giro fa come "rimedio standard" mai dimostrato, forzava QUESTO pannello (l'unico
+             di tutta l'app con `background:transparent` + `overflow:hidden` + `borderRadius`)
+             sul SUO livello di composizione GPU separato. L'utente conferma con l'ispettore del
+             browser aperto sul PUNTO ESATTO dell'alone: il click non seleziona NESSUN elemento
+             (« è in arrière plan », sotto tutto il contenuto vero) — e l'alone SI SPOSTA con la
+             finestra, e compare IDENTICO sia in Chrome che in Safari. Le mie prove precedenti
+             ("rimosso live transform:translateZ(0), l'alone non cambia") giravano nel MIO
+             sandbox di test, quasi certamente non macOS — non potevano intercettare un bug del
+             compositor di macOS (Core Animation/Window Server), che è sotto ENTRAMBI Chromium e
+             WebKit e quindi l'unica spiegazione che regge davvero tutte le prove insieme: stesso
+             identico artefatto in due motori di rendering diversi, invisibile a QUALUNQUE
+             ispezione DOM/CSS di quel motore (perché non è il motore a disegnarlo), e legato
+             alla finestra (perché è il compositor DI QUELLA finestra). Un livello GPU separato
+             con angoli arrotondati (`overflow:hidden`+`borderRadius`) e nessun colore proprio a
+             riempirlo è la combinazione da manuale per questa classe di bug. Tolto. */
           background: 'transparent',
-          transform: 'translateZ(0)',
           /* ⚠️ Segnalato: « togli l'ombra alla zona ARC AGO ». Restava un'ombra di rilievo
              (`--s-shadow`/`--s-shadow-lift`) ereditata da quando il fondo era pieno — con lo
              sfondo ormai trasparente (v. sopra) un'ombra sotto un riquadro senza fondo si legge
