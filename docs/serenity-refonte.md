@@ -6699,3 +6699,48 @@ async/memoria/sicurezza), poi verifica diretta riga per riga dei 10 candidati pi
 `{ unsubscribe: () => void } | null` apposta per non alzare il conteggio). Verifica dal vivo
 (profilo TEST, Expert, seduta senza strumenti): nessun errore console, seduta aperta e
 funzionante regolarmente.
+
+## Giro (successivo) — l'alone bianco: causa trovata (con ragionevole certezza) — `backgroundColor` mai impostato
+
+**Segnalato**: « Verifica il codice come se non l'avessi mai analizzato prima. Individua perché
+compare un alone bianco nell'angolo superiore sinistro della zona ARCO. » — indagine rifatta
+completamente da zero, senza dare per scontate le esclusioni precedenti (DOM, GPU, bagliori SVG,
+fotocamere — tutte confermate valide alla rilettura, v. i giri precedenti).
+
+**Il confronto che ha aperto la pista.** Rileggendo `Serenity.tsx` da capo: il pannello
+dell'arco (`borderRadius:18`, `overflow:'hidden'`, `transform:'translateZ(0)'`) è l'UNICO
+riquadro arrotondato di tutta l'applicazione con `background:'transparent'` — Giornale,
+Assessment e Santé Système usano tutti un vero colore (`--s-zone-bg`) che copre qualunque cosa
+gli stia dietro. Solo questo pannello, per una richiesta esplicita dell'utente due giri fa
+(« la zona arc deve essere trasparente », per lasciar vedere il wallpaper personalizzato sotto),
+non ha più NESSUN colore proprio a riempirlo — la firma esatta per cui, all'angolo arrotondato
+di un livello composito senza sfondo opaco, Chromium può lasciar trapelare un filo di quel che
+sta DIETRO invece di sfumarlo sul niente.
+
+**E dietro la pagina, in Electron, non c'è altro che la finestra stessa.** `main.cjs` crea la
+`BrowserWindow` senza mai impostare `backgroundColor` — Electron la disegna BIANCA di default
+quando non specificato. Bianco è esattamente il colore segnalato. Questo spiega anche perché
+NESSUNA delle indagini precedenti l'aveva trovato: non è un elemento della pagina (per questo
+l'ispezione DOM/CSS, anche esaustiva, non trovava mai nulla — non è la pagina a disegnarlo, è
+quel che sta sotto), e non dipende dalla GPU (è il colore della finestra stessa, non una resa
+del suo contenuto — coerente col test già fatto: spegnere l'accelerazione hardware non cambia il
+colore di fondo non impostato della finestra).
+
+**La correzione**: `backgroundColor` impostato esplicitamente sulla `BrowserWindow`, scelto in
+base a quale interfaccia si carica (`ENTRY`) — `#17181a` per SERENITY (il suo `--s-ground`
+scuro), `#2a2a2f` per EQUILIBRIUM (il centro del suo gradiente `AppBackground.tsx`). Costo zero,
+nessun cambio di comportamento o di disegno: quel colore si vede SOLO nel filo scoperto
+all'angolo (o nell'istante prima che la pagina dipinga sopra) — mai altrove. Non tocca
+`Serenity.tsx`: il pannello dell'arco resta transparente com'è stato chiesto, il wallpaper
+personalizzato continua a vedersi sotto.
+
+**Perché non con certezza assoluta**: senza poter riprodurre l'alone dal vivo in questo
+ambiente sandboxato (serve la build Electron reale, non il solo server di sviluppo in un
+browser) la diagnosi resta la spiegazione più coerente con TUTTE le prove raccolte finora
+(colore, invisibilità al DOM, indipendenza dalla GPU, unicità di questo pannello) — non una
+riproduzione confermata riga per riga come le esclusioni precedenti. Se il DMG mostra ancora
+l'alone, la pista GPU/DOM/finestra è ormai esaurita: resterebbe solo la verifica di sistema già
+proposta (un'altra finestra sovrapposta allo stesso punto dello schermo).
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `main.cjs` (condiviso — entrambi i DMG ricostruiti).

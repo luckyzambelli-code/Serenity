@@ -258,20 +258,33 @@ function startLocalServer() {
 
 app.commandLine.appendSwitch('enable-features', 'WebBluetooth');
 
-// ── « ALONE BIANCO » — test diagnostico GPU tentato e SCARTATO ──────────────────────────────
-// `app.disableHardwareAcceleration()` era stato messo qui per isolare un sospetto bug di
-// compositing GPU (v. `docs/serenity-refonte.md` per la cronologia completa dell'indagine) —
-// segnalato dall'utente: « c'è sempre » anche a GPU spenta. Tolto: nessun beneficio, solo il
-// costo (tutta l'interfaccia più lenta, resa software). La pista GPU è ora esclusa quanto le
-// altre quattro tentate prima. Prossimo passo: verificare se l'alone esiste ANCHE fuori dalla
-// finestra dell'app (altre finestre, alla stessa posizione sullo schermo) — se sì, non è un
-// bug di questa applicazione, ma di qualcos'altro sul sistema dell'utente.
+// ── « ALONE BIANCO » — trovato: il bianco di default della BrowserWindow ────────────────────
+// Cronologia dei tentativi scartati (bottone PRESS-START, bagliori SVG, GPU spenta, canvas
+// della SplashScreen) in `docs/serenity-refonte.md`. Review completa rifatta da zero: il
+// pannello dell'arco (`Serenity.tsx`) è l'UNICO riquadro arrotondato di tutta l'app con
+// `background:'transparent'` — ogni altro pannello (Giornale/Assessment/Santé Système) tiene
+// un vero colore di fondo (`--s-zone-bg`), che a sua volta copre/nasconde qualunque cosa gli
+// stia dietro. Questo pannello, invece, ha `borderRadius:18` + `overflow:'hidden'` +
+// `transform:'translateZ(0)'` (un livello di composizione a parte) SENZA NESSUN colore proprio
+// a riempirlo — la combinazione da manuale per cui Chromium, all'angolo arrotondato di un
+// livello composito senza sfondo opaco, può lasciar trasparire un filo del colore SOTTOSTANTE
+// invece di sfumarlo sul niente. Sotto la pagina non c'è altro che la `BrowserWindow` stessa —
+// e Electron, quando `backgroundColor` non è impostato, la disegna BIANCA di default. Bianco è
+// esattamente il colore segnalato; non un elemento della pagina (per questo l'ispezione DOM/
+// CSS non trovava mai nulla — non è la pagina a disegnarlo); indipendente dalla GPU (è il
+// colore della finestra stessa, non della resa del suo contenuto — coerente col test già fatto).
+// `backgroundColor` sotto: il vero fondo scuro di ciascuna interfaccia al posto del bianco non
+// impostato — costo zero, nessun cambio di comportamento o disegno, il colore visibile SOLO
+// in quel filo/nell'istante prima che la pagina dipinga sopra.
 
 function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
     title: 'EQUILIBRIUM',
+    // FIX « alone bianco »: il fondo vero di ciascuna interfaccia (non il bianco di default di
+    // Electron) dietro ogni pixel che la pagina lascia scoperto — v. la nota sopra.
+    backgroundColor: ENTRY === 'serenity.html' ? '#17181a' : '#2a2a2f',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
