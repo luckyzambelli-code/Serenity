@@ -4689,6 +4689,19 @@ export default function Serenity() {
           // di meno, non di più: non era un errore percettivo, il rapporto non teneva conto se
           // sotto ci fosse poco o molto da mostrare.
           const cicloAttivo = cycles.cycleArmed || mirror.mirrorArmed || toneAttivo || procedimentoAttivo;
+          // ⚠️ SEGNALATO: « le MNA se trouve trop en bas et on ne le voit pas entièrement ».
+          // Il rapporto sopra (2:1, o 3:1 a ciclo armato) era tarato SENZA il pannello MNA
+          // dentro `gruppoBasso` — misurato dal vivo: a schermo inattivo `gruppoBasso` riceveva
+          // 181px veri contro 352px di contenuto reale (i cinque cerchi + il pannello MNA), 171px
+          // fuori dalla vista SENZA alcuna barra di scorrimento visibile a dirlo (`overflow:
+          // 'auto'` c'è — v. la nota sotto — ma è una striscia di 6px, invisibile su un fondo
+          // scuro: lo si scopriva solo scorrendo alla cieca, e scorrere nascondeva a sua volta i
+          // cerchi). Quando l'MNA è davvero mostrato, `gruppoBasso` riceve ORA una quota molto
+          // più grande — tolta a `gruppoAlto`, che resta comunque quello con più spazio nei casi
+          // normali (MNA chiuso, la stragrande maggioranza del tempo): l'arco non si riduce mai
+          // per niente, solo quando l'attrezzo che lo giustifica è davvero aperto.
+          const mnaVisibile = aperta && moduleVis.mna;
+          const pesoBasso = mnaVisibile ? 2.4 : 1;
           return (
         <>
         <div style={{ flex: comandiSottoAgo ? (cicloAttivo ? '3 1 0%' : '2 1 0%') : '1 1 0%', minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
@@ -5512,7 +5525,7 @@ export default function Serenity() {
             il contenuto parte SEMPRE dalla cima del box — la prima riga (l'intestazione, il suo
             bottone di chiusura) è SEMPRE la prima cosa visibile, mai quella scrollata via;
             l'eventuale eccedenza trabocca in basso, dove uno scroll è normale da aspettarsi. */}
-        <div style={{ flex: comandiSottoAgo ? '1 1 0%' : '0 0 0%', minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 16, overflow: comandiSottoAgo ? 'auto' : 'visible' }}>
+        <div style={{ flex: comandiSottoAgo ? `${pesoBasso} 1 0%` : '0 0 0%', minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 16, overflow: comandiSottoAgo ? 'auto' : 'visible' }}>
         {/* ── LA PISTA DEL CICLO, SOTTO IL PUNTO DI ANCORAGGIO DELL'AGO ─────────────────────────
             Segnalato: « i comandi e le indicazioni dei cicli, per più leggibilità, sotto il
             punto di ancoraggio dell'ago, in uno spazio che permetta il più possibile le
@@ -5733,9 +5746,17 @@ export default function Serenity() {
             toccato (resta lui a posizionarsi `absolute, left/right:16, bottom:16`) — cambia
             solo DOVE: un involucro `position:relative` qui, fratello dell'arco invece che suo
             figlio, gli dà un riquadro TUTTO SUO in cui ancorarsi, nello spazio che la colonna
-            (ora `flexDirection:'column'`, sopra) lascia libero sotto l'arco. */}
+            (ora `flexDirection:'column'`, sopra) lascia libero sotto l'arco.
+            ⚠️ 180, non più 240 — segnalato: « le MNA se trouve trop en bas et on ne le voit pas
+            entièrement ». `PannelloMna` è `position:absolute, bottom:16` DENTRO questo
+            involucro: misurato dal vivo, il pannello vero (intestazione + campi + bottone) è
+            alto 141px anche nella fase più fitta con la barra di avanzamento; 240 di `minHeight`
+            ne lasciava 80+ vuoti IN CIMA (l'involucro non si restringe mai sotto `minHeight`,
+            e un figlio `absolute` non lo fa crescere) — spazio sprecato che spingeva tutto,
+            pannello compreso, più in basso di quanto servisse. 180 lascia un margine reale
+            (~25px) sopra il pannello più alto misurato, senza sprecare il resto. */}
         {aperta && moduleVis.mna && (
-          <div style={{ position: 'relative', width: '100%', maxWidth: 1400, minHeight: 240, flexShrink: 0 }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: 1400, minHeight: 180, flexShrink: 0 }}>
             <PannelloMna
               primePhase={primePhase}
               setPrimePhase={setPrimePhase}

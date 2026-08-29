@@ -6289,3 +6289,46 @@ Versione guide: 3.0.141 → 3.0.142.
 `git status`: `src/App.tsx`, `src/serenity/Serenity.tsx`, `public/guide/SERENITY-manuale.html`
 (rigenerato) — nessun file `.ts`/`.tsx` toccato in questo giro oltre alla rigenerazione della
 guida, quindi nessun nuovo `tsc`/`vitest`/`lint` da rilanciare.
+
+---
+
+## Giro (29/08/2026, 12) — MNA enfin visible, choix METER lisible, proposition liquid glass
+
+**Le MNA était quasi entièrement hors écran.** Segnalato: « le MNA se trouve trop en bas et on
+ne le voit pas entièrement ». Mesuré en direct (1280×720): `PannelloMna` (rect réel, 141px de
+haut) s'affichait à `top:717, bottom:858` — 3px visibles sur 141, le reste sous le bord de la
+fenêtre. Deux causes combinées: (1) son enveloppe (`minHeight:240`) réservait 240px alors que le
+panneau réel ne dépasse jamais ~157px même à l'étape la plus chargée (barre de progression
+comprise) — 80px perdus EN HAUT de l'enveloppe, poussant tout le reste plus bas qu'il ne fallait;
+(2) `gruppoBasso` (la ligne des 5 cercles + le MNA) ne recevait qu'un tiers de la hauteur contre
+deux tiers pour l'arc — un rapport fixé avant que le MNA vive là-dedans. `gruppoBasso` a bien un
+`overflow:'auto'` (vérifié: scroller à la main révèle le MNA en entier), mais rien ne dit à
+l'auditor qu'il PEUT scroller — une barre de 6px, invisible sur fond sombre. Corrigé: enveloppe
+réduite à `minHeight:180` (zéro gâchis), et `gruppoBasso` reçoit maintenant 2,4 parts contre 1
+quand le MNA est réellement ouvert (`mnaVisibile = aperta && moduleVis.mna`) — l'arc ne perd
+jamais un pixel quand le MNA est fermé, la grande majorité du temps. **Vérifié en direct**: les 5
+cercles ET le panneau MNA visibles ensemble, sans aucun scroll, à 1280×720.
+
+**Le choix METER ne montrait presque rien au clic.** Segnalato: « configurer le METER, il faut
+montrer davantage quand on a cliqué sur un bouton de choix ». `pillola()` distinguait sélectionné/
+non-sélectionné par une différence d'opacité entre `--s-disc` (`rgba(255,255,255,0.42)`) et
+`--s-disc-sunk` (`rgba(236,234,230,0.34)`) — quasi le même blanc translucide, presque invisible.
+`ThetaReadyCheck.tsx` (le même bouton, EQUILIBRIUM) marque déjà l'option active en ambre
+(`#f59e0b`) contre un gris neutre: nouvelle fonction `scelta()` reprenant la même logique avec
+`--s-reserve` (l'ambre de SERENITY, déjà utilisé pour "chiudi la seduta"). Vérifié visuellement
+(page de contrôle isolée, dans les deux thèmes): l'option active ressort clairement en ambre,
+bordure + texte, l'inactive reste neutre.
+
+**Proposition « liquid glass ».** Segnalato: « je voudrais que les boutons, tous les boutons et
+l'interface deviennent plus GLASS LIQUID ». `.s-glass`/`.s-glass-btn` existent déjà (giro
+précédent, hors de cette fenêtre visible) — 34 des 48 `<button>` de `Serenity.tsx` les utilisent
+déjà; 14 n'y sont pas encore (à traiter au prochain giro, cas par cas — certains ont
+volontairement un autre traitement, pas un balayage mécanique). Trois directions comparées côte
+à côte sur les vraies pièces de l'appli (bouton principal, cercle de méthode, choix persistant),
+publiées en artefact pour choix: « Verre profond » (le même mécanisme renforcé — flou/saturation/
+ombre plus poussés, zéro risque), « Reflet mobile » (un lustre qui glisse au survol, un ménisque
+sur le bord haut des boutons sélectionnés), « Lentille » (le verre le plus récent façon Apple —
+lentille convexe simulée, plus radical, plus loin du ton actuel de SERENITY).
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx`, `src/serenity/PannelloMeter.tsx`.

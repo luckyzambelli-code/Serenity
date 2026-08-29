@@ -57,6 +57,36 @@ const pillola = (piena: boolean): React.CSSProperties => ({
   color: 'var(--s-ink)',
 });
 
+/**
+ * scelta — LA STESSA PILLOLA, MA PER UNA SCELTA PERSISTENTE fra due opzioni (non un'azione
+ * a un colpo solo come « avanti »/« stringi »).
+ *
+ * ── PERCHÉ NON BASTAVA `pillola` ────────────────────────────────────────────────────────────
+ * Segnalato: « configurer le METER, il faut montrer davantage quand on a cliqué sur un bouton
+ * de choix » — vero: « due lattine »/« lattina sola » (passo 1) usava `pillola`, che distingue
+ * piena/non-piena SOLO nell'opacità di `--s-disc`/`--s-disc-sunk` — nel vetro liquido i due
+ * valori sono `rgba(255,255,255,0.42)` e `rgba(236,234,230,0.34)` in chiaro (`rgba(52,53,57,
+ * 0.36)`/`rgba(28,29,31,0.36)` in scuro): una differenza di qualche punto di opacità sullo
+ * STESSO quasi-bianco/quasi-nero, quasi invisibile a colpo d'occhio. Bene per un bottone
+ * d'azione (lo si preme e basta), non per due opzioni che restano lì e dovrebbero dire QUALE
+ * delle due è attiva ADESSO.
+ *
+ * ── LA STESSA SCELTA, IN EQUILIBRIUM ────────────────────────────────────────────────────────
+ * `ThetaReadyCheck.tsx` (lo stesso identico toggle, motore condiviso) marca l'opzione attiva a
+ * colore — fondo/bordo/testo in ambra (`#f59e0b`) contro un grigio neutro per quella inattiva.
+ * Stessa logica qui: `--s-reserve` è l'ambra di SERENITY (la stessa del terzo segnale di
+ * sistema e del bottone "chiudi la seduta"), non un colore nuovo inventato per l'occasione.
+ */
+const scelta = (selezionata: boolean): React.CSSProperties => ({
+  cursor: 'pointer', borderRadius: 999, padding: '8px 18px',
+  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.04em',
+  fontWeight: selezionata ? 700 : 500,
+  background: selezionata ? 'color-mix(in srgb, var(--s-reserve) 20%, var(--s-disc))' : 'var(--s-disc-sunk)',
+  border: `1.5px solid ${selezionata ? 'color-mix(in srgb, var(--s-reserve) 65%, transparent)' : 'var(--s-ink-ghost)'}`,
+  color: selezionata ? 'var(--s-reserve)' : 'var(--s-ink-faint)',
+  transition: 'background var(--s-slow) var(--s-ease), color var(--s-slow) var(--s-ease), border-color var(--s-slow) var(--s-ease)',
+});
+
 const PASSI = ['config', 'stretta', 'respiro', 'taratura'] as const;
 type Passo = typeof PASSI[number];
 
@@ -129,11 +159,11 @@ export function PannelloMeter({ theta, provaTa, onFatto }: {
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={() => theta.setConfig('two-cans')}
-              className="s-glass s-glass-btn" style={pillola(theta.setup.config === 'two-cans')}>
+              className="s-glass s-glass-btn" style={scelta(theta.setup.config === 'two-cans')}>
               {t('theta_two_cans')}
             </button>
             <button onClick={() => theta.setConfig('solo-can')}
-              className="s-glass s-glass-btn" style={pillola(theta.setup.config === 'solo-can')}>
+              className="s-glass s-glass-btn" style={scelta(theta.setup.config === 'solo-can')}>
               {t('theta_solo_can')}
             </button>
           </div>
