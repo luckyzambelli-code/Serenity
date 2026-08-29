@@ -410,21 +410,25 @@ body {
      di CONFIG, non più solo le camere. */
   opacity: var(--s-ui-alpha);
 }
-/* IL LUCIDO — segnalato con esempi: il vetro vero prende più luce in ALTO che in basso, un
-   velo che sfuma via, non un bordo. Uno pseudo-elemento (mai contenuto, mai un colore proprio)
-   sovrapposto per ultimo — `isolation:isolate` sul contenitore lo tiene dentro i bordi
-   arrotondati senza aggiungere un `overflow:hidden` che taglierebbe altro (i cerchi delle
-   camere, per esempio, hanno già il loro `overflow:hidden` interno per il video). */
+/* IL LUCIDO — LENTILLE: segnalato « je voudrais que les boutons... deviennent plus GLASS
+   LIQUID », poi scelta fra tre proposte confrontate live (l'artefact "Trois verres pour
+   SERENITY") — LENTILLE, il verre più recente (il "Liquid Glass" di Apple): una lente
+   CONVESSA vera, non più un velo diagonale piatto. Il punto di luce sta DECENTRATO in alto
+   a sinistra (dove cadrebbe la luce su un oggetto di vetro vero) e si spegne verso il
+   centro con un dégradé RADIALE — non più lineare, che tagliava dritto da un bordo
+   all'altro. Uno pseudo-elemento (mai contenuto, mai un colore proprio) sovrapposto per
+   ultimo — `isolation:isolate` sul contenitore lo tiene dentro i bordi arrotondati senza
+   aggiungere un `overflow:hidden` che taglierebbe altro (i cerchi delle camere, per
+   esempio, hanno già il loro `overflow:hidden` interno per il video). */
 .s-glass::before {
   content: '';
   position: absolute; inset: 0; border-radius: inherit;
-  background: linear-gradient(165deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 46%);
+  background: radial-gradient(120% 140% at 24% 8%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.08) 40%, rgba(255,255,255,0) 62%);
   pointer-events: none;
   z-index: 0;
 }
-/* Segnalato: « più trasparenze liquide » — lucido più ampio e più intenso in entrambi i temi. */
 :root[data-tema='scuro'] .s-glass::before {
-  background: linear-gradient(165deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 50%);
+  background: radial-gradient(120% 140% at 24% 8%, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.04) 42%, rgba(255,255,255,0) 64%);
 }
 .s-glass > * { position: relative; z-index: 1; }
 
@@ -450,26 +454,60 @@ body {
    vetro sollevato dal fondo. Qui un'ombra SOLO dei bottoni (due strati, come nel riferimento:
    un lucido dentro, un'ombra diffusa sotto), più profonda — senza toccare `--s-shadow`, che le
    zone continuano a usare così com'è. */
+/* ⚠️ LENTILLE, non più il rilievo a due ombre — v. la nota su `.s-glass::before` per la
+   scelta. Tre ombre, non due: un filo di luce PIÙ SPESSO in cima (`inset 0 2px`, non
+   `0 1px` — una lente ha uno spessore vero, non un semplice bordo lucido), un'ombra
+   INTERNA che incurva il lato opposto (`inset 0 -6px 10px -4px` — il "fondo" della lente
+   che curva via dalla luce, l'ingrediente che manca a un rilievo piatto), e l'ombra
+   esterna di sempre, un poco più profonda per staccarsi meglio dal fondo. */
 .s-glass-btn {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 8px 32px rgba(44, 47, 51, 0.16);
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, 0.55),
+    inset 0 -6px 10px -4px rgba(44, 47, 51, 0.20),
+    0 14px 34px rgba(44, 47, 51, 0.18);
   cursor: pointer;
   transition: box-shadow var(--s-slow) cubic-bezier(0.4, 0, 0.2, 1),
               border-color var(--s-slow) var(--s-ease),
               transform 120ms cubic-bezier(0.4, 0, 0.2, 1), background var(--s-slow) var(--s-ease);
 }
 :root[data-tema='scuro'] .s-glass-btn {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, 0.22),
+    inset 0 -6px 10px -4px rgba(0, 0, 0, 0.40),
+    0 14px 34px rgba(0, 0, 0, 0.48);
 }
 .s-glass-btn:hover:not(:disabled) {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 12px 40px rgba(44, 47, 51, 0.22);
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, 0.65),
+    inset 0 -6px 10px -4px rgba(44, 47, 51, 0.24),
+    0 18px 42px rgba(44, 47, 51, 0.24);
 }
 :root[data-tema='scuro'] .s-glass-btn:hover:not(:disabled) {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 12px 40px rgba(0, 0, 0, 0.48);
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, 0.30),
+    inset 0 -6px 10px -4px rgba(0, 0, 0, 0.46),
+    0 18px 42px rgba(0, 0, 0, 0.56);
 }
 .s-glass-btn:active:not(:disabled) {
   transform: scale(0.97);
 }
 .s-glass-btn:disabled { cursor: default; }
+
+/* ── LA GOCCIA DI LUCE — il riflesso netto che una vera lentille rimanda, nello stesso
+   angolo del lucido sopra (24%/8%) ma più piccolo e più concentrato: è quello che fa
+   leggere "oggetto di vetro" invece di "rilievo generico". Un secondo pseudo-elemento
+   perché `::before` è già il lucido diffuso di `.s-glass` — così nessun markup nuovo da
+   aggiungere bottone per bottone, basta la classe. */
+.s-glass-btn::after {
+  content: '';
+  position: absolute; top: 10%; left: 16%; width: 26%; height: 34%;
+  border-radius: 50%; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle, rgba(255,255,255,0.75), rgba(255,255,255,0) 70%);
+  filter: blur(0.5px);
+}
+:root[data-tema='scuro'] .s-glass-btn::after {
+  background: radial-gradient(circle, rgba(255,255,255,0.45), rgba(255,255,255,0) 70%);
+}
 
 /* ── IL TOGGLE SCORREVOLE — segnalato con l'immagine di riferimento esatta: traccia+manopola
    di vetro che scorre, non un bottone che si smonta e rimonta. `BottoneCiclico.tsx` lo usa

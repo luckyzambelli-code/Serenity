@@ -6332,3 +6332,44 @@ lentille convexe simulée, plus radical, plus loin du ton actuel de SERENITY).
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/Serenity.tsx`, `src/serenity/PannelloMeter.tsx`.
+
+---
+
+## Giro (29/08/2026, 13) — LENTILLE, la scelta fatta
+
+**« Per SERENITY vorrei LENTILLE »** — la terza delle tre proposte confrontate nell'artefatto
+"Trois verres pour SERENITY" (giro precedente), applicata al vero materiale condiviso
+(`tokens.css`, `.s-glass`/`.s-glass-btn`): questo era il punto di costruire le tre proposte
+sulle CLASSI vere, non su un mockup a parte — la scelta si scrive in un solo posto e arriva
+automaticamente a tutti e 34 i bottoni che già portano quelle classi, senza toccarli uno per
+uno.
+
+**Cosa cambia davvero.** `.s-glass::before` (il lucido): da un velo diagonale lineare
+(`linear-gradient(165deg, ...)`, che tagliava dritto da un bordo all'altro) a una lente
+CONVESSA vera — un dégradé RADIALE decentrato in alto a sinistra (`radial-gradient(120% 140%
+at 24% 8%, ...)`, dove cadrebbe la luce su un vero oggetto di vetro). `.s-glass-btn`: da due
+ombre a tre — un filo di luce più spesso in cima (`inset 0 2px`, non più `0 1px`), un'ombra
+INTERNA che incurva il lato opposto (`inset 0 -6px 10px -4px`, l'ingrediente che mancava a un
+rilievo piatto), l'ombra esterna di sempre un poco più profonda. Nuovo `.s-glass-btn::after`:
+una goccia di luce netta nello stesso angolo del lucido — un secondo pseudo-elemento, zero
+markup nuovo da aggiungere bottone per bottone.
+
+**Il gap dei 14 bottoni senza `.s-glass-btn`** (segnalato il giro scorso): rivisto uno per
+uno, non un balayage meccanico. Tredici si sono rivelati intenzionalmente ALTRO — righe di
+lista (MUSE/BOÎTES/SANS-INSTRUMENTS, i menu Assetto), link di testo puri (« annulla »,
+« enregistrer », i due "salva configurazione"), un bottone che incornicia il logo Alt.
+Scientology (un caso a parte, non un controllo generico), un bottone di chiusura sopra un
+iframe esterno (tenuto apposta indipendente dal tema, quel colore deve leggersi su qualunque
+contenuto ci sia sotto), due chip di stato (NEEDLE LIGHT, con/senza ago), e il grande invito
+trasparente "premi START" sopra l'arco (sfocarlo avrebbe confuso il quadrante sotto). Solo UNO
+era una vera lacuna: la tastiera numerica manuale di MIRROR (dieci cerchietti 26px, `Serenity.
+tsx` — stesso ruolo dei pulsanti +/- di sensibilità in `PannelloMeter.tsx`, che il vetro ce
+l'hanno già) — aggiunte le classi lì, tolto il `border:'none'` inline che avrebbe cancellato
+il bordo del vetro.
+
+**Verificato in diretto**, chiaro e scuro: cerchi header, cerchi di metodo, bottone "fermer la
+séance", tutti mostrano ora il riflesso convesso decentrato invece del velo piatto di prima —
+particolarmente netto in scuro sul bottone grande.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/tokens.css`, `src/serenity/Serenity.tsx`.

@@ -2888,8 +2888,8 @@ export default function Serenity() {
                   mirror.mirrorCycle.setManualValue(v);
                   mirror.setMirrorDisp({ contactQ: mirror.mirrorCycle.contactQ, dischargeQ: 0,
                     locked: true, reached: false, valueR: mirror.mirrorCycle.valueR, liveR: mirror.mirrorCycle.valueR });
-                }} style={{
-                  border: 'none', cursor: 'pointer', borderRadius: 999, width: 26, height: 26,
+                }} className="s-glass s-glass-btn" style={{
+                  cursor: 'pointer', borderRadius: 999, width: 26, height: 26,
                   fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', fontWeight: 700,
                   background: 'var(--s-disc-sunk)', color: 'var(--s-ink)',
                 }}>
