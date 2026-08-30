@@ -2318,7 +2318,13 @@ export default function Serenity() {
     // della voce, non le parole. `void`: se il microfono non è concesso (o è già preso da
     // altro) `init()` risolve `false` — `onTranscript` (sopra) legge `analyze() ?? undefined`,
     // niente chip di tono invece di un errore.
-    void voiceToneAnalyzer.init().then(ok => { if (ok) voiceToneAnalyzer.ensureAudioContextActive(); });
+    // ⚠️ TEST DIAGNOSTICO « alone bianco » — disattivato temporaneamente per isolare la causa.
+    // La pausa (`pausata`) NON ferma questo motore (solo `chiudi()` lo fa, v. sotto) — un test
+    // precedente "seduta in pausa" non lo escludeva affatto, un buco nel ragionamento, non
+    // nel motore. Qui un secondo flusso microfono vero, separato dal riconoscimento vocale,
+    // si attiva ESATTAMENTE quando la seduta si apre — la stessa identica finestra temporale
+    // in cui compare l'alone. Se sparisce con questo spento, la causa è confermata.
+    // void voiceToneAnalyzer.init().then(ok => { if (ok) voiceToneAnalyzer.ensureAudioContextActive(); });
     sessionRecorder.reset();   // niente chart/reazioni/CSV di una seduta precedente — come App.tsx
     setPausata(false); pausaMotivoRef.current = null;   // niente pausa residua da una seduta precedente
     journal.resetJournal(t('ser_session_opened'));

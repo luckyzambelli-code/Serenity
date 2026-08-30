@@ -6935,6 +6935,9 @@ rendering del browser conosce); indipendente dalla GPU di Chromium (giusto: la G
 quella del compositing di sistema, non quella del processo di rendering). Ogni singola prova, con
 il senno di poi, punta ESATTAMENTE qui.
 
+⚠️ **RIAPERTO nel giro successivo** — v. più in fondo a questo documento: la conclusione qui sopra
+si è rivelata prematura. Non toccare questa sezione, resta come cronologia di come ci si è arrivati.
+
 **Nessuna correzione di codice necessaria — non c'è niente in questo repository da correggere.**
 Tutti i tentativi precedenti (bottone PRESS-START, bagliori SVG, GPU spenta, canvas della
 SplashScreen, `backgroundColor` della finestra, sfondo pieno sulla zona arco, `transform:
@@ -6985,6 +6988,35 @@ limite del sistema — non qualcosa che una proprietà CSS su questo lato possa 
 (LENTILLE piena, l'alone resta, cosmetico) contro Aspetto Automatico (nessun alone, LENTILLE
 piatta ma leggibile e funzionante). Nessuna delle correzioni provate — su nessuno dei due lati —
 ha trovato un modo di avere entrambi. Resta la scelta dell'utente.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx` (solo SERENITY).
+
+## Giro (successivo) — l'alone bianco: RIAPERTO — non era risolto, il microfono resta un candidato vero
+
+**L'utente conferma « c'è ancora »** anche con CAM 2 spenta da CONFIG (webcam esclusa con
+certezza) e con la seduta in **pausa** (voce esclusa... solo in apparenza). Riletto il codice di
+`avviaSeduta()`/`chiudi()`: `voiceToneAnalyzer.stop()` e `primeFreqAudio.killAll()` vivono SOLO
+dentro `chiudi()` — nessuno dei due si ferma quando la seduta va in pausa. `pausata` spegne
+UNICAMENTE `useVoiceItem` (il riconoscimento vocale, via `active: aperta && !pausata`). Un secondo
+flusso microfono VERO — `voiceToneAnalyzer`, che legge l'energia della voce, separato dalle
+parole — resta attivo per tutta la pausa. Il test "seduta in pausa" quindi non escludeva il
+microfono per davvero, solo UNO dei suoi consumatori: un buco nel mio ragionamento, non nel
+codice.
+
+**Il confronto che regge ancora**: CONFIG ha LENTILLE ma non apre mai una seduta — non avvia mai
+`voiceToneAnalyzer`/`primeFreqAudio`, coerente con « appare SOLO dopo aver aperto la seduta »
+(confermato: l'arco inattivo, prima di "OUVRIR UNE SÉANCE", è pulito).
+
+**Test diagnostico**: `voiceToneAnalyzer.init()`/`ensureAudioContextActive()` disattivato
+temporaneamente in `avviaSeduta()` (righe commentate, non rimosse — in questa build di test SOLO
+il tono di voce nella trascrizione resta assente, nient'altro cambia). `primeFreqAudio.init()`
+lasciato attivo apposta: crea solo un `AudioContext`, nessun `getUserMedia` nel suo codice —
+meno sospetto di un microfono vero, isolato per un test successivo se serve.
+
+Se aprendo una seduta NORMALE (non in pausa) in questa build l'alone sparisce, la causa è
+`voiceToneAnalyzer` — confermata, non per sospetto. Se resta, si esclude anche lui e tocca a
+`primeFreqAudio`.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/Serenity.tsx` (solo SERENITY).
