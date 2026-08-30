@@ -607,10 +607,20 @@ body {
    `!important` batte il `color` in linea, lo stesso escamotage di `modalCloseButtons.css`.
    Il bottone di chiusura non è toccato: il suo `::after` (la ×) dichiara il proprio `color`
    per conto suo, e un valore dichiarato SUL pseudo-elemento vince sempre sull'eredità del
-   genitore, `!important` o no. */
+   genitore, `!important` o no.
+   ⚠️ SEGNALATO DI NUOVO, con screenshot dal vero (tema scuro): « metti le scritte nere dei
+   bottoni » — erano ancora chiare, illeggibili sui bottoni COMANDI PROCEDIMENTI. La causa:
+   `var(--s-ink)` SEGUE il tema (`#2c2f33` scuro in chiaro, ma `#e8e6e1` CHIARO in scuro —
+   riga ~250, sopra) — mentre il lucido di LENTILLE (`.s-glass::before`) resta un bagliore
+   BIANCO in ENTRAMBI i temi (v. la sua nota, sopra: solo l'opacità cambia, mai il colore).
+   Un ink che segue il tema, su un vetro che non lo segue mai, ridiventava chiaro-su-chiaro
+   proprio nel tema scuro — l'unico caso che la richiesta originale (fatta guardando il tema
+   chiaro) non copriva. Il colore letterale del tema chiaro (`#2c2f33`, non la variabile)
+   resta leggibile sul bagliore bianco in ENTRAMBI i temi: quello, non `var(--s-ink)`, è
+   quel che questa regola deve davvero garantire. */
 .ser-history-wrap button, .ser-history-wrap button *,
 .ser-processus-wrap button, .ser-processus-wrap button * {
-  color: var(--s-ink) !important;
+  color: #2c2f33 !important;
 }
 
 /* ── IL TOGGLE SCORREVOLE — segnalato con l'immagine di riferimento esatta: traccia+manopola

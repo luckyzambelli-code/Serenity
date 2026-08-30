@@ -7187,3 +7187,34 @@ larga).
 `git status`: `src/App.tsx`, `src/serenity/Serenity.tsx`, `src/serenity/ZonaAssessment.tsx`,
 `src/serenity/PannelloMeter.tsx`, `src/serenity/orologio.ts` (nuovo) — `App.tsx` condiviso,
 entrambi i DMG ricostruiti.
+
+## Giro (successivo) — PROCESSUS: scritte nere vere sui bottoni (non più legate al tema)
+
+**Segnalato con uno screenshot dal vero** (tema scuro): i bottoni di COMANDI PROCEDIMENTI
+(RADIAL PROCEDURE, RUDIMENTS, APRI CARTELLA) avevano testo chiaro, difficile da leggere.
+
+**La causa vera, trovata rileggendo `tokens.css`** (non `.s-glass` nel file React, come
+sospettato un giro fa — `ProcessusModal.tsx` non usa mai quella classe): LENTILLE ci arriva per
+SELETTORE CSS discendente, non per classe (`.ser-processus-wrap button::before` — righe
+546-597, aggiunta apposta perché il file è condiviso con EQUILIBRIUM e non si può toccare). Il
+lucido bianco è quindi SEMPRE presente su OGNI bottone di questo modale (tranne quello di
+chiusura), indipendentemente dal suo sfondo dichiarato nel JSX. Il colore del testo, però,
+seguiva `var(--s-ink)` (riga 622) — che segue il TEMA (`#2c2f33` scuro in chiaro, `#e8e6e1`
+CHIARO in scuro) mentre il lucido resta bianco in ENTRAMBI i temi: nel tema scuro, chiaro-su-
+lucido-bianco tornava chiaro-su-chiaro.
+
+**Corretto**: `var(--s-ink)` → `#2c2f33` (il valore letterale del tema chiaro, non più la
+variabile) — nero vero, fisso, leggibile sul lucido bianco che c'è sempre, in entrambi i temi.
+Verificato dal vivo via DOM (non lo screenshot, troppo compresso per giudicare a occhio): il
+colore computato su ogni bottone controllato è `rgb(44,47,51)`, il nero appena impostato.
+
+**"Aggiorna il GUIDE anche"** — controllato dal vivo: il pannello Guida (`GuideModal.tsx`) ha
+un suo sfondo scuro fisso, indipendente da LENTILLE e dal tema di SERENITY — nessuno stesso
+problema lì, testo già leggibile. Il vero disallineamento trovato: il manuale SERENITY (vive
+FUORI da questo repository, `~/Downloads/Guide Static Meter/SERENITY-manuale.html`, copiato
+dentro l'app a ogni build da `scripts/copy-guide.cjs`) scriveva `VERSIONE = "3.0.142"` nel suo
+footer — la app è già a 3.0.165. Allineato a `3.0.165`.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/tokens.css` (solo SERENITY) — e, fuori dal repository,
+`~/Downloads/Guide Static Meter/SERENITY-manuale.html` (copiato in `public/guide/` alla build).
