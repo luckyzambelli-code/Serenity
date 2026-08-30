@@ -478,6 +478,21 @@ body {
    di quel che ha sotto), l'ombra che incurva e quella esterna scendono (0,20→0,30 e 0,18→0,26:
    in chiaro è la ombra SCURA a dover fare il lavoro che in scuro faceva già il bianco). */
 .s-glass-btn {
+  /* ⚠️ TROVATA — « l'alone bianco ». `.s-glass-btn::after` (la goccia di luce, poco sotto)
+     è `position:absolute` — senza un `position` qui, un bottone con SOLO questa classe (non
+     anche `.s-glass`, che dichiara `position:relative` per sé) non ha nessun antenato
+     posizionato tutto suo: il browser risale il DOM fino al primo che lo È, in
+     `ZonaAssessment.tsx` fino a `<section>` stessa (il grande contenitore di tutta la vista).
+     La goccia di luce, pensata per un bottone di 24px, si ridimensiona quindi al 26%×34%
+     dell'INTERA sezione — un enorme alone bianco morbido, spostato sul lato sinistro dello
+     schermo, con nessuna relazione visibile col bottone che lo genera davvero. Trovato per
+     bisezione dal vivo (nascosti a metà i discendenti della sezione, ripetuto finché non è
+     rimasto un solo elemento — il bottone ATTIVA dell'ASSESSMENT) — non un sospetto, la
+     matematica del gradiente contro le dimensioni vere della sezione tornava esatta. Gli
+     ALTRI due usi di questa classe in `Serenity.tsx` "funzionavano per fortuna" (un
+     div-contenitore già posizionato, uno `position:relative` scritto a mano): la classe
+     stessa doveva garantirlo, non lasciarlo alla memoria di chi la usa. */
+  position: relative;
   box-shadow:
     inset 0 2px 1px rgba(255, 255, 255, 0.85),
     inset 0 -6px 10px -4px rgba(44, 47, 51, 0.30),

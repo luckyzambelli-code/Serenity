@@ -654,37 +654,6 @@ export default function Serenity() {
   /** `taRef` — il blocco della lettura TA/NEEDLE LIGHT in alto a sinistra del quadrante
    *  (`top:14,left:16` dentro `<section>`). */
   const taRef = useRef<HTMLDivElement | null>(null);
-  /** `arcoPannelloRef` — TEST DIAGNOSTICO « alone bianco ». Il pannello dell'arco cambia
-   *  davvero dimensione quando la seduta si apre (`comandiSottoAgo = aperta` cambia il
-   *  rapporto flex della colonna che lo contiene, da `'1 1 0%'` a `'2 1 0%'`/`'3 1 0%'`) —
-   *  un ridimensionamento vero, non solo un cambio di contenuto. Ipotesi: un pannello con
-   *  `overflow:hidden`+`borderRadius` che si ridimensiona proprio mentre riceve nuovo
-   *  contenuto (le camere, i comandi, l'overlay) può lasciare un residuo di ridisegno che
-   *  Chromium/WebKit non invalida da soli — v. l'effetto poco più giù, che forza un
-   *  ridisegno pulito appena la seduta si apre, senza toccare taglia o design veri. */
-  const arcoPannelloRef = useRef<HTMLDivElement | null>(null);
-  const arcoNudgeId1Ref = useRef(0);
-  const arcoNudgeId2Ref = useRef(0);
-  useEffect(() => {
-    if (!aperta) return;
-    const el = arcoPannelloRef.current;
-    if (!el) return;
-    // Nudge impercettibile (0.001 di opacità, due frame dopo che il layout si è assestato):
-    // forza Chromium/WebKit a ridipingere per davvero il pannello, invece di riusare quel
-    // che aveva già composto per la taglia precedente.
-    const id1 = requestAnimationFrame(() => {
-      const id2 = requestAnimationFrame(() => {
-        el.style.opacity = '0.999';
-        requestAnimationFrame(() => { el.style.opacity = '1'; });
-      });
-      arcoNudgeId2Ref.current = id2;
-    });
-    arcoNudgeId1Ref.current = id1;
-    return () => {
-      cancelAnimationFrame(arcoNudgeId1Ref.current);
-      cancelAnimationFrame(arcoNudgeId2Ref.current);
-    };
-  }, [aperta]);
   const uiAlpha = useUiStore(s => s.uiAlpha);
   // ⚠️ Segnalato: « la trasparenza si può modificare ma non agisce sulle scritte ». Prima
   // `uiAlpha` arrivava SOLO a `Cerchio.tsx` (le due camere) — v. la nota su `--s-ui-alpha` in
@@ -4912,7 +4881,7 @@ export default function Serenity() {
             </div>
           );
         })()}
-        <div ref={arcoPannelloRef} style={{
+        <div style={{
           /* ⚠️ Era `calc(100% - 44px)`: quei 44px riservavano lo spazio per l'orologio e le
              letture che stavano SOTTO questo contenitore, nel flusso di `<section>`. Ora che
              sono dentro (la striscia in basso, `position:absolute`, vedi sotto), non c'è più

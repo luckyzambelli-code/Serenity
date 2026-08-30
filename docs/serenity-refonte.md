@@ -7060,3 +7060,53 @@ normalmente. La verifica vera può avvenire solo sul Mac dell'utente.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/Serenity.tsx` (solo SERENITY).
+
+## Giro (successivo) — l'alone bianco: TROVATO E CORRETTO — `.s-glass-btn::after` senza `position:relative`
+
+**L'utente conferma « C'È ANCORA »** anche col nudge di ridisegno — e giustamente stanco di
+ipotesi indirette, chiede di guardare quello che LENTILLE stessa disegna, non più il contenitore
+attorno. Ripresa in mano `.s-glass::before`/`.s-glass-btn::after` (`tokens.css`, il lucido e la
+« goccia di luce » di LENTILLE): entrambi sono `position:absolute` — e `.s-glass::before` è un
+`radial-gradient` bianco, centrato al **24% 8%** (in alto a sinistra), grande **120%×140%**
+dell'elemento. Esattamente la forma, il colore e l'angolo dell'alone.
+
+**La caccia all'elemento, questa volta per bisezione visiva diretta** (non più `elementsFromPoint`
+o scansioni di stile, che avevano già dimostrato i loro limiti): nascosto il pannello dell'arco —
+alone invariato; nascosta l'intera `<section>` — alone sparito; bisezione binaria sui 167
+discendenti della sezione (metà nascosti, metà visibili, ripetuto) finché non è rimasto un solo
+elemento capace di farlo riapparire da solo: il bottone **« ACTIVER »** dell'ASSESSMENT
+(`ZonaAssessment.tsx`).
+
+**La causa esatta**: quel bottone (e il suo vicino, « espandi/chiudi la vista ») ha
+`className="s-glass-btn"` — MAI `.s-glass` insieme, che è l'unica delle due classi a dichiarare
+`position:relative`. `ZonaAssessment.tsx` non ha NESSUN `position:relative` proprio, in nessun
+antenato. Il `::after` di quel bottone (la goccia di luce, `position:absolute`), senza un
+antenato posizionato tutto suo, risale il DOM fino al primo che lo È — la `<section>` intera
+(1240×558). Le sue percentuali (26%×34%, offset 16%/10%) si applicano quindi alla SEZIONE, non
+al bottone di 24px: un cerchio enorme, centrato in una zona che non ha nessuna relazione visibile
+con l'elemento che lo genera davvero — da qui l'impossibilità di trovarlo cliccandoci sopra
+("è in arrière plan": il vero elemento responsabile è un piccolo bottone in alto a destra, non
+sotto il cursore quando si clicca sull'alone).
+
+Verificata la matematica: sezione 1240×558 a (20,146) → gradiente calcolato a x 218..540,
+y 202..392 — combacia con l'alone osservato (x ~280..530, y ~136..344) entro il margine
+d'errore di una stima a occhio sullo screenshot.
+
+**La correzione**: `position: relative` aggiunto a `.s-glass-btn` stessa (`tokens.css`), non ai
+singoli bottoni. Gli ALTRI due usi di `s-glass-btn` da solo in `Serenity.tsx` "funzionavano per
+fortuna" (un div-contenitore già posizionato, uno `position:relative` scritto a mano) — un
+contratto fragile, non garantito dalla classe. Ora lo è: qualunque bottone `s-glass-btn` futuro,
+con o senza `.s-glass` insieme, ha sempre il suo proprio contesto di posizionamento.
+
+Tolto anche il "nudge" di ridisegno del giro precedente (mai la vera causa, ora inutile) e i suoi
+ref (`arcoPannelloRef`/`arcoNudgeId1Ref`/`arcoNudgeId2Ref`).
+
+**Verificato dal vivo**: seduta riaperta con ASSESSMENT visibile (lo stesso stato in cui l'alone
+compariva sempre) — nessun alone, "DONNE L'ITEM" pulito, nessuna regressione visiva altrove
+(header, CONFIG, EP/COMMANDS). Prima volta in tutta questa indagine che il fix è CONFERMATO nel
+mio stesso ambiente, non solo in attesa di conferma sul Mac dell'utente — perché stavolta la
+causa è puramente CSS/DOM, non un comportamento specifico di macOS: doveva riprodursi ovunque, e
+si è riprodotta.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx`, `src/serenity/tokens.css` (solo SERENITY).
