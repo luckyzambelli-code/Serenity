@@ -6947,4 +6947,32 @@ risolvere — nessuna ragione di rimetterlo).
 indesiderato (passa da chiaro a scuro secondo l'ora, invece di restare fisso), è una scelta di
 System Settings → Aspetto Generale, non qualcosa che questa app possa impostare o aggirare da sé —
 maiuscolo indipendente da SERENITY/EQUILIBRIUM.
+
+## Giro (successivo) — LENTILLE torna piatta sotto Automatico: la stessa causa, vista dall'altro lato
+
+**Segnalato**: « Quando attivo modo automatico l'interfaccia perde il modo lentille » — vero,
+non un'invenzione: `backdrop-filter` (la sfocatura vera del vetro, `.s-glass`/`.s-glass-btn` in
+`tokens.css`) è una funzione del browser/di macOS, non dell'app — verificato che il tema COLORE
+di SERENITY resta indipendente (`isLightTheme` non legge mai `prefers-color-scheme` né
+l'API nativa di Electron per il tema — zero occorrenze in tutto il codice, incluso il CSS, ora
+controllato anche lì dopo un primo giro che aveva cercato solo nei `.tsx`), ma la RESA di
+`backdrop-filter` stesso può cambiare secondo come macOS compone quel livello — la stessa
+famiglia di comportamento sospettata per l'alone. Sotto Automatico i bottoni restano leggibili
+(`.s-glass` non ha un colore di fondo suo: quando la sfocatura non si compone, resta visibile
+SOLO il colore di base già scritto su ogni bottone — il fallback più pulito che il CSS possa
+fare da solo, niente di rotto).
+
+**L'utente vuole entrambi**, non un compromesso — proposto un test mirato prima di arrendersi:
+`.s-glass` non chiedeva mai un livello di composizione GPU esplicito (`isolation:isolate` crea
+solo un contesto d'impilamento). Aggiunto `transform:translateZ(0)` — l'OPPOSTO esatto del
+rimedio tolto dal pannello dell'arco due giri fa (lì il livello esplicito sembrava LA causa
+dell'alone su un elemento `background:transparent`; qui, su un elemento con `backdrop-filter`
+invece, l'ipotesi è che la sua ASSENZA sia la causa della sfocatura mancante sotto Automatico).
+
+Verifica dal vivo (sandbox, non macOS): nessuna regressione — LENTILLE identica in condizioni
+normali. La verifica vera (se la sfocatura torna sotto Automatico, e se l'alone nel frattempo
+non riappare sui bottoni) può avvenire solo sul Mac dell'utente.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/tokens.css` (solo SERENITY).
 `git status`: `src/serenity/Serenity.tsx` (solo SERENITY).
