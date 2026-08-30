@@ -7134,3 +7134,56 @@ tooltip nativi non sempre catturabili in screenshot).
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/components/ProcessusModal.tsx` (condiviso — entrambi i DMG ricostruiti).
+
+## Giro (successivo) — review di ottimizzazione: 6 correzioni, riprendendo i candidati mai affrontati
+
+**Segnalato**: « rivedi bene tutto il codice per vedere cosa c'è da ottimizzare ». Ripresi i
+candidati di efficienza/duplicazione già trovati (ma non affrontati, per la regola « la
+correttezza vince quando il tetto costringe a tagliare ») nella review completa di due giri fa —
+riverificati uno per uno sul codice attuale, non per sospetto.
+
+**Corretti (6):**
+1. **`Serenity.tsx` — `onClick` di `QuantumSphere` stabilizzato.** Una funzione inline
+   (`onClick={() => { theta.resetToSet(); resetNeedleEeg(); }}`) ricreata a ogni render,
+   passata a un `React.memo` che l'app stessa descrive come "il componente più grande e più
+   chiamato" — vanificava quel memo per questo prop, ridisegnando ~680 righe di SVG a ogni
+   render di `Serenity.tsx`, non solo quando l'ago cambia per davvero. `resetNeedleEeg`
+   avvolta in `useCallback([])` (tocca solo singleton di modulo e ref, mai stato), un nuovo
+   `handleQuantumSphereClick` con `theta.resetToSet` (già stabile di suo) nelle dipendenze —
+   MAI l'intero oggetto `theta`, che è un letterale nuovo a ogni render.
+2. **`App.tsx` — `onShowGuide` stabilizzato.** Stessa classe di bug: un handler inline in
+   mezzo a fratelli TUTTI già stabilizzati con `useEvent` per lo stesso commento esplicito
+   ("stable-identity handlers... skipped when App re-renders only because the ~10 Hz session
+   metrics changed") — l'unico dimenticato. Aggiunto `sbOnShowGuide = useEvent(...)`.
+3. **`orologio` — duplicata parola per parola fra `Serenity.tsx` e `ZonaAssessment.tsx`.**
+   Estratta in `orologio.ts` (un file a sé, non importata da `Serenity.tsx` per evitare lo
+   stesso giro circolare già incontrato con `SuggerimentoCiclo.tsx`).
+4. **`PannelloMeter.tsx` — ternario morto.** `theta.testing === 'squeeze' ? t('theta_squeeze_hint')
+   : t('theta_squeeze_hint')` — stesso testo in entrambi i rami, nessun comportamento da
+   preservare. Collassato nella sua unica resa.
+5-6. **`PannelloMeter.tsx` — bottone annulla mancante in 2 delle 4 copie** del blocco "test in
+   corso" (le due sotto-prove TA con due lattine/lattina sola, dentro il passo taratura) — le
+   altre due copie (passo stretta/respiro) lo hanno da sempre. Chi stringeva per errore in
+   quei due punti non aveva modo di uscirne se non aspettando la prova. Aggiunto lo stesso
+   bottone, stesso testo, stesso stile delle copie che già lo avevano.
+
+**Esaminati e SCARTATI** (candidati della review precedente, non più validi o mai stati un
+problema reale): `getProfiles()`/`getPcProfiles()` triplicate — già ottimizzate in un giro non
+tracciato qui; i due `useLayoutEffect` senza dipendenze in `Serenity.tsx` — deliberati, con
+guardia `prev===nuovo` che li rende innocui, non un bug; `gyroRms` "non limitato" — 32
+iterazioni per tick, costo trascurabile, falso allarme; `sessionContext` allocato inline per
+`AIAssistant` — il componente non è memoizzato e legge quel prop solo dentro un callback, mai
+in un effect reattivo: nessun beneficio misurabile a toccarlo; `pillola` duplicata — non più
+vera, una sola definizione trovata; l'algoritmo di attenuazione in `PistaCiclo.tsx` — il file è
+stato modificato pesantemente da un altro giro, l'identificatore originale non esiste più.
+
+Verificato dal vivo: nessuna regressione (arco, ASSESSMENT, seduta aperta/chiusa normalmente).
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo — il
+warning nuovo di `react-hooks/exhaustive-deps` sul `useCallback` di `handleQuantumSphereClick`,
+che avrebbe voluto l'intero oggetto `theta` nelle dipendenze — esattamente l'instabilità che il
+fix elimina — silenziato con un `eslint-disable-next-line` mirato, non con una disattivazione
+larga).
+`git status`: `src/App.tsx`, `src/serenity/Serenity.tsx`, `src/serenity/ZonaAssessment.tsx`,
+`src/serenity/PannelloMeter.tsx`, `src/serenity/orologio.ts` (nuovo) — `App.tsx` condiviso,
+entrambi i DMG ricostruiti.

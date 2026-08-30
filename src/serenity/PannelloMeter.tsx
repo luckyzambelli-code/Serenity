@@ -191,7 +191,10 @@ export function PannelloMeter({ theta, provaTa, onFatto }: {
       {passo === 'stretta' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
           <div style={{ fontSize: 'var(--s-fs-base)', lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
-            {theta.testing === 'squeeze' ? t('theta_squeeze_hint') : t('theta_squeeze_hint')}
+            {/* ⚠️ OTTIMIZZAZIONE — era un ternario con lo STESSO testo in entrambi i rami
+                (`theta.testing === 'squeeze' ? t('theta_squeeze_hint') : t('theta_squeeze_hint')`),
+                nessun comportamento diverso da preservare: collassato nella sua unica resa. */}
+            {t('theta_squeeze_hint')}
           </div>
           <button onClick={() => theta.startSqueezeTest()} disabled={theta.testing !== null}
             className="s-glass s-glass-btn" style={pillola(true)}>
@@ -320,7 +323,18 @@ export function PannelloMeter({ theta, provaTa, onFatto }: {
                     {LC('metti due lattine', 'mets deux boîtes', 'set two cans', 'pon dos latas', 'sätt två burkar')}
                   </button>
                 ) : theta.testing === 'squeeze' ? (
-                  <span className="ser-pulse" style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-alive)' }}>{t('theta_test_running')}</span>
+                  /* ⚠️ OTTIMIZZAZIONE — mancava il bottone annulla che le altre copie di
+                     questo stesso blocco (« PASSO 2 », più su) hanno: senza, chi stringeva
+                     per errore non aveva modo di uscirne se non aspettando la prova. */
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span className="ser-pulse" style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-alive)' }}>{t('theta_test_running')}</span>
+                    <button className="s-glass s-glass-btn" onClick={() => theta.cancelTest()} style={{
+                      cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                      fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)',
+                    }}>
+                      {LC('annulla', 'annuler', 'cancel', 'cancelar', 'avbryt')}
+                    </button>
+                  </div>
                 ) : (
                   <button className="s-glass s-glass-btn" onClick={() => theta.startSqueezeTest()} style={pillola(true)}>
                     {LC('stringi le due lattine', 'serre les deux boîtes', 'squeeze the two cans', 'aprieta las dos latas', 'kläm de två burkarna')}
@@ -352,7 +366,17 @@ export function PannelloMeter({ theta, provaTa, onFatto }: {
                     {LC('passa a lattina sola', 'passe à une boîte', 'switch to solo can', 'pasa a una lata', 'byt till en burk')}
                   </button>
                 ) : theta.testing === 'squeeze' ? (
-                  <span className="ser-pulse" style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-alive)' }}>{t('theta_test_running')}</span>
+                  /* ⚠️ OTTIMIZZAZIONE — stessa mancanza della copia sopra (due lattine):
+                     aggiunto il bottone annulla, prima assente qui. */
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span className="ser-pulse" style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-alive)' }}>{t('theta_test_running')}</span>
+                    <button className="s-glass s-glass-btn" onClick={() => theta.cancelTest()} style={{
+                      cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                      fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)',
+                    }}>
+                      {LC('annulla', 'annuler', 'cancel', 'cancelar', 'avbryt')}
+                    </button>
+                  </div>
                 ) : (
                   <button className="s-glass s-glass-btn" onClick={() => theta.startSqueezeTest()} style={pillola(true)}>
                     {LC('stringi la lattina sola', 'serre la boîte seule', 'squeeze the solo can', 'aprieta la lata sola', 'kläm den ensamma burken')}

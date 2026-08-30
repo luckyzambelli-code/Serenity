@@ -23,7 +23,7 @@
  * @see docs/serenity-refonte.md
  */
 
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, lazy, Suspense } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, lazy, Suspense } from 'react';
 import { useMetric, metricsStore } from '../store/metricsStore';
 import { chargeStateById } from '../lib/chargeState';
 import { sessionClock } from '../runtime/SessionClock';
@@ -112,12 +112,7 @@ import { isAssessableItem } from '../engine/assessItemFilter';
 import { deriveCyclePhase } from '../engine/sessionPhase';
 import type { SessionMode } from '../engine/sessionMode';
 import { salvaConfigurazione, type ConfigurazioneSalvata } from './configurazioniStore';
-
-/** mm:ss — l'unico formato di tempo che serve in seduta. */
-const orologio = (s: number) => {
-  const m = Math.floor(s / 60), r = Math.floor(s % 60);
-  return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
-};
+import { orologio } from './orologio';
 
 const MNA_SESSION_VUOTA: MnaSession = {
   cycles: 0, imHistory: [], imSum: 0, imCount: 0, peakIm: 0, finalZone: 'PRIME', totalCopies: 0, phaseLog: [],
@@ -1265,8 +1260,16 @@ export default function Serenity() {
     needleItemInterruptRef.current = Date.now() + ITEM_INTERRUPT_MS;
   };
   /** Torna a SET — stessa funzione di App.tsx (`resetNeedle`), la parte che riguarda l'ago EEG
-   *  (la parte Theta-Meter resta `theta.resetToSet`, già cablata sotto). */
-  const resetNeedleEeg = () => {
+   *  (la parte Theta-Meter resta `theta.resetToSet`, già cablata sotto).
+   *  ⚠️ OTTIMIZZAZIONE — `useCallback` a dipendenze vuote: tocca solo singleton di modulo
+   *  (`needleEngine`/`virtualNeedle`) e ref (`workerRef`/`needleVirtualRef`, sempre lette
+   *  fresche via `.current`), mai stato o props — può restare la STESSA funzione fra un
+   *  render e l'altro. Prima era ricreata a ogni render: passata a `onClick` di
+   *  `QuantumSphere` (sotto), un `React.memo` che l'app stessa descrive come "il componente
+   *  più grande e più chiamato" proprio perché i suoi props restino stabili — una funzione
+   *  nuova a ogni render vanificava quel memo per QUESTO prop, ridisegnando ~680 righe di SVG
+   *  a ogni render di `Serenity.tsx`, non solo quando l'ago cambia per davvero. */
+  const resetNeedleEeg = useCallback(() => {
     needleEngine.reset(() => {
       if (workerRef.current) {
         workerRef.current.postMessage({ type: 'RESET_SYSTEM' });
@@ -1275,7 +1278,19 @@ export default function Serenity() {
     });
     virtualNeedle.reset();
     needleVirtualRef.current = [];
-  };
+  }, []);
+  /** Il click sul quadrante (`onClick` di `QuantumSphere`, più giù) — riportato in cima e
+   *  stabilizzato per la STESSA ragione di `resetNeedleEeg` appena sopra: una funzione
+   *  inline nella JSX sarebbe stata ricreata a ogni render, vanificando il `React.memo` del
+   *  quadrante per questo prop. `theta.resetToSet` è già stabile di suo (il proprio
+   *  `useCallback` in `useThetaMeter.ts`) — usare LUI nelle dipendenze, non l'intero oggetto
+   *  `theta` (che invece È un letterale nuovo a ogni render), è quel che lascia
+   *  `handleQuantumSphereClick` davvero stabile fra un render e l'altro. */
+  const handleQuantumSphereClick = useCallback(() => {
+    theta.resetToSet();
+    resetNeedleEeg();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theta.resetToSet, resetNeedleEeg]);
   /** Chiude (o apre) la riga CORPUS dell'F/N EEG — stessa logica di App.tsx (`flushEegFn`):
    *  scrive solo se una seduta è aperta (`corpusSessionRef` non vuoto, vedi `apri()`) e c'era
    *  davvero un F/N in sospeso. `asIs` lega l'indicatore alla decisione: senza, non si potrebbe
@@ -5229,7 +5244,7 @@ export default function Serenity() {
             targetOffset={theta.testing ? theta.testBaseOffset + SQUEEZE_TARGET_OFFSET : null}
             needleReactionKey={agoEeg ? needleReactionKey : thetaReactionKey}
             asIsnessState={ep.asIsnessState}
-            onClick={() => { theta.resetToSet(); resetNeedleEeg(); }}
+            onClick={handleQuantumSphereClick}
             showTrail={showTrailPref}
             sessionState={aperta ? 'running' : 'idle'}
           />

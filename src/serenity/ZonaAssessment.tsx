@@ -31,6 +31,7 @@
 import { useState } from 'react';
 import { useI18n } from '../i18n';
 import { READ_NON_MISURATO } from '../engine/instantRead';
+import { orologio } from './orologio';
 
 export interface AssessItemSerenity {
   id: string; time: number; item: string; gruppo: number;
@@ -46,11 +47,6 @@ export interface AssessItemSerenity {
 }
 
 type Vista = 'assess' | 'ri';
-
-const orologio = (s: number) => {
-  const m = Math.floor(s / 60), r = Math.floor(s % 60);
-  return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
-};
 
 /** Quante volte la lettura di UN ago ha indicato al preclear. Il denominatore conta solo le
  *  righe in cui quell'ago aveva letto qualcosa: un ago che tace non sbaglia — e nemmeno un ago

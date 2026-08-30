@@ -4378,6 +4378,12 @@ export default function App() {
   const sbOnEnd           = useEvent(handleEnd);
   const sbOnShowProcessus = useEvent(() => setShowProcessus(s => !s));
   const sbOnShowHistory   = useEvent(() => setShowHistoryModal(s => !s));
+  // ⚠️ OTTIMIZZAZIONE — mancava fra i fratelli sopra: `onShowGuide` restava una funzione
+  // inline nella JSX (più giù), l'UNICO prop di questo blocco a farlo — vanificava per
+  // questo prop la STESSA ottimizzazione che il commento qui sopra descrive per tutti gli
+  // altri (Sidebar/SidebarDrawer memoizzati, saltati quando App si ridisegna solo per le
+  // metriche di sessione a ~10 Hz).
+  const sbOnShowGuide     = useEvent(() => setShowGuide(true));
   const sdOnClose         = useEvent(() => setSidebarDrawer(null));
   const sdOnModeChange    = useEvent(handleModeChange);
   const sdOnUsePhoneSatellite = useEvent(() => { setSidebarDrawer(null); handleModeChange('auditor', { satellite: true }); });
@@ -5108,7 +5114,7 @@ export default function App() {
           historyOpen={showHistoryModal}
           onShowProcessus={sbOnShowProcessus}
           onShowHistory={sbOnShowHistory}
-          onShowGuide={() => setShowGuide(true)}
+          onShowGuide={sbOnShowGuide}
           guideOpen={showGuide}
           onConnectMuse={sbOnConnectMuse}
           onStart={sbOnStart}
