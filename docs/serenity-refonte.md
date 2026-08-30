@@ -7110,3 +7110,8 @@ si è riprodotta.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/Serenity.tsx`, `src/serenity/tokens.css` (solo SERENITY).
+
+**CONFERMATO dall'utente sul suo Mac vero, versione 3.0.163**: « Perfetto, sparito ». L'indagine è
+chiusa per davvero — non un'esclusione, una CAUSA TROVATA E CORRETTA. `EQUILIBRIUM` non ha mai
+usato `.s-glass`/LENTILLE (la sua tavolozza scura vive in `ui/tokens.ts`, un materiale diverso):
+nessun rischio dello stesso bug lì, nessun bisogno di ricostruire il suo DMG per questo fix.
