@@ -6906,4 +6906,45 @@ Verifica dal vivo (sandbox, non macOS): nessuna regressione visiva, l'arco è id
 VERA di questo fix può avvenire solo sul Mac dell'utente, dove il difetto esiste per davvero.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+
+## Giro (successivo) — l'alone bianco: RISOLTO — non era un bug di questo repository
+
+**L'utente conferma**: « C'è ancora » su 3.0.157 (`translateZ(0)` tolto — pista esclusa anche
+questa, confermata sul suo Mac vero). Proposto il pannello « Layer borders » di Chrome DevTools
+(mostra un riquadro attorno a ogni livello di composizione GPU reale, invece di indovinare quale
+proprietà CSS lo causa) — prima che l'utente arrivasse a provarlo, ha trovato da solo la vera
+causa: **« Quando attivo MODE SOMBRE AUTOMATIQUE sparisce »**.
+
+**Perché questo chiude l'indagine con certezza, non per sospetto.** L'impostazione di sistema
+macOS Aspetto: Chiaro / Scuro / **Automatico** (passa da solo secondo l'ora) è indistinguibile, per
+QUALUNQUE pagina web, da un Aspetto fissato a mano sullo stesso valore corrente — `prefers-color-
+scheme` in CSS/JS restituisce lo stesso identico `dark` (o `light`) in entrambi i casi, nello
+stesso istante. Nessuna riga di HTML/CSS/JS di questa applicazione — né di NESSUNA pagina web — può
+*in linea di principio* comportarsi diversamente fra "Scuro fissato a mano" e "Automatico,
+attualmente scuro": sono la stessa cosa vista dal browser. Se l'alone cambia fra i due, la causa
+non può essere nella pagina — dev'essere macOS stesso, nel modo in cui gestisce un Aspetto FISSATO
+a mano contro uno SCELTO in automatico (un dettaglio di implementazione del Window Server, non
+qualcosa che un sito web può leggere o influenzare).
+
+**Questo combacia con OGNI prova raccolta in tutta l'indagine**, dal primo giro fino a questo: mai
+un elemento DOM/CSS/SVG/canvas a spiegarlo (giusto: non c'era da spiegare, non lo disegnava questa
+pagina); presente in Chrome, Safari, ED Electron (giusto: tutti e tre passano dallo stesso
+compositor di sistema); si sposta con la finestra (giusto: è il compositor DI QUELLA finestra);
+l'ispettore non seleziona nulla, « è in arrière plan » (giusto: sotto tutto quel che il motore di
+rendering del browser conosce); indipendente dalla GPU di Chromium (giusto: la GPU coinvolta è
+quella del compositing di sistema, non quella del processo di rendering). Ogni singola prova, con
+il senno di poi, punta ESATTAMENTE qui.
+
+**Nessuna correzione di codice necessaria — non c'è niente in questo repository da correggere.**
+Tutti i tentativi precedenti (bottone PRESS-START, bagliori SVG, GPU spenta, canvas della
+SplashScreen, `backgroundColor` della finestra, sfondo pieno sulla zona arco, `transform:
+translateZ(0)`) erano ipotesi ragionevoli via via escluse — nessuna sbagliata di per sé, tutte
+cieche a una causa che stava fuori da qualunque pagina web. `transform:translateZ(0)` resta tolto
+dalla zona arco (era comunque un rimedio mai dimostrato per un problema che non era suo da
+risolvere — nessuna ragione di rimetterlo).
+
+**Per l'utente**: se « Automatico » risolve l'alone ma cambia il comportamento dell'Aspetto in modo
+indesiderato (passa da chiaro a scuro secondo l'ora, invece di restare fisso), è una scelta di
+System Settings → Aspetto Generale, non qualcosa che questa app possa impostare o aggirare da sé —
+maiuscolo indipendente da SERENITY/EQUILIBRIUM.
 `git status`: `src/serenity/Serenity.tsx` (solo SERENITY).
