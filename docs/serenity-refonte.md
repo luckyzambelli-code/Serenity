@@ -7020,3 +7020,12 @@ Se aprendo una seduta NORMALE (non in pausa) in questa build l'alone sparisce, l
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/Serenity.tsx` (solo SERENITY).
+
+**Esito**: l'utente conferma « C'È L'ALONE » — `voiceToneAnalyzer` escluso anche lui. Tolto anche
+`primeFreqAudio.init()` (temporaneamente, stesso test) — l'ultimo motore audio/media rimasto che
+si attiva esattamente all'apertura della seduta, mai prima. Crea "solo" un `AudioContext`, senza
+`getUserMedia` nel suo codice: meno sospetto degli altri due, ma è l'ultimo candidato di questa
+famiglia rimasto da escludere prima di allargare la ricerca fuori dall'audio.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx` (solo SERENITY).

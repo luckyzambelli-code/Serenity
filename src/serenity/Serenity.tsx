@@ -2341,7 +2341,11 @@ export default function Serenity() {
     // `onHarmonicCopy` va agganciato QUI (una volta per seduta, come in App.tsx) — è
     // `primeFreqAudio` che lo richiama a ogni copia armonica generata durante HARMONICS;
     // senza, il contatore COPIES di `PannelloMna` resterebbe fermo a zero per sempre.
-    primeFreqAudio.init();
+    // ⚠️ TEST DIAGNOSTICO « alone bianco » — disattivato temporaneamente, come già fatto per
+    // voiceToneAnalyzer (escluso: l'utente conferma che l'alone resta anche con quello spento).
+    // Questo crea "solo" un AudioContext — nessun getUserMedia nel suo codice — ma è l'ultimo
+    // motore audio/media rimasto che si attiva ESATTAMENTE quando la seduta si apre, mai prima.
+    // primeFreqAudio.init();
     primeFreqAudio.onHarmonicCopy = (p, freq) => {
       setPrimeCopies(prev => {
         const next = [...prev, { p, freq }];
