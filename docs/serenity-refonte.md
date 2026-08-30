@@ -7115,3 +7115,22 @@ si è riprodotta.
 chiusa per davvero — non un'esclusione, una CAUSA TROVATA E CORRETTA. `EQUILIBRIUM` non ha mai
 usato `.s-glass`/LENTILLE (la sua tavolozza scura vive in `ui/tokens.ts`, un materiale diverso):
 nessun rischio dello stesso bug lì, nessun bisogno di ricostruire il suo DMG per questo fix.
+
+## Giro (successivo) — PROCESSUS: `title` sulle card PDF e sui bottoni senza etichetta
+
+**Segnalato**: « Metti i titoli dei bottoni in PROCESSUS in modo da rendere visibili le scritte ».
+Verificato dal vivo (`ProcessusModal.tsx`, condiviso con EQUILIBRIUM): le card dei PDF mostrano il
+nome troncato a due righe (`line-clamp-2`, es. « 12) FRA 8 January 2020 – The Existence Non... »)
+ma non avevano `title` — passandoci sopra col mouse non compariva nessun testo completo.
+
+**Aggiunto `title` (il nome intero) a**: le card PDF (il caso principale, il nome troncato ora si
+vede per intero al passaggio del mouse), il bottone di eliminazione ✕ su ogni card, il chip "ALL"
+del filtro tag, il bottone ✕ che annulla la coda dei file in attesa — tutti icone/testo troncato
+senza nessuna etichetta prima. Solo `title`, nessun cambio visivo finché non ci si passa sopra —
+sicuro per un file condiviso, nessun comportamento diverso per EQUILIBRIUM.
+
+Verificato dal vivo: tutte le card mostrano ora il `title` completo (controllato via DOM, i
+tooltip nativi non sempre catturabili in screenshot).
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/components/ProcessusModal.tsx` (condiviso — entrambi i DMG ricostruiti).

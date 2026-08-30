@@ -174,6 +174,8 @@ export function ProcessusModal({
               const countBadge = { background: lt ? 'rgba(8,145,178,0.12)' : 'rgba(255,255,255,0.15)' };
               return (<>
                 <button onClick={() => setProcessusTagFilter('all')}
+                  title={L('mostra tutti i processus', 'afficher tous les processus', 'show all processus',
+                    'mostrar todos los processus', 'visa alla processus')}
                   className="px-3.5 py-1.5 rounded-full text-[11px] font-mono tracking-widest uppercase transition-all flex items-center gap-1.5"
                   style={chipStyle(processusTagFilter === 'all')}>
                   ◈ ALL
@@ -262,6 +264,7 @@ export function ProcessusModal({
                 </button>
                 <button
                   onClick={() => { setPendingFiles([]); setPendingTagInput(''); }}
+                  title={L('annulla', 'annuler', 'cancel', 'cancelar', 'avbryt')}
                   className="px-2 py-1 rounded text-[10px] font-mono transition-all hover:bg-red-500/20"
                   style={{ color: 'rgba(255,80,80,0.6)', border: '1px solid rgba(255,80,80,0.2)' }}>
                   ✕
@@ -371,6 +374,7 @@ export function ProcessusModal({
                   return (
                     <div
                       key={i}
+                      title={p.name}
                       className="relative group cursor-pointer flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-200"
                       style={{
                         background: th.card,
@@ -434,6 +438,7 @@ export function ProcessusModal({
                           }
                           setProcessusPdfs(prev => prev.filter((_, j) => j !== globalIdx));
                         }}
+                        title={L('elimina', 'supprimer', 'delete', 'eliminar', 'ta bort')}
                         className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
                         style={{ background: 'rgba(200,0,0,0.5)', border: '1px solid rgba(255,60,60,0.4)', color: 'rgba(255,180,180,0.9)' }}>
                         ✕
