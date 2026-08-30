@@ -7029,3 +7029,34 @@ famiglia rimasto da escludere prima di allargare la ricerca fuori dall'audio.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/Serenity.tsx` (solo SERENITY).
+
+**Esito**: « SI » — l'utente conferma che l'alone resta anche con `primeFreqAudio` spento.
+TUTTA la famiglia audio/media di `avviaSeduta()` è ora esclusa con certezza (voce, tono di
+voce, MNA). Ripristinati entrambi i motori (nessun beneficio, solo funzionalità rotta per
+niente).
+
+## Giro (successivo) — l'alone bianco: nuova pista — il ridimensionamento del pannello all'apertura
+
+Rifatto il ragionamento da capo: il pannello ha SEMPRE lo stesso CSS statico (confermato dal
+codice), ma non è vero che NIENTE cambia intorno a lui — `comandiSottoAgo = aperta` cambia il
+rapporto flex della colonna che lo contiene (`'1 1 0%'` inattivo → `'2 1 0%'`/`'3 1 0%'` a seduta
+aperta): il pannello CAMBIA DAVVERO dimensione nell'istante esatto in cui la seduta si apre, un
+ridimensionamento vero non solo un cambio di contenuto — proprio l'istante in cui compare l'alone
+(confermato: assente sull'arco inattivo, compare solo dopo "OUVRIR UNE SÉANCE").
+
+**Ipotesi**: un pannello `overflow:hidden`+`borderRadius` che si ridimensiona PROPRIO mentre
+riceve nuovo contenuto (camere, comandi, overlay) può lasciare un residuo di composizione che il
+motore di rendering non invalida da solo — non un bug nel contenuto, un bug nella TRANSIZIONE.
+
+**Test, questa volta senza toccare taglia o design veri**: un `useEffect` su `[aperta]` che, SOLO
+quando la seduta si apre, aspetta due frame (che il layout si sia assestato per davvero) e poi fa
+un "nudge" impercettibile di opacità (`1` → `0.999` → `1`) sul pannello — forza il motore di
+rendering a ridipingerlo per davvero invece di riusare quel che aveva già composto per la taglia
+precedente. Zero cambi visibili, zero cambi di comportamento — un `useEffect` in più, niente
+altro.
+
+Verifica dal vivo (sandbox, non macOS): nessuna regressione — seduta aperta e funzionante
+normalmente. La verifica vera può avvenire solo sul Mac dell'utente.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx` (solo SERENITY).

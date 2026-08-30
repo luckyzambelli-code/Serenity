@@ -654,6 +654,37 @@ export default function Serenity() {
   /** `taRef` — il blocco della lettura TA/NEEDLE LIGHT in alto a sinistra del quadrante
    *  (`top:14,left:16` dentro `<section>`). */
   const taRef = useRef<HTMLDivElement | null>(null);
+  /** `arcoPannelloRef` — TEST DIAGNOSTICO « alone bianco ». Il pannello dell'arco cambia
+   *  davvero dimensione quando la seduta si apre (`comandiSottoAgo = aperta` cambia il
+   *  rapporto flex della colonna che lo contiene, da `'1 1 0%'` a `'2 1 0%'`/`'3 1 0%'`) —
+   *  un ridimensionamento vero, non solo un cambio di contenuto. Ipotesi: un pannello con
+   *  `overflow:hidden`+`borderRadius` che si ridimensiona proprio mentre riceve nuovo
+   *  contenuto (le camere, i comandi, l'overlay) può lasciare un residuo di ridisegno che
+   *  Chromium/WebKit non invalida da soli — v. l'effetto poco più giù, che forza un
+   *  ridisegno pulito appena la seduta si apre, senza toccare taglia o design veri. */
+  const arcoPannelloRef = useRef<HTMLDivElement | null>(null);
+  const arcoNudgeId1Ref = useRef(0);
+  const arcoNudgeId2Ref = useRef(0);
+  useEffect(() => {
+    if (!aperta) return;
+    const el = arcoPannelloRef.current;
+    if (!el) return;
+    // Nudge impercettibile (0.001 di opacità, due frame dopo che il layout si è assestato):
+    // forza Chromium/WebKit a ridipingere per davvero il pannello, invece di riusare quel
+    // che aveva già composto per la taglia precedente.
+    const id1 = requestAnimationFrame(() => {
+      const id2 = requestAnimationFrame(() => {
+        el.style.opacity = '0.999';
+        requestAnimationFrame(() => { el.style.opacity = '1'; });
+      });
+      arcoNudgeId2Ref.current = id2;
+    });
+    arcoNudgeId1Ref.current = id1;
+    return () => {
+      cancelAnimationFrame(arcoNudgeId1Ref.current);
+      cancelAnimationFrame(arcoNudgeId2Ref.current);
+    };
+  }, [aperta]);
   const uiAlpha = useUiStore(s => s.uiAlpha);
   // ⚠️ Segnalato: « la trasparenza si può modificare ma non agisce sulle scritte ». Prima
   // `uiAlpha` arrivava SOLO a `Cerchio.tsx` (le due camere) — v. la nota su `--s-ui-alpha` in
@@ -2318,13 +2349,10 @@ export default function Serenity() {
     // della voce, non le parole. `void`: se il microfono non è concesso (o è già preso da
     // altro) `init()` risolve `false` — `onTranscript` (sopra) legge `analyze() ?? undefined`,
     // niente chip di tono invece di un errore.
-    // ⚠️ TEST DIAGNOSTICO « alone bianco » — disattivato temporaneamente per isolare la causa.
-    // La pausa (`pausata`) NON ferma questo motore (solo `chiudi()` lo fa, v. sotto) — un test
-    // precedente "seduta in pausa" non lo escludeva affatto, un buco nel ragionamento, non
-    // nel motore. Qui un secondo flusso microfono vero, separato dal riconoscimento vocale,
-    // si attiva ESATTAMENTE quando la seduta si apre — la stessa identica finestra temporale
-    // in cui compare l'alone. Se sparisce con questo spento, la causa è confermata.
-    // void voiceToneAnalyzer.init().then(ok => { if (ok) voiceToneAnalyzer.ensureAudioContextActive(); });
+    // ⚠️ TEST DIAGNOSTICO « alone bianco » FATTO E RIPRISTINATO — disattivato temporaneamente
+    // per isolare la causa; l'utente conferma dal vivo che l'alone resta identico anche con
+    // questo motore spento. Escluso con certezza — nessuna ragione di tenerlo spento.
+    void voiceToneAnalyzer.init().then(ok => { if (ok) voiceToneAnalyzer.ensureAudioContextActive(); });
     sessionRecorder.reset();   // niente chart/reazioni/CSV di una seduta precedente — come App.tsx
     setPausata(false); pausaMotivoRef.current = null;   // niente pausa residua da una seduta precedente
     journal.resetJournal(t('ser_session_opened'));
@@ -2341,11 +2369,11 @@ export default function Serenity() {
     // `onHarmonicCopy` va agganciato QUI (una volta per seduta, come in App.tsx) — è
     // `primeFreqAudio` che lo richiama a ogni copia armonica generata durante HARMONICS;
     // senza, il contatore COPIES di `PannelloMna` resterebbe fermo a zero per sempre.
-    // ⚠️ TEST DIAGNOSTICO « alone bianco » — disattivato temporaneamente, come già fatto per
-    // voiceToneAnalyzer (escluso: l'utente conferma che l'alone resta anche con quello spento).
-    // Questo crea "solo" un AudioContext — nessun getUserMedia nel suo codice — ma è l'ultimo
-    // motore audio/media rimasto che si attiva ESATTAMENTE quando la seduta si apre, mai prima.
-    // primeFreqAudio.init();
+    // ⚠️ TEST DIAGNOSTICO « alone bianco » FATTO E RIPRISTINATO — disattivato temporaneamente
+    // per lo stesso test; l'utente conferma dal vivo che l'alone resta identico anche con
+    // questo spento. Tutta la famiglia audio/media di `avviaSeduta()` è ora esclusa con
+    // certezza — nessuna ragione di tenerlo spento.
+    primeFreqAudio.init();
     primeFreqAudio.onHarmonicCopy = (p, freq) => {
       setPrimeCopies(prev => {
         const next = [...prev, { p, freq }];
@@ -4884,7 +4912,7 @@ export default function Serenity() {
             </div>
           );
         })()}
-        <div style={{
+        <div ref={arcoPannelloRef} style={{
           /* ⚠️ Era `calc(100% - 44px)`: quei 44px riservavano lo spazio per l'orologio e le
              letture che stavano SOTTO questo contenitore, nel flusso di `<section>`. Ora che
              sono dentro (la striscia in basso, `position:absolute`, vedi sotto), non c'è più
