@@ -409,20 +409,13 @@ body {
   /* v. la nota su `--s-ui-alpha`, sopra: l'intero pannello (fondo E testo) segue il cursore
      di CONFIG, non più solo le camere. */
   opacity: var(--s-ui-alpha);
-  /* ⚠️ TEST — segnalato: « con Aspetto di macOS su Automatico (che toglie l'alone bianco
-     nella zona arco, v. Serenity.tsx) LENTILLE torna piatta, `backdrop-filter` non si vede
-     più ». `isolation:isolate` crea un contesto d'impilamento ma non chiede un livello di
-     composizione GPU esplicito — sotto Automatico, macOS potrebbe decidere da sé se comporre
-     la sfocatura, e deciderlo diversamente da sotto Aspetto fissato (la stessa famiglia di
-     comportamento sospettata per l'alone, qui probabilmente causa la sparizione anziché la
-     comparsa di un livello). `transform:translateZ(0)` chiede quel livello in modo esplicito,
-     invece di lasciarlo alla decisione implicita del sistema — l'opposto esatto del rimedio
-     tolto dal pannello dell'arco (lì il livello esplicito sembrava LA causa dell'alone; qui,
-     su un elemento diverso con backdrop-filter invece di background:transparent, l'ipotesi è
-     che la sua ASSENZA sia la causa della sfocatura mancante). Test diagnostico: se sotto
-     Automatico LENTILLE torna a vedersi, la causa è confermata; se resta piatta, si esclude
-     anche questa e si toglie. */
-  transform: translateZ(0);
+  /* ⚠️ TEST FATTO E RIPRISTINATO — `transform:translateZ(0)` provato qui per riportare
+     `backdrop-filter` sotto Aspetto Automatico di macOS (che toglie l'alone bianco nella zona
+     arco, v. Serenity.tsx, ma spegne anche la sfocatura vera di LENTILLE). L'utente conferma
+     dal vivo: LENTILLE resta piatta anche con il livello GPU esplicito — nessun beneficio.
+     Tolto: nessuna ragione di tenere più livelli di composizione su una ventina di bottoni per
+     un rimedio che non ha funzionato. `backdrop-filter` sotto Automatico resta un limite del
+     sistema, non qualcosa che questa classe possa aggirare. */
 }
 /* IL LUCIDO — LENTILLE: segnalato « je voudrais que les boutons... deviennent plus GLASS
    LIQUID », poi scelta fra tre proposte confrontate live (l'artefact "Trois verres pour

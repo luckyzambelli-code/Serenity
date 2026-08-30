@@ -6975,4 +6975,16 @@ non riappare sui bottoni) può avvenire solo sul Mac dell'utente.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/tokens.css` (solo SERENITY).
+
+**Esito, confermato dall'utente**: LENTILLE resta piatta anche con il livello GPU esplicito —
+nessun beneficio. `transform:translateZ(0)` tolto da `.s-glass`, nessuna ragione di tenerlo per
+un rimedio che non ha funzionato. `backdrop-filter` sotto Aspetto Automatico di macOS resta un
+limite del sistema — non qualcosa che una proprietà CSS su questo lato possa aggirare.
+
+**A questo punto il trade-off è confermato reale e non risolvibile via codice**: Aspetto fissato
+(LENTILLE piena, l'alone resta, cosmetico) contro Aspetto Automatico (nessun alone, LENTILLE
+piatta ma leggibile e funzionante). Nessuna delle correzioni provate — su nessuno dei due lati —
+ha trovato un modo di avere entrambi. Resta la scelta dell'utente.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/Serenity.tsx` (solo SERENITY).
