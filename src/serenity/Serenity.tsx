@@ -1808,6 +1808,24 @@ export default function Serenity() {
    *  condizione che già nasconde/mostra i cinque cerchi dei metodi, ora estesa alla barra
    *  amministrativa in alto. */
   const modalitaCiclo = mode !== 'free';
+  /**
+   * ── PRIMA VOLTA « LIBERO » — segnalato: « quando si inizia la sessione senza strumenti
+   * appaiono i cerchi dei cicli, e c'è scritto DAI L'ITEM, Scrivilo o dillo, poi premi, ma non
+   * è corretto ». Vero: `spiegazioneCiclo`/`comeSenzaAgo` per `mode === 'free'` sono pensati
+   * per il RITORNO al libero fra un ciclo e l'altro (« nessun ciclo scelto ADESSO » — un
+   * auditor già in seduta sa già come procedere). Al PRIMO libero della seduta — prima che
+   * QUALSIASI ciclo sia mai stato armato — serve invece un vero briefing d'apertura (v. il
+   * blocco "INIZIO SESSIONE"/"SESSION START" più giù), non la stessa didascalia minima.
+   * `primaVoltaLibero` distingue i due casi con un solo state, senza toccare `spiegazioneCiclo`
+   * (usata anche altrove, es. `PistaCiclo` con strumenti): si riarma a `true` ad ogni apertura
+   * seduta (`aperta`), e si spegne per sempre — fino alla prossima apertura — al primo `mode`
+   * diverso da `'free'`: quello è il segno che l'auditor ha già capito come muoversi.
+   */
+  const [primaVoltaLibero, setPrimaVoltaLibero] = useState(true);
+  useEffect(() => { if (aperta) setPrimaVoltaLibero(true); }, [aperta]);
+  useEffect(() => {
+    if (aperta && mode !== 'free') setPrimaVoltaLibero(false);
+  }, [aperta, mode]);
   /** ── SENZA STRUMENTI, L'ARCO SPARISCE — segnalato: « quando non ci sono strumenti attivi,
    *  l'arco deve sparire e le scritte dei cicli devono farsi al posto dell'arco, COME IN
    *  EQUILIBRIUM ». Verificato App.tsx: `senzaMisura` (la STESSA funzione pura condivisa,
@@ -2483,7 +2501,13 @@ export default function Serenity() {
     const museInCorso = muse.museConnection !== 'disconnected';
     const meterInCorso = meterC || theta.status === 'connecting';
     if (!senzaStrumenti && !museInCorso && !meterInCorso) {
-      setConnSel({ muse: false, theta: false, none: false });
+      // ⚠️ SEGNALATO: « Basico deve cominciare senza strumenti per default ». In BASIC
+      // (`espertoAttivo !== true`, stessa convenzione di `moduleVis`/`cam2Mostrata` sopra —
+      // « non === false », per includere anche la configurazione ancora senza questo campo)
+      // la scelta più probabile è "nessuno": si pre-seleziona "senza strumenti" nel pannello
+      // qui sotto, l'auditor può comunque cambiarla con un clic. In EXPERT nessuna scelta è
+      // pre-selezionata, come prima.
+      setConnSel({ muse: false, theta: false, none: espertoAttivo !== true });
       setNomeConfigDaSalvare(''); setConfigSalvata(false);
       setScegliStrumento(true);
       return;
@@ -3805,9 +3829,26 @@ export default function Serenity() {
             </span>
           )}
         </div>
-        <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)' }}>
-          {__SERENITY_VERSION__}
-        </span>
+        {/* ⚠️ AGGIUNTO — segnalato: « inserisci sopra la versione accanto a SERENITY un
+            cerchio con all'interno l'immagine che utilizzi per l'icona dell'applicazione ».
+            La stessa icona che macOS mostra nel Dock/Launchpad (`build/icon-serenity.icns`,
+            qui la sua sorgente PNG copiata in `public/` — un asset SOLO di SERENITY, non
+            condiviso con EQUILIBRIUM, che ha la propria `build/icon.icns`), non un disegno
+            reinventato. Colonna a sé accanto al nome SERENITY (stesso gruppo del logo Alt.
+            Scientology più a sinistra): il cerchio sopra, il numero di build appena sotto —
+            "sopra la versione" preso alla lettera, non un'icona sparsa altrove nell'header. */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+          <div style={{
+            width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+            boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.6), 0 1px 3px rgba(44,47,51,0.35)',
+            border: '1px solid var(--s-ink-ghost)',
+          }}>
+            <img src="/icon-serenity.png" alt="SERENITY" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)' }}>
+            {__SERENITY_VERSION__}
+          </span>
+        </div>
         {/* ⚠️ SEGNALATO: « la langue doit pouvoir être changée en cours de route » — non solo
             alle quattro domande d'avvio. Stessi due selettori di `Avvio.tsx`, condivisi da
             `Impostazioni.tsx`: qui restano visibili per tutta la seduta, non solo prima. */}
@@ -5520,28 +5561,130 @@ export default function Serenity() {
           {senzaMisura && aperta && (
             <div style={{
               position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)',
-              zIndex: 4, maxWidth: 560, padding: '0 24px', textAlign: 'center',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, pointerEvents: 'none',
+              zIndex: 4, maxWidth: (mode === 'free' && primaVoltaLibero) ? 660 : 560,
+              maxHeight: '82vh', overflowY: 'auto',
+              padding: '0 24px', textAlign: 'center',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+              pointerEvents: (mode === 'free' && primaVoltaLibero) ? 'auto' : 'none',
             }}>
-              <span style={{
-                fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-hero)', fontWeight: 800,
-                letterSpacing: '0.02em', lineHeight: 1.15,
-                color: spiegazioneCiclo.fatto ? 'var(--s-still)' : 'var(--s-ink)',
-              }}>
-                {senzaNumero(spiegazioneCiclo.titolo)}
-              </span>
-              {spiegazioneCiclo.comando && (
-                <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-lg)', lineHeight: 1.35, color: 'var(--s-ink-soft)' }}>
-                  {spiegazioneCiclo.comando}
-                </span>
-              )}
-              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', lineHeight: 1.5, color: 'var(--s-ink-faint)' }}>
-                {comeSenzaAgo(faseCiclo) ?? spiegazioneCiclo.come}
-              </span>
-              {spiegazioneCiclo.avviso && (
-                <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', fontWeight: 700, color: 'var(--s-reserve)' }}>
-                  {spiegazioneCiclo.avviso}
-                </span>
+              {/* ⚠️ SEGNALATO: « quando si inizia la sessione senza strumenti appaiono i cerchi
+                  dei cicli, e c'è scritto DAI L'ITEM, Scrivilo o dillo, poi premi, ma non è
+                  corretto ». `spiegazioneCiclo`/`comeSenzaAgo` per `mode==='free'` restano
+                  giuste per il RITORNO al libero fra un ciclo e l'altro — sbagliate al PRIMO
+                  libero della seduta, quando l'auditor non ha ancora scelto nulla: lì serve un
+                  vero briefing d'apertura, non l'istruzione minima "premi" pensata per chi sta
+                  già conducendo. `primaVoltaLibero` (sopra, accanto a `mode`) distingue i due
+                  momenti; `bottoniCiclo` (i cerchi dei cicli) restano SEMPRE montati sotto,
+                  nell'uno e nell'altro caso — il testo del briefing lo dice esplicitamente
+                  ("puoi scegliere uno dei cicli disponibili").
+                  ⚠️ Il contenitore era troppo BASSO per questo testo lungo (verificato dal vivo:
+                  titolo e ultimo punto uscivano dallo schermo, `top:50%`/`translate(-50%,-50%)`
+                  non lascia spazio extra) — due liste UNA sopra l'altra (7 righe in tutto) non
+                  ci stavano. Le due liste ora affiancate in `grid` (`Prima di iniziare`/3 punti
+                  a sinistra, `Durante la sessione`/4 punti a destra) dimezzano l'altezza; titolo
+                  e corpo un poco più piccoli (`--s-fs-xl`/`--s-fs-sm`, non hero/lg) bastano per
+                  un testo letto UNA VOLTA SOLA all'apertura — diverso da `spiegazioneCiclo`, che
+                  resta grande perché letto ripetutamente durante il ciclo. `maxHeight`+`overflowY`
+                  sul contenitore, come rete di sicurezza su finestre ancora più basse. */}
+              {mode === 'free' && primaVoltaLibero ? (
+                <>
+                  <span style={{
+                    fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-xl)', fontWeight: 800,
+                    letterSpacing: '0.02em', lineHeight: 1.15, color: 'var(--s-ink)',
+                  }}>
+                    {LC('INIZIO SESSIONE', 'DÉBUT DE SÉANCE', 'SESSION START', 'INICIO DE LA SESIÓN', 'SESSIONSSTART')}
+                  </span>
+                  <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-base)', lineHeight: 1.35, color: 'var(--s-ink-soft)' }}>
+                    {LC('Stai per iniziare la sessione.', 'Tu es sur le point de commencer la séance.',
+                        'You are about to start the session.', 'Estás a punto de empezar la sesión.',
+                        'Du är på väg att påbörja sessionen.')}
+                  </span>
+                  <div style={{
+                    textAlign: 'left', alignSelf: 'stretch', display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px 28px',
+                  }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', fontWeight: 700, color: 'var(--s-ink)' }}>
+                        {LC('Prima di iniziare:', 'Avant de commencer :', 'Before you start:', 'Antes de empezar:', 'Innan du börjar:')}
+                      </span>
+                      <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3,
+                        fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.35, color: 'var(--s-ink-faint)' }}>
+                        <li>{LC('Inserisci l\'Obiettivo della sessione.', 'Renseigne l\'Objectif de la séance.',
+                                'Enter the session\'s Objective.', 'Introduce el Objetivo de la sesión.',
+                                'Ange sessionens Mål.')}</li>
+                        <li>{LC('Indica lo stato fisico del PC.', 'Indique l\'état physique du PC.',
+                                'Indicate the PC\'s physical state.', 'Indica el estado físico del PC.',
+                                'Ange PC:ns fysiska tillstånd.')}</li>
+                        <li>{LC('Inserisci l\'R-Factor. Questi dati saranno inclusi nel rapporto finale della sessione.',
+                                'Renseigne le R-Factor. Ces données seront incluses dans le rapport final de la séance.',
+                                'Enter the R-Factor. This data will be included in the session\'s final report.',
+                                'Introduce el R-Factor. Estos datos se incluirán en el informe final de la sesión.',
+                                'Ange R-Factor. Dessa uppgifter inkluderas i sessionens slutrapport.')}</li>
+                      </ul>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', fontWeight: 700, color: 'var(--s-ink)' }}>
+                        {LC('Durante la sessione:', 'Pendant la séance :', 'During the session:', 'Durante la sesión:', 'Under sessionen:')}
+                      </span>
+                      <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3,
+                        fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.35, color: 'var(--s-ink-faint)' }}>
+                        <li>{LC('Puoi scegliere uno dei cicli disponibili oppure eseguire liberamente qualsiasi procedimento.',
+                                'Tu peux choisir l\'un des cycles disponibles ou mener librement n\'importe quel procédé.',
+                                'You can choose one of the available cycles or freely run any process.',
+                                'Puedes elegir uno de los ciclos disponibles o llevar libremente cualquier procedimiento.',
+                                'Du kan välja en av de tillgängliga cyklerna eller fritt köra vilken process som helst.')}</li>
+                        <li>{LC('Premi COMMANDS per visualizzare i comandi disponibili.',
+                                'Appuie sur COMMANDS pour afficher les commandes disponibles.',
+                                'Press COMMANDS to see the available commands.',
+                                'Pulsa COMMANDS para ver los comandos disponibles.',
+                                'Tryck på COMMANDS för att visa tillgängliga kommandon.')}</li>
+                        <li>{LC('Premi ASSESSMENT per registrare automaticamente gli item che enunci.',
+                                'Appuie sur ASSESSMENT pour enregistrer automatiquement les items que tu énonces.',
+                                'Press ASSESSMENT to automatically log the items you call out.',
+                                'Pulsa ASSESSMENT para registrar automáticamente los ítems que enuncies.',
+                                'Tryck på ASSESSMENT för att automatiskt registrera de items du säger.')}</li>
+                        <li>{LC('Il trascritto della sessione viene registrato automaticamente.',
+                                'La transcription de la séance est enregistrée automatiquement.',
+                                'The session transcript is recorded automatically.',
+                                'La transcripción de la sesión se registra automáticamente.',
+                                'Sessionens transkript spelas in automatiskt.')}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <span style={{
+                    fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-hero)', fontWeight: 800,
+                    letterSpacing: '0.02em', lineHeight: 1.15,
+                    color: spiegazioneCiclo.fatto ? 'var(--s-still)' : 'var(--s-ink)',
+                  }}>
+                    {senzaNumero(spiegazioneCiclo.titolo)}
+                  </span>
+                  {/* ⚠️ SEGNALATO: « quando si audisce senza strumenti, i comandi dei cicli
+                      scrivili più grandi per rendere facile la lettura dell'auditor ». Senza ago
+                      né arco a fare da appoggio visivo, questo blocco di testo è l'UNICA cosa che
+                      l'auditor legge per condurre il ciclo — `--s-fs-lg` (18px, la taglia dei
+                      titoli minori/domande di dialogo) bastava per una didascalia accanto a un
+                      disegno, non per un testo letto da solo, magari a distanza dallo schermo.
+                      `--s-fs-xl` (21px, la stessa taglia del nome SERENITY/dei numeri in mostra)
+                      per il comando ESATTO da dire; `--s-fs-lg` anche per il "come" appena sotto
+                      (era `--s-fs-base`, 15px, la più piccola del blocco) — stesso ragionamento,
+                      è l'istruzione operativa, non una nota a margine. */}
+                  {spiegazioneCiclo.comando && (
+                    <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-xl)', lineHeight: 1.35, color: 'var(--s-ink-soft)' }}>
+                      {spiegazioneCiclo.comando}
+                    </span>
+                  )}
+                  <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-lg)', lineHeight: 1.5, color: 'var(--s-ink-faint)' }}>
+                    {comeSenzaAgo(faseCiclo) ?? spiegazioneCiclo.come}
+                  </span>
+                  {spiegazioneCiclo.avviso && (
+                    <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-lg)', fontWeight: 700, color: 'var(--s-reserve)' }}>
+                      {spiegazioneCiclo.avviso}
+                    </span>
+                  )}
+                </>
               )}
               <div style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,

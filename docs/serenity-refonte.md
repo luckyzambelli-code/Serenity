@@ -7242,3 +7242,92 @@ leggibili, nero su fondo chiaro reale.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/tokens.css` (solo SERENITY).
+
+## Giro — 2026-08-31 — quattro richieste insieme: BASIC senza strumenti, testo dei cicli più
+## grande, "volume" ai bottoni PROCESSUS, cerchio icona in intestazione, briefing d'apertura
+
+Quattro richieste arrivate una dopo l'altra, tutte solo-vista SERENITY (nessun file condiviso
+toccato — nessuna `dist:mac`).
+
+**1. « Basico deve cominciare senza strumenti per default »**
+
+`apri()` (`Serenity.tsx`, l'unica funzione che apre il pannello "avec quoi audite-t-on?")
+azzerava sempre `connSel` a `{muse:false, theta:false, none:false}` — nessuna scelta
+pre-selezionata, indipendentemente da BASIC/EXPERT. Ora `none: espertoAttivo !== true`: in BASIC
+(`!== true`, non `=== false` — stessa convenzione robusta di `moduleVis`/`cam2Mostrata`, per
+includere una configurazione ancora senza questo campo) "senza strumenti" parte già selezionata;
+l'auditor può comunque cambiarla con un clic. In EXPERT nessun cambiamento: nessuna scelta
+pre-selezionata, come prima.
+
+Verificato dal vivo: BASIC → il pannello si apre con "Séance sans instruments" già spuntato (✓).
+
+**2. « Quando si audisce senza strumenti, i comandi dei cicli scrivili più grandi »**
+
+Il blocco assoluto "senza strumenti" (`senzaMisura && aperta`, l'UNICA cosa che l'auditor legge
+per condurre il ciclo quando non c'è né ago né arco): `spiegazioneCiclo.comando` era
+`--s-fs-lg` (18px) → `--s-fs-xl` (21px, la taglia del nome SERENITY/dei numeri in mostra); il
+"come" (`comeSenzaAgo`/`spiegazioneCiclo.come`) e l'`avviso` erano `--s-fs-base` (15px, la più
+piccola del blocco) → `--s-fs-lg` (18px). Il titolo restava già `--s-fs-hero` (28px), invariato.
+
+**3. « I bottoni dei processi che hai appena corretto così non sono belli, dagli un poco di
+volume »**
+
+Il fondo piatto aggiunto nel giro precedente (`background-color: rgba(255,255,255,0.82)
+!important`, tinta unica uniforme) risolveva la leggibilità ma appiattiva il bottone in una
+lastra bianca, perdendo l'aria "a lente" di LENTILLE. Sostituito con un **gradiente verticale**
+(`linear-gradient(168deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.78) 55%,
+rgba(255,255,255,0.86) 100%)`): più chiaro in alto dove cade la luce, leggermente più tenue al
+centro, di nuovo chiaro in basso — il rilievo di una superficie curva. Ogni fermata resta sopra
+0.74 di opacità, ben oltre la soglia di leggibilità del nero (a differenza del lucido radiale
+`::before`, che scende fino a 0 in alcune zone del bottone — v. giro precedente). `box-shadow`
+anche lui un poco più marcato (bordo/ombra esterna rinforzati) per accompagnare lo stesso
+rilievo. Stessa regola CSS di prima (`.ser-history-wrap button:not(...)`,
+`.ser-processus-wrap button:not(...)`), nessun nuovo selettore.
+
+**4. « Inserisci sopra la versione accanto a SERENITY un cerchio con all'interno l'immagine che
+utilizzi per l'icona dell'applicazione »**
+
+Copiata `build/icon-serenity.iconset/icon_128x128.png` (la sorgente PNG della stessa icona che
+macOS mostra nel Dock/Launchpad, `build/icon-serenity.icns`) in `public/icon-serenity.png` — un
+asset solo di SERENITY, non condiviso con EQUILIBRIUM (che ha la propria `build/icon.icns`).
+Nell'header, il numero di build (`{__SERENITY_VERSION__}`) è ora dentro una colonna verticale
+insieme a un cerchio di 22px (`border-radius:'50%'`, `overflow:'hidden'`, leggero bordo/ombra)
+che contiene quell'immagine — il cerchio sopra, il numero sotto, accanto al nome SERENITY: "sopra
+la versione" preso alla lettera.
+
+**5. (segnalato a metà di questo stesso giro, mentre le prime quattro erano già in corso) « Quando
+si inizia la sessione senza strumenti appaiono i cerchi dei cicli, e c'è scritto DAI L'ITEM,
+Scrivilo o dillo, poi premi, ma non è corretto »**
+
+`spiegazioneCiclo`/`comeSenzaAgo` per `mode === 'free'` (nessun ciclo armato) sono giuste per il
+RITORNO al libero fra un ciclo e l'altro — un auditor già in seduta sa già come procedere.
+Sbagliate al **primo** libero della seduta, prima che qualsiasi ciclo sia mai stato armato: lì
+serve un vero briefing d'apertura, non l'istruzione minima "premi" pensata per chi sta già
+conducendo.
+
+Nuovo state `primaVoltaLibero` (accanto alla derivazione di `mode`): si riarma a `true` ad ogni
+apertura seduta (`aperta`), e si spegne per sempre — fino alla prossima apertura — al primo
+`mode` diverso da `'free'` (il primo ciclo armato). Quando `mode==='free' && primaVoltaLibero`,
+il blocco assoluto "senza strumenti" mostra un briefing "INIZIO SESSIONE"/"DÉBUT DE SÉANCE" (5
+lingue) al posto di "DAI L'ITEM": intro + due liste ("Prima di iniziare" — Obiettivo/stato fisico
+del PC/R-Factor, gli stessi tre campi già in cima allo schermo; "Durante la sessione" —
+scegliere un ciclo o procedere liberamente, COMMANDS, ASSESSMENT, trascritto automatico).
+`bottoniCiclo` (i cerchi dei cicli) restano SEMPRE montati sotto, in entrambi i casi — il
+briefing lo dice esplicitamente ("puoi scegliere uno dei cicli disponibili").
+
+⚠️ Primo tentativo (titolo `--s-fs-hero`, corpo `--s-fs-lg`/`--s-fs-xl`, le due liste una sopra
+l'altra) **usciva dallo schermo**: verificato dal vivo anche a 1440×900, titolo e ultimo punto
+tagliati fuori dal contenitore (`position:absolute; top:50%; transform:translate(-50%,-50%)`, che
+non lascia margine extra). Corretto: le due liste affiancate in `grid`
+(`gridTemplateColumns:'repeat(auto-fit, minmax(220px,1fr))'`, non più impilate — dimezza
+l'altezza), titolo e corpo un poco più piccoli (`--s-fs-xl`/`--s-fs-sm`, non hero/lg — è un testo
+letto una volta sola all'apertura, diverso da `spiegazioneCiclo` che resta grande perché letto
+ripetutamente durante il ciclo), più `maxHeight:'82vh'`/`overflowY:'auto'` come rete di sicurezza.
+
+Verificato dal vivo (BASIC, FR, 1440×900): briefing completo visibile, cerchi dei cicli sotto;
+cliccato CONTACT → torna il testo normale del ciclo (grande, come punto 2); ANNULER → tornati a
+"libero" mostra "DONNE L'ITEM" normale, MAI più il briefing nella stessa apertura seduta.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx`, `src/serenity/tokens.css`, `public/icon-serenity.png`
+(nuovo file, solo SERENITY).
