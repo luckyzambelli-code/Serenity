@@ -7598,3 +7598,98 @@ non reinventati. `VERSIONE` del manuale portata a 3.0.174 (la prossima build SER
 `git status`: `src/serenity/Serenity.tsx` (SERENITY) + `src/session/useToneCycle.ts`
 (CONDIVISO, additivo) — **entrambi i DMG ricompilati e spediti**, come da regola per i file
 condivisi. Il manuale HTML resta fuori dal repository, nessun commit per lui.
+
+## Giro — 2026-08-31 (8) — scala del tono davvero scelta (non automatica), briefing mai due
+## volte, timer/chiudi solo dopo START, COMMANDS solo comandi
+
+Sei correzioni in questo giro, due delle quali toccano file condivisi con EQUILIBRIUM
+(`useToneCycle.ts`, additivo; `ProcessusModal.tsx`, additivo) — entrambi i DMG ricompilati e
+spediti.
+
+**1. « Non hai capito. Nel ciclo TONO 40 devi far vedere la scala del tono per poter
+scegliere il TONO dopo che è stata trovata la resistenza... NON PUÒ ESSERE AUTOMATICA senza
+strumenti »**, chiarito dal vivo: « SENZA STRUMENTI, non c'è nessuna tendina poiché cerca da
+solo il tono... Dice 0 vs +40 in corso... e lampeggia »
+
+Il giro precedente AVEVA aggiunto un select — ma sotto la scala, in fondo a un contenitore che
+scorre: mai visto, perché la cosa più in vista restava la pillola "0 → +40 in corso…"
+pulsante di `bottoniCiclo` (sempre montata). Tre correzioni:
+- Nuovo stato `tonoScelto`: finché è falso (seduta `senzaMisura`), `bottoniCiclo` NON monta la
+  pillola pulsante né i bottoni "portalo a tono 40"/"raggiunto" — quella pillola era
+  esattamente l'aria "automatica" segnalata.
+- Nuovo ramo `deveScegliereTono` (`senzaMisura && toneAttivo && faseCiclo==='tone.raise' &&
+  !tonoScelto`): uno SCHERMO DEDICATO, stesso peso visivo del briefing "INIZIO SESSIONE" —
+  titolo hero "A CHE TONO SI TROVA?", istruzione, la scala GRANDE, e un select con bordo
+  ambra e opzione vuota "— scegli il tono —" (mai un default nascosto) — impossibile da
+  perdere, non un'aggiunta in coda a uno scroll.
+- Il `<select>` pre-arm (accanto al cerchio TONE, prima di trovare la resistenza) nascosto per
+  `senzaMisura` — era lui il vero "cerca da solo" percepito: sceglieva il tono PRIMA della
+  resistenza, l'ordine sbagliato.
+
+**Bug trovato verificando dal vivo**: scegliendo un tono PIÙ BASSO del default (0) lasciato da
+`localizzaTone()` al click su TONE, la scala restava ferma su "0 · Mort du corps" invece di
+mostrare il tono scelto. Causa: `toneOra` è un ratchet "solo sale" che non scende mai sotto il
+massimo già confermato — nella finestra fra il click e la scelta, `toneOraGrezzo` era rimasto
+fermo su 0 abbastanza a lungo da essere già promosso a pavimento. `useToneCycle.ts`
+(CONDIVISO): nuova funzione additiva `correggiToneAtStart(v)` che scrive `toneAtStart` E
+azzera il ratchet (`toneHighRef`/`toneCandidateRef`/`taSmoothRef`) — esattamente quel che
+`localizzaTone()` fa già quando fissa l'origine la prima volta. Nessuna riga esistente
+toccata, nessun chiamante esistente (EQUILIBRIUM) legge questi campi.
+
+Verificato dal vivo (BASIC, FR, 1440×900): TONE → "DIS LA RÉSISTANCE" (nessuna scala) →
+resistenza data → schermo dedicato "A CHE TONO SI TROVA?" con select vuoto → scelto un tono
+PIÙ BASSO di 0 (−1,5) → la scala mostra CORRETTAMENTE "−2 · Contrôler les corps" (arrotondato)
+alla posizione giusta, non più bloccata su 0.
+
+**2. « Se passi da strumenti a senza strumenti, con la session in corso, rifai vedere il
+debriefing di inizio sessione. NON VA BENE »**
+
+`primaVoltaLibero` si spegneva solo al primo `mode !== 'free'` — una seduta aperta CON
+strumenti che non aveva ancora armato nessun ciclo lo lasciava `true`; passando poi a "senza
+strumenti" a metà seduta, il briefing si riaccendeva da sé. Nuovo effetto: appena la seduta
+gira DAVVERO con uno strumento vero (`!senzaMisura`), `primaVoltaLibero` si spegne per sempre
+(fino alla prossima apertura) — chi ha iniziato con MUSE/Meter, anche solo un istante, non è
+più "al primo libero della seduta" nemmeno se stacca tutto dopo.
+
+**3. « Quando si inizia la session senza strumenti non devi far partire il timer e indicare
+Chiudi la seduta se prima non si è schiacciato sul START che pulsa »**
+
+Il timer di seduta (accanto all'ora reale) e il bottone FERMER LA SÉANCE restano nascosti
+finché `mostraBriefingIniziale` è vero — nessun secondo comando in alto mentre il bottone
+INIZIA pulsa nel briefing. L'ora reale (`OraReale`) resta sempre visibile.
+
+**Bug trovato SUBITO DOPO, verificato dal vivo**: `mostraBriefingIniziale` non controlla
+`aperta` nel suo calcolo (`mode` vale già `'free'` PRIMA di aprire) — la sola
+`!mostraBriefingIniziale` nascondeva "OUVRIR UNE SÉANCE" stesso sulla schermata INIZIALE,
+prima di qualunque apertura: l'unico modo di cominciare, sparito. Corretto con
+`!(mostraBriefingIniziale && aperta)` in entrambi i punti (timer e bottone).
+
+**4. (dal punto 2 della sessione precedente, corretto insieme) Posizione del bottone START**
+— restava ok dal giro precedente (sotto "Inserisci l'R-Factor" nel briefing), nessuna
+modifica necessaria qui.
+
+**5. « Quando schiacci sul bottone COMMANDS, devono apparire solo i file dei comandi, non
+tutti i processus »**
+
+`ProcessusModal.tsx` (CONDIVISO): nuova prop additiva `soloComandi?: boolean` — `true`
+nasconde i chip dei tag, la griglia dei PDF e la zona di upload, lasciando SOLO l'intestazione
+e la card "COMANDI PROCEDIMENTI". `undefined`/`false` (il default, e quel che passano
+EQUILIBRIUM e il bottone "Processus" di SERENITY) lascia il modale tale e quale a sempre.
+Nuovo stato `processusSoloComandi` in Serenity.tsx: `true` dal bottone COMMANDS, `false` dal
+bottone "Processus" — un solo `<ProcessusModal>` montato, la prop dice quale dei due ha
+aperto.
+
+Verificato dal vivo: COMMANDS → solo la card "COMMANDES DE PROCÉDÉS" (0 procédés, nessun tag/
+PDF/upload); Processus → tutto come prima (35 processus, 15 tag, griglia PDF, upload)
+— nessuna regressione.
+
+**6. « Quando si apre una session SENZA STRUMENTI, la scelta non è validata nel selettore in
+alto »** — verificato dal vivo (EXPERT e BASIC): il pallino della pillola "SANS INSTRUMENTS"
+è correttamente verde ("connesso") in entrambe le modalità, MUSE/METER restano grigi
+("in attesa") — nessuna discrepanza trovata. Nessuna modifica fatta qui: se il problema persiste
+sulla build reale, serve un altro giro con più dettagli (schermata, sequenza esatta).
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx` (SERENITY) + `src/session/useToneCycle.ts` +
+`src/components/ProcessusModal.tsx` (CONDIVISI, additivi) — **entrambi i DMG ricompilati e
+spediti**.

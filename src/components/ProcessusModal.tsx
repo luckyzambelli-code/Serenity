@@ -42,6 +42,15 @@ interface ProcessusModalProps {
   procedimenti?: Procedimento[];
   onSelectProcedimento?: (p: Procedimento) => void;
   onApriCartellaProcedimenti?: () => void;
+  /** ⚠️ SOLO SERENITY, additiva — segnalato di nuovo: « quando schiacci sul bottone COMMANDS,
+   *  devono apparire solo i file dei comandi, non tutti i processus ». Un giro precedente
+   *  aveva scelto di aprire lo STESSO modale generale per COMMANDS e Processus, solo mettendo
+   *  in evidenza la card PROCEDIMENTI (v. la sua nota, poco più giù) — corretto ora: `true`
+   *  nasconde i chip dei tag, la griglia dei PDF e la zona di upload, lasciando SOLO
+   *  l'intestazione e la card PROCEDIMENTI. `undefined`/`false` (il default, e l'unico valore
+   *  che EQUILIBRIUM/il bottone "Processus" di SERENITY passano) lascia il modale tale e quale
+   *  a sempre — nessuna riga esistente cambia comportamento. */
+  soloComandi?: boolean;
 }
 
 export function ProcessusModal({
@@ -53,6 +62,7 @@ export function ProcessusModal({
   editingTagValue, setEditingTagValue,
   onSelectProcessus, onClose, t,
   procedimenti, onSelectProcedimento, onApriCartellaProcedimenti,
+  soloComandi,
 }: ProcessusModalProps) {
   // La lingua non arrivava fra le props: il segnaposto del campo restava in francese per tutti.
   const { lang } = useI18n();
@@ -155,7 +165,9 @@ export function ProcessusModal({
                 {t('processus_modal_title')}
               </h3>
               <p className="text-[10px] font-mono tracking-widest uppercase" style={{ color: th.textDim }}>
-                {processusPdfs.length} PROCESSUS · {allTags.length} TAG{allTags.length !== 1 ? 'S' : ''}
+                {soloComandi
+                  ? `${(procedimenti ?? []).length} ${L('procedimenti', 'procédés', 'procedures', 'procedimientos', 'procedurer')}`
+                  : `${processusPdfs.length} PROCESSUS · ${allTags.length} TAG${allTags.length !== 1 ? 'S' : ''}`}
               </p>
             </div>
             {/* Fermeture en MINI TOGGLE (cohérence graphique) : on = panneau ouvert. */}
@@ -163,7 +175,9 @@ export function ProcessusModal({
           </div>
 
           {/* FIX #2: tag chips on their OWN full-width row — bigger, themed, with per-tag counts */}
-          <div className="flex items-center gap-2 flex-wrap">
+          {/* ⚠️ SOLO SERENITY — nascosti con `soloComandi` (v. la nota sulla prop, in cima al
+              file): filtrano i PDF sotto, che con `soloComandi` non compaiono affatto. */}
+          {!soloComandi && <div className="flex items-center gap-2 flex-wrap">
             {(() => {
               const chipStyle = (active: boolean): React.CSSProperties => ({
                 border: `1px solid ${active ? th.accent : th.accentBorder}`,
@@ -228,7 +242,7 @@ export function ProcessusModal({
                 ))}
               </>);
             })()}
-          </div>
+          </div>}
         </div>
 
         {/* Pending file tag-input overlay */}
@@ -337,7 +351,9 @@ export function ProcessusModal({
         )}
 
         {/* Content — grouped by tag */}
-        <div className="flex-1 overflow-y-auto px-6 py-4" style={{ minHeight: 0 }}>
+        {/* ⚠️ SOLO SERENITY — nascosta con `soloComandi`: « quando schiacci sul bottone
+            COMMANDS, devono apparire solo i file dei comandi, non tutti i processus ». */}
+        {!soloComandi && <div className="flex-1 overflow-y-auto px-6 py-4" style={{ minHeight: 0 }}>
           {processusPdfs.length === 0 && (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <div className="w-16 h-16 rounded-full flex items-center justify-center"
@@ -449,10 +465,13 @@ export function ProcessusModal({
               </div>
             </div>
           ))}
-        </div>
+        </div>}
 
         {/* Footer — upload zone */}
-        <div className="px-6 pb-5 pt-3 border-t" style={{ borderColor: th.divider }}>
+        {/* ⚠️ SOLO SERENITY — nascosta con `soloComandi`: carica PDF, non pertinente qui — chi
+            preme COMMANDS cerca un procedimento già pronto (v. la card sopra), non un archivio
+            da riempire. */}
+        {!soloComandi && <div className="px-6 pb-5 pt-3 border-t" style={{ borderColor: th.divider }}>
           <label
             className="flex items-center justify-center gap-3 py-4 rounded-xl cursor-pointer transition-all"
             style={{ border: `1px dashed ${th.accentBorder}`, background: th.accentSoft, color: th.accent }}
@@ -474,7 +493,7 @@ export function ProcessusModal({
             />
             <span className="text-xs font-mono tracking-[0.3em] uppercase">⊕ {t('processus_add_button')}</span>
           </label>
-        </div>
+        </div>}
 
         {/* Bottom accent line */}
         <div className="h-px w-full" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)' }} />

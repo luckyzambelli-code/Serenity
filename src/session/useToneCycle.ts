@@ -427,6 +427,31 @@ export function useToneCycle(d: ToneCycleDeps) {
   }, [d.hasMuse, toneMeasured, toneHasMeter, toneAssessed, taCorretto, d.auditingQuestion]);
 
   /**
+   * ⚠️ AGGIUNTO (SERENITY, additivo) — CORREGGERE `toneAtStart` DOPO `localizzaTone`, SENZA
+   * ROMPERE IL RATCHET « SOLO SALIRE ».
+   *
+   * Segnalato dal vivo: scelto un tono più BASSO del default (0) lasciato da `localizzaTone`
+   * (chiamata subito al click su TONE, prima che la resistenza sia nota — v. la sua nota),
+   * la scala restava ferma su "0 · Mort du corps" invece di mostrare il tono appena scelto.
+   * Causa: `toneOra` (sopra) è un ratchet che non scende mai sotto il massimo già confermato
+   * (`toneHighRef`) — nella finestra fra il click e questa scelta, `toneOraGrezzo` è rimasto
+   * fermo su 0 abbastanza a lungo (`TONE_HOLD_S`) da essere GIÀ promosso a pavimento
+   * garantito. Scrivere `toneAtStart` da solo (`setToneAtStart`, sopra) non tocca quel
+   * pavimento: un tono più basso del vecchio default veniva "inghiottito" dal ratchet, che lo
+   * legge come un colpo isolato sotto la soglia già raggiunta.
+   * `localizzaTone` (sopra) azzera SEMPRE `toneHighRef`/`toneCandidateRef` quando fissa
+   * l'origine — questa funzione fa lo STESSO, per la STESSA ragione, quando l'origine viene
+   * corretta più tardi: una nuova origine merita un ratchet vergine, non quello ereditato dal
+   * valore sbagliato che sostituisce.
+   */
+  const correggiToneAtStart = useCallback((v: number) => {
+    setToneAtStart(v);
+    toneHighRef.current = null;
+    toneCandidateRef.current = null;
+    taSmoothRef.current = null;
+  }, []);
+
+  /**
    * IL LOCATORE SI ALIMENTA DA FUORI — lo chiama il gestore del worker EEG, a ogni campione.
    *
    * L'istante del clic su LOCALIZZA è il peggiore dei tre (vedi `ToneLocator`): bisogna poter
@@ -443,18 +468,14 @@ export function useToneCycle(d: ToneCycleDeps) {
     trackTone,
     // stato
     tonePhase, setTonePhase, tonePhaseRef,
-    // ⚠️ AGGIUNTO (SERENITY, additivo, nessuna riga esistente toccata) — `setToneAtStart` è il
-    // setter di `useState` qui sopra, già esistente, semplicemente MAI esposto al chiamante:
-    // finora solo `localizzaTone` (in questo stesso file) lo scriveva, dal `toneAssessed`
-    // dichiarato PRIMA di armare. Segnalato: « senza strumenti, trovare a quale livello di
-    // tono corrisponde è il SECONDO comando del ciclo, dopo aver trovato la resistenza » — non
-    // prima. `localizzaTone` resta invariato (arma e ancora il ciclo nello stesso click,
-    // nessuna riga sua cambia): chi chiama da fuori può ora CORREGGERE `toneAtStart` un
-    // istante dopo, quando la resistenza è stata nominata e l'auditor sceglie davvero il
-    // livello — senza dover rifare l'intera `localizzaTone` (che riazzererebbe ripetizioni,
-    // testimoni, l'ancora del locatore: tutte cose già giuste al primo click). Nessun
-    // chiamante esistente (EQUILIBRIUM) legge questo campo: comportamento suo invariato.
-    toneAtStart, setToneAtStart, toneAssessed, setToneAssessed,
+    // ⚠️ AGGIUNTO (SERENITY, additivo, nessuna riga esistente toccata) — `correggiToneAtStart`
+    // (sopra) è la via SICURA per cambiare `toneAtStart` da fuori: scrive lo stato E azzera il
+    // ratchet "solo salire" (`toneHighRef`/`toneCandidateRef`/`taSmoothRef`), esattamente come
+    // fa `localizzaTone` quando fissa l'origine la prima volta — un tono corretto più BASSO
+    // del vecchio valore (v. la sua nota grande, sopra) non deve restare "inghiottito" da un
+    // pavimento già raggiunto col valore sbagliato. Nessun chiamante esistente (EQUILIBRIUM)
+    // legge questo campo: comportamento suo invariato.
+    toneAtStart, correggiToneAtStart, toneAssessed, setToneAssessed,
     toneRipetizioni, setToneRipetizioni,
     toneAnchor, toneFired,
     // misure derivate

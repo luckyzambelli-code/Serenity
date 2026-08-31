@@ -432,6 +432,14 @@ export default function Serenity() {
    *  finestre multiple ridimensionabili): un solo PDF alla volta, in una finestra fissa — un
    *  raffinamento dichiarato ancora aperto, non l'intera macchina delle finestre mobili. */
   const [processusAperto, setProcessusAperto] = useState(false);
+  /** ⚠️ SEGNALATO DI NUOVO: « quando schiacci sul bottone COMMANDS, devono apparire solo i
+   *  file dei comandi, non tutti i processus ». COMMANDS e "Processus" aprono lo STESSO
+   *  modale (`setProcessusAperto(true)`, un solo `<ProcessusModal>` montato) — questo stato
+   *  dice DA QUALE dei due bottoni si è arrivati, letto dalla nuova prop `soloComandi` del
+   *  modale: `true` quando arriva da COMMANDS (nasconde tag/griglia PDF/upload, lascia solo
+   *  la card PROCEDIMENTI), `false` da "Processus" (tutto, come sempre — nessun cambiamento
+   *  per chi apre da lì). */
+  const [processusSoloComandi, setProcessusSoloComandi] = useState(false);
   const [processusPdfs, setProcessusPdfs] = useState<ProcessusEntry[]>([]);
   const [pendingFiles, setPendingFiles] = useState<{ name: string; url: string }[]>([]);
   const [pendingTagInput, setPendingTagInput] = useState('');
@@ -1763,6 +1771,22 @@ export default function Serenity() {
     LC,
   });
   trackToneRef.current = tone.trackTone;
+  /** ⚠️ SEGNALATO DI NUOVO, con forza: « non hai capito. Nel ciclo TONO 40 devi far vedere la
+   *  scala del tono per poter scegliere il TONO dopo che è stata trovata la resistenza,
+   *  altrimenti [l'auditor] non sà a che tono si trova. NON PUÒ ESSERE AUTOMATICA senza
+   *  strumenti ». Chiarito dal vivo: « SENZA STRUMENTI, non c'è nessuna tendina poiché cerca
+   *  da solo il tono, ma questo è impossibile senza strumenti. Dice 0 vs +40 in corso... e
+   *  lampeggia ». Il giro precedente AVEVA aggiunto un select — ma sotto la scala, in fondo a
+   *  un contenitore che scorre: mai visto, perché la cosa più in vista era proprio quella
+   *  pillola "0 → +40 in corso…" pulsante di `bottoniCiclo` (sempre montata, sotto), che senza
+   *  un valore scelto sembra — ed È — un numero automatico che lampeggia da solo. `tonoScelto`
+   *  chiude il buco: finché è falso (in una seduta `senzaMisura`), `bottoniCiclo` non monta
+   *  QUELLA pillola né i bottoni "portalo a tono 40"/"raggiunto" (v. la sua nota, poco più
+   *  giù) — l'unica cosa a schermo è la scelta del tono, grande, in cima, impossibile da
+   *  perdere. Si riarma a `false` ad ogni nuova resistenza (click su TONE, "altra
+   *  resistenza") — mai un valore rimasto dalla resistenza precedente scambiato per una scelta
+   *  già fatta su questa. */
+  const [tonoScelto, setTonoScelto] = useState(false);
 
   /**
    * ── E IL CICLO TRUTH, ALLO STESSO MODO — v. docs/truth-cycle-proposal.md ────────────────
@@ -1842,6 +1866,18 @@ export default function Serenity() {
    *  non c'è niente da dire », la sua nota). Stessa condizione qui, con `museOk`/`meterC` al
    *  posto di `instruments.muse`/`instruments.theta`. */
   const senzaMisura = noInstruments({ muse: museOk, theta: meterC });
+  /** ⚠️ SEGNALATO: « se passi da strumenti a senza strumenti, con la session in corso, rifai
+   *  vedere il debriefing di inizio sessione. NON VA BENE ». `primaVoltaLibero` si spegneva
+   *  solo al primo `mode !== 'free'` (sopra) — una seduta aperta CON strumenti che non ha
+   *  ancora armato nessun ciclo lo lascia `true`; passando poi a "senza strumenti" a metà
+   *  seduta (`senzaMisura` diventa vero SOLO ora), `mostraBriefingIniziale` si accendeva da
+   *  sé, perché nulla aveva mai spento `primaVoltaLibero`. Nuovo effetto: appena la seduta
+   *  gira DAVVERO con uno strumento vero (`!senzaMisura`), la leva si spegne per sempre (fino
+   *  alla prossima apertura) — chi ha iniziato con MUSE/Meter, anche solo per un istante, non
+   *  è più "al primo libero della seduta" nemmeno se stacca tutto dopo. */
+  useEffect(() => {
+    if (aperta && !senzaMisura) setPrimaVoltaLibero(false);
+  }, [aperta, senzaMisura]);
   /** ── L'ASSESSMENT SI ARMA E SI DISARMA CON IL CICLO — segnalato: « l'assessment sembra
    *  sempre attivo, anche quando è chiuso... nel report abbiamo degli assessment lunghissimi
    *  che in realtà non lo sono. DEVE ESSERE ATTIVATO al momento dell'armamento del ciclo, ed
@@ -1894,6 +1930,12 @@ export default function Serenity() {
   }), [showSplash, aperta, muse.museConnection, meterC, ep.epWindowOpen, mode, cycles.cycleArmed, cycles.asIsPending,
        cycles.nullPhase, item, itemDigitando, itemSpoken, mirror.mirrorArmed, mirror.mirrorDisp.locked, mirror.mirrorDisp.reached,
        tone.tonePhase, truth.truthPhase]);
+  /** ⚠️ « NON PUÒ ESSERE AUTOMATICA senza strumenti » — v. la nota grande su `tonoScelto`,
+   *  sopra. Vero SOLO in `tone.raise`: la resistenza è già stata trovata (`tone.item`/
+   *  `tone.say_item`, prima, escludono questo stato) e il tono non è ancora stato scelto —
+   *  `tone.done` non può mai valerlo, perché ci si arriva SOLO passando per il bottone
+   *  "raggiunto", già bloccato finché `tonoScelto` è falso (v. `bottoniCiclo`). */
+  const deveScegliereTono = senzaMisura && toneAttivo && faseCiclo === 'tone.raise' && !tonoScelto;
 
   const chargePhaseNow = useMetric(m => m.chargePhase);
 
@@ -2368,7 +2410,7 @@ export default function Serenity() {
     journal.resetJournal(t('ser_session_opened'));
     ep.resetEpState();   // niente "EP ✓" residuo da una seduta precedente
     mirror.resetMirror();   // niente ciclo MIRROR residuo da una seduta precedente
-    tone.resetTone(); setToneAttivo(false);   // niente TONE residuo da una seduta precedente
+    tone.resetTone(); setToneAttivo(false); setTonoScelto(false);   // niente TONE residuo da una seduta precedente
     setCampiSessioneNascosti(false);   // OBIETTIVO/STATO FISICO/R-FACTOR di nuovo in vista
     setProvaTa({ two: null, solo: null });   // niente prova doppia residua da un'altra persona
     setAssessAttivo(false); setAssessItems([]); assessLogCursorRef.current = 0;   // idem, ASSESSMENT
@@ -2894,7 +2936,16 @@ export default function Serenity() {
               `--s-still` — LO STESSO segnale che l'AS-IS/F-N usano altrove per "arrivato" — con
               un segno di spunta, niente più pulsare. La stessa distinzione, nell'arco (v.
               `ToneDial`: `animate-pulse` sulla riga ambra solo mentre `raise`). */}
-          {tone.tonePhase === 'raise' && (
+          {/* ⚠️ SEGNALATO — « NON PUÒ ESSERE AUTOMATICA senza strumenti... dice 0 vs +40 in
+              corso e lampeggia ». Questa pillola pulsante (e i due bottoni "portalo a tono
+              40"/"raggiunto" appena sotto) sono esattamente l'aria "automatica" segnalata:
+              senza uno strumento vero, mostrarli PRIMA che l'auditor abbia scelto un livello
+              vero significa mostrare un "0 → +40" che non è la misura di nessuno, solo il
+              default mai toccato. `senzaMisura && !tonoScelto` li tiene spenti finché la
+              scelta (il nuovo select grande, nell'overlay "senza strumenti" — v. la sua nota
+              più giù) non è stata fatta davvero; con strumenti (`!senzaMisura`) restano
+              esattamente come prima, nessun cambiamento. */}
+          {tone.tonePhase === 'raise' && (!senzaMisura || tonoScelto) && (
             <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
               {tone.toneAtStart !== null ? `${tone.toneAtStart > 0 ? '+' : ''}${tone.toneAtStart.toFixed(0)} ` : ''}
               <span className="animate-pulse" style={{ color: 'var(--s-tone-hue)', fontWeight: 700 }}>
@@ -2902,7 +2953,7 @@ export default function Serenity() {
               </span>
             </span>
           )}
-          {tone.tonePhase === 'done' && (
+          {tone.tonePhase === 'done' && (!senzaMisura || tonoScelto) && (
             <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
               {tone.toneAtStart !== null ? `${tone.toneAtStart > 0 ? '+' : ''}${tone.toneAtStart.toFixed(0)} → ` : ''}
               <b style={{ color: 'var(--s-still)' }}>
@@ -2910,7 +2961,7 @@ export default function Serenity() {
               </b>
             </span>
           )}
-          {tone.tonePhase === 'raise' && (
+          {tone.tonePhase === 'raise' && (!senzaMisura || tonoScelto) && (
             <>
               <button className="s-glass s-glass-btn" onClick={() => tone.setToneRipetizioni(v => v + 1)} style={pillBtn('var(--s-ink-soft)')}>
                 {LC('portalo a tono 40', 'mène-le au ton 40', 'raise it to tone 40', 'llévalo al tono 40', 'för det till ton 40')}
@@ -2922,13 +2973,13 @@ export default function Serenity() {
             </>
           )}
           {tone.tonePhase === 'done' && (
-            <button className="s-glass s-glass-btn" onClick={() => tone.resetTone()} style={pillBtn('var(--s-still)')}>
+            <button className="s-glass s-glass-btn" onClick={() => { tone.resetTone(); setTonoScelto(false); }} style={pillBtn('var(--s-still)')}>
               {LC('altra resistenza', 'autre résistance', 'another resistance', 'otra resistencia', 'annat motstånd')}
             </button>
           )}
           <button className="s-glass s-glass-btn" onClick={() => {
             if (tone.tonePhase === 'raise') tone.chiudiTone(false);
-            tone.resetTone(); setToneAttivo(false);
+            tone.resetTone(); setToneAttivo(false); setTonoScelto(false);
           }} style={pillBtn('var(--s-ink-ghost)')}>
             {t('cancel')}
           </button>
@@ -3495,16 +3546,34 @@ export default function Serenity() {
               <Clock size={17} strokeWidth={1.8} aria-hidden="true" />
               <OraReale />
             </span>
-            <span style={{
-              display: 'flex', alignItems: 'center', gap: 3,
-              fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-lg)', letterSpacing: '0.03em',
-              color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
-              transition: 'color var(--s-slow) var(--s-ease)',
-              fontVariantNumeric: 'tabular-nums',
-            }}>
-              <Timer size={15} strokeWidth={1.8} aria-hidden="true" />
-              {orologio(tempo)}
-            </span>
+            {/* ⚠️ SEGNALATO — « quando si inizia la sessione senza strumenti non devi far
+                partire il timer e indicare Chiudi la seduta se prima non si è schiacciato sul
+                START che pulsa ». `mostraBriefingIniziale` è vero esattamente in quella
+                finestra (BASIC, primo libero, briefing ancora a schermo, bottone INIZIA non
+                ancora premuto) — il timer di seduta resta nascosto finché dura: la seduta È
+                già `aperta` internamente (altrimenti il briefing non potrebbe stare a
+                schermo), ma l'auditor non ha ancora "iniziato per davvero" nella sua
+                esperienza, e vedere i secondi correre lo direbbe il contrario. L'ora reale
+                (`OraReale`, sopra) resta comunque visibile — non è un orologio DI seduta.
+                ⚠️ BUG TROVATO SUBITO DOPO — verificato dal vivo: `mostraBriefingIniziale` NON
+                controlla `aperta` (il suo calcolo, sopra, guarda solo `mode`/`primaVoltaLibero`/
+                `espertoAttivo` — `mode` vale già `'free'` PRIMA di aprire) — la sola
+                `!mostraBriefingIniziale` nascondeva questa riga (e il bottone sotto) anche
+                sulla schermata INIZIALE, prima di qualunque apertura: spariva "OUVRIR UNE
+                SÉANCE" stesso, l'unico modo di cominciare. `&& aperta` in più: nascosto SOLO
+                nella vera finestra briefing-aperto-non-ancora-iniziato, non prima. */}
+            {!(mostraBriefingIniziale && aperta) && (
+              <span style={{
+                display: 'flex', alignItems: 'center', gap: 3,
+                fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-lg)', letterSpacing: '0.03em',
+                color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
+                transition: 'color var(--s-slow) var(--s-ease)',
+                fontVariantNumeric: 'tabular-nums',
+              }}>
+                <Timer size={15} strokeWidth={1.8} aria-hidden="true" />
+                {orologio(tempo)}
+              </span>
+            )}
           </div>
           {/* ⚠️ SEGNALATO — « il bottone chiudi la session fallo più verso il giallo, ma poco
               vistoso ». Solo quando DICE "chiudi la seduta" (`aperta` vero — chiudere è il
@@ -3512,7 +3581,16 @@ export default function Serenity() {
               già usato per "il dato c'è ma non è sostenibile", il terzo dei tre segnali del
               sistema — v. `tokens.css`) leggerissima sul fondo, un bordo appena percettibile
               — non un rosso d'allarme, un giallo SUSSURRATO: si nota se lo cerchi, non salta
-              agli occhi. Aprire una seduta resta il vetro neutro di sempre. */}
+              agli occhi. Aprire una seduta resta il vetro neutro di sempre.
+              ⚠️ SEGNALATO DI NUOVO — stessa ragione del timer qui sopra: « non devi... indicare
+              Chiudi la seduta se prima non si è schiacciato sul START che pulsa ». Il bottone
+              intero resta nascosto finché `mostraBriefingIniziale && aperta` (v. la nota
+              grande sul timer, appena sopra, sul perché serve anche `aperta`) — nessun
+              "CHIUDI LA SEDUTA" a schermo prima che l'auditor abbia premuto INIZIA, l'unico
+              comando visibile in quella finestra è quello, dentro il testo del briefing —
+              MA "OUVRIR UNE SÉANCE", sulla schermata iniziale prima di qualunque apertura,
+              resta sempre a vista. */}
+          {!(mostraBriefingIniziale && aperta) && (
           <button className="s-glass s-glass-btn" onClick={aperta ? chiudi : apri} style={{
             flex: 1, minWidth: 0, cursor: 'pointer', pointerEvents: 'auto',
             background: aperta ? 'color-mix(in srgb, var(--s-reserve) 14%, var(--s-disc))' : 'var(--s-disc)',
@@ -3531,6 +3609,7 @@ export default function Serenity() {
               ? LC('chiudi la seduta', 'fermer la séance', 'close the session', 'cerrar la sesión', 'stäng sessionen')
               : LC('apri una seduta', 'ouvrir une séance', 'open a session', 'abrir una sesión', 'öppna en session')}
           </button>
+          )}
         </div>
         {/* ── PAUSA/RIPRENDI, CON IL SUO STATO ACCANTO — segnalato: « il bottone di pausa
             deve essere vicino al bottone Fermer la séance » (giro scorso), poi: « le pavé en
@@ -3625,7 +3704,7 @@ export default function Serenity() {
           <div style={{ display: 'grid', justifyItems: 'center', gap: 4, pointerEvents: 'auto' }}>
             <button
               className="s-glass s-glass-btn"
-              onClick={() => setProcessusAperto(true)}
+              onClick={() => { setProcessusSoloComandi(true); setProcessusAperto(true); }}
               title="COMMANDS" data-help={LC('carica un file di comandi da seguire', 'charge un fichier de commandes à suivre',
                 'loads a commands file to follow', 'carga un archivo de comandos a seguir',
                 'laddar en kommandofil att följa') as string} style={{
@@ -3892,7 +3971,7 @@ export default function Serenity() {
             ) : null;
           })()}
         </button>
-        <button className="s-glass s-glass-btn" onClick={() => setProcessusAperto(true)} title={t('processus_modal_title') as string} data-help={t('processus_modal_title') as string} style={{
+        <button className="s-glass s-glass-btn" onClick={() => { setProcessusSoloComandi(false); setProcessusAperto(true); }} title={t('processus_modal_title') as string} data-help={t('processus_modal_title') as string} style={{
           position: 'relative', cursor: 'pointer', padding: 8, borderRadius: 999,
           background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
         }}>
@@ -4473,6 +4552,7 @@ export default function Serenity() {
             procedimenti={procedimenti}
             onSelectProcedimento={p => { setProcedimentoAttivo(p); setProcessusAperto(false); }}
             onApriCartellaProcedimenti={() => { apriCartellaProcedimenti(); }}
+            soloComandi={processusSoloComandi}
           />
         </div>
       )}
@@ -5776,7 +5856,64 @@ export default function Serenity() {
                     </div>
                   </div>
                 </>
-              ) : mode === 'free' ? null : (
+              ) : mode === 'free' ? null : deveScegliereTono ? (
+                /* ⚠️ SEGNALATO DI NUOVO, con forza — v. la nota grande su `deveScegliereTono`
+                   più sopra: « non hai capito... NON PUÒ ESSERE AUTOMATICA senza strumenti ».
+                   La versione precedente lasciava a schermo il testo NORMALE del ciclo
+                   ("2 · PORTALO A TONO 40", già pronto a salire) e infilava la scelta del
+                   tono DOPO di lui, in fondo, dietro uno scroll — mai vista, perché la cosa
+                   più in vista restava la pillola "0 → +40 in corso…" pulsante (ora spenta,
+                   v. `bottoniCiclo`). Qui invece, finché il tono non è scelto, NIENT'ALTRO è a
+                   schermo: uno schermo dedicato, lo stesso peso visivo del briefing "INIZIO
+                   SESSIONE" — titolo hero, istruzione, la scala GRANDE, e il select — ultimo,
+                   ma ora davvero il PRIMO gesto possibile, non un'aggiunta in coda. */
+                <>
+                  <span style={{
+                    fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-hero)', fontWeight: 800,
+                    letterSpacing: '0.02em', lineHeight: 1.15, color: 'var(--s-ink)',
+                  }}>
+                    {LC('A CHE TONO SI TROVA?', 'À QUEL TON EST-IL ?', 'WHAT TONE IS IT AT?', '¿A QUÉ TONO ESTÁ?', 'VILKEN TON ÄR DET?')}
+                  </span>
+                  <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-xl)', lineHeight: 1.35, color: 'var(--s-ink-soft)' }}>
+                    {LC('Guarda la scala e scegli a quale livello corrisponde questa resistenza.',
+                        'Regarde l\'échelle et choisis à quel niveau correspond cette résistance.',
+                        'Look at the scale and choose which level this resistance corresponds to.',
+                        'Mira la escala y elige a qué nivel corresponde esta resistencia.',
+                        'Titta på skalan och välj vilken nivå detta motstånd motsvarar.')}
+                  </span>
+                  <div style={{ width: 300, maxWidth: '100%', pointerEvents: 'none' }}>
+                    <ToneColumn
+                      tone={tone.toneAssessed}
+                      toneEeg={null}
+                      margin={0}
+                      hasMeter={false}
+                      lang={lang}
+                      charge={null}
+                      chargeFrom={null}
+                    />
+                  </div>
+                  <select value={tone.toneAssessed} autoFocus
+                    onChange={e => {
+                      const v = Number(e.target.value);
+                      tone.setToneAssessed(v); tone.correggiToneAtStart(v); setTonoScelto(true);
+                    }}
+                    style={{
+                      pointerEvents: 'auto', width: 320, maxWidth: '100%', borderRadius: 10,
+                      border: '2px solid var(--s-reserve)', background: 'var(--s-disc)', outline: 'none',
+                      cursor: 'pointer', fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)',
+                      fontWeight: 700, color: 'var(--s-ink)', padding: '10px 14px', textAlign: 'center',
+                    }}>
+                    <option value={tone.toneAssessed} disabled hidden>
+                      {LC('— scegli il tono —', '— choisis le ton —', '— choose the tone —', '— elige el tono —', '— välj tonen —')}
+                    </option>
+                    {TONE_LEVELS.map(l => (
+                      <option key={l.tone} value={l.tone}>
+                        {l.tone > 0 ? `+${l.tone}` : `${l.tone}`} · {levelName(l.name, lang)}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              ) : (
                 <>
                   <span style={{
                     fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-hero)', fontWeight: 800,
@@ -5808,66 +5945,23 @@ export default function Serenity() {
                       {spiegazioneCiclo.avviso}
                     </span>
                   )}
-                  {/* ⚠️ AGGIUNTO, poi CORRETTO DI NUOVO — segnalato: « senza strumenti devi far
-                      apparire la scala del tono solo dopo aver trovato la resistenza. Il
-                      ciclo è: trovare la resistenza, trovare a quale livello di tono
-                      corrisponde, chiedere di portarlo a Tono 40 e Tono 40 raggiunto » — poi
-                      « senza strumenti non deve far apparire l'arco quando è scelto » — poi
-                      ancora « appaiono i bottoni dei cicli, con il bottone TONO in cui appare
-                      la scala del tono... NON VA BENE, deve apparire solo al secondo comando
-                      del ciclo TONO, dopo aver trovato la resistenza ». Tre cose, non due:
-                      `ToneDial` (l'ARCO) resta escluso, sempre — non ha senso senza un ago
-                      vero. `ToneColumn` (la SCALA verticale) monta SOLO su `tone.raise`/
-                      `tone.done`, mai prima — la resistenza è già stata trovata a quel punto
-                      (fasi `tone.item`/`tone.say_item`, prima di questa, non la montano).
-                      TERZO: il `<select>` che sceglieva il livello PRIMA di armare (accanto
-                      al cerchio TONE, poco più giù nel file) è stato lì il vero "secondo
-                      comando mostrato troppo presto" — nascosto ora per `senzaMisura`
-                      (`&& !senzaMisura` sulla sua condizione), e uno GEMELLO rimontato QUI,
-                      accanto alla scala — cioè DAVVERO al secondo comando, dopo la
-                      resistenza, non prima. `localizzaTone()` (chiamato al click su TONE)
-                      resta invariato: arma e ancora il ciclo con QUALUNQUE valore avesse
-                      `toneAssessed` in quel momento — questo select, scegliendo ORA, corregge
-                      `toneAtStart` con `tone.setToneAtStart` (nuovo export additivo di
-                      `useToneCycle.ts`, v. la sua nota) oltre a `setToneAssessed`: il valore
-                      che l'auditor sceglie DAVVERO diventa quello registrato nel rapporto, non
-                      lo zero di default lasciato dal click. */}
+                  {/* ⚠️ « ToneDial » (l'ARCO) resta escluso, sempre — non ha senso senza un ago
+                      vero. `ToneColumn` qui è la scala GIÀ scelta (v. `deveScegliereTono` più
+                      sopra: si arriva qui SOLO dopo aver scelto, `tone.raise` con `tonoScelto`
+                      vero, o `tone.done`) — resta come riferimento visivo mentre si dà
+                      "portalo a tono 40", non più un controllo su cui agire. */}
                   {toneAttivo && (faseCiclo === 'tone.raise' || faseCiclo === 'tone.done') && (
-                    <>
-                      <div style={{ width: 280, maxWidth: '100%', pointerEvents: 'none' }}>
-                        <ToneColumn
-                          tone={tone.toneOra ?? 0}
-                          toneEeg={tone.toneOraEeg}
-                          margin={tone.margineTono}
-                          hasMeter={tone.toneMisurato}
-                          lang={lang}
-                          charge={null}
-                          chargeFrom={tone.toneAtStart}
-                        />
-                      </div>
-                      {!tone.toneHasMeter && (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, pointerEvents: 'auto' }}>
-                          <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)' }}>
-                            {LC('a che livello di tono corrisponde?', 'à quel niveau de ton cela correspond-il ?',
-                                'what tone level does this correspond to?', '¿a qué nivel de tono corresponde?',
-                                'vilken tonnivå motsvarar detta?')}
-                          </span>
-                          <select value={tone.toneAtStart ?? tone.toneAssessed}
-                            onChange={e => { const v = Number(e.target.value); tone.setToneAssessed(v); tone.setToneAtStart(v); }}
-                            style={{
-                              maxWidth: 200, borderRadius: 6, border: '1px solid var(--s-ink-ghost)',
-                              background: 'var(--s-disc)', outline: 'none', cursor: 'pointer',
-                              fontFamily: 'var(--s-mono)', fontSize: 11, color: 'var(--s-ink-soft)', padding: '3px 5px',
-                            }}>
-                            {TONE_LEVELS.map(l => (
-                              <option key={l.tone} value={l.tone}>
-                                {l.tone > 0 ? `+${l.tone}` : `${l.tone}`} · {levelName(l.name, lang)}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                    </>
+                    <div style={{ width: 280, maxWidth: '100%', pointerEvents: 'none' }}>
+                      <ToneColumn
+                        tone={tone.toneOra ?? 0}
+                        toneEeg={tone.toneOraEeg}
+                        margin={tone.margineTono}
+                        hasMeter={tone.toneMisurato}
+                        lang={lang}
+                        charge={null}
+                        chargeFrom={tone.toneAtStart}
+                      />
+                    </div>
                   )}
                 </>
               )}
@@ -6087,7 +6181,7 @@ export default function Serenity() {
                 desc: LC('porta la resistenza al tono 40', 'mène la résistance au ton 40',
                   'raises the resistance to tone 40', 'lleva la resistencia al tono 40',
                   'för motståndet till ton 40') as string,
-                onClick: () => { confermaItemSePresente(); setToneAttivo(true); tone.localizzaTone(); } },
+                onClick: () => { confermaItemSePresente(); setToneAttivo(true); setTonoScelto(false); tone.localizzaTone(); } },
               // TRUTH — il protocollo di Ron (v. docs/truth-cycle-proposal.md). Un click solo,
               // come gli altri quattro: `locateRI()` arma E apre la cattura del R/I nello
               // stesso gesto (campo vuoto → si aspetta la voce, come tutti gli altri).
