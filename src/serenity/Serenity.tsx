@@ -4817,7 +4817,29 @@ export default function Serenity() {
             l'ingombro segnalato: una riga si trasformava in un'altra riga, non spariva. Ora
             `campiSessioneNascosti` non lascia più NULLA al suo posto: i tre campi restano
             comunque scritti (nello stato, nel rapporto) — solo non più a vista. */}
-        {aperta && !campiSessioneNascosti && (
+        {/* ⚠️ SEGNALATO — « il bottone [START] che hai messo è sotto i bottoni dei cicli,
+            mettilo sotto il campo R-FACTOR, IDENTICO A QUELLO INIZIALE che pulsa ». Due
+            correzioni:
+            1) POSIZIONE — il bottone viveva DENTRO il briefing "senza strumenti", in fondo
+               alle due liste: troppo vicino ai cerchi dei cicli qui sotto (`bottoniCiclo`),
+               confuso con loro. Spostato qui, nella STESSA riga di Obiettivo/Stato fisico/
+               R-Factor (in alto), sotto la terza colonna — `i === 2` nella `.map` qui sotto.
+            2) STILE — non più il cerchietto piccolo inventato: ora il bottone "PREMI START"
+               ORIGINALE (quello che apre la seduta, montato più giù nel file su
+               `!aperta && (senzaStrumenti || museOk || meterC)`) — stesso cerchio 104px, stesso
+               bagliore radiale, stesso anello che pulsa (`animation:'sStartPulse'`), stessa
+               `Play` da 46px — non una variazione, lo STESSO disegno, `position:'relative'`
+               invece di `'absolute'` (qui vive DENTRO il flusso della colonna, non centrato a
+               schermo intero) e `color:'var(--s-ink)'` invece del ternario `isLightTheme` del
+               bottone originale (tarato per il fondo scuro del quadrante ago — qui il bottone
+               sta sulla stessa riga di testo di Obiettivo/Stato fisico, `--s-ink` già corretto
+               nei due temi senza bisogno del ternario, v. la nota sul tema in tokens.css).
+            ⚠️ La riga dei tre campi resta visibile anche oltre i 10 secondi automatici
+            (`campiSessioneNascosti`) FINCHÉ il briefing è a schermo (`mostraBriefingIniziale`)
+            — altrimenti chi scrive subito nei campi si vede sparire sotto i piedi anche il
+            bottone che deve premere per liberare lo schermo, lo stesso problema di partenza
+            in un'altra forma. */}
+        {aperta && (!campiSessioneNascosti || mostraBriefingIniziale) && (
           <div style={{
             display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 20,
             width: 'min(96%, 2200px)', maxWidth: '100%', pointerEvents: 'auto',
@@ -4826,7 +4848,7 @@ export default function Serenity() {
               [LC('obiettivo', 'objectif', 'objective', 'objetivo', 'mål') as string, sessionObjective, setSessionObjective],
               [LC('stato fisico', 'état physique', 'physical state', 'estado físico', 'fysiskt tillstånd') as string, sessionPhysicalCheck, setSessionPhysicalCheck],
               [LC('r-factor', 'r-factor', 'r-factor', 'r-factor', 'r-factor') as string, sessionBriefing, setSessionBriefing],
-            ] as const).map(([etichetta, valore, setValore]) => (
+            ] as const).map(([etichetta, valore, setValore], i) => (
               <div key={etichetta} style={{ display: 'flex', flexDirection: 'column', gap: 1, flex: '1 1 160px', minWidth: 140 }}>
                 <span style={{
                   fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
@@ -4840,6 +4862,31 @@ export default function Serenity() {
                     outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)',
                     color: 'var(--s-ink)', padding: '2px 0', width: '100%',
                   }} />
+                {i === 2 && mostraBriefingIniziale && (
+                  <button onClick={() => setPrimaVoltaLibero(false)}
+                    title={LC('inizia', 'commencer', 'start', 'empezar', 'starta') as string} style={{
+                      position: 'relative', alignSelf: 'flex-start', marginTop: 14,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
+                      background: 'transparent', border: 'none', cursor: 'pointer',
+                      color: 'var(--s-ink)', animation: 'sStartFade 0.5s ease-out',
+                    }}>
+                    <span style={{
+                      position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 104, height: 104, borderRadius: '50%',
+                      background: 'radial-gradient(circle at 50% 40%, color-mix(in srgb, currentColor 16%, transparent), color-mix(in srgb, currentColor 4%, transparent) 70%, transparent)',
+                      border: '2px solid color-mix(in srgb, currentColor 55%, transparent)',
+                      animation: 'sStartPulse 1.8s ease-in-out infinite',
+                    }}>
+                      <Play size={46} strokeWidth={1.6} fill="currentColor" style={{ marginLeft: 6 }} />
+                    </span>
+                    <span style={{
+                      fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', fontWeight: 800, letterSpacing: '0.22em',
+                      textTransform: 'uppercase',
+                    }}>
+                      {LC('inizia', 'commencer', 'start', 'empezar', 'starta')}
+                    </span>
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -5706,37 +5753,6 @@ export default function Serenity() {
                       </ul>
                     </div>
                   </div>
-                  {/* ⚠️ AGGIUNTO — segnalato: « quand on ouvre la séance en BASIC, sans
-                      instruments, on doit voir le BRIEFING début séance, mais doit apparaître
-                      aussi le bouton de START (rond avec la flèche) afin que une fois lu le
-                      briefing l'écran se libère et l'auditeur puisse réellement commencer ».
-                      Prima di questo bottone, `primaVoltaLibero` si spegneva SOLO al primo
-                      `mode !== 'free'` (v. la nota grande più sopra) — chi voleva restare
-                      libero (nessun ciclo armato, solo ASSESSMENT manuale) non aveva modo di
-                      liberare lo schermo dal briefing. Stessa iconografia `Play` pieno del
-                      bottone "PREMI START" (poco più giù nel file — quello che APRE la
-                      seduta): stesso linguaggio visivo dell'app per "si comincia", qui
-                      applicato a "il briefing è letto, libera lo schermo". Un click spegne
-                      `primaVoltaLibero` — la STESSA leva che il primo ciclo armato spegne da
-                      sé (v. l'`useEffect` sopra): non un secondo stato da tenere allineato. */}
-                  <button onClick={() => setPrimaVoltaLibero(false)} title={LC('inizia', 'commencer', 'start', 'empezar', 'starta') as string} style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-                    border: 'none', background: 'transparent', cursor: 'pointer', marginTop: 6, padding: 0,
-                  }}>
-                    <span style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      width: 56, height: 56, borderRadius: '50%',
-                      background: 'var(--s-reserve)', boxShadow: 'var(--s-shadow)',
-                    }}>
-                      <Play size={24} strokeWidth={1.8} fill="#1c1408" color="#1c1408" style={{ marginLeft: 2 }} />
-                    </span>
-                    <span style={{
-                      fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', fontWeight: 800,
-                      letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--s-ink-soft)',
-                    }}>
-                      {LC('inizia', 'commencer', 'start', 'empezar', 'starta')}
-                    </span>
-                  </button>
                 </>
               ) : mode === 'free' ? null : (
                 <>

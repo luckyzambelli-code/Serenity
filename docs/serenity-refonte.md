@@ -7439,3 +7439,39 @@ solo i cerchi dei cicli, esattamente come dopo un ciclo concluso.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: solo `src/serenity/Serenity.tsx` (SERENITY, nessun file condiviso).
+
+## Giro — 2026-08-31 (5) — bottone START spostato sotto R-FACTOR, identico all'originale
+
+**« Il bottone che hai messo è sotto i bottoni dei cicli. mettilo [sotto il campo] R-FACTOR,
+IDENTICO A QUELLO INIZIALE che pulsa »** (confermato dall'utente via domanda di chiarimento:
+"Sotto il campo R-FACTOR").
+
+Due correzioni sul bottone aggiunto nel giro precedente:
+
+1. **Posizione** — viveva in fondo alle due liste del briefing, troppo vicino ai cerchi dei
+   cicli (`bottoniCiclo`) subito sotto: confuso con loro, esattamente il problema segnalato.
+   Rimosso da lì. Spostato nella riga Obiettivo/Stato fisico/R-Factor in alto (già esistente),
+   sotto la terza colonna (R-Factor) — `.map(..., i) => ... i===2 && mostraBriefingIniziale`.
+
+2. **Stile** — non più il cerchietto 56px inventato: ora è lo STESSO disegno del bottone
+   "PREMI START" originale (quello che apre la seduta, `!aperta && (senzaStrumenti || museOk
+   || meterC)`, poco più giù nel file) — cerchio 104px, bagliore radiale, anello pulsante
+   (`animation:'sStartPulse'`, la stessa keyframe già in `tokens.css`), `Play` da 46px. Uniche
+   differenze necessarie per il nuovo contesto: `position:'relative'` (vive nel flusso della
+   colonna, non centrato a schermo) invece di `'absolute'`, e `color:'var(--s-ink)'` diretto
+   invece del ternario `isLightTheme` dell'originale (tarato per il fondo scuro del quadrante
+   ago — qui il bottone sta sulla riga di Obiettivo/Stato fisico, `--s-ink` già corretto nei
+   due temi da solo).
+
+Effetto collaterale corretto insieme: la riga dei tre campi (`aperta && !campiSessioneNascosti`)
+spariva da sola dopo 10 secondi se l'auditor iniziava a scrivere — portandosi via anche il
+bottone prima che fosse stato premuto. Condizione estesa a `aperta && (!campiSessioneNascosti
+|| mostraBriefingIniziale)`: la riga resta visibile finché il briefing è a schermo,
+indipendentemente dal timer.
+
+Verificato dal vivo (BASIC, FR, 1440×900): bottone pulsante ben separato dai cerchi dei cicli,
+posizionato sotto R-FACTOR; un click libera lo schermo (restano solo i cerchi), la riga
+Obiettivo/Stato fisico/R-Factor resta visibile in alto come sempre.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: solo `src/serenity/Serenity.tsx` (SERENITY, nessun file condiviso).
