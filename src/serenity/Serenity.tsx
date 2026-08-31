@@ -5561,54 +5561,71 @@ export default function Serenity() {
           {senzaMisura && aperta && (
             <div style={{
               position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)',
-              zIndex: 4, maxWidth: (mode === 'free' && primaVoltaLibero) ? 660 : 560,
-              maxHeight: '82vh', overflowY: 'auto',
+              zIndex: 4,
+              /* `width:'100%'` accanto a `maxWidth` — senza, il `display:flex` con
+                 `alignItems:'center'` (sotto) resta largo quanto il SUO contenuto (shrink-
+                 to-fit, essendo `position:absolute`), non quanto `maxWidth` concede: la `grid`
+                 delle due liste (`gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))'`,
+                 più giù) vedeva così una larghezza troppo stretta per due colonne e ripiegava
+                 su UNA, raddoppiando l'altezza reale rispetto a quella prevista. */
+              width: '100%', maxWidth: (mode === 'free' && primaVoltaLibero) ? 660 : 560,
+              /* ⚠️ `82vh` (l'altezza della FINESTRA) era la misura sbagliata — verificato dal
+                 vivo via DOM: questo contenitore vive dentro un genitore posizionato alto
+                 ~400px (lo spazio VERO fra header e riga dei cerchi dei cicli, non l'intera
+                 finestra), quindi `82vh` (738px a 900px di finestra) non scattava mai, e il
+                 testo (613px col titolo ingrandito) usciva sopra/sotto quello spazio reale,
+                 dietro header/riga cicli. `100%` risolve contro il VERO genitore posizionato
+                 (`top:50%` qui sotto è già relativo a lui): il contenitore centrato ora
+                 riempie esattamente lo spazio disponibile, `overflowY:auto` scorre SOLO se
+                 il testo non ci sta comunque, invece di restare un budget mai raggiunto. */
+              maxHeight: '100%', overflowY: 'auto',
               padding: '0 24px', textAlign: 'center',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
               pointerEvents: (mode === 'free' && primaVoltaLibero) ? 'auto' : 'none',
             }}>
-              {/* ⚠️ SEGNALATO: « quando si inizia la sessione senza strumenti appaiono i cerchi
-                  dei cicli, e c'è scritto DAI L'ITEM, Scrivilo o dillo, poi premi, ma non è
-                  corretto ». `spiegazioneCiclo`/`comeSenzaAgo` per `mode==='free'` restano
-                  giuste per il RITORNO al libero fra un ciclo e l'altro — sbagliate al PRIMO
-                  libero della seduta, quando l'auditor non ha ancora scelto nulla: lì serve un
-                  vero briefing d'apertura, non l'istruzione minima "premi" pensata per chi sta
-                  già conducendo. `primaVoltaLibero` (sopra, accanto a `mode`) distingue i due
-                  momenti; `bottoniCiclo` (i cerchi dei cicli) restano SEMPRE montati sotto,
-                  nell'uno e nell'altro caso — il testo del briefing lo dice esplicitamente
-                  ("puoi scegliere uno dei cicli disponibili").
-                  ⚠️ Il contenitore era troppo BASSO per questo testo lungo (verificato dal vivo:
-                  titolo e ultimo punto uscivano dallo schermo, `top:50%`/`translate(-50%,-50%)`
-                  non lascia spazio extra) — due liste UNA sopra l'altra (7 righe in tutto) non
-                  ci stavano. Le due liste ora affiancate in `grid` (`Prima di iniziare`/3 punti
-                  a sinistra, `Durante la sessione`/4 punti a destra) dimezzano l'altezza; titolo
-                  e corpo un poco più piccoli (`--s-fs-xl`/`--s-fs-sm`, non hero/lg) bastano per
-                  un testo letto UNA VOLTA SOLA all'apertura — diverso da `spiegazioneCiclo`, che
-                  resta grande perché letto ripetutamente durante il ciclo. `maxHeight`+`overflowY`
-                  sul contenitore, come rete di sicurezza su finestre ancora più basse. */}
+              {/* ⚠️ SEGNALATO DI NUOVO — due correzioni sullo stesso blocco:
+                  1) « scrivi il briefing INIZIO SESSIONE più grande, come i comandi dei cicli ».
+                     Taglie allineate a quelle di `spiegazioneCiclo` qui sotto (il ramo "ciclo in
+                     corso"): titolo `--s-fs-hero` (era `--s-fs-xl`), intro `--s-fs-xl` serif
+                     (era `--s-fs-base`), le due intestazioni/liste `--s-fs-lg` (erano
+                     `--s-fs-sm`) — la STESSA gerarchia di taglie, non un'invenzione a parte.
+                     `maxHeight`+`overflowY` sul contenitore (sopra) resta la rete di sicurezza
+                     per le finestre più basse, ora che il testo occupa più spazio.
+                  2) « quando si finisce un ciclo si ritorna alla schermata iniziale e c'è
+                     sempre scritto DAI L'ITEM, Scrivilo o dillo... Non deve più apparire ».
+                     Vero — `mode === 'free'` senza `primaVoltaLibero` (un ciclo è già stato
+                     armato e concluso in questa seduta) ricadeva sul ramo "ciclo in corso" con
+                     `spiegazioneCiclo`'s "1 · DAI L'ITEM": quella frase descrive il PRIMO passo
+                     del processo CONTACT, non un invito generico a ridare un item — fuorviante
+                     quando l'auditor è semplicemente tornato al libero dopo MIRROR/TONE/NULL e
+                     sta per SCEGLIERE un nuovo ciclo dai cerchi qui sotto, non a "scriverlo o
+                     dirlo". Terzo ramo aggiunto: `mode === 'free' && !primaVoltaLibero` → nessun
+                     testo, solo i cerchi (`bottoniCiclo`, sempre montati sotto). Il ramo
+                     `spiegazioneCiclo`/`comeSenzaAgo` resta SOLO per `mode !== 'free'` — un
+                     ciclo davvero in corso (CONTACT/NULL/MIRROR/TONE/TRUTH). */}
               {mode === 'free' && primaVoltaLibero ? (
                 <>
                   <span style={{
-                    fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-xl)', fontWeight: 800,
+                    fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-hero)', fontWeight: 800,
                     letterSpacing: '0.02em', lineHeight: 1.15, color: 'var(--s-ink)',
                   }}>
                     {LC('INIZIO SESSIONE', 'DÉBUT DE SÉANCE', 'SESSION START', 'INICIO DE LA SESIÓN', 'SESSIONSSTART')}
                   </span>
-                  <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-base)', lineHeight: 1.35, color: 'var(--s-ink-soft)' }}>
+                  <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-xl)', lineHeight: 1.35, color: 'var(--s-ink-soft)' }}>
                     {LC('Stai per iniziare la sessione.', 'Tu es sur le point de commencer la séance.',
                         'You are about to start the session.', 'Estás a punto de empezar la sesión.',
                         'Du är på väg att påbörja sessionen.')}
                   </span>
                   <div style={{
                     textAlign: 'left', alignSelf: 'stretch', display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px 28px',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px 32px',
                   }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', fontWeight: 700, color: 'var(--s-ink)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-lg)', fontWeight: 700, color: 'var(--s-ink)' }}>
                         {LC('Prima di iniziare:', 'Avant de commencer :', 'Before you start:', 'Antes de empezar:', 'Innan du börjar:')}
                       </span>
-                      <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3,
-                        fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.35, color: 'var(--s-ink-faint)' }}>
+                      <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 5,
+                        fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-lg)', lineHeight: 1.4, color: 'var(--s-ink-faint)' }}>
                         <li>{LC('Inserisci l\'Obiettivo della sessione.', 'Renseigne l\'Objectif de la séance.',
                                 'Enter the session\'s Objective.', 'Introduce el Objetivo de la sesión.',
                                 'Ange sessionens Mål.')}</li>
@@ -5622,12 +5639,12 @@ export default function Serenity() {
                                 'Ange R-Factor. Dessa uppgifter inkluderas i sessionens slutrapport.')}</li>
                       </ul>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', fontWeight: 700, color: 'var(--s-ink)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-lg)', fontWeight: 700, color: 'var(--s-ink)' }}>
                         {LC('Durante la sessione:', 'Pendant la séance :', 'During the session:', 'Durante la sesión:', 'Under sessionen:')}
                       </span>
-                      <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3,
-                        fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.35, color: 'var(--s-ink-faint)' }}>
+                      <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 5,
+                        fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-lg)', lineHeight: 1.4, color: 'var(--s-ink-faint)' }}>
                         <li>{LC('Puoi scegliere uno dei cicli disponibili oppure eseguire liberamente qualsiasi procedimento.',
                                 'Tu peux choisir l\'un des cycles disponibles ou mener librement n\'importe quel procédé.',
                                 'You can choose one of the available cycles or freely run any process.',
@@ -5652,7 +5669,7 @@ export default function Serenity() {
                     </div>
                   </div>
                 </>
-              ) : (
+              ) : mode === 'free' ? null : (
                 <>
                   <span style={{
                     fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-hero)', fontWeight: 800,

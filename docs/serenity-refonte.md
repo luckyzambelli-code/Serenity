@@ -7331,3 +7331,54 @@ cliccato CONTACT → torna il testo normale del ciclo (grande, come punto 2); AN
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/Serenity.tsx`, `src/serenity/tokens.css`, `public/icon-serenity.png`
 (nuovo file, solo SERENITY).
+
+## Giro — 2026-08-31 (2) — briefing INIZIO SESSIONE più grande + "DAI L'ITEM" non deve più
+## riapparire dopo un ciclo
+
+Due correzioni sullo STESSO blocco del giro precedente (`senzaMisura && aperta`).
+
+**1. « Scrivi il briefing INIZIO SESSIONE più grande, come i comandi dei cicli »**
+
+Taglie allineate a quelle di `spiegazioneCiclo` (il ramo "ciclo in corso", già ingrandito nel
+giro precedente): titolo `--s-fs-hero` (era `--s-fs-xl`), intro `--s-fs-xl` serif (era
+`--s-fs-base`), le due intestazioni/liste `--s-fs-lg` (erano `--s-fs-sm`) — stessa gerarchia,
+non un'invenzione a parte.
+
+Il testo più grande usciva di nuovo dal contenitore — due bug distinti trovati verificando dal
+vivo (DOM, non solo screenshot):
+- `maxHeight:'82vh'` misurava l'altezza della FINESTRA, ma il contenitore vive dentro un
+  genitore posizionato alto solo ~400px (lo spazio vero fra header e riga dei cicli) — `82vh`
+  (738px a 900px di finestra) non scattava mai come limite reale. Corretto: `maxHeight:'100%'`,
+  che risolve contro il genitore posizionato vero (`top:50%` è già relativo a lui).
+- Il contenitore (`display:flex`, `position:absolute`, solo `maxWidth` senza `width`) restava
+  largo quanto il SUO contenuto (shrink-to-fit) invece che quanto `maxWidth` concedeva: la
+  `grid` delle due liste (`repeat(auto-fit,minmax(260px,1fr))`) vedeva una larghezza troppo
+  stretta per due colonne e ripiegava su una sola, raddoppiando l'altezza reale. Corretto:
+  aggiunto `width:'100%'` accanto a `maxWidth`.
+
+Verificato dal vivo via DOM (non solo screenshot, che può ingannare su un overflow silenzioso):
+`getBoundingClientRect()`/`scrollHeight` del contenitore prima e dopo — da 613px di contenuto
+dentro un genitore di 403px (200px fuori, invisibile, layout a 1 colonna) a 424px di contenuto
+nello stesso spazio di 403px (grid a 2 colonne, come previsto; `overflowY:auto` copre i 21px
+residui, non più un budget mai raggiunto).
+
+**2. « Quando si finisce un ciclo si ritorna alla schermata iniziale e c'è sempre scritto DAI
+L'ITEM, Scrivilo o dillo... Non deve più apparire »**
+
+`mode === 'free'` senza `primaVoltaLibero` (un ciclo è già stato armato e concluso in questa
+seduta) ricadeva sul ramo "ciclo in corso" con `spiegazioneCiclo`'s "1 · DAI L'ITEM": quella
+frase descrive il PRIMO passo del processo CONTACT, non un invito generico a ridare un item —
+fuorviante quando l'auditor è tornato al libero dopo MIRROR/TONE/NULL e sta per SCEGLIERE un
+nuovo ciclo dai cerchi sotto, non a "scriverlo o dirlo".
+
+Terzo ramo aggiunto al condizionale: `mode === 'free' && !primaVoltaLibero` → nessun testo
+(`null`), solo i cerchi (`bottoniCiclo`, sempre montati sotto in tutti e tre i casi). Il ramo
+`spiegazioneCiclo`/`comeSenzaAgo` resta ora SOLO per `mode !== 'free'` — un ciclo davvero in
+corso (CONTACT/NULL/MIRROR/TONE/TRUTH).
+
+Verificato dal vivo (BASIC, FR, 1440×900): briefing grande e leggibile, due colonne affiancate;
+CONTACT → testo normale del ciclo; ANNULER → tornati al libero, schermo SENZA alcun testo,
+solo i cinque cerchi — mai più "DAI L'ITEM" dopo il primo ciclo, nella stessa apertura seduta.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: solo `src/serenity/Serenity.tsx` (SERENITY, nessun file condiviso).
