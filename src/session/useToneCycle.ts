@@ -443,7 +443,18 @@ export function useToneCycle(d: ToneCycleDeps) {
     trackTone,
     // stato
     tonePhase, setTonePhase, tonePhaseRef,
-    toneAtStart, toneAssessed, setToneAssessed,
+    // ⚠️ AGGIUNTO (SERENITY, additivo, nessuna riga esistente toccata) — `setToneAtStart` è il
+    // setter di `useState` qui sopra, già esistente, semplicemente MAI esposto al chiamante:
+    // finora solo `localizzaTone` (in questo stesso file) lo scriveva, dal `toneAssessed`
+    // dichiarato PRIMA di armare. Segnalato: « senza strumenti, trovare a quale livello di
+    // tono corrisponde è il SECONDO comando del ciclo, dopo aver trovato la resistenza » — non
+    // prima. `localizzaTone` resta invariato (arma e ancora il ciclo nello stesso click,
+    // nessuna riga sua cambia): chi chiama da fuori può ora CORREGGERE `toneAtStart` un
+    // istante dopo, quando la resistenza è stata nominata e l'auditor sceglie davvero il
+    // livello — senza dover rifare l'intera `localizzaTone` (che riazzererebbe ripetizioni,
+    // testimoni, l'ancora del locatore: tutte cose già giuste al primo click). Nessun
+    // chiamante esistente (EQUILIBRIUM) legge questo campo: comportamento suo invariato.
+    toneAtStart, setToneAtStart, toneAssessed, setToneAssessed,
     toneRipetizioni, setToneRipetizioni,
     toneAnchor, toneFired,
     // misure derivate

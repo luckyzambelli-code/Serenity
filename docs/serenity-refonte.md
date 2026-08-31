@@ -7518,3 +7518,83 @@ di lei.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: solo `src/serenity/Serenity.tsx` (SERENITY, nessun file condiviso).
+
+## Giro — 2026-08-31 (7) — correzioni pesanti: arco MAI senza strumenti, bottone START rimesso
+## sotto R-Factor nel testo, scala del tono davvero al secondo comando, GUIDE 5 domande
+
+Giro di correzioni dopo un riscontro molto negativo dell'utente sulle scelte del giro
+precedente ("hai fatto malissimo"). Quattro correzioni, una delle quali tocca un file
+condiviso con EQUILIBRIUM (additivo, entrambi i DMG ricompilati e spediti).
+
+**1. « SENZA STRUMENTI NON DEVE MAI MOSTRARE L'ARCO, anche nella schermata iniziale (dove fai
+apparire l'arco con il bottone PREMI START) »**
+
+Un giro precedente aveva deliberatamente scelto `!(senzaMisura && aperta)` (non
+`!senzaMisura`) per i tre archi (`VistaSenzaAgo`/`QuantumSphere`/il contenitore
+`ClearDial`+`MirrorDial`+`ToneDial`) — "solo `aperta`, non `!aperta`: PRIMA di aprire, l'arco
+resta, è lì che vive il bottone PLAY al centro". Scelta esplicitamente ribaltata ora: "mai"
+vuol dire anche PRIMA di aprire. Le tre condizioni diventano `!senzaMisura`, senza la clausola
+`&& aperta` — quando il bottone PREMI START è a schermo, `senzaMisura` è già il segnale
+giusto (vero solo se `senzaStrumenti` è stato scelto O nessun MUSE/Meter è ancora connesso).
+
+**2. « Appare il bottone CHIUDI LA SEDUTA mentre abbiamo in alto il bottone pulsante INIZIA,
+questo non va bene. Il bottone START deve essere posizionato sotto la frase INSERISCI
+L'R-FACTOR »**
+
+Il giro precedente aveva letto "sotto il campo R-Factor" come il campo dell'INTESTAZIONE
+(Obiettivo/Stato fisico/R-Factor, in alto) — sbagliato: portava il bottone pulsante proprio
+accanto a "FERMER LA SÉANCE", due comandi opposti fianco a fianco. "INSERISCI L'R-FACTOR" è
+in realtà la FRASE del briefing "INIZIO SESSIONE" (l'ultimo punto della lista "Prima di
+iniziare"). Il bottone è tornato lì, sotto quella frase, dentro il testo del briefing —
+lontano dai comandi di sessione in alto, che risolve anche l'incoerenza visiva. La barra
+Obiettivo/Stato fisico/R-Factor è tornata alla sua condizione originale
+(`!campiSessioneNascosti`, senza l'estensione per il briefing, non più necessaria).
+
+**3. « Appaiono i bottoni dei cicli, con il bottone TONO in cui appare la scala del tono...
+NON VA BENE. Deve apparire solo al secondo comando del ciclo TONO, dopo aver trovato la
+resistenza »**
+
+Il vero colpevole era il `<select>` che sceglieva il livello di tono PRIMA di armare TONE
+(accanto al suo cerchio, fra i cinque metodi) — la "scala in anteprima" visibile fin dalla
+primissima schermata, prima ancora di aver trovato la resistenza. Nascosto per `senzaMisura`
+(`&& !senzaMisura` aggiunto alla sua condizione — resta invariato con SOLO il MUSE connesso).
+Un gemello dello stesso select rimontato DAVVERO al secondo comando: accanto a `ToneColumn`,
+nel ramo `tone.raise`/`tone.done` dell'overlay senza strumenti (dopo che la resistenza è
+stata trovata, mai prima) — sotto l'etichetta "a che livello di tono corrisponde?".
+
+Sfida tecnica: `localizzaTone()` (chiamato al click su TONE, invariato) fissa `toneAtStart`
+SUBITO, usando `toneAssessed` in quel momento — nascondere il select pre-arm senza altro
+avrebbe lasciato `toneAtStart` sempre a 0 (il default) per ogni ciclo TONE senza strumenti, un
+regresso reale sul rapporto registrato. Risolto con un'aggiunta ADDITIVA a `useToneCycle.ts`
+(file CONDIVISO con EQUILIBRIUM): esposto `setToneAtStart` (il setter di uno `useState` già
+esistente, mai stato nel `return` — nessuna riga esistente toccata, nessun chiamante esistente
+la legge, comportamento di EQUILIBRIUM invariato). Il nuovo select "al secondo comando"
+chiama sia `setToneAssessed` che `setToneAtStart`: il valore che l'auditor sceglie DAVVERO,
+dopo aver trovato la resistenza, diventa quello registrato — non più lo zero di default.
+
+Verificato dal vivo (EXPERT, FR, 1440×900): TONE cliccato → "DIS LA RÉSISTANCE" (nessuna
+scala, nessun select); resistenza data via R&I · Manuel → scala + select "a che livello di
+tono corrisponde?" appaiono INSIEME, nessun arco (confermato via scan DOM degli `<svg>`);
+select cambiato a −1,5 → `toneAtStart` aggiornato correttamente (pillola "−2 → +40 en
+cours…", arrotondamento di `.toFixed(0)` su −1,5); "ton quarante atteint" → scala/select
+restano, nessuna regressione. Verificato anche in BASIC: il briefing mostra il bottone START
+sotto "Renseigne le R-Factor…" (non più accanto a FERMER LA SÉANCE), TONE senza select
+prematuro sui cinque cerchi.
+
+**4. « Dans le guide le chapitre 1, Premier lancement doit avoir 5 étapes et non pas 3 »**
+
+`~/Downloads/Guide Static Meter/SERENITY-manuale.html` (fuori dal repository git), capitolo
+"1. Premier lancement" — elencava solo 3 domande (Qui audite / Seul ou avec préclair /
+Combien veux-tu voir), mancavano "Qui est le préclair ?" e "Ici, ou à distance ?" — le due
+domande CONDIZIONALI (esistono solo scegliendo "Avec un préclair", saltate in SOLO — v.
+`flussoAvvio.ts`, `PassoId`). Aggiunte le due voci mancanti nell'`<ol>` (con nota esplicita
+sulla condizionalità), riscritta la nota "note info" per spiegare "5 domande, non sempre 5
+schermate", aggiornati i due riferimenti residui a "3 questions"/"3 domande" (didascalia
+screenshot, riga della tabella §2 "profil · seul/préclair"). Testi presi parola per parola
+da `src/i18n.tsx` (`ser_q_auditor`/`ser_q_chi`/`ser_q_preclear`/`ser_q_dove`/`ser_q_modo`),
+non reinventati. `VERSIONE` del manuale portata a 3.0.174 (la prossima build SERENITY).
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/Serenity.tsx` (SERENITY) + `src/session/useToneCycle.ts`
+(CONDIVISO, additivo) — **entrambi i DMG ricompilati e spediti**, come da regola per i file
+condivisi. Il manuale HTML resta fuori dal repository, nessun commit per lui.

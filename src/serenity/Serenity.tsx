@@ -4820,29 +4820,19 @@ export default function Serenity() {
             l'ingombro segnalato: una riga si trasformava in un'altra riga, non spariva. Ora
             `campiSessioneNascosti` non lascia più NULLA al suo posto: i tre campi restano
             comunque scritti (nello stato, nel rapporto) — solo non più a vista. */}
-        {/* ⚠️ SEGNALATO — « il bottone [START] che hai messo è sotto i bottoni dei cicli,
-            mettilo sotto il campo R-FACTOR, IDENTICO A QUELLO INIZIALE che pulsa ». Due
-            correzioni:
-            1) POSIZIONE — il bottone viveva DENTRO il briefing "senza strumenti", in fondo
-               alle due liste: troppo vicino ai cerchi dei cicli qui sotto (`bottoniCiclo`),
-               confuso con loro. Spostato qui, nella STESSA riga di Obiettivo/Stato fisico/
-               R-Factor (in alto), sotto la terza colonna — `i === 2` nella `.map` qui sotto.
-            2) STILE — non più il cerchietto piccolo inventato: ora il bottone "PREMI START"
-               ORIGINALE (quello che apre la seduta, montato più giù nel file su
-               `!aperta && (senzaStrumenti || museOk || meterC)`) — stesso cerchio 104px, stesso
-               bagliore radiale, stesso anello che pulsa (`animation:'sStartPulse'`), stessa
-               `Play` da 46px — non una variazione, lo STESSO disegno, `position:'relative'`
-               invece di `'absolute'` (qui vive DENTRO il flusso della colonna, non centrato a
-               schermo intero) e `color:'var(--s-ink)'` invece del ternario `isLightTheme` del
-               bottone originale (tarato per il fondo scuro del quadrante ago — qui il bottone
-               sta sulla stessa riga di testo di Obiettivo/Stato fisico, `--s-ink` già corretto
-               nei due temi senza bisogno del ternario, v. la nota sul tema in tokens.css).
-            ⚠️ La riga dei tre campi resta visibile anche oltre i 10 secondi automatici
-            (`campiSessioneNascosti`) FINCHÉ il briefing è a schermo (`mostraBriefingIniziale`)
-            — altrimenti chi scrive subito nei campi si vede sparire sotto i piedi anche il
-            bottone che deve premere per liberare lo schermo, lo stesso problema di partenza
-            in un'altra forma. */}
-        {aperta && (!campiSessioneNascosti || mostraBriefingIniziale) && (
+        {/* ⚠️ SEGNALATO DI NUOVO — « hai fatto malissimo: appare il bottone CHIUDI LA SEDUTA
+            mentre abbiamo in alto il bottone pulsante INIZIA, questo non va bene. Il bottone
+            START deve essere posizionato sotto la frase INSERISCI L'R-FACTOR ». Il giro
+            precedente aveva letto "sotto il campo R-Factor" come il campo dell'INTESTAZIONE
+            (qui sotto) — sbagliato: portava il bottone pulsante proprio accanto a "FERMER LA
+            SÉANCE" in alto, due comandi opposti ("chiudi"/"inizia") fianco a fianco.
+            "INSERISCI L'R-FACTOR" è la FRASE del briefing "INIZIO SESSIONE" (il punto della
+            lista "Prima di iniziare:", v. più giù) — è LÌ che il bottone vive ora, sotto
+            quella frase, lontano da questa barra. Tornata alla condizione originale
+            (`!campiSessioneNascosti`, senza l'estensione `|| mostraBriefingIniziale`): non
+            c'è più nessun bottone qui dentro che debba restare raggiungibile oltre i 10
+            secondi. */}
+        {aperta && !campiSessioneNascosti && (
           <div style={{
             display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 20,
             width: 'min(96%, 2200px)', maxWidth: '100%', pointerEvents: 'auto',
@@ -4851,7 +4841,7 @@ export default function Serenity() {
               [LC('obiettivo', 'objectif', 'objective', 'objetivo', 'mål') as string, sessionObjective, setSessionObjective],
               [LC('stato fisico', 'état physique', 'physical state', 'estado físico', 'fysiskt tillstånd') as string, sessionPhysicalCheck, setSessionPhysicalCheck],
               [LC('r-factor', 'r-factor', 'r-factor', 'r-factor', 'r-factor') as string, sessionBriefing, setSessionBriefing],
-            ] as const).map(([etichetta, valore, setValore], i) => (
+            ] as const).map(([etichetta, valore, setValore]) => (
               <div key={etichetta} style={{ display: 'flex', flexDirection: 'column', gap: 1, flex: '1 1 160px', minWidth: 140 }}>
                 <span style={{
                   fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
@@ -4865,31 +4855,6 @@ export default function Serenity() {
                     outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)',
                     color: 'var(--s-ink)', padding: '2px 0', width: '100%',
                   }} />
-                {i === 2 && mostraBriefingIniziale && (
-                  <button onClick={() => setPrimaVoltaLibero(false)}
-                    title={LC('inizia', 'commencer', 'start', 'empezar', 'starta') as string} style={{
-                      position: 'relative', alignSelf: 'flex-start', marginTop: 14,
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
-                      background: 'transparent', border: 'none', cursor: 'pointer',
-                      color: 'var(--s-ink)', animation: 'sStartFade 0.5s ease-out',
-                    }}>
-                    <span style={{
-                      position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      width: 104, height: 104, borderRadius: '50%',
-                      background: 'radial-gradient(circle at 50% 40%, color-mix(in srgb, currentColor 16%, transparent), color-mix(in srgb, currentColor 4%, transparent) 70%, transparent)',
-                      border: '2px solid color-mix(in srgb, currentColor 55%, transparent)',
-                      animation: 'sStartPulse 1.8s ease-in-out infinite',
-                    }}>
-                      <Play size={46} strokeWidth={1.6} fill="currentColor" style={{ marginLeft: 6 }} />
-                    </span>
-                    <span style={{
-                      fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', fontWeight: 800, letterSpacing: '0.22em',
-                      textTransform: 'uppercase',
-                    }}>
-                      {LC('inizia', 'commencer', 'start', 'empezar', 'starta')}
-                    </span>
-                  </button>
-                )}
               </div>
             ))}
           </div>
@@ -5297,7 +5262,18 @@ export default function Serenity() {
               toccati (le loro scale non sono "CONTACT/DISSOLUTION/AS-IS", v. la nota nel file
               del componente): l'ago sparisce comunque, `MirrorDial`/`ToneDial` (più giù)
               restano quel che sono, indipendenti da questa scelta. */}
-          {!(senzaMisura && aperta) && vistaSenzaAgo && !mirror.mirrorArmed && !toneAttivo && (
+          {/* ⚠️ SEGNALATO DI NUOVO, con forza: « SENZA STRUMENTI NON DEVE MAI MOSTRARE L'ARCO,
+              anche nella schermata iniziale (dove fai apparire l'arco con il bottone PREMI
+              START) ». La nota qui sopra ("Solo `aperta`, non `!aperta`... PRIMA di aprire,
+              l'arco resta — è lì che vive il bottone PLAY al centro") era una scelta
+              deliberata di un giro precedente — esplicitamente ribaltata ora: "mai" vuol dire
+              anche PRIMA di aprire. `!(senzaMisura && aperta)` → `!senzaMisura`, la stessa
+              condizione dei tre archi (`VistaSenzaAgo`/`QuantumSphere` qui, `ClearDial`/
+              `MirrorDial`/`ToneDial` poco più giù) senza più la clausola `&& aperta`. Quando
+              il bottone PREMI START è a schermo, `senzaMisura` è già il segnale giusto: vero
+              solo se `senzaStrumenti` è stato scelto O nessun MUSE/Meter è ancora connesso —
+              esattamente quando non c'è nessun ago vero da disegnare dietro il bottone. */}
+          {!senzaMisura && vistaSenzaAgo && !mirror.mirrorArmed && !toneAttivo && (
             <VistaSenzaAgo
               armed={cycles.cycleArmed}
               cycleKind={cycles.cycleKind}
@@ -5305,7 +5281,7 @@ export default function Serenity() {
               isLightTheme={isLightTheme}
             />
           )}
-          {!(senzaMisura && aperta) && !(vistaSenzaAgo && !mirror.mirrorArmed && !toneAttivo) && (
+          {!senzaMisura && !(vistaSenzaAgo && !mirror.mirrorArmed && !toneAttivo) && (
           <QuantumSphere
             needleOffsetProp={agoEeg ? needleOffsetEeg : SET_OFFSET}
             /* ⚠️ BUG TROVATO — segnalato: « quand on choisit MUSE, apparaît toujours
@@ -5410,10 +5386,11 @@ export default function Serenity() {
               stesso contenitore qui, per i tre insieme: nessuna riga toccata DENTRO i tre
               componenti (`ClearDial` si ritrova avvolto due volte, innocuo — due `inset:0`
               identici occupano lo stesso rettangolo).
-              ⚠️ Stessa condizione di `QuantumSphere` appena sopra — senza strumenti, a seduta
-              aperta, nessuno dei tre archi ha un ago da inseguire: sparisce anche lui, insieme
-              all'ago, per lo stesso motivo. */}
-          {!(senzaMisura && aperta) && (
+              ⚠️ Stessa condizione di `QuantumSphere` appena sopra — senza strumenti nessuno dei
+              tre archi ha un ago da inseguire: sparisce anche lui, insieme all'ago, per lo
+              stesso motivo — MAI, nemmeno PRIMA di aprire la seduta (v. la nota grande su
+              `QuantumSphere`, poco più su: `!senzaMisura`, non più `!(senzaMisura && aperta)`). */}
+          {!senzaMisura && (
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
             {/* ⚠️ MIRROR E TONE RISPETTANO ORA "SENZA AGO" — segnalato: « il bottone con o
                 senza ago deve apparire anche in MIRROR e TONE » (implica: deve avere un
@@ -5706,6 +5683,48 @@ export default function Serenity() {
                                 'Introduce el R-Factor. Estos datos se incluirán en el informe final de la sesión.',
                                 'Ange R-Factor. Dessa uppgifter inkluderas i sessionens slutrapport.')}</li>
                       </ul>
+                      {/* ⚠️ SEGNALATO DI NUOVO — « il bottone START deve essere posizionato
+                          sotto la frase INSERISCI L'R-FACTOR », dopo aver corretto due
+                          incoerenze del giro precedente:
+                          1) POSIZIONE — non più nella barra Obiettivo/Stato fisico/R-Factor
+                             IN ALTO (v. la sua nota, sopra): stava proprio accanto a "FERMER
+                             LA SÉANCE" — due comandi opposti ("chiudi"/"inizia") fianco a
+                             fianco, la stessa incoerenza segnalata esplicitamente. Qui invece
+                             è DENTRO il testo del briefing, sotto l'ultimo punto della lista
+                             "Prima di iniziare" ("Inserisci l'R-Factor…") — letto alla
+                             lettera, e lontano dai comandi di sessione in alto.
+                          2) STILE — invariato dal giro prima: lo STESSO disegno del bottone
+                             "PREMI START" originale (quello che apre la seduta, montato più
+                             giù su `!aperta && (senzaStrumenti || museOk || meterC)`) —
+                             cerchio 104px, bagliore radiale, anello pulsante
+                             (`animation:'sStartPulse'`), `Play` da 46px. `position:'relative'`
+                             (vive nel flusso della colonna) e `color:'var(--s-ink)'` diretto
+                             (non il ternario `isLightTheme` dell'originale, tarato per il
+                             fondo scuro del quadrante ago — qui il bottone sta nel testo del
+                             briefing). */}
+                      <button onClick={() => setPrimaVoltaLibero(false)}
+                        title={LC('inizia', 'commencer', 'start', 'empezar', 'starta') as string} style={{
+                          position: 'relative', alignSelf: 'flex-start', marginTop: 10,
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+                          background: 'transparent', border: 'none', cursor: 'pointer',
+                          color: 'var(--s-ink)', animation: 'sStartFade 0.5s ease-out',
+                        }}>
+                        <span style={{
+                          position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          width: 104, height: 104, borderRadius: '50%',
+                          background: 'radial-gradient(circle at 50% 40%, color-mix(in srgb, currentColor 16%, transparent), color-mix(in srgb, currentColor 4%, transparent) 70%, transparent)',
+                          border: '2px solid color-mix(in srgb, currentColor 55%, transparent)',
+                          animation: 'sStartPulse 1.8s ease-in-out infinite',
+                        }}>
+                          <Play size={46} strokeWidth={1.6} fill="currentColor" style={{ marginLeft: 6 }} />
+                        </span>
+                        <span style={{
+                          fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', fontWeight: 800, letterSpacing: '0.22em',
+                          textTransform: 'uppercase',
+                        }}>
+                          {LC('inizia', 'commencer', 'start', 'empezar', 'starta')}
+                        </span>
+                      </button>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-lg)', fontWeight: 700, color: 'var(--s-ink)' }}>
@@ -5789,39 +5808,66 @@ export default function Serenity() {
                       {spiegazioneCiclo.avviso}
                     </span>
                   )}
-                  {/* ⚠️ AGGIUNTO — segnalato: « senza strumenti devi far apparire la scala del
-                      tono solo dopo aver trovato la resistenza. Il ciclo è: trovare la
-                      resistenza, trovare a quale livello di tono corrisponde, chiedere di
-                      portarlo a Tono 40 e Tono 40 raggiunto » — poi precisato: « senza
-                      strumenti non deve far apparire l'arco quando è scelto ». Due cose
-                      distinte, mai state a schermo senza strumenti (`ToneDial`/`ToneColumn`
-                      vivono SOLO dentro `!(senzaMisura && aperta)`, v. la nota grande più su):
-                      `ToneDial` è l'ARCO con la lancetta — non ha senso senza un ago vero da
-                      disegnare, resta escluso anche qui, come richiesto esplicitamente.
-                      `ToneColumn` è la SCALA verticale (i livelli, non un ago) — puro, prende
-                      tutto da `tone` (`useToneCycle`, già montato), funziona a schermo anche
-                      senza nessuno strumento collegato (`toneAssessed`, il livello dichiarato
-                      dall'auditor PRIMA di armare — v. il selettore accanto al cerchio TONE —
-                      è già la sorgente quando `!tone.toneHasMeter`). Montata SOLO quando
-                      `faseCiclo` è `'tone.raise'`/`'tone.done'`: la resistenza è già stata
-                      trovata (fasi `'tone.item'`/`'tone.say_item'`, PRIMA di questa, non la
-                      montano) — esattamente l'ordine dei quattro passi elencato nella
-                      segnalazione. Stessi props della copia "con strumenti" (poco più giù nel
-                      file), `charge={null}` invece di `museOk ? ... : null`: senza strumenti
-                      `museOk` è già sempre falso, scritto qui alla lettera evita un confronto
-                      inutile con una variabile che in questo ramo vale sempre `false`. */}
+                  {/* ⚠️ AGGIUNTO, poi CORRETTO DI NUOVO — segnalato: « senza strumenti devi far
+                      apparire la scala del tono solo dopo aver trovato la resistenza. Il
+                      ciclo è: trovare la resistenza, trovare a quale livello di tono
+                      corrisponde, chiedere di portarlo a Tono 40 e Tono 40 raggiunto » — poi
+                      « senza strumenti non deve far apparire l'arco quando è scelto » — poi
+                      ancora « appaiono i bottoni dei cicli, con il bottone TONO in cui appare
+                      la scala del tono... NON VA BENE, deve apparire solo al secondo comando
+                      del ciclo TONO, dopo aver trovato la resistenza ». Tre cose, non due:
+                      `ToneDial` (l'ARCO) resta escluso, sempre — non ha senso senza un ago
+                      vero. `ToneColumn` (la SCALA verticale) monta SOLO su `tone.raise`/
+                      `tone.done`, mai prima — la resistenza è già stata trovata a quel punto
+                      (fasi `tone.item`/`tone.say_item`, prima di questa, non la montano).
+                      TERZO: il `<select>` che sceglieva il livello PRIMA di armare (accanto
+                      al cerchio TONE, poco più giù nel file) è stato lì il vero "secondo
+                      comando mostrato troppo presto" — nascosto ora per `senzaMisura`
+                      (`&& !senzaMisura` sulla sua condizione), e uno GEMELLO rimontato QUI,
+                      accanto alla scala — cioè DAVVERO al secondo comando, dopo la
+                      resistenza, non prima. `localizzaTone()` (chiamato al click su TONE)
+                      resta invariato: arma e ancora il ciclo con QUALUNQUE valore avesse
+                      `toneAssessed` in quel momento — questo select, scegliendo ORA, corregge
+                      `toneAtStart` con `tone.setToneAtStart` (nuovo export additivo di
+                      `useToneCycle.ts`, v. la sua nota) oltre a `setToneAssessed`: il valore
+                      che l'auditor sceglie DAVVERO diventa quello registrato nel rapporto, non
+                      lo zero di default lasciato dal click. */}
                   {toneAttivo && (faseCiclo === 'tone.raise' || faseCiclo === 'tone.done') && (
-                    <div style={{ width: 280, maxWidth: '100%', pointerEvents: 'none' }}>
-                      <ToneColumn
-                        tone={tone.toneOra ?? 0}
-                        toneEeg={tone.toneOraEeg}
-                        margin={tone.margineTono}
-                        hasMeter={tone.toneMisurato}
-                        lang={lang}
-                        charge={null}
-                        chargeFrom={tone.toneAtStart}
-                      />
-                    </div>
+                    <>
+                      <div style={{ width: 280, maxWidth: '100%', pointerEvents: 'none' }}>
+                        <ToneColumn
+                          tone={tone.toneOra ?? 0}
+                          toneEeg={tone.toneOraEeg}
+                          margin={tone.margineTono}
+                          hasMeter={tone.toneMisurato}
+                          lang={lang}
+                          charge={null}
+                          chargeFrom={tone.toneAtStart}
+                        />
+                      </div>
+                      {!tone.toneHasMeter && (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, pointerEvents: 'auto' }}>
+                          <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)' }}>
+                            {LC('a che livello di tono corrisponde?', 'à quel niveau de ton cela correspond-il ?',
+                                'what tone level does this correspond to?', '¿a qué nivel de tono corresponde?',
+                                'vilken tonnivå motsvarar detta?')}
+                          </span>
+                          <select value={tone.toneAtStart ?? tone.toneAssessed}
+                            onChange={e => { const v = Number(e.target.value); tone.setToneAssessed(v); tone.setToneAtStart(v); }}
+                            style={{
+                              maxWidth: 200, borderRadius: 6, border: '1px solid var(--s-ink-ghost)',
+                              background: 'var(--s-disc)', outline: 'none', cursor: 'pointer',
+                              fontFamily: 'var(--s-mono)', fontSize: 11, color: 'var(--s-ink-soft)', padding: '3px 5px',
+                            }}>
+                            {TONE_LEVELS.map(l => (
+                              <option key={l.tone} value={l.tone}>
+                                {l.tone > 0 ? `+${l.tone}` : `${l.tone}`} · {levelName(l.name, lang)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
               )}
@@ -6074,8 +6120,23 @@ export default function Serenity() {
                     che non c'è più una fase di transito in cui scegliere. Ron: il legame
                     tono↔ohm è arbitrario, senza strumento la sorgente è quel che il preclear
                     dichiara — e allora si dà PRIMA, non durante. Col meter non compare: lo
-                    propone la misura, come sempre. */}
-                {c.k === 'tone' && !tone.toneHasMeter && (
+                    propone la misura, come sempre.
+                    ⚠️ SEGNALATO DI NUOVO, con forza: « appaiono anche in questa schermata i
+                    bottoni dei cicli, con il bottone TONO in cui appare la scala del tono...
+                    NON VA BENE. La scala del tono deve apparire solo al secondo comando del
+                    ciclo TONO, dopo aver trovato la resistenza ». Vero — su una seduta
+                    COMPLETAMENTE senza strumenti (`senzaMisura`, non solo `!tone.toneHasMeter`,
+                    che resta vero anche con SOLO il MUSE connesso) questo `<select>` è
+                    esattamente "la scala del tono" in anteprima, visibile PRIMA che la
+                    resistenza sia stata trovata — sui cinque cerchi di scelta del metodo,
+                    la primissima cosa che si vede aprendo la seduta. `&& !senzaMisura`
+                    aggiunto: nascosto qui, spostato come "secondo comando" — il nuovo select
+                    accanto a `ToneColumn`, nel ramo `tone.raise`/`tone.done` dell'overlay
+                    "senza strumenti" (poco più giù nel file) — DOPO aver trovato la
+                    resistenza, mai prima. Con SOLO il MUSE (`senzaMisura` falso: il MUSE
+                    conta come strumento) resta qui, invariato — quel caso non è mai stato
+                    la lamentela. */}
+                {c.k === 'tone' && !tone.toneHasMeter && !senzaMisura && (
                   <select value={tone.toneAssessed} onChange={e => tone.setToneAssessed(Number(e.target.value))}
                     title={LC('Dove sta il preclear adesso sulla scala', 'Où est le préclair maintenant sur l\'échelle', 'Where the preclear is now on the scale', 'Dónde está el preclear ahora en la escala', 'Var preclearen är nu på skalan') as string}
                     style={{
