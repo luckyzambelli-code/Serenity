@@ -1826,6 +1826,14 @@ export default function Serenity() {
   useEffect(() => {
     if (aperta && mode !== 'free') setPrimaVoltaLibero(false);
   }, [aperta, mode]);
+  /** ⚠️ SEGNALATO: « quand on commence la séance comme EXPERT on n'a pas besoin du debriefing
+   *  de INIZIO SESSION ». Vero — il briefing spiega cosa sono Obiettivo/stato fisico del
+   *  PC/R-Factor e come funzionano COMMANDS/ASSESSMENT: cose che un EXPERT (che vede "tous les
+   *  chiffres", `espertoAttivo === true`) già sa. `espertoAttivo !== true` (stessa convenzione
+   *  robusta di `moduleVis`/`cam2Mostrata` — BASIC finché non è ESPLICITAMENTE EXPERT) qui
+   *  restringe il briefing al solo BASIC; in EXPERT il primo libero si comporta già come ogni
+   *  libero successivo (nessun testo, solo `bottoniCiclo`, v. poco più giù). */
+  const mostraBriefingIniziale = mode === 'free' && primaVoltaLibero && espertoAttivo !== true;
   /** ── SENZA STRUMENTI, L'ARCO SPARISCE — segnalato: « quando non ci sono strumenti attivi,
    *  l'arco deve sparire e le scritte dei cicli devono farsi al posto dell'arco, COME IN
    *  EQUILIBRIUM ». Verificato App.tsx: `senzaMisura` (la STESSA funzione pura condivisa,
@@ -5568,7 +5576,7 @@ export default function Serenity() {
                  delle due liste (`gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))'`,
                  più giù) vedeva così una larghezza troppo stretta per due colonne e ripiegava
                  su UNA, raddoppiando l'altezza reale rispetto a quella prevista. */
-              width: '100%', maxWidth: (mode === 'free' && primaVoltaLibero) ? 660 : 560,
+              width: '100%', maxWidth: mostraBriefingIniziale ? 660 : 560,
               /* ⚠️ `82vh` (l'altezza della FINESTRA) era la misura sbagliata — verificato dal
                  vivo via DOM: questo contenitore vive dentro un genitore posizionato alto
                  ~400px (lo spazio VERO fra header e riga dei cerchi dei cicli, non l'intera
@@ -5581,7 +5589,7 @@ export default function Serenity() {
               maxHeight: '100%', overflowY: 'auto',
               padding: '0 24px', textAlign: 'center',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
-              pointerEvents: (mode === 'free' && primaVoltaLibero) ? 'auto' : 'none',
+              pointerEvents: mostraBriefingIniziale ? 'auto' : 'none',
             }}>
               {/* ⚠️ SEGNALATO DI NUOVO — due correzioni sullo stesso blocco:
                   1) « scrivi il briefing INIZIO SESSIONE più grande, come i comandi dei cicli ».
@@ -5602,8 +5610,18 @@ export default function Serenity() {
                      dirlo". Terzo ramo aggiunto: `mode === 'free' && !primaVoltaLibero` → nessun
                      testo, solo i cerchi (`bottoniCiclo`, sempre montati sotto). Il ramo
                      `spiegazioneCiclo`/`comeSenzaAgo` resta SOLO per `mode !== 'free'` — un
-                     ciclo davvero in corso (CONTACT/NULL/MIRROR/TONE/TRUTH). */}
-              {mode === 'free' && primaVoltaLibero ? (
+                     ciclo davvero in corso (CONTACT/NULL/MIRROR/TONE/TRUTH).
+                  3) « quand on commence la séance comme EXPERT on n'a pas besoin du debriefing
+                     de INIZIO SESSION ». `mostraBriefingIniziale` (sopra, accanto a
+                     `primaVoltaLibero`) aggiunge `espertoAttivo !== true`: in EXPERT il primo
+                     libero cade ora nello STESSO ramo `null` di ogni libero successivo — mai
+                     stato bisogno di un secondo flag, `mostraBriefingIniziale` è già falso.
+                  4) « quand on est en basic au début de séance dans le debriefing ajoute que on
+                     peut appuyer sur EXPLICATIONS DES BOUTONS en montrant l'icône ». Nuovo punto
+                     nella lista "Durante la sessione", con la VERA icona `StickyNote` del
+                     bottone-aiuto di header (`helpAttivo`/`AiutoOverlay`) accanto al testo — non
+                     descritta a parole soltanto. */}
+              {mostraBriefingIniziale ? (
                 <>
                   <span style={{
                     fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-hero)', fontWeight: 800,
@@ -5665,6 +5683,26 @@ export default function Serenity() {
                                 'The session transcript is recorded automatically.',
                                 'La transcripción de la sesión se registra automáticamente.',
                                 'Sessionens transkript spelas in automatiskt.')}</li>
+                        {/* ⚠️ AGGIUNTO — segnalato: « quand on est en basic au début de séance
+                            dans le debriefing ajoute que on peut appuyer sur EXPLICATIONS DES
+                            BOUTONS en montrant l'icône ». Lo stesso bottone-icona (`StickyNote`,
+                            `helpAttivo`/`AiutoOverlay`, montato in header) che apre le
+                            spiegazioni brevi sopra i controlli dello schermo — qui nominato con
+                            la SUA icona reale accanto al testo, non descritto a parole soltanto:
+                            un BASIC che non l'ha mai notato in header lo riconosce comunque nel
+                            briefing. Icona piccola (16px) e inline col testo via uno `span`
+                            `inline-flex` DENTRO il `<li>` — mettere `display:flex` sul `<li>`
+                            stesso gli avrebbe tolto il pallino elenco (i browser smettono di
+                            generare `::marker` su un list-item con `display` sovrascritto). */}
+                        <li>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, verticalAlign: 'middle' }}>
+                            {LC('Premi', 'Appuie sur', 'Press', 'Pulsa', 'Tryck på')}
+                            <StickyNote size={16} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                            {LC('per le spiegazioni sui bottoni.', 'pour les explications sur les boutons.',
+                                'for explanations on the buttons.', 'para las explicaciones sobre los botones.',
+                                'för förklaringar på knapparna.')}
+                          </span>
+                        </li>
                       </ul>
                     </div>
                   </div>

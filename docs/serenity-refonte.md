@@ -7382,3 +7382,36 @@ solo i cinque cerchi — mai più "DAI L'ITEM" dopo il primo ciclo, nella stessa
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: solo `src/serenity/Serenity.tsx` (SERENITY, nessun file condiviso).
+
+## Giro — 2026-08-31 (3) — EXPERT senza briefing, BASIC con menzione EXPLICATIONS DES BOUTONS
+
+Due correzioni sullo stesso blocco "senza strumenti" (`senzaMisura && aperta`).
+
+**1. « Quand on commence la séance comme EXPERT on n'a pas besoin du debriefing de INIZIO
+SESSION »**
+
+Il briefing spiega Obiettivo/stato fisico del PC/R-Factor e come funzionano COMMANDS/
+ASSESSMENT — cose che un EXPERT (`espertoAttivo === true`, "tous les chiffres") già conosce.
+Nuova const `mostraBriefingIniziale = mode === 'free' && primaVoltaLibero && espertoAttivo !==
+true` (accanto a `primaVoltaLibero`) sostituisce la condizione inline nei tre punti del blocco:
+in EXPERT il primo libero cade ora nello stesso ramo `null` di ogni libero successivo (nessun
+testo, solo `bottoniCiclo`) — nessun secondo flag necessario, il criterio è già in
+`mostraBriefingIniziale`.
+
+**2. « Quand on est en basic au début de séance dans le debriefing ajoute que on peut appuyer
+sur EXPLICATIONS DES BOUTONS en montrant l'icône pour les explications des commandes »**
+
+Nuovo punto nella lista "Durante la sessione" (5 lingue), con la VERA icona `StickyNote` dello
+stesso bottone-aiuto già in header (`helpAttivo`/`AiutoOverlay`) accanto al testo — non
+descritta a parole soltanto. Icona 16px in uno `span` `inline-flex` DENTRO il `<li>` (non
+`display:flex` sul `<li>` stesso, che gli avrebbe tolto il pallino elenco: i browser smettono
+di generare `::marker` su un list-item con `display` sovrascritto).
+
+Verificato dal vivo (1440×900): BASIC → briefing con il nuovo punto "Appuie sur [icona
+StickyNote] pour les explications sur les boutons." (confermato via DOM: `<li>` con `<svg>`
+dentro); EXPERT → seduta senza strumenti si apre DIRETTAMENTE sui cerchi dei cicli, nessun
+briefing, nessuna regressione sul resto del pannello EXPERT (JOURNAL, MODULATION
+NEURO-ACOUSTIQUE...).
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: solo `src/serenity/Serenity.tsx` (SERENITY, nessun file condiviso).
