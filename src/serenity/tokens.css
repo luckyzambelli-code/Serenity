@@ -578,6 +578,17 @@ body {
     inset 0 2px 1px rgba(255, 255, 255, 0.85),
     inset 0 -6px 10px -4px rgba(44, 47, 51, 0.30),
     0 14px 34px rgba(44, 47, 51, 0.26);
+  /* ⚠️ SEGNALATO DI NUOVO, con screenshot dal vero: « le noir dans les boutons... n'est pas
+     visible ». Il nero era giusto — mancava un fondo VERO sotto di lui. Il lucido qui sopra
+     (`::before`, poco più giù) è un gradiente RADIALE concentrato in un angolo (24% 8%),
+     spento oltre il 60% della sua estensione — su un bottone LARGO (i chip dei tag, "RADIAL
+     PROCEDURE (EN)"...) gran parte del testo sta FUORI da quel lucido, sul fondo VERO del
+     bottone: quasi trasparente (`th.accentSoft`, gli sfondi originali di ProcessusModal/
+     HistoryModal), quindi scuro quanto il pannello sotto. Nero su quello sparisce per
+     davvero, non solo si legge male. Un fondo chiaro VERO, uniforme su TUTTO il bottone —
+     non solo dove arriva il lucido — è quel che manca perché il nero abbia sempre qualcosa
+     di chiaro sotto. */
+  background-color: rgba(255, 255, 255, 0.82) !important;
 }
 .ser-history-wrap button:not(:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"]))::before,
 .ser-processus-wrap button:not(:is([title="Close"],[title="Fermer"],[title="Chiudi"],[title="Cerrar"],[title="Stäng"]))::before {

@@ -7218,3 +7218,27 @@ footer — la app è già a 3.0.165. Allineato a `3.0.165`.
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: `src/serenity/tokens.css` (solo SERENITY) — e, fuori dal repository,
 `~/Downloads/Guide Static Meter/SERENITY-manuale.html` (copiato in `public/guide/` alla build).
+
+## Giro (successivo) — PROCESSUS: il nero era giusto, mancava un fondo chiaro vero
+
+**Segnalato di nuovo, con screenshot**: « le noir dans les boutons... n'est pas visible » — il
+nero era sparito del tutto, non solo poco leggibile.
+
+**La causa**: il lucido di LENTILLE (`::before`) è un gradiente RADIALE concentrato in un
+angolo (24% 8%), spento oltre il 60% della sua estensione — su un bottone LARGO (i chip dei
+tag, "RADIAL PROCEDURE (EN)"...) gran parte del testo sta FUORI da quel lucido, sul fondo VERO
+del bottone: quasi trasparente (gli sfondi originali di `ProcessusModal`, pensati per un'altra
+coppia fondo/testo), quindi scuro quanto il pannello sotto. Nero su quello sparisce per
+davvero.
+
+**Corretto**: aggiunto `background-color: rgba(255,255,255,0.82) !important` alla stessa regola
+CSS che già forza `backdrop-filter`/`box-shadow` su questi bottoni — un fondo chiaro VERO,
+uniforme su TUTTO il bottone, non solo dove arriva il lucido parziale. Il lucido e la goccia di
+luce restano sopra (loro pseudo-elementi, z-index più alto): l'effetto vetro non cambia, solo
+ora ha sempre qualcosa di chiaro sotto perché il nero funzioni.
+
+Verificato dal vivo: tutti i chip (ALL, ACADEMY, CANCER HANDLING...) e "OUVRIR LE DOSSIER" ora
+leggibili, nero su fondo chiaro reale.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: `src/serenity/tokens.css` (solo SERENITY).
