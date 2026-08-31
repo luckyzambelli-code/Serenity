@@ -5706,6 +5706,37 @@ export default function Serenity() {
                       </ul>
                     </div>
                   </div>
+                  {/* ⚠️ AGGIUNTO — segnalato: « quand on ouvre la séance en BASIC, sans
+                      instruments, on doit voir le BRIEFING début séance, mais doit apparaître
+                      aussi le bouton de START (rond avec la flèche) afin que une fois lu le
+                      briefing l'écran se libère et l'auditeur puisse réellement commencer ».
+                      Prima di questo bottone, `primaVoltaLibero` si spegneva SOLO al primo
+                      `mode !== 'free'` (v. la nota grande più sopra) — chi voleva restare
+                      libero (nessun ciclo armato, solo ASSESSMENT manuale) non aveva modo di
+                      liberare lo schermo dal briefing. Stessa iconografia `Play` pieno del
+                      bottone "PREMI START" (poco più giù nel file — quello che APRE la
+                      seduta): stesso linguaggio visivo dell'app per "si comincia", qui
+                      applicato a "il briefing è letto, libera lo schermo". Un click spegne
+                      `primaVoltaLibero` — la STESSA leva che il primo ciclo armato spegne da
+                      sé (v. l'`useEffect` sopra): non un secondo stato da tenere allineato. */}
+                  <button onClick={() => setPrimaVoltaLibero(false)} title={LC('inizia', 'commencer', 'start', 'empezar', 'starta') as string} style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                    border: 'none', background: 'transparent', cursor: 'pointer', marginTop: 6, padding: 0,
+                  }}>
+                    <span style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 56, height: 56, borderRadius: '50%',
+                      background: 'var(--s-reserve)', boxShadow: 'var(--s-shadow)',
+                    }}>
+                      <Play size={24} strokeWidth={1.8} fill="#1c1408" color="#1c1408" style={{ marginLeft: 2 }} />
+                    </span>
+                    <span style={{
+                      fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', fontWeight: 800,
+                      letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--s-ink-soft)',
+                    }}>
+                      {LC('inizia', 'commencer', 'start', 'empezar', 'starta')}
+                    </span>
+                  </button>
                 </>
               ) : mode === 'free' ? null : (
                 <>

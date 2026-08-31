@@ -7415,3 +7415,27 @@ NEURO-ACOUSTIQUE...).
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: solo `src/serenity/Serenity.tsx` (SERENITY, nessun file condiviso).
+
+## Giro — 2026-08-31 (4) — bottone START nel briefing INIZIO SESSIONE
+
+**« Quand on ouvre la séance en BASIC, sans instruments, on doit voir le BRIEFING début séance,
+mais doit apparaître aussi le bouton de START (rond avec la flèche) afin que une fois lu le
+briefing l'écran se libère et l'auditeur puisse réellement commencer »**
+
+Prima di questo giro, `primaVoltaLibero` si spegneva SOLO al primo `mode !== 'free'` (un ciclo
+armato) — chi in BASIC voleva restare libero (nessun ciclo, solo ASSESSMENT manuale) non aveva
+modo di liberare lo schermo dal briefing, che restava a coprire il centro indefinitamente.
+
+Aggiunto un bottone rotondo sotto le due liste del briefing (`mostraBriefingIniziale`), stessa
+iconografia `Play` pieno del bottone "PREMI START" già in uso nel file (quello che APRE la
+seduta) — stesso linguaggio visivo dell'app per "si comincia". Il click chiama
+`setPrimaVoltaLibero(false)`: la STESSA leva che il primo ciclo armato spegne da sé — non un
+secondo stato da tenere allineato. Etichetta "INIZIA"/"COMMENCER"/"START"/"EMPEZAR"/"STARTA"
+(5 lingue), sfondo `var(--s-reserve)` (l'accento ambra), icona/testo `#1c1408`.
+
+Verificato dal vivo (BASIC, FR, 1440×900): il bottone appare sotto le due liste (confermato via
+DOM col contenitore scrollato in fondo), un click libera immediatamente lo schermo — restano
+solo i cerchi dei cicli, esattamente come dopo un ciclo concluso.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: solo `src/serenity/Serenity.tsx` (SERENITY, nessun file condiviso).
