@@ -3475,31 +3475,34 @@ export default function Serenity() {
             destra: `alignItems:'center'` così i due si allineano sulla stessa linea invece
             che l'uno sopra l'altro. */}
         <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {/* ⚠️ Segnalato di nuovo: « le scritte dell'ora ed altre non sono le stesse ».
-              L'armonizzazione delle taglie (giro scorso) ha piegato ciascun valore VECCHIO nel
-              passo più vicino guardando SOLO il numero — 15→base (invariato) e 17→lg (18,
-              +1px): la coppia orologio/tempo-seduta, prima scelta apposta vicina (15/17, un
-              gradino di 2px), si è ritrovata con un gradino diverso (15/18, 3px) senza che
-              nessuno lo decidesse. Sono la STESSA famiglia di informazione (due orologi, uno
-              sopra l'altro) — restano sulla stessa taglia, `--s-fs-base`, non due passi
-              diversi della scala. */}
+          {/* ⚠️ SEGNALATO DI NUOVO — « l'ora e il tempo di sessione devono essere più in
+              grande, e l'ora più in evidenza del timer di sessione ». Il giro precedente
+              (nota storica qui sopra, "L'armonizzazione delle taglie") li aveva portati alla
+              STESSA taglia (`--s-fs-base`, 15px) apposta, come "stessa famiglia di
+              informazione" — richiesta ora ESPLICITAMENTE ribaltata: non più uguali, l'orologio
+              (`OraReale`) più grande E più marcato del timer di seduta (`orologio(tempo)`), non
+              solo più grande insieme a lui. `--s-fs-xl` (21px, la taglia del nome SERENITY) per
+              l'ora, `color:'var(--s-ink)'` pieno (non più `--s-ink-faint`) e `fontWeight:700` —
+              il timer resta un passo sotto, `--s-fs-lg` (18px, comunque più grande di prima),
+              stesso colore di sempre (`aperta ? --s-ink-soft : --s-ink-faint`): più grande
+              anche lui, ma resta il SECONDO orologio, non il protagonista. */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, pointerEvents: 'none', flexShrink: 0 }}>
             <span style={{
-              display: 'flex', alignItems: 'center', gap: 3,
-              fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.02em',
-              color: 'var(--s-ink-faint)',
+              display: 'flex', alignItems: 'center', gap: 4,
+              fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-xl)', fontWeight: 700, letterSpacing: '0.02em',
+              color: 'var(--s-ink)',
             }}>
-              <Clock size={13} strokeWidth={1.8} aria-hidden="true" />
+              <Clock size={17} strokeWidth={1.8} aria-hidden="true" />
               <OraReale />
             </span>
             <span style={{
               display: 'flex', alignItems: 'center', gap: 3,
-              fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.03em',
+              fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-lg)', letterSpacing: '0.03em',
               color: aperta ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
               transition: 'color var(--s-slow) var(--s-ease)',
               fontVariantNumeric: 'tabular-nums',
             }}>
-              <Timer size={14} strokeWidth={1.8} aria-hidden="true" />
+              <Timer size={15} strokeWidth={1.8} aria-hidden="true" />
               {orologio(tempo)}
             </span>
           </div>
@@ -5785,6 +5788,40 @@ export default function Serenity() {
                     <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-lg)', fontWeight: 700, color: 'var(--s-reserve)' }}>
                       {spiegazioneCiclo.avviso}
                     </span>
+                  )}
+                  {/* ⚠️ AGGIUNTO — segnalato: « senza strumenti devi far apparire la scala del
+                      tono solo dopo aver trovato la resistenza. Il ciclo è: trovare la
+                      resistenza, trovare a quale livello di tono corrisponde, chiedere di
+                      portarlo a Tono 40 e Tono 40 raggiunto » — poi precisato: « senza
+                      strumenti non deve far apparire l'arco quando è scelto ». Due cose
+                      distinte, mai state a schermo senza strumenti (`ToneDial`/`ToneColumn`
+                      vivono SOLO dentro `!(senzaMisura && aperta)`, v. la nota grande più su):
+                      `ToneDial` è l'ARCO con la lancetta — non ha senso senza un ago vero da
+                      disegnare, resta escluso anche qui, come richiesto esplicitamente.
+                      `ToneColumn` è la SCALA verticale (i livelli, non un ago) — puro, prende
+                      tutto da `tone` (`useToneCycle`, già montato), funziona a schermo anche
+                      senza nessuno strumento collegato (`toneAssessed`, il livello dichiarato
+                      dall'auditor PRIMA di armare — v. il selettore accanto al cerchio TONE —
+                      è già la sorgente quando `!tone.toneHasMeter`). Montata SOLO quando
+                      `faseCiclo` è `'tone.raise'`/`'tone.done'`: la resistenza è già stata
+                      trovata (fasi `'tone.item'`/`'tone.say_item'`, PRIMA di questa, non la
+                      montano) — esattamente l'ordine dei quattro passi elencato nella
+                      segnalazione. Stessi props della copia "con strumenti" (poco più giù nel
+                      file), `charge={null}` invece di `museOk ? ... : null`: senza strumenti
+                      `museOk` è già sempre falso, scritto qui alla lettera evita un confronto
+                      inutile con una variabile che in questo ramo vale sempre `false`. */}
+                  {toneAttivo && (faseCiclo === 'tone.raise' || faseCiclo === 'tone.done') && (
+                    <div style={{ width: 280, maxWidth: '100%', pointerEvents: 'none' }}>
+                      <ToneColumn
+                        tone={tone.toneOra ?? 0}
+                        toneEeg={tone.toneOraEeg}
+                        margin={tone.margineTono}
+                        hasMeter={tone.toneMisurato}
+                        lang={lang}
+                        charge={null}
+                        chargeFrom={tone.toneAtStart}
+                      />
+                    </div>
                   )}
                 </>
               )}

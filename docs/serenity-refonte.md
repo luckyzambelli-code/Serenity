@@ -7475,3 +7475,46 @@ Obiettivo/Stato fisico/R-Factor resta visibile in alto come sempre.
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: solo `src/serenity/Serenity.tsx` (SERENITY, nessun file condiviso).
+
+## Giro — 2026-08-31 (6) — scala del tono senza strumenti (dopo la resistenza), orologio più grande
+
+Tre correzioni in questo giro.
+
+**1. « Senza strumenti devi far apparire la scala del tono solo dopo aver trovato la
+resistenza. Il ciclo è: trovare la resistenza, trovare a quale livello di tono corrisponde,
+chiedere di portarlo a Tono 40 e Tono 40 raggiunto »**, poi precisato: **« Senza strumenti non
+deve far apparire l'arco quando è scelto »**
+
+`ToneDial`/`ToneColumn` vivevano SOLO dentro `!(senzaMisura && aperta)` — senza strumenti,
+TONE non mostrava mai nulla di visivo, solo il testo di `spiegazioneCiclo`. Aggiunta la SOLA
+`ToneColumn` (la scala verticale a livelli, puro, prende tutto da `useToneCycle` già montato —
+`toneAssessed`, il livello dichiarato dall'auditor PRIMA di armare via il `<select>` accanto al
+cerchio TONE, è già la sorgente quando `!tone.toneHasMeter`) nel ramo "ciclo in corso"
+dell'overlay senza strumenti, montata SOLO quando `faseCiclo === 'tone.raise' ||
+faseCiclo === 'tone.done'` — la resistenza deve essere già stata trovata (fasi `tone.item`/
+`tone.say_item`, prima di questa, non la montano). `ToneDial` (l'ARCO con la lancetta) resta
+escluso: non ha senso senza un ago vero, esattamente come richiesto nella precisazione.
+`charge={null}` (senza `museOk`, sempre falso in questo ramo).
+
+Verificato dal vivo (EXPERT — per arrivare più in fretta al ciclo, comportamento identico a
+BASIC per questa parte — FR, 1440×900, séance sans instruments): scelto un livello dal
+`<select>` (−1,5), TONE armato → "DIS LA RÉSISTANCE" → NESSUNA scala ancora (corretto: resistenza
+non ancora detta); resistenza data via "R&I · Manuel" → la scala verticale appare, nessun arco
+(confermato via scan DOM degli `<svg>`: solo icone lucide + un `viewBox="0 0 260 454"`, il
+`ToneColumn`, nessun disegno d'arco); "ton quarante atteint" → scala resta visibile.
+
+**2. « L'ora e il tempo di sessione devono essere più in grande, e l'ora più in evidenza del
+timer di sessione »**
+
+L'orologio (`OraReale`) e il timer di seduta (`orologio(tempo)`, a sinistra del bottone FERMER
+LA SÉANCE) erano stati portati alla STESSA taglia (`--s-fs-base`, 15px) in un giro precedente,
+apposta come "stessa famiglia di informazione" — richiesta ora esplicitamente ribaltata.
+`OraReale`: `--s-fs-xl` (21px), `color:'var(--s-ink)'` pieno (non più `--s-ink-faint`),
+`fontWeight:700`. Timer: `--s-fs-lg` (18px, comunque più grande di prima), stesso colore di
+sempre — resta il secondo orologio, non il protagonista.
+
+Verificato dal vivo: l'ora ("14:38") nettamente più grande e marcata del timer ("00:00") sotto
+di lei.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: solo `src/serenity/Serenity.tsx` (SERENITY, nessun file condiviso).
