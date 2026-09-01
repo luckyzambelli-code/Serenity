@@ -7693,3 +7693,43 @@ sulla build reale, serve un altro giro con più dettagli (schermata, sequenza es
 `git status`: `src/serenity/Serenity.tsx` (SERENITY) + `src/session/useToneCycle.ts` +
 `src/components/ProcessusModal.tsx` (CONDIVISI, additivi) — **entrambi i DMG ricompilati e
 spediti**.
+
+## Giro — 2026-08-31 (9) — arco mai senza strumenti anche col MUSE solo, guide capitolo 10
+
+**1. « Quand on démarre la séance avec les instruments, le cycle TON fait apparaître sous le
+bouton l'échelle des tons pour choisir un ton. C'est erroné, puisque le ton est trouvé via
+les instruments »**
+
+Il `<select>` pre-arm (sotto il cerchio TONE, prima di armare) restava per il caso MUSE-solo
+(`!tone.toneHasMeter` — vero anche con SOLO il MUSE connesso, dato che `toneHasMeter` è
+specifico del Theta-Meter): un giro precedente l'aveva escluso per la seduta COMPLETAMENTE
+senza strumenti, ma l'aveva lasciato lì per MUSE-solo, credendola non la lamentela. Lo era —
+segnalato di nuovo, stavolta esplicitamente "con gli strumenti". Tolto del tutto: con
+QUALUNQUE strumento connesso (anche solo il MUSE) l'auditor non sceglie più nulla a mano
+prima di armare TONE. Un MUSE-solo che arma TONE parte ora da `toneAssessed` (il default, 0)
+senza modo di correggerlo — accettato: la scelta esplicita di non offrire più nessuna scala
+manuale quando uno strumento c'è, qualunque esso sia.
+
+Verificato dal vivo (senza strumenti, non regredito): TONE → "SAY THE RESISTANCE" → resistenza
+data → scala grande + select "— choose the tone —" appare correttamente, come nei giri
+precedenti — nessuna regressione sul flusso senza strumenti.
+
+**2. « Dans le journal tu dois inclure un chapitre sur l'audition en BASIC, avec démarrage,
+l'utilisation des cycles sans instruments etc »**
+
+Nuovo capitolo 10, "Auditer en Basique, sans instruments" / "Audire in Basico, senza
+strumenti" / "Auditing in Basic, without instruments", in `SERENITY-manuale.html` (esterno al
+repository, copiato in `public/guide/` a ogni build) — tra "9. Historique" e il vecchio "10.
+Dépannage" (rinumerato "11."). Copre: come scegliere Basico + senza strumenti (la
+pre-selezione di default), lo schermo SESSION START (i tre campi da compilare, il bottone
+START pulsante, timer/FERMER nascosti finché non premuto, la finestra "una sola volta per
+seduta"), l'assenza di ago/arco sostituita dal testo grande, una tabella per ciclo (CONTACT/
+NULL sempre dichiarati a mano; MIRROR/TRUTH identici alla versione con strumenti; TONE in due
+tempi — resistenza, poi SOLO dopo la scelta del tono, mai automatico), e il richiamo che
+COMMANDS/ASSESSMENT/Journal/FERMER LA SÉANCE restano invariati. Aggiornata anche una nota
+obsoleta al capitolo 4 (menzionava ancora il vecchio menu pre-arm, ora rimosso) e la riga TONE
+della sua tabella. `VERSIONE` del manuale portata a 3.0.176 (la prossima build SERENITY).
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: solo `src/serenity/Serenity.tsx` (SERENITY, nessun file condiviso questo giro —
+`useToneCycle.ts`/`ProcessusModal.tsx` non toccati, il DMG EQUILIBRIUM non viene rispedito).

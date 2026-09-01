@@ -6209,53 +6209,22 @@ export default function Serenity() {
                   fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
                   color: c.hue,
                 }}>{c.label}</span>
-                {/* ── DA DOVE SI PARTE SENZA METER — spostato QUI, PRIMA del click su TONE
-                    (v. la nota sul suo `onClick`, sopra): armare in un click solo vuol dire
-                    che non c'è più una fase di transito in cui scegliere. Ron: il legame
-                    tono↔ohm è arbitrario, senza strumento la sorgente è quel che il preclear
-                    dichiara — e allora si dà PRIMA, non durante. Col meter non compare: lo
-                    propone la misura, come sempre.
-                    ⚠️ SEGNALATO DI NUOVO, con forza: « appaiono anche in questa schermata i
-                    bottoni dei cicli, con il bottone TONO in cui appare la scala del tono...
-                    NON VA BENE. La scala del tono deve apparire solo al secondo comando del
-                    ciclo TONO, dopo aver trovato la resistenza ». Vero — su una seduta
-                    COMPLETAMENTE senza strumenti (`senzaMisura`, non solo `!tone.toneHasMeter`,
-                    che resta vero anche con SOLO il MUSE connesso) questo `<select>` è
-                    esattamente "la scala del tono" in anteprima, visibile PRIMA che la
-                    resistenza sia stata trovata — sui cinque cerchi di scelta del metodo,
-                    la primissima cosa che si vede aprendo la seduta. `&& !senzaMisura`
-                    aggiunto: nascosto qui, spostato come "secondo comando" — il nuovo select
-                    accanto a `ToneColumn`, nel ramo `tone.raise`/`tone.done` dell'overlay
-                    "senza strumenti" (poco più giù nel file) — DOPO aver trovato la
-                    resistenza, mai prima. Con SOLO il MUSE (`senzaMisura` falso: il MUSE
-                    conta come strumento) resta qui, invariato — quel caso non è mai stato
-                    la lamentela. */}
-                {c.k === 'tone' && !tone.toneHasMeter && !senzaMisura && (
-                  <select value={tone.toneAssessed} onChange={e => tone.setToneAssessed(Number(e.target.value))}
-                    title={LC('Dove sta il preclear adesso sulla scala', 'Où est le préclair maintenant sur l\'échelle', 'Where the preclear is now on the scale', 'Dónde está el preclear ahora en la escala', 'Var preclearen är nu på skalan') as string}
-                    style={{
-                      // ⚠️ 140, non più 96 — la scala espansa scrive anche il nome nella
-                      // casella chiusa (« +9 · Simpatia », non più solo « +9 »): a 96px il
-                      // nome usciva subito troncato.
-                      marginTop: 2, maxWidth: 140, borderRadius: 6, border: '1px solid var(--s-ink-ghost)',
-                      background: 'var(--s-disc)', outline: 'none', cursor: 'pointer',
-                      fontFamily: 'var(--s-mono)', fontSize: 10, color: 'var(--s-ink-soft)', padding: '2px 3px',
-                    }}>
-                    {/* ⚠️ SCALA ESPANSA — segnalato: « devi mettere anche la denominazione con
-                        i numeri, devi dare la scala espansa ». Prima solo i tredici numeri di
-                        `TONE_LABELS` (quelli scritti sulla colonna, ridotti apposta per non
-                        accavallarsi nel disegno — v. `toneLevels.ts`). Un `<select>` non è un
-                        disegno: non c'è un bordo da cui i nomi escono, quindi qui il vincolo
-                        non vale e si può dare la scala INTERA, `TONE_LEVELS` — sessantadue
-                        livelli, ognuno col suo nome nella lingua della seduta. È lo stesso
-                        formato di App.tsx (v. lì, lo stesso select): « numero · nome ». */}
-                    {TONE_LEVELS.map(l => (
-                      <option key={l.tone} value={l.tone}>
-                        {l.tone > 0 ? `+${l.tone}` : `${l.tone}`} · {levelName(l.name, lang)}
-                      </option>
-                    ))}
-                  </select>
-                )}
+                {/* ── DA DOVE SI PARTE SENZA METER — questo select viveva QUI, PRIMA del click
+                    su TONE. TOLTO — segnalato di nuovo, stavolta anche CON gli strumenti:
+                    « quand on démarre la séance avec les instruments, le cycle TON fait
+                    apparaître sous le bouton l'échelle des tons pour choisir un ton. C'est
+                    erroné, puisque le ton est trouvé via les instruments ». La condizione
+                    `!tone.toneHasMeter` restava vera anche con SOLO il MUSE connesso (nessun
+                    meter vero — `toneHasMeter` è specifico del Theta-Meter, v. la sua nota in
+                    `useToneCycle.ts`): un giro precedente aveva già tolto questo select per la
+                    seduta COMPLETAMENTE senza strumenti (spostato come "secondo comando", dopo
+                    la resistenza — v. `deveScegliereTono` più giù), ma l'aveva lasciato qui
+                    per il caso MUSE-solo, credendolo non la lamentela. Lo era: con QUALUNQUE
+                    strumento connesso (anche solo il MUSE) l'auditor non deve più scegliere
+                    nulla a mano PRIMA di armare — tolto anche per lui. Un MUSE-solo che arma
+                    TONE parte ora da `toneAssessed` (il default, 0) senza modo di correggerlo:
+                    accettato, non un dimenticato — la scelta esplicita di NON offrire più
+                    nessuna scala manuale quando uno strumento c'è, qualunque esso sia. */}
               </div>
             ))}
           </div>
