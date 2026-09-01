@@ -7877,3 +7877,17 @@ File toccati: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
 [`src/serenity/PistaCiclo.tsx`](../src/serenity/PistaCiclo.tsx),
 [`src/serenity/ItemDaScrivere.tsx`](../src/serenity/ItemDaScrivere.tsx) (nuovo) — solo SERENITY,
 nessun file condiviso con EQUILIBRIUM. Più il manuale esterno.
+
+## Giro — 2026-09-01 (15) — spazio per lo screenshot di COMMANDS in fondo al capitolo 7
+
+**« aggiungi un posto per la immagine dei comandi (fine punto 7) »**
+
+Il capitolo 7 aveva già uno slot screenshot per Processus (`processus.png`, il pannello con
+bottone FERMER) ma nessuno per il nuovo blocco "COMMANDS — les procédés prêts à suivre" appena
+scritto. Aggiunto un secondo `.shot` in fondo al capitolo (dopo la nota "info" sul file .txt,
+prima del capitolo 8): `commands.png`, con la stessa didascalia nelle tre lingue — un
+procedimento caricato nello spazio del ciclo, crocetta × visibile. `VERSIONE` del manuale
+portata a 3.0.183.
+
+Verificato il bilanciamento dei tag HTML dopo la modifica — tutto pari. Nessun file di codice
+toccato — solo il manuale esterno.
