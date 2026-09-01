@@ -25,9 +25,9 @@
   3. Démarrer une séance → le cadran, les 5 cercles.
   4. Chaque méthode, en un tableau (un clic pour armer, ce qui apparaît, comment fermer).
   5. AVEC/SANS AIGUILLE.
-  6. Le Journal.
-  7. Processus (charger un script de commandes — et comment l'annuler, question posée
-     directement : « comment j'annule le script des commandes »).
+  6. Le Journal → pas de bouton dédié, se montre depuis CONFIG (case "Journal de session").
+  7. Processus et COMMANDS → deux boutons distincts, pas des synonymes : Processus ouvre
+     l'archive PDF entière, COMMANDS ouvre seulement la carte des procédés à charger.
   8. Fermer la séance → le rapport PDF.
   9. Historique → voir/télécharger/supprimer.
   10. Auditer en Basique, sans instruments → démarrage (écran SESSION START, bouton START),
@@ -166,7 +166,7 @@
   <a href="#methodes"><span data-l="fr">4. Les 5 méthodes</span><span data-l="it">4. I 5 metodi</span><span data-l="en">4. The 5 methods</span></a>
   <a href="#aiguille"><span data-l="fr">5. Avec / sans aiguille</span><span data-l="it">5. Con / senza ago</span><span data-l="en">5. With / without needle</span></a>
   <a href="#journal"><span data-l="fr">6. Journal</span><span data-l="it">6. Diario</span><span data-l="en">6. Journal</span></a>
-  <a href="#processus"><span data-l="fr">7. Processus (commandes)</span><span data-l="it">7. Processi (comandi)</span><span data-l="en">7. Processes (commands)</span></a>
+  <a href="#processus"><span data-l="fr">7. Processus et COMMANDS</span><span data-l="it">7. Processi e COMMANDS</span><span data-l="en">7. Processes and COMMANDS</span></a>
   <a href="#fermer"><span data-l="fr">8. Fermer la séance</span><span data-l="it">8. Chiudere la seduta</span><span data-l="en">8. Closing the session</span></a>
   <a href="#historique"><span data-l="fr">9. Historique</span><span data-l="it">9. Storico</span><span data-l="en">9. History</span></a>
   <a href="#basique"><span data-l="fr">10. Auditer en Basique, sans instruments</span><span data-l="it">10. Audire in Basico, senza strumenti</span><span data-l="en">10. Auditing in Basic, without instruments</span></a>
@@ -416,9 +416,14 @@
 
   <h2 id="journal"><span data-l="fr">6. Journal</span><span data-l="it">6. Diario</span><span data-l="en">6. Journal</span></h2>
   <p>
-    <span data-l="fr">Le bouton 📖 dans la barre du haut ouvre/ferme un panneau qui liste ce qui a été tapé ou dit pendant la séance. Il ne montre que ça (pas les réactions de l'aiguille ni les messages système) — tout le reste apparaît dans le rapport PDF final.</span>
-    <span data-l="it">Il pulsante 📖 nella barra in alto apre/chiude un pannello che elenca ciò che è stato scritto o detto durante la seduta. Mostra solo quello (non le reazioni dell'ago né i messaggi di sistema) — tutto il resto compare nel rapporto PDF finale.</span>
-    <span data-l="en">The 📖 button in the top bar opens/closes a panel listing what was typed or said during the session. It shows only that (not needle reactions or system messages) — everything else appears in the final PDF report.</span>
+    <span data-l="fr">Pas de bouton dédié dans la barre du haut. Le panneau Journal se montre depuis <b>CONFIG</b> — case « Journal de session » — comme les autres modules (Santé Système, MNA…). Tant qu'il est caché, un petit texte muet en haut à gauche rappelle juste le nombre de lignes déjà écrites.</span>
+    <span data-l="it">Nessun bottone dedicato nella barra in alto. Il pannello Diario si mostra da <b>CONFIG</b> — voce "Diario di sessione" — come gli altri moduli (Santé Système, MNA…). Finché resta nascosto, un piccolo testo muto in alto a sinistra ricorda solo il numero di righe già scritte.</span>
+    <span data-l="en">No dedicated button in the top bar. The Journal panel is shown from <b>CONFIG</b> — "Session journal" checkbox — like the other modules (System Health, MNA…). While hidden, a small muted text top-left just recalls how many lines have already been written.</span>
+  </p>
+  <p>
+    <span data-l="fr">Une fois affiché : une croix <b>×</b> en haut du panneau le referme (la même case dans CONFIG se décoche). Il liste ce qui a été tapé ou dit pendant la séance — pas de ligne séparée pour les réactions de l'aiguille (la réaction, quand il y en a une, s'affiche à côté du mot qui l'a causée) ni pour les messages système — tout le reste apparaît dans le rapport PDF final.</span>
+    <span data-l="it">Una volta mostrato: una crocetta <b>×</b> in alto sul pannello lo richiude (la stessa voce in CONFIG si spunta via). Elenca ciò che è stato scritto o detto durante la seduta — nessuna riga separata per le reazioni dell'ago (la reazione, quando c'è, compare accanto alla parola che l'ha causata) né per i messaggi di sistema — tutto il resto compare nel rapporto PDF finale.</span>
+    <span data-l="en">Once shown: a <b>×</b> at the top of the panel closes it again (the same CONFIG checkbox gets unchecked). It lists what was typed or said during the session — no separate line for needle reactions (the reaction, when there is one, shows next to the word that caused it) nor for system messages — everything else appears in the final PDF report.</span>
   </p>
   <div class="shot">
     <img src="docs/guide-screenshots-serenity/journal.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" onload="this.nextElementSibling.style.display='none'">
@@ -429,12 +434,17 @@
     </div>
   </div>
 
-  <h2 id="processus"><span data-l="fr">7. Processus (commandes)</span><span data-l="it">7. Processi (comandi)</span><span data-l="en">7. Processes (commands)</span></h2>
+  <h2 id="processus"><span data-l="fr">7. Processus et COMMANDS</span><span data-l="it">7. Processi e COMMANDS</span><span data-l="en">7. Processes and COMMANDS</span></h2>
+  <div class="note info">
+    <span data-l="fr"><b>Deux boutons, pas un seul.</b> <b>Processus</b> (barre du haut) ouvre l'ARCHIVE ENTIÈRE : tous les PDF déposés, classés par tag, avec la zone pour en ajouter — et, tout en haut, la même carte "commandes de procédés" que ci-dessous. <b>COMMANDS</b> (à côté de EP, sous le cadran) ouvre SEULEMENT cette carte-là : les procédés prêts à charger dans la séance — pas de PDF, pas de tags, pas de zone d'ajout. Va sur COMMANDS pour charger vite un procédé en cours de séance ; va sur Processus pour gérer l'archive des PDF (en ajouter, les classer, les consulter).</span>
+    <span data-l="it">Due bottoni, non uno solo. <b>Processi</b> (barra in alto) apre l'ARCHIVIO INTERO: tutti i PDF depositati, ordinati per tag, con la zona per aggiungerne — e, in cima, la stessa card "comandi di procedimenti" descritta sotto. <b>COMMANDS</b> (accanto a EP, sotto il quadrante) apre SOLO quella card: i procedimenti pronti da caricare nella seduta — niente PDF, niente tag, niente zona per aggiungere. Vai su COMMANDS per caricare in fretta un procedimento durante la seduta; vai su Processi per gestire l'archivio dei PDF (aggiungerne, classificarli, consultarli).</span>
+    <span data-l="en"><b>Two buttons, not one.</b> <b>Processes</b> (top bar) opens the WHOLE ARCHIVE: every PDF you've dropped in, sorted by tag, with the zone to add more — and, right at the top, the same "procedure commands" card described below. <b>COMMANDS</b> (next to EP, under the dial) opens ONLY that card: the procedures ready to load into the session — no PDFs, no tags, no add zone. Use COMMANDS to quickly load a procedure mid-session; use Processes to manage the PDF archive (add, sort, browse).</span>
+  </div>
   <ol>
     <li>
-      <span data-l="fr">Clique sur <b>Processus</b> dans la barre du haut : une liste de fichiers apparaît (déposés dans le dossier partagé, ou déjà présents).</span>
-      <span data-l="it">Clicca su <b>Processi</b> nella barra in alto: appare un elenco di file (depositati nella cartella condivisa, o già presenti).</span>
-      <span data-l="en">Click <b>Processes</b> in the top bar: a list of files appears (dropped in the shared folder, or already present).</span>
+      <span data-l="fr">Clique sur <b>Processus</b> dans la barre du haut : une liste de fichiers apparaît (déposés dans le dossier partagé, ou déjà présents) — ou sur <b>COMMANDS</b> pour n'avoir que les procédés.</span>
+      <span data-l="it">Clicca su <b>Processi</b> nella barra in alto: appare un elenco di file (depositati nella cartella condivisa, o già presenti) — oppure su <b>COMMANDS</b> per avere solo i procedimenti.</span>
+      <span data-l="en">Click <b>Processes</b> in the top bar: a list of files appears (dropped in the shared folder, or already present) — or <b>COMMANDS</b> for just the procedures.</span>
     </li>
     <li>
       <span data-l="fr">Clique sur un fichier pour l'ouvrir — il reste affiché à côté de la séance, tu peux le suivre commande par commande.</span>
@@ -602,7 +612,7 @@
 </div>
 <span class="ver">SERENITY <span id="v"></span></span>
 <script>
-const VERSIONE = "3.0.178";
+const VERSIONE = "3.0.180";
 document.getElementById('v').textContent = VERSIONE;
 function setLang(l){
   document.body.setAttribute('data-lang', l);

@@ -7782,3 +7782,30 @@ a 3.0.178 (la prossima build SERENITY).
 
 Nessun file del repository toccato — solo il manuale esterno
 (`~/Downloads/Guide Static Meter/SERENITY-manuale.html`).
+
+## Giro — 2026-08-31 (12) — correzioni al manuale: Journal senza bottone, PROCESSUS vs COMMANDS
+
+**« Change, car ceci est faux » — capitolo 6 "Journal"**
+
+Il capitolo diceva: « Le bouton 📖 dans la barre du haut ouvre/ferme un panneau ». Falso —
+verificato nel codice: non esiste più nessun bottone dedicato nella barra in alto per il
+Journal (un giro passato, non di questa sessione, l'aveva tolto: « i moduli ASSESSMENT,
+System Health, Journal, MNA non devono avere bottoni, si attivano solamente via CONFIG » —
+`moduleVis.journal`, spuntabile SOLO dal pannello CONFIG, voce "Journal de session"/"Diario di
+sessione"). Riscritto: si mostra da CONFIG, si richiude con la crocetta × in alto sul
+pannello stesso (la stessa voce in CONFIG si spunta via) — non un bottone a sé. Confermato
+invece corretto il resto (solo Aud/PC, reazione inline sulla parola, non righe NEEDLE/SYS a
+parte).
+
+**« Tu dois aussi indiquer la différence entre PROCESSUS et COMMANDS » — capitolo 7**
+
+Il capitolo trattava i due come sinonimi ("Processus (commandes)"). Sono due bottoni DISTINTI
+(v. il giro "COMMANDS solo comandi" di qualche giorno fa): **Processus** (barra in alto) apre
+l'archivio PDF INTERO (tag, zona di aggiunta, più la card procedimenti in cima); **COMMANDS**
+(accanto a EP, sotto il quadrante) apre SOLO quella card — nessun PDF, nessun tag, nessuna
+zona di aggiunta. Titolo del capitolo cambiato in "7. Processus et COMMANDS", nuova nota
+esplicita in cima al capitolo con la distinzione, aggiornati TOC e nota di pianificazione
+interna. `VERSIONE` del manuale portata a 3.0.180.
+
+Verificato il bilanciamento dei tag HTML (`h2`/`p`/`div`/`span`/`ol`/`li`) dopo entrambe le
+modifiche — tutto pari. Nessun file di codice toccato — solo il manuale esterno.
