@@ -536,6 +536,13 @@ export default function Serenity() {
    */
   const [meterSetupAperto, setMeterSetupAperto] = useState(false);
   /**
+   * ⚠️ AGGIUNTO (revisione dei calcoli TONE, 01/09/2026) — su quale passo aprire `PannelloMeter`
+   * la PROSSIMA volta. `undefined` → il suo default ('config'), come il bottone "configura il
+   * meter" ha sempre fatto. Il bottone "rifai la prova delle lattine" (vicino al TONE, sotto)
+   * lo mette a `'stretta'` prima di aprire — v. `passoIniziale` in `PannelloMeter.tsx`.
+   */
+  const [meterSetupPasso, setMeterSetupPasso] = useState<'config' | 'stretta' | 'respiro' | 'taratura' | undefined>(undefined);
+  /**
    * ── METER / MUSE / NESSUNO STRUMENTO — segnalato: « la logica... non sembra ancora
    * implementata ». Vero: `App.tsx` chiede SEMPRE, al primo APRI UNA SEDUTA senza niente di già
    * collegato, quale configurazione usare — anche "senza strumenti" È una scelta (il gruppo di
@@ -810,6 +817,9 @@ export default function Serenity() {
   const meterC = theta.status === 'connected';
   // Il cassetto del meter non deve restare aperto su un meter che non c'è più.
   useEffect(() => { if (!meterC) setMeterSetupAperto(false); }, [meterC]);
+  // Lo stesso, per il passo su cui riaprire: uno strumento disconnesso non deve lasciare in
+  // memoria "riapri sulla prova delle lattine" per la prossima connessione, magari di un altro.
+  useEffect(() => { if (!meterC) setMeterSetupPasso(undefined); }, [meterC]);
   const thetaTaRef = useRef<number | null>(null);
   useEffect(() => { thetaTaRef.current = theta.ta; }, [theta.ta]);
 
@@ -2995,6 +3005,25 @@ export default function Serenity() {
               <button className="s-glass s-glass-btn" onClick={() => { tone.chiudiTone(true); tone.setTonePhase('done'); }} style={pillBtn('var(--s-still)')}>
                 {LC('tono quaranta raggiunto', 'ton quarante atteint', 'tone forty reached', 'tono cuarenta alcanzado', 'ton fyrtio nådd')}
               </button>
+              {/* ⚠️ AGGIUNTO (revisione dei calcoli TONE, 01/09/2026) — il ratchet "solo salire"
+                  (v. `useToneCycle.ts`, `toneHighRef`) non si poteva correggere DURANTE la
+                  salita: un colpo isolato (un movimento del corpo, un cavo) che regge per caso
+                  `TONE_HOLD_S` viene promosso a pavimento garantito, e da lì in poi il tono
+                  mostrato non scende più — l'unica via era annullare tutta la resistenza. Visto
+                  SOLO con uno strumento vero (`!senzaMisura`: senza, nulla muove il numero, il
+                  ratchet non entra mai in gioco) e solo quando c'è davvero un pavimento da
+                  sciogliere (`tonePavimentoAttivo`) — altrimenti il bottone non farebbe niente. */}
+              {!senzaMisura && tone.tonePavimentoAttivo && (
+                <button className="s-glass s-glass-btn" onClick={() => tone.sciogliPavimento()} style={pillBtn('var(--s-ink-ghost)')}
+                  title={LC(
+                    'un salto isolato dell\'ago ha fissato il tono più in alto di quanto sia davvero — scioglilo, la resistenza in corso resta la stessa',
+                    'un sursaut isolé de l\'aiguille a fixé le ton plus haut qu\'il ne l\'est vraiment — dénoue-le, la résistance en cours reste la même',
+                    'an isolated needle spike fixed the tone higher than it really is — release it, the resistance in progress stays the same',
+                    'un salto aislado de la aguja fijó el tono más alto de lo que realmente es — suéltalo, la resistencia en curso sigue siendo la misma',
+                    'ett isolerat nålhopp fastställde tonen högre än den verkligen är — lossa det, det pågående motståndet är detsamma') as string}>
+                  {LC('era un colpo isolato', 'un sursaut isolé', 'an isolated spike', 'un salto aislado', 'ett isolerat hopp')}
+                </button>
+              )}
             </>
           )}
           {tone.tonePhase === 'done' && (
@@ -4738,7 +4767,8 @@ export default function Serenity() {
       {meterSetupAperto && meterC && (
         <div style={{ position: 'absolute', top: 16, right: 44, bottom: 16, zIndex: 30, display: 'flex' }}>
           <div style={{ maxHeight: '100%', overflowY: 'auto' }}>
-            <PannelloMeter theta={theta} provaTa={provaTa} onFatto={() => setMeterSetupAperto(false)} />
+            <PannelloMeter theta={theta} provaTa={provaTa} passoIniziale={meterSetupPasso}
+              onFatto={() => { setMeterSetupAperto(false); setMeterSetupPasso(undefined); }} />
           </div>
         </div>
       )}
@@ -5608,6 +5638,81 @@ export default function Serenity() {
                     chargeFrom={tone.toneAtStart}
                   />
                 </div>
+                {/* ── TRASPARENZA SULLA FONTE E SUL MARGINE — revisione dei calcoli TONE,
+                    01/09/2026. Trovato in revisione: con MUSE connesso `tone.toneOra` è SEMPRE
+                    guidato da lui (v. `useToneCycle.ts`, la nota sulla priorità delle fonti),
+                    ma nulla a schermo lo diceva — il trattino "EEG" di `ToneColumn` compare
+                    SOLO in divergenza, cioè proprio quando le due fonti concordano (il caso
+                    normale) l'auditor non sa quale sta guardando. E il margine (`margineTono`)
+                    arriva già tolto nel numero, ma — a differenza di App.tsx, che lo mostra
+                    accanto al TA con un bottone "rifai la prova" (segnalato lì: « è lì che
+                    interessa ») — SERENITY non aveva mai riprodotto quel bottone: qui lo fa,
+                    stessa condizione (`margineTono > 0`), stesso gesto (riapre la prova delle
+                    lattine). Terzo pezzo, nuovo anche in EQUILIBRIUM: un avviso quando la
+                    lettura grezza del meter (`theta.rawSmooth`, la stessa che la taratura
+                    registra) cade FUORI dai punti misurati con l'artefatto — lì la conversione
+                    non interpola più, PROLUNGA l'ultimo segmento, ed è onesto dirlo. */}
+                {tone.toneAtStart !== null && (
+                  <div style={{
+                    position: 'absolute', left: 12, top: '15%', width: 290,
+                    display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center',
+                    pointerEvents: 'auto',
+                  }}>
+                    <span style={{
+                      fontFamily: 'var(--s-mono)', fontSize: 10, letterSpacing: '0.08em',
+                      textTransform: 'uppercase', padding: '2px 8px', borderRadius: 999,
+                      border: '1px solid var(--s-ink-ghost)',
+                      color: tone.toneSource === 'muse' ? 'var(--s-alive)'
+                        : tone.toneSource === 'meter' ? 'var(--s-tone-hue)' : 'var(--s-ink-faint)',
+                    }} title={LC(
+                      'da quale strumento viene il numero adesso — con più strumenti connessi la priorità è MUSE, poi METER, poi il dichiarato',
+                      'de quel instrument vient le chiffre maintenant — avec plusieurs instruments connectés, la priorité est MUSE, puis METER, puis le déclaré',
+                      'which instrument the number comes from right now — with more than one connected, the priority is MUSE, then METER, then declared',
+                      'de qué instrumento viene el número ahora — con más de uno conectado, la prioridad es MUSE, luego METER, luego lo declarado',
+                      'vilket instrument siffran kommer från just nu — med fler än ett anslutet är prioriteten MUSE, sedan METER, sedan deklarerat') as string}>
+                      {tone.toneSource === 'muse'
+                        ? LC('fonte · MUSE', 'source · MUSE', 'source · MUSE', 'fuente · MUSE', 'källa · MUSE')
+                        : tone.toneSource === 'meter'
+                        ? LC('fonte · METER', 'source · METER', 'source · METER', 'fuente · METER', 'källa · METER')
+                        : LC('fonte · dichiarato', 'source · déclaré', 'source · declared', 'fuente · declarado', 'källa · deklarerad')}
+                    </span>
+                    {tone.margineTono > 0 && (
+                      <button onClick={() => { setMeterSetupPasso('stretta'); setMeterSetupAperto(true); }}
+                        className="s-glass s-glass-btn"
+                        title={LC('rifai la prova della stretta — fissa la sensibilità dell\'ago',
+                          'refais le test de pression — il fixe la sensibilité de l\'aiguille',
+                          'redo the squeeze test — it sets the needle sensitivity',
+                          'rehaz la prueba de presión — fija la sensibilidad de la aguja',
+                          'gör om tryckprovet — det ställer nålens känslighet') as string}
+                        style={{
+                          padding: '3px 9px', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap',
+                          fontFamily: 'var(--s-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
+                          color: 'var(--s-tone-hue)', border: '1px solid var(--s-tone-hue)',
+                          background: 'rgba(251,191,36,0.12)',
+                        }}>
+                        −{tone.margineTono} · {LC('fai la prova delle lattine', 'fais le test des boîtes', 'do the cans test', 'haz la prueba de las latas', 'gör burktestet')}
+                      </button>
+                    )}
+                    {meterC && theta.taScale && theta.taScale.points.length > 0 && (
+                      theta.rawSmooth < theta.taScale.points[0].raw
+                      || theta.rawSmooth > theta.taScale.points[theta.taScale.points.length - 1].raw
+                    ) && (
+                      <span title={LC(
+                        'la lettura attuale è fuori dai valori misurati con l\'artefatto di taratura — il TA mostrato prolunga il segmento più vicino, non è più interpolato fra due punti veri',
+                        'la lecture actuelle est hors des valeurs mesurées avec l\'artefact d\'étalonnage — le TA affiché prolonge le segment le plus proche, il n\'est plus interpolé entre deux points réels',
+                        'the current reading is outside the values measured with the calibration artifact — the TA shown extends the nearest segment, it is no longer interpolated between two real points',
+                        'la lectura actual está fuera de los valores medidos con el artefacto de calibrado — el TA mostrado prolonga el segmento más cercano, ya no está interpolado entre dos puntos reales',
+                        'den aktuella avläsningen ligger utanför de värden som mätts med kalibreringsartefakten — TA som visas förlänger närmaste segment, det är inte längre interpolerat mellan två riktiga punkter') as string}
+                        style={{
+                          fontFamily: 'var(--s-sans)', fontSize: 10, letterSpacing: '0.04em',
+                          color: 'var(--s-reserve)', border: '1px solid var(--s-reserve)',
+                          borderRadius: 999, padding: '2px 8px', whiteSpace: 'nowrap',
+                        }}>
+                        {LC('fuori dai punti tarati', 'hors des points étalonnés', 'outside calibrated points', 'fuera de los puntos calibrados', 'utanför kalibrerade punkter')}
+                      </span>
+                    )}
+                  </div>
+                )}
               </>
             ) : toneAttivo ? (
               // ⚠️ TONE ARMATO MA SENZA QUADRANTE — UNA SOLA RAGIONE ORA (era due: la seconda,

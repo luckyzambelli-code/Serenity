@@ -27,7 +27,6 @@
  */
 
 import { TONE_SCALE_MAX, TONE_STEP, TONE_LOOKBACK_S, TONE_LOCATE_RISE_RATIO } from './tuning';
-import { toneFromResistance } from './impedanceMeter';
 
 /** I due tempi del ciclo, uno per comando, più il compiuto. */
 export type TonePhase = 'locate' | 'raise' | 'done';
@@ -44,10 +43,13 @@ export const clampTone = (t: number): number =>
   Math.max(-TONE_SCALE_MAX, Math.min(TONE_SCALE_MAX, t));
 
 /**
- * Il TONO dagli OHM. Riesporta `toneFromResistance` col nome che ha in questa vista, così
- * chi legge la procedura non deve sapere che la formula abita nel meter delle lattine.
+ * ⚠️ RIMOSSO (revisione dei calcoli TONE, 01/09/2026) — QUI C'ERA `toneFromOhm`, un alias di
+ * `toneFromResistance` (in `impedanceMeter.ts`, dove resta: è testata e serve ancora al CAN
+ * METER a resistenza diretta). Verificato con una ricerca sul deposito: zero chiamanti, in
+ * nessuno dei due programmi — il ciclo TONE vivo passa SEMPRE dal TA (`toneFromTa`, sotto),
+ * mai dagli ohm diretti. Un alias non richiamato da nessuno è un'esca per chi legge: sembra la
+ * via viva e non lo è. Tolto solo l'alias — `toneFromResistance` stessa non si tocca.
  */
-export const toneFromOhm = toneFromResistance;
 
 /**
  * Il TONO dal TONE ARM.

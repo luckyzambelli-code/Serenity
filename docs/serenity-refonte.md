@@ -7918,3 +7918,68 @@ dimenticanza, in questa tabella. Riga rimossa.
 `VERSIONE` del manuale portata a 3.0.184. Verificato il bilanciamento dei tag HTML (inclusa la
 `<table>`) dopo la modifica — tutto pari. Nessun file di codice toccato — solo il manuale
 esterno.
+
+## Giro — 2026-09-01 (17) — TONE: trasparenza fonte/margine, sciogliere un pavimento falso, pulizia
+
+**« vai con rapide e medie »** — seguito alla revisione critica dei calcoli TONE (vedi l'artefatto
+pubblicato nello stesso scambio): quattro correzioni "rapide" più una "media", le sole
+implementabili subito — le altre (tarare le costanti sul CORPUS, ripensare la normalizzazione
+MUSE) restano per il giro "architetturale", dopo una seduta vera.
+
+**1 — nessuna indicazione di quale strumento guida il numero.** Con MUSE connesso, `toneOra`
+è SEMPRE guidato da lui (v. `useToneCycle.ts`, la priorità delle fonti) — ma nulla lo diceva.
+Aggiunto `toneSource` (`'meter' | 'muse' | 'assessed'`, additivo, stesse tre condizioni di
+`toneOraGrezzo`) al ritorno di `useToneCycle`, mostrato in SERENITY come una piccola etichetta
+"fonte · MUSE/METER/dichiarato" accanto alla colonna del tono.
+
+**2 — il margine delle lattine (`margineTono`) è calcolato ma non c'è modo di agire su di
+esso in SERENITY.** Verificato: EQUILIBRIUM ha già questo bottone (`App.tsx`, riga ~5540 —
+« è lì che interessa », richiesta utente di un giro passato) — SERENITY non l'aveva mai
+riprodotto. Aggiunto lo stesso bottone "−N · rifai la prova delle lattine" (stessa condizione
+`margineTono > 0`), che ora riapre `PannelloMeter` direttamente sul passo "stretta" (nuovo prop
+additivo `passoIniziale`, invece del default "quante lattine").
+
+*Nota di correzione rispetto alla revisione precedente*: avevo scritto che il prop `margin` di
+`ToneColumn` fosse "calcolato, passato, e mai mostrato" come se fosse un bug — falso, verificato
+dopo: è una scelta deliberata di un giro passato (« il margine sta QUI e non sotto la colonna del
+tono — richiesta utente »), il margine si mostra apposta ALTROVE (accanto al numero che corregge).
+Il vero problema era che SERENITY non aveva mai portato quell'"altrove" dentro di sé.
+
+**3 — il ratchet "solo salire" non si poteva correggere durante la salita.** Un colpo isolato
+(un movimento del corpo, un cavo) che regge per caso `TONE_HOLD_S` (0,15s) diventava un
+pavimento garantito per il resto della resistenza, senza modo di disfarlo se non annullando
+tutto. Aggiunta `sciogliPavimento()` (additiva, in `useToneCycle.ts`: azzera SOLO
+`toneHighRef`/`toneCandidateRef`, non `toneAtStart` — a differenza di `correggiToneAtStart`,
+che azzera lo stesso ratchet ma cambiando anche l'origine) più `tonePavimentoAttivo` (per
+mostrare il bottone SOLO quando c'è davvero un pavimento da sciogliere). Bottone "era un colpo
+isolato" nella barra dei comandi TONE, visibile solo con uno strumento vero (`!senzaMisura`:
+senza, nulla muove il numero, il ratchet non entra mai in gioco).
+
+**4 — codice morto che può trarre in inganno.** `toneFromOhm` (alias di `toneFromResistance`,
+in `toneScale.ts`) non aveva NESSUN chiamante in nessuno dei due programmi — verificato con una
+ricerca sul deposito. Rimosso l'alias (non la funzione sottostante, che resta in
+`impedanceMeter.ts`, testata e viva per il CAN METER a resistenza diretta).
+
+**Media — trasparenza sull'estrapolazione della taratura TA.** I 4 punti di fabbrica
+(2,034–5,041) non coprono l'intera scala (0–6,5): fuori da quel range, `taFromRaw` prolunga
+l'ultimo segmento invece di interpolare fra due punti veri. Aggiunto un avviso "fuori dai punti
+tarati" quando `theta.rawSmooth` esce dai valori misurati (calcolato lato SERENITY da
+`theta.taScale.points`, nessuna modifica al motore — l'informazione era già tutta lì, solo mai
+confrontata). *Scartata* invece la proposta di rendere `toneMargin` graduale (più giorni senza
+prova → più margine): trovato, leggendo `canTest.ts`, che è già stato deciso il contrario, con
+una ragione esplicita (« fingere di saper misurare l'incertezza in funzione del tempo sarebbe
+inventare una curva che nessuno ha osservato ») — la stessa disciplina epistemica che la
+revisione chiedeva di applicare altrove. Corretto qui invece di ignorare la nota.
+
+`tsc --noEmit` pulito, `npm run lint` invariato (325 warning), `npx vitest run` 652/652 verdi.
+Verificato dal vivo (profilo TEST, SOLO, BASIC, senza strumenti — l'unico banco di prova
+disponibile senza hardware reale): il ciclo TONE senza strumenti resta bit-per-bit identico a
+prima (nessuno dei nuovi elementi appare, tutti correttamente condizionati a `!senzaMisura`/uno
+strumento vero), nessun errore in console, nessuna regressione.
+
+File toccati — CONDIVISI (richiedono build e invio di ENTRAMBI i DMG):
+[`src/engine/toneScale.ts`](../src/engine/toneScale.ts),
+[`src/session/useToneCycle.ts`](../src/session/useToneCycle.ts) — additivi, zero comportamento
+esistente cambiato per EQUILIBRIUM (nessun campo nuovo letto dai suoi chiamanti). SERENITY-only:
+[`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
+[`src/serenity/PannelloMeter.tsx`](../src/serenity/PannelloMeter.tsx).

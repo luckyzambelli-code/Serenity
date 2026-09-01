@@ -92,7 +92,7 @@ type Passo = typeof PASSI[number];
 
 /** Chi monta questo pannello (`Serenity.tsx`) lo fa SOLO a meter connesso — niente stato di
  *  "non connesso" da disegnare qui dentro: quella parola la dice già l'indicatore sopra. */
-export function PannelloMeter({ theta, provaTa, onFatto }: {
+export function PannelloMeter({ theta, provaTa, onFatto, passoIniziale }: {
   theta: ReturnType<typeof useThetaMeter>;
   /** I due TA della prova doppia (uno per configurazione) — vive in `Serenity.tsx`, non qui:
    *  è la stessa seduta a doverli azzerare quando cambia persona, non questo pannello. */
@@ -101,10 +101,17 @@ export function PannelloMeter({ theta, provaTa, onFatto }: {
    *  cosa vuol dire "fatto, chiudi" (qui: `setMeterSetupAperto(false)`) — senza questo prop il
    *  bottone dell'ultimo passo resta testo statico, come App.tsx quando manca `onProceed`. */
   onFatto?: () => void;
+  /**
+   * ⚠️ AGGIUNTO (revisione dei calcoli TONE, 01/09/2026, additivo) — su QUALE passo aprirsi.
+   * `undefined` (default) → 'config', come sempre. Serve al bottone « rifai la prova delle
+   * lattine » vicino al TONE: senza, riaprire il pannello mandava sempre al passo 1 (« quante
+   * lattine »), un giro in più per arrivare a quello che l'auditor ha appena chiesto.
+   */
+  passoIniziale?: Passo;
 }) {
   const { t, lang } = useI18n();
   const [riferimento, setRiferimento] = useState('2.0');
-  const [passo, setPasso] = useState<Passo>('config');
+  const [passo, setPasso] = useState<Passo>(passoIniziale ?? 'config');
   const idx = PASSI.indexOf(passo);
   const LC = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang as string, it, fr, en, es, sv);
 

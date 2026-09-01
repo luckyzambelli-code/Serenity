@@ -263,6 +263,22 @@ export function useToneCycle(d: ToneCycleDeps) {
             toneFromDelta(toneAtStart, toneTaAtStartRef.current, taSmoothRef.current, TA_MAX - taClear),
             margineTono)
         : withMargin(toneAtStart, margineTono);
+  /**
+   * ⚠️ AGGIUNTO (revisione dei calcoli TONE, 01/09/2026) — DA QUALE STRUMENTO VIENE `toneOra`,
+   * ADESSO.
+   *
+   * Segnalato in revisione: con MUSE connesso, `toneOraGrezzo` (sopra) lo guida sempre lui —
+   * ma l'auditor non ha modo di saperlo, perché il quadrante mostra lo stesso numero qualunque
+   * sia la fonte. Le STESSE tre condizioni di `toneOraGrezzo`, ripetute qui invece di dedotte
+   * da lui: `toneOraGrezzo` è già un valore, non porta con sé la ragione per cui è quel
+   * valore — duplicare la condizione (non il calcolo) è il modo più diretto di restare
+   * garantito allineato a lei senza riscriverla.
+   */
+  const toneSource: 'meter' | 'muse' | 'assessed' =
+    d.hasMuse && toneOraMuse !== null ? 'muse'
+      : toneAtStart === null
+        ? (toneHasMeter && toneMeasured !== null ? 'meter' : 'assessed')
+        : (toneTaAtStartRef.current !== null && taSmoothRef.current !== null) ? 'meter' : 'assessed';
   // ── SOLO SALIRE — v. la nota su `TONE_SMOOTH`/`toneHighRef`. Il ratchet vale SOLO dopo una
   // localizzazione vera (`toneAtStart !== null`): prima di localizzare il numero è ancora una
   // misura assoluta (o l'assessment dell'auditor), non un movimento da questo punto — non ha
@@ -295,6 +311,16 @@ export function useToneCycle(d: ToneCycleDeps) {
         // un pavimento da garantire, e aspettare la prima conferma lascerebbe lo schermo fermo.
         return toneHighRef.current ?? toneOraGrezzo;
       })();
+  /**
+   * ⚠️ AGGIUNTO (revisione dei calcoli TONE, 01/09/2026) — C'È UN PAVIMENTO DA SCIOGLIERE?
+   *
+   * `toneHighRef.current` è appena stato scritto dall'IIFE sopra, nello stesso passaggio di
+   * render: leggerlo qui è già il valore di ADESSO, non quello del render precedente. Serve
+   * SOLO a decidere se mostrare il gesto `sciogliPavimento` — mostrarlo quando non c'è ancora
+   * nessun pavimento confermato non farebbe niente di sbagliato, ma inviterebbe a un gesto
+   * senza effetto.
+   */
+  const tonePavimentoAttivo = toneAtStart !== null && toneHighRef.current !== null;
   /** Il secondo sguardo per la colonna (`ToneColumn`'s `toneEeg`) — quando il MUSE È già il
    *  cursore primario (sopra) è la STESSA lettura: la colonna mostra il trattino "EEG" solo se
    *  diverge di oltre 3 unità dal cursore, quindi coincidendo semplicemente non compare più,
@@ -452,6 +478,27 @@ export function useToneCycle(d: ToneCycleDeps) {
   }, []);
 
   /**
+   * ⚠️ AGGIUNTO (revisione dei calcoli TONE, 01/09/2026) — SCIOGLIERE IL PAVIMENTO A METÀ
+   * SALITA, SENZA PERDERE L'ORIGINE.
+   *
+   * Segnalato in revisione: il ratchet "solo salire" (v. `toneHighRef`/`TONE_HOLD_S` sopra)
+   * non si può correggere DURANTE `raise` — un colpo isolato (un movimento del corpo, un cavo)
+   * che regge per caso `TONE_HOLD_S` viene promosso a pavimento garantito, e da lì in poi il
+   * tono mostrato non scende più sotto di lui: l'unico modo di uscirne era annullare TUTTA la
+   * resistenza e rilocalizzare, perdendo `toneAtStart` insieme al pavimento sbagliato.
+   *
+   * `correggiToneAtStart` (sopra) già azzera lo stesso ratchet, ma cambiando anche l'origine —
+   * giusto quando la correzione È l'origine (la scelta manuale del tono), sbagliato quando la
+   * resistenza è la stessa e solo il pavimento va tolto. Questa funzione fa SOLO quello: stessa
+   * origine, stesso ciclo, pavimento vergine — il prossimo `toneOraGrezzo` torna a essere il
+   * numero mostrato, finché un nuovo massimo non regge per il suo `TONE_HOLD_S`.
+   */
+  const sciogliPavimento = useCallback(() => {
+    toneHighRef.current = null;
+    toneCandidateRef.current = null;
+  }, []);
+
+  /**
    * IL LOCATORE SI ALIMENTA DA FUORI — lo chiama il gestore del worker EEG, a ogni campione.
    *
    * L'istante del clic su LOCALIZZA è il peggiore dei tre (vedi `ToneLocator`): bisogna poter
@@ -481,6 +528,11 @@ export function useToneCycle(d: ToneCycleDeps) {
     // misure derivate
     taMostrato, taCorretto, taClear,
     toneMeasured, toneHasMeter, toneMisurato, margineTono, toneOra, toneOraEeg,
+    // ⚠️ AGGIUNTO (revisione dei calcoli TONE, 01/09/2026, additivo) — `toneSource` (sopra) è
+    // di quale strumento è il numero ADESSO; `sciogliPavimento` (sopra) toglie il pavimento del
+    // ratchet senza toccare `toneAtStart`. Nessun chiamante esistente (EQUILIBRIUM) legge
+    // questi due campi: comportamento suo invariato.
+    toneSource, sciogliPavimento, tonePavimentoAttivo,
     // gesti
     localizzaTone, chiudiTone, resetTone,
     // registrazione e voce
