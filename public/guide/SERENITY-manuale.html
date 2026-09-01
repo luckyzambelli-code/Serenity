@@ -250,9 +250,6 @@
     <tr data-l="fr"><td>🕐 Historique</td><td>toutes tes séances passées — voir §9.</td></tr>
     <tr data-l="it"><td>🕐 Storico</td><td>tutte le tue sedute passate — vedi §9.</td></tr>
     <tr data-l="en"><td>🕐 History</td><td>all your past sessions — see §9.</td></tr>
-    <tr data-l="fr"><td>📖 Journal</td><td>bascule le panneau qui affiche ce qui a été dit/tapé pendant la séance — voir §6.</td></tr>
-    <tr data-l="it"><td>📖 Diario</td><td>attiva/disattiva il pannello che mostra ciò che è stato detto/scritto durante la seduta — vedi §6.</td></tr>
-    <tr data-l="en"><td>📖 Journal</td><td>toggles the panel showing what was said/typed during the session — see §6.</td></tr>
     <tr data-l="fr"><td>Processus</td><td>charge un fichier de commandes/procédure — voir §7.</td></tr>
     <tr data-l="it"><td>Processi</td><td>carica un file di comandi/procedura — vedi §7.</td></tr>
     <tr data-l="en"><td>Processes</td><td>loads a commands/procedure file — see §7.</td></tr>
@@ -272,6 +269,11 @@
     <tr data-l="it"><td>🗒️ Help</td><td>mostra/nasconde un post-it di spiegazione sotto ogni pulsante della schermata attuale — diverso da Guida, che apre il manuale intero.</td></tr>
     <tr data-l="en"><td>🗒️ Help</td><td>shows/hides an explanation post-it under every button on the current screen — different from Guide, which opens the whole manual.</td></tr>
   </table>
+  <div class="note info">
+    <span data-l="fr"><b>Connecter MUSE.</b> Clique l'icône casque : la fenêtre de jumelage Bluetooth du système/navigateur s'ouvre — choisis le MUSE dans la liste. Une fois connecté, le point passe au vert et affiche le niveau de batterie.<br><b>Connecter le Theta‑Meter (METER).</b> Clique l'icône cadran : la fenêtre de sélection USB du système/navigateur s'ouvre — choisis le Theta‑Meter. <b>L'interface propre du Theta‑Meter (son propre écran/logiciel) n'est volontairement PAS utilisée</b> : SERENITY lit directement le signal électrique brut par USB et dessine sa propre aiguille, calibrée avec sa propre échelle TA — inutile de garder ouvert un autre programme ou de regarder l'appareil lui-même, tout ce qui compte s'affiche déjà dans SERENITY.</span>
+    <span data-l="it"><b>Collegare MUSE.</b> Clicca l'icona cuffie: si apre la finestra di associazione Bluetooth del sistema/browser — scegli il MUSE dall'elenco. Una volta connesso, il pallino diventa verde e mostra il livello di batteria.<br><b>Collegare il Theta‑Meter (METER).</b> Clicca l'icona quadrante: si apre la finestra di selezione USB del sistema/browser — scegli il Theta‑Meter. <b>L'interfaccia propria del Theta‑Meter (il suo schermo/software) NON viene volutamente usata</b>: SERENITY legge direttamente il segnale elettrico grezzo via USB e disegna il proprio ago, tarato con la propria scala TA — non serve tenere aperto un altro programma né guardare l'apparecchio stesso, tutto ciò che conta compare già in SERENITY.</span>
+    <span data-l="en"><b>Connecting MUSE.</b> Click the headphones icon: the system/browser Bluetooth pairing window opens — pick the MUSE from the list. Once connected, the dot turns green and shows the battery level.<br><b>Connecting the Theta‑Meter (METER).</b> Click the dial icon: the system/browser USB picker opens — pick the Theta‑Meter. <b>The Theta‑Meter's own interface (its own screen/software) is deliberately NOT used</b>: SERENITY reads the raw electrical signal directly over USB and draws its own needle, calibrated with its own TA scale — no need to keep another program open or watch the device itself, everything that matters already shows up in SERENITY.</span>
+  </div>
   <div class="shot">
     <img src="docs/guide-screenshots-serenity/barre-du-haut.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" onload="this.nextElementSibling.style.display='none'">
     <div class="cap" style="display:block">
@@ -653,7 +655,7 @@
 </div>
 <span class="ver">SERENITY <span id="v"></span></span>
 <script>
-const VERSIONE = "3.0.183";
+const VERSIONE = "3.0.184";
 document.getElementById('v').textContent = VERSIONE;
 function setLang(l){
   document.body.setAttribute('data-lang', l);

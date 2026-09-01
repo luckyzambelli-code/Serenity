@@ -7891,3 +7891,30 @@ portata a 3.0.183.
 
 Verificato il bilanciamento dei tag HTML dopo la modifica — tutto pari. Nessun file di codice
 toccato — solo il manuale esterno.
+
+## Giro — 2026-09-01 (16) — comment connecter MUSE et METER, interface propre du Theta‑Meter non utilisée
+
+**« Tu dois ajouter une indication de liaison pour MUSE et THETA METER, en expliquant que
+l'interface du Theta Meter est volontairement non utilisée »**
+
+Il capitolo 2 elencava il bottone MUSE/METER/SENZA STRUMENTI ma senza dire COME si collega
+davvero ciascuno strumento. Verificato nel codice (`Serenity.tsx`, i tre bottoni della pillola
+strumenti; `useThetaMeter`/`thetaMeterHid.ts`) prima di scrivere: MUSE si collega cliccando
+l'icona cuffie (apre il pop-up di associazione Bluetooth del sistema/browser), METER cliccando
+l'icona quadrante (apre il selettore USB/WebHID del sistema/browser). Aggiunta una nota "info"
+dopo la tabella del capitolo 2 con questi due gesti, ed esplicitato il punto chiesto: **il
+Theta-Meter viene letto SOLO come segnale elettrico grezzo via USB (WebHID)** — SERENITY
+disegna il proprio ago con la propria taratura TA, l'interfaccia/schermo/software propri
+dell'apparecchio (o un eventuale programma del produttore aperto in parallelo) non sono mai
+letti né necessari, per scelta (v. il commento storico in `thetaMeterHid.ts`: « il programma
+Theta-Meter e EQUILIBRIUM possono leggere il dispositivo nello stesso momento » — SERENITY non
+dipende in alcun modo da quel programma).
+
+**Bonus, trovato per strada**: la tabella del capitolo 2 elencava ancora un bottone « 📖
+Journal » che apre/chiude un pannello nella barra in alto — falso, corretto nel capitolo 6 di
+un giro precedente (nessun bottone dedicato, si mostra solo da CONFIG) ma rimasto, per
+dimenticanza, in questa tabella. Riga rimossa.
+
+`VERSIONE` del manuale portata a 3.0.184. Verificato il bilanciamento dei tag HTML (inclusa la
+`<table>`) dopo la modifica — tutto pari. Nessun file di codice toccato — solo il manuale
+esterno.
