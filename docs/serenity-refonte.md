@@ -7829,3 +7829,51 @@ sempre e solo cercato in Historique (View/PDF). `VERSIONE` del manuale portata a
 
 Verificato il bilanciamento dei tag HTML dopo la modifica — tutto pari. Nessun file di codice
 toccato — solo il manuale esterno.
+
+## Giro — 2026-09-01 (14) — SANS INSTRUMENT: écrire l'item dans le cycle, + capitolo COMMANDS
+
+**« Dans SANS INSTRUMENT il faut avoir la possibilité d'écrire l'item dans les Cycles, comme
+quand on a les instruments »**
+
+Vero — l'overlay grande senza strumenti (`Serenity.tsx`, il blocco `senzaMisura && aperta`) non
+montava mai `PistaCiclo` (niente arco da affiancare), quindi l'unico modo di dare un item era
+la voce, o il campo separato "R&I · Manuel"/ASSESSMENT — un passaggio più lontano dell'`<input>`
+già presente, con strumenti, proprio nel testo che si sta leggendo.
+
+Estratto il primo blocco di `PistaCiclo` (`<input>` + « dì l'item…/l'ho detta ») in un
+componente a sé, [`ItemDaScrivere.tsx`](../src/serenity/ItemDaScrivere.tsx) — stessa logica
+(`diItem`, il testo "dì l'item…"/"la resistenza…" in TONE, il calcolo della larghezza),
+montato ora in DUE posti invece di uno: dentro `PistaCiclo` (invariato, con strumenti) e
+nell'overlay senza strumenti (nuovo, prop `grande` per il testo più grande già usato lì).
+`setItem`/`item` restano gli stessi di `Serenity.tsx` — scriverlo vale quanto dirlo a voce, il
+motore (`useContactNullCycle`/`useMirrorCycle`/`useToneCycle`) legge la stessa variabile
+qualunque sia la sua origine.
+
+Verificato dal vivo (profilo Test, SOLO, BASIQUE, senza strumenti): armato CONTACT →
+"DIS L'ITEM" mostra l'`<input>`, scritto "la peur du noir", cliccato "l'item a été dit" → il
+ciclo avanza a "DEMANDE UN MOCK-UP" con l'item scritto in cima, esattamente come con
+strumenti. Riprovato con TONE: "DIS LA RÉSISTANCE" mostra il testo giusto ("dis la
+résistance…"/"je l'ai dite"), scritta la resistenza, dichiarata detta → la schermata dedicata
+"choisis le ton" del giro precedente appare regolarmente dopo. Nessuna regressione nel flusso
+con strumenti (`PistaCiclo` invariato).
+
+**« Ajoute une vue explications (si pas fait) pour les COMMANDS et comment cela fonctionne »**
+
+Il post-it in-app (`data-help` sul bottone COMMANDS) esiste già. Nel manuale, il capitolo 7
+("Processus et COMMANDS") aveva già una nota che li distingue, ma trattava ancora COMMANDS
+come una variante minore del flusso Processus (stessa lista numerata, "bouton FERMER"). Falso —
+COMMANDS non apre nessun pannello a parte: le sue commande sostituiscono DIRETTAMENTE le
+indicazioni del ciclo, nello stesso spazio, e si chiude con la crocetta × sulla card, non un
+bottone FERMER (verificato in `PistaProcedimento.tsx`, `titoloChiudi`/`onChiudi`). Riscritto il
+capitolo in due liste numerate distinte e etichettate — "Processus — l'archive PDF" (invariata)
+e "COMMANDS — les procédés prêts à suivre" (nuova, tre passi + nota sul fichier .txt, pas de
+PDF) — con una nota "info" che précise qu'aucun PDF n'existe côté COMMANDS. `VERSIONE` del
+manuale portata a 3.0.182.
+
+`tsc --noEmit` pulito, `npm run lint` invariato (325 warning), `npx vitest run` 652/652 verdi.
+Verificato il bilanciamento dei tag HTML del manuale dopo la modifica — tutto pari.
+
+File toccati: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
+[`src/serenity/PistaCiclo.tsx`](../src/serenity/PistaCiclo.tsx),
+[`src/serenity/ItemDaScrivere.tsx`](../src/serenity/ItemDaScrivere.tsx) (nuovo) — solo SERENITY,
+nessun file condiviso con EQUILIBRIUM. Più il manuale esterno.

@@ -43,6 +43,7 @@ import { QuantumSphere } from '../components/QuantumSphere';
 import { ClearDial } from '../components/ClearDial';
 import { CycleStatusBar } from '../components/CycleStatusBar';
 import { PistaCiclo } from './PistaCiclo';
+import { ItemDaScrivere } from './ItemDaScrivere';
 import { PistaProcedimento } from './PistaProcedimento';
 import { VistaSenzaAgo } from './VistaSenzaAgo';
 import { listaProcedimenti, apriCartellaProcedimenti, type Procedimento } from '../lib/procedimenti';
@@ -5969,6 +5970,21 @@ export default function Serenity() {
                       {spiegazioneCiclo.avviso}
                     </span>
                   )}
+                  {/* ⚠️ AGGIUNTO — segnalato: « SANS INSTRUMENT il faut avoir la possibilité
+                      d'écrire l'item dans les Cycles, comme quand on a les instruments ».
+                      Vero: questo overlay non montava mai `PistaCiclo` (niente arco da
+                      affiancare senza strumenti, v. la condizione `!senzaMisura` sul suo unico
+                      punto di montaggio) — l'unico modo di dare un item restava la voce o il
+                      campo separato "R&I · Manuel"/ASSESSMENT, un gradino più lontano di un
+                      `<input>` proprio nel testo che si sta già leggendo. `ItemDaScrivere` (v.
+                      il file, estratto da `PistaCiclo.tsx` apposta per essere montato anche
+                      qui) è lo STESSO componente, `item`/`setItemManuale`/`dichiaraItemDetto`
+                      sono le STESSE variabili di sempre — scrivere qui vale quanto dirlo a
+                      voce o scriverlo dentro `PistaCiclo`, per il motore è la stessa cosa.
+                      `grande`: stessa taglia già scelta per i comandi in questo overlay
+                      (`--s-fs-xl`/`--s-fs-lg`, non la taglia normale di `PistaCiclo`). */}
+                  <ItemDaScrivere mode={mode} phase={faseCiclo} lang={lang} item={item} setItem={setItemManuale}
+                    itemPlaceholder={t('ser_item_placeholder') as string} onDichiaraDetto={dichiaraItemDetto} grande />
                   {/* ⚠️ « ToneDial » (l'ARCO) resta escluso, sempre — non ha senso senza un ago
                       vero. `ToneColumn` qui è la scala GIÀ scelta (v. `deveScegliereTono` più
                       sopra: si arriva qui SOLO dopo aver scelto, `tone.raise` con `tonoScelto`

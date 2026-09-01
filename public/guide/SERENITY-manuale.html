@@ -27,7 +27,9 @@
   5. AVEC/SANS AIGUILLE.
   6. Le Journal → pas de bouton dédié, se montre depuis CONFIG (case "Journal de session").
   7. Processus et COMMANDS → deux boutons distincts, pas des synonymes : Processus ouvre
-     l'archive PDF entière, COMMANDS ouvre seulement la carte des procédés à charger.
+     l'archive PDF entière (fichiers → panneau à part, bouton FERMER), COMMANDS charge un
+     procédé DANS l'espace du cycle lui-même (pas de fenêtre, pas de PDF — un fichier .txt,
+     une commande par ligne — fermé par la croix × de sa carte).
   8. Fermer la séance → le rapport PDF.
   9. Historique → voir/télécharger/supprimer.
   10. Auditer en Basique, sans instruments → démarrage (écran SESSION START, bouton START),
@@ -440,16 +442,17 @@
     <span data-l="it">Due bottoni, non uno solo. <b>Processi</b> (barra in alto) apre l'ARCHIVIO INTERO: tutti i PDF depositati, ordinati per tag, con la zona per aggiungerne — e, in cima, la stessa card "comandi di procedimenti" descritta sotto. <b>COMMANDS</b> (accanto a EP, sotto il quadrante) apre SOLO quella card: i procedimenti pronti da caricare nella seduta — niente PDF, niente tag, niente zona per aggiungere. Vai su COMMANDS per caricare in fretta un procedimento durante la seduta; vai su Processi per gestire l'archivio dei PDF (aggiungerne, classificarli, consultarli).</span>
     <span data-l="en"><b>Two buttons, not one.</b> <b>Processes</b> (top bar) opens the WHOLE ARCHIVE: every PDF you've dropped in, sorted by tag, with the zone to add more — and, right at the top, the same "procedure commands" card described below. <b>COMMANDS</b> (next to EP, under the dial) opens ONLY that card: the procedures ready to load into the session — no PDFs, no tags, no add zone. Use COMMANDS to quickly load a procedure mid-session; use Processes to manage the PDF archive (add, sort, browse).</span>
   </div>
+  <p><b><span data-l="fr">Processus — l'archive PDF</span><span data-l="it">Processi — l'archivio PDF</span><span data-l="en">Processes — the PDF archive</span></b></p>
   <ol>
     <li>
-      <span data-l="fr">Clique sur <b>Processus</b> dans la barre du haut : une liste de fichiers apparaît (déposés dans le dossier partagé, ou déjà présents) — ou sur <b>COMMANDS</b> pour n'avoir que les procédés.</span>
-      <span data-l="it">Clicca su <b>Processi</b> nella barra in alto: appare un elenco di file (depositati nella cartella condivisa, o già presenti) — oppure su <b>COMMANDS</b> per avere solo i procedimenti.</span>
-      <span data-l="en">Click <b>Processes</b> in the top bar: a list of files appears (dropped in the shared folder, or already present) — or <b>COMMANDS</b> for just the procedures.</span>
+      <span data-l="fr">Clique sur <b>Processus</b> dans la barre du haut : une liste de fichiers apparaît (déposés dans le dossier partagé, ou déjà présents).</span>
+      <span data-l="it">Clicca su <b>Processi</b> nella barra in alto: appare un elenco di file (depositati nella cartella condivisa, o già presenti).</span>
+      <span data-l="en">Click <b>Processes</b> in the top bar: a list of files appears (dropped in the shared folder, or already present).</span>
     </li>
     <li>
-      <span data-l="fr">Clique sur un fichier pour l'ouvrir — il reste affiché à côté de la séance, tu peux le suivre commande par commande.</span>
-      <span data-l="it">Clicca su un file per aprirlo — resta visibile accanto alla seduta, puoi seguirlo comando per comando.</span>
-      <span data-l="en">Click a file to open it — it stays visible next to the session, you can follow it command by command.</span>
+      <span data-l="fr">Clique sur un fichier pour l'ouvrir — il reste affiché à côté de la séance, tu peux le suivre page par page.</span>
+      <span data-l="it">Clicca su un file per aprirlo — resta visibile accanto alla seduta, puoi seguirlo pagina per pagina.</span>
+      <span data-l="en">Click a file to open it — it stays visible next to the session, you can follow it page by page.</span>
     </li>
     <li>
       <b><span data-l="fr">Pour l'annuler / le fermer :</span><span data-l="it">Per annullarlo / chiuderlo:</span><span data-l="en">To cancel / close it:</span></b>
@@ -465,6 +468,31 @@
       <span data-l="it">[schermata in arrivo] — il pannello Processi, pulsante CHIUDI visibile</span>
       <span data-l="en">[screenshot pending] — the Processes panel, CLOSE button visible</span>
     </div>
+  </div>
+
+  <p><b><span data-l="fr">COMMANDS — les procédés prêts à suivre</span><span data-l="it">COMMANDS — i procedimenti pronti da seguire</span><span data-l="en">COMMANDS — the ready-to-follow procedures</span></b></p>
+  <ol>
+    <li>
+      <span data-l="fr">Clique sur <b>COMMANDS</b> (à côté de EP, sous le cadran) : la carte des procédés apparaît — un bouton par procédé, avec le nombre de commandes qu'il contient.</span>
+      <span data-l="it">Clicca su <b>COMMANDS</b> (accanto a EP, sotto il quadrante): appare la card dei procedimenti — un bottone per procedimento, con il numero di comandi che contiene.</span>
+      <span data-l="en">Click <b>COMMANDS</b> (next to EP, under the dial): the procedures card appears — one button per procedure, with how many commands it holds.</span>
+    </li>
+    <li>
+      <span data-l="fr">Clique sur un procédé : PAS de fenêtre à part — ses commandes prennent directement la place des indications du cycle, dans le même espace, l'une après l'autre.</span>
+      <span data-l="it">Clicca su un procedimento: NESSUNA finestra a parte — i suoi comandi prendono direttamente il posto delle indicazioni del ciclo, nello stesso spazio, uno dopo l'altro.</span>
+      <span data-l="en">Click a procedure: NO separate window — its commands take the place of the cycle's own guidance, in the same space, one after another.</span>
+    </li>
+    <li>
+      <b><span data-l="fr">Pour le fermer :</span><span data-l="it">Per chiuderlo:</span><span data-l="en">To close it:</span></b>
+      <span data-l="fr">la croix <b>×</b> en haut de la carte du procédé. Ça ferme le procédé sans toucher à la séance — les indications normales du cycle reprennent leur place.</span>
+      <span data-l="it">la crocetta <b>×</b> in alto sulla card del procedimento. Chiude il procedimento senza toccare la seduta — le indicazioni normali del ciclo riprendono il loro posto.</span>
+      <span data-l="en">the <b>×</b> at the top of the procedure's card. This closes the procedure without touching the session — the cycle's normal guidance takes its place back.</span>
+    </li>
+  </ol>
+  <div class="note info">
+    <span data-l="fr">Aucun fichier PDF n'existe côté COMMANDS — un procédé, c'est un fichier .txt (un dossier partagé, une commande par ligne), pas quelque chose à faire défiler comme un PDF. Pour l'ajouter/le modifier : le bouton "ouvrir le dossier" dans la carte du procédé (barre du haut, sous "COMANDI PROCEDIMENTI") ouvre ce dossier directement.</span>
+    <span data-l="it">Nessun file PDF esiste lato COMMANDS — un procedimento è un file .txt (una cartella condivisa, un comando per riga), non qualcosa da scorrere come un PDF. Per aggiungerlo/modificarlo: il pulsante "apri cartella" nella card del procedimento (barra in alto, sotto "COMANDI PROCEDIMENTI") apre quella cartella direttamente.</span>
+    <span data-l="en">No PDF file exists on the COMMANDS side — a procedure is a .txt file (a shared folder, one command per line), not something to scroll like a PDF. To add/edit one: the "open folder" button in the procedure's card (top bar, under "PROCEDURES COMMANDS") opens that folder directly.</span>
   </div>
 
   <h2 id="fermer"><span data-l="fr">8. Fermer la séance</span><span data-l="it">8. Chiudere la seduta</span><span data-l="en">8. Closing the session</span></h2>
@@ -617,7 +645,7 @@
 </div>
 <span class="ver">SERENITY <span id="v"></span></span>
 <script>
-const VERSIONE = "3.0.181";
+const VERSIONE = "3.0.182";
 document.getElementById('v').textContent = VERSIONE;
 function setLang(l){
   document.body.setAttribute('data-lang', l);

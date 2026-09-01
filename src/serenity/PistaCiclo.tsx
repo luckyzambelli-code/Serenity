@@ -5,6 +5,7 @@ import type { SessionMode } from '../engine/sessionMode';
 import type { SessionPhase } from '../engine/sessionPhase';
 import { pick5 } from '../i18n5';
 import { SuggerimentoCiclo } from './SuggerimentoCiclo';
+import { ItemDaScrivere } from './ItemDaScrivere';
 
 /**
  * PistaCiclo — LA PROCEDURA A FUOCO, SOVRAPPOSTA AL LATO SINISTRO DELL'ARCO.
@@ -116,10 +117,6 @@ export function PistaCiclo({ mode, phase, lang, item, setItem, itemPlaceholder, 
   const L = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang, it, fr, en, es, sv);
   const steps = stepsOf(mode);
   const cur = currentStep(phase, mode);
-  // Stessa condizione dei tre punti di chiamata tolti dalla barra comandi: armato, ma l'item
-  // (la resistenza, in TONE) non è ancora stato dato a voce o dichiarato a mano.
-  const diItem = phase === 'tone.say_item' || phase === 'mirror.say_item'
-    || phase === 'contact.say_item' || phase === 'null.say_item' || phase === 'truth.say_ri';
 
   // Il fuoco manuale (clic su un tempo diverso da quello reale) si spegne da sé appena il ciclo
   // avanza davvero — mai restare a leggere un tempo vecchio mentre l'audit è già oltre.
@@ -206,68 +203,14 @@ export function PistaCiclo({ mode, phase, lang, item, setItem, itemPlaceholder, 
           {TITOLO_METODO[mode]}
         </span>
       </div>
-      {/* ── L'ITEM — segnalato: « niente più dei cicli riprodotto in alto a sinistra ». Era in
-          `testataCiclo`, nella barra comandi; stessa resa (`--s-serif`/`--s-fs-lg`), qui
-          sotto l'intestazione invece che accanto al badge.
-          ⚠️ ORA SCRIVIBILE — v. la nota in cima al file. Un `<input>`, non più uno `<span>` di
-          sola lettura: stessa resa (`--s-serif`/`--s-fs-lg`), larghezza che segue il testo
-          (`ch` sul valore o sul segnaposto, mai più corta di 6 caratteri) invece di una
-          larghezza fissa — un `<input>` a taglia fissa o tronca l'item lungo o lascia un vuoto
-          enorme per uno corto.
-          ⚠️ BUG TROVATO — segnalato: « l'item non si vede in intero nella zona sottolineata ».
-          `1ch` = la larghezza del carattere "0" nel font ATTUALE — un numero ESATTO solo per
-          un font monospazio. `--s-serif` non lo è: lettere come "M"/"W" sono molto più larghe
-          di "0"/"i", e con un testo qualunque (non solo cifre) `N caratteri × 1ch` sottostima
-          sistematicamente quanto spazio serve davvero — l'input restava più STRETTO del suo
-          stesso contenuto, che uno scorrimento interno tagliava via ai bordi. Non c'è un modo
-          esatto senza misurare il testo per davvero (un `<span>` fantasma, un `<canvas>`) per
-          un solo campo — un moltiplicatore GENEROSO (×1.6) risolve lo stesso problema con un
-          margine che non si nota (un po' di spazio vuoto in più è innocuo, un item tagliato
-          non lo è). */}
-      <input
-        value={item}
-        onChange={e => setItem(e.target.value)}
-        placeholder={itemPlaceholder}
-        onKeyDown={e => {
-          if (e.key === 'Enter' && diItem) onDichiaraDetto();
-        }}
-        style={{
-          fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-lg)', color: 'var(--s-ink)',
-          padding: '0 10px', border: 'none', borderBottom: '1px solid var(--s-ink-ghost)',
-          background: 'none', outline: 'none',
-          flexShrink: 0, width: `${Math.max(9, (item || itemPlaceholder).length * 1.6)}ch`,
-        }}
-      />
-      {/* ── « DÌ L'ITEM… » / « L'HO DETTA » — segnalato: « devono stare a sinistra coi
-          comandi, per tutti i cicli ». TONE dice "la resistenza", gli altri tre "l'item" —
-          stessa distinzione che facevano le tre copie nella barra comandi. */}
-      {diItem && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 10px', pointerEvents: 'auto', flexShrink: 0 }}>
-          <span className="ser-pulse" style={{
-            fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.04em',
-            color: 'var(--s-reserve)',
-          }}>
-            {mode === 'tone'
-              ? L('dì la resistenza…', 'dis la résistance…', 'say the resistance…', 'di la resistencia…', 'säg motståndet…')
-              : L('dì l\'item…', 'dis l\'item…', 'say the item…', 'di el ítem…', 'säg item…')}
-          </span>
-          <button type="button" className="s-glass s-glass-btn" onClick={onDichiaraDetto}
-            title={L('la trascrizione non c\'è o non si sente — dichiara che è stato detto',
-              'pas de transcription ou pas de son — déclare que c\'est dit',
-              'no transcript or no sound — declare it has been said',
-              'sin transcripción o sin sonido — declara que se ha dicho',
-              'ingen transkription eller inget ljud — förklara att det har sagts') as string}
-            style={{
-              cursor: 'pointer', borderRadius: 999, padding: '5px 14px', background: 'var(--s-disc)',
-              fontFamily: 'var(--s-sans)', fontSize: 15, color: 'var(--s-ink-faint)', border: 'none',
-              whiteSpace: 'nowrap',
-            }}>
-            {mode === 'tone'
-              ? L('l\'ho detta', 'je l\'ai dite', 'said it', 'la he dicho', 'sa det')
-              : L('l\'item è stato detto', 'l\'item a été dit', 'the item has been said', 'el ítem ha sido dicho', 'item har sagts')}
-          </button>
-        </div>
-      )}
+      {/* ── L'ITEM, SCRIVIBILE — v. la nota storica sull'`<input>` (ex qui, ora in
+          `ItemDaScrivere.tsx`, estratto per essere montato ANCHE nell'overlay senza strumenti
+          — segnalato: « SANS INSTRUMENT il faut avoir la possibilité d'écrire l'item... comme
+          quand on a les instruments »). Stessa resa di sempre (`--s-serif`/`--s-fs-lg`,
+          `grande` omesso → default `false`), stesso `diItem`/testo "dì l'item…"/"l'ho detta" —
+          nessuna riga di comportamento cambiata, solo spostata. */}
+      <ItemDaScrivere mode={mode} phase={phase} lang={lang} item={item} setItem={setItem}
+        itemPlaceholder={itemPlaceholder} onDichiaraDetto={onDichiaraDetto} />
       {/* ── I TEMPI, UN GRUPPO SOLO — segnalato: « il più possibile le scritte su una riga ».
           Prima ogni tempo era un figlio diretto della colonna (`flexDirection:'column'`, uno
           sotto l'altro per costruzione); ora il contenitore è una riga che può andare a capo
