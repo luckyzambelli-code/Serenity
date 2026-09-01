@@ -7809,3 +7809,23 @@ interna. `VERSIONE` del manuale portata a 3.0.180.
 
 Verificato il bilanciamento dei tag HTML (`h2`/`p`/`div`/`span`/`ol`/`li`) dopo entrambe le
 modifiche — tutto pari. Nessun file di codice toccato — solo il manuale esterno.
+
+## Giro — 2026-08-31 (13) — chiarito: il PDF non appare mai in SERENITY, solo in Historique
+
+**« Le pdf de fin séance n'apparait plus dans SERENITY, corrige le guide »**
+
+Verificato dal vivo PRIMA di toccare il manuale (per non correggerlo a descrivere un bug che
+non c'è, o peggio nascondere un bug vero): aperta una seduta, armato TONE, chiuso DIRETTAMENTE
+senza completarlo (lo scenario esatto del giro precedente) — nessun errore in console, il PDF
+appare correttamente in Historique ("2 sessions · 2 PDF", pulsante "+ PDF" attivo). La
+correzione di `chiudi()` del giro precedente non ha rotto nulla.
+
+Il capitolo 8 diceva già che il PDF va in Historique, ma non abbastanza chiaramente: non è mai
+stato previsto che il PDF appaia dentro SERENITY stessa (scelta esplicita di un giro molto
+precedente: « vorrei che il Report post session non ci sia più in Serenity, solo il PDF in
+History »). Aggiunta una nota "warn" inequivocabile: **il PDF non appare MAI in SERENITY** —
+nessuna finestra di rapporto, nessuna anteprima, niente a schermo al momento di chiudere — va
+sempre e solo cercato in Historique (View/PDF). `VERSIONE` del manuale portata a 3.0.181.
+
+Verificato il bilanciamento dei tag HTML dopo la modifica — tutto pari. Nessun file di codice
+toccato — solo il manuale esterno.

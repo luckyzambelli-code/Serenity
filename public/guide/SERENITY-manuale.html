@@ -469,10 +469,15 @@
 
   <h2 id="fermer"><span data-l="fr">8. Fermer la séance</span><span data-l="it">8. Chiudere la seduta</span><span data-l="en">8. Closing the session</span></h2>
   <p>
-    <span data-l="fr">Le bouton <b>fermer la séance</b> (barre du haut, teinté ambre discret pour se distinguer d'"ouvrir") termine la séance et génère le rapport PDF automatiquement — pas de bouton "exporter" à part.</span>
-    <span data-l="it">Il pulsante <b>chiudi la seduta</b> (barra in alto, tinta ambra discreta per distinguersi da "apri") termina la seduta e genera il rapporto PDF automaticamente — nessun pulsante "esporta" a parte.</span>
-    <span data-l="en">The <b>close the session</b> button (top bar, subtly amber-tinted to stand apart from "open") ends the session and generates the PDF report automatically — no separate "export" button.</span>
+    <span data-l="fr">Le bouton <b>fermer la séance</b> (barre du haut, teinté ambre discret pour se distinguer d'"ouvrir") termine la séance et génère le rapport PDF automatiquement en arrière-plan — pas de bouton "exporter" à part.</span>
+    <span data-l="it">Il pulsante <b>chiudi la seduta</b> (barra in alto, tinta ambra discreta per distinguersi da "apri") termina la seduta e genera il rapporto PDF automaticamente in sottofondo — nessun pulsante "esporta" a parte.</span>
+    <span data-l="en">The <b>close the session</b> button (top bar, subtly amber-tinted to stand apart from "open") ends the session and generates the PDF report automatically in the background — no separate "export" button.</span>
   </p>
+  <div class="note warn">
+    <span data-l="fr"><b>Le PDF n'apparaît JAMAIS dans SERENITY elle-même</b> — pas de fenêtre de rapport, pas d'aperçu, rien à l'écran au moment de fermer. C'est voulu : la séance finit directement dans l'<b>Historique</b> (chap. 9), pas sur un écran de rapport. Pour le voir ou le télécharger, ouvre Historique, retrouve la séance, et clique <b>View</b> ou <b>PDF</b>.</span>
+    <span data-l="it"><b>Il PDF non appare MAI in SERENITY stessa</b> — nessuna finestra di rapporto, nessuna anteprima, niente a schermo al momento di chiudere. È voluto: la seduta finisce direttamente nello <b>Storico</b> (cap. 9), non su uno schermo di rapporto. Per vederlo o scaricarlo, apri Storico, ritrova la seduta, e clicca <b>View</b> o <b>PDF</b>.</span>
+    <span data-l="en"><b>The PDF NEVER appears in SERENITY itself</b> — no report window, no preview, nothing on screen the moment you close. This is deliberate: the session goes straight into <b>History</b> (ch. 9), not onto a report screen. To view or download it, open History, find the session, and click <b>View</b> or <b>PDF</b>.</span>
+  </div>
   <div class="note info">
     <span data-l="fr">Le PDF peut prendre quelques secondes à se préparer (surtout avec un long Journal). S'il n'apparaît pas tout de suite dans l'Historique, rouvre le panneau un instant après.</span>
     <span data-l="it">Il PDF può richiedere qualche secondo per prepararsi (soprattutto con un Diario lungo). Se non compare subito nello Storico, riapri il pannello un momento dopo.</span>
@@ -612,7 +617,7 @@
 </div>
 <span class="ver">SERENITY <span id="v"></span></span>
 <script>
-const VERSIONE = "3.0.180";
+const VERSIONE = "3.0.181";
 document.getElementById('v').textContent = VERSIONE;
 function setLang(l){
   document.body.setAttribute('data-lang', l);
