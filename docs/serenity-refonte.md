@@ -7769,3 +7769,16 @@ INSTRUMENTS sono di nuovo cliccabili — il sintomo esatto segnalato, confermato
 
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: solo `src/serenity/Serenity.tsx` (SERENITY, nessun file condiviso).
+
+## Giro — 2026-08-31 (11) — secondo screenshot per "cinq-méthodes"
+
+**« Dans le guide ajoute un deuxième picture pour cinq-methodes »**
+
+Aggiunto un secondo `<div class="shot">` al capitolo 4 ("Les 5 méthodes"), subito dopo il
+primo — `cinq-methodes-2.png`, a complemento di `cinq-methodes.png` ("i 5 cerchi, armati e a
+riposo"): questo mostra un ciclo armato IN CORSO (es. TONE con "portalo a tono 40"/"tono 40
+raggiunto"), la controparte naturale del primo scatto statico. `VERSIONE` del manuale portata
+a 3.0.178 (la prossima build SERENITY).
+
+Nessun file del repository toccato — solo il manuale esterno
+(`~/Downloads/Guide Static Meter/SERENITY-manuale.html`).
