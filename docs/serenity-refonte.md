@@ -7733,3 +7733,39 @@ della sua tabella. `VERSIONE` del manuale portata a 3.0.176 (la prossima build S
 `tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
 `git status`: solo `src/serenity/Serenity.tsx` (SERENITY, nessun file condiviso questo giro —
 `useToneCycle.ts`/`ProcessusModal.tsx` non toccati, il DMG EQUILIBRIUM non viene rispedito).
+
+## Giro — 2026-08-31 (10) — chiudere la seduta con un ciclo aperto torna DAVVERO allo stato iniziale
+
+**« Quando chiudi una seduta e che lascio un ciclo aperto, devi far ritornare lo schermo allo
+stato iniziale, ora ad esempio resta TONO 40, con una parte fuori dallo schermo e non posso
+neanche cambiare gli strumenti per iniziare la sessione »**
+
+`chiudi()` correggeva già CONTACT/NULL (`cycles.closeOpenCycleAtEnd()`) e MIRROR
+(`mirror.stopMirror()`, se armato) — un giro molto precedente aveva trovato e chiuso quel buco
+per il PDF. Ma TONE e TRUTH restavano fuori dall'elenco: chiudere la seduta con uno dei due
+ancora armato non li disarmava MAI.
+
+Non è solo un dato mancante nel rapporto (come lo era per CONTACT/NULL prima della correzione
+precedente) — è `mode` (`toneAttivo ? 'tone' : truth.truthPhase !== 'idle' ? 'truth' : ...`)
+che NON controlla `aperta`: resta `'tone'`/`'truth'` PER SEMPRE dopo la chiusura, e con lui
+`modalitaCiclo`, che ad esempio disattiva i bottoni di connessione strumenti "già attivo
+durante un ciclo" — un ciclo fantasma, chiuso da nessuna parte tranne che nella testa
+dell'app, blocca la schermata SUCCESSIVA intera (la scelta degli strumenti per la prossima
+seduta), non solo il quadrante di quella appena chiusa.
+
+Aggiunto a `chiudi()`, sullo stesso schema di CONTACT/NULL/MIRROR appena sopra: se TONE era
+davvero in corso (`tonePhase==='raise'`) si registra "non concluso" (`tone.chiudiTone(false)`)
+prima di azzerarlo — `tonePhase==='done'` è già stato registrato dal bottone "raggiunto",
+richiuderlo lo avrebbe duplicato. TRUTH non ha un equivalente per un R/I abbandonato a metà —
+`truth.resetTruth()` (la stessa via di ANNULER) è quella giusta: nessun R/I fu davvero
+risolto, non c'è nulla di vero da registrare. Azzerato anche `procedimentoAttivo` (un
+Procedimento COMANDI aperto), stessa famiglia di bug.
+
+Verificato dal vivo (BASIC, FR, 1440×900): TONE armato → "DIS LA RÉSISTANCE" (resistenza mai
+data) → FERMER LA SÉANCE diretto, senza ANNULER prima → lo schermo torna ESATTAMENTE allo
+stato iniziale (OUVRIR UNE SÉANCE + il grande PLAY pulsante "Appuyez sur START"), nessuna
+traccia di TONE; il selettore strumenti in alto si espande e i tre bottoni MUSE/METER/SANS
+INSTRUMENTS sono di nuovo cliccabili — il sintomo esatto segnalato, confermato risolto.
+
+`tsc --noEmit` pulito, `vitest run` 652/652, `npm run lint` 325 warning (nessuno nuovo).
+`git status`: solo `src/serenity/Serenity.tsx` (SERENITY, nessun file condiviso).

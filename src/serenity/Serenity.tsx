@@ -2623,6 +2623,30 @@ export default function Serenity() {
        altrimenti il ciclo in corso non è ancora nell'elenco quando lo si legge. */
     cycles.closeOpenCycleAtEnd();
     if (mirror.mirrorArmedRef.current && mirror.mirrorCurRef.current) mirror.stopMirror();
+    /* ⚠️ BUG TROVATO DI NUOVO, segnalato dal vivo: « quando chiudi una seduta e lascio un ciclo
+       aperto, devi far ritornare lo schermo allo stato iniziale — ora resta TONO 40... e non
+       posso nemmeno cambiare gli strumenti ». La nota qui sopra aveva corretto CONTACT/NULL/
+       MIRROR ma NON TONE né TRUTH — restavano armati (`toneAttivo`/`truth.truthPhase`) anche a
+       `aperta` tornato falso. Non è solo un dato mancante nel PDF (come per CONTACT/NULL): è
+       `mode` (`toneAttivo ? 'tone' : truth.truthPhase !== 'idle' ? 'truth' : ...`) che NON
+       controlla `aperta` — resta `'tone'`/`'truth'` per sempre dopo la chiusura, e con lui
+       `modalitaCiclo`/`cicloAttivo`, che ad esempio disattivano i bottoni di connessione
+       strumenti «già attivo durante un ciclo» (v. la nota su "LE CONNESSIONI..." più giù) —
+       un ciclo fantasma, chiuso da nessuna parte tranne che nella testa dell'app, blocca la
+       schermata SUCCESSIVA intera, non solo il quadrante. Stesso trattamento di TONE/CONTACT/
+       NULL: se il ciclo era davvero in corso (`tonePhase==='raise'`) si registra "non concluso"
+       prima di chiudere — `tonePhase==='done'` è già stato registrato dal bottone "raggiunto",
+       richiuderlo lo duplicherebbe. TRUTH non ha un equivalente di `chiudiTone(false)`/
+       `closeOpenCycleAtEnd()` per un R/I abbandonato a metà — `resetTruth()` (usato anche da
+       ANNULER) è la via giusta: nessun R/I fu davvero risolto, non c'è nulla di vero da
+       registrare. */
+    if (toneAttivo) {
+      if (tone.tonePhase === 'raise') tone.chiudiTone(false);
+      tone.resetTone();
+      setToneAttivo(false); setTonoScelto(false);
+    }
+    if (truth.truthPhase !== 'idle') truth.resetTruth();
+    setProcedimentoAttivo(null);
     /* ── LA SEDUTA FINISCE DIRETTA IN HISTORY, MAI SU UNO SCHERMO DI RAPPORTO — segnalato:
        « vorrei che il Report post session non ci sia più in Serenity, solo il PDF in
        History ». Vedi `sessionReport.ts` per il perché non è un porting di
