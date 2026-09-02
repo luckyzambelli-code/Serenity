@@ -59,7 +59,6 @@ import { useToneCycle } from '../session/useToneCycle';
 import { useTruthCycle } from '../session/useTruthCycle';
 import { ToneDial } from '../components/ToneDial';
 import { ToneColumn } from '../components/ToneColumn';
-import { TONE_LEVELS, levelName } from '../engine/toneLevels';
 import {
   loadHistory as loadCanTests, saveHistory as saveCanTests, addTest as addCanTest,
   testedToday, type PcCanHistory,
@@ -1890,22 +1889,6 @@ export default function Serenity() {
   useEffect(() => {
     if (aperta && !senzaMisura) setPrimaVoltaLibero(false);
   }, [aperta, senzaMisura]);
-  /** ── L'ASSESSMENT SI ARMA E SI DISARMA CON IL CICLO — segnalato: « l'assessment sembra
-   *  sempre attivo, anche quando è chiuso... nel report abbiamo degli assessment lunghissimi
-   *  che in realtà non lo sono. DEVE ESSERE ATTIVATO al momento dell'armamento del ciclo, ed
-   *  alla fine poi disattivato ». Vero: `assessAttivo` era un interruttore SOLO manuale — se
-   *  restava acceso da una seduta precedente (o da una prova fatta molto prima), gli item
-   *  raccolti nel frattempo finivano nello stesso "assessment" di quello vero, allungandolo nel
-   *  rapporto. Ora si accende da sé quando `mode` esce da `'free'` (un ciclo si arma) e si
-   *  spegne da sé quando ci rientra (il ciclo finisce) — SOLO alle transizioni (`[mode]` come
-   *  unica dipendenza): mentre un ciclo resta armato, `mode` non cambia, quindi l'auditor può
-   *  ancora spegnerla/riaccenderla a mano in qualunque momento (segnalato insieme: « si deve
-   *  poter armare l'assessment quando l'auditor lo ritiene opportuno ») senza che questo
-   *  effetto la rimetta a posto sotto di lui. */
-  useEffect(() => {
-    setAssessAttivo(mode !== 'free');
-  }, [mode]);
-
   /** ── LE CAMERE, TOLTO IL LEGAME CON LA MODALITÀ CICLO — il giro scorso le rendeva piccole
    *  fuori da un ciclo e le spostava, grandi, nella striscia dell'intestazione durante un
    *  ciclo. Segnalato: « così non mi piacciono, perché si destabilizza l'auditor che deve
@@ -1951,18 +1934,31 @@ export default function Serenity() {
 
   const chargePhaseNow = useMetric(m => m.chargePhase);
 
-  /** ── SI DISATTIVA ANCHE PASSANDO ALLA STEP SUCCESSIVA — segnalato: « quando si arma un
-   *  ciclo, l'assessment si arma, ma passando alla step successiva deve disattivarsi, poiché
-   *  quello che si dice non è più un assessment ». L'effetto sopra (`[mode]`) la accende/
-   *  spegne solo alle DUE estremità del ciclo (armato/libero) — dentro lo stesso ciclo, `mode`
-   *  non cambia mai, quindi restava accesa per tutti i tempi successivi (MOCK-UP, AS-IS,
-   *  RAISE...) anche se quel che si dice lì non è più l'item da valutare. `faseCiclo`
-   *  distingue i tempi "si sta ancora dando l'item" (`*.item`/`*.say_item`) dagli altri —
-   *  appena si esce da quei due, se un ciclo è ancora armato, l'assessment si spegne da sé.
-   *  Resta comunque riaccendibile a mano in qualunque momento (nessuna guardia tolta): un
-   *  nuovo tempo la spegne di nuovo solo se e quando IL TEMPO STESSO cambia ancora, non
-   *  subito dopo un tocco manuale. */
+  /** ── L'ASSESSMENT SI ARMA E SI DISARMA CON IL CICLO — segnalato: « l'assessment sembra
+   *  sempre attivo, anche quando è chiuso... nel report abbiamo degli assessment lunghissimi
+   *  che in realtà non lo sono. DEVE ESSERE ATTIVATO al momento dell'armamento del ciclo, ed
+   *  alla fine poi disattivato ». Vero: `assessAttivo` era un interruttore SOLO manuale — se
+   *  restava acceso da una seduta precedente, gli item raccolti nel frattempo finivano nello
+   *  stesso "assessment" di quello vero, allungandolo nel rapporto.
+   *
+   *  ⚠️ BUG TROVATO (revisione TONE, 02/09/2026) — segnalato di nuovo, con forza: « non hai
+   *  risolto il problema dell'assessment che non si attiva quando armi TONE ». Vero SOLO alla
+   *  SECONDA resistenza in poi ("altra resistenza"): questo effetto era rimasto DUE effetti
+   *  separati — uno su `[mode]` che ACCENDEVA solo alle transizioni libero↔armato, uno su
+   *  `[faseCiclo, mode]` che SPEGNEVA quando si usciva dalla fase "dai l'item" — ma nessuno dei
+   *  due RIACCENDEVA quando si RIENTRAVA in una fase "dai l'item" restando nello STESSO ciclo
+   *  armato. "Altra resistenza" (v. `tone.resetTone()`+`tone.localizzaTone()`, nei bottoni del
+   *  ciclo) NON disarma TONE (`toneAttivo` resta vero, `mode` resta `'tone'` — non cambia),
+   *  quindi l'effetto su `[mode]` non rifaceva scattare nulla; e l'effetto su `[faseCiclo,
+   *  mode]` sapeva SOLO spegnere, mai riaccendere. Risultato: dopo la prima resistenza,
+   *  l'assessment restava spento per tutte quelle successive, anche tornando a "dì la
+   *  resistenza". Un solo effetto ora, che scrive lo stato ESATTO invece di spegnere soltanto:
+   *  fuori da un ciclo → spento; dentro un ciclo, nella fase "dai l'item" → acceso; dentro un
+   *  ciclo, in qualunque altra fase → spento. Resta comunque riaccendibile a mano in qualunque
+   *  momento: l'effetto rifà scattare solo quando `mode`/`faseCiclo` CAMBIANO, non a ogni
+   *  render — un tocco manuale a fase invariata non viene rimesso a posto sotto l'auditor. */
   useEffect(() => {
+    if (mode === 'free') { setAssessAttivo(false); return; }
     // ⚠️ BUG TROVATO — segnalato: « il faut activer l'assessment, car on doit trouver un
     // R&I ». `truth.locateRI()` accende l'assessment (`ensureAssessmentOn`), ma QUESTO
     // stesso effetto la spegneva nello stesso istante: le fasi di TRUTH si chiamano
@@ -1974,7 +1970,7 @@ export default function Serenity() {
     // il R/I, non solo al primo tempo.
     const inFaseItem = faseCiclo.endsWith('.item') || faseCiclo.endsWith('.say_item')
       || faseCiclo.endsWith('.ri') || faseCiclo.endsWith('.say_ri') || faseCiclo === 'truth.questioning';
-    if (mode !== 'free' && !inFaseItem) setAssessAttivo(false);
+    setAssessAttivo(inFaseItem);
   }, [faseCiclo, mode]);
 
   /**
@@ -6056,46 +6052,19 @@ export default function Serenity() {
                         'Mira la escala y elige a qué nivel corresponde esta resistencia.',
                         'Titta på skalan och välj vilken nivå detta motstånd motsvarar.')}
                   </span>
-                  <div style={{ width: 300, maxWidth: '100%', pointerEvents: 'none' }}>
-                    <ToneColumn
-                      tone={tone.toneAssessed}
-                      toneEeg={null}
-                      margin={0}
-                      hasMeter={false}
-                      lang={lang}
-                      charge={null}
-                      chargeFrom={null}
-                    />
-                  </div>
-                  <select value={tone.toneAssessed} autoFocus
-                    onChange={e => {
-                      const v = Number(e.target.value);
-                      tone.setToneAssessed(v); tone.correggiToneAtStart(v); setTonoScelto(true);
-                    }}
-                    style={{
-                      pointerEvents: 'auto', width: 320, maxWidth: '100%', borderRadius: 10,
-                      border: '2px solid var(--s-reserve)', background: 'var(--s-disc)', outline: 'none',
-                      cursor: 'pointer', fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)',
-                      fontWeight: 700, color: 'var(--s-ink)', padding: '10px 14px', textAlign: 'center',
-                    }}>
-                    <option value={tone.toneAssessed} disabled hidden>
-                      {LC('— scegli il tono —', '— choisis le ton —', '— choose the tone —', '— elige el tono —', '— välj tonen —')}
-                    </option>
-                    {TONE_LEVELS.map(l => (
-                      <option key={l.tone} value={l.tone}>
-                        {l.tone > 0 ? `+${l.tone}` : `${l.tone}`} · {levelName(l.name, lang)}
-                      </option>
-                    ))}
-                  </select>
-                  {/* ⚠️ AGGIUNTO — segnalato: « la scala deve essere possibile scroll, poiché
-                      l'auditor potrebbe aver bisogno di dare i valori ed i nomi dei diversi
-                      toni al PC ». Il `<select>` sopra lascia scegliere fra i 62 livelli, ma è
-                      un menu che si chiude appena scelto — non un riferimento da poter
-                      scorrere e leggere ad alta voce mentre si parla al preclear. Stessa lista
-                      (`TONE_LEVELS`), stessi nomi tradotti, ma persistente e scorrevole — v.
-                      `ScalaTonoCompleta.tsx`. */}
-                  <div style={{ width: 320, maxWidth: '100%', pointerEvents: 'auto' }}>
-                    <ScalaTonoCompleta tone={tone.toneAssessed} lang={lang} />
+                  {/* ⚠️ CORRETTO — segnalato con forza: « non va bene la scala del tono in
+                      doppio... hai già il selettore dove fai vedere la scala, perché devi
+                      farne un secondo... NON VOGLIO UNA SECONDA SCALA, è perturbante ». Qui
+                      c'erano TRE rappresentazioni della stessa cosa insieme: `ToneColumn`
+                      (13 nomi, sola lettura), il `<select>` nativo (62 livelli, ma un menu che
+                      si chiude appena scelto) e `ScalaTonoCompleta` appena aggiunta (62 nomi,
+                      scorrevole). Una SOLA scala ora: `ScalaTonoCompleta` con `onScegli` —
+                      stessa lista, scorrevole COME chiesto, e le righe sono bottoni: toccarne
+                      una sceglie quel tono, sostituendo lei stessa il `<select>` invece di
+                      affiancarlo. */}
+                  <div style={{ width: 340, maxWidth: '100%' }}>
+                    <ScalaTonoCompleta tone={tone.toneAssessed} lang={lang}
+                      onScegli={v => { tone.setToneAssessed(v); tone.correggiToneAtStart(v); setTonoScelto(true); }} />
                   </div>
                 </>
               ) : (
@@ -6146,12 +6115,18 @@ export default function Serenity() {
                   <ItemDaScrivere mode={mode} phase={faseCiclo} lang={lang} item={item} setItem={setItemManuale}
                     itemPlaceholder={t('ser_item_placeholder') as string} onDichiaraDetto={dichiaraItemDetto} grande />
                   {/* ⚠️ « ToneDial » (l'ARCO) resta escluso, sempre — non ha senso senza un ago
-                      vero. `ToneColumn` qui è la scala GIÀ scelta (v. `deveScegliereTono` più
+                      vero. La scala qui è quella GIÀ scelta (v. `deveScegliereTono` più
                       sopra: si arriva qui SOLO dopo aver scelto, `tone.raise` con `tonoScelto`
                       vero, o `tone.done`) — resta come riferimento visivo mentre si dà
-                      "portalo a tono 40", non più un controllo su cui agire. */}
+                      "portalo a tono 40", non più un controllo su cui agire (niente
+                      `onScegli`: qui `ScalaTonoCompleta` è sola lettura).
+                      ⚠️ UNA SOLA SCALA, NON DUE — segnalato con forza (v. la stessa nota,
+                      più su, sulla schermata di scelta): questo punto montava `ToneColumn` E
+                      `ScalaTonoCompleta` insieme. Tolta `ToneColumn` — `ScalaTonoCompleta` da
+                      sola resta l'UNICA scala, qui come nella schermata di scelta appena
+                      sopra: stessa coerenza, un solo posto dove guardare in tutto il ciclo. */}
                   {toneAttivo && (faseCiclo === 'tone.raise' || faseCiclo === 'tone.done') && (
-                    <>
+                    <div style={{ width: 340, maxWidth: '100%' }}>
                       {/* ⚠️ AGGIUNTO — segnalato: « quando si ottiene TONO 40, muovi la scala
                           per indicare TONO 40 ». Senza strumenti `tone.toneOra` non si muove
                           MAI da solo (nessuna misura lo fa salire) — resta fermo al valore
@@ -6160,21 +6135,8 @@ export default function Serenity() {
                           traguardo ma non tocca `toneAtStart`). Vero, ma la scala che
                           l'auditor guarda deve poter DIRE che ci si è arrivati: a `tone.done`
                           si mostra +40 a schermo, non il valore di partenza dimenticato lì. */}
-                      <div style={{ width: 280, maxWidth: '100%', pointerEvents: 'none' }}>
-                        <ToneColumn
-                          tone={tone.tonePhase === 'done' ? 40 : (tone.toneOra ?? 0)}
-                          toneEeg={tone.toneOraEeg}
-                          margin={tone.margineTono}
-                          hasMeter={tone.toneMisurato}
-                          lang={lang}
-                          charge={null}
-                          chargeFrom={tone.toneAtStart}
-                        />
-                      </div>
-                      <div style={{ width: 320, maxWidth: '100%', pointerEvents: 'auto' }}>
-                        <ScalaTonoCompleta tone={tone.tonePhase === 'done' ? 40 : (tone.toneOra ?? 0)} lang={lang} />
-                      </div>
-                    </>
+                      <ScalaTonoCompleta tone={tone.tonePhase === 'done' ? 40 : (tone.toneOra ?? 0)} lang={lang} />
+                    </div>
                   )}
                 </>
               )}

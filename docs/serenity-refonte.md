@@ -8097,3 +8097,47 @@ File toccati — SOLO SERENITY (nessun file condiviso in questo giro):
 [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
 [`src/serenity/ScalaTonoCompleta.tsx`](../src/serenity/ScalaTonoCompleta.tsx) (nuovo),
 [`src/serenity/sessionReport.ts`](../src/serenity/sessionReport.ts).
+
+## Giro — 2026-09-02 (20) — TONE: due bug veri (scala doppia, assessment che non si riattiva)
+
+**« TUTTO QUESTO è FATTO? »** — segnalato subito dopo, con forza, che il giro precedente non
+andava bene su due punti. Verificato uno per uno: il primo era un vero difetto (introdotto
+proprio nel giro precedente), il secondo un bug reale mai risolto perché il tentativo
+precedente lo aveva solo "verificato come da design" invece di trovarne la causa vera.
+
+**1 — « non va bene la scala del tono in doppio... hai già il selettore dove fai vedere la
+scala, perché devi farne un secondo... NON VOGLIO UNA SECONDA SCALA, è perturbante ».**
+Fondato: il giro precedente aveva aggiunto `ScalaTonoCompleta` ACCANTO a `ToneColumn` e al
+`<select>` nativo — nella schermata di scelta, TRE rappresentazioni della stessa scala
+insieme. Corretto: `ScalaTonoCompleta` ora riceve un prop `onScegli` opzionale — con lui, le
+righe diventano bottoni veri (cliccarne una sceglie quel tono) e SOSTITUISCE sia `ToneColumn`
+sia il `<select>`, invece di affiancarli; senza (nel riferimento durante "portalo a tono 40"),
+resta sola lettura ma SOSTITUISCE comunque `ToneColumn`, mai accanto a lei. Una sola scala, in
+ciascuno dei due punti. Rimosso l'import ormai inutile di `TONE_LEVELS`/`levelName` da
+`Serenity.tsx` (restava solo dentro `ScalaTonoCompleta.tsx`).
+
+**2 — « non hai risolto il problema dell'assessment che non si attiva quando armi TONE ».**
+Aveva ragione, e la mia verifica del giro precedente era incompleta: avevo controllato SOLO il
+primo arm (funzionava) senza mai testare una SECONDA resistenza nello stesso ciclo TONE
+("altra resistenza"). Causa vera, trovata leggendo `useEffect` per `useEffect`: l'assessment
+viveva in DUE effetti separati — uno su `[mode]` che ACCENDEVA solo alle transizioni
+libero↔armato, uno su `[faseCiclo, mode]` che SAPEVA SOLO SPEGNERE quando si usciva dalla fase
+"dai l'item". "Altra resistenza" non disarma TONE (`mode` resta `'tone'`, non cambia) — quindi
+il primo effetto non rifaceva scattare nulla, e il secondo non aveva alcun ramo per
+RIACCENDERE quando si rientrava in una fase "dai l'item" restando nello stesso ciclo. Risultato
+reale: dopo la prima resistenza, l'assessment restava spento per tutte quelle successive.
+Uniti i due effetti in uno solo, simmetrico: fuori da un ciclo → spento; dentro un ciclo, in
+fase "dai l'item" → acceso; in qualunque altra fase → spento — scritto ESPLICITAMENTE
+(`setAssessAttivo(inFaseItem)`), non più "spegni soltanto".
+
+Verificato dal vivo, passo per passo, con l'intero ciclo: TONE armato (assessment ON) → item
+"peur" dato → tono scelto CLICCANDO una riga della scala unica (nessun `<select>` residuo) →
+"tono quaranta raggiunto" (assessment OFF, per design, fase non più "dai l'item") → "altra
+resistenza" → **assessment di nuovo ON** ("à l'écoute…", non più "capture désactivée") — il
+bug è confermato risolto, non solo "verificato come da design" come nel giro precedente.
+
+`tsc --noEmit` pulito, `npm run lint` invariato (325 warning), `npx vitest run` 652/652 verdi.
+
+File toccati — SOLO SERENITY:
+[`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
+[`src/serenity/ScalaTonoCompleta.tsx`](../src/serenity/ScalaTonoCompleta.tsx).

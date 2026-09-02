@@ -5,29 +5,38 @@ import { pick5 } from '../i18n5';
 /**
  * ScalaTonoCompleta — LA SCALA INTERA, SCORREVOLE — SOLO SERENITY, SOLO SENZA STRUMENTI.
  *
- * ── PERCHÉ ESISTE, ACCANTO A `ToneColumn` (già condivisa con EQUILIBRIUM) ───────────────────
+ * ── PERCHÉ ESISTE, AL POSTO DI `ToneColumn` (non accanto — v. sotto) ────────────────────────
  * Segnalato: « la scala deve essere possibile scroll, poiché l'auditor potrebbe aver bisogno
- * di dare i valori ed i nomi dei diversi toni al PC ». `ToneColumn` (v. il file, condiviso)
- * disegna apposta solo TREDICI nomi (`TONE_LABELS`) su un `<svg>` che si RIDIMENSIONA per
- * stare nello spazio dato — utile come lancetta/posizione, ma senza scroll e senza gli altri
- * quarantanove nomi della scala di Ron. Qui serve l'opposto: l'elenco INTERO (`TONE_LEVELS`,
- * gli stessi 62 già usati dal `<select>` di scelta del tono), leggibile riga per riga, che
- * scorre — l'auditor deve poter dire al preclear « guarda, questo si chiama così » per
- * QUALUNQUE livello, non solo i tredici scritti sul disegno.
+ * di dare i valori ed i nomi dei diversi toni al PC ». `ToneColumn` (condivisa con
+ * EQUILIBRIUM) disegna apposta solo TREDICI nomi (`TONE_LABELS`) su un `<svg>` che si
+ * RIDIMENSIONA per stare nello spazio dato — utile come lancetta/posizione, ma senza scroll e
+ * senza gli altri quarantanove nomi della scala di Ron. Qui serve l'opposto: l'elenco INTERO
+ * (`TONE_LEVELS`, gli stessi 62 già usati dal `<select>` di scelta del tono), leggibile riga
+ * per riga, che scorre.
  *
- * Estratta a sé invece di infilata dentro `ToneColumn` (che resta INVARIATA, condivisa, con
- * tutte le sue proporzioni già tarate su schermate reali) — un elenco che scorre e un disegno
- * a scala adattata sono due mestieri diversi, non due varianti dello stesso componente.
+ * ⚠️ UNA SOLA SCALA, NON DUE — segnalato con forza: « non va bene la scala del tono in
+ * doppio... hai già il selettore dove fai vedere la scala, perché devi farne un secondo... NON
+ * VOGLIO UNA SECONDA SCALA, è perturbante ». Il primo giro montava QUESTA lista ACCANTO a
+ * `ToneColumn` e al `<select>` nativo — tre rappresentazioni della stessa cosa, a schermo
+ * insieme. Corretto: dove serve la scelta (schermata "A CHE TONO SI TROVA?"), questo
+ * componente SOSTITUISCE sia `ToneColumn` sia il `<select>` — prop `onScegli`, righe
+ * cliccabili, `<button>` veri — non li affianca. Dove serve solo il riferimento (durante
+ * "portalo a tono 40"), sostituisce `ToneColumn` da sola, senza `onScegli`. In nessun punto
+ * compaiono insieme due scale.
  *
- * Nessuna logica: riceve `tone` (dove si è ADESSO, per evidenziare la riga) e basta.
+ * Nessuna logica di ciclo qui dentro: riceve `tone` (dove si è ADESSO, per evidenziare la
+ * riga) e, se dato, `onScegli` (scrive la scelta) — il motore resta in `useToneCycle.ts`.
  */
-export function ScalaTonoCompleta({ tone, lang }: {
+export function ScalaTonoCompleta({ tone, lang, onScegli }: {
   /** Il tono ATTUALE, −40…+40: la riga più vicina si evidenzia. */
   tone: number;
   lang: string;
+  /** Se presente, le righe diventano bottoni: cliccarne una sceglie quel tono — sostituisce
+   *  il `<select>` nativo, non lo affianca. Assente → solo riferimento, righe non cliccabili
+   *  (durante "portalo a tono 40": il tono è già scelto, non ha senso poterlo ritoccare qui). */
+  onScegli?: (v: number) => void;
 }) {
-  const righeRef = useRef<Record<number, HTMLDivElement | null>>({});
-  const contenitoreRef = useRef<HTMLDivElement | null>(null);
+  const righeRef = useRef<Record<number, HTMLDivElement | HTMLButtonElement | null>>({});
 
   // Il livello più vicino al tono corrente — stessa idea di `levelAt` (toneLevels.ts), qui
   // rifatta in loco perché serve l'INDICE nell'elenco (per lo scorrimento), non solo il nome.
@@ -46,21 +55,25 @@ export function ScalaTonoCompleta({ tone, lang }: {
   }, [livelloVicino]);
 
   return (
-    <div ref={contenitoreRef} style={{
-      width: '100%', maxHeight: 220, overflowY: 'auto',
+    <div style={{
+      width: '100%', maxHeight: 300, overflowY: 'auto',
       borderRadius: 10, border: '1px solid var(--s-ink-ghost)',
-      background: 'var(--s-disc)', padding: '4px 0',
+      background: 'var(--s-disc)', padding: '4px 0', pointerEvents: 'auto',
     }}>
       {TONE_LEVELS.map(l => {
         const vicino = l.tone === livelloVicino;
+        const Tag = onScegli ? 'button' : 'div';
         return (
-          <div key={l.tone}
-            ref={el => { righeRef.current[l.tone] = el; }}
+          <Tag key={l.tone}
+            {...(onScegli ? { type: 'button', onClick: () => onScegli(l.tone) } : {})}
+            ref={(el: HTMLDivElement | HTMLButtonElement | null) => { righeRef.current[l.tone] = el; }}
             style={{
-              display: 'flex', gap: 10, alignItems: 'baseline',
-              padding: '4px 12px',
+              display: 'flex', gap: 10, alignItems: 'baseline', width: '100%',
+              padding: '5px 12px', border: 'none',
+              cursor: onScegli ? 'pointer' : 'default',
               background: vicino ? 'var(--s-tone-hue)' : 'transparent',
               opacity: vicino ? 1 : 0.85,
+              fontFamily: 'inherit', textAlign: 'left',
             }}>
             <span style={{
               width: 48, flexShrink: 0, textAlign: 'right',
@@ -76,7 +89,7 @@ export function ScalaTonoCompleta({ tone, lang }: {
             }}>
               {levelName(l.name, lang)}
             </span>
-          </div>
+          </Tag>
         );
       })}
       <div style={{
@@ -85,9 +98,13 @@ export function ScalaTonoCompleta({ tone, lang }: {
         color: 'var(--s-ink-faint)', background: 'var(--s-disc)',
         borderTop: '1px solid var(--s-ink-ghost)',
       }}>
-        {pick5(lang, 'scorri per vedere tutti i livelli', 'défile pour voir tous les niveaux',
-          'scroll to see every level', 'desplázate para ver todos los niveles',
-          'skrolla för att se alla nivåer')}
+        {onScegli
+          ? pick5(lang, 'scorri e tocca il livello giusto', 'défile et touche le bon niveau',
+              'scroll and tap the right level', 'desplázate y toca el nivel correcto',
+              'skrolla och tryck på rätt nivå')
+          : pick5(lang, 'scorri per vedere tutti i livelli', 'défile pour voir tous les niveaux',
+              'scroll to see every level', 'desplázate para ver todos los niveles',
+              'skrolla för att se alla nivåer')}
       </div>
     </div>
   );
