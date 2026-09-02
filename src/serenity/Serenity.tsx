@@ -44,6 +44,7 @@ import { ClearDial } from '../components/ClearDial';
 import { CycleStatusBar } from '../components/CycleStatusBar';
 import { PistaCiclo } from './PistaCiclo';
 import { ItemDaScrivere } from './ItemDaScrivere';
+import { ScalaTonoCompleta } from './ScalaTonoCompleta';
 import { PistaProcedimento } from './PistaProcedimento';
 import { VistaSenzaAgo } from './VistaSenzaAgo';
 import { listaProcedimenti, apriCartellaProcedimenti, type Procedimento } from '../lib/procedimenti';
@@ -3058,6 +3059,17 @@ export default function Serenity() {
               // legge già il ref giusto, senza aspettare l'effetto.
               itemConfirmedRef.current = false;
               tone.resetTone(); setTonoScelto(false); tone.localizzaTone();
+              // ⚠️ AGGIUNTO — segnalato: « quando si fa altra resistenza, devi ripristinare
+              // la scala del tono al valore neutro di inizio ciclo ». Senza `localizzaTone()`
+              // (senza strumenti) fissa `toneAtStart` sul vecchio `toneAssessed` — ancora
+              // quello dell'ultima resistenza chiusa (0/`toneAssessed` non viene mai svuotato
+              // da `resetTone()`, solo l'item lo è) — quindi la scala ripartiva già segnata
+              // sull'ultima scelta invece che dal neutro. `correggiToneAtStart` scrive
+              // `toneAtStart` DIRETTAMENTE (e azzera lo stesso ratchet che `localizzaTone()`
+              // ha appena azzerato — nessun danno, stessa idempotenza già usata altrove);
+              // `setToneAssessed(0)` allinea anche il valore che la colonna in
+              // `deveScegliereTono` legge PRIMA che l'auditor scelga di nuovo.
+              tone.setToneAssessed(0); tone.correggiToneAtStart(0);
             }} style={pillBtn('var(--s-still)')}>
               {LC('altra resistenza', 'autre résistance', 'another resistance', 'otra resistencia', 'annat motstånd')}
             </button>
@@ -6075,6 +6087,16 @@ export default function Serenity() {
                       </option>
                     ))}
                   </select>
+                  {/* ⚠️ AGGIUNTO — segnalato: « la scala deve essere possibile scroll, poiché
+                      l'auditor potrebbe aver bisogno di dare i valori ed i nomi dei diversi
+                      toni al PC ». Il `<select>` sopra lascia scegliere fra i 62 livelli, ma è
+                      un menu che si chiude appena scelto — non un riferimento da poter
+                      scorrere e leggere ad alta voce mentre si parla al preclear. Stessa lista
+                      (`TONE_LEVELS`), stessi nomi tradotti, ma persistente e scorrevole — v.
+                      `ScalaTonoCompleta.tsx`. */}
+                  <div style={{ width: 320, maxWidth: '100%', pointerEvents: 'auto' }}>
+                    <ScalaTonoCompleta tone={tone.toneAssessed} lang={lang} />
+                  </div>
                 </>
               ) : (
                 <>
@@ -6129,17 +6151,30 @@ export default function Serenity() {
                       vero, o `tone.done`) — resta come riferimento visivo mentre si dà
                       "portalo a tono 40", non più un controllo su cui agire. */}
                   {toneAttivo && (faseCiclo === 'tone.raise' || faseCiclo === 'tone.done') && (
-                    <div style={{ width: 280, maxWidth: '100%', pointerEvents: 'none' }}>
-                      <ToneColumn
-                        tone={tone.toneOra ?? 0}
-                        toneEeg={tone.toneOraEeg}
-                        margin={tone.margineTono}
-                        hasMeter={tone.toneMisurato}
-                        lang={lang}
-                        charge={null}
-                        chargeFrom={tone.toneAtStart}
-                      />
-                    </div>
+                    <>
+                      {/* ⚠️ AGGIUNTO — segnalato: « quando si ottiene TONO 40, muovi la scala
+                          per indicare TONO 40 ». Senza strumenti `tone.toneOra` non si muove
+                          MAI da solo (nessuna misura lo fa salire) — resta fermo al valore
+                          scelto in `deveScegliereTono` per tutta la salita, e ci resta ANCHE
+                          dopo "tono quaranta raggiunto" (`tone.chiudiTone(true)`, che logga il
+                          traguardo ma non tocca `toneAtStart`). Vero, ma la scala che
+                          l'auditor guarda deve poter DIRE che ci si è arrivati: a `tone.done`
+                          si mostra +40 a schermo, non il valore di partenza dimenticato lì. */}
+                      <div style={{ width: 280, maxWidth: '100%', pointerEvents: 'none' }}>
+                        <ToneColumn
+                          tone={tone.tonePhase === 'done' ? 40 : (tone.toneOra ?? 0)}
+                          toneEeg={tone.toneOraEeg}
+                          margin={tone.margineTono}
+                          hasMeter={tone.toneMisurato}
+                          lang={lang}
+                          charge={null}
+                          chargeFrom={tone.toneAtStart}
+                        />
+                      </div>
+                      <div style={{ width: 320, maxWidth: '100%', pointerEvents: 'auto' }}>
+                        <ScalaTonoCompleta tone={tone.tonePhase === 'done' ? 40 : (tone.toneOra ?? 0)} lang={lang} />
+                      </div>
+                    </>
                   )}
                 </>
               )}

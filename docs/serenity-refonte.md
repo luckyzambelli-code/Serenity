@@ -8043,3 +8043,57 @@ con tastiera reale e dichiarata, schermata di scelta del tono di nuovo corretta.
 File toccati — SOLO SERENITY (nessun file condiviso in questo giro):
 [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
 [`src/serenity/ItemDaScrivere.tsx`](../src/serenity/ItemDaScrivere.tsx).
+
+## Giro — 2026-09-02 (19) — TONE: +40 alla fine, reset neutro, scala scorrevole; Assessment verificato; PDF compresso
+
+**1 — « quando si ottiene TONO 40, muovi la scala per indicare TONO 40, e quando si fa altra
+resistenza, devi ripristinare la scala del tono al valore neutro di inizio ciclo ».**
+Senza strumenti `tone.toneOra` non si muove mai da solo — resta fermo al valore scelto per
+tutta la salita, anche dopo "tono quaranta raggiunto" (`chiudiTone(true)` logga il traguardo,
+non tocca `toneAtStart`). Corretto: nel riferimento visivo (`ToneColumn`, terzo punto di
+montaggio, solo senza strumenti) il valore mostrato è ora `tone.tonePhase === 'done' ? 40 :
+tone.toneOra` — a `tone.done` la scala salta a +40, non resta al valore di partenza
+dimenticato lì. E "altra resistenza": oltre alle due correzioni del giro precedente
+(`localizzaTone()`, `itemConfirmedRef`), aggiunto `tone.setToneAssessed(0);
+tone.correggiToneAtStart(0);` — la scala riparte dal neutro (0 · Mort du corps), non dall'ultima
+scelta della resistenza appena chiusa.
+
+**2 — « la scala deve essere possibile scroll, poiché l'auditor potrebbe aver bisogno di dare
+i valori ed i nomi dei diversi toni al PC ».** `ToneColumn` (condivisa con EQUILIBRIUM, non
+toccata) disegna apposta solo i TREDICI nomi di `TONE_LABELS`, su un `<svg>` che si RIDIMENSIONA
+per stare nello spazio dato — niente scroll, niente altri quarantanove nomi. Nuovo componente
+SOLO SERENITY, [`ScalaTonoCompleta.tsx`](../src/serenity/ScalaTonoCompleta.tsx): la stessa
+lista di 62 livelli già usata dal `<select>` (`TONE_LEVELS`), in un riquadro scorrevole
+(`overflowY:'auto'`, tetto 220px) con la riga più vicina al tono attuale evidenziata e
+raggiunta da sola (`scrollIntoView`, `block:'nearest'`) quando il tono cambia. Montata in DUE
+punti, entrambi senza strumenti: sotto il `<select>` in "A CHE TONO SI TROVA?", e accanto alla
+colonna di riferimento durante "portalo a tono 40"/"raggiunto".
+
+**Verificato (segnalato: « verifica che quando si arma un ciclo, l'assessment sia attivato »)
+— confermato funzionante, non un bug.** Dal vivo, per CONTACT e per TONE: l'assessment si
+accende correttamente nello stesso istante in cui il ciclo si arma (`useEffect` su `[mode]`,
+`setAssessAttivo(mode !== 'free')`). Si spegne di nuovo, da sé, quando si passa dalla fase
+"dai l'item" alla fase di lavoro vera (`tone.raise`, `contact.mock_up`…) — comportamento
+DELIBERATO di un giro precedente (« deve essere attivato al momento dell'armamento... e alla
+fine poi disattivato »), non toccato: cambiarlo avrebbe contraddetto una decisione esplicita
+già presa, senza che fosse quello il segnalato.
+
+**3 — « le PDF dans History est très lent à défiler ».** `sessionReport.ts` (il generatore PDF
+di SERENITY, non `PostSessionReport.tsx` di EQUILIBRIUM) non incolla immagini — verificato,
+zero `addImage` nel file — ma scrive OGNI riga del giornale della seduta: una seduta lunga
+vuol dire molte pagine, tutte di testo. `new jsPDF(...)` non aveva `compress: true`: jsPDF
+scriveva gli stream di ogni pagina non compressi. Aggiunta l'opzione — nessun cambiamento
+visivo, stesso identico PDF, tipicamente dimezzato o più nel peso per un documento fatto quasi
+solo di testo ripetuto su tante pagine. Non verificabile la VELOCITÀ in questa sessione (le
+sedute di prova sono troppo corte per generare un PDF davvero pesante) — verificato solo che
+la generazione resta corretta (PDF creato, "1 PDF" in Storico, si apre senza errori).
+
+`tsc --noEmit` pulito, `npm run lint` invariato (325 warning), `npx vitest run` 652/652 verdi.
+Verificato dal vivo (digitazione/selezione reali): TONO 40 raggiunto → scala a +40 evidenziata
+in entrambe le viste; "altra resistenza" → scala tornata a 0 · Mort du corps, evidenziata
+correttamente nella lista scorrevole; scroll automatico confermato a ogni cambio di tono.
+
+File toccati — SOLO SERENITY (nessun file condiviso in questo giro):
+[`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
+[`src/serenity/ScalaTonoCompleta.tsx`](../src/serenity/ScalaTonoCompleta.tsx) (nuovo),
+[`src/serenity/sessionReport.ts`](../src/serenity/sessionReport.ts).

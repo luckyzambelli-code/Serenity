@@ -190,7 +190,15 @@ export async function generaPdf(
   t: (key: string) => string,
   LC: (it: string, fr: string, en: string, es: string, sv: string) => string,
 ): Promise<string> {
-  const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  // ⚠️ `compress: true` — segnalato: « le PDF dans History est très lent à défiler ». Questo
+  // file non incolla immagini (nessun `addImage` — solo testo/vettoriale, v. la nota sopra), ma
+  // il journal (poco più giù, `for (const l of input.journal)`) scrive OGNI riga della seduta:
+  // una seduta lunga vuol dire molte pagine, tutte di testo. Senza `compress`, jsPDF scrive gli
+  // stream di ogni pagina non compressi — per un documento fatto quasi solo di testo ripetuto
+  // su tante pagine, l'opzione nativa (deflate) tipicamente dimezza o più il peso del file, e un
+  // file più leggero è un file che il lettore PDF nativo apre e scorre più in fretta. Nessun
+  // cambiamento visivo: stesso identico PDF, solo compresso.
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
   let y = 12;
