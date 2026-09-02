@@ -6140,9 +6140,23 @@ export default function Serenity() {
                   )}
                 </>
               )}
+              {/* ⚠️ AGGANCIATA IN FONDO — segnalato ancora, dopo aver già ridotto la scala:
+                  « ora la scala nasconde i bottoni del ciclo TONE ». Il genitore (poco più su,
+                  `overflowY:'auto'`) vive in uno spazio ALTO FISSO (~400px, lo spazio vero fra
+                  header e riga dei cicli — v. la sua nota, non cambia con la finestra): nella
+                  schermata "PORTALO A TONO 40" (titolo + citazione + comando + item + scala,
+                  PRIMA dei bottoni) quel totale supera i 400px anche a finestra grande, perché
+                  la finestra non c'entra — lo spazio disponibile resta lo stesso. Restringere
+                  ancora la scala avrebbe iniziato a togliere l'utilità stessa dello scorrimento
+                  (leggerne il nome al PC, il motivo per cui esiste). Invece: `position:sticky,
+                  bottom:0` — i bottoni restano SEMPRE nella parte bassa visibile del riquadro,
+                  qualunque cosa ci sia sopra e quanto sia alta; se il testo/scala non ci stanno
+                  scorre SOLO quella parte, dietro di loro, mai loro stessi. */}
               <div style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
                 pointerEvents: 'auto',
+                position: 'sticky', bottom: 0, width: '100%',
+                background: 'var(--s-disc)', borderRadius: 12, padding: '10px 0 4px',
               }}>
                 {bottoniCiclo}
               </div>

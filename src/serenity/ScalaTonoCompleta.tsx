@@ -56,7 +56,24 @@ export function ScalaTonoCompleta({ tone, lang, onScegli }: {
 
   return (
     <div style={{
-      width: '100%', maxHeight: 300, overflowY: 'auto',
+      // ⚠️ CORRETTO — segnalato: « ora la scala nasconde i bottoni del ciclo TONE ». Questa
+      // lista vive in un `<div>` a colonna NORMALE (non assoluto) insieme al titolo,
+      // all'istruzione, all'item e — SUBITO SOTTO — ai bottoni del ciclo
+      // ("portalo a tono 40"/"raggiunto"/"altra resistenza"): tutti fratelli nello stesso
+      // flusso. `maxHeight:300` fisso (diventato l'UNICA scala, prima condivideva lo spazio
+      // con `ToneColumn`) spingeva quel totale oltre l'altezza vera del contenitore che lo
+      // ospita (`maxHeight:'100%', overflowY:'auto'` — v. `Serenity.tsx`), e sullo schermo
+      // reale dell'utente i bottoni finivano sotto il bordo, senza scrollbar visibile a
+      // dirlo — la stessa identica famiglia di bug già descritta altrove in questo file per
+      // `PistaCiclo` (« sembrava sparita »).
+      //
+      // ⚠️ RIDOTTA ANCORA — verificato dal vivo dopo il primo taglio (190px): nella schermata
+      // "PORTALO A TONO 40" (più affollata di quella di scelta: titolo + citazione + item +
+      // scala, prima dei bottoni) i bottoni restavano appena sotto il bordo anche a
+      // finestra realistica (1280×800). `min(130px, 16vh)`: la lista mostra comunque 4-5
+      // righe subito, e resta scorrevole per le altre 57 — non è la sua taglia a dover
+      // garantire la lettura di ogni nome, è lo scorrimento (il motivo per cui esiste).
+      width: '100%', maxHeight: 'min(130px, 16vh)', overflowY: 'auto',
       borderRadius: 10, border: '1px solid var(--s-ink-ghost)',
       background: 'var(--s-disc)', padding: '4px 0', pointerEvents: 'auto',
     }}>

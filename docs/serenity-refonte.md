@@ -8141,3 +8141,35 @@ bug è confermato risolto, non solo "verificato come da design" come nel giro pr
 File toccati — SOLO SERENITY:
 [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
 [`src/serenity/ScalaTonoCompleta.tsx`](../src/serenity/ScalaTonoCompleta.tsx).
+
+## Giro — 2026-09-02 (21) — TONE: la scala nascondeva i bottoni del ciclo
+
+**« Ora la scala nasconde i bottoni del ciclo TONE »** — segnalato subito dopo il giro
+precedente (che aveva reso `ScalaTonoCompleta` l'unica scala, al posto di tre rappresentazioni
+insieme). Diventata l'UNICA scala, la sua altezza fissa (300px) andava a sommarsi a titolo,
+istruzione/citazione, item e bottoni nello STESSO contenitore a colonna — e quel contenitore
+vive in uno spazio ALTO FISSO (~400px, lo spazio vero fra header e riga dei cicli, non l'intera
+finestra: verificato che allargare la finestra a 1280×800 non cambiava nulla). Due correzioni,
+in sequenza, verificate dal vivo dopo ciascuna:
+
+1. Altezza della scala ridotta (`min(190px, 24vh)`, poi `min(130px, 16vh)` dopo aver visto che
+   la schermata "PORTALO A TONO 40" — più affollata di quella di scelta: titolo + citazione +
+   comando + item, PRIMA della scala — restava comunque troppo alta anche dopo il primo taglio).
+2. Anche dopo il taglio, la schermata "PORTALO A TONO 40" a 1280×800 restava sopra i 400px
+   disponibili — non per la finestra (fissa), ma per il TOTALE del contenuto fisso sopra la
+   scala. Restringere ancora la scala avrebbe tolto lo scopo per cui esiste (leggere il nome di
+   un livello al PC, che richiede vedersi abbastanza). Corretto alla radice: i bottoni del
+   ciclo (`{bottoniCiclo}`, `Serenity.tsx`) ora hanno `position:sticky, bottom:0` col fondo del
+   riquadro — restano SEMPRE nella parte bassa visibile, qualunque cosa ci sia sopra e quanto
+   sia alta; se il contenuto sopra non ci sta, scorre SOLO lui, dietro ai bottoni, mai loro.
+
+Verificato dal vivo, a 1280×800: TONE armato → item dato → cliccata una riga della scala unica
+→ schermata "PORTALO A TONO 40" — titolo, citazione, item, la scala (ora scorrevole al suo
+interno) E i tre bottoni ("mène-le au ton 40"/"ton quarante atteint"/"ANNULER") tutti visibili
+insieme, senza dover scorrere la pagina per trovarli.
+
+`tsc --noEmit` pulito, `npm run lint` invariato (325 warning), `npx vitest run` 652/652 verdi.
+
+File toccati — SOLO SERENITY:
+[`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
+[`src/serenity/ScalaTonoCompleta.tsx`](../src/serenity/ScalaTonoCompleta.tsx).
