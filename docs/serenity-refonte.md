@@ -8173,3 +8173,35 @@ insieme, senza dover scorrere la pagina per trovarli.
 File toccati — SOLO SERENITY:
 [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
 [`src/serenity/ScalaTonoCompleta.tsx`](../src/serenity/ScalaTonoCompleta.tsx).
+
+## Giro — 2026-09-02 (22) — scala: via la scritta doppia, ascensore vero, testo nero leggibile
+
+Tre correzioni distinte su `ScalaTonoCompleta.tsx`, tutte segnalate nello stesso messaggio:
+
+**« togli SCORRI PER VEDERE... perché si sovrappone con la scelta della scala fatta ».**
+La scritta era essa stessa `position:sticky, bottom:0` — un SECONDO elemento agganciato in
+fondo, proprio sotto `bottoniCiclo` (reso sticky nel giro precedente, stesso motivo). Due
+"sticky bottom" annidati finiscono per accavallarsi. Rimossa — resta un `title` sul
+contenitore (letto al passaggio del mouse) per chi ha bisogno di saperlo esplicitamente.
+
+**« metti un ascensore laterale, si capisce ».** Al posto della scritta, una vera barra di
+scorrimento SEMPRE visibile: `::-webkit-scrollbar` con larghezza e colore propri (classe
+`.s-scala-tono-scroll`, definita in un `<style>` scoped dentro il componente — non uno stile
+esprimibile dall'attributo `style` di React), invece di lasciare al sistema operativo
+(macOS: comparsa solo al passaggio del mouse) l'ultima parola su se e quando mostrarla.
+
+**« il colore giallo non va bene perché non si vede la scritta... devi far passare in NERO
+il valore ed il nome del TONO ».** Il testo della riga evidenziata usava `var(--s-disc)` —
+verificato in `tokens.css`: è un colore pensato per essere uno SFONDO translucido
+(`rgba(...,0.36..0.42)`), non un testo leggibile sopra un colore pieno — quasi invisibile
+sopra l'accento (`--s-tone-hue`, un mauve, non davvero giallo, ma lo stesso identico difetto
+di contrasto). Cambiato in `#0b0f14`, lo stesso nero già usato altrove in SERENITY per il
+testo sopra fondi chiari/accentati (`ToneColumn.tsx`).
+
+Verificato dal vivo (zoom sulla riga "0 · Mort du corps" evidenziata): testo nero, alto
+contrasto, perfettamente leggibile; nessuna scritta sovrapposta al bottone sotto; l'ascensore
+appare come una sottile barra chiara sul bordo destro della lista.
+
+`tsc --noEmit` pulito, `npm run lint` invariato (325 warning), `npx vitest run` 652/652 verdi.
+
+File toccati — SOLO SERENITY: [`src/serenity/ScalaTonoCompleta.tsx`](../src/serenity/ScalaTonoCompleta.tsx).
