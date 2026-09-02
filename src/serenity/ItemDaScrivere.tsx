@@ -51,6 +51,22 @@ export function ItemDaScrivere({ mode, phase, lang, item, setItem, itemPlacehold
     <div style={{
       display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center',
       gap: grande ? 14 : 10,
+      // ⚠️ AGGIUNTO — segnalato: « ho lo spazio per scrivere l'item ma non accetta di
+      // scrivere ». Trovato dal vivo (DOM, non solo lettura del sorgente): nell'overlay
+      // senza strumenti (`Serenity.tsx`, il contenitore `senzaMisura && aperta`) questo
+      // componente vive dentro un antenato con `pointerEvents:'none'` di default — acceso
+      // SOLO durante il briefing iniziale (`mostraBriefingIniziale`), spento in ogni altro
+      // stato, "ciclo in corso" compreso. Il `<select>` del tono e "ANNULLA", nello stesso
+      // overlay, avevano già il proprio `pointerEvents:'auto'` scritto a mano — questo
+      // componente (estratto da `PistaCiclo`, dove l'antenato non esiste, quindi il
+      // problema non si vedeva mai) no: il campo si vedeva ma un click reale ci passava
+      // attraverso, fino al quadrante sotto (verificato con `elementFromPoint` — il click
+      // arrivava a un `<div>` decorativo, mai all'`<input>`; `document.activeElement`
+      // restava `<body>`). `form_input` (che scrive il valore DOM senza passare dal vero
+      // hit-test del mouse) non lo mostrava: da qui il falso "funziona" di round precedenti.
+      // `auto` qui non fa danno nell'altro punto di montaggio (`PistaCiclo`, con o senza
+      // strumenti): è già il valore di default lì, scriverlo non cambia nulla.
+      pointerEvents: 'auto',
     }}>
       <input
         value={item}

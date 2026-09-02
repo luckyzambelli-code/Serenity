@@ -3027,7 +3027,38 @@ export default function Serenity() {
             </>
           )}
           {tone.tonePhase === 'done' && (
-            <button className="s-glass s-glass-btn" onClick={() => { tone.resetTone(); setTonoScelto(false); }} style={pillBtn('var(--s-still)')}>
+            <button className="s-glass s-glass-btn" onClick={() => {
+              // ⚠️ CORRETTO (segnalato: « quando dò un'altra resistenza, mi dice di dare
+              // l'item... ma non si può scrivere e l'assessment non è armato, si resta
+              // bloccati ») — `resetTone()` da solo riporta `tonePhase` a 'locate'
+              // (`faseCiclo` diventa `'tone.item'`), ma il bottone "DAI L'ITEM" che un tempo
+              // faceva uscire da quella fase è stato tolto apposta (v. la nota sul cerchio
+              // TONE, sopra: « ENLEVE LE... arma E localizza nello stesso gesto ») — quel
+              // click chiama `localizzaTone()` per la PRIMA resistenza, ma "altra resistenza"
+              // non lo rifaceva per la successiva. `ItemDaScrivere` non mostra il bottone "l'ho
+              // detta" in `tone.item` (solo in `tone.say_item`, dopo `localizzaTone()`): senza
+              // di lui il campo restava un `<input>` senza modo di confermarlo — esattamente
+              // bloccato. Stessa chiamata del cerchio, ripetuta qui per ogni resistenza
+              // successiva, non solo la prima.
+              //
+              // ⚠️ SECONDO BUG TROVATO SUBITO DOPO (verificato dal vivo: con la sola riga
+              // sopra si saltava DRITTI alla schermata "A CHE TONO SI TROVA?" con la
+              // resistenza VECCHIA ancora scritta, senza mai passare per "dì la resistenza")
+              // — `itemConfirmedRef` (poco più su in questo file: « STICKY... non deve più
+              // tornare falso solo perché il campo è ritoccato ») resta vero dalla resistenza
+              // APPENA CHIUSA. Si azzera da sé, ma dentro un `useEffect` che osserva `item`
+              // — e quello stesso effetto richiama anche `setItemDigitando(false)`, già
+              // falso a questo punto: React non ridisegna per uno stato invariato, quindi
+              // l'azzeramento del ref non arriva MAI a un nuovo render finché qualcos'altro,
+              // per tutt'altra ragione, non forza uno — cosa che senza strumenti può non
+              // succedere mai. `itemNamed` restava quindi vero (dalla resistenza precedente)
+              // nello stesso identico render in cui `resetTone()` svuota l'item, e
+              // `deriveCyclePhase` saltava 'tone.say_item' passando dritto a 'tone.raise'.
+              // Azzerato QUI, PRIMA che `resetTone()` svuoti l'item: il render successivo
+              // legge già il ref giusto, senza aspettare l'effetto.
+              itemConfirmedRef.current = false;
+              tone.resetTone(); setTonoScelto(false); tone.localizzaTone();
+            }} style={pillBtn('var(--s-still)')}>
               {LC('altra resistenza', 'autre résistance', 'another resistance', 'otra resistencia', 'annat motstånd')}
             </button>
           )}
@@ -5624,37 +5655,27 @@ export default function Serenity() {
                     DESTRO deve stare PRIMA di quel confine, non il sinistro dopo un margine
                     fisso — `left:-150` porta il riquadro tutto a x=(-150…310), interamente
                     nella striscia riservata alla barra laterale, mai dentro il quadrante. */}
+                {/* ⚠️ CORRETTO (segnalato con screenshot: « scritte parasite in alto della
+                    scala del tono ») — il riquadro che segue non stava, come sembrava
+                    leggendolo, "vicino" a NEEDLE LIGHT/WITH-WITHOUT NEEDLE: quel bottone vive
+                    nel SUO contenitore (`top:14, left:16`, poco più su nel file), ma QUESTO
+                    riquadro sta dentro `<div style={{position:'absolute', inset:0}}>` (la nota
+                    "l'arco cambia con il metodo", più su) — un contenitore GRANDE QUANTO TUTTO
+                    LO SCHERMO. Il pannello fonte/margine che avevo aggiunto qui sotto usava
+                    `top:'15%'` credendo di essere relativo a QUESTO riquadro (460px, vicino
+                    alla colonna) — era relativo allo SCHERMO INTERO, quindi cadeva nell'angolo
+                    in alto a sinistra, esattamente sopra NEEDLE LIGHT/WITH-WITHOUT NEEDLE.
+                    Non più un `<div>` a sé fuori da questo riquadro: ora è la PRIMA riga di un
+                    riquadro diventato `flexDirection:'column'` — sopra la colonna, dentro le
+                    sue stesse coordinate (`left:-150…310`, la striscia laterale), mai vicino
+                    all'angolo in alto a sinistra. */}
                 <div style={{
                   position: 'absolute', left: -150, top: '22%', bottom: '6%', width: 460,
-                  pointerEvents: 'none',
+                  pointerEvents: 'none', display: 'flex', flexDirection: 'column', gap: 4,
                 }}>
-                  <ToneColumn
-                    tone={tone.toneOra ?? 0}
-                    toneEeg={tone.toneOraEeg}
-                    margin={tone.margineTono}
-                    hasMeter={tone.toneMisurato}
-                    lang={lang}
-                    charge={museOk ? Math.max(0, Math.min(1, qLnow)) : null}
-                    chargeFrom={tone.toneAtStart}
-                  />
-                </div>
-                {/* ── TRASPARENZA SULLA FONTE E SUL MARGINE — revisione dei calcoli TONE,
-                    01/09/2026. Trovato in revisione: con MUSE connesso `tone.toneOra` è SEMPRE
-                    guidato da lui (v. `useToneCycle.ts`, la nota sulla priorità delle fonti),
-                    ma nulla a schermo lo diceva — il trattino "EEG" di `ToneColumn` compare
-                    SOLO in divergenza, cioè proprio quando le due fonti concordano (il caso
-                    normale) l'auditor non sa quale sta guardando. E il margine (`margineTono`)
-                    arriva già tolto nel numero, ma — a differenza di App.tsx, che lo mostra
-                    accanto al TA con un bottone "rifai la prova" (segnalato lì: « è lì che
-                    interessa ») — SERENITY non aveva mai riprodotto quel bottone: qui lo fa,
-                    stessa condizione (`margineTono > 0`), stesso gesto (riapre la prova delle
-                    lattine). Terzo pezzo, nuovo anche in EQUILIBRIUM: un avviso quando la
-                    lettura grezza del meter (`theta.rawSmooth`, la stessa che la taratura
-                    registra) cade FUORI dai punti misurati con l'artefatto — lì la conversione
-                    non interpola più, PROLUNGA l'ultimo segmento, ed è onesto dirlo. */}
                 {tone.toneAtStart !== null && (
                   <div style={{
-                    position: 'absolute', left: 12, top: '15%', width: 290,
+                    flex: '0 0 auto', width: '100%',
                     display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center',
                     pointerEvents: 'auto',
                   }}>
@@ -5713,6 +5734,18 @@ export default function Serenity() {
                     )}
                   </div>
                 )}
+                  <div style={{ flex: '1 1 auto', minHeight: 0, width: '100%' }}>
+                    <ToneColumn
+                      tone={tone.toneOra ?? 0}
+                      toneEeg={tone.toneOraEeg}
+                      margin={tone.margineTono}
+                      hasMeter={tone.toneMisurato}
+                      lang={lang}
+                      charge={museOk ? Math.max(0, Math.min(1, qLnow)) : null}
+                      chargeFrom={tone.toneAtStart}
+                    />
+                  </div>
+                </div>
               </>
             ) : toneAttivo ? (
               // ⚠️ TONE ARMATO MA SENZA QUADRANTE — UNA SOLA RAGIONE ORA (era due: la seconda,

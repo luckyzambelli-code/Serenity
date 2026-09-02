@@ -7983,3 +7983,63 @@ File toccati — CONDIVISI (richiedono build e invio di ENTRAMBI i DMG):
 esistente cambiato per EQUILIBRIUM (nessun campo nuovo letto dai suoi chiamanti). SERENITY-only:
 [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
 [`src/serenity/PannelloMeter.tsx`](../src/serenity/PannelloMeter.tsx).
+
+## Giro — 2026-09-02 (18) — TONE: tre bug veri trovati dal vivo, dopo il giro precedente
+
+Segnalati con uno screenshot da una seduta vera (la prima volta in questa sessione con MUSE e
+METER davvero collegati) — tre problemi distinti, tutti verificati e corretti uno per uno.
+
+**1 — le "scritte parasite" in alto sulla scala del tono.** Il pannello fonte/margine
+(giro precedente) usava `top:'15%'` credendo di essere relativo al riquadro della colonna
+(460px, vicino a lei) — era relativo allo SCHERMO INTERO (`<div style={{position:'absolute',
+inset:0}}>`, il contenitore che avvolge ToneDial/MirrorDial/ClearDial), quindi cadeva
+nell'angolo in alto a sinistra, sopra NEEDLE LIGHT/WITH-WITHOUT NEEDLE — testo sovrapposto,
+illeggibile. Il riquadro della colonna è diventato `flexDirection:'column'`: il pannello
+fonte/margine ora ne è la PRIMA riga, dentro le sue stesse coordinate, mai vicino all'angolo.
+
+**2 — « ho lo spazio per scrivere l'item ma non accetta di scrivere ».** Il bug più serio,
+trovato solo grazie al DOM (non bastava leggere il sorgente): l'overlay senza strumenti
+(`senzaMisura && aperta`) ha un contenitore con `pointerEvents: mostraBriefingIniziale ?
+'auto' : 'none'` — acceso SOLO durante il briefing "INIZIO SESSIONE", spento in ogni altro
+stato, "ciclo in corso" compreso. Il `<select>` del tono e "ANNULLA" avevano già il proprio
+`pointerEvents:'auto'` scritto a mano; `ItemDaScrivere` (l'`<input>` dell'item/resistenza),
+estratto da `PistaCiclo` — dove questo antenato non esiste — no. Verificato con
+`elementFromPoint`: un click sull'input arrivava a un `<div>` decorativo del quadrante
+sottostante, mai all'`<input>` (`document.activeElement` restava `<body>`). `form_input`
+(usato nei giri precedenti per "digitare" nei test) scrive il valore DOM senza passare dal
+vero hit-test del mouse — non mostrava mai il problema, da cui il falso "funziona" di prima.
+Aggiunto `pointerEvents:'auto'` sul contenitore di `ItemDaScrivere` stesso: innocuo nell'altro
+punto di montaggio (`PistaCiclo`), dove è già il valore di default.
+
+**3 — « quando dò un'altra resistenza, mi dice di dare l'item... ma non si può scrivere e
+l'assessment non è armato, si resta bloccati ».** Due cause, trovate una dopo l'altra dal
+vivo:
+- Il click sul cerchio TONE arma E localizza nello stesso gesto (`tone.localizzaTone()`,
+  scelta esplicita di un giro precedente: « ENLEVE LE [il vecchio bottone "DAI L'ITEM"] »)
+  — ma "altra resistenza" chiamava solo `resetTone()`, mai `localizzaTone()`: il ciclo restava
+  fermo in `tonePhase==='locate'` (`faseCiclo==='tone.item'`), una fase che `ItemDaScrivere`
+  non riconosce (il suo elenco `diItem` si ferma a `'tone.say_item'`) — nessun bottone di
+  conferma, bloccato per davvero. Corretto richiamando `localizzaTone()` anche qui, come fa
+  il cerchio.
+- Con la sola correzione sopra, verificato dal vivo un SECONDO bug: si saltava dritti alla
+  schermata "A CHE TONO SI TROVA?" con la resistenza VECCHIA, mai passando per "dì la
+  resistenza". Causa: `itemConfirmedRef` (un flag "sticky", vero una volta per tutto il
+  ciclo) resta vero dalla resistenza appena chiusa; si azzera da sé in un `useEffect` che
+  osserva `item` — ma quello stesso effetto richiama anche `setItemDigitando(false)`, già
+  falso a quel punto: React non ridisegna per uno stato invariato, quindi l'azzeramento del
+  ref non arriva a un nuovo render finché qualcos'altro, per tutt'altra ragione, non ne forza
+  uno — cosa che senza strumenti può non succedere mai. `itemNamed` restava quindi vero nello
+  STESSO render in cui `resetTone()` svuota l'item, e `deriveCyclePhase` saltava dritto a
+  `'tone.raise'`. Corretto azzerando `itemConfirmedRef.current` a mano, PRIMA di chiamare
+  `resetTone()`/`localizzaTone()`.
+
+`tsc --noEmit` pulito, `npm run lint` invariato (325 warning), `npx vitest run` 652/652 verdi.
+Verificato dal vivo con DIGITAZIONE REALE (click + tasti, non `form_input` — la lezione del
+punto 2) l'intero ciclo TONE senza strumenti per DUE resistenze di fila: prima resistenza
+("colère") scritta e dichiarata, tono scelto (-30), raggiunto; "altra resistenza" →
+correttamente "DIS LA RÉSISTANCE" (non più il salto), seconda resistenza ("honte") scritta
+con tastiera reale e dichiarata, schermata di scelta del tono di nuovo corretta.
+
+File toccati — SOLO SERENITY (nessun file condiviso in questo giro):
+[`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
+[`src/serenity/ItemDaScrivere.tsx`](../src/serenity/ItemDaScrivere.tsx).
