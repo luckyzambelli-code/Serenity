@@ -1,0 +1,518 @@
+[
+ {
+  "codice": "AAR",
+  "espansione": "All About Radiation"
+ },
+ {
+  "codice": "Abil",
+  "espansione": "Ability Magazine"
+ },
+ {
+  "codice": "Abil Ma",
+  "espansione": "A bility Major Magazine"
+ },
+ {
+  "codice": "Abil Mi",
+  "espansione": "A bility Minor Magazine"
+ },
+ {
+  "codice": "Abil SW",
+  "espansione": "Ability Straightwire"
+ },
+ {
+  "codice": "ACC",
+  "espansione": "Advanced Clinical Course"
+ },
+ {
+  "codice": "ACSA",
+  "espansione": "South African Anatomy Congress"
+ },
+ {
+  "codice": "AHD",
+  "espansione": "American Heritage Dictionary"
+ },
+ {
+  "codice": "AHMC",
+  "espansione": "Anatomy of the Human Mind Congress"
+ },
+ {
+  "codice": "A&L",
+  "espansione": "Axioms and Logics"
+ },
+ {
+  "codice": "AP&A",
+  "espansione": "Advanced Procedures and Axioms"
+ },
+ {
+  "codice": "ASHO",
+  "espansione": "American Saint Hill Organization"
+ },
+ {
+  "codice": "ASMC",
+  "espansione": "Anatomy of the Spirit of Man Congress"
+ },
+ {
+  "codice": "AUD",
+  "espansione": "The Auditor Magazine"
+ },
+ {
+  "codice": "AUD ASHO",
+  "espansione": "Auditor Magazine American Saint Hill Organization"
+ },
+ {
+  "codice": "AUDC",
+  "espansione": "Auditors Conference"
+ },
+ {
+  "codice": "AUD DK",
+  "espansione": "Auditor Magazine Denmark"
+ },
+ {
+  "codice": "Audit",
+  "espansione": "auditing"
+ },
+ {
+  "codice": "AUD Spec Iss",
+  "espansione": "Auditor Magazine Special Issue"
+ },
+ {
+  "codice": "AUD UK",
+  "espansione": "Auditor Magazine United Kingdom"
+ },
+ {
+  "codice": "B&C",
+  "espansione": "Background and Ceremonies of the Founding Church"
+ },
+ {
+  "codice": "BCR",
+  "espansione": "The Book of Case Remedies"
+ },
+ {
+  "codice": "BIEM",
+  "espansione": "The Book Introducing The E-meter"
+ },
+ {
+  "codice": "BPL",
+  "espansione": "Board Policy Letter"
+ },
+ {
+  "codice": "BTB",
+  "espansione": "Board Technical Bulletin"
+ },
+ {
+  "codice": "C",
+  "espansione": "Copy (tape)"
+ },
+ {
+  "codice": "C&A",
+  "espansione": "Certificates and Awards"
+ },
+ {
+  "codice": "CDN",
+  "espansione": "Child Dianetics"
+ },
+ {
+  "codice": "Cert",
+  "espansione": "Certainty Magazine"
+ },
+ {
+  "codice": "CFC",
+  "espansione": "Ceremonies of the Founding Church"
+ },
+ {
+  "codice": "CG&AC",
+  "espansione": "The Classification Gradation and Awareness Chart"
+ },
+ {
+  "codice": "Cl.",
+  "espansione": "Class"
+ },
+ {
+  "codice": "Class VILI NO.",
+  "espansione": "Class VIII tape number"
+ },
+ {
+  "codice": "CM",
+  "espansione": "Copy Master (tape)"
+ },
+ {
+  "codice": "CMSCS",
+  "espansione": "Control and the Mechanics of Start Change Stop"
+ },
+ {
+  "codice": "COHA",
+  "espansione": "The Creation of Human Ability"
+ },
+ {
+  "codice": "Confid",
+  "espansione": "Confidential"
+ },
+ {
+  "codice": "DAB Vol. II",
+  "espansione": "Dianetic Auditors Bulletin, Volume II"
+ },
+ {
+  "codice": "DASF",
+  "espansione": "Dianomet y Astounding Science Fiction 489"
+ },
+ {
+  "codice": "Dec Cod",
+  "espansione": "December Conference Lectures"
+ },
+ {
+  "codice": "Def",
+  "espansione": "Definition"
+ },
+ {
+  "codice": "DMSMH",
+  "espansione": "Dianetics: The Modern Science of Mental Health Dn 55!, Dianetics 55!"
+ },
+ {
+  "codice": "Dn Today",
+  "espansione": "Dianetics Today"
+ },
+ {
+  "codice": "DPB",
+  "espansione": "The Basic Dianetic Picture Book"
+ },
+ {
+  "codice": "DTOT",
+  "espansione": "Dianetics: The Original Thesis"
+ },
+ {
+  "codice": "ED Flag",
+  "espansione": "Executive Directive Flag"
+ },
+ {
+  "codice": "EMD",
+  "espansione": "The Book of E-meter Drills"
+ },
+ {
+  "codice": "EME",
+  "espansione": "E-meter Essentials"
+ },
+ {
+  "codice": "EOS",
+  "espansione": "Dianetics: The Evolution of A Science"
+ },
+ {
+  "codice": "EST0 3",
+  "espansione": "Establishment Officer Tape Three"
+ },
+ {
+  "codice": "Exp Jour",
+  "espansione": "The Explorer's Journal"
+ },
+ {
+  "codice": "FAO",
+  "espansione": "Flag Administration Organization"
+ },
+ {
+  "codice": "FBDL",
+  "espansione": "Flag Bureaux Data Letter"
+ },
+ {
+  "codice": "FC",
+  "espansione": "Freedom Congress"
+ },
+ {
+  "codice": "FO",
+  "espansione": "Flag Order"
+ },
+ {
+  "codice": "FOT",
+  "espansione": "The Fundamentals of Thought"
+ },
+ {
+  "codice": "FSO",
+  "espansione": "Flag Ship Order"
+ },
+ {
+  "codice": "GAH",
+  "espansione": "Scientology: Group Auditors Handbook"
+ },
+ {
+  "codice": "GL",
+  "espansione": "Glossary"
+ },
+ {
+  "codice": "Gloss",
+  "espansione": "Glossary"
+ },
+ {
+  "codice": "HCL",
+  "espansione": "Hubbard College Lectures"
+ },
+ {
+  "codice": "HCOB",
+  "espansione": "Hubbard Communications Office Bulletin"
+ },
+ {
+  "codice": "HCO PL",
+  "espansione": "Hubbard Communications Office Policy Letter"
+ },
+ {
+  "codice": "HCOTB",
+  "espansione": "Hubbard Communications Office Technical Bulletin"
+ },
+ {
+  "codice": "HCOTRB",
+  "espansione": "Hubbard Communications Office Training Bulletin"
+ },
+ {
+  "codice": "HEV",
+  "espansione": "Human Evaluation Course"
+ },
+ {
+  "codice": "HFP",
+  "espansione": "Handbook for Preclears"
+ },
+ {
+  "codice": "HOA",
+  "espansione": "Hymn of Asia"
+ },
+ {
+  "codice": "HOM",
+  "espansione": "History of Man"
+ },
+ {
+  "codice": "HPC",
+  "espansione": "Hubbard Professional Course Lectures"
+ },
+ {
+  "codice": "HPC A6",
+  "espansione": "Hubbard Professional Course August 1956 HYLBTL?, Have You Lived Before This Life?"
+ },
+ {
+  "codice": "HTLTAE",
+  "espansione": "How To Live Though An Executive"
+ },
+ {
+  "codice": "IFR",
+  "espansione": "Information For Releases"
+ },
+ {
+  "codice": "ISE",
+  "espansione": "Introduction to Scientology Ethics"
+ },
+ {
+  "codice": "Iss",
+  "espansione": "Issue or Issued"
+ },
+ {
+  "codice": "LACC",
+  "espansione": "London Advanced Clinical Course"
+ },
+ {
+  "codice": "LPLS",
+  "espansione": "London Public Lecture Series"
+ },
+ {
+  "codice": "LRH Def. Notes",
+  "espansione": "L. Ron Hubbard Definition Notes"
+ },
+ {
+  "codice": "LRH ED INT",
+  "espansione": "L. Ron Hubbard Executive Directive International"
+ },
+ {
+  "codice": "Mimeo",
+  "espansione": "Mimeograph or Mimeograph Issues"
+ },
+ {
+  "codice": "MIT",
+  "espansione": "Mission Into Time"
+ },
+ {
+  "codice": "HCO bfo LO",
+  "espansione": "Hubbard Communications number Office Information Letter NOTL, Notes on The Lectures"
+ },
+ {
+  "codice": "NSOL",
+  "espansione": "Scientology A New Slant On Life"
+ },
+ {
+  "codice": "Oct Ser",
+  "espansione": "October Series"
+ },
+ {
+  "codice": "OODs",
+  "espansione": "Orders of the Day of the Flagship Apollo"
+ },
+ {
+  "codice": "Op Bd",
+  "espansione": "Operational Bulletin"
+ },
+ {
+  "codice": "OS",
+  "espansione": "Organizational Series"
+ },
+ {
+  "codice": "PAB",
+  "espansione": "Professional Auditors Bulletin"
+ },
+ {
+  "codice": "PDC",
+  "espansione": "Philadelphia Doctorate Course"
+ },
+ {
+  "codice": "PIP",
+  "espansione": "Printed Intensive Procedure Lectures"
+ },
+ {
+  "codice": "PLS",
+  "espansione": "Public Lecture Series"
+ },
+ {
+  "codice": "POW",
+  "espansione": "The Problems of Work"
+ },
+ {
+  "codice": "PRD Gloss",
+  "espansione": "Special Primay Rundown Glossa y"
+ },
+ {
+  "codice": "PRO",
+  "espansione": "Professional Course"
+ },
+ {
+  "codice": "PXL",
+  "espansione": "The Phoenix Lectures"
+ },
+ {
+  "codice": "Reiss",
+  "espansione": "Reissued"
+ },
+ {
+  "codice": "Rev",
+  "espansione": "Revised"
+ },
+ {
+  "codice": "Ron's Jour 68",
+  "espansione": "Ron's Journal 1968 (tape)"
+ },
+ {
+  "codice": "SA",
+  "espansione": "Self Analysis"
+ },
+ {
+  "codice": "SC",
+  "espansione": "Success Congress"
+ },
+ {
+  "codice": "Scn AD",
+  "espansione": "Scientology Abridged Dictionary"
+ },
+ {
+  "codice": "Scn 0-8",
+  "espansione": "Scientology 0-8"
+ },
+ {
+  "codice": "Scn 8-80",
+  "espansione": "Scientology 8-80"
+ },
+ {
+  "codice": "Scn 8-8008",
+  "espansione": "Scientology 8-8008"
+ },
+ {
+  "codice": "Scn Jour",
+  "espansione": "Journal of Scientology"
+ },
+ {
+  "codice": "SCP",
+  "espansione": "Scientology Clear Procedure"
+ },
+ {
+  "codice": "SH ACC",
+  "espansione": "Saint Hill Advanced Clinical Course"
+ },
+ {
+  "codice": "SHPA",
+  "espansione": "Special Hubbard Professional Auditors Course (London)"
+ },
+ {
+  "codice": "SH Spec",
+  "espansione": "Saint Hill Special SH TM), Saint Hill Television Demonstration"
+ },
+ {
+  "codice": "SLP",
+  "espansione": "Six Levels of Processing"
+ },
+ {
+  "codice": "SMC",
+  "espansione": "State of Man Congress"
+ },
+ {
+  "codice": "SO",
+  "espansione": "Sea Organization"
+ },
+ {
+  "codice": "SOED INT",
+  "espansione": "Sea Organization Executive Directive International"
+ },
+ {
+  "codice": "SOS",
+  "espansione": "Science of SumTV1val"
+ },
+ {
+  "codice": "SPB",
+  "espansione": "The Basic Scientology Picture Book"
+ },
+ {
+  "codice": "Spec kt",
+  "espansione": "Special Lecture"
+ },
+ {
+  "codice": "Spr kt",
+  "espansione": "London Spring Lectures"
+ },
+ {
+  "codice": "STCR",
+  "espansione": "Scientology Twentieth Century Religion"
+ },
+ {
+  "codice": "STP",
+  "espansione": "Standard Procedure Lectures"
+ },
+ {
+  "codice": "Sup",
+  "espansione": "Supplement or Supplementary Lecture"
+ },
+ {
+  "codice": "T 80",
+  "espansione": "Technique 80 Lectures"
+ },
+ {
+  "codice": "T 88",
+  "espansione": "Technique 88 Lectures"
+ },
+ {
+  "codice": "TIP",
+  "espansione": "Technical Individual Program"
+ },
+ {
+  "codice": "TVD",
+  "espansione": "Television Demonstration"
+ },
+ {
+  "codice": "UPC",
+  "espansione": "Universe Process Congress"
+ },
+ {
+  "codice": "U.S.",
+  "espansione": "United States"
+ },
+ {
+  "codice": "Vol.",
+  "espansione": "Volume"
+ },
+ {
+  "codice": "WW",
+  "espansione": "World Wide M)N No. 1, Expanded Dianetics Tape Number One"
+ },
+ {
+  "codice": "I",
+  "espansione": "11, III, Issue 1, 2 or 3, etc."
+ }
+]

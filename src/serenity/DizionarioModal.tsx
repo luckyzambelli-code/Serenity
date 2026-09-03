@@ -37,6 +37,23 @@ import { pick5 } from '../i18n5';
  * maiuscolo+parentesi a inizio riga — v. la nota in `estrai_pdf_v2.py`). Il "-en" inglese non ha
  * questo difetto (fonte HTML, non pagine stampate) — non toccato.
  *
+ * ── LE ABBREVIAZIONI, UNA TERZA/QUARTA FONTE ────────────────────────────────────────────────
+ * Segnalato: « ho visto che non hai messo le ABBREVIAZIONI. Sono importanti per capire le
+ * definizioni, aggiungile come nel libro, alla fine. Ho anche un dizionario inglese PDF con le
+ * abbreviazioni ». I codici che chiudono ogni definizione (es. "(HCOB 23 Ago 65)") non sono
+ * spiegati DENTRO al dizionario — il libro stampato ha una lista a sé, "Abbreviazioni", subito
+ * dopo il corpo A-Z. Estratta con `estrai_abbrev.py` (fuori dal deposito, stesso principio dei
+ * due script del dizionario) da DUE fonti: la sezione italiana del PDF già in uso (pagine 635-
+ * 640, 133 voci), e la sezione equivalente ("Abbreviations") di un SECONDO pdf inglese fornito
+ * apposta per questo — "1. Tech Dictionary 1975.pdf", pagine 498-500, 129 voci — non usato
+ * altrove, l'inglese del dizionario principale resta l'HTML "fair use" di sempre.
+ * `public/dizionario/abbreviazioni-it.json`/`abbreviazioni-en.json`, caricate insieme ai due
+ * JSON principali e aggiunte in CODA a ciascuna lista (`abbreviazione:true` le distingue nel
+ * rendering, con una riga-titolo "ABBREVIAZIONI" prima della prima) — "come nel libro, alla
+ * fine": si vedono per ultime scorrendo, ma restano dentro la STESSA ricerca/lettera delle voci
+ * vere, apposta — leggere "(HCOB 23 Ago 65)" e poter cercare subito "HCOB" nello stesso posto è
+ * il punto stesso di averle.
+ *
  * ⚠️ COPYRIGHT — segnalato dall'utente: per ora la distribuzione resta a due persone, per il
  * collaudo del programma; la distribuzione più ampia resta da decidere. Non è compito di
  * questo componente deciderlo — solo mostrare il dizionario a chi ha già l'app.
@@ -52,7 +69,8 @@ import { pick5 } from '../i18n5';
  */
 
 interface VoceGrezza { termine: string; termine_en?: string | null; definizione: string }
-interface Voce { termine: string; termineEn?: string | null; definizione: string }
+interface Voce { termine: string; termineEn?: string | null; definizione: string; abbreviazione?: boolean }
+interface AbbrGrezza { codice: string; espansione: string }
 
 const rimuoviAccenti = (s: string): string =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -81,16 +99,38 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
   // ⚠️ CARICATO SOLO ALL'APERTURA, NON ALL'AVVIO DI SERENITY — 2 MB di JSON che servono
   // solo a chi apre il dizionario: caricarli sempre, anche per una seduta che non lo apre
   // mai, sarebbe un peso di avvio per un uso che potrebbe non capitare.
+  // ⚠️ LE ABBREVIAZIONI — segnalato: « ho visto che non hai messo le ABBREVIAZIONI. Sono
+  // importanti per capire le definizioni, aggiungile come nel libro, alla fine ». Non sono
+  // termini del dizionario: sono i CODICI di citazione che chiudono ogni definizione (es.
+  // "(HCOB 23 Ago 65)") — nel libro stampato è una lista a sé, SUBITO dopo il corpo A-Z, prima
+  // del resto (indici, indirizzi). Estratte con lo stesso metodo (`estrai_abbrev.py`, fuori dal
+  // deposito) da DUE fonti: la sezione "Abbreviazioni" del PDF italiano già in uso, e una
+  // sezione "Abbreviations" equivalente in un SECONDO pdf inglese fornito apposta ("1. Tech
+  // Dictionary 1975.pdf", non usato altrove — l'inglese del dizionario principale resta l'HTML
+  // "fair use" di sempre, questo secondo pdf serve SOLO per le sue abbreviazioni).
+  // Aggiunte in CODA a ciascuna lista (`abbreviazione:true` le distingue nel rendering sotto) —
+  // "come nel libro, alla fine": si vedono per ultime scorrendo l'elenco, MA restano dentro la
+  // STESSA ricerca/lettera delle voci vere, apposta — leggere "(HCOB 23 Ago 65)" in una
+  // definizione e poter cercare subito "HCOB" nello stesso posto è il punto stesso di averle.
   useEffect(() => {
     let vivo = true;
     Promise.all([
       fetch('/dizionario/dizionario-it.json').then(r => r.json()).catch(() => []),
       fetch('/dizionario/dizionario-en.json').then(r => r.json()).catch(() => []),
-    ]).then(([it, en]: [VoceGrezza[], VoceGrezza[]]) => {
+      fetch('/dizionario/abbreviazioni-it.json').then(r => r.json()).catch(() => []),
+      fetch('/dizionario/abbreviazioni-en.json').then(r => r.json()).catch(() => []),
+    ]).then(([it, en, abbrIt, abbrEn]: [VoceGrezza[], VoceGrezza[], AbbrGrezza[], AbbrGrezza[]]) => {
       if (!vivo) return;
       if (!Array.isArray(it) && !Array.isArray(en)) { setErroreCaricamento(true); setCaricamento(false); return; }
-      setVociIt((Array.isArray(it) ? it : []).map(v => ({ termine: v.termine, termineEn: v.termine_en ?? null, definizione: v.definizione })));
-      setVociEn((Array.isArray(en) ? en : []).map(v => ({ termine: v.termine, definizione: v.definizione })));
+      const aVoce = (a: AbbrGrezza): Voce => ({ termine: a.codice, definizione: a.espansione, abbreviazione: true });
+      setVociIt([
+        ...(Array.isArray(it) ? it : []).map(v => ({ termine: v.termine, termineEn: v.termine_en ?? null, definizione: v.definizione })),
+        ...(Array.isArray(abbrIt) ? abbrIt : []).map(aVoce),
+      ]);
+      setVociEn([
+        ...(Array.isArray(en) ? en : []).map(v => ({ termine: v.termine, definizione: v.definizione })),
+        ...(Array.isArray(abbrEn) ? abbrEn : []).map(aVoce),
+      ]);
       setCaricamento(false);
     }).catch(() => { if (vivo) { setErroreCaricamento(true); setCaricamento(false); } });
     return () => { vivo = false; };
@@ -248,35 +288,62 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
               {LC('nessun termine trovato.', 'aucun terme trouvé.', 'no term found.', 'ningún término encontrado.', 'ingen term hittades.')}
             </div>
           )}
-          {filtrata.map(v => {
-            const aperta = espanso === v.termine;
+          {filtrata.map((v, i) => {
+            // ⚠️ NON PIÙ `v.termine` DA SOLO — segnalato dal vivo (conteggio "2 / 2670" con
+            // 14 righe davvero disegnate): alcuni CODICI di abbreviazione coincidono col nome
+            // di un termine VERO già nel dizionario ("HCOB" è sia un'abbreviazione sia una voce
+            // del corpo inglese) — due oggetti diversi con la stessa `key` React, che si
+            // confondono a vicenda nella riconciliazione (React non sa più quale dei due tenere,
+            // quale togliere) non appena la lista filtrata cambia. Un id che include anche
+            // `abbreviazione` resta unico anche quando il nome coincide.
+            const id = `${v.abbreviazione ? 'a' : 'v'}:${v.termine}`;
+            const aperta = espanso === id;
+            // ── LA RIGA-TITOLO "ABBREVIAZIONI" — appare una volta sola, appena PRIMA della
+            // prima voce marcata `abbreviazione`: solo così si vede il confine "qui finiscono
+            // le voci vere, qui comincia l'appendice", come nel libro stampato. Sparisce da
+            // sola filtrando per lettera o per testo (la voce precedente in elenco potrebbe
+            // non essere più adiacente) — lì il confine non serve più, la ricerca ha già
+            // ristretto tutto a quel che conta.
+            const inizioAbbreviazioni = v.abbreviazione && !letteraFiltro && !ricerca.trim()
+              && (i === 0 || !filtrata[i - 1].abbreviazione);
             return (
-              <div key={v.termine} style={{ borderBottom: '1px solid var(--s-ink-ghost)' }}>
-                <button onClick={() => setEspanso(aperta ? null : v.termine)} style={{
-                  display: 'flex', alignItems: 'baseline', gap: 10, width: '100%', textAlign: 'left',
-                  border: 'none', background: 'transparent', cursor: 'pointer', padding: '9px 18px',
-                  fontFamily: 'inherit',
-                }}>
-                  <span style={{
-                    fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', fontWeight: 700,
-                    color: aperta ? 'var(--s-reserve)' : 'var(--s-ink)',
-                  }}>
-                    {v.termine}
-                  </span>
-                  {v.termineEn && v.termineEn !== v.termine && (
-                    <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', color: 'var(--s-ink-faint)' }}>
-                      {v.termineEn}
-                    </span>
-                  )}
-                </button>
-                {aperta && (
+              <div key={id}>
+                {inizioAbbreviazioni && (
                   <div style={{
-                    padding: '0 18px 14px 18px', fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-base)',
-                    lineHeight: 1.55, color: 'var(--s-ink-soft)',
+                    padding: '14px 18px 6px 18px', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)',
+                    fontWeight: 700, letterSpacing: '0.06em', color: 'var(--s-ink-faint)',
                   }}>
-                    {v.definizione}
+                    {LC('ABBREVIAZIONI', 'ABRÉVIATIONS', 'ABBREVIATIONS', 'ABREVIATURAS', 'FÖRKORTNINGAR')}
                   </div>
                 )}
+                <div style={{ borderBottom: '1px solid var(--s-ink-ghost)' }}>
+                  <button onClick={() => setEspanso(aperta ? null : id)} style={{
+                    display: 'flex', alignItems: 'baseline', gap: 10, width: '100%', textAlign: 'left',
+                    border: 'none', background: 'transparent', cursor: 'pointer', padding: '9px 18px',
+                    fontFamily: 'inherit',
+                  }}>
+                    <span style={{
+                      fontFamily: v.abbreviazione ? 'var(--s-mono)' : 'var(--s-sans)',
+                      fontSize: 'var(--s-fs-base)', fontWeight: 700,
+                      color: aperta ? 'var(--s-reserve)' : 'var(--s-ink)',
+                    }}>
+                      {v.termine}
+                    </span>
+                    {v.termineEn && v.termineEn !== v.termine && (
+                      <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', color: 'var(--s-ink-faint)' }}>
+                        {v.termineEn}
+                      </span>
+                    )}
+                  </button>
+                  {aperta && (
+                    <div style={{
+                      padding: '0 18px 14px 18px', fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-base)',
+                      lineHeight: 1.55, color: 'var(--s-ink-soft)',
+                    }}>
+                      {v.definizione}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}

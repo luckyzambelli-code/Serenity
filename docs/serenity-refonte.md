@@ -8385,3 +8385,54 @@ leggibile su fondo chiaro vero; ricerca "theetie-weetie" trova le due voci separ
 File toccati — SOLO SERENITY: [`src/serenity/DizionarioModal.tsx`](../src/serenity/DizionarioModal.tsx)
 (scheda di default, ricerca per lettera, temi), `public/dizionario/dizionario-it.json`
 (dato statico rigenerato — script `estrai_pdf_v2.py`, fuori dal deposito, non nel build).
+
+## Giro — 2026-09-03 (25) — le ABBREVIAZIONI (codici di citazione), una quarta fonte
+
+**« Ho visto che non hai messo le ABBREVIAZIONI. Sono importanti per capire le definizioni,
+aggiungile come nel libro, alla fine. Ho anche un dizionario inglese PDF con le
+abbreviazioni ».** I codici che chiudono ogni definizione ("(HCOB 23 Ago 65)") non erano
+spiegati da nessuna parte nel dizionario — il libro stampato ha una lista a sé,
+"Abbreviazioni", subito dopo il corpo A-Z. Trovata nel PDF italiano già in uso (pagine 635-
+640) e in un SECONDO pdf inglese fornito apposta per questo ("1. Tech Dictionary 1975.pdf",
+587 pagine, non usato altrove — l'inglese del dizionario principale resta l'HTML "fair use"
+di sempre, questo pdf serve SOLO per la sua sezione "Abbreviations", pagine 498-500).
+
+**Estrazione (`estrai_abbrev.py`, fuori dal deposito) — una regex diversa dal dizionario
+principale**: lì il termine è sempre tutto maiuscolo, qui il codice quasi mai ("Abil", "Cl.",
+"Dn 55!") — l'ancora diventa "riga che inizia con un codice corto (< 30 caratteri) seguito
+subito da virgola", non più "riga tutta maiuscola". Due voci (una per lista) si spezzavano
+per lo stesso motivo del titolo corrente del giro 24: la TRADUZIONE italiana tra parentesi
+va a capo prima della propria virgola interna ("Congresso di\nanatomia dello spirito,
+dell'uomo)"), creando un falso codice a sé — riconosciuto in generale (una parentesi aperta
+mai richiusa nell'espansione, seguita da una voce che comincia in minuscolo, è la sua stessa
+continuazione) invece che voce per voce. **133 voci italiane, 129 inglesi.** Restano alcuni
+artefatti noti del SECONDO pdf inglese, non corretti (invenzione di testo non presente nella
+fonte): un difetto di codifica del font di quel pdf storpia certe sequenze di lettere
+("XDN" → "M)N", "Lect" → "kt" in due voci) — 6 voci su 129, isolate, documentate nel codice.
+
+**Nel pannello**: le abbreviazioni si aggiungono in CODA a ciascuna lista (`abbreviazione:
+true` le distingue — font mono, come i numeri/codici altrove in SERENITY), con una riga-
+titolo "ABBREVIAZIONI" prima della prima (solo in vista non filtrata — sparisce filtrando per
+lettera o testo, il confine non serve più). Restano dentro la STESSA ricerca delle voci vere
+apposta: leggere una citazione e poter cercare subito il suo codice nello stesso posto è il
+punto stesso di averle.
+
+**Bug trovato dal vivo**: alcuni codici coincidono col nome di un termine VERO già nel
+dizionario ("HCOB" è sia un'abbreviazione sia una voce del corpo inglese) — due oggetti
+diversi con la stessa `key` React (`v.termine`), che si confondevano a vicenda nella
+riconciliazione appena la lista filtrata cambiava: cercando "hcob" il contatore diceva
+"2 / 2670" ma la lista ne disegnava 14, righe duplicate e sparse. Corretto con un id che
+include anche `abbreviazione` (`${abbreviazione?'a':'v'}:${termine}`), usato sia per la `key`
+sia per lo stato "voce espansa" (stesso rischio lì).
+
+Verificato dal vivo: 2670/2670 (inglese, 2541+129) e 2757/2757 (italiano, 2624+133) entrate;
+ricerca "hcob" ora corretta (2/2670, due righe distinte, espandibili indipendentemente — il
+termine vero E l'abbreviazione); scorrendo senza filtri, il confine "ABRÉVIATIONS" (lingua
+d'interfaccia FR in quel momento) appare subito dopo l'ultima voce vera di ciascuna lista.
+
+`tsc --noEmit` pulito, `npm run lint` invariato (324 warning), `npx vitest run` 652/652 verdi.
+
+File toccati — SOLO SERENITY: [`src/serenity/DizionarioModal.tsx`](../src/serenity/DizionarioModal.tsx)
+(caricamento e fusione delle abbreviazioni, id univoco), `public/dizionario/abbreviazioni-it.json`,
+`public/dizionario/abbreviazioni-en.json` (nuovi, dati statici — script `estrai_abbrev.py`,
+fuori dal deposito, non nel build).
