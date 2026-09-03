@@ -8249,3 +8249,63 @@ File toccati — CONDIVISI (richiedono build e invio di ENTRAMBI i DMG):
 [`src/App.tsx`](../src/App.tsx) (solo il wrapper dell'`onClick`, comportamento invariato).
 SERENITY-only: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx).
 Più il manuale esterno (COMMANDS/Electron).
+
+## Giro — 2026-09-03 (23) — DIZIONARIO TECNICO, nuovo bottone accanto a COMMANDS
+
+**« Si potrebbe integrare il dizionario tecnico? »** — due fonti, entrambe FUORI dal deposito:
+il "Dizionario Tecnico" italiano completo (808 pagine, PDF di New Era Publications, copyright
+attivo) e un "Technical Dictionary" inglese ("fair use quotes", non il libro intero — 11 file
+`.htm` FrontPage 4.0). **Copyright chiarito dall'utente prima di procedere**: per ora la
+distribuzione resta a due persone, per il collaudo — la distribuzione più ampia resta da
+decidere più avanti, non è compito di questo componente deciderlo.
+
+**Estrazione (due script Python, fuori dal deposito — il libro non cambia, non serve rifarla
+a ogni build come la guida):**
+- **PDF italiano** — sorpresa buona: `pypdf` estrae un testo VERO e pulito, non è una
+  scansione, nessun OCR necessario. Corpo alfabetico verificato pagina per pagina: PDF 11-631
+  (pagine stampate 1-630; la 632 è la Scala del Tono, non un termine). Voci riconosciute da un
+  termine tutto maiuscolo a inizio riga (spesso già con l'equivalente inglese: "ATTUABILITÀ -
+  WORKABILITY"), seguito da virgola. Due bug di sillabazione trovati e corretti verificando i
+  conteggi (non a occhio): un tentativo di distinguere "sillabazione vera" da "trattino di
+  traduzione a fine riga" guardando maiuscola/minuscola sembrava giusto ma peggiorava le cose
+  (286 sillabazioni vere rotte per guarire un solo caso raro) — tornato a ricongiungere
+  sempre. **2408 voci finali** (uniti gli omografi — "ACCERTAMENTO" compariva più volte per
+  intestazioni con una virgola al loro interno, es. "ACCERTAMENTO, METODO 1").
+- **HTML inglese** — il primo tentativo (ancorato al tag `<b>`/`<a name>` esatto) trovava solo
+  109 voci in tutto: HTML scritto a mano, tag non bilanciati un-per-voce. Stessa idea del PDF
+  invece: `<br>` diventa "a capo" vero, si tolgono gli altri tag, si cerca lo stesso schema
+  (MAIUSCOLO a inizio riga + virgola). **2541 voci finali.**
+
+**L'interfaccia — segnalato: « un bottone come comands e processus sarebbe l'ideale »,
+poi: « si possa far apparire sia la lista delle parole, sia un campo ricerca. Per l'italiano,
+la ricerca deve potersi fare sia in italiano che con la parola corrispondente in inglese ».**
+Nuovo bottone "DIZIONARIO" (icona `Search`), stessa forma esatta di COMMANDS — cerchio 54px,
+etichetta sotto — nel nuovo [`DizionarioModal.tsx`](../src/serenity/DizionarioModal.tsx): due
+schede (Italiano/Inglese, l'italiano di default), elenco completo cliccabile (si espande per
+leggere la definizione), campo di ricerca che confronta la parola digitata sia col termine
+italiano sia col suo `termine_en` incrociato — non solo col termine mostrato. I due JSON
+(906 KB + 1,18 MB) vivono in `public/dizionario/`, caricati SOLO all'apertura del pannello
+(mai al primo avvio di SERENITY, per non pesare su chi il dizionario non lo apre mai).
+
+**Due bug trovati dal vivo, entrambi corretti prima di spedire:**
+1. Il titolo "DIZIONARIO TECNICO" si sovrapponeva, illeggibile, all'intestazione vera di
+   SERENITY dietro di lui. Non era la trasparenza dello sfondo (`rgba(0,0,0,0.72)`, la stessa
+   già in uso per il visore PDF) — il montaggio viveva DENTRO `.ser-comandi`
+   (`zIndex:8`, il contenitore del bottone che lo apre): un `position:fixed, zIndex:200`
+   DENTRO un contenitore con `zIndex` più basso di `<header>` (`zIndex:10`) non vince mai
+   contro di lui — lo z-index conta solo dentro il proprio contesto di impilamento, non può
+   scavalcare quello del genitore. Spostato fratello di `<header>`, accanto agli altri modali
+   (`historyAperto`/`processusAperto`) — lì il suo `zIndex:200` fa davvero da solo.
+2. (minore, tenuto comunque) sfondo alzato a `rgba(6,9,13,0.95)`, quasi opaco.
+
+Verificato dal vivo l'intero percorso: bottone DIZIONARIO accanto a COMMANDS, pannello leggibile
+senza sovrapposizioni, "2408/2408 entrées", ricerca di "workability" (inglese) trova
+"ATTUABILITÀ - WORKABILITY" nella scheda Italiano, click espande la definizione vera del
+libro; scheda Inglese, stessa ricerca, trova "WORKABILITY" (2541 entrées).
+
+`tsc --noEmit` pulito, `npm run lint` invariato (324 warning), `npx vitest run` 652/652 verdi.
+
+File toccati — SOLO SERENITY: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
+[`src/serenity/DizionarioModal.tsx`](../src/serenity/DizionarioModal.tsx) (nuovo),
+`public/dizionario/dizionario-it.json`, `public/dizionario/dizionario-en.json` (nuovi, dati
+statici — nessun file di codice condiviso con EQUILIBRIUM).

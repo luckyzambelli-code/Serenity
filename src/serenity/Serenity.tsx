@@ -45,6 +45,7 @@ import { CycleStatusBar } from '../components/CycleStatusBar';
 import { PistaCiclo } from './PistaCiclo';
 import { ItemDaScrivere } from './ItemDaScrivere';
 import { ScalaTonoCompleta } from './ScalaTonoCompleta';
+import { DizionarioModal } from './DizionarioModal';
 import { PistaProcedimento } from './PistaProcedimento';
 import { VistaSenzaAgo } from './VistaSenzaAgo';
 import { listaProcedimenti, apriCartellaProcedimenti, type Procedimento } from '../lib/procedimenti';
@@ -88,7 +89,7 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, SlidersHorizontal, Brain, Lightbulb, StickyNote } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, SlidersHorizontal, Brain, Lightbulb, StickyNote, Search } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
@@ -433,6 +434,10 @@ export default function Serenity() {
    *  finestre multiple ridimensionabili): un solo PDF alla volta, in una finestra fissa — un
    *  raffinamento dichiarato ancora aperto, non l'intera macchina delle finestre mobili. */
   const [processusAperto, setProcessusAperto] = useState(false);
+  /** ⚠️ AGGIUNTO — segnalato: « si potrebbe integrare il dizionario tecnico? ». Un bottone in
+   *  più accanto a EP/COMMANDS (v. `DizionarioModal.tsx` per la fonte dei dati e il motivo del
+   *  copyright), stesso principio di `processusAperto`: uno stato, un solo modale montato. */
+  const [dizionarioAperto, setDizionarioAperto] = useState(false);
   /** ⚠️ SEGNALATO DI NUOVO: « quando schiacci sul bottone COMMANDS, devono apparire solo i
    *  file dei comandi, non tutti i processus ». COMMANDS e "Processus" aprono lo STESSO
    *  modale (`setProcessusAperto(true)`, un solo `<ProcessusModal>` montato) — questo stato
@@ -3835,6 +3840,32 @@ export default function Serenity() {
             }}>COMMANDS</span>
           </div>
         )}
+        {/* ── DIZIONARIO TECNICO — segnalato: « si potrebbe integrare il dizionario tecnico?
+            ...un bottone come comands e processus sarebbe l'ideale ». Stessa forma esatta del
+            bottone COMMANDS appena sopra (icona rotonda 54px, etichetta sotto) — v.
+            `DizionarioModal.tsx` per la fonte dei dati e la nota sul copyright. */}
+        {aperta && (
+          <div style={{ display: 'grid', justifyItems: 'center', gap: 4, pointerEvents: 'auto' }}>
+            <button
+              className="s-glass s-glass-btn"
+              onClick={() => setDizionarioAperto(true)}
+              title="DIZIONARIO" data-help={LC('cerca un termine nel dizionario tecnico di Dianetics e Scientology',
+                'cherche un terme dans le dictionnaire technique de Dianetics et Scientology',
+                'search a term in the Dianetics and Scientology technical dictionary',
+                'busca un término en el diccionario técnico de Dianetics y Scientology',
+                'sök en term i den tekniska ordboken för Dianetics och Scientology') as string} style={{
+                width: 54, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', border: '1.5px solid var(--s-ink-ghost)', borderRadius: '50%',
+                background: 'var(--s-disc)', color: 'var(--s-ink-soft)',
+              }}>
+              <Search size={22} strokeWidth={1.8} aria-hidden="true" />
+            </button>
+            <span style={{
+              fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
+              color: 'var(--s-ink-faint)',
+            }}>{LC('DIZIONARIO', 'DICTIONNAIRE', 'DICTIONARY', 'DICCIONARIO', 'ORDBOK')}</span>
+          </div>
+        )}
         </div>
         )}
         {/* ── IL GIORNALE, SOTTO EP — segnalato: « cambia di posizione il giornale con
@@ -4618,6 +4649,16 @@ export default function Serenity() {
           FUNZIONA — non era lui il guasto) si perdeva dentro il disordine, sembrando
           irraggiungibile. Non si può cambiare `HistoryModal` stesso (è condiviso, cambierebbe
           anche EQUILIBRIUM): un involucro `fixed` qui gli dà l'antenato che si aspetta. */}
+      {/* ⚠️ SPOSTATO QUI — segnalato con screenshot: il titolo "DIZIONARIO TECNICO" si
+          sovrapponeva, illeggibile, all'intestazione vera di SERENITY. Non era la trasparenza
+          dello sfondo (corretta comunque, v. `DizionarioModal.tsx`): il montaggio viveva
+          dentro `.ser-comandi` (`zIndex:8`, accanto al bottone che lo apre) — un `position:
+          fixed, zIndex:200` DENTRO un contenitore con `zIndex` più basso di `<header>`
+          (`zIndex:10`) non vince MAI contro di lui: lo z-index di un elemento conta solo
+          dentro il proprio contesto di impilamento, non può "scavalcare" quello del genitore.
+          Qui, fratello di `<header>` e degli altri modali (`historyAperto`/`processusAperto`,
+          sotto), il suo `zIndex:200` fa davvero da solo sopra tutto. */}
+      {dizionarioAperto && <DizionarioModal lang={lang} onClose={() => setDizionarioAperto(false)} />}
       {historyAperto && (
         <div className="ser-history-wrap" style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
           <Suspense fallback={null}>
