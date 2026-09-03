@@ -4146,6 +4146,10 @@ export default function App() {
     // cancellerebbe proprio quel che il rapporto deve dire. Si azzera alla CHIUSURA del
     // rapporto — vedi `onClose` di PostSessionReport.
     setSessionEndTime(new Date());
+    // ⚠️ AGGIUNTO — v. la nota grande su `annullaTimerSospesi`, più giù: senza, un timer di
+    // ASSESSMENT (o il rimbalzo dell'ago) rimasto in sospeso da QUESTA seduta poteva risolversi
+    // durante la PROSSIMA (il componente resta montato, non smonta fra una seduta e l'altra).
+    annullaTimerSospesi();
     addLog({ time: timeRef.current, speaker: 'SYS', text: t('sys_end') as string });
     if (appModeRef.current === 'auditor') {
       networkManager.send({ type: 'SESSION_STATE', state: 'ended', time: timeRef.current, seq: ++sessionStateSeqRef.current }, true);
@@ -4170,20 +4174,28 @@ export default function App() {
     setShowReport(true);
   };
 
+  /**
+   * ── TUTTI I TIMER A LUNGA PORTATA, ANNULLATI DA UN SOLO POSTO ────────────────────────────
+   * Prima viveva SOLO nel cleanup allo smontaggio (sotto): senza di lei, un rimbalzo dell'ago,
+   * un mascheramento di parole o la risoluzione di un read potevano scattare DOPO la fine della
+   * seduta — stato aggiornato nel vuoto. Ma "smontaggio" e "fine seduta" NON sono lo stesso
+   * istante: `handleEnd()` (poco più giù) chiude la seduta SENZA smontare il componente — la
+   * stessa finestra resta aperta, pronta per la prossima — quindi questi timer non venivano MAI
+   * annullati fra una seduta e la successiva, solo alla chiusura vera dell'app. Un timer di
+   * ASSESSMENT rimasto in sospeso dalla seduta appena chiusa poteva quindi risolversi durante
+   * la seduta SUCCESSIVA, scrivendo in un ciclo che non è più il suo. Estratta qui apposta, per
+   * essere chiamata da ENTRAMBI i punti — non solo allo smontaggio.
+   */
+  const annullaTimerSospesi = () => {
+    if (kickFlybackRef.current) clearTimeout(kickFlybackRef.current);
+    // Il timer della riconnessione MUSE si spegne da sé: sta in `useMuseConnection`.
+    if (epWindowTimerRef.current) clearTimeout(epWindowTimerRef.current);
+    pendingTimersRef.current.forEach(id => window.clearTimeout(id));
+    pendingTimersRef.current.clear();
+  };
+
   // ── NETTOYAGE AU DÉMONTAGE ────────────────────────────────────────────────
-  // Tous les timers à longue portée sont annulés ici : sans cela, un rebond d'aiguille, un
-  // masquage de mots ou la résolution d'un read pouvait se déclencher APRÈS la fin de la
-  // séance (état mis à jour dans le vide).
-  useEffect(() => {
-    const pending = pendingTimersRef.current;
-    return () => {
-      if (kickFlybackRef.current) clearTimeout(kickFlybackRef.current);
-      // Il timer della riconnessione MUSE si spegne da sé: sta in `useMuseConnection`.
-      if (epWindowTimerRef.current) clearTimeout(epWindowTimerRef.current);
-      pending.forEach(id => window.clearTimeout(id));
-      pending.clear();
-    };
-  }, []);
+  useEffect(() => annullaTimerSospesi, []);
 
   // ── R3: crash-recovery autosave ────────────────────────────────────────────
   // The latest session content lives in a ref (updated each render, cheap) so the
