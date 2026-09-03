@@ -8436,3 +8436,28 @@ File toccati — SOLO SERENITY: [`src/serenity/DizionarioModal.tsx`](../src/sere
 (caricamento e fusione delle abbreviazioni, id univoco), `public/dizionario/abbreviazioni-it.json`,
 `public/dizionario/abbreviazioni-en.json` (nuovi, dati statici — script `estrai_abbrev.py`,
 fuori dal deposito, non nel build).
+
+## Giro — 2026-09-03 (26) — le abbreviazioni, un accesso diretto dopo la Z
+
+**« Avrei voluto una sezione abbreviazioni (come nel libro) dopo la lettera z ».** Il giro
+precedente le aggiungeva in coda a ciascuna lista — visibili scorrendo senza filtri fino in
+fondo — ma cliccando una LETTERA, i loro codici che iniziano con quella lettera si
+mescolavano silenziosamente alle voci vere dello stesso filtro (es. "H" mostrava sia HABIT
+che HCOB, senza distinzione se non il font). Nessun modo diretto per saltare SOLO a loro,
+come invece si fa per una lettera — non era ancora "dopo la Z" nel senso di un accesso
+proprio, solo una posizione nello scroll.
+
+**Aggiunto un bottone "§" nella stessa riga A-Z, subito DOPO la Z** (`letteraFiltro` accetta
+ora anche `'#'`, mai una vera lettera): un clic mostra SOLO le abbreviazioni, esattamente la
+sezione a sé del libro stampato — non più solo raggiungibile scorrendo. Le lettere A-Z, di
+conseguenza, ora escludono le abbreviazioni dal proprio filtro (prima le mescolavano quando i
+loro nomi coincidevano) — la selezione resta sempre netta: o voci vere di una lettera, o tutte
+e sole le abbreviazioni, mai le due cose insieme per errore.
+
+Verificato dal vivo: "§" cliccato mostra "129 / 2670 entrées" (tutte le abbreviazioni
+inglesi, col titolo "ABRÉVIATIONS" in cima); "H" cliccato subito dopo mostra "94 / 2670
+entrées" di sole voci vere (HABIT, HALLUCINATIONS…), niente più HCOB/HCO PL mescolate.
+
+`tsc --noEmit` pulito, `npm run lint` invariato (324 warning), `npx vitest run` 652/652 verdi.
+
+File toccati — SOLO SERENITY: [`src/serenity/DizionarioModal.tsx`](../src/serenity/DizionarioModal.tsx).

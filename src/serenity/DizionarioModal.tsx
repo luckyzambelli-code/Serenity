@@ -139,10 +139,15 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
   const lista = lingua === 'it' ? vociIt : vociEn;
 
   // Lettere davvero presenti nell'elenco corrente (niente bottoni morti per una lettera
-  // senza nessuna voce — es. "K" o "W" in italiano).
+  // senza nessuna voce — es. "K" o "W" in italiano). ⚠️ SOLO voci vere, mai `abbreviazione` —
+  // altrimenti un codice come "K" (se esistesse) accenderebbe il bottone "K" promettendo un
+  // termine vero che non c'è: le abbreviazioni hanno ORA il loro proprio accesso (v. "§" sotto,
+  // segnalato: « avrei voluto una sezione abbreviazioni dopo la lettera z »), le lettere restano
+  // SOLO per le voci vere.
   const letterePresenti = useMemo(() => {
     const s = new Set<string>();
     for (const v of lista) {
+      if (v.abbreviazione) continue;
       const prima = rimuoviAccenti(v.termine).charAt(0).toUpperCase();
       if (prima >= 'A' && prima <= 'Z') s.add(prima);
     }
@@ -150,7 +155,16 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
   }, [lista]);
 
   const filtrata = useMemo(() => {
-    if (letteraFiltro) return lista.filter(v => rimuoviAccenti(v.termine).charAt(0).toUpperCase() === letteraFiltro);
+    // ⚠️ SEGNALATO DI NUOVO: « avrei voluto una sezione abbreviazioni (come nel libro) dopo la
+    // lettera z ». Prima le abbreviazioni si vedevano SOLO scorrendo l'elenco fino in fondo
+    // (nessun filtro attivo) — cliccando una lettera qualunque, i loro codici che iniziano con
+    // quella lettera si mescolavano silenziosamente alle voci vere dello stesso filtro, senza
+    // un modo diretto per saltare SOLO a loro. `'#'` è un valore speciale di `letteraFiltro`
+    // (mai una vera lettera dell'alfabeto) per il bottone aggiunto DOPO la Z nella riga sotto —
+    // un clic e si vedono SOLO le abbreviazioni, esattamente la sezione a sé del libro stampato,
+    // non più solo raggiungibile scorrendo.
+    if (letteraFiltro === '#') return lista.filter(v => v.abbreviazione);
+    if (letteraFiltro) return lista.filter(v => !v.abbreviazione && rimuoviAccenti(v.termine).charAt(0).toUpperCase() === letteraFiltro);
     const q = rimuoviAccenti(ricerca.trim());
     if (!q) return lista;
     return lista.filter(v =>
@@ -241,7 +255,14 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
               dell'alfabeto ». Alternativa al campo di testo (v. nota sullo stato sopra): un
               clic su una lettera azzera il testo digitato, e viceversa. Le lettere senza
               nessuna voce nell'elenco corrente restano visibili ma spente e non cliccabili —
-              coerenza visiva dell'alfabeto intero, senza promettere risultati inesistenti. */}
+              coerenza visiva dell'alfabeto intero, senza promettere risultati inesistenti.
+              ⚠️ IL BOTTONE DOPO LA Z — segnalato di nuovo: « avrei voluto una sezione
+              abbreviazioni (come nel libro) dopo la lettera z ». Prima le abbreviazioni si
+              raggiungevano SOLO scorrendo l'elenco senza filtri fino in fondo — nessun modo
+              diretto per saltare SOLO a loro, come invece si fa per una lettera. Stessa riga di
+              bottoni, stesso stile, ma un piccolo distacco visivo (`marginLeft`) e un'etichetta
+              diversa (§, non una lettera) per dire "qui comincia un'altra cosa" — esattamente
+              dove sta nel libro stampato, subito dopo la Z. */}
           <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
             {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l => {
               const presente = letterePresenti.has(l);
@@ -262,6 +283,25 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
                 </button>
               );
             })}
+            {(() => {
+              const presente = lista.some(v => v.abbreviazione);
+              const attiva = letteraFiltro === '#';
+              return (
+                <button
+                  disabled={!presente}
+                  onClick={() => { setLetteraFiltro(attiva ? null : '#'); if (ricerca) setRicerca(''); }}
+                  title={LC('ABBREVIAZIONI', 'ABRÉVIATIONS', 'ABBREVIATIONS', 'ABREVIATURAS', 'FÖRKORTNINGAR')}
+                  style={{
+                    marginLeft: 6, minWidth: 22, padding: '3px 6px', border: 'none', borderRadius: 5,
+                    cursor: presente ? 'pointer' : 'default',
+                    fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
+                    background: attiva ? 'var(--s-reserve)' : 'transparent',
+                    color: attiva ? '#0b0f14' : presente ? 'var(--s-ink-faint)' : 'var(--s-ink-ghost)',
+                  }}>
+                  §
+                </button>
+              );
+            })()}
           </div>
           <div style={{
             marginTop: 8, fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)',
@@ -303,8 +343,10 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
             // le voci vere, qui comincia l'appendice", come nel libro stampato. Sparisce da
             // sola filtrando per lettera o per testo (la voce precedente in elenco potrebbe
             // non essere più adiacente) — lì il confine non serve più, la ricerca ha già
-            // ristretto tutto a quel che conta.
-            const inizioAbbreviazioni = v.abbreviazione && !letteraFiltro && !ricerca.trim()
+            // ristretto tutto a quel che conta. Resta invece col bottone "§" (`letteraFiltro
+            // === '#'`): lì la lista È solo abbreviazioni, il titolo diventa "stai guardando
+            // questo", non un confine da segnare.
+            const inizioAbbreviazioni = v.abbreviazione && (!letteraFiltro || letteraFiltro === '#') && !ricerca.trim()
               && (i === 0 || !filtrata[i - 1].abbreviazione);
             return (
               <div key={id}>
