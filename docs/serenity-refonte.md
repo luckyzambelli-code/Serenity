@@ -8205,3 +8205,47 @@ appare come una sottile barra chiara sul bordo destro della lista.
 `tsc --noEmit` pulito, `npm run lint` invariato (325 warning), `npx vitest run` 652/652 verdi.
 
 File toccati — SOLO SERENITY: [`src/serenity/ScalaTonoCompleta.tsx`](../src/serenity/ScalaTonoCompleta.tsx).
+
+## Giro — 2026-09-02 (23) — COMMANDS fuori da Electron (guida), e l'item non scritto in TONE
+
+**« Dans CHROME je ne peux pas ni créer ni accéder au fichiers commands ».** Verificato nel
+codice (`src/lib/procedimenti.ts`) prima di scrivere: è un comportamento DELIBERATO, dichiarato
+nel commento stesso del file (« FUORI DA ELECTRON NON C'È NULLA, E NON È UN ERRORE ») — COMMANDS
+legge/scrive `~/EQUILIBRIUM/COMANDI/Procedimenti` via IPC (`main.cjs`/`preload.cjs`), un canale
+che esiste SOLO nell'app Electron installata, mai in una scheda Chrome/browser puntata su un
+indirizzo di sviluppo. Non un bug — una nota mancante nel manuale. Aggiunta una nota "warn" nel
+capitolo 7, che spiega il perché e cosa aspettarsi (card vuota, "apri cartella" senza effetto)
+fuori dall'app installata. `VERSIONE` del manuale portata a 3.0.191.
+
+**« In TONE, quando enunci l'item è preso in considerazione ma non si scrive ».** Bug vero,
+trovato leggendo `resetTone()`/`localizzaTone()` riga per riga: "altra resistenza" chiama
+`resetTone()` (svuota l'item con uno STATE React, quindi asincrono) e SUBITO DOPO, nello stesso
+gesto sincrono, `localizzaTone()` — che leggeva `d.auditingQuestion` dalla propria CHIUSURA,
+ancora quella di PRIMA del reset (React non ha ancora ridisegnato). Con un item non vuoto
+rimasto dall'ultima resistenza, `toneAwaitItemRef.current` risultava FALSO invece di VERO —
+l'effetto che scrive la parola detta a voce dentro `item` (`Serenity.tsx`, l'`useEffect` sul
+giornale) non scattava mai: la voce restava sentita/registrata nel giornale ma mai copiata nel
+campo. Il primo arm (item già vuoto per davvero) non ne soffriva — da qui il bug visibile solo
+dalla seconda resistenza in poi, esattamente come descritto.
+
+Corretto in `useToneCycle.ts`: `localizzaTone` accetta ora `{ appenaResettato?: boolean }` —
+"altra resistenza" lo passa `true`, scavalcando la chiusura invece di fidarsene. ⚠️ Non un
+booleano posizionale: `App.tsx` monta questa stessa funzione con `onClick={localizzaTone}`
+(nessun wrapper) — un booleano posizionale sarebbe risultato VERO su OGNI click (l'evento del
+click, sempre "presente"), rompendo silenziosamente EQUILIBRIUM. Un oggetto `{appenaResettato}`
+non condivide proprietà con un `MouseEvent`: TypeScript stesso l'ha segnalato in compilazione
+("nessuna proprietà in comune"), da cui un piccolo tocco NECESSARIO a `App.tsx` — avvolto
+`onClick={localizzaTone}` in `onClick={() => localizzaTone()}`, comportamento invariato
+(nessun argomento passato, `appenaResettato` resta il suo default `false`).
+
+Verificato dal vivo (senza microfono reale non simulabile qui) il percorso adiacente non
+regredito: TONE, item digitato a mano, tono scelto, tono 40 raggiunto, "altra resistenza",
+seconda resistenza digitata a mano — tutto funziona come prima, nessun errore in console.
+
+`tsc --noEmit` pulito, `npm run lint` invariato (325 warning), `npx vitest run` 652/652 verdi.
+
+File toccati — CONDIVISI (richiedono build e invio di ENTRAMBI i DMG):
+[`src/session/useToneCycle.ts`](../src/session/useToneCycle.ts),
+[`src/App.tsx`](../src/App.tsx) (solo il wrapper dell'`onClick`, comportamento invariato).
+SERENITY-only: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx).
+Più il manuale esterno (COMMANDS/Electron).

@@ -3054,7 +3054,15 @@ export default function Serenity() {
               // Azzerato QUI, PRIMA che `resetTone()` svuoti l'item: il render successivo
               // legge già il ref giusto, senza aspettare l'effetto.
               itemConfirmedRef.current = false;
-              tone.resetTone(); setTonoScelto(false); tone.localizzaTone();
+              // ⚠️ `localizzaTone(true)`, non `localizzaTone()` — segnalato: « in TONE, quando
+              // enunci l'item è preso in considerazione ma non si scrive ». `resetTone()` (riga
+              // sopra) svuota l'item con uno state React (asincrono) — `localizzaTone()`,
+              // chiamata SUBITO dopo nello stesso gesto, leggerebbe ancora l'item VECCHIO dalla
+              // propria chiusura (React non ha ancora ridisegnato) e crederebbe il campo non
+              // vuoto — silenziando l'attesa della voce per la resistenza successiva. `true`
+              // dice esplicitamente "l'ho appena svuotato io" — v. la nota grande su
+              // `appenaResettato` in `useToneCycle.ts`.
+              tone.resetTone(); setTonoScelto(false); tone.localizzaTone({ appenaResettato: true });
               // ⚠️ AGGIUNTO — segnalato: « quando si fa altra resistenza, devi ripristinare
               // la scala del tono al valore neutro di inizio ciclo ». Senza `localizzaTone()`
               // (senza strumenti) fissa `toneAtStart` sul vecchio `toneAssessed` — ancora

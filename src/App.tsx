@@ -6226,7 +6226,16 @@ export default function App() {
                             « assessa » nominava per giunta le fasi che non ci sono più. È lo
                             stesso bottone degli altri tre cicli, e ora lo si vede. */}
                         {locabile && (
-                        <button style={btn(false, toneHasMeter)} onClick={localizzaTone}>
+                        // ⚠️ `onClick={() => localizzaTone()}`, non più `onClick={localizzaTone}`
+                        // (SERENITY, additivo) — `localizzaTone` ha guadagnato un parametro
+                        // opzionale (`{ appenaResettato }`, v. `useToneCycle.ts`) per una
+                        // correzione TONE di SERENITY; passato DIRETTO come qui, il primo
+                        // argomento che riceverebbe davvero è l'evento del click, non
+                        // l'opzione — TypeScript lo segnala giustamente («nessuna proprietà in
+                        // comune»), ed è per questo che ora c'è un wrapper. Comportamento
+                        // INVARIATO: nessun argomento passato, `appenaResettato` resta il suo
+                        // default (`false`), esattamente come prima di questo giro.
+                        <button style={btn(false, toneHasMeter)} onClick={() => localizzaTone()}>
                           {LC('DAI L\'ITEM', 'DONNE L\'ITEM', 'GIVE THE ITEM', 'DA EL ÍTEM', 'GE ITEM')}
                         </button>
                         )}

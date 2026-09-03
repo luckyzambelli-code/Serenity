@@ -496,6 +496,11 @@
     <span data-l="it">Nessun file PDF esiste lato COMMANDS — un procedimento è un file .txt (una cartella condivisa, un comando per riga), non qualcosa da scorrere come un PDF. Per aggiungerlo/modificarlo: il pulsante "apri cartella" nella card del procedimento (barra in alto, sotto "COMANDI PROCEDIMENTI") apre quella cartella direttamente.</span>
     <span data-l="en">No PDF file exists on the COMMANDS side — a procedure is a .txt file (a shared folder, one command per line), not something to scroll like a PDF. To add/edit one: the "open folder" button in the procedure's card (top bar, under "PROCEDURES COMMANDS") opens that folder directly.</span>
   </div>
+  <div class="note warn">
+    <span data-l="fr">COMMANDS a besoin de <b>l'application SERENITY installée</b> (le .app depuis le DMG) — pas d'un onglet Chrome/navigateur ouvert sur une adresse de développement. Le dossier des procédés vit sur ton disque (<code>~/EQUILIBRIUM/COMANDI/Procedimenti</code>) ; seule l'application installée peut le lire ou l'ouvrir. Dans un navigateur ordinaire, la carte reste vide et "ouvrir le dossier" ne fait rien — ce n'est pas une panne, juste l'absence du disque local que seule l'app a.</span>
+    <span data-l="it">COMMANDS ha bisogno dell'<b>applicazione SERENITY installata</b> (il .app dal DMG) — non di una scheda Chrome/browser aperta su un indirizzo di sviluppo. La cartella dei procedimenti vive sul disco (<code>~/EQUILIBRIUM/COMANDI/Procedimenti</code>); solo l'app installata può leggerla o aprirla. In un browser normale la card resta vuota e "apri cartella" non fa nulla — non è un guasto, è solo l'assenza del disco locale che ha solo l'app.</span>
+    <span data-l="en">COMMANDS needs the <b>installed SERENITY app</b> (the .app from the DMG) — not a Chrome/browser tab pointed at a development address. The procedures folder lives on disk (<code>~/EQUILIBRIUM/COMANDI/Procedimenti</code>); only the installed app can read or open it. In an ordinary browser the card stays empty and "open folder" does nothing — that's not a fault, just the missing local disk access only the app has.</span>
+  </div>
   <div class="shot">
     <img src="docs/guide-screenshots-serenity/commands.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" onload="this.nextElementSibling.style.display='none'">
     <div class="cap" style="display:block">
@@ -655,7 +660,7 @@
 </div>
 <span class="ver">SERENITY <span id="v"></span></span>
 <script>
-const VERSIONE = "3.0.184";
+const VERSIONE = "3.0.191";
 document.getElementById('v').textContent = VERSIONE;
 function setLang(l){
   document.body.setAttribute('data-lang', l);

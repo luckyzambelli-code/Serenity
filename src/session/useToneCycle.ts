@@ -418,8 +418,30 @@ export function useToneCycle(d: ToneCycleDeps) {
    * il corpo lo manifesti), il METER dice QUANTO (il TA a quell'istante). Senza MUSE si
    * ripiega sul movimento del METER; se non ha reagito nulla, sulla mediana della finestra —
    * che l'artefatto del clic non sposta.
+   *
+   * ⚠️ AGGIUNTO `appenaResettato` (SERENITY, additivo) — BUG TROVATO, segnalato: « in TONE,
+   * quando enunci l'item è preso in considerazione ma non si scrive ». Causa vera: "altra
+   * resistenza" chiama `resetTone()` (che azzera l'item con `d.setAuditingQuestion('')`, uno
+   * STATE React, quindi asincrono) e SUBITO DOPO, nello stesso gesto sincrono,
+   * `localizzaTone()` — che leggeva `d.auditingQuestion` dalla PROPRIA chiusura, ancora quella
+   * di PRIMA del reset (React non ha ancora ridisegnato). Con un item non vuoto rimasto
+   * dall'ultima resistenza, `toneAwaitItemRef.current = !d.auditingQuestion.trim()` risultava
+   * FALSO — quindi l'effetto che scrive la parola detta a voce dentro `item` (`Serenity.tsx`,
+   * l'`useEffect` su `tone.toneAwaitItemRef`) non scattava mai: la voce restava "sentita" (nel
+   * giornale, da cui viene comunque letta) ma non copiata nel campo. Il primo arm (item già
+   * vuoto per davvero) non ne soffriva — da qui il bug visibile solo dalla seconda resistenza
+   * in poi. `{ appenaResettato: true }`, passato SOLO dal gesto "altra resistenza" (che sa di
+   * aver appena chiamato `resetTone()`), scavalca la chiusura invece di fidarsi di lei.
+   *
+   * ⚠️ UN OGGETTO, NON UN BOOLEANO POSIZIONALE — App.tsx monta questa stessa funzione con
+   * `onClick={localizzaTone}` (verificato: nessun wrapper), quindi il PRIMO ARGOMENTO che
+   * riceve davvero, lì, è l'evento del click — sempre "presente" (troncherebbe un booleano
+   * posizionale a vero su OGNI click, silenziosamente). Un evento non ha una proprietà
+   * `appenaResettato`: `evento?.appenaResettato` è `undefined`, cioè falso — lo stesso
+   * comportamento di prima, invariato, qualunque cosa App.tsx passi qui senza saperlo.
    */
-  const localizzaTone = useCallback(() => {
+  const localizzaTone = useCallback((opts?: { appenaResettato?: boolean }) => {
+    const appenaResettato = opts?.appenaResettato ?? false;
     const r = toneLocator.locate(d.nowSec(), d.hasMuse, toneMeasured ?? 0);
     setToneAnchor({ how: r.anchor, ageS: r.ageS });
     // ── L'ORIGINE DELLA SCALA SI FISSA QUI ────────────────────────────────────────────────
@@ -441,7 +463,7 @@ export function useToneCycle(d: ToneCycleDeps) {
     // Premuto col campo VUOTO, la prima parola dell'auditor diventa l'item — come negli altri
     // tre cicli. Senza, in TONE si poteva solo scrivere: e scrivere vuol dire staccare gli
     // occhi dall'ago proprio mentre si localizza.
-    toneAwaitItemRef.current = !d.auditingQuestion.trim();
+    toneAwaitItemRef.current = appenaResettato || !d.auditingQuestion.trim();
     toneLogCursorRef.current = d.logLength();
     // E anche qui l'assessment si accende da sé (segnalato): dare la resistenza a voce è lo
     // stesso gesto che dare un item, e deve avere la stessa conseguenza in tutti e quattro i cicli.
