@@ -11,7 +11,31 @@ import { pick5 } from '../i18n5';
  * "Technical Dictionary" inglese (file .htm, dichiarato dalla fonte stessa "fair use quotes",
  * non il libro intero). Estratti UNA VOLTA in JSON con due script Python (fuori dal deposito,
  * non richiesti a ogni build come la guida — il libro non cambia) e copiati qui:
- * `public/dizionario/dizionario-it.json` (2408 voci) e `dizionario-en.json` (2567 voci).
+ * `public/dizionario/dizionario-it.json` (2624 voci) e `dizionario-en.json` (2541 voci).
+ *
+ * ⚠️ SEGNALATO DI NUOVO — con un esempio preciso: « in cima ad ogni pagina è riprodotto il
+ * titolo della definizione che si sta spiegando... poi la B maiuscola è la continuazione del
+ * testo della pagina 2 ». Il PDF italiano stampa un titolo corrente (il "guide word" da
+ * dizionario cartaceo) in cima a OGNI pagina — lo script di estrazione lo trattava come testo
+ * normale, incollandolo dentro la definizione ancora aperta al cambio pagina. Ricostruito lo
+ * script (`estrai_pdf_v2.py`, fuori dal deposito): `pdfplumber`, non solo `pypdf`, per sapere
+ * DOVE sta il testo sulla pagina — il titolo corrente sta sempre più in alto del corpo,
+ * indipendentemente dal font. Trovati e corretti nello stesso giro altri due difetti scoperti
+ * verificando la correzione: un capolettera decorativo a inizio di ogni sezione alfabetica
+ * (stesso rischio, riga isolata), e i termini che vanno a capo PRIMA della virgola che apre
+ * la definizione (creavano una voce fantasma col nome sbagliato — l'ultima parola della
+ * traduzione inglese invece del vero termine italiano, es. "ABERRAZIONE AMBIENTALE" sparita a
+ * favore di una voce "ABERRATION" con la definizione giusta ma il nome sbagliato) — e un terzo,
+ * un trattino SENZA spazi dentro al termine o alla traduzione stessa (es. "MID-INTEGRITY",
+ * "THEETIE-WEETIE") che le classi di caratteri della correzione precedente non prevedevano
+ * ancora, fermando l'abbinamento a metà parola esattamente come prima. 2408→2624 voci italiane
+ * dopo i tre giri di correzione: centinaia di frammenti fantasma spariti, centinaia di voci
+ * vere (prima fuse dentro quella precedente) recuperate col proprio nome. Una QUARTA ipotesi
+ * (ammettere anche le parentesi, per le abbreviazioni tra parentesi nel termine — "AMMINISTRA-
+ * ZIONE (ADMIN)") è stata provata e tolta di nuovo: recuperava 9 voci ma ne rompeva 12 altre (un
+ * riferimento bibliografico a fine voce precedente che va a capo da solo, "...III)", è anch'esso
+ * maiuscolo+parentesi a inizio riga — v. la nota in `estrai_pdf_v2.py`). Il "-en" inglese non ha
+ * questo difetto (fonte HTML, non pagine stampate) — non toccato.
  *
  * ⚠️ COPYRIGHT — segnalato dall'utente: per ora la distribuzione resta a due persone, per il
  * collaudo del programma; la distribuzione più ampia resta da decidere. Non è compito di
@@ -40,8 +64,18 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
   const [erroreCaricamento, setErroreCaricamento] = useState(false);
   const [vociIt, setVociIt] = useState<Voce[]>([]);
   const [vociEn, setVociEn] = useState<Voce[]>([]);
-  const [lingua, setLingua] = useState<'it' | 'en'>('it');
+  // ⚠️ INGLESE PER DEFAULT — segnalato. La ricerca bilingue (italiano che confronta anche
+  // `termineEn`) resta invariata su ENTRAMBE le schede: qui cambia solo quale delle due si
+  // vede aprendo il pannello, non la logica di ricerca.
+  const [lingua, setLingua] = useState<'it' | 'en'>('en');
   const [ricerca, setRicerca] = useState('');
+  // ⚠️ AGGIUNTA — segnalato: « puoi mettere una ricerca anche via lettera dell'alfabeto ».
+  // Alternativa al campo di testo, non insieme a lui (le due ricerche si annullano a vicenda
+  // quando si usa l'altra — v. `onChange`/`onClick` sotto): scegliere una lettera mentre resta
+  // scritto qualcosa nel campo di testo produrrebbe un filtro doppio poco prevedibile
+  // ("comincia con B" E "contiene xyz"), più facile da confondere che da capire a colpo
+  // d'occhio.
+  const [letteraFiltro, setLetteraFiltro] = useState<string | null>(null);
   const [espanso, setEspanso] = useState<string | null>(null);
 
   // ⚠️ CARICATO SOLO ALL'APERTURA, NON ALL'AVVIO DI SERENITY — 2 MB di JSON che servono
@@ -63,12 +97,25 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
   }, []);
 
   const lista = lingua === 'it' ? vociIt : vociEn;
+
+  // Lettere davvero presenti nell'elenco corrente (niente bottoni morti per una lettera
+  // senza nessuna voce — es. "K" o "W" in italiano).
+  const letterePresenti = useMemo(() => {
+    const s = new Set<string>();
+    for (const v of lista) {
+      const prima = rimuoviAccenti(v.termine).charAt(0).toUpperCase();
+      if (prima >= 'A' && prima <= 'Z') s.add(prima);
+    }
+    return s;
+  }, [lista]);
+
   const filtrata = useMemo(() => {
+    if (letteraFiltro) return lista.filter(v => rimuoviAccenti(v.termine).charAt(0).toUpperCase() === letteraFiltro);
     const q = rimuoviAccenti(ricerca.trim());
     if (!q) return lista;
     return lista.filter(v =>
       rimuoviAccenti(v.termine).includes(q) || (v.termineEn ? rimuoviAccenti(v.termineEn).includes(q) : false));
-  }, [lista, ricerca]);
+  }, [lista, ricerca, letteraFiltro]);
 
   return (
     <div style={{
@@ -79,26 +126,40 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
       // sovrapponevano ed erano illeggibili insieme. Il visore PDF non lo mostrava (il suo
       // titolo, il nome del file, è più corto e cade altrove) — non è un difetto suo da
       // correggere qui, solo un valore che qui non basta. Quasi opaco.
-      background: 'rgba(6,9,13,0.95)', backdropFilter: 'blur(8px)', padding: 24,
+      // ⚠️ SEGNALATO DI NUOVO: « in light il dizionario, le definizioni non sono molto
+      // visibili ». Il fondo qui sopra era un nero LETTERALE (`rgba(6,9,13,...)`), fisso in
+      // ENTRAMBI i temi — copiato dal visore PDF, che però resta scuro apposta in ogni tema
+      // (uno strumento, v. `--tr-bg`/`--s-instrument-bg` in tokens.css). Questo pannello
+      // invece è testo normale, non uno strumento: doveva seguire il tema come tutto il resto
+      // di SERENITY. In chiaro, il vetro semitrasparente del riquadro sotto (`--s-disc`)
+      // galleggiava su questo nero fisso — e le definizioni, in `--s-ink-soft` (SCURO in
+      // tema chiaro, per leggersi sul fondo perla vero), sparivano su un fondo che restava
+      // nero a dispetto del tema. `var(--s-ground)` invece dell'hex fisso: perla quasi opaco
+      // in chiaro, quasi nero in scuro — la stessa intenzione ("nascondi l'intestazione
+      // dietro"), ma nel colore giusto per il tema attivo.
+      background: 'color-mix(in srgb, var(--s-ground) 96%, transparent)',
+      backdropFilter: 'blur(8px)', padding: 24,
     }}>
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
         marginBottom: 14, flexShrink: 0, flexWrap: 'wrap',
       }}>
-        <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-lg)', fontWeight: 700, color: '#fff' }}>
+        <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-lg)', fontWeight: 700, color: 'var(--s-ink)' }}>
           {LC('DIZIONARIO TECNICO', 'DICTIONNAIRE TECHNIQUE', 'TECHNICAL DICTIONARY', 'DICCIONARIO TÉCNICO', 'TEKNISK ORDBOK')}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {/* ── DUE FONTI, DUE SCHEDE — l'italiano (completo, con incrocio inglese) e
-              l'inglese (fonte a sé, "fair use quotes" — v. la nota in testa al file). */}
-          <div style={{ display: 'flex', borderRadius: 999, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.24)' }}>
+              l'inglese (fonte a sé, "fair use quotes" — v. la nota in testa al file).
+              Stesso motivo del fondo sopra: bianco/nero fissi sostituiti dai token —
+              la pillola piena "inchiostro con sopra il colore del fondo" (v. tokens.css). */}
+          <div style={{ display: 'flex', borderRadius: 999, overflow: 'hidden', border: '1px solid var(--s-ink-ghost)' }}>
             {(['it', 'en'] as const).map(l => (
-              <button key={l} onClick={() => { setLingua(l); setEspanso(null); }}
+              <button key={l} onClick={() => { setLingua(l); setEspanso(null); setLetteraFiltro(null); }}
                 style={{
                   border: 'none', cursor: 'pointer', padding: '6px 16px',
                   fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', fontWeight: 700,
-                  background: lingua === l ? 'rgba(255,255,255,0.9)' : 'transparent',
-                  color: lingua === l ? '#0b0f14' : 'rgba(255,255,255,0.75)',
+                  background: lingua === l ? 'var(--s-ink)' : 'transparent',
+                  color: lingua === l ? 'var(--s-ground-warm)' : 'var(--s-ink-faint)',
                 }}>
                 {l === 'it'
                   ? LC('ITALIANO', 'ITALIEN', 'ITALIAN', 'ITALIANO', 'ITALIENSKA')
@@ -107,7 +168,7 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
             ))}
           </div>
           <button onClick={onClose} style={{
-            border: 'none', background: 'rgba(255,255,255,0.12)', color: '#fff',
+            border: 'none', background: 'var(--s-disc-sunk)', color: 'var(--s-ink)',
             borderRadius: 999, padding: '6px 16px', cursor: 'pointer',
             fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)',
           }}>
@@ -123,7 +184,7 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
         <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--s-ink-ghost)', flexShrink: 0 }}>
           <input
             value={ricerca}
-            onChange={e => setRicerca(e.target.value)}
+            onChange={e => { setRicerca(e.target.value); if (letteraFiltro) setLetteraFiltro(null); }}
             autoFocus
             placeholder={lingua === 'it'
               ? LC('cerca un termine, in italiano o in inglese…', 'cherche un terme, en italien ou en anglais…',
@@ -136,6 +197,32 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
               fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
             }}
           />
+          {/* ── RICERCA PER LETTERA — segnalato: « puoi mettere una ricerca anche via lettera
+              dell'alfabeto ». Alternativa al campo di testo (v. nota sullo stato sopra): un
+              clic su una lettera azzera il testo digitato, e viceversa. Le lettere senza
+              nessuna voce nell'elenco corrente restano visibili ma spente e non cliccabili —
+              coerenza visiva dell'alfabeto intero, senza promettere risultati inesistenti. */}
+          <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l => {
+              const presente = letterePresenti.has(l);
+              const attiva = letteraFiltro === l;
+              return (
+                <button
+                  key={l}
+                  disabled={!presente}
+                  onClick={() => { setLetteraFiltro(attiva ? null : l); if (ricerca) setRicerca(''); }}
+                  style={{
+                    minWidth: 22, padding: '3px 5px', border: 'none', borderRadius: 5,
+                    cursor: presente ? 'pointer' : 'default',
+                    fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
+                    background: attiva ? 'var(--s-reserve)' : 'transparent',
+                    color: attiva ? '#0b0f14' : presente ? 'var(--s-ink-faint)' : 'var(--s-ink-ghost)',
+                  }}>
+                  {l}
+                </button>
+              );
+            })}
+          </div>
           <div style={{
             marginTop: 8, fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)',
             letterSpacing: '0.04em', color: 'var(--s-ink-faint)',

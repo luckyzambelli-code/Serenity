@@ -8309,3 +8309,79 @@ File toccati — SOLO SERENITY: [`src/serenity/Serenity.tsx`](../src/serenity/Se
 [`src/serenity/DizionarioModal.tsx`](../src/serenity/DizionarioModal.tsx) (nuovo),
 `public/dizionario/dizionario-it.json`, `public/dizionario/dizionario-en.json` (nuovi, dati
 statici — nessun file di codice condiviso con EQUILIBRIUM).
+
+## Giro — 2026-09-03 (24) — DIZIONARIO: inglese di default, ricerca per lettera, e la
+## correzione grossa dell'estrazione italiana
+
+**Due richieste piccole, poi una segnalazione grossa mentre erano ancora in corso.**
+« Metti inglese per default » — la scheda che si vede aprendo il pannello ora è INGLESE
+(prima Italiano); la ricerca bilingue (l'italiano che confronta anche `termine_en`) resta
+identica su entrambe le schede, cambia solo quale si vede per prima. « Puoi mettere una
+ricerca anche via lettera dell'alfabeto » — riga di 26 bottoni A-Z sotto il campo di testo,
+alternativa al campo (non insieme: scegliere una lettera svuota il testo digitato e
+viceversa, per non produrre un filtro doppio poco prevedibile); le lettere senza nessuna
+voce nell'elenco corrente restano visibili ma spente, per coerenza visiva dell'alfabeto
+intero. Cambiare scheda (Italiano/Inglese) azzera anche la lettera scelta, non solo la voce
+espansa — altrimenti restava evidenziata una lettera "0 entrées" nella lingua appena aperta.
+
+**Segnalato mentre erano in corso: « in light il dizionario, le definizioni non sono molto
+visibili ».** Riprodotto dal vivo: lo sfondo esterno del pannello era un nero LETTERALE
+(`rgba(6,9,13,0.95)`) fisso in ENTRAMBI i temi — copiato dal visore PDF quando si era corretto
+(giro 23) il titolo che si sovrapponeva all'intestazione, ma il visore PDF resta scuro APPOSTA
+in ogni tema (uno strumento, come `--tr-bg`/`--s-instrument-bg` — v. `tokens.css`); questo
+pannello invece è testo normale, doveva seguire il tema come tutto il resto di SERENITY. In
+chiaro il vetro semitrasparente del riquadro (`--s-disc`) galleggiava su quel nero fisso, e le
+definizioni (`--s-ink-soft`, SCURO in tema chiaro per leggersi sul perla vero) sparivano sopra.
+Sostituito con `color-mix(in srgb, var(--s-ground) 96%, transparent)` — segue il tema da solo.
+Stessa correzione per il titolo (`#fff` fisso → `var(--s-ink)`), la pillola di lingua e il
+bottone chiudi (bianco/nero fissi → `var(--s-ink)`/`var(--s-disc-sunk)`/`var(--s-ink-ghost)`).
+
+**Segnalato SUBITO DOPO, con un esempio preciso: « hai sbagliato ad importare il dizionario
+ITALIANO... in cima ad ogni pagina è riprodotto il titolo della definizione che si sta
+spiegando... la B maiuscola è la continuazione del testo della pagina 2. CORREGGI ».**
+Riprodotto e confermato: il PDF stampa un titolo corrente (il "guide word" da dizionario
+cartaceo) in cima a OGNI pagina — lo script del giro 23 (`estrai_pdf.py`) lo trattava come
+testo normale, incollandolo dentro la definizione ancora aperta al cambio pagina. Ricostruita
+l'estrazione (`estrai_pdf_v2.py`, fuori dal deposito): `pdfplumber` invece del solo `pypdf`,
+per sapere DOVE sta il testo sulla pagina — il titolo corrente sta sempre più in alto (`top` <
+65pt) del corpo (sempre `top` >= 81pt), indipendentemente dal font (di norma 12pt contro
+l'11pt del corpo, ma non sempre: la posizione è l'unico segnale affidabile su tutte le 621
+pagine verificate). Tre difetti IMPARENTATI scoperti verificando la correzione dal vivo, non
+a occhio:
+1. un capolettera decorativo a inizio di ogni sezione alfabetica (23 pagine) — stesso rischio
+   di fondersi col termine vero della riga dopo, tolto per essere una riga isolata di una
+   sola lettera;
+2. i termini che vanno a capo PRIMA della virgola che apre la definizione — creavano una voce
+   fantasma col nome sbagliato (l'ultima parola della traduzione inglese invece del vero
+   termine italiano: "ABERRAZIONE AMBIENTALE" spariva a favore di una voce "ABERRATION" con la
+   definizione giusta ma il nome sbagliato). Corretto ammettendo l'"a capo" dentro alle classi
+   di caratteri del termine/traduzione (pigro come prima, si ferma alla prima virgola vera);
+3. un trattino SENZA spazi dentro al termine o alla traduzione stessa ("MID-INTEGRITY",
+   "THEETIE-WEETIE") che la correzione (2) da sola non copriva ancora, fermando l'abbinamento
+   a metà parola esattamente come prima.
+
+Una quarta ipotesi (ammettere anche le parentesi, per voci come "AMMINISTRAZIONE (ADMIN)") è
+stata provata e tolta di nuovo verificando i conteggi: recuperava 9 voci ma ne rompeva 12
+altre (un riferimento bibliografico a fine voce precedente che va a capo da solo, "...III)",
+è anch'esso maiuscolo+parentesi a inizio riga — l'abbinamento successivo partiva da lì invece
+che dalla vera voce dopo). Il costo superava il beneficio, tolta — resta un'imperfezione nota,
+come il trattino di traduzione più raro già documentato nel giro 23.
+
+**2408 → 2624 voci italiane.** Verificato con un campione casuale di voci comuni fra la
+versione vecchia e la nuova (nessuna regressione sul contenuto già corretto) e con una
+ricerca mirata sulle stesse voci citate dall'utente e trovate durante la correzione:
+"ABERRAZIONE AMBIENTALE" e "CASO THEETIE-WEETIE"/"THEETIE-WEETIE" ora esistono come voci
+separate, col nome giusto. Il dizionario inglese (`-en`, fonte HTML senza pagine stampate)
+non ha questo difetto — non toccato.
+
+Verificato dal vivo: scheda ANGLAIS selezionata di default all'apertura (2541 entrées);
+lettera "X" cliccata mostra "3/2541 entrées" (X, X 1, X 2), cambio scheda verso ITALIEN
+azzera la lettera (2408/2408 — verificato PRIMA della correzione dell'estrazione, poi
+2624/2624 dopo); ricerca "aberrazione ambientale" trova la voce giusta con definizione
+leggibile su fondo chiaro vero; ricerca "theetie-weetie" trova le due voci separate.
+
+`tsc --noEmit` pulito, `npm run lint` invariato (324 warning), `npx vitest run` 652/652 verdi.
+
+File toccati — SOLO SERENITY: [`src/serenity/DizionarioModal.tsx`](../src/serenity/DizionarioModal.tsx)
+(scheda di default, ricerca per lettera, temi), `public/dizionario/dizionario-it.json`
+(dato statico rigenerato — script `estrai_pdf_v2.py`, fuori dal deposito, non nel build).
