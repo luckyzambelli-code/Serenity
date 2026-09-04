@@ -53,7 +53,7 @@ import { ThetaReadyCheck } from '../components/ThetaReadyCheck';
 import { MetabolicCheck } from '../components/MetabolicCheck';
 import { metabolicBaseline, type MetabAssessment } from '../engine/MetabolicBaseline';
 import { useSessionJournal } from '../session/useSessionJournal';
-import { useContactNullCycle } from '../session/useContactNullCycle';
+import { useContactNullCycle, type CycleTick } from '../session/useContactNullCycle';
 import { useMirrorCycle } from '../session/useMirrorCycle';
 import { MirrorDial } from '../components/MirrorDial';
 import { useToneCycle } from '../session/useToneCycle';
@@ -349,6 +349,11 @@ function Divisore() {
 
 export default function Serenity() {
   const { t, lang, setLang } = useI18n();
+  // ⚠️ Stessa nota di App.tsx: `t` reale ha una chiave letterale stretta (~660 varianti) —
+  // corretto, ma un paio di componenti dichiarano la propria prop `t` più larga. Sicuro per
+  // davvero (una chiave sconosciuta a runtime ritorna la chiave stessa, v. `i18n.tsx`) — `tWide`
+  // resta SOLO per quei punti di passaggio, mai per chiamare `t()` direttamente qui.
+  const tWide = t as (key: string) => unknown;
   /** LC — le stesse cinque lingue di App.tsx, stesso helper (`i18n5`, non un secondo). Serve
    *  ai moduli condivisi (`useChargeEngine`'s deps non lo usa direttamente, ma sarà necessario
    *  quando la fase 6 monterà i cicli — vedi la nota più sotto). */
@@ -1267,7 +1272,11 @@ export default function Serenity() {
   const trackTruthRef = useRef<(q: number, nowSec: number, hasInstrument: boolean, fnNow: boolean, pushUi: boolean) => void>(() => {});
   /** `useContactNullCycle` (sotto) scrive qui il suo `trackCycle` DOPO essere stato creato —
    *  il ref esiste già ora perché `useChargeEngine` (anche lui sotto) lo riceve una volta sola. */
-  const trackCycleRef = useRef<(t: never) => void>(() => {});
+  // ⚠️ `(t: never)`, non `(t: CycleTick)` — trovato attivando `strict`: un placeholder rimasto
+  // troppo largo (o troppo stretto: `never` non accetta NESSUN argomento) che l'inferenza
+  // lasca di prima non segnalava. Corretto al tipo vero, lo stesso che riceve poi da
+  // `cycles.trackCycle` qualche riga sotto.
+  const trackCycleRef = useRef<(t: CycleTick) => void>(() => {});
 
   /** NUOVO ITEM → l'ago si LIBERA. Stessa funzione di App.tsx (`freeNeedleForNewItem`): la
    *  chiama `armCycle`, sotto, appena l'auditor dà un item. */
@@ -4372,8 +4381,13 @@ export default function Serenity() {
           // in basic non deve apparire »): una configurazione salvata senza questo campo
           // (`null`/`undefined`) deve leggersi come BASIC.
           if (espertoAttivo !== true && !strumentiEspansi) {
-            const ordinePriorita: Record<string, number> = { connesso: 0, errore: 1, cercando: 2, spento: 3, 'in-attesa': 4 };
-            const statoAggregato = strumenti.reduce((peggiore, s) =>
+            const ordinePriorita: Record<import('./IndicatoreConnessione').StatoConnessione, number> =
+              { connesso: 0, errore: 1, cercando: 2, spento: 3, 'in-attesa': 4 };
+            // ⚠️ Genere esplicito sul `reduce` — trovato attivando `strict`: senza, l'accumulatore
+            // partiva dal letterale 'in-attesa' allargato a `string` semplice (non più
+            // `StatoConnessione`), e `COLORE_PUNTO[statoAggregato]` sotto perdeva il controllo
+            // del tipo sulla chiave.
+            const statoAggregato = strumenti.reduce<import('./IndicatoreConnessione').StatoConnessione>((peggiore, s) =>
               ordinePriorita[s.stato] < ordinePriorita[peggiore] ? s.stato : peggiore, 'in-attesa');
             const IconaAggregata = strumenti.find(s => s.stato === statoAggregato)?.icona ?? strumenti[0].icona;
             return (
@@ -5299,7 +5313,7 @@ export default function Serenity() {
                 <span style={{ fontSize: 'var(--s-fs-xl)', fontWeight: 700, color: 'var(--s-ink)' }}>
                   <LetturaTA />
                 </span>
-                <LetturaFase t={t} />
+                <LetturaFase t={tWide} />
                 {/* ⚠️ ORA DIETRO EXPERT — segnalato: « semplificare al massimo BASIC »,
                     « numeri esatti (TA, %, velocità) ». Il TOTAL TA cumulativo e la velocità
                     sono un secondo livello di lettura (quanto in TUTTO, non quanto ORA) —
@@ -5315,7 +5329,7 @@ export default function Serenity() {
                       <LetturaTotalTa override={meterC ? theta.totalTa : null} bodyMotion={theta.bodyMotion} />
                     </span>
                     <span title={t('mental_processing_velocity') as string}>
-                      <LetturaVelocita t={t} />
+                      <LetturaVelocita t={tWide} />
                     </span>
                   </>
                 )}

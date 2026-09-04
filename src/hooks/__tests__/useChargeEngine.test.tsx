@@ -32,6 +32,13 @@ import { contactPredictor } from '../../engine/ContactPredictor';
 import { cycleStateMachine } from '../../engine/CycleStateMachine';
 import { chargeEpisode } from '../../engine/ChargeEpisodeTracker';
 
+// `act()` importé directement de 'react' a besoin de ce drapeau pour savoir qu'il tourne dans
+// un environnement de test — v. la note dans `useMuseConnection.test.tsx`, où son absence
+// corrompait le suivi interne de React après un `act()` async imbriqué. Ce fichier-ci n'en avait
+// pas besoin pour passer (aucun chevauchement d'`act()`), mais l'avertissement qu'il supprime
+// est le même signal — mieux vaut le poser partout où `act()` est utilisé nu.
+(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
 const { workerInstances, FakeWorker } = vi.hoisted(() => {
   const workerInstances: FakeWorkerImpl[] = [];
   class FakeWorkerImpl {

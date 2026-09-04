@@ -56,8 +56,12 @@ const isElettrone = typeof window !== 'undefined'
 
 export type StatoVoce = 'spenta' | 'avvio' | 'in-ascolto' | 'assente';
 
+// ⚠️ `results` OBBLIGATORIO, non opzionale — trovato attivando `strict`: le due classi vere
+// (`OfflineSpeechRecognition`, `NativeSpeechRecognition`) lo dichiarano entrambe obbligatorio
+// e lo passano SEMPRE (mai omesso) ai propri `this.onresult(...)`. Un'astrazione più larga di
+// quella reale non è più sicura, solo scorretta — TypeScript lo segnalava a ragione.
 interface MotoreSemplice {
-  onresult: ((e: { results?: { transcript: string; isFinal: boolean }[]; speechEndMs?: number }) => void) | null;
+  onresult: ((e: { results: { transcript: string; isFinal: boolean }[]; speechEndMs?: number }) => void) | null;
   onerror: ((e: { error: string }) => void) | null;
 }
 

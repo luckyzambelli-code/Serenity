@@ -169,6 +169,14 @@ const isElectron = typeof window !== 'undefined' && !!(window as unknown as { el
 
 export default function App() {
   const { t, lang, setLang } = useI18n();
+  // ⚠️ Trovato attivando `strict`: `t` è tipizzata su un'unione letterale di ~660 chiavi note —
+  // corretto (una chiave inventata sarebbe un errore da cogliere in compilazione), ma alcuni
+  // componenti dichiarano la propria prop `t` come `(key: string) => string` (più larga). Passare
+  // la funzione stretta lì è REALMENTE sicuro (v. `i18n.tsx`: una chiave sconosciuta a runtime
+  // ritorna la chiave stessa, mai un crash) — ma TypeScript lo rifiuta a ragione in astratto (una
+  // funzione che accetta MENO non sostituisce una che promette di accettarne di più). `tWide`
+  // esiste SOLO per quei pochi punti di passaggio, mai per chiamare `t()` direttamente qui.
+  const tWide = t as (key: string) => string;
   /** Traduction INLINE 5 langues pour les libellés/infobulles locaux (même esprit que SidebarDrawer).
    *  Les TERMES D'AUDITION (CONTACT, NULL, RISE, EQUILIBRIUM, AS-IS, VGIs, MOCK-UP, recharging /
    *  no recharging) ne se traduisent PAS : c'est le vocabulaire du métier, identique partout. */
@@ -4944,7 +4952,11 @@ export default function App() {
             qL: metricsStore.get().qL,
             eta: metricsStore.get().eta,
             needleReaction: needleReaction,
-            recentLogs: logs.slice(-15).map(l => ({ time: l.time, speaker: l.speaker, text: l.text })) }}
+            // ⚠️ `l.speaker` è opzionale (`LogEntry`, TranscriptLog.tsx) — trovato attivando
+            // `strict`: un `undefined` qui sarebbe finito stampato come testo "undefined:" nel
+            // prompt inviato all'IA (v. AIAssistant.tsx, `${l.speaker}:`). Difetto latente vero,
+            // non solo un tipo da zittire — corretto con una stringa vuota, non un valore inventato.
+            recentLogs: logs.slice(-15).map(l => ({ time: l.time, speaker: l.speaker ?? '', text: l.text })) }}
         />
       </div>
 
@@ -5132,7 +5144,7 @@ export default function App() {
           onPause={sbOnPause}
           onResume={sbOnResume}
           onEnd={sbOnEnd}
-          t={t}
+          t={tWide}
         />
 
       
@@ -5150,7 +5162,7 @@ export default function App() {
             onOpenThetaTester={() => { setSidebarDrawer(null); setShowThetaCal(true); }}
           drawer={sidebarDrawer}
           onClose={sdOnClose}
-          t={t}
+          t={tWide}
 
           sessionState={sessionState}
           onModeChange={sdOnModeChange}
@@ -5236,7 +5248,7 @@ export default function App() {
                   batteryLevel={batteryLevel}
                   sessionState={sessionState}
                   onHide={() => setModuleVis(v => ({ ...v, health: false }))}
-                  t={t}
+                  t={tWide}
                   panelStyle={panelStyle}
                 />
               )}

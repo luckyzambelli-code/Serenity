@@ -477,7 +477,12 @@ export function useMuseConnection(d: MuseConnectionDeps) {
               if (!dev || !dev.gatt) throw new Error('no retained Muse device');
               // gatt.connect() su un device che non trasmette può PENDERE per sempre → timeout,
               // e prima di riprovare si ABORTISCE il tentativo pendente (disconnect).
-              let server;
+              // ⚠️ Tipo esplicito — trovato attivando `strict`: senza, l'inferenza attraverso
+              // `withTimeout` (generico) + `try/catch` risolveva `server` a `unknown`, che
+              // `client.connect()` (muse-js) rifiuta. `dev` resta `any` (v. `museDeviceRef`,
+              // deliberatamente — è un oggetto Bluetooth non tipizzato da muse-js), solo il
+              // punto di consumo qui ha bisogno del tipo vero.
+              let server: BluetoothRemoteGATTServer | undefined;
               try {
                 server = await withTimeout(dev.gatt.connect(), MUSE_GATT_TIMEOUT_MS, 'gatt timeout');
               } catch (e) {

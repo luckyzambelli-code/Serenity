@@ -8512,3 +8512,78 @@ contratto), [`src/App.tsx`](../src/App.tsx) (stato + bandeau morto tolti).
 SERENITY-only: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx) (setter morto
 tolto). Nuovo: [`src/hooks/__tests__/useChargeEngine.test.tsx`](../src/hooks/__tests__/useChargeEngine.test.tsx).
 Housekeeping: `.gitignore`, `package.json`/`package-lock.json` (nuova devDependency `jsdom`).
+
+## Giro — 2026-09-04 (28) — test per networkManager/storage/useMuseConnection, e la modalità strict
+
+**« Continue avec les deux »** — i due punti rimasti dall'analisi del codice: copertura di test
+per gli ultimi tre file critici senza alcuna, e `tsconfig.json` senza modalità strict.
+
+**Test — 57 nuovi, tre file:**
+- **`networkManager.ts` (18 test)** — le due funzioni di parsing esportate (`parseSignalingUrl`,
+  `parseConnectionLink`, pure) + il comportamento del buffer d'uscita su un'istanza mai connessa
+  (dedup dei pacchetti alta priorità, bordo di 600 per quelli regolari, `notifyLeaving()`/
+  `disconnect()` mai in errore). La classe `NetworkManager` è ora esportata ANCHE come classe
+  (non solo il singleton `networkManager`) — cambio innocuo, serve a istanziarne copie pulite nei
+  test invece di azzerare a mano lo stato del singleton condiviso.
+- **`storage.ts` (28 test)** — profili, sessioni (con lo scarto delle foto pesanti, CONN-104),
+  PDF di seduta nelle due varianti (localStorage sincrona, IndexedDB asincrona con ripiego),
+  file di processo, brouillon di crash-recovery. Nuova dipendenza `fake-indexeddb` (jsdom non
+  implementa IndexedDB) — una fabbrica FRESCA per test (`new IDBFactory()`), mai una condivisa,
+  altrimenti una base di un test inquinerebbe il successivo (i nomi di base sono costanti fisse
+  del modulo).
+- **`useMuseConnection.ts` (11 test)** — il protocollo Bluetooth completo: gettone
+  d'annullamento, timeout di connessione, ricablaggio dei flussi al riconnettersi, la
+  riconnessione silenziosa (fino a 6 tentativi, BORNATA — mai una ricerca senza fine). `MuseClient`
+  (da `muse-js`) mockata con un `FakeMuseClient` pilotabile a mano, stesso principio del
+  `FakeWorker` già usato per `useChargeEngine`.
+
+  **Bug reale trovato scrivendo i test, non nel codice del prodotto ma nel test stesso**: due
+  `act()` asincroni sovrapposti (uno tenuto in sospeso apposta, un secondo avviato prima che il
+  primo si chiudesse) corrompevano il tracciamento interno di React — i 9 test DOPO quello
+  fallivano tutti con lo stato del hook rimasto `null`, un sintomo che non c'entrava nulla con la
+  causa vera. Risolto con il pattern corretto (`act()` SINCRONO che cattura solo la parte
+  sincrona della chiamata, la promessa lasciata in sospeso fuori da quell'`act()`) — e aggiunto
+  `IS_REACT_ACT_ENVIRONMENT = true` in entrambi i file che usano `act()` nudo (non
+  `@testing-library/react`, che lo imposta da sé), per lo stesso avviso che lo segnalava.
+
+**`tsconfig.json`: `"strict": true`.** Temuto il peggio (143 usi di `any`, zero rete di
+sicurezza finora) — attivata e misurato per davvero prima di decidere: **solo 13 errori**, in 6
+file. Corretti uno per uno, nessuno zittito con un cast a caso:
+- **`App.tsx`**: un `speaker` opzionale passato all'assistente IA senza ripiego — un `undefined`
+  sarebbe finito stampato come testo `"undefined:"` nel prompt inviato all'IA. **Difetto latente
+  vero**, non solo un tipo da correggere.
+- **5 punti** (`App.tsx`×3, `Serenity.tsx`×2): la funzione di traduzione `t` (chiave letterale
+  stretta, ~660 varianti) passata a componenti che dichiarano la propria prop `t` più larga
+  (`(key: string) => string`). Verificato che `i18n.tsx` ritorna la chiave stessa per una chiave
+  sconosciuta (mai un crash) — sicuro per davvero, non solo silenziato: un alias `tWide` locale,
+  usato SOLO in quei punti di passaggio.
+- **`useContactNullCycle.ts`/`PostSessionReport.tsx`**: `leadMs` poteva essere `null` (il
+  sentinella "lag mai misurato") ma il tipo dichiarava solo `number | undefined` — allargato ai
+  tipi giusti, nessuna logica toccata.
+- **`useMuseConnection.ts`**: un `let server;` senza tipo che l'inferenza attraverso un generico
+  + `try/catch` risolveva a `unknown` — tipizzato esplicitamente.
+- **`useVoiceItem.ts`**: l'interfaccia condivisa `MotoreSemplice` dichiarava `results` opzionale,
+  ma le DUE classi vere lo passano SEMPRE — l'astrazione era più larga della realtà, corretta a
+  combaciare.
+- **`Serenity.tsx`**: un `useRef<(t: never) => void>` — un refuso letterale (mai `(t:
+  CycleTick)`, il tipo giusto, presente correttamente nella stessa riga in `App.tsx`) che
+  l'inferenza lasca di prima non coglieva; e un `.reduce()` senza generico esplicito che
+  allargava una chiave da `StatoConnessione` a `string` semplice, perdendo il controllo del tipo
+  su `COLORE_PUNTO[...]`.
+
+Verificato dal vivo (avvio pulito di SERENITY, nessun nuovo errore console) — nessuna di queste
+correzioni cambia un comportamento, solo la sicurezza con cui il compilatore lo garantisce.
+
+`tsc --noEmit` pulito **in strict**, `npm run lint` invariato (324 warning), `npx vitest run`
+**718/718** verdi (661 + 57 nuovi), build di produzione pulita per entrambe le app.
+
+File toccati — CONDIVISI (richiedono build e invio di ENTRAMBI i DMG): `tsconfig.json`,
+[`src/App.tsx`](../src/App.tsx), [`src/hooks/useMuseConnection.ts`](../src/hooks/useMuseConnection.ts),
+[`src/hooks/useVoiceItem.ts`](../src/hooks/useVoiceItem.ts),
+[`src/session/useContactNullCycle.ts`](../src/session/useContactNullCycle.ts),
+[`src/lib/networkManager.ts`](../src/lib/networkManager.ts) (classe esportata, nessun
+comportamento cambiato), [`src/components/PostSessionReport.tsx`](../src/components/PostSessionReport.tsx).
+SERENITY-only: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx). Nuovi (solo test):
+`src/lib/__tests__/networkManager.test.ts`, `src/lib/__tests__/storage.test.ts`,
+`src/hooks/__tests__/useMuseConnection.test.tsx`. Housekeeping: `package.json`/
+`package-lock.json` (nuove devDependency `fake-indexeddb`).

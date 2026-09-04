@@ -1,7 +1,7 @@
 {
   "name": "staticmeter",
   "private": true,
-  "version": "2.0.261",
+  "version": "2.0.262",
   "main": "main.cjs",
   "type": "module",
   "scripts": {
@@ -65,6 +65,7 @@
     "electron-builder": "^25.1.8",
     "eslint": "^9.39.5",
     "eslint-plugin-react-hooks": "^5.2.0",
+    "fake-indexeddb": "^6.2.5",
     "globals": "^17.7.0",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4.1.14",
@@ -137,5 +138,5 @@
       }
     ]
   },
-  "serenityVersion": "3.0.197"
+  "serenityVersion": "3.0.198"
 }

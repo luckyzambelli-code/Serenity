@@ -42,7 +42,11 @@ import { metricsStore } from '../store/metricsStore';
 /** Un ciclo, concluso o abbandonato, come finisce nel rapporto e nel PDF. */
 export interface ArmedCycle {
   n: number; question: string; tItemMs: number; tStartSec: number; tEndSec: number;
-  phaseReached: ChargeStateId; completed: boolean; leadMs?: number;
+  phaseReached: ChargeStateId; completed: boolean;
+  // ⚠️ `number | null`, non solo opzionale — trovato attivando `strict` in tsconfig: un ciclo
+  // registrato PRIMA che un lag sia mai stato misurato porta `null` (il sentinella usato in
+  // `CurrentCycle.leadMs` qui sotto, mai `undefined`), e lo strict mode lo segnalava a ragione.
+  leadMs?: number | null;
   falseAsIs?: boolean; io?: number; taAtAsIs?: number;
   /** Ciclo NULL: tipo, flag « niente si ricarica », e i VGI's inscritti alla validazione. */
   kind?: 'charge' | 'null'; noRecharging?: boolean; clearRead?: boolean; vgi?: boolean;

@@ -62,7 +62,11 @@ interface PostSessionReportProps {
   dissChargeQ?: number;
   /** Auditing items the auditor armed a cycle for: question + furthest phase
    *  reached + whether it completed (reached AS-IS) + the measured leading-edge lag. */
-  auditingCycles?: Array<{ n?: number; question: string; tStartSec: number; tEndSec: number; phaseReached: string; completed: boolean; leadMs?: number; falseAsIs?: boolean; io?: number; taAtAsIs?: number;
+  // ⚠️ `leadMs?: number | null`, non solo `number` — trovato attivando `strict`: la forma reale
+  // (`ArmedCycle`, session/useContactNullCycle.ts) porta `null` come sentinella « lag mai
+  // misurato », mai `undefined`. Duplica volutamente la forma di `ArmedCycle` invece di
+  // importarla — non toccato qui, fuori dal perimetro di questa correzione.
+  auditingCycles?: Array<{ n?: number; question: string; tStartSec: number; tEndSec: number; phaseReached: string; completed: boolean; leadMs?: number | null; falseAsIs?: boolean; io?: number; taAtAsIs?: number;
     /** Cycle NULL (miroir) : type + issue. Les deux familles sont RAPPORTÉES SÉPARÉMENT
      *  (demande utilisateur) : CONTACT → AS-IS, NULL → EQUILIBRIUM (avec les VGI's) / no recharging. */
     kind?: 'charge' | 'null'; noRecharging?: boolean; clearRead?: boolean; vgi?: boolean }>;

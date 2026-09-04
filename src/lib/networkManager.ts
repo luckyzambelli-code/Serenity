@@ -179,7 +179,11 @@ export function parseConnectionLink(link: string): {
 
 // ── NetworkManager ───────────────────────────────────────────────────────────
 
-class NetworkManager {
+// ⚠️ Esportata anche come classe (non solo il singleton `networkManager` sotto) — cambio
+// innocuo, nessun comportamento tocco: serve solo a poter istanziare copie PULITE nei test
+// (`new NetworkManager()`), invece di dover azzerare a mano lo stato del singleton condiviso
+// fra un test e l'altro.
+export class NetworkManager {
   private peer: Peer | null = null;
   // CONN-84 (#1): timestamp of the last Peer teardown, to settle before re-init.
   private _peerDestroyedAt = 0;
