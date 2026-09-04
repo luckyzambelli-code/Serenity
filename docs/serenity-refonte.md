@@ -9627,3 +9627,24 @@ Cluster principali:
 **File toccati — SOLO SERENITY (dati):**
 - `public/dizionario/dizionario-fr.json`
 - `public/dizionario/dizionario-es.json`
+
+## Giro — 2026-09-04 — dizionario: trentasettesimo blocco, 1850/2541 voci (72,8%)
+
+**Blocco 37 (indici 1800-1849)**, FR+ES, 50 voci ciascuna lingua. Termini coperti: da QUACK a RECURRING WITHHOLDS.
+
+Cluster principali:
+- **QUAD cluster**: QUAD, QUAD DIANETICS, QUAD FLOWS (i quattro flussi F-0/F-1/F-2/F-3).
+- **QUICKIE cluster**: QUICKIE (definizione cardine del termine), QUICKIE GRADES, QUICKIE LOWER GRADES ("Triple Grades"), QUICKIE PROGRAMS.
+- **R / RABBIT / RADIATION / RANDOMITY**: R (4 definizioni: prefisso routine, R2-25, realtà, revisione), RANDOMITY (4 definizioni numerate sui vettori di sforzo).
+- **RATIONAL/REASON cluster**: RATIONAL CONFLICT, RATIONALITY, RATIONALIZATION, RATIONAL THOUGHT, REASON (3 definizioni).
+- **REACTIVE cluster (ampio)**: REACTIVE, REACTIVE ACTION, REACTIVE BANK, REACTIVE CONDUCT, REACTIVE MIND (7 definizioni numerate — la voce cardine di tutta la Dianetics, dal "R6 bank" alla "unconscious mind"), REACTIVE PLEASURE, REACTIVE THOUGHT.
+- **READ cluster**: READ (definizione cardine su TA/E-mètre), READING ITEM, READING QUESTION, READING WORD.
+- **RECALL/RECESSION/RECOUNTING**: RECALL (3 definizioni), RECALL PROCESSES, RECALL RELEASE, RECESSION (2 definizioni dettagliate sulla differenza tra recessione e riduzione), RECOUNTING.
+- **REALITY**: prima definizione completa, seconda definizione affetta dall'anomalia OCR standard del dizionario sorgente (il testo prosegue erroneamente con un frammento duplicato di REACTIVE CONDUCT/5702C28) — riprodotta fedelmente in entrambe le lingue come da regola permanente.
+- Anche **RANDOM RUDIMENT** presenta un troncamento OCR a fine voce (la frase si interrompe su "then one can...") — riprodotto fedelmente.
+
+**Verifica:** dati JSON puri — validati con `json.load` prima e dopo il merge (50/50 per lingua, totale 1850/1850 coerente in entrambi i file). `tsc`/`lint`/`vitest` non ri-eseguiti (nessun file TSX toccato in questo giro).
+
+**File toccati — SOLO SERENITY (dati):**
+- `public/dizionario/dizionario-fr.json`
+- `public/dizionario/dizionario-es.json`
