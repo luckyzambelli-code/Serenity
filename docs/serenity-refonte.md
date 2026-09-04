@@ -8691,3 +8691,32 @@ inviare.
 File toccati — SOLO SERENITY: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx).
 Nuovo: SOLO SERENITY —
 [`src/serenity/PannelloScegliStrumento.tsx`](../src/serenity/PannelloScegliStrumento.tsx).
+
+## Giro — 2026-09-04 (32) — terzo pezzo su App.tsx: il dialogo di uscita con seduta aperta
+
+Continua la fase 1 su `App.tsx` (v. giro 29/30). Terzo pezzo: il dialogo « uscire con una
+seduta aperta » (« salva ed esci » / « esci senza salvare » / « resta »), ~50 righe di JSX
+senza stato proprio, aperto da UNA sola condizione booleana (`quitAsk`). Estratto in
+[`src/components/QuitConfirmDialog.tsx`](../src/components/QuitConfirmDialog.tsx) —
+presentazionale puro, stesso schema dei due pezzi precedenti: il gesto composito « salva ed
+esci » (tocca `quitAfterSaveRef`/`handleEnd`/`quitNow`/`window.setTimeout`, troppo intrecciato
+con `App.tsx`) resta lì, passato come UNA sola funzione (`onSaveAndQuit`). Riuso di `tWide`
+(già introdotto nel giro dello strict mode) al posto dei singoli `t('…') as string` sparsi nel
+blocco originale — stessa resa, un cast solo invece di sei.
+
+Verifica dal vivo NON eseguibile con un semplice clic: il dialogo si apre solo su evento
+IPC nativo di Electron (`electronAPI.onCloseRequest`, chiamato dal processo principale alla
+chiusura della finestra) — assente per costruzione nell'anteprima browser (`if
+(!api?.onCloseRequest) return;`, riga preesistente, non toccata). Questo limite esisteva
+identico PRIMA dell'estrazione: non è una regressione introdotta ora. Verificato invece per
+lettura diretta del diff (JSX spostato parola per parola, zero righe di logica cambiate) più
+`tsc`/`lint`/`vitest`/build puliti.
+
+`App.tsx`: 6953 → 6918 righe (-35; il nuovo file ne pesa 61). `tsc --noEmit` pulito, `npm run
+lint` invariato (324 warning), `npx vitest run` 718/718 verdi, build di produzione pulita per
+entrambe le app.
+
+File toccati — CONDIVISO (App.tsx, sempre ENTRAMBI i DMG): [`src/App.tsx`](../src/App.tsx).
+Nuovo: SOLO EQUILIBRIUM —
+[`src/components/QuitConfirmDialog.tsx`](../src/components/QuitConfirmDialog.tsx) (non
+importato da `Serenity.tsx`, che gestisce l'uscita a parte).
