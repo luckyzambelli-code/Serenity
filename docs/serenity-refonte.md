@@ -9443,3 +9443,26 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (58) — ventottesimo blocco dizionario (1400/2541, oltre il 55%)
+
+Voci 1350→1399: METALOSIS/METALOSIS RUNDOWN, METAPHYSICS, METER CHECK/DEPENDENCE, il cluster
+METHOD 1-6 ASSESSMENT e METHODS OF WORD CLEARING, il cluster MID (CONFESSIONAL SHORT
+ASSESSMENT, INTEGRITY PROCESSING SHORT ASSESSMENT, MIDDLE RUDIMENTS, MID RUDS), MIMICRY, il
+lungo MIND (8 definizioni numerate), MINOR THOUGHT, MINUS-FREEDOM, il cluster MINUS (RANDOMITY,
+SCALE, SCALE RELEASE, TONE SCALE), il cluster MIS- (ACKNOWLEDGMENT, ASSESSMENT, ASSIST,
+DIRECTOR, EMOTION, EMOTIONAL, MEMORY, PROGRAMMED), il cluster MISSED (OVERT, WITHHOLD, WITHHOLD
+OF NOTHING, WITHHOLD PROGRAM), MISSION, MO, MOCKERY BAND, il lungo MOCK-UP (5 definizioni),
+MODEL SESSION, MODIFIER, MOISTURE PERCEPTION, M 1 WC, MONEY ASSIST, MONITOR, MOOD DRILLS,
+MORAL CODE, MORALS, fino a MORES. Dati: `dizionario-fr.json`/`dizionario-es.json` ora a 1400
+voci ciascuno (55,1% del corpus).
+
+Nota tecnica: batch corretto durante la fusione — virgolette dritte non escapate in una
+traduzione spagnola avevano rotto il JSON (`json.decoder.JSONDecodeError`); sostituite con
+virgolette angolari « » prima della fusione, verificato con `json.load` prima di procedere.
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
