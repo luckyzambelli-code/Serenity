@@ -9000,3 +9000,29 @@ File toccati — SOLO SERENITY: [`src/serenity/Serenity.tsx`](../src/serenity/Se
 TERMINAL…BUTTON CHART, BY-PASSED…), poi C fino a CERTIFICATION COURSE (CASE… in blocco,
 CAUSE/CC/CCH-O, CERTAINTY/CERTIFICATE). Dati: `dizionario-fr.json`/`dizionario-es.json` ora a
 300 voci.
+
+## Giro — 2026-09-04 (38) — settimo e ottavo blocco dizionario (400/2541)
+
+**Settimo blocco — 350/2541 (13,8%).** Voci 300→349: CERTIFICATION EXAM, tutto il cluster
+CHAIN/CHANGE (comprese le sette sotto-definizioni di CHANGE OF CHARACTERISTIC e i procédés di
+cambiamento), CHAOS/CHAOS MERCHANT, il lungo CHARGE (7 definizioni numerate + una frase finale
+non numerata), CHECKLIST/CHECKOUT/CHECK SHEET, CHRONIC CHARGE/ENGRAM/HIGH TA/INSANITY/SOMATIC,
+CIRCUIT (con le sue 6 definizioni) e CIRCUITRY, fino a tutta la serie CLASS 0…CLASS XII (in
+gran parte semplici rimandi "vedi H..") e CLASSIFICATION GRADATION AND AWARENESS CHART. Nota:
+la voce sorgente inglese 343-344 presenta la stessa anomalia di OCR già incontrata altrove (un
+"CLASS X" interrotto a metà frase che confluisce nella voce "OT" successiva) — riprodotta
+fedelmente in entrambe le lingue, non corretta silenziosamente.
+
+**Ottavo blocco, nello stesso giro — 400/2541 (15,7%).** Voci 350→399: tutto il cluster CLAY
+TABLE (demo, healing, IQ processing, track analysis, training), CLEAN HANDS/CLEANING A
+CLEAN/CLEAN NEEDLE, il lunghissimo CLEAR (14 definizioni numerate, incluso il senso verbale
+"to clear"), CLEARED CANNIBAL/CLEARED THETA CLEAR, CLEARING/CLEARING COMMANDS, CLOSED
+TERMINALS (con il CLOSURE MECHANISM annesso), COACH, CO-AUDITING TEAM/CO-AUDITOR, CODE OF A
+SCIENTOLOGIST/CODE OF HONOR, fino a COMM LINE. Dati: `dizionario-fr.json`/`dizionario-es.json`
+ora a 400 voci ciascuno (15,7% del corpus).
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
