@@ -9194,3 +9194,19 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (45) — quindicesimo blocco dizionario (750/2541, quasi 30%)
+
+Voci 700→749: EM/il lungo E-METER (5 definizioni), il cluster EMOTION (7 definizioni numerate)
+e i suoi composti (CHARGE, CURVE, SCALE, TONE SCALE, POINT), END OF CYCLE/END PHENOMENA/END
+RUDIMENTS/END WORD, ENERGY, il cluster ENFORCED (AFFINITY, COMMUNICATION, HAVE, OVERT HAVE,
+REALITY), il lunghissimo ENGRAM (15 definizioni numerate) e i suoi composti (BANK, CHAIN,
+COMMAND), ENGRAMIC THOUGHT, ENMEST/ENTHETA, ENTITIES/ENTRAPMENT/ENTURBULATE, ENVIRONMENT
+(con ENVIRONMENTAL ABERRATION), EP, EPICENTER/EPICENTER THEORY, EPISTEMOLOGY, ERASE/ERASED/
+ERASING AUDITING/ERASURE, E/S, ESPINOL (il nome proprio di una civiltà aliena descritta nelle
+conferenze — riprodotto come nome proprio, non tradotto), ESTO, fino al cluster ETHICS
+(CODE, CONDUCT, la definizione lunga di ETHICS stessa, BAIT). Dati: `dizionario-fr.json`/
+`dizionario-es.json` ora a 750 voci ciascuno (29,5% — quasi 30% del corpus).
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
