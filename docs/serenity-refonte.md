@@ -9423,3 +9423,23 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (57) — ventisettesimo blocco dizionario (1350/2541, oltre il 53%)
+
+Voci 1300→1349: L-10M/L-10-OT/L-12, LUCK, LUMBOSIS, LX LISTS, LYING, l'inizio della lettera M
+(frammento OCR "M" come le voci "E"/"H"), MAA, MACHINE (con l'anomalia OCR classica: la
+citazione "17LACC-10" spezzata in una voce a parte "LACC-10"), MAGNETIC FIELD, MAJOR ACTION/
+THOUGHT, MAN, MANIC/MANIC DEPRESSIVE, MARCAB CONFEDERACY (un'altra civiltà aliena delle
+conferenze, con MASS annesso), MASSES, MASTER PROCESS/PROGRAM, MATCHED/MATCHING TERMINALS,
+MATERIALS OF SCIENTOLOGY, MATERIAL UNIVERSE, MATTER, MAYBE, MEAN GRAPH, MECHANICAL ABERRATION/
+DEFINITION, MECHANICS, MEDIUM CLEAN/DIRTY NEEDLE, MEGALOMANIA, MEMORY (con MEMORY BANKS),
+MENTAL IMAGE PICTURES, MERCHANTS OF CHAOS/FEAR, MESMERISM, il lungo cluster MEST (5
+definizioni) e tutti i suoi composti (BODY, CLEAR, LOCKS, PERCEPTICS, PERCEPTION, REALITY,
+STRAIGHTWIRE, TECHNIQUE, UNIVERSE). Dati: `dizionario-fr.json`/`dizionario-es.json` ora a
+1350 voci ciascuno (53,1% del corpus).
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
