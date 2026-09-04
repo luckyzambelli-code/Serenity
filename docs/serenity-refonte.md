@@ -9174,3 +9174,23 @@ del corpus).
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (44) — quattordicesimo blocco dizionario (700/2541)
+
+Voci 650→699: il cluster DRAMATIZATION/DRAMATIZE/DRAMATIZING PSYCHOTIC, DREAM, DRIFT DOWN/UP,
+DRUGS e tutto il DRUG RUNDOWN, DUB-IN/DUB-IN CASE, DUPLICATION (con la QUESTION DUPLICATIVA
+TR-3 annessa), DWINDLING (ROCK SLAM, SANITY, SPIRAL), il lungo DYNAMIC/DYNAMICS (le otto
+dinamiche per esteso) e DYNAMIC STRAIGHTWIRE, EARLIER SIMILAR, ECHO INVALIDATION/METERING,
+EDUCATION, EFFECT/EFFORT e i loro composti (con il cluster 8-C/8D/8-80/8-8008 annesso a EFFORT
+PROCESSING), EIGHT/EIGHTH DYNAMIC, EJECTOR (con ÉLAN VITAL annesso — già in francese nella
+fonte inglese, riportato tale e quale), ELECTRICAL/ELECTRICITY/ELECTRONICS/
+ELECTROPSYCHOMETER, fino a EMERGENCY AUDITOR. Nota: la voce sorgente inglese 679 "E" è un
+frammento OCR palesemente corrotto ("F, G - Tech Fair use quotes...") — riprodotto fedelmente,
+non ricostruito. Dati: `dizionario-fr.json`/`dizionario-es.json` ora a 700 voci ciascuno
+(27,5% del corpus).
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
