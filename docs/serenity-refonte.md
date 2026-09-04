@@ -8720,3 +8720,31 @@ File toccati — CONDIVISO (App.tsx, sempre ENTRAMBI i DMG): [`src/App.tsx`](../
 Nuovo: SOLO EQUILIBRIUM —
 [`src/components/QuitConfirmDialog.tsx`](../src/components/QuitConfirmDialog.tsx) (non
 importato da `Serenity.tsx`, che gestisce l'uscita a parte).
+
+## Giro — 2026-09-04 (33) — quarto e ultimo pezzo piccolo: il banner del preclear in attesa
+
+Ultimo pezzo della fase 1 su `App.tsx` (dopo i tre dei giri 29/30/32) — il più piccolo: il
+banner cliccabile « in attesa del preclear » (modalità `participant`, non ancora connesso),
+19 righe, senza stato proprio. Estratto in
+[`src/components/ParticipantWaitingBanner.tsx`](../src/components/ParticipantWaitingBanner.tsx)
+— presentazionale puro, un solo prop funzione (`onOpen`, riapre `ConnectionModal`) più `t`
+(riusa `tWide`).
+
+Verificato dal vivo: attivata la modalità « PRÉCLAIR » dal drawer MODE DE SÉANCE, chiusa la
+`ConnectionModal` con la ✕ — il banner « MODE PRÉCLAIR — NON CONNECTÉ / Entrez le lien reçu de
+l'Auditeur → » appare correttamente in alto; il clic sul banner riapre la stessa
+`ConnectionModal` — identico a prima dell'estrazione.
+
+`App.tsx`: 6918 → 6901 righe (-17; il nuovo file ne pesa 34). `tsc --noEmit` pulito, `npm run
+lint` invariato (324 warning), `npx vitest run` 718/718 verdi, build di produzione pulita per
+entrambe le app.
+
+File toccati — CONDIVISO (App.tsx, sempre ENTRAMBI i DMG): [`src/App.tsx`](../src/App.tsx).
+Nuovo: SOLO EQUILIBRIUM —
+[`src/components/ParticipantWaitingBanner.tsx`](../src/components/ParticipantWaitingBanner.tsx).
+
+**Fine fase 1** (JSX senza stato proprio): i pezzi isolati e a basso rischio rimasti su
+`App.tsx`/`Serenity.tsx` sono ormai innestati dentro le sezioni dei cicli (molto stato
+condiviso) o già dietro componenti esistenti (`ConnectionModal`) — territorio della fase 3, non
+più della fase 1. Si passa alla **fase 2**: le modali già isolate concettualmente ma ancora
+scritte inline nei due file.

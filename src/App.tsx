@@ -84,6 +84,7 @@ import { ProfileRoster } from './components/ProfileRoster';
 import { InstrumentHintPanel } from './components/InstrumentHintPanel';
 import { InstrumentBadges } from './components/InstrumentBadges';
 import { QuitConfirmDialog } from './components/QuitConfirmDialog';
+import { ParticipantWaitingBanner } from './components/ParticipantWaitingBanner';
 import { GuideModal } from './components/GuideModal';
 import { AIAssistant } from './components/AIAssistant';
 import { getProfiles, setActiveProfileId, saveProfile, saveSession, getSessions, getSessionsByProfile, saveSessionDraft, loadSessionDraftAsync, clearSessionDraft, SessionDraft } from './lib/storage';
@@ -4742,26 +4743,8 @@ export default function App() {
         />
       </div>
 
-      {/* ── Bannière participant non connecté — cliquable pour rouvrir le modal ── */}
       {appMode === 'participant' && !isConnected && (
-        <div
-          onClick={() => setShowConnectionModal(true)}
-          style={{
-            position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)',
-            zIndex: LAYER.gate, display: 'flex', alignItems: 'center', gap: 12,
-            padding: '10px 20px', borderRadius: 8, cursor: 'pointer',
-            background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.4)',
-            backdropFilter: 'blur(8px)', boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}>
-          <span style={{ fontSize: 18 }}>🔗</span>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 'bold', color: '#fbbf24', letterSpacing: '0.05em' }}>
-              {t('conn_preclear_title')} — {t('conn_badge_preclear_waiting')}
-            </div>
-            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>
-              {t('conn_preclear_subtitle')} →
-            </div>
-          </div>
-        </div>
+        <ParticipantWaitingBanner onOpen={() => setShowConnectionModal(true)} t={tWide} />
       )}
 
       {/* ── Grande fenêtre de connexion P2P ── */}
