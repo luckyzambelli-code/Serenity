@@ -9210,3 +9210,21 @@ conferenze — riprodotto come nome proprio, non tradotto), ESTO, fino al cluste
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (46) — sedicesimo blocco dizionario (800/2541, quasi un terzo)
+
+Voci 750→799: ETHICS CASES, EUPHORIA, EVALUATION (con EVALUATION OF DATA), EVIL/EVIL PURPOSE,
+EVOLUTION, EXAMINER/EXAM REPORT, EXCALIBUR, EXCHANGE BY DYNAMICS, EXCHANGED VALENCE, il cluster
+EXPANDED (DIANETICS con la sua lunga definizione, DIANETIC SPECLALIST — refuso OCR riprodotto
+tale e quale nel termine sorgente, GITA, LOWER GRADES), EXPERIENCE/EXPLOSION, EXTERIORIZATION
+(con RUNDOWN annesso), EXTRAORDINARY SOLUTIONS, EXTROVERSION/EXTROVERT, l'inizio della lettera
+F (F=fall/femminile, combinato nella stessa voce sorgente), FACSIMILE (8 definizioni numerate)
+e i suoi composti (BANK, FACSIMILE ONE), FACTORS, FADE-AWAY QUESTIONS, FAILED CASE/FAILURE,
+FALL/FALL ON HIS HEAD, fino a FALSE/FALSE CLEAR. Dati: `dizionario-fr.json`/
+`dizionario-es.json` ora a 800 voci ciascuno (31,5% — quasi un terzo del corpus).
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
