@@ -9306,3 +9306,23 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (51) — ventunesimo blocco dizionario (1050/2541, oltre il 41%)
+
+Voci 1000→1049: GROUPER, GROUP PROCESS ING, GROUP REACTIVE MIND/THETA/THINK, GUARD OF THE
+LEFT/RIGHT, GUIDING SECONDARY STYLE (con GUIDING STYLE AUDITING annesso), GUILT COMPLEX, GUK
+BOMB, l'inizio della lettera H (H = frammento OCR corrotto come la voce "E" al 679, con
+"H. E&R" annesso), HAA, HABIT/HABIT RELEASE, HALF-ACKNOWLEDGEMENT, HALLUCINATIONS/HALLUCINATORY
+CAUSE, HANDLE/HANDLING AN ORIGINATION, HANG-FIRE/HANG-UP, HAPPINESS (con HARD WAY TRs annesso),
+il cluster delle sigle Hubbard (HAS, HAS CO-AUDIT, HAS COURSE, HASI, HAT, HAVE/HAVING/
+HAVINGNESS, HCA, HCA/HPA, HCI, HC LIST, HCO/HCOB/HCO PL, HDA/HDC/HDG), HEALTH FORM, HEAT,
+HEAVILY CHARGED CASE, HEAVY FACSIMILE, HELATROBUS (con HELATROBUS IMPLANTS — un'altra civiltà
+aliena delle conferenze, nome proprio non tradotto), HELD-DOWN FIVES/SEVEN, fino a HELLO AND
+OKAY. Dati: `dizionario-fr.json`/`dizionario-es.json` ora a 1050 voci ciascuno (41,3% del
+corpus).
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
