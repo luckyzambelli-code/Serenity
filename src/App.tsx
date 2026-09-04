@@ -82,6 +82,7 @@ const ASSESS_READ_META = (reaction: string): { short: string; color: string; bor
 };
 const HistoryModal = lazy(() => import('./components/HistoryModal').then(m => ({ default: m.HistoryModal })));
 import { ProfileRoster } from './components/ProfileRoster';
+import { InstrumentHintPanel } from './components/InstrumentHintPanel';
 import { GuideModal } from './components/GuideModal';
 import { AIAssistant } from './components/AIAssistant';
 import { getProfiles, setActiveProfileId, saveProfile, saveSession, getSessions, getSessionsByProfile, saveSessionDraft, loadSessionDraftAsync, clearSessionDraft, SessionDraft } from './lib/storage';
@@ -4487,102 +4488,36 @@ export default function App() {
     {/* ── NESSUNO STRUMENTO: si SCEGLIE quale collegare ────────────────────────────────
         Si SELEZIONA prima e si collega dopo, invece di partire al primo clic: chi vuole
         lavorare con tutti e due deve poterli spuntare entrambi in una volta, senza che la
-        connessione parta appena tocca il primo. */}
+        connessione parta appena tocca il primo.
+        Estratto in `InstrumentHintPanel.tsx` — primo pezzo della frammentazione di App.tsx
+        (segnalato: « si possono frammentare per ciclo o altro? »): un overlay auto-contenuto,
+        senza stato proprio, il candidato più sicuro per cominciare. Il gesto composito di
+        START (che tocca `senzaStrumentiRef`/`handleConnectMuse`/`theta.connect`/`handleStart`,
+        troppo intrecciato con questo file per guadagnarci separandolo) resta qui, passato
+        come UNA sola funzione. */}
     {museHint && (
-      <div style={{
-        position: 'fixed', top: 70, left: '50%', transform: 'translateX(-50%)',
-        zIndex: LAYER.session, display: 'flex', flexDirection: 'column', gap: 12,
-        padding: '18px 22px', borderRadius: 12, minWidth: 340,
-        background: 'rgba(2,6,23,0.96)', border: '1px solid rgba(251,191,36,0.45)',
-        backdropFilter: 'blur(8px)', boxShadow: '0 10px 34px rgba(0,0,0,0.5)',
-        animation: 'smFadeIn 0.3s ease-out' }}>
-        {/* ── LA VIA D'USCITA ────────────────────────────────────────────────────────────────
-            Il pannello non ne aveva alcuna: aperto per sbaglio, si restava dentro senza modo di
-            tornare indietro (segnalato). Una croce, e ESC — perché chi vuole annullare cerca
-            ESC prima di cercare una croce. */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <span style={{ flex: 1, fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700,
-                         letterSpacing: '0.03em', color: '#fbbf24' }}>
-            {t('connect_an_instrument') as string}
-          </span>
-          <button type="button" onClick={() => setMuseHint(false)}
-            title={`${t('cancel') as string} · ESC`}
-            style={{ flexShrink: 0, width: 24, height: 24, borderRadius: 6, cursor: 'pointer',
-                     background: 'transparent', border: '1px solid rgba(255,255,255,0.18)',
-                     color: 'rgba(226,238,255,0.65)', fontSize: 14, lineHeight: 1, padding: 0 }}>
-            ✕
-          </button>
-        </div>
-
-        {/* ── TRE VOCI SULLO STESSO PIANO ────────────────────────────────────────────────────
-            « Senza strumenti » era un bottone sotto CONNETTI, con una riga di spiegazione: e
-            così sembrava una didascalia, non una possibilità. Ora è la TERZA VOCE, con la sua
-            icona e la sua spunta come le altre due — perché è quel che è: un modo di condurre
-            la seduta, non l'assenza degli altri due.
-
-            È ESCLUSIVA (vedi `scegliConn`): spuntandola si spengono MUSE e boîtes, e viceversa.
-            Un « senza strumenti » spuntato insieme al MUSE non vorrebbe dire niente. */}
-        {([
-          { k: 'muse' as const, on: connSel.muse, label: 'MUSE', icon: <Headphones size={17} strokeWidth={2} />,
-            col: 'rgba(240,246,255,0.95)', bg: 'rgba(255,255,255,0.10)', bd: 'rgba(255,255,255,0.45)', show: true },
-          { k: 'theta' as const, on: connSel.theta, label: t('theta_cans') as string, icon: <Gauge size={17} strokeWidth={2} />,
-            col: '#f59e0b', bg: 'rgba(245,158,11,0.16)', bd: 'rgba(245,158,11,0.6)', show: !theta.unavailable },
-          { k: 'none' as const, on: connSel.none, label: t('no_instruments_mode') as string,
-            icon: <MessageSquare size={17} strokeWidth={2} />,
-            col: 'rgba(240,246,255,0.95)', bg: 'rgba(255,255,255,0.10)', bd: 'rgba(255,255,255,0.45)', show: true },
-        ]).filter(o => o.show).map(o => (
-          <button key={o.k} type="button"
-            onClick={() => scegliConn(o.k)}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-                     borderRadius: 9, cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                     fontSize: 13, fontWeight: 700, letterSpacing: '0.05em', textAlign: 'left',
-                     background: o.on ? o.bg : 'rgba(255,255,255,0.04)',
-                     border: `1px solid ${o.on ? o.bd : 'rgba(255,255,255,0.16)'}`,
-                     color: o.on ? o.col : 'rgba(226,238,255,0.55)' }}>
-            <span style={{ fontFamily: 'monospace', fontSize: 15, width: 16 }}>{o.on ? '✓' : '·'}</span>
-            {o.icon} {o.label}
-          </button>
-        ))}
-
-        {/* ── UN SOLO BOTTONE, E DICE START ──────────────────────────────────────────────────
-            Diceva CONNETTI, e collegava soltanto: bisognava poi premere START a parte. Due
-            gesti per una intenzione. Ora è uno, e dice quel che fa.
-
-            Collegare può ancora fallire (il selettore di dispositivo annullato), e in quel caso
-            `handleStart` ritrova il suo controllo « nessuno strumento » e riapre questo
-            pannello: non serve gestirlo qui, si corregge da sé. */}
-        <button type="button"
-          disabled={!connSel.muse && !connSel.theta && !connSel.none}
-          onClick={async () => {
-            const nessuno = connSel.none;
-            setMuseHint(false);
-            setSenzaStrumenti(nessuno);
-            // Il ref si scrive A MANO: `setSenzaStrumenti` non ha effetto prima del render
-            // successivo, e `handleStart` parte in questo stesso giro — leggerebbe il valore
-            // vecchio e ricadrebbe nel controllo, riaprendo il pannello. (Visto a schermo.)
-            senzaStrumentiRef.current = nessuno;
-            if (!nessuno) {
-              // In sequenza: due selettori di dispositivo aperti insieme si ostacolerebbero.
-              if (connSel.muse)  await handleConnectMuse();
-              if (connSel.theta) await theta.connect();
-            }
-            void handleStart();
-          }}
-          style={{ height: 38, borderRadius: 9,
-                   cursor: (connSel.muse || connSel.theta || connSel.none) ? 'pointer' : 'default',
-                   opacity: (connSel.muse || connSel.theta || connSel.none) ? 1 : 0.4,
-                   fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700,
-                   letterSpacing: '0.1em', textTransform: 'uppercase',
-                   background: 'rgba(52,211,153,0.18)', border: '1px solid rgba(52,211,153,0.6)',
-                   color: '#34d399' }}>
-          START
-        </button>
-
-        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, lineHeight: 1.5,
-                       color: 'rgba(226,238,255,0.5)' }}>
-          {connSel.none ? t('no_instruments_hint') as string : t('connect_either_hint') as string}
-        </span>
-      </div>
+      <InstrumentHintPanel
+        connSel={connSel}
+        onToggle={scegliConn}
+        onClose={() => setMuseHint(false)}
+        thetaUnavailable={theta.unavailable}
+        t={tWide}
+        onStart={async () => {
+          const nessuno = connSel.none;
+          setMuseHint(false);
+          setSenzaStrumenti(nessuno);
+          // Il ref si scrive A MANO: `setSenzaStrumenti` non ha effetto prima del render
+          // successivo, e `handleStart` parte in questo stesso giro — leggerebbe il valore
+          // vecchio e ricadrebbe nel controllo, riaprendo il pannello. (Visto a schermo.)
+          senzaStrumentiRef.current = nessuno;
+          if (!nessuno) {
+            // In sequenza: due selettori di dispositivo aperti insieme si ostacolerebbero.
+            if (connSel.muse)  await handleConnectMuse();
+            if (connSel.theta) await theta.connect();
+          }
+          void handleStart();
+        }}
+      />
     )}
 
     <div className="h-screen flex flex-col overflow-hidden relative"

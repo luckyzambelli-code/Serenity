@@ -8587,3 +8587,40 @@ SERENITY-only: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx). Nuov
 `src/lib/__tests__/networkManager.test.ts`, `src/lib/__tests__/storage.test.ts`,
 `src/hooks/__tests__/useMuseConnection.test.tsx`. Housekeeping: `package.json`/
 `package-lock.json` (nuove devDependency `fake-indexeddb`).
+
+## Giro — 2026-09-04 (29) — comincia la frammentazione di App.tsx: primo pezzo estratto
+
+**« Io vorrei vedere come efficentare le più di 7000 linee di APP.tsx et Serenity... si possono
+frammentare per ciclo o altro? ».** Analisi con `graphify` prima di leggere il codice: la
+logica PER CICLO è già estratta (fase 6 della refonte SERENITY — `useContactNullCycle`,
+`useMirrorCycle`, `useToneCycle`, `useTruthCycle`, `useChargeEngine`… tutti hook a sé). Quel che
+resta dentro i due file non è più "motore di ciclo": è per lo più l'ALBERO JSX (mai spezzato in
+componenti) e un numero enorme di stato/effetti locali (App.tsx: 48 `useState`, 43 `useRef`, 73
+`useEffect`; Serenity.tsx: 60/26/45). Piano proposto in tre fasi di rischio crescente — JSX
+senza stato proprio (il più sicuro) → modali già isolate ma ancora inline → gruppi di
+`useEffect` coesi (il più delicato, stesso schema di `useChargeEngine`). **« ok »** — si comincia
+dalla fase 1, un pezzo alla volta.
+
+**Primo pezzo: `InstrumentHintPanel.tsx`** — il pannello "nessuno strumento: si sceglie quale
+collegare" (~95 righe di JSX in `App.tsx`, aperto da UNA sola condizione booleana, senza stato
+proprio: il candidato più isolato e meccanico di tutti). Estratto in
+[`src/components/InstrumentHintPanel.tsx`](../src/components/InstrumentHintPanel.tsx) —
+componente presentazionale puro: `connSel` e il suo mutatore restano in `App.tsx`, passati come
+props; il gesto composito di START (tocca `senzaStrumentiRef`/`handleConnectMuse`/
+`theta.connect`/`handleStart`, troppo intrecciato con `App.tsx` per guadagnarci separandolo)
+resta lì, passato come UNA sola funzione (`onStart`). Nessuna riga di logica cambiata — solo
+spostata, verificato leggendo il diff prima di spedire.
+
+Verificato dal vivo: pannello aperto premendo START senza strumenti collegati, le tre voci
+(MUSE/LATTINE/senza strumenti) si spuntano correttamente (la spunta ✓, il colore, il testo
+d'aiuto che cambia in base alla scelta), il bottone START si accende solo con una voce spuntata,
+la croce di chiusura funziona — tutto identico a prima dell'estrazione.
+
+`App.tsx`: 7172 → 7107 righe (-65; il nuovo file ne pesa 118, la differenza è la nota
+esplicativa in testa, non logica). `tsc --noEmit` pulito, `npm run lint` invariato (324
+warning), `npx vitest run` 718/718 verdi, build di produzione pulita per entrambe le app.
+
+File toccati — CONDIVISO (per regola del progetto, App.tsx richiede sempre ENTRAMBI i DMG anche
+quando Serenity.tsx non è toccato): [`src/App.tsx`](../src/App.tsx). Nuovo: SOLO EQUILIBRIUM —
+[`src/components/InstrumentHintPanel.tsx`](../src/components/InstrumentHintPanel.tsx) (non
+importato da `Serenity.tsx`, che ha il proprio pannello equivalente scritto a parte).
