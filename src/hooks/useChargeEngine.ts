@@ -154,7 +154,6 @@ export interface ChargeEngineDeps {
   // ── stato React che questo motore pubblica (setter di `useState`: stabili di natura) ──────
   setHardwareError: (v: string | null) => void;
   setSignalQuality: (v: number) => void;
-  setIsHoldMode: (v: boolean) => void;
   setRealBpm: (v: number | null) => void;
   setDisplayMass: (v: number) => void;
   setPrimeIm: (v: number) => void;
@@ -231,7 +230,6 @@ export function useChargeEngine(d: ChargeEngineDeps): void {
       if (e.data.type === 'HARDWARE_ERROR') {
         d.setHardwareError(d.tRef.current('mass_disconnected') as string);
         d.setSignalQuality(0);
-        d.setIsHoldMode(false);
         return;
       }
 
@@ -380,10 +378,6 @@ export function useChargeEngine(d: ChargeEngineDeps): void {
         const pushUi = _nowMs - lastMetricsUiRef.current >= 100;
         if (pushUi) lastMetricsUiRef.current = _nowMs;
         if (pushUi) {
-          // NOTE : le worker n'émet PAS `isHold` → ce mode n'a jamais pu s'activer (le bandeau
-          // jaune « HOLD » est donc inerte). Comportement inchangé ; à implémenter côté worker
-          // si l'on veut ce signal.
-          d.setIsHoldMode(false);
           // CONN-122: the 7 high-frequency numeric metrics go to the external
           // metricsStore (NOT App state) → App no longer re-renders at 10 Hz.
           // qL pushed = PREDICTED (display) charge → readouts/sphere/needle color

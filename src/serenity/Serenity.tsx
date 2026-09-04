@@ -1195,11 +1195,6 @@ export default function Serenity() {
   const release = useStableReleaseState({ needleReactionKeyRef });
 
   const [hardwareError, setHardwareError] = useState<string | null>(null);
-  // ⚠️ Codice morto tolto (verifica del codice, richiesta esplicita): il VALORE non era mai
-  // letto in questo file — solo `setIsHoldMode` serve, passato al motore condiviso più sotto.
-  // Il motore continua a scriverlo esattamente come prima (stesso calcolo, stesso stato);
-  // qui si tiene solo il pezzo che questo file usa davvero.
-  const [, setIsHoldMode] = useState(false);
   const [realBpm, setRealBpm] = useState<number | null>(null);
   const realBpmRef = useRef<number | null>(null);
   useEffect(() => { realBpmRef.current = realBpm; }, [realBpm]);
@@ -1528,7 +1523,7 @@ export default function Serenity() {
     epWindowTimerRef: ep.epWindowTimerRef,
     setEpWindowOpen: ep.setEpWindowOpen, setAsIsnessState: ep.setAsIsnessState,
     setIsFnActive: ep.setIsFnActive,
-    setHardwareError, setSignalQuality: museGate.setSignalQuality, setIsHoldMode, setRealBpm, setDisplayMass,
+    setHardwareError, setSignalQuality: museGate.setSignalQuality, setRealBpm, setDisplayMass,
     setPrimeIm, setPrimeFd, setPrimePStar, setPrimeDelta, setPrimeZone, setPrimeCaptured,
     setNeedleReactionKey, setNeedleReaction,
     massAccumulatorRef,

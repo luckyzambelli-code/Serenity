@@ -13,6 +13,9 @@ release/
 *.dmg
 *.blockmap
 
+# grafo di Graphify — rigenerato da `graphify update .`, mai a mano.
+graphify-out/
+
 # Riferimenti per la TARATURA (video degli F/N reali filmati sul Theta-Meter).
 # Servono a tarare, non a far girare l'app: 115 MB che in git non tornerebbero mai indietro.
 #

@@ -8461,3 +8461,54 @@ entrées" di sole voci vere (HABIT, HALLUCINATIONS…), niente più HCOB/HCO PL 
 `tsc --noEmit` pulito, `npm run lint` invariato (324 warning), `npx vitest run` 652/652 verdi.
 
 File toccati — SOLO SERENITY: [`src/serenity/DizionarioModal.tsx`](../src/serenity/DizionarioModal.tsx).
+
+## Giro — 2026-09-04 (27) — analisi indipendente del codice, prime correzioni
+
+**« Fais une analyse du code complète, regarde s'il y a des incohérences… comme si tu n'avais
+jamais travaillé sur ce code ».** Analisi a occhi nuovi (via `graphify` per l'orientamento
+strutturale, poi lettura diretta dei file più centrali), NON solo di SERENITY — di tutto il
+deposito. Trovati: zero test sul motore centrale (`useChargeEngine.ts`, 827 righe, nessuno),
+su `networkManager.ts`, `useMuseConnection.ts`, `useThetaMeter.ts`, `storage.ts`,
+`ContactPredictor.ts`; un bandeau "HOLD" nell'interfaccia MAI raggiungibile (il worker non
+emette mai il segnale che lo attiverebbe — il codice stesso lo documentava); `tsconfig.json`
+senza alcuna modalità strict, 143 usi di `any`; `graphify-out/` non escluso da git.
+
+**« Commence à corriger » — tre correzioni, dalla più sicura alla più impegnativa:**
+
+1. **`.gitignore`** — aggiunta `graphify-out/` (artefatto rigenerato da `graphify update .`,
+   mai da versionare).
+2. **Bandeau HOLD morto, tolto** — `isHoldMode`/`setIsHoldMode` non diventava MAI `true` in
+   nessun punto del codice (solo `useState(false)` e due `setIsHoldMode(false)`): un elemento
+   di interfaccia per uno stato strutturalmente irraggiungibile. Tolto da `useChargeEngine.ts`
+   (il contratto `ChargeEngineDeps`, condiviso), `App.tsx` (lo stato E il bandeau JSX) e
+   `Serenity.tsx` (che already teneva solo il setter, mai il valore — ora tolto anche quello).
+3. **Primi test per `useChargeEngine.ts`** — il file più critico del motore, zero copertura
+   fino ad ora. Aggiunta infrastruttura minima (`jsdom`, solo per questo file — il resto della
+   suite resta sull'ambiente `node`, più veloce — `// @vitest-environment jsdom`), un
+   `FakeWorker` per sostituire l'import `?worker` di Vite (jsdom non implementa `Worker`, e
+   quell'import non può produrne uno vero fuori da un browser). Nessun mock dei motori veri
+   (`needleEngine`, `sessionRecorder`, `metricsStore`, `contactPredictor`, `cycleStateMachine`…)
+   — sono loro il collegamento da verificare, non da reimplementare. 9 test nuovi: spawn/respawn
+   con backoff BORNATO del worker (verificato: mai più di `MAX_RESPAWN` tentativi), `HARDWARE_
+   ERROR`, `BPM_UPDATE`, `GSR_UPDATE` dentro/fuori soglia (reset di sicurezza), un tick
+   `METRICS_UPDATE` completo (carica predetta pubblicata su `metricsStore`, ciclo alimentato,
+   evento NEEDLE_EVENT inviato al worker), e la sessione in pausa (niente registrazione).
+
+   **Un test ha trovato un'ipotesi sbagliata, non un bug**: pensavo che senza contatto Muse
+   valido `qlDisp` (la carica mostrata) venisse azzerata prima di arrivare a
+   `useContactNullCycle` — falso, resta la carica predetta GREZZA. Il vero blocco è più a monte:
+   `cycleStateMachine.update(validSignal ? qlDisp : 0, ...)` non riceve MAI la carica non
+   valida, quindi la fase non raggiunge mai `'contact'` — e `useContactNullCycle.ts` legge
+   `t.qlDisp` solo sotto quella guardia (`t.phase === 'contact'`). Nessun bug reale, ma un
+   contratto implicito ora bloccato da un test invece che dedotto leggendo il codice a mano.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` invariato (324 warning), `npx vitest run`
+**661/661** verdi (652 + 9 nuovi), build di produzione pulita per ENTRAMBE le app, avvio dal
+vivo di EQUILIBRIUM senza errori di console nuovi.
+
+File toccati — CONDIVISI (richiedono build e invio di ENTRAMBI i DMG):
+[`src/hooks/useChargeEngine.ts`](../src/hooks/useChargeEngine.ts) (tolto `setIsHoldMode` dal
+contratto), [`src/App.tsx`](../src/App.tsx) (stato + bandeau morto tolti).
+SERENITY-only: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx) (setter morto
+tolto). Nuovo: [`src/hooks/__tests__/useChargeEngine.test.tsx`](../src/hooks/__tests__/useChargeEngine.test.tsx).
+Housekeeping: `.gitignore`, `package.json`/`package-lock.json` (nuova devDependency `jsdom`).

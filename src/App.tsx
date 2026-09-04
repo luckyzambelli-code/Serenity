@@ -697,7 +697,6 @@ export default function App() {
   // CONN-68/PERF: la gola degli 21 Hz del worker → 10 Hz UI e i 2 Hz del grafico/CSV
   // vivono ora in `hooks/useChargeEngine` (fase 6) — non più qui.
   const [hardwareError, setHardwareError] = useState<string | null>(null);
-  const [isHoldMode, setIsHoldMode] = useState(false);
   const [realBpm, setRealBpm] = useState<number | null>(null);
   // BPM staleness: the worker only emits BPM_UPDATE when the PPG autocorrelation
   // finds a clear beat. The Muse 2's forehead PPG is weak for heart-rate, so when
@@ -3005,7 +3004,7 @@ export default function App() {
     logBufferRef, pendingEegFnRef,
     epWindowOpenRef, epWindowHasOpenedRef, epWindowTimerRef,
     setEpWindowOpen, setAsIsnessState, setIsFnActive,
-    setHardwareError, setSignalQuality, setIsHoldMode, setRealBpm, setDisplayMass,
+    setHardwareError, setSignalQuality, setRealBpm, setDisplayMass,
     setPrimeIm, setPrimeFd, setPrimePStar, setPrimeDelta, setPrimeZone, setPrimeCaptured,
     setNeedleReactionKey, setNeedleReaction,
     massAccumulatorRef: massAccumulator,
@@ -5395,10 +5394,6 @@ export default function App() {
                   <AlertTriangle size={40} className="text-red-500" />
                   <h2 className="text-lg font-mono font-bold text-red-500 tracking-widest text-center">{hardwareError}</h2>
                 </div>
-              </div>
-            ) : isHoldMode ? (
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-yellow-500/90 text-black px-4 py-1.5 rounded font-mono text-xs uppercase tracking-widest z-50 animate-pulse border border-yellow-400">
-                HOLD
               </div>
             ) : null}
             {/* EP Validation Panel — appare quando finestra Cognition è aperta */}
