@@ -8995,3 +8995,8 @@ correttamente.
 File toccati — SOLO SERENITY: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
 [`src/serenity/DizionarioModal.tsx`](../src/serenity/DizionarioModal.tsx). Dati:
 `dizionario-fr.json`/`dizionario-es.json` a 250 voci.
+
+**Sesto blocco, nello stesso giro — 300/2541 (11,8%).** Voci 250→299: fine di B (BOTTOM
+TERMINAL…BUTTON CHART, BY-PASSED…), poi C fino a CERTIFICATION COURSE (CASE… in blocco,
+CAUSE/CC/CCH-O, CERTAINTY/CERTIFICATE). Dati: `dizionario-fr.json`/`dizionario-es.json` ora a
+300 voci.
