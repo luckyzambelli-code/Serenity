@@ -9083,3 +9083,29 @@ invariato (324 warning), `npx vitest run` 718/718 verdi.
 
 File toccati — SOLO SERENITY: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
 [`src/serenity/DizionarioModal.tsx`](../src/serenity/DizionarioModal.tsx).
+
+## Giro — 2026-09-04 (40) — nono e decimo blocco dizionario (500/2541)
+
+**Nono blocco — 450/2541 (17,7%).** Voci 400→449: il lungo COMMUNICATION (10 definizioni
+numerate) e tutto il suo cluster (BRIDGE, CHANGE, COURSE, CYCLE, FORMULA, LAG + INDEX, LINE,
+PROCESS, SCALE, RELEASE), COMPARABLE MAGNITUDE, COMPLETE/COMPLETION, COMPULSION e i suoi
+composti, COMPUTATION/COMPUTATIONAL ALTITUDE/COMPUTING PSYCHOTIC, CONCEPT/CONCEPT RUNNING,
+CONDITION e le CONDITIONS OF EXISTENCE (BE/DO/HAVE), CONFRONT/CONFRONTING/CONFRONT PROCESS,
+CONFUSION, fino a CONTACT ASSIST. Nota: le voci sorgente inglesi 430-431 presentano la stessa
+anomalia OCR già incontrata (un "CONDITION" interrotto a metà frase che confluisce nella voce
+"BY DYNAMICS" successiva) — riprodotta fedelmente, non corretta silenziosamente.
+
+**Decimo blocco, nello stesso giro — 500/2541 (19,7%).** Voci 450→499: CONTAGION OF
+ABERRATION/ERROR, il cluster CONTINUING/CONTINUOUS OVERT, CONTROL e tutti i suoi composti
+(CASE, CENTER, CIRCUIT, PROCESSES, TRANSFER, TRIO), COPY, CORPSE CASE, COUNTER-CREATE/-EFFORT/
+-EMOTION/-THOUGHT, il cluster COURSE (ADMINISTRATOR, MATERIALS, SUP, SUPERVISOR), COVERT
+AUDITING/HOSTILITY, CRAMMING (con la stessa anomalia OCR "ORDER" scissa in voce a parte, alla
+483-484), CREATE e i suoi composti, CRIMINAL, CRITICAL THOUGHT/CRITICISM, fino ai cinque drill
+CR0000-1…5. Dati: `dizionario-fr.json`/`dizionario-es.json` ora a 500 voci ciascuno (19,7% del
+corpus).
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
