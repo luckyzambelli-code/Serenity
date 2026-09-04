@@ -9026,3 +9026,60 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (39) — quattro segnalazioni con screenshot: AVVERTENZA, arco fuori
+schermo, badge tagliati in TONE, bottone isolato tolto
+
+**1) « Metti in fondo giallo scritto in nero per AVVERTENZA ».** Il disclaimer FR/ES del
+dizionario (v. Giro 36) restava sul colore `--s-reserve` ambrato, coerente col resto dell'app
+per "dato non confermato" ma troppo tenue per un avviso che l'auditor deve notare SUBITO prima
+di fidarsi di un termine specifico di Scientology. Fondo giallo pieno (`#fde047`), testo nero,
+e la parola AVVERTENZA/WARNING/AVERTISSEMENT/ADVERTENCIA/VARNING in grassetto in testa,
+davanti al testo dell'avviso — non più solo un tono leggero.
+
+**2) « La disposizione è sbagliata con l'arco fuori schermo — puoi nasconderlo, poiché stiamo
+vedendo solo i comandi ».** Screenshot: sulla schermata "PREMI START PER AVVIARE LA SESSIONE",
+con un procedimento aperto (COMMANDS → una procedura, es. "RADIAL PROCEDURE" — mostrata da
+`PistaProcedimento`), il quadrante intero (QuantumSphere, ClearDial/ToneDial/MirrorDial, il
+bottone PREMI START, le letture in alto a sinistra — tutti figli assoluti dello stesso
+contenitore `position:relative` con `aspectRatio:1600/850`) restava montato sopra, e la sua
+`aspectRatio` lo spinge oltre l'alto dello schermo su una finestra bassa: esattamente il "fuori
+schermo" della segnalazione. Un procedimento aperto non ha nessun ago vero ad accompagnarlo —
+è un testo di riferimento, non una lettura in corso. Un solo `display:'none'` condizionato a
+`procedimentoAttivo` sul contenitore nasconde TUTTO il quadrante insieme (niente da toccare in
+ciascun figlio) — `PistaProcedimento`, più sotto nel flusso normale della colonna, resta
+l'unica cosa a schermo, come chiesto. Non verificabile dal vivo in questo giro: l'ambiente di
+anteprima non ha nessun file di procedimento caricato ("aucun procédé" — richiede un dossier
+locale di .txt che questo sandbox non ha); il meccanismo (uno `style.display` condizionato,
+nessuna struttura JSX toccata) resta comunque a basso rischio.
+
+**3) « Non hai risolto il problema delle scritte che non si vedono in alto a sinistra della
+scala del tono ».** La causa reale, mai trovata nei due giri precedenti sullo stesso bug (v.
+Giro 35): il riquadro dei badge TONE (fonte MUSE/METER, "fai la prova delle lattine", "fuori
+dai punti tarati") vive nello stesso contenitore da 460px di `ToneColumn`, deliberatamente
+posizionato a `left:-150` (per spingere la scala fuori dalla zona arco, v. Giro precedente) —
+quindi da x=-150 a x=310, con SOLO x=0…310 dentro lo schermo. `ToneColumn` se la cava perché è
+un SVG col suo `viewBox` proporzionale (la parte tagliata è solo margine del disegno); ma la
+riga dei badge è testo HTML normale, `width:'100%'` del riquadro: il suo contenuto comincia a
+scorrere ESATTAMENTE da x=-150, quindi i primi 150px di ogni badge restavano letteralmente
+oltre il bordo della finestra — non "dietro" `.ser-comandi" (quello era un bug DIVERSO, già
+corretto). `width:310, marginLeft:150` sposta SOLO questa riga dentro la fetta davvero
+visibile (0…310), lasciando `ToneColumn` sotto invariato.
+
+**4) « Nel tono c'è un bottone, era un colpo isolato, l'auditor non capisce, non è
+interessante averlo, toglilo ».** Il bottone "−{margine} · fai la prova delle lattine" (quello
+della segnalazione 3) viveva SOLO nel riquadro TONE, isolato in mezzo alle letture, senza il
+contesto che ha nel pannello Meter vero (dove sta insieme a tutte le altre tappe di taratura,
+spiegate una per una) — un colpo secco e illeggibile fuori da quel contesto. Tolto insieme al
+suo riquadro; era l'unico punto a impostare `meterSetupPasso` su `'stretta'` — lo stato resta
+valido per l'uso normale (bottone "configura il meter"), semplicemente nessuno lo punta più su
+questo passo specifico da qui.
+
+Verificato dal vivo (ambiente `serenity-dev`, seduta "senza strumenti"): dizionario FR con
+banner AVVERTENZA giallo/nero ben visibile; dashboard a seduta chiusa con COMMANDS/DIZIONARIO
+sempre presenti; ciclo TONE armato, item dato, tono scelto, salita a "MÈNE-LE AU TON 40" —
+nessun bottone residuo, nessun errore in console. `tsc --noEmit` pulito, `npm run lint`
+invariato (324 warning), `npx vitest run` 718/718 verdi.
+
+File toccati — SOLO SERENITY: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
+[`src/serenity/DizionarioModal.tsx`](../src/serenity/DizionarioModal.tsx).

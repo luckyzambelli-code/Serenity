@@ -285,22 +285,29 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
           [...] bisogna immaginare una frase che indica di verificare attentamente la
           traduzione ed in particolare le parole specifiche a Scientology ». Mostrato SOLO su
           FR/ES (l'italiano è il libro vero tradotto da una persona, l'inglese è la fonte
-          originale — nessuno dei due ha bisogno di questo avviso). Colore `--s-reserve`
-          (l'ambra "il dato c'è ma non è confermato", lo stesso usato altrove nell'app per
-          questo tipo di segnale — mai un rosso d'allarme, non è un errore). */}
+          originale — nessuno dei due ha bisogno di questo avviso).
+          ⚠️ CORRETTO — segnalato di nuovo: « metti in fondo giallo scritto in nero per
+          AVVERTENZA ». Il colore `--s-reserve` (l'ambra "il dato c'è ma non è confermato",
+          usato ovunque nell'app per un dato non confermato ma non un errore) restava troppo
+          tenue per un avviso che l'auditor deve notare SUBITO, prima di fidarsi di un termine
+          tecnico specifico di Scientology. Fondo giallo pieno, testo nero — lo stesso
+          contrasto di un cartello di avvertenza vero, non più un tono ambrato leggero — e la
+          parola AVVERTENZA/WARNING/AVERTISSEMENT/ADVERTENCIA/VARNING in testa, in grassetto,
+          prima del testo dell'avviso stesso. */}
       {(lingua === 'fr' || lingua === 'es') && (
         <div style={{
           flexShrink: 0, marginBottom: 12, padding: '10px 16px', borderRadius: 10,
-          background: 'color-mix(in srgb, var(--s-reserve) 12%, var(--s-disc))',
-          border: '1px solid color-mix(in srgb, var(--s-reserve) 40%, transparent)',
-          fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.5, color: 'var(--s-ink-soft)',
+          background: '#fde047', border: '1px solid #ca8a04',
+          fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.5, color: '#000000',
         }}>
+          <strong>{LC('AVVERTENZA', 'AVERTISSEMENT', 'WARNING', 'ADVERTENCIA', 'VARNING')}</strong>
+          {' — '}
           {LC(
-            '⚠ Traduzione semantica non confermata (a differenza dell\'italiano, il libro vero) — verifica attentamente il testo, in particolare le parole specifiche a Scientology.',
-            '⚠ Traduction sémantique non confirmée (contrairement à l\'italien, le vrai livre) — vérifie attentivement le texte, en particulier les mots spécifiques à la Scientologie.',
-            '⚠ Unconfirmed semantic translation (unlike the Italian, the real book) — check the text carefully, especially words specific to Scientology.',
-            '⚠ Traducción semántica no confirmada (a diferencia del italiano, el libro real) — verifica el texto con atención, en particular las palabras específicas de Cienciología.',
-            '⚠ Obekräftad semantisk översättning (till skillnad från italienskan, den riktiga boken) — kontrollera texten noga, särskilt ord som är specifika för Scientology.',
+            'traduzione semantica non confermata (a differenza dell\'italiano, il libro vero) — verifica attentamente il testo, in particolare le parole specifiche a Scientology.',
+            'traduction sémantique non confirmée (contrairement à l\'italien, le vrai livre) — vérifie attentivement le texte, en particulier les mots spécifiques à la Scientologie.',
+            'unconfirmed semantic translation (unlike the Italian, the real book) — check the text carefully, especially words specific to Scientology.',
+            'traducción semántica no confirmada (a diferencia del italiano, el libro real) — verifica el texto con atención, en particular las palabras específicas de Cienciología.',
+            'obekräftad semantisk översättning (till skillnad från italienskan, den riktiga boken) — kontrollera texten noga, särskilt ord som är specifika för Scientology.',
           )}
         </div>
       )}

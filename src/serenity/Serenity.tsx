@@ -549,8 +549,11 @@ export default function Serenity() {
   /**
    * ⚠️ AGGIUNTO (revisione dei calcoli TONE, 01/09/2026) — su quale passo aprire `PannelloMeter`
    * la PROSSIMA volta. `undefined` → il suo default ('config'), come il bottone "configura il
-   * meter" ha sempre fatto. Il bottone "rifai la prova delle lattine" (vicino al TONE, sotto)
-   * lo mette a `'stretta'` prima di aprire — v. `passoIniziale` in `PannelloMeter.tsx`.
+   * meter" ha sempre fatto — v. `passoIniziale` in `PannelloMeter.tsx`.
+   * ⚠️ Il bottone "rifai la prova delle lattine", vicino al TONE, che poneva questo passo a
+   * `'stretta'` prima di aprire, è stato tolto (segnalato: « era un colpo isolato, l'auditor
+   * non capisce, non è interessante averlo » — v. la nota al suo vecchio punto di montaggio).
+   * `'stretta'` resta un valore valido del tipo, semplicemente niente lo imposta più da qui.
    */
   const [meterSetupPasso, setMeterSetupPasso] = useState<'config' | 'stretta' | 'respiro' | 'taratura' | undefined>(undefined);
   /**
@@ -5211,6 +5214,19 @@ export default function Serenity() {
              tipico) — resta `100%` della larghezza vera lasciata libera qui sotto. */
           width: '100%', aspectRatio: '1600 / 850', maxHeight: '100%',
           borderRadius: 18, overflow: 'hidden', position: 'relative',
+          /* ⚠️ SEGNALATO con screenshot: « la disposizione è sbagliata con l'arco fuori
+             schermo — puoi nasconderlo, poiché stiamo vedendo solo i comandi ». Quando un
+             procedimento è aperto (`procedimentoAttivo`, v. sotto — mostra `PistaProcedimento`,
+             es. "RADIAL PROCEDURE") NESSUN ago vero lo accompagna: non è una lettura in corso,
+             è un testo di riferimento. Ma questo riquadro (l'intero quadrante — QuantumSphere,
+             ClearDial/ToneDial/MirrorDial, il bottone PREMI START, le letture in alto a
+             sinistra: tutti figli assoluti di QUESTO contenitore `position:relative`) restava
+             comunque montato sopra, con la sua `aspectRatio` che lo spinge oltre l'alto dello
+             schermo su una finestra bassa — proprio il "fuori schermo" segnalato. Un solo
+             `display:'none'` qui basta a nasconderlo TUTTO insieme (niente da toccare in
+             ciascun figlio): `PistaProcedimento`, più sotto nel flusso normale della colonna,
+             resta l'unica cosa a schermo. */
+          display: procedimentoAttivo ? 'none' : undefined,
           /* ⚠️ Segnalato: « il fondo della zona arc deve essere trasparente ». In chiaro era
              `var(--s-ground)` — LO STESSO colore della pagina, ma un colore PIENO: con uno
              sfondo personalizzato (CONFIG → "importa la tua immagine") copriva comunque
@@ -5750,14 +5766,30 @@ export default function Serenity() {
                     `zIndex:8` esplicito, gli dipinge SOPRA — non dietro l'arco (mai stato il
                     problema), dietro la barra laterale, che nasconde la metà sinistra del
                     badge "rifai la prova delle lattine" e taglia il resto. `zIndex:9` basta:
-                    un solo gradino sopra `.ser-comandi`, non sopra tutto lo schermo. */}
+                    un solo gradino sopra `.ser-comandi`, non sopra tutto lo schermo.
+                    ⚠️ CORRETTO ANCORA (segnalato di nuovo con screenshot: « non hai risolto il
+                    problema delle scritte che non si vedono in alto a sinistra della scala del
+                    tono ») — lo zIndex era giusto, ma non era mai stato quello .ser-comandi il
+                    vero taglio residuo: `left:-150` porta TUTTO questo riquadro, 460px di
+                    larghezza, a x=(-150…310) — SOLO x=(0…310) resta dentro lo schermo, x<0 è
+                    letteralmente oltre il bordo sinistro della finestra, non "dietro" qualcosa,
+                    fuori dal viewport. `ToneColumn` (più giù) se la cava perché è un SVG col suo
+                    `viewBox` proporzionale: la parte tagliata è solo margine/tacche del disegno.
+                    MA questa riga di badge è testo HTML normale in flusso flex, `width:'100%'`
+                    del riquadro — il suo contenuto comincia a scorrere ESATTAMENTE da x=-150,
+                    quindi i primi 150px di "fai la prova delle lattine"/"fuori dai punti
+                    tarati" restavano oltre il bordo, tagliati alla radice (da qui il "che non si
+                    vedono completamente" già segnalato prima — lo zIndex risolveva solo il
+                    conflitto con `.ser-comandi`, non questo). `width:310, marginLeft:150`
+                    sposta SOLO questa riga dentro la fetta davvero visibile (0…310), lasciando
+                    la colonna dell'ago sotto (`ToneColumn`) al suo posto invariato. */}
                 <div style={{
                   position: 'absolute', left: -150, top: '22%', bottom: '6%', width: 460, zIndex: 9,
                   pointerEvents: 'none', display: 'flex', flexDirection: 'column', gap: 4,
                 }}>
                 {tone.toneAtStart !== null && (
                   <div style={{
-                    flex: '0 0 auto', width: '100%',
+                    flex: '0 0 auto', width: 310, marginLeft: 150,
                     display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center',
                     pointerEvents: 'auto',
                   }}>
@@ -5779,23 +5811,16 @@ export default function Serenity() {
                         ? LC('fonte · METER', 'source · METER', 'source · METER', 'fuente · METER', 'källa · METER')
                         : LC('fonte · dichiarato', 'source · déclaré', 'source · declared', 'fuente · declarado', 'källa · deklarerad')}
                     </span>
-                    {tone.margineTono > 0 && (
-                      <button onClick={() => { setMeterSetupPasso('stretta'); setMeterSetupAperto(true); }}
-                        className="s-glass s-glass-btn"
-                        title={LC('rifai la prova della stretta — fissa la sensibilità dell\'ago',
-                          'refais le test de pression — il fixe la sensibilité de l\'aiguille',
-                          'redo the squeeze test — it sets the needle sensitivity',
-                          'rehaz la prueba de presión — fija la sensibilidad de la aguja',
-                          'gör om tryckprovet — det ställer nålens känslighet') as string}
-                        style={{
-                          padding: '3px 9px', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap',
-                          fontFamily: 'var(--s-sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
-                          color: 'var(--s-tone-hue)', border: '1px solid var(--s-tone-hue)',
-                          background: 'rgba(251,191,36,0.12)',
-                        }}>
-                        −{tone.margineTono} · {LC('fai la prova delle lattine', 'fais le test des boîtes', 'do the cans test', 'haz la prueba de las latas', 'gör burktestet')}
-                      </button>
-                    )}
+                    {/* ⚠️ TOLTO — segnalato: « nel tono c'è un bottone, era un colpo isolato,
+                        l'auditor non capisce, non è interessante averlo, toglilo ». Il bottone
+                        "−{margine} · fai la prova delle lattine" viveva SOLO qui, isolato in
+                        mezzo alle letture del TONE, senza il contesto che ha nel pannello Meter
+                        vero (dove sta insieme a tutte le altre tappe di taratura, spiegate una
+                        per una) — un colpo secco, illeggibile fuori da quel contesto. Restava
+                        l'UNICO punto che poneva `meterSetupPasso` a `'stretta'` (v. la nota su
+                        quello stato, in cima al file): tolto insieme, lo stato resta comunque
+                        valido per l'uso normale (bottone "configura il meter"), semplicemente
+                        nessuno lo punta più su questo passo specifico da qui. */}
                     {meterC && theta.taScale && theta.taScale.points.length > 0 && (
                       theta.rawSmooth < theta.taScale.points[0].raw
                       || theta.rawSmooth > theta.taScale.points[theta.taScale.points.length - 1].raw
