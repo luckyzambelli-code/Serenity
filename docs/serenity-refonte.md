@@ -9141,3 +9141,19 @@ metà frase che confluisce nella voce "M-5" successiva) — riprodotta fedelment
 File toccati — SOLO SERENITY: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx)
 (codice), `public/dizionario/dizionario-fr.json`, `public/dizionario/dizionario-es.json`
 (dati).
+
+## Giro — 2026-09-04 (42) — dodicesimo blocco dizionario (600/2541)
+
+Voci 550→599: DED/DED-DEDEX/DEDEX, DEEP PROCESSING, DEFINITION PROCESSES/DEFINITIONS TYPES OF,
+DEGRADATION/DEGRADED BEING, DELUSION, DEMO/DEMO KIT, DEMON/DEMON CIRCUIT, DENYER, DEPLETION OF
+HAVINGNESS, DERAILER, DESTIMULATE/-D/-ION, DESTROY/DESTRUCTION, DETACHED, il grande cluster
+DIANETIC (ASSESSMENT LIST, ASSIST, AUDITING, AUDITOR, CASE COMPLETION, CLEAR, FLOW TABLE, LIST,
+PRECLEAR, RELEASE, REVERIE) e il lungo DIANETICS (8 definizioni numerate), DIANOMETRY,
+DICHOTOMY, DIFFERENTIATION, fino a DIMENSION POINT. Dati: `dizionario-fr.json`/
+`dizionario-es.json` ora a 600 voci ciascuno (23,6% del corpus — quasi un quarto).
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
