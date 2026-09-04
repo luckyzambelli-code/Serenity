@@ -8860,3 +8860,47 @@ ancora, 46/56 → 58/70px; la scritta "SERENITY" torna alla sua taglia originale
 21px, non più `--s-fs-hero`) — l'immagine porta il peso visivo, il nome accanto resta una
 didascalia. Verificato dal vivo: logo chiaramente più grande, "SERENITY"/BASIC/versione ben
 proporzionati accanto. `tsc`/`lint`/`vitest` puliti (stessi numeri di sopra).
+
+## Giro — 2026-09-04 (36) — dizionario tecnico: FRANCESE e SPAGNOLO, primo blocco
+
+Chiesto direttamente: prendere la versione INGLESE del dizionario tecnico e tradurla in
+FRANCESE e SPAGNOLO, indicando chiaramente — a differenza dell'italiano, il libro vero,
+tradotto e curato da una persona — che queste due sono semplici traduzioni SEMANTICHE, non
+confermate, con un avviso a verificare con attenzione, in particolare le parole specifiche a
+Scientology. **« Per il dizionario procedi by steps »** — si procede a blocchi, senza
+fermarsi a ogni giro per chiedere conferma, con aggiornamenti di avanzamento.
+
+**Le ABBREVIAZIONI (129 voci) — complete fin da subito.** Molto più piccole del corpo
+principale (titoli brevi di pubblicazioni Scientology), tradotte per intero in un solo giro:
+`public/dizionario/abbreviazioni-fr.json`/`abbreviazioni-es.json`, stesso formato
+dell'italiano — titolo originale inglese invariato + traduzione fra parentesi (es. « AAR —
+All About Radiation (Todo sobre la radiación) »).
+
+**Il corpo principale (2541 voci) — 50/2541 in questo giro (2,0%).** Le prime 50 voci
+(A → ADVANCE PROGRAM) tradotte in `dizionario-fr.json`/`dizionario-es.json`: `termine` resta
+l'INTESTAZIONE INGLESE originale invariata (è il termine tecnico vero, quello citato nelle
+fonti HCOB/PAB/…, tradurlo lo renderebbe irriconoscibile), solo `definizione` è tradotta. Le
+voci non ancora tradotte semplicemente non compaiono nell'elenco FR/ES — niente segnaposto
+vuoto: la copertura si allarga a ogni giro successivo, senza rompere quel che già c'è.
+Continuerà nei prossimi giri fino a coprire l'intero dizionario.
+
+**`DizionarioModal.tsx`** — da due schede (ITALIANO/INGLESE) a quattro (+ FRANCESE/SPAGNOLO),
+stesso meccanismo di caricamento (`fetch` solo all'apertura del pannello, non all'avvio di
+SERENITY). Nuovo avviso, mostrato SOLO quando FRANCESE o SPAGNOLO è la scheda attiva (mai su
+italiano/inglese, che non ne hanno bisogno): « ⚠ Traduzione semantica non confermata (a
+differenza dell'italiano, il libro vero) — verifica attentamente il testo, in particolare le
+parole specifiche a Scientology », nelle 5 lingue dell'interfaccia. Stesso colore ambra
+(`--s-reserve`) già usato altrove per "il dato c'è ma non è confermato" — mai un rosso
+d'allarme, non è un errore.
+
+Verificato dal vivo: aperto il dizionario, scheda FRANCESE — l'avviso compare, "179/179 voci"
+(50 voci + 129 abbreviazioni), "ABERRATE" espande correttamente in francese; scheda SPAGNOLO
+— stessa voce espande correttamente in spagnolo; sezione "§" (abbreviazioni) — "AAR" espande
+« All About Radiation (Todo sobre la radiación) ».
+
+`tsc --noEmit` pulito, `npm run lint` invariato (324 warning), `npx vitest run` 718/718 verdi.
+
+File toccati — SOLO SERENITY: [`src/serenity/DizionarioModal.tsx`](../src/serenity/DizionarioModal.tsx).
+Nuovo (dati, non codice): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`, `public/dizionario/abbreviazioni-fr.json`,
+`public/dizionario/abbreviazioni-es.json`.

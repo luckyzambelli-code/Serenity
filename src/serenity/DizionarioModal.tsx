@@ -82,10 +82,24 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
   const [erroreCaricamento, setErroreCaricamento] = useState(false);
   const [vociIt, setVociIt] = useState<Voce[]>([]);
   const [vociEn, setVociEn] = useState<Voce[]>([]);
+  // ⚠️ AGGIUNTE — segnalato: prendi la versione INGLESE del dizionario tecnico e traducila in
+  // FRANCESE e SPAGNOLO. A differenza dell'italiano (il libro vero, tradotto e curato da una
+  // persona) queste due sono traduzioni SEMANTICHE del testo inglese, non confermate — v.
+  // l'avviso mostrato quando una delle due è la scheda attiva, poco più sotto. `termine`
+  // resta l'INTESTAZIONE INGLESE originale in entrambe (non tradotta): è il termine tecnico
+  // vero, quello che compare nelle citazioni (HCOB, PAB, …) — tradurlo lo renderebbe
+  // irriconoscibile rispetto alla fonte che lo cita.
+  // ⚠️ COPERTURA PARZIALE, IN CRESCITA — il dizionario inglese ha 2541 voci: tradurle tutte con
+  // la cura che meritano i termini di Scientology è un lavoro a più riprese, non un unico
+  // giro. Le voci non ancora tradotte semplicemente non compaiono ancora nell'elenco FR/ES —
+  // niente segnaposto vuoto, niente "non disponibile": la ricerca vede quel che c'è, la
+  // copertura si allarga a ogni giro successivo.
+  const [vociFr, setVociFr] = useState<Voce[]>([]);
+  const [vociEs, setVociEs] = useState<Voce[]>([]);
   // ⚠️ INGLESE PER DEFAULT — segnalato. La ricerca bilingue (italiano che confronta anche
-  // `termineEn`) resta invariata su ENTRAMBE le schede: qui cambia solo quale delle due si
-  // vede aprendo il pannello, non la logica di ricerca.
-  const [lingua, setLingua] = useState<'it' | 'en'>('en');
+  // `termineEn`) resta invariata su TUTTE le schede: qui cambia solo quale si vede aprendo il
+  // pannello, non la logica di ricerca.
+  const [lingua, setLingua] = useState<'it' | 'en' | 'fr' | 'es'>('en');
   const [ricerca, setRicerca] = useState('');
   // ⚠️ AGGIUNTA — segnalato: « puoi mettere una ricerca anche via lettera dell'alfabeto ».
   // Alternativa al campo di testo, non insieme a lui (le due ricerche si annullano a vicenda
@@ -119,7 +133,17 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
       fetch('/dizionario/dizionario-en.json').then(r => r.json()).catch(() => []),
       fetch('/dizionario/abbreviazioni-it.json').then(r => r.json()).catch(() => []),
       fetch('/dizionario/abbreviazioni-en.json').then(r => r.json()).catch(() => []),
-    ]).then(([it, en, abbrIt, abbrEn]: [VoceGrezza[], VoceGrezza[], AbbrGrezza[], AbbrGrezza[]]) => {
+      // ⚠️ AGGIUNTI — traduzioni FR/ES del dizionario inglese, v. la nota sullo stato `vociFr`/
+      // `vociEs` sopra. Le abbreviazioni FR/ES (`abbreviazioni-fr.json`/`-es.json`) sono
+      // invece COMPLETE fin da subito — 129 voci, brevi titoli di pubblicazioni, un lavoro
+      // molto più piccolo del corpo principale. `.catch(() => [])`: come le altre fonti, un
+      // file mancante non deve rompere il resto del dizionario.
+      fetch('/dizionario/dizionario-fr.json').then(r => r.json()).catch(() => []),
+      fetch('/dizionario/dizionario-es.json').then(r => r.json()).catch(() => []),
+      fetch('/dizionario/abbreviazioni-fr.json').then(r => r.json()).catch(() => []),
+      fetch('/dizionario/abbreviazioni-es.json').then(r => r.json()).catch(() => []),
+    ]).then(([it, en, abbrIt, abbrEn, fr, es, abbrFr, abbrEs]:
+      [VoceGrezza[], VoceGrezza[], AbbrGrezza[], AbbrGrezza[], VoceGrezza[], VoceGrezza[], AbbrGrezza[], AbbrGrezza[]]) => {
       if (!vivo) return;
       if (!Array.isArray(it) && !Array.isArray(en)) { setErroreCaricamento(true); setCaricamento(false); return; }
       const aVoce = (a: AbbrGrezza): Voce => ({ termine: a.codice, definizione: a.espansione, abbreviazione: true });
@@ -131,12 +155,20 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
         ...(Array.isArray(en) ? en : []).map(v => ({ termine: v.termine, definizione: v.definizione })),
         ...(Array.isArray(abbrEn) ? abbrEn : []).map(aVoce),
       ]);
+      setVociFr([
+        ...(Array.isArray(fr) ? fr : []).map(v => ({ termine: v.termine, definizione: v.definizione })),
+        ...(Array.isArray(abbrFr) ? abbrFr : []).map(aVoce),
+      ]);
+      setVociEs([
+        ...(Array.isArray(es) ? es : []).map(v => ({ termine: v.termine, definizione: v.definizione })),
+        ...(Array.isArray(abbrEs) ? abbrEs : []).map(aVoce),
+      ]);
       setCaricamento(false);
     }).catch(() => { if (vivo) { setErroreCaricamento(true); setCaricamento(false); } });
     return () => { vivo = false; };
   }, []);
 
-  const lista = lingua === 'it' ? vociIt : vociEn;
+  const lista = lingua === 'it' ? vociIt : lingua === 'en' ? vociEn : lingua === 'fr' ? vociFr : vociEs;
 
   // Lettere davvero presenti nell'elenco corrente (niente bottoni morti per una lettera
   // senza nessuna voce — es. "K" o "W" in italiano). ⚠️ SOLO voci vere, mai `abbreviazione` —
@@ -202,12 +234,17 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
           {LC('DIZIONARIO TECNICO', 'DICTIONNAIRE TECHNIQUE', 'TECHNICAL DICTIONARY', 'DICCIONARIO TÉCNICO', 'TEKNISK ORDBOK')}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {/* ── DUE FONTI, DUE SCHEDE — l'italiano (completo, con incrocio inglese) e
-              l'inglese (fonte a sé, "fair use quotes" — v. la nota in testa al file).
-              Stesso motivo del fondo sopra: bianco/nero fissi sostituiti dai token —
-              la pillola piena "inchiostro con sopra il colore del fondo" (v. tokens.css). */}
+          {/* ── QUATTRO FONTI, QUATTRO SCHEDE — l'italiano (il libro vero, tradotto e curato
+              da una persona, con incrocio inglese) e l'inglese (fonte a sé, "fair use quotes"
+              — v. la nota in testa al file) restano le due sole CONFERMATE. FRANCESE e
+              SPAGNOLO, aggiunte — segnalato: prendi l'inglese e traducilo in francese e
+              spagnolo — sono invece traduzioni SEMANTICHE del testo inglese fatte da questa
+              stessa IA, non confermate da un traduttore umano: v. l'avviso sotto la riga di
+              schede, mostrato solo quando una delle due è attiva. Stesso motivo del fondo
+              sopra: bianco/nero fissi sostituiti dai token — la pillola piena "inchiostro con
+              sopra il colore del fondo" (v. tokens.css). */}
           <div style={{ display: 'flex', borderRadius: 999, overflow: 'hidden', border: '1px solid var(--s-ink-ghost)' }}>
-            {(['it', 'en'] as const).map(l => (
+            {(['it', 'en', 'fr', 'es'] as const).map(l => (
               <button key={l} onClick={() => { setLingua(l); setEspanso(null); setLetteraFiltro(null); }}
                 style={{
                   border: 'none', cursor: 'pointer', padding: '6px 16px',
@@ -217,7 +254,11 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
                 }}>
                 {l === 'it'
                   ? LC('ITALIANO', 'ITALIEN', 'ITALIAN', 'ITALIANO', 'ITALIENSKA')
-                  : LC('INGLESE', 'ANGLAIS', 'ENGLISH', 'INGLÉS', 'ENGELSKA')}
+                  : l === 'en'
+                  ? LC('INGLESE', 'ANGLAIS', 'ENGLISH', 'INGLÉS', 'ENGELSKA')
+                  : l === 'fr'
+                  ? LC('FRANCESE', 'FRANÇAIS', 'FRENCH', 'FRANCÉS', 'FRANSKA')
+                  : LC('SPAGNOLO', 'ESPAGNOL', 'SPANISH', 'ESPAÑOL', 'SPANSKA')}
               </button>
             ))}
           </div>
@@ -230,6 +271,31 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
           </button>
         </div>
       </div>
+
+      {/* ⚠️ AGGIUNTO — segnalato esplicitamente: « indicando che queste due traduzioni,
+          contrariamente all'italiano, non sono confermate, ma semplici traduzioni semantiche
+          [...] bisogna immaginare una frase che indica di verificare attentamente la
+          traduzione ed in particolare le parole specifiche a Scientology ». Mostrato SOLO su
+          FR/ES (l'italiano è il libro vero tradotto da una persona, l'inglese è la fonte
+          originale — nessuno dei due ha bisogno di questo avviso). Colore `--s-reserve`
+          (l'ambra "il dato c'è ma non è confermato", lo stesso usato altrove nell'app per
+          questo tipo di segnale — mai un rosso d'allarme, non è un errore). */}
+      {(lingua === 'fr' || lingua === 'es') && (
+        <div style={{
+          flexShrink: 0, marginBottom: 12, padding: '10px 16px', borderRadius: 10,
+          background: 'color-mix(in srgb, var(--s-reserve) 12%, var(--s-disc))',
+          border: '1px solid color-mix(in srgb, var(--s-reserve) 40%, transparent)',
+          fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.5, color: 'var(--s-ink-soft)',
+        }}>
+          {LC(
+            '⚠ Traduzione semantica non confermata (a differenza dell\'italiano, il libro vero) — verifica attentamente il testo, in particolare le parole specifiche a Scientology.',
+            '⚠ Traduction sémantique non confirmée (contrairement à l\'italien, le vrai livre) — vérifie attentivement le texte, en particulier les mots spécifiques à la Scientologie.',
+            '⚠ Unconfirmed semantic translation (unlike the Italian, the real book) — check the text carefully, especially words specific to Scientology.',
+            '⚠ Traducción semántica no confirmada (a diferencia del italiano, el libro real) — verifica el texto con atención, en particular las palabras específicas de Cienciología.',
+            '⚠ Obekräftad semantisk översättning (till skillnad från italienskan, den riktiga boken) — kontrollera texten noga, särskilt ord som är specifika för Scientology.',
+          )}
+        </div>
+      )}
 
       <div style={{
         flex: 1, minHeight: 0, background: 'var(--s-disc)', borderRadius: 16,
