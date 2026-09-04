@@ -8904,3 +8904,42 @@ File toccati — SOLO SERENITY: [`src/serenity/DizionarioModal.tsx`](../src/sere
 Nuovo (dati, non codice): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`, `public/dizionario/abbreviazioni-fr.json`,
 `public/dizionario/abbreviazioni-es.json`.
+
+**Continua nello stesso giro — 100 voci in più (100/2541, 3,9%) e i TERMINI tradotti.**
+
+Due sviluppi immediati sullo stesso lavoro:
+
+1) **Secondo e terzo blocco del corpo principale** (voci 50→149, cluster ARC/ASSESSMENT/
+AUDITING — la terminologia più densa vista finora): +100 voci, portando il totale a
+150/2541 (5,9%).
+
+2) **« Traduci anche le parole del dizionario, lasciando a fianco la versione inglese »** —
+segnalato subito dopo. Finora solo la *definizione* era tradotta; il *termine* (l'intestazione)
+restava sempre in inglese. Corretto con lo STESSO meccanismo già usato per l'italiano
+(`termine_en`, già previsto da `DizionarioModal.tsx` fin dall'inizio — bastava popolarlo anche
+per FR/ES): il termine tradotto sostituisce ora `termine`, l'inglese originale resta leggibile
+accanto in piccolo, esattamente come già fa l'italiano con `termineEn`. Nessuna riga di
+rendering nuova — solo il caricamento esteso.
+
+**Il criterio di traduzione dei termini** — verificato prima sull'italiano per restare
+coerenti: le frasi descrittive normali si traducono (« ABERRATED BEHAVIOR » → « COMPORTEMENT
+ABERRÉ » / « COMPORTAMIENTO ABERRADO »), ma i termini coniati o le sigle di Scientology restano
+INVARIATI anche in italiano (ARC, AS-IS, AUDITOR, F/N…) — stessa regola qui: ARC, ASSIST,
+STRAIGHTWIRE, RELEASE, C/S, TR e simili non si traducono, restano il "nome proprio" del
+concetto. Applicato retroattivamente alle 150 voci già tradotte in questo giro (i termini
+mancavano ancora quando sono state scritte).
+
+Bonus emerso senza codice nuovo: la ricerca bilingue (già confronta `termine` E `termineEn`,
+indipendentemente dalla lingua attiva) ora funziona anche su FR/ES — cercare in inglese trova
+la voce anche dalla scheda francese o spagnola. Il placeholder del campo di ricerca lo dice
+esplicitamente su queste due schede.
+
+Verificato dal vivo: scheda FRANCESE, « COMPORTEMENT ABERRÉ » con « ABERRATED BEHAVIOR »
+accanto in piccolo — espande correttamente la definizione francese.
+
+`tsc --noEmit` pulito, `npm run lint` invariato (324 warning), `npx vitest run` 718/718 verdi.
+
+File toccati in questa continuazione — SOLO SERENITY:
+[`src/serenity/DizionarioModal.tsx`](../src/serenity/DizionarioModal.tsx) (caricamento
+`termineEn` esteso a FR/ES, placeholder di ricerca). Dati: `dizionario-fr.json`/
+`dizionario-es.json` estesi a 150 voci con termine tradotto + `termine_en`.

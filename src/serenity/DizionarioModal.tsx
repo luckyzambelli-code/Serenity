@@ -155,12 +155,16 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
         ...(Array.isArray(en) ? en : []).map(v => ({ termine: v.termine, definizione: v.definizione })),
         ...(Array.isArray(abbrEn) ? abbrEn : []).map(aVoce),
       ]);
+      // ⚠️ AGGIUNTO — segnalato: « traduci anche le parole del dizionario, lasciando a fianco
+      // la versione inglese ». Stesso `termine_en` già usato per l'italiano, sopra — non un
+      // secondo meccanismo. Il termine tradotto sostituisce `termine`, l'originale inglese
+      // resta leggibile accanto (v. il rendering più giù, stessa riga di `termineEn` per IT).
       setVociFr([
-        ...(Array.isArray(fr) ? fr : []).map(v => ({ termine: v.termine, definizione: v.definizione })),
+        ...(Array.isArray(fr) ? fr : []).map(v => ({ termine: v.termine, termineEn: v.termine_en ?? null, definizione: v.definizione })),
         ...(Array.isArray(abbrFr) ? abbrFr : []).map(aVoce),
       ]);
       setVociEs([
-        ...(Array.isArray(es) ? es : []).map(v => ({ termine: v.termine, definizione: v.definizione })),
+        ...(Array.isArray(es) ? es : []).map(v => ({ termine: v.termine, termineEn: v.termine_en ?? null, definizione: v.definizione })),
         ...(Array.isArray(abbrEs) ? abbrEs : []).map(aVoce),
       ]);
       setCaricamento(false);
@@ -310,6 +314,12 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
               ? LC('cerca un termine, in italiano o in inglese…', 'cherche un terme, en italien ou en anglais…',
                   'search a term, in Italian or in English…', 'busca un término, en italiano o en inglés…',
                   'sök en term, på italienska eller engelska…')
+              // ⚠️ FR/ES ora hanno anch'esse `termineEn` (v. la nota sul caricamento, più
+              // sopra) — la stessa ricerca bilingue dell'italiano vale anche per loro.
+              : (lingua === 'fr' || lingua === 'es')
+              ? LC('cerca un termine, nella lingua o in inglese…', 'cherche un terme, dans la langue ou en anglais…',
+                  'search a term, in the language or in English…', 'busca un término, en el idioma o en inglés…',
+                  'sök en term, på språket eller på engelska…')
               : LC('cerca un termine…', 'cherche un terme…', 'search a term…', 'busca un término…', 'sök en term…')}
             style={{
               width: '100%', border: '2px solid var(--s-reserve)', borderRadius: 10,
