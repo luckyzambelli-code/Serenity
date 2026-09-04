@@ -8655,3 +8655,39 @@ di produzione pulita per entrambe le app.
 File toccati — CONDIVISO (App.tsx, sempre ENTRAMBI i DMG): [`src/App.tsx`](../src/App.tsx).
 Nuovo: SOLO EQUILIBRIUM —
 [`src/components/InstrumentBadges.tsx`](../src/components/InstrumentBadges.tsx).
+
+## Giro — 2026-09-04 (31) — primo pezzo su Serenity.tsx: il pannello « con che cosa si audita »
+
+Stessa fase 1 (JSX senza stato proprio), primo pezzo su `Serenity.tsx` invece che su `App.tsx` —
+il suo equivalente di `InstrumentHintPanel.tsx` (giro 29), ma qui è anche il posto dove si
+salva la configurazione (auditor/PC/dove/esperto + strumenti) col nome scelto dall'utente, una
+funzionalità che App.tsx non ha nello stesso pannello. Estratto in
+[`src/serenity/PannelloScegliStrumento.tsx`](../src/serenity/PannelloScegliStrumento.tsx) —
+presentazionale puro: `connSel`, `nomeConfigDaSalvare`, `configSalvata`, `avvio` restano stato
+di `Serenity.tsx`, passati come props; `salvaConfigurazione`/`pick5` sono funzioni pure
+importate direttamente nel nuovo file (non dipendono da altro stato del genitore); il gesto
+composito di START resta in `Serenity.tsx`, passato come UNA sola funzione (`onStart`), stesso
+schema del giro 29. Diversamente da `InstrumentHintPanel`/`InstrumentBadges` (ancora dietro un
+`{cond && (...)}` nel genitore), qui il componente è invocato incondizionatamente e decide da
+sé con `if (!open) return null;` — prima estrazione con questo schema.
+
+Un dettaglio colto scrivendo la chiamata JSX: `Serenity.tsx` ha già un alias `tWide` per `t`,
+ma tipato `(key: string) => unknown` (convenzione di questo file, per `LetturaFase`/
+`LetturaVelocita`), mentre il nuovo pannello vuole `(key: string) => string` — non coincide,
+quindi un cast dedicato `t={t as (key: string) => string}` invece di riusare `tWide`.
+
+Verificato dal vivo (Test · seul → BASIQUE → « ouvrir une séance »): il pannello si apre con
+« Séance sans instruments » selezionata di default; il clic su MUSE la sposta correttamente
+(spunta, sfondo, testo d'aiuto che cambia); il campo nome configurazione accetta testo, INVIO
+e il bottone "enregistrer" salvano entrambi (il bottone passa a "enregistrée ✓"); ANNULER
+chiude il pannello e riporta alla schermata precedente — tutto identico a prima
+dell'estrazione.
+
+`Serenity.tsx`: 6659 → 6578 righe (-81; il nuovo file ne pesa 141). `tsc --noEmit` pulito,
+`npm run lint` invariato (324 warning), `npx vitest run` 718/718 verdi, build di produzione
+pulita per entrambe le app. `App.tsx` non toccato in questo giro: solo `dist:serenity` da
+inviare.
+
+File toccati — SOLO SERENITY: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx).
+Nuovo: SOLO SERENITY —
+[`src/serenity/PannelloScegliStrumento.tsx`](../src/serenity/PannelloScegliStrumento.tsx).
