@@ -9345,3 +9345,22 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (53) — ventitreesimo blocco dizionario (1150/2541, quasi il 45%)
+
+Voci 1100→1149: HYPNOTISM, HYPO-HEARING/HYPO-SIGHT, HYSTERIA (con l'inizio della lettera I
+incorporato: "I"/il thêtan, 3 definizioni), IATROGENIC, IDEAL STATE, IDENTIFICATION, ILL,
+ILLUSION, IMAGINARY CAUSE/VISIO, IMAGINATION, IMMORTALITY, IMPACT, IMPLANT (con IMPLANT GOAL),
+IMPLOSION, IMPORTANCE, IN, INACCESSIBLE CASE, INADVERTENT WITHHOLD, INCIDENT, INCREDIBLE
+CHAIN, IND, INDICATOR/INDICATORS, IN-DISPERSAL, INDIVIDUAL, INDIVIDUATION, INDOC, INERT
+INCIDENT, IN ETHICS, INFINITY SYMBOL/INFINITY-VALUED LOGIC, il cluster INSANE (CERTAINTY, PC)
+e il lungo INSANITY (10 definizioni numerate), IN-SCANNING, IN SESSION, il cluster INSTANT
+(READ, ROCK SLAM, RUDIMENT READ), INSTITUTIONALIZED, IN TECH, INTEGRITY (con INTEGRITY
+PROCESSING), INTELLIGENCE (con INTELLIGENCE GAIN), fino a INTENSIVE. Dati:
+`dizionario-fr.json`/`dizionario-es.json` ora a 1150 voci ciascuno (45,3% del corpus).
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
