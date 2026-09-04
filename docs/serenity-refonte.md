@@ -9607,3 +9607,23 @@ Nessuna anomalia OCR rilevata in questo blocco. Voci pulite, nessuno split spuri
 **File toccati — SOLO SERENITY (dati):**
 - `public/dizionario/dizionario-fr.json`
 - `public/dizionario/dizionario-es.json`
+
+## Giro — 2026-09-04 — dizionario: trentaseiesimo blocco, 1800/2541 voci (70,8%) — traguardo delle 1800 voci
+
+**Blocco 36 (indici 1750-1799)**, FR+ES, 50 voci ciascuna lingua. Termini coperti: da PROFESSIONAL AUDITING a Q AND A'D.
+
+Cluster principali:
+- **PROFESSIONAL**: PROFESSIONAL AUDITING, PROFESSIONAL SCIENTOLOGIST, PROFESSIONAL STUDENTS (elenco articolato dei tre requisiti di certificazione).
+- **PROGRAM cluster**: PROGRAM (3 definizioni), PROGRAM COMPLETION, PROGRAM CYCLE, PROGRAMMING, PROGRAM SHEET, PROGRESS PROGRAM (4 definizioni con la nota storica "Repair Program" → rinominato).
+- **PSYCHO- cluster (ampio)**: PSYCHO, PSYCHO-, PSYCHO-ANALYSIS (voce lunga sulla psicoanalisi freudiana), PSYCHOLOGY (6 definizioni numerate), PSYCHOPOLITICS, PSYCHOSIS (8 definizioni numerate), PSYCHOSOMATICALLY ILL CASE, PSYCHOSOMATIC, PSYCHOSOMATIC ILLNESS (4 definizioni), PSYCHOTHERAPY, PSYCHOTIC (10 definizioni numerate — la voce più estesa del blocco), PSYCHOTIC BREAK (3 definizioni).
+- **PTS cluster**: PTS RD CORRECTION LIST, PTS TYPE A, PTS TYPE ONE/TWO/THREE (la classificazione completa delle Persone Potenzialmente Fonte di Guai).
+- **PTP cluster**: PTP, PTP OF LONG DURATION, PTP OF SHORT DURATION, PT ENVIRONMENT LIST.
+- **Q cluster**: Q, Q AND A (Q&A, con l'esempio didattico "uccelli/non mi piacciono gli uccelli"), Q AND A'D, PURPOSE, PV.
+
+**Nota tecnica:** nel blocco tradotto, gli indici di PSYCHOSOMATIC e PSYCHOSOMATICALLY ILL CASE erano stati invertiti rispetto all'ordine del dizionario sorgente (l'assert di `append_batch.py` lo ha rilevato all'indice 1779); corretto scambiando le due voci nel file batch prima di rieseguire il merge, che è quindi riuscito al secondo tentativo.
+
+**Verifica:** dati JSON puri — validati con `json.load` prima e dopo il merge (50/50 per lingua, totale 1800/1800 coerente in entrambi i file). `tsc`/`lint`/`vitest` non ri-eseguiti (nessun file TSX toccato in questo giro).
+
+**File toccati — SOLO SERENITY (dati):**
+- `public/dizionario/dizionario-fr.json`
+- `public/dizionario/dizionario-es.json`
