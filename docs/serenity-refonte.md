@@ -9157,3 +9157,20 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (43) — tredicesimo blocco dizionario (650/2541, superato un quarto)
+
+Voci 600→649: DINKY DICTIONARIES, il cluster DIRECT(ION)/DIRTY (NEEDLE, READ, 30), DISAGREEMENT
+REMEDY, DISCHARGED/DISCHARGING, DISHONESTY, DISINTEGRATING ROCKET READ (con DISPERSAL annesso),
+DISPERSED/DISPERSION, DIVISION OF TA, DIZZINESS, il cluster DO/DOG/DOING (A BUNK, CASE, PC,
+THE FOLDER, -NESS), DOMINATION (con DOMINATION BY NULLIFICATION), DOPE-OFF, il cluster DOUBLE
+(ACK NOWLEDGMENT, ASSESS, QUESTION, TERMINAL ING, TERMINALS, TICK), DOUBT, fino a D.R. Nota:
+le voci sorgenti inglesi 604-605 (un "DIRECTION-REVERSAL" interrotto a metà frase in
+"DIRECTIVE" che confluisce nella voce "LISTING" successiva) presentano la stessa anomalia OCR
+già incontrata più volte — riprodotta fedelmente; la voce 624 "D .N ." mantiene gli spazi
+anomali dell'originale inglese anche nel `termine_en` di cross-riferimento. Dati:
+`dizionario-fr.json`/`dizionario-es.json` ora a 650 voci ciascuno (25,6% — superato un quarto
+del corpus).
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
