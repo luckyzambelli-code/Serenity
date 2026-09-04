@@ -85,6 +85,8 @@ import { InstrumentHintPanel } from './components/InstrumentHintPanel';
 import { InstrumentBadges } from './components/InstrumentBadges';
 import { QuitConfirmDialog } from './components/QuitConfirmDialog';
 import { ParticipantWaitingBanner } from './components/ParticipantWaitingBanner';
+import { PcSexPromptDialog } from './components/PcSexPromptDialog';
+import { SessionRecoveryDialog } from './components/SessionRecoveryDialog';
 import { GuideModal } from './components/GuideModal';
 import { AIAssistant } from './components/AIAssistant';
 import { getProfiles, setActiveProfileId, saveProfile, saveSession, getSessions, getSessionsByProfile, saveSessionDraft, loadSessionDraftAsync, clearSessionDraft, SessionDraft } from './lib/storage';
@@ -6842,58 +6844,19 @@ export default function App() {
         t={tWide}
       />
 
-      {showSexPrompt && (
-        <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: LAYER.gate, background: 'rgba(0,0,0,0.6)' }}>
-          <div style={{ maxWidth: 440, background: '#0b1626', border: '1px solid rgba(34,211,238,0.30)', borderRadius: 16, padding: '26px 28px', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,0.55)' }}>
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(148,163,184,0.85)', marginBottom: 18 }}>
-              {t('ta_sex_title') as string}
-            </div>
-            <div className="flex gap-3 justify-center">
-              {([['m', t('sex_man') as string, '3.0'], ['f', t('sex_woman') as string, '2.0']] as const).map(([sx, lbl, ta]) => (
-                <button key={sx}
-                  onClick={() => { setPcSex(sx); setShowSexPrompt(false); proceedStart(); }}
-                  style={{ minWidth: 130, padding: '14px 18px', borderRadius: 12, cursor: 'pointer',
-                    background: 'rgba(34,211,238,0.10)', border: '1px solid rgba(34,211,238,0.45)',
-                    color: '#9ff6ff', fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 500 }}>
-                  {lbl}<span style={{ display: 'block', fontFamily: 'var(--font-mono, monospace)', fontSize: 12, opacity: 0.7, marginTop: 4 }}>TA {ta}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      <PcSexPromptDialog
+        open={showSexPrompt}
+        onPick={(sx) => { setPcSex(sx); setShowSexPrompt(false); proceedStart(); }}
+        t={tWide}
+      />
 
       {/* R3: crash-recovery prompt for an interrupted session — in the session language */}
-      {recoverableDraft && (() => {
-        const RL: Record<string, { title: string; body: string; lines: string; resume: string; discard: string }> = {
-          fr: { title: '⚠ Session interrompue', body: 'Une session non terminée a été retrouvée (journal, R&I, Total TA).', lines: 'lignes', resume: '↻ Reprendre', discard: 'Ignorer' },
-          it: { title: '⚠ Sessione interrotta', body: 'È stata trovata una sessione non conclusa (journal, R&I, Total TA).', lines: 'righe', resume: '↻ Riprendi', discard: 'Ignora' },
-          es: { title: '⚠ Sesión interrumpida', body: 'Se encontró una sesión sin terminar (registro, R&I, Total TA).', lines: 'líneas', resume: '↻ Reanudar', discard: 'Ignorar' },
-          en: { title: '⚠ Interrupted session', body: 'An unfinished session was found (journal, R&I, Total TA).', lines: 'lines', resume: '↻ Resume', discard: 'Discard' },
-          sv: { title: '⚠ Avbruten session', body: 'En oavslutad session hittades (journal, R&I, Total TA).', lines: 'rader', resume: '↻ Återuppta', discard: 'Ignorera' } };
-        const r = RL[lang] || RL.en;
-        return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: LAYER.confirm, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(2,6,23,0.82)', backdropFilter: 'blur(8px)' }}>
-          <div style={{ maxWidth: 480, background: '#0b1626', border: '1px solid rgba(34,211,238,0.3)', borderRadius: 16, padding: '26px 28px', color: '#e2e8f0', textAlign: 'center', boxShadow: '0 0 40px rgba(0,0,0,0.6)' }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#eaf3ff', letterSpacing: '0.04em', marginBottom: 10 }}>{r.title}</div>
-            <div style={{ fontSize: 13, opacity: 0.85, lineHeight: 1.5 }}>{r.body}</div>
-            <div style={{ fontSize: 12, color: 'rgba(235,244,255,0.92)', margin: '12px 0 18px' }}>
-              {(recoverableDraft.logs?.length ?? 0)} {r.lines} · Total TA {Number(recoverableDraft.totalTa || 0).toFixed(2)} · {new Date(recoverableDraft.savedAt).toLocaleString()}
-            </div>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-              <button onClick={() => recoverDraft(recoverableDraft)}
-                style={{ fontSize: 14, fontWeight: 'bold', letterSpacing: '0.03em', color: '#021018', background: '#eaf3ff', border: 'none', borderRadius: 10, padding: '12px 22px', cursor: 'pointer' }}>
-                {r.resume}
-              </button>
-              <button onClick={discardDraft}
-                style={{ fontSize: 13, color: '#cbd5e1', background: 'transparent', border: '1px solid rgba(148,163,184,0.4)', borderRadius: 10, padding: '12px 20px', cursor: 'pointer' }}>
-                {r.discard}
-              </button>
-            </div>
-          </div>
-        </div>
-        );
-      })()}
+      <SessionRecoveryDialog
+        draft={recoverableDraft}
+        lang={lang}
+        onResume={recoverDraft}
+        onDiscard={discardDraft}
+      />
       </div>
       </div>
     </div>

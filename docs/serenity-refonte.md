@@ -8748,3 +8748,40 @@ Nuovo: SOLO EQUILIBRIUM —
 condiviso) o già dietro componenti esistenti (`ConnectionModal`) — territorio della fase 3, non
 più della fase 1. Si passa alla **fase 2**: le modali già isolate concettualmente ma ancora
 scritte inline nei due file.
+
+## Giro — 2026-09-04 (34) — fase 2: due dialoghi, sesso del PC e ripresa seduta interrotta
+
+Primi due pezzi della fase 2 su `App.tsx`. Stesso metodo della fase 1 (JSX prima, dialoghi
+adesso): entrambi presentazionali puri, zero stato nuovo.
+
+**`PcSexPromptDialog.tsx`** — se l'auditor non ha indicato il PC, si chiede il sesso (baseline
+TA: uomo 3.0 / donna 2.0) prima di proseguire con l'avvio. ~20 righe, un solo prop funzione
+(`onPick`).
+
+**`SessionRecoveryDialog.tsx`** — il prompt R3 di ripresa dopo un crash (« Sessione
+interrotta », con journal/R&I/Total TA ritrovati). Portava con sé un piccolo dizionario locale
+(`RL`, cinque lingue) perché compare PRIMA che `useI18n()` scelga la lingua della sessione —
+spostato a livello di modulo nel nuovo file (era ricreato a ogni render dentro una IIFE
+nell'originale: pulizia innocua, non un cambio di comportamento).
+
+Verificato dal vivo per entrambi:
+- **Ripresa seduta**: iniettato un draft di sessione in IndexedDB (`nest_pdfs_db`, stesso
+  schema di `storage.ts`) e ricaricato — il dialogo « Sessione interrotta » compare con le
+  cifre corrette (2 righe, Total TA 3.70, data), « Ignora » lo chiude.
+  (Piccolo incidente in corsa: il primo tentativo di scrittura ha aperto il DB con una
+  versione sbagliata — 2 invece di 1 — alzando la versione reale e rompendo temporaneamente
+  le `open()` dell'app a versione 1; risolto cancellando e ricreando il DB alla versione
+  corretta prima di riprovare. Nessun file del progetto toccato, solo lo stato IndexedDB del
+  browser di anteprima.)
+- **Sesso del PC**: premuto START senza PC assegnato — compare « PC — SESSO (BASELINE TA) »
+  con i due bottoni; scelto « Uomo » — il flusso prosegue correttamente verso il pannello
+  « Collega uno strumento », esattamente come prima dell'estrazione.
+
+`App.tsx`: 6901 → 6864 righe (-37; i due nuovi file pesano 39 + 51). `tsc --noEmit` pulito,
+`npm run lint` invariato (324 warning), `npx vitest run` 718/718 verdi, build di produzione
+pulita per entrambe le app.
+
+File toccati — CONDIVISO (App.tsx, sempre ENTRAMBI i DMG): [`src/App.tsx`](../src/App.tsx).
+Nuovo: SOLO EQUILIBRIUM —
+[`src/components/PcSexPromptDialog.tsx`](../src/components/PcSexPromptDialog.tsx),
+[`src/components/SessionRecoveryDialog.tsx`](../src/components/SessionRecoveryDialog.tsx).
