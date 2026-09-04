@@ -1,7 +1,7 @@
 {
   "name": "staticmeter",
   "private": true,
-  "version": "2.0.263",
+  "version": "2.0.264",
   "main": "main.cjs",
   "type": "module",
   "scripts": {
@@ -138,5 +138,5 @@
       }
     ]
   },
-  "serenityVersion": "3.0.199"
+  "serenityVersion": "3.0.200"
 }

@@ -8624,3 +8624,34 @@ File toccati — CONDIVISO (per regola del progetto, App.tsx richiede sempre ENT
 quando Serenity.tsx non è toccato): [`src/App.tsx`](../src/App.tsx). Nuovo: SOLO EQUILIBRIUM —
 [`src/components/InstrumentHintPanel.tsx`](../src/components/InstrumentHintPanel.tsx) (non
 importato da `Serenity.tsx`, che ha il proprio pannello equivalente scritto a parte).
+
+## Giro — 2026-09-04 (30) — secondo pezzo: i tre badge degli strumenti
+
+Continua la frammentazione di App.tsx (fase 1, JSX senza stato proprio — v. giro 29). Secondo
+pezzo: i tre badge « con che cosa si audita » nella barra in alto — MUSE, boîtes (Theta-Meter),
+« senza strumenti » — sempre mostrati insieme, stesso schema visivo (cerchio + etichetta su
+`TOKEN.wellBg`). Estratti in
+[`src/components/InstrumentBadges.tsx`](../src/components/InstrumentBadges.tsx), un solo
+componente per i tre (si leggono come un gruppo, non tre pezzi a sé): presentazionale puro,
+`smoothPct`/`museConnection`/`thetaStatus`/… passati come props, ogni clic richiama UNA
+funzione passata da `App.tsx` — l'azione vera (connessione Bluetooth/USB, tocco del ref
+`senzaStrumentiRef`) resta lì.
+
+Rimossi da `App.tsx`, diventati inutili dopo l'estrazione: `Gauge`/`Battery`/`Activity`/
+`MessageSquare` (import lucide-react — `Headphones` resta, ancora usato altrove),
+`THETA_AMBER`, `INTEGRITA_SOGLIA` — tutti ora vivono SOLO in `InstrumentBadges.tsx`. Senza
+questa pulizia il lint sarebbe salito (import inutilizzati), la regola del progetto è che non
+sale mai.
+
+Verificato dal vivo: i tre badge appaiono nella barra come prima ("MUSE — CONNECTER",
+"Brancher le meter", "Séance sans instruments"), il clic su "Séance sans instruments" lo accende
+in verde esattamente come prima dell'estrazione.
+
+`App.tsx`: 7107 → 6953 righe (-154; il nuovo file ne pesa 232 — la maggior parte è la
+documentazione già presente nel codice originale, copiata pari pari, non aggiunta). `tsc
+--noEmit` pulito, `npm run lint` invariato (324 warning), `npx vitest run` 718/718 verdi, build
+di produzione pulita per entrambe le app.
+
+File toccati — CONDIVISO (App.tsx, sempre ENTRAMBI i DMG): [`src/App.tsx`](../src/App.tsx).
+Nuovo: SOLO EQUILIBRIUM —
+[`src/components/InstrumentBadges.tsx`](../src/components/InstrumentBadges.tsx).
