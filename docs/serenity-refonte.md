@@ -8943,3 +8943,9 @@ File toccati in questa continuazione — SOLO SERENITY:
 [`src/serenity/DizionarioModal.tsx`](../src/serenity/DizionarioModal.tsx) (caricamento
 `termineEn` esteso a FR/ES, placeholder di ricerca). Dati: `dizionario-fr.json`/
 `dizionario-es.json` estesi a 150 voci con termine tradotto + `termine_en`.
+
+**Quarto blocco, nello stesso giro — 200/2541 (7,9%).** Voci 150→199 (fine del cluster
+AUDITOR, poi BAD/BANK/BASIC — molte voci "BASIC …" in fila, tradotte con lo stesso aggettivo
+"basique"/"básico" davanti, come fa la fonte inglese con "BASIC"). Stesso formato fin
+dall'inizio del blocco (termine tradotto + `termine_en` + definizione insieme, non più un
+passaggio separato). Dati: `dizionario-fr.json`/`dizionario-es.json` ora a 200 voci.
