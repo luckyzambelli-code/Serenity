@@ -9584,3 +9584,26 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 — dizionario: trentacinquesimo blocco, 1750/2541 voci (68,9%)
+
+**Blocco 35 (indici 1700-1749)**, FR+ES, 50 voci ciascuna lingua. Termini coperti: da PRESENT TIME ENVIRONMENT a PRODUCTION.
+
+Cluster principali:
+- **PRESENT TIME**: PRESENT TIME ENVIRONMENT, PRESENT TIME PROBLEM (4 definizioni numerate, con la storica distinzione HCOB 1957/1959/1960/PAB 142).
+- **PRE-SESSION PROCESS**: elenco degli 8 casi (a)-(h) che richiedono un procedimento di pre-seduta, più i 4 fattori (aiuto/controllo/comunicazione/interesse).
+- **PRESSOR**: PRESSOR BEAM, PRESSOR RIDGE, PRESSOR-TRACTOR RIDGE — cluster energetico Scn 8-8008.
+- **PRIMARY**: PRIMARY ENGRAM, PRIMARY LOCK, PRIMARY MID-RUDS, PRIMARY RUNDOWN (Abr. PRD), PRIMARY SCALE, PRIMARY UNIVERSE, PRIMARY UNMOTIVATED ACT.
+- **PRIME**: PRIME CAUSE, PRIME POSTULATE, PRIME THOUGHT.
+- **PRIOR**: PRIOR ASSESSMENT, PRIOR CAUSE, PRIOR CONFUSION, PRIOR READS.
+- **PROBLEM cluster**: la lunga voce PROBLEM con 6 definizioni numerate (postulato-contro-postulato, indecisione, confusione multipla, ecc.), PROBLEMS INTENSIVES con procedura dettagliata in 3 revisioni storiche (HCOB 9 Nov 61 → 17 Oct 61 → versione finale con prepcheck e predate), PROBLEMS LONG DURATION, PROBLEMS RELEASE.
+- **PROCESS cluster**: PROCESS (definizione cardine), PROCESS BITING, PROCESS BY TONE ARM, PROCESS COMPLETION, PROCESS CYCLE, PROCESSED, PROCESS FLAT (rimando), PROCESSING (6 definizioni numerate, tra cui la nota "listen and command" e "aumentare l'autodeterminismo"), PROCESSING CHECKS, PROCESS LAG (4 definizioni numerate con l'esempio storico dell'Opening Procedure 8-C in 14 ore), PRODUCTION.
+- Acronimi lasciati non tradotti: PRO, PROB, PROB INT, TA, ARC, R3R, OCA, HCOB, HCO PL, PAB, BTB, Scn AD, ecc. (invariati come da convenzione).
+
+Nessuna anomalia OCR rilevata in questo blocco. Voci pulite, nessuno split spurio.
+
+**Verifica:** dati JSON puri — validati con `json.load` prima e dopo il merge (50/50 per lingua, totale 1750/1750 coerente in entrambi i file). `tsc`/`lint`/`vitest` non ri-eseguiti (nessun file TSX toccato in questo giro, invariati rispetto all'ultima verifica completa).
+
+**File toccati — SOLO SERENITY (dati):**
+- `public/dizionario/dizionario-fr.json`
+- `public/dizionario/dizionario-es.json`
