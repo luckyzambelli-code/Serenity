@@ -9248,3 +9248,21 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (48) — diciottesimo blocco dizionario (900/2541, oltre un terzo)
+
+Voci 850→899: il cluster FLAT (BY TA, COMM LAG con METER annesso, PROCESS, QUESTION, FLATTEN A
+PROCESS), FLIP-FLOPPING, FLOATER, FLOATING NEEDLE/FLOATING TA, FLOW e i quattro flussi F-0/F-1/
+F-2/F-3, FLUB/FLUBBED COMMANDS/FLUB CATCH/FLUB CATCH SYSTEM, FLUNK, FLYING NEEDLE, il cluster
+F/N (F/NING AUDITOR, LIST, STUDENTS), FOLDER (con ERROR SUMMARY e SUMMARY), FOOTPLATES, FORCE
+(con FIELD e SCREEN), FORGET/FORGETFULNESS/FORGETTER/FORGETTING, FORMAL AUDITING, FORMULA
+(con FORMULA H e FORMULA 19), FOUNDING SCIENTOLOGIST (con "40"/"4.0" annessi), il cluster FOUR
+(FLOWS, IV RUNDOWN, DYNAMIC, DYNAMIC ENGRAM, FLOW, POSTULATE, STAGE RELEASE, UNIVERSES),
+FRAGILE TA, fino a FRANCHISE. Dati: `dizionario-fr.json`/`dizionario-es.json` ora a 900 voci
+ciascuno (35,4% del corpus).
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
