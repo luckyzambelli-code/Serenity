@@ -5742,106 +5742,21 @@ export default function Serenity() {
                     DESTRO deve stare PRIMA di quel confine, non il sinistro dopo un margine
                     fisso — `left:-150` porta il riquadro tutto a x=(-150…310), interamente
                     nella striscia riservata alla barra laterale, mai dentro il quadrante. */}
-                {/* ⚠️ CORRETTO (segnalato con screenshot: « scritte parasite in alto della
-                    scala del tono ») — il riquadro che segue non stava, come sembrava
-                    leggendolo, "vicino" a NEEDLE LIGHT/WITH-WITHOUT NEEDLE: quel bottone vive
-                    nel SUO contenitore (`top:14, left:16`, poco più su nel file), ma QUESTO
-                    riquadro sta dentro `<div style={{position:'absolute', inset:0}}>` (la nota
-                    "l'arco cambia con il metodo", più su) — un contenitore GRANDE QUANTO TUTTO
-                    LO SCHERMO. Il pannello fonte/margine che avevo aggiunto qui sotto usava
-                    `top:'15%'` credendo di essere relativo a QUESTO riquadro (460px, vicino
-                    alla colonna) — era relativo allo SCHERMO INTERO, quindi cadeva nell'angolo
-                    in alto a sinistra, esattamente sopra NEEDLE LIGHT/WITH-WITHOUT NEEDLE.
-                    Non più un `<div>` a sé fuori da questo riquadro: ora è la PRIMA riga di un
-                    riquadro diventato `flexDirection:'column'` — sopra la colonna, dentro le
-                    sue stesse coordinate (`left:-150…310`, la striscia laterale), mai vicino
-                    all'angolo in alto a sinistra.
-                    ⚠️ CORRETTO ANCORA (segnalato di nuovo con screenshot: « le indicazioni in
-                    giallo sopra la scala del tono... la prova delle lattine è fuori dai punti
-                    tarati che non si vedono completamente ») — la causa vera non era qui:
-                    `left:-150…310` mette apposta questo riquadro nella STESSA striscia
-                    orizzontale di `.ser-comandi` (`left:20, width:272, zIndex:8` — la colonna
-                    APRI/PAUSA/CONTACT/NULL/…, sempre montata, anche a ciclo armato). Senza un
-                    suo `zIndex`, questo riquadro vale `auto` (≈0): `.ser-comandi`, con
-                    `zIndex:8` esplicito, gli dipinge SOPRA — non dietro l'arco (mai stato il
-                    problema), dietro la barra laterale, che nasconde la metà sinistra del
-                    badge "rifai la prova delle lattine" e taglia il resto. `zIndex:9` basta:
-                    un solo gradino sopra `.ser-comandi`, non sopra tutto lo schermo.
-                    ⚠️ CORRETTO ANCORA (segnalato di nuovo con screenshot: « non hai risolto il
-                    problema delle scritte che non si vedono in alto a sinistra della scala del
-                    tono ») — lo zIndex era giusto, ma non era mai stato quello .ser-comandi il
-                    vero taglio residuo: `left:-150` porta TUTTO questo riquadro, 460px di
-                    larghezza, a x=(-150…310) — SOLO x=(0…310) resta dentro lo schermo, x<0 è
-                    letteralmente oltre il bordo sinistro della finestra, non "dietro" qualcosa,
-                    fuori dal viewport. `ToneColumn` (più giù) se la cava perché è un SVG col suo
-                    `viewBox` proporzionale: la parte tagliata è solo margine/tacche del disegno.
-                    MA questa riga di badge è testo HTML normale in flusso flex, `width:'100%'`
-                    del riquadro — il suo contenuto comincia a scorrere ESATTAMENTE da x=-150,
-                    quindi i primi 150px di "fai la prova delle lattine"/"fuori dai punti
-                    tarati" restavano oltre il bordo, tagliati alla radice (da qui il "che non si
-                    vedono completamente" già segnalato prima — lo zIndex risolveva solo il
-                    conflitto con `.ser-comandi`, non questo). `width:310, marginLeft:150`
-                    sposta SOLO questa riga dentro la fetta davvero visibile (0…310), lasciando
-                    la colonna dell'ago sotto (`ToneColumn`) al suo posto invariato. */}
+                {/* ⚠️ TOLTO — segnalato: « le indicazioni FONTE/METER fuori dai punti tarati
+                    sono inutili. Normalmente l'auditor sa che deve tarare il METER e le
+                    lattine. Togliele ». Questo riquadro (`left:-150…310`, la striscia laterale
+                    fuori dalla zona arco) portava fino a un giro fa DUE badge — "fonte ·
+                    MUSE/METER/dichiarato" e "fuori dai punti tarati" — bersaglio di tre giri
+                    di correzioni di puro posizionamento (z-index contro `.ser-comandi`, poi il
+                    taglio a `left:-150` che li spingeva fuori dallo schermo — tutta questa
+                    storia, ormai superflua, è stata tolta insieme ai badge). Restava solo
+                    `ToneColumn` a valere la pena in questo riquadro — nessun `flexDirection`/
+                    `gap` più necessari, un solo figlio. */}
                 <div style={{
                   position: 'absolute', left: -150, top: '22%', bottom: '6%', width: 460, zIndex: 9,
-                  pointerEvents: 'none', display: 'flex', flexDirection: 'column', gap: 4,
+                  pointerEvents: 'none',
                 }}>
-                {tone.toneAtStart !== null && (
-                  <div style={{
-                    flex: '0 0 auto', width: 310, marginLeft: 150,
-                    display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center',
-                    pointerEvents: 'auto',
-                  }}>
-                    <span style={{
-                      fontFamily: 'var(--s-mono)', fontSize: 10, letterSpacing: '0.08em',
-                      textTransform: 'uppercase', padding: '2px 8px', borderRadius: 999,
-                      border: '1px solid var(--s-ink-ghost)',
-                      color: tone.toneSource === 'muse' ? 'var(--s-alive)'
-                        : tone.toneSource === 'meter' ? 'var(--s-tone-hue)' : 'var(--s-ink-faint)',
-                    }} title={LC(
-                      'da quale strumento viene il numero adesso — con più strumenti connessi la priorità è MUSE, poi METER, poi il dichiarato',
-                      'de quel instrument vient le chiffre maintenant — avec plusieurs instruments connectés, la priorité est MUSE, puis METER, puis le déclaré',
-                      'which instrument the number comes from right now — with more than one connected, the priority is MUSE, then METER, then declared',
-                      'de qué instrumento viene el número ahora — con más de uno conectado, la prioridad es MUSE, luego METER, luego lo declarado',
-                      'vilket instrument siffran kommer från just nu — med fler än ett anslutet är prioriteten MUSE, sedan METER, sedan deklarerat') as string}>
-                      {tone.toneSource === 'muse'
-                        ? LC('fonte · MUSE', 'source · MUSE', 'source · MUSE', 'fuente · MUSE', 'källa · MUSE')
-                        : tone.toneSource === 'meter'
-                        ? LC('fonte · METER', 'source · METER', 'source · METER', 'fuente · METER', 'källa · METER')
-                        : LC('fonte · dichiarato', 'source · déclaré', 'source · declared', 'fuente · declarado', 'källa · deklarerad')}
-                    </span>
-                    {/* ⚠️ TOLTO — segnalato: « nel tono c'è un bottone, era un colpo isolato,
-                        l'auditor non capisce, non è interessante averlo, toglilo ». Il bottone
-                        "−{margine} · fai la prova delle lattine" viveva SOLO qui, isolato in
-                        mezzo alle letture del TONE, senza il contesto che ha nel pannello Meter
-                        vero (dove sta insieme a tutte le altre tappe di taratura, spiegate una
-                        per una) — un colpo secco, illeggibile fuori da quel contesto. Restava
-                        l'UNICO punto che poneva `meterSetupPasso` a `'stretta'` (v. la nota su
-                        quello stato, in cima al file): tolto insieme, lo stato resta comunque
-                        valido per l'uso normale (bottone "configura il meter"), semplicemente
-                        nessuno lo punta più su questo passo specifico da qui. */}
-                    {meterC && theta.taScale && theta.taScale.points.length > 0 && (
-                      theta.rawSmooth < theta.taScale.points[0].raw
-                      || theta.rawSmooth > theta.taScale.points[theta.taScale.points.length - 1].raw
-                    ) && (
-                      <span title={LC(
-                        'la lettura attuale è fuori dai valori misurati con l\'artefatto di taratura — il TA mostrato prolunga il segmento più vicino, non è più interpolato fra due punti veri',
-                        'la lecture actuelle est hors des valeurs mesurées avec l\'artefact d\'étalonnage — le TA affiché prolonge le segment le plus proche, il n\'est plus interpolé entre deux points réels',
-                        'the current reading is outside the values measured with the calibration artifact — the TA shown extends the nearest segment, it is no longer interpolated between two real points',
-                        'la lectura actual está fuera de los valores medidos con el artefacto de calibrado — el TA mostrado prolonga el segmento más cercano, ya no está interpolado entre dos puntos reales',
-                        'den aktuella avläsningen ligger utanför de värden som mätts med kalibreringsartefakten — TA som visas förlänger närmaste segment, det är inte längre interpolerat mellan två riktiga punkter') as string}
-                        style={{
-                          fontFamily: 'var(--s-sans)', fontSize: 10, letterSpacing: '0.04em',
-                          color: 'var(--s-reserve)', border: '1px solid var(--s-reserve)',
-                          borderRadius: 999, padding: '2px 8px', whiteSpace: 'nowrap',
-                        }}>
-                        {LC('fuori dai punti tarati', 'hors des points étalonnés', 'outside calibrated points', 'fuera de los puntos calibrados', 'utanför kalibrerade punkter')}
-                      </span>
-                    )}
-                  </div>
-                )}
-                  <div style={{ flex: '1 1 auto', minHeight: 0, width: '100%' }}>
+                  <div style={{ height: '100%', width: '100%' }}>
                     <ToneColumn
                       tone={tone.toneOra ?? 0}
                       toneEeg={tone.toneOraEeg}

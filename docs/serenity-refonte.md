@@ -9109,3 +9109,35 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (41) — badge FONTE/fuori-punti-tarati tolti da TONE + undicesimo blocco
+dizionario (550/2541)
+
+**« Le indicazioni FONTE METER fuori dai punti tarati sono inutili. Normalmente l'auditor sa
+che deve tarare il METER e le lattine. Togliele ».** I due badge ("fonte · MUSE/METER/
+dichiarato" e "fuori dai punti tarati") erano stati bersaglio di TRE giri di correzioni di
+puro posizionamento (Giro 35: z-index contro `.ser-comandi`; Giro 39/40: il taglio a
+`left:-150` che li spingeva letteralmente fuori dallo schermo) — mai il contenuto in sé
+rimesso in discussione. Segnalato ora che il contenuto stesso non serve: l'auditor sa già che
+deve tarare meter e lattine, non ha bisogno di un promemoria a schermo. Tolti entrambi insieme
+al loro riquadro — resta solo `ToneColumn` nel contenitore che li ospitava, nessuna storia di
+z-index/clipping più da mantenere. Come annunciato dall'utente, la logica e il design di TONE
+(anche i calcoli) saranno ripresi in un giro dedicato, dopo il dizionario — questa è solo la
+rimozione dei due badge, non ancora quella revisione.
+
+Verificato: `tsc --noEmit` pulito, `npm run lint` invariato (324 warning), `npx vitest run`
+718/718 verdi.
+
+**Undicesimo blocco dizionario, nello stesso giro — 550/2541 (21,6%).** Voci 500→549: CROSS
+ENGRAM/CROSSOVER, il cluster C/S (C/S, C/S 53+M-5, C/SHEET, C/SING IN THE CHAIR), CT/CTH,
+CULTURE, il lungo cluster CYCLE (ACTION, AN ORGANISM, AN OVERT, A UNIVERSE, MIS-DEFINITION,
+MOTION, RANDOMITY, SURVIVAL, THE ROCK), CYCLIC PROCESS/PSYCHOTIC, DANGEROUS AUDITOR/
+ENVIRONMENT, DATA/DATUM/DATE FLASH/DATE-LOCATE, il cluster DEAD (BODY, HORSE, LIST, THETAN…) e
+DEATH (FACSIMILE BOP, TALKER, WISH, ZONE), fino a DECLARE. Nota: le voci sorgente inglesi
+504-505 presentano la stessa anomalia OCR già incontrata più volte (un "C/S 53" interrotto a
+metà frase che confluisce nella voce "M-5" successiva) — riprodotta fedelmente. Dati:
+`dizionario-fr.json`/`dizionario-es.json` ora a 550 voci ciascuno (21,6% del corpus).
+
+File toccati — SOLO SERENITY: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx)
+(codice), `public/dizionario/dizionario-fr.json`, `public/dizionario/dizionario-es.json`
+(dati).
