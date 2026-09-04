@@ -9485,3 +9485,23 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (60) — trentesimo blocco dizionario (1500/2541, traguardo delle 1500 voci)
+
+Voci 1450→1499: NO-GAME CONDITIONS, NO HAVINGNESS, NO-INTERFERENCE AREA, NOMENCLATURE, NO
+MENTION, NON-COMMUNICATION/CYCLICAL PROCESS/READING ITEM/VOCAL LOCK SCANNING (con "NO OVERTS"
+CASE annesso), NO RANDOMITY/RESPONSIBILITY, NORMAL, NORTH TO APATHY, NO SYMPATHY/TA, NOT
+BEINGNESS, NOT DOING THE AUDITING COMMAND, NOTHINGNESS, NO-TIME MOMENTS, NOT IN PRESENT TIME,
+il lungo NOT-IS-NESS (4 definizioni) con NOT-IS STRAIGHTWIRE, NOT KNOW/KNOWINGNESS, NO TONE ARM
+ACTION, NOT THERE, NULLABLE/NULLABLE LIST, NULLIFICATION, NULLING, NULL NEEDLE/SUBJECTS,
+NUTRITION (con la transizione alla lettera O incorporata), OBJECT, OBJECTIVE e tutti i suoi
+composti (DUB-IN, ENVIRONMENT, HAVINGNESS PROCESSES, PROCESSES), OBNOSIS, OBSERVER, OBSESSION,
+OBSESSIVE COMMUNICATION, OCA GRAPH, OCCLUDED/OCCLUDED CASE/OCCLUSION/OCCLUSION TYPE OF
+CIRCUIT, OFF THE TRACK, fino a OJ. Dati: `dizionario-fr.json`/`dizionario-es.json` ora a
+**1500 voci ciascuno (59,0% del corpus)**.
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
