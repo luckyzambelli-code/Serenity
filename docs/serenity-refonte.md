@@ -9403,3 +9403,23 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (56) — ventiseiesimo blocco dizionario (1300/2541 — SUPERATA LA METÀ)
+
+Voci 1250→1299: LIE/LIE FACTORY/LIE REACTION, il lungo LIFE (6 definizioni) e tutti i suoi
+composti (AND LIVINGNESS ENVIRONMENT, CONTINUUM, REPAIR PROGRAM, RUDS, STATIC), LIGHT
+OBJECTIVE PROCESSES/LIGHT PROCESSING, LIMITED PROCESS/TECHNIQUE, LINE CHARGE/LISTING/PLOT,
+LINES (i quattro basici), LIST, LISTEN STYLE AUDITING, LISTING AND NULLING, LISTING METER, il
+lunghissimo LIST ONE (con tutta la famiglia L1/L1C/L1R/L1X/L3B/L3EXD/L3RD/L4BR), LIVE QUESTION,
+LIVINGNESS, L9S, il cluster LOCATIONAL (LOC, LOCATIONAL, LOCATIONAL PROCESSING, LOCATIONAL
+SPOTTING), il cluster LOCK (LOCK, LOCK END WORDS, LOCKS, LOCK SCANNING, LOCK WORDS), LOE,
+LOGIC (5 definizioni), LONG FALL/LONG FALL BLOWDOWN, LOOP, LOSE/LOSS (con LOSS OF HAVINGNESS/
+VIEWPOINT), LOVE, LOWER HARMONIC/LOWER ON THE SCALE, LOW TA, LRH, LT, fino a L-10. Dati:
+`dizionario-fr.json`/`dizionario-es.json` ora a **1300 voci ciascuno (51,2% del corpus)** —
+**superata la metà esatta del dizionario tecnico**, in entrambe le lingue.
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
