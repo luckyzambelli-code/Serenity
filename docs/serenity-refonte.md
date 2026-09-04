@@ -8785,3 +8785,78 @@ File toccati — CONDIVISO (App.tsx, sempre ENTRAMBI i DMG): [`src/App.tsx`](../
 Nuovo: SOLO EQUILIBRIUM —
 [`src/components/PcSexPromptDialog.tsx`](../src/components/PcSexPromptDialog.tsx),
 [`src/components/SessionRecoveryDialog.tsx`](../src/components/SessionRecoveryDialog.tsx).
+
+## Giro — 2026-09-04 (35) — sei segnalazioni: TONE coperto, PDF lento, icona, pausa/timer, logo, foto
+
+Sei segnalazioni indipendenti nello stesso giro, ciascuna verificata a sé.
+
+**1) TONE: badge coperto dalla colonna comandi.** Segnalato con screenshot: « le indicazioni in
+giallo sopra la scala del tono... la prova delle lattine è fuori dai punti tarati che non si
+vedono completamente ». Causa vera, trovata leggendo `Serenity.tsx`: il riquadro badge+colonna
+(`ToneDial`/`ToneColumn`, a ciclo TONE armato CON meter) vive apposta nella STESSA striscia
+orizzontale di `.ser-comandi` (la colonna APRI/PAUSA/CONTACT/…, `zIndex:8`, sempre montata) —
+senza un suo `zIndex` esplicito (`auto` ≈ 0), `.ser-comandi` gli dipinge sopra: non l'arco (mai
+stato il problema, già corretto in un giro precedente), la barra laterale, che nasconde metà
+del badge "rifai la prova delle lattine". `zIndex:9` — un solo gradino sopra `.ser-comandi`.
+Non riproducibile dal vivo nell'anteprima browser (serve un Theta-Meter vero collegato via
+WebHID): corretto per lettura statica del codice, `tsc`/`lint`/`vitest` puliti.
+
+**2) PDF di History di nuovo lento.** « Vedi se hai tolto la compressione ». Non tolta — mai
+stata messa nel posto giusto: il giro del 2 settembre aggiunse `compress:true` SOLO al
+generatore di SERENITY (`sessionReport.ts`, ancora lì, invariato), ma
+[`PostSessionReport.tsx`](../src/components/PostSessionReport.tsx) — il vero generatore di
+EQUILIBRIUM, l'unico che questo componente usa davvero (SERENITY ha il proprio, come da
+`docs`) — non l'aveva mai ricevuta. Stesso `compress:true` aggiunto lì.
+
+**3) Icona del dizionario.** « Non mi piace ». Era `Search` (lente d'ingrandimento — dice
+"cerca", non "dizionario"), sostituita con `BookText` (un libro con righe di testo), distinta
+da `BookOpen` già usato per COMMANDS/GUIDE poco sopra.
+
+**4) Sessione "senza strumenti": pausa/timer incoerenti.** « La freccia che pulsa per START e
+invece il bottone pausa a destra... quando poi schiacci START appaiono i secondi che hai
+passato a leggere e la sessione inizia con un tempo falso ». Causa: un giro precedente aveva
+già nascosto la DISPLAY del timer e il bottone "chiudi la seduta" durante il briefing
+(`mostraBriefingIniziale && aperta`), ma non fermava l'orologio VERO (`sessionClock`, correva
+comunque dietro le quinte) né il bottone Pausa (restava condizionato solo su `aperta`).
+Corretto con lo stesso meccanismo già usato per lo strumento perso: un motivo automatico in
+più in `pausaMotivoRef` (`'briefing'`) che ferma l'orologio vero passando dall'effetto
+pausata/sessionClock esistente, nessun log nel giornale (non è una pausa decisa
+dall'auditor); il bottone Pausa prende la stessa condizione `!(mostraBriefingIniziale &&
+aperta)` già usata per timer/chiudi.
+Verificato dal vivo: aperta una seduta senza strumenti, atteso 6s nel briefing, premuto
+"inizia" — il timer parte da `00:05` (il tempo reale da "inizia" allo screenshot, non i secondi
+di lettura), il bottone pausa assente durante il briefing e presente subito dopo.
+
+**5) Logo/versione piccoli.** « Anche il logo SERENITY con sotto la versione è piccolo, non si
+vede. Metterei la versione sulla stessa linea di BASIC Expert e aggrandirei il logo ».
+Immagine 36/44px → 46/56px, "SERENITY" `--s-fs-xl` (21px) → `--s-fs-hero` (28px), versione
+spostata sulla riga di BASIC/EXPERT (`BASIC · 3.0.204`) al posto della colonna a sé sotto
+l'icona rotonda (rimasta sola, 22→26px). Verificato dal vivo: logo e riga BASIC/versione ben
+leggibili nell'header.
+
+**6) Foto nella configurazione salvata.** « Nella configurazione salvata... metti anche le foto
+dell'auditor e del PC ». `Avvio.tsx` già risolveva `nomeProfilo` dall'`id` salvato in
+`ConfigurazioneSalvata` — stessa idea per `fotoProfilo`: due cerchietti (28px, leggermente
+accavallati) prima del nome nella pillola, l'auditor sempre, il PC solo se la configurazione
+non è SOLO (altrimenti ripeterebbe la stessa foto). Nessuna foto salvata dentro
+`configurazioniStore.ts` — letta dai profili veri al momento di disegnare, così una foto
+cambiata nel profilo si vede subito, non una copia congelata.
+Verificato dal vivo: salvata una configurazione con Claudio (foto vera) e Lise (foto vera) —
+la pillola "foto-test" mostra i due cerchietti sovrapposti prima del testo, esattamente come
+richiesto.
+
+`tsc --noEmit` pulito, `npm run lint` invariato (324 warning), `npx vitest run` 718/718 verdi,
+build di produzione pulita per entrambe le app.
+
+File toccati — CONDIVISO (per regola del progetto, `PostSessionReport.tsx` è nella cartella
+condivisa e richiede sempre ENTRAMBI i DMG anche se solo EQUILIBRIUM lo monta):
+[`src/components/PostSessionReport.tsx`](../src/components/PostSessionReport.tsx). SOLO
+SERENITY: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
+[`src/serenity/Avvio.tsx`](../src/serenity/Avvio.tsx).
+
+**Ribilanciamento immediato del punto 5** — segnalato appena spedito: « riduci la scritta
+SERENITY ed aumenta la taglia del logo ». Il logo vero (l'immagine Alt. Scientology) sale
+ancora, 46/56 → 58/70px; la scritta "SERENITY" torna alla sua taglia originale (`--s-fs-xl`,
+21px, non più `--s-fs-hero`) — l'immagine porta il peso visivo, il nome accanto resta una
+didascalia. Verificato dal vivo: logo chiaramente più grande, "SERENITY"/BASIC/versione ben
+proporzionati accanto. `tsc`/`lint`/`vitest` puliti (stessi numeri di sopra).

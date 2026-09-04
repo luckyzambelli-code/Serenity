@@ -90,7 +90,7 @@ import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ZonaAssessment } from './ZonaAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, SlidersHorizontal, Brain, Lightbulb, StickyNote, Search } from 'lucide-react';
+import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, SlidersHorizontal, Brain, Lightbulb, StickyNote, BookText } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
@@ -400,7 +400,7 @@ export default function Serenity() {
    *  auto-ripresa qui sotto avrebbe cancellato una pausa manuale nell'istante stesso in cui la
    *  si premeva — lo strumento resta connesso, quindi la condizione di ripresa sarebbe stata
    *  vera subito. Un ref, non uno stato: non deve ridisegnare nulla da solo. */
-  const pausaMotivoRef = useRef<'strumento' | 'manuale' | null>(null);
+  const pausaMotivoRef = useRef<'strumento' | 'manuale' | 'briefing' | null>(null);
   const [tempo, setTempo] = useState(0);
   /** Le quattro risposte dell'avvio. `null` = le domande non sono ancora state fatte. */
   const [avvio, setAvvio] = useState<StatoAvvio | null>(null);
@@ -1899,6 +1899,34 @@ export default function Serenity() {
   useEffect(() => {
     if (aperta && !senzaMisura) setPrimaVoltaLibero(false);
   }, [aperta, senzaMisura]);
+  /** ⚠️ AGGIUNTO — segnalato: « quando fai partire una sessione in SENZA STRUMENTI c'è una
+   *  incoerenza: hai la freccia che pulsa per START e invece il bottone pausa a destra. Quando
+   *  poi schiacci START appaiono i secondi che hai passato a leggere e la sessione inizia con
+   *  un tempo falso ». La correzione di un giro precedente (v. la nota grande sul timer, più
+   *  giù, vicino a `<OraReale>`) nascondeva SOLO la DISPLAY del tempo (`orologio(tempo)`) e il
+   *  bottone "chiudi la seduta" finché dura il briefing (`mostraBriefingIniziale && aperta`) —
+   *  ma non fermava l'orologio VERO (`sessionClock`), che correva comunque dietro le quinte: i
+   *  secondi passati a leggere restavano contati, e riapparivano tutti insieme, un tempo falso,
+   *  appena il briefing si chiudeva (bottone "INIZIA" → `setPrimaVoltaLibero(false)`). Lo
+   *  stesso vale per il bottone Pausa, poco più giù: restava condizionato solo su `aperta` —
+   *  mai su `mostraBriefingIniziale` — mentre il resto della barra (timer, "chiudi la seduta")
+   *  era già nascosto: la freccia che invita a INIZIARE e un comando che presuppone una seduta
+   *  già IN CORSO, insieme, l'incoerenza segnalata.
+   *  Corretto con lo STESSO meccanismo già usato per lo strumento perso (`pausaMotivoRef`, v.
+   *  `pauseOnLoss` più sopra): un motivo automatico in più, `'briefing'` — ferma l'orologio
+   *  VERO passando dall'effetto pausata/sessionClock già esistente (poco più giù), non un
+   *  secondo percorso. Nessun log nel giornale (come per `'strumento'`): non è una pausa
+   *  decisa dall'auditor, non deve comparire come tale nella trascrizione. Il bottone Pausa
+   *  stesso prende la STESSA condizione `!(mostraBriefingIniziale && aperta)` di timer/chiudi,
+   *  v. la sua nota. */
+  useEffect(() => {
+    if (mostraBriefingIniziale && aperta) {
+      if (!pausata) { pausaMotivoRef.current = 'briefing'; setPausata(true); }
+    } else if (pausata && pausaMotivoRef.current === 'briefing') {
+      setPausata(false);
+      pausaMotivoRef.current = null;
+    }
+  }, [mostraBriefingIniziale, aperta, pausata]);
   /** ── LE CAMERE, TOLTO IL LEGAME CON LA MODALITÀ CICLO — il giro scorso le rendeva piccole
    *  fuori da un ciclo e le spostava, grandi, nella striscia dell'intestazione durante un
    *  ciclo. Segnalato: « così non mi piacciono, perché si destabilizza l'auditor che deve
@@ -3645,8 +3673,18 @@ export default function Serenity() {
             pause fais le apparaître à côté du bouton REPRISE ». Il badge "in pausa"/
             "strumento perso" stava nell'angolo dell'arco, lontano dal bottone che la governa
             — ora sulla STESSA riga, a sinistra del bottone Pausa/Riprendi, come l'orologio
-            sopra è a sinistra di Chiudi. */}
-        {aperta && (
+            sopra è a sinistra di Chiudi.
+            ⚠️ AGGIUNTO `!(mostraBriefingIniziale && aperta)` — segnalato: « la freccia che
+            pulsa per START e invece il bottone pausa a destra », la stessa incoerenza già
+            corretta per timer/"chiudi la seduta" (v. le loro note, più sopra) ma dimenticata
+            qui: questo bottone restava condizionato solo su `aperta`, quindi visibile anche
+            nella finestra briefing-aperto-non-ancora-iniziato dove tutto il resto della barra
+            è già nascosto. La pausa automatica che lo accompagna (`pausaMotivoRef.current ===
+            'briefing'`, v. l'effetto vicino a `mostraBriefingIniziale`) fa il resto: durante
+            quella finestra la seduta È davvero in pausa, quindi anche l'orologio VERO non
+            corre — questo bottone che la comanda resta comunque nascosto, coerente con
+            timer/chiudi, non con un motivo diverso da riflettere qui. */}
+        {!(mostraBriefingIniziale && aperta) && (
           <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             {pausata && (
               <span className="ser-pulse" style={{
@@ -3781,7 +3819,13 @@ export default function Serenity() {
                 cursor: 'pointer', border: '1.5px solid var(--s-ink-ghost)', borderRadius: '50%',
                 background: 'var(--s-disc)', color: 'var(--s-ink-soft)',
               }}>
-              <Search size={22} strokeWidth={1.8} aria-hidden="true" />
+              {/* ⚠️ Segnalato: « l'icona del dizionario non mi piace ». Era `Search` (lente
+                  d'ingrandimento) — dice "cerca", non "dizionario", e qui accanto a COMMANDS
+                  (`BookOpen`) sembrava un bottone diverso, non un fratello. `BookText` (un
+                  libro con righe di testo dentro) somiglia di più a un vero dizionario, e resta
+                  distinta da `BookOpen`, già usato per COMMANDS/GUIDE poco sopra — mai la
+                  stessa icona per due bottoni diversi. */}
+              <BookText size={22} strokeWidth={1.8} aria-hidden="true" />
             </button>
             <span style={{
               fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
@@ -3942,14 +3986,21 @@ export default function Serenity() {
             superficie chiara/scura di SERENITY, non c'è nulla da riadattare). In tema chiaro
             l'immagine (disegnata per un fondo scuro, il testo sparirebbe) prende la stessa
             pastiglia scura di App.tsx invece di un filtro che ne sporcherebbe il blu. */}
+        {/* ⚠️ INGRANDITO, POI RIBILANCIATO — segnalato: « anche il logo SERENITY con sotto la
+            versione è piccolo, non si vede » (primo giro: immagine 36/44→46/56px, scritta
+            "SERENITY" `--s-fs-xl`→`--s-fs-hero`), poi di nuovo: « riduci la scritta SERENITY
+            ed aumenta la taglia del logo ». L'immagine (il vero logo, Alt. Scientology) sale
+            ancora, 46/56→58/70px; la scritta "SERENITY" torna a `--s-fs-xl` (21px, la sua
+            taglia originale) — l'immagine porta il peso visivo, il nome accanto resta una
+            didascalia, non un secondo logo in concorrenza con lei. */}
         <button type="button" onClick={() => setCreditiAperti(true)} title={t('tip_credits') as string} style={{
-          border: 'none', padding: isLightTheme ? '4px 10px' : 0, borderRadius: 10,
+          border: 'none', padding: isLightTheme ? '5px 12px' : 0, borderRadius: 12,
           background: isLightTheme ? '#2a2a2f' : 'transparent',
           boxShadow: isLightTheme ? '0 2px 8px rgba(38,40,48,0.22)' : 'none',
           cursor: 'pointer', lineHeight: 0, flexShrink: 0,
         }}>
           <img src="/logo-alt-scientology.png" alt="Alt. Scientology" style={{
-            height: isLightTheme ? 36 : 44, width: 'auto',
+            height: isLightTheme ? 58 : 70, width: 'auto',
             filter: isLightTheme ? 'none' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.45)) brightness(1.05)',
           }} />
         </button>
@@ -3960,8 +4011,13 @@ export default function Serenity() {
             grande su `espertoAttivo`/`moduleVis`: una configurazione ancora senza questo campo
             si legge come BASIC, non come EXPERT). Non mostrata prima che l'avvio esista
             (`avvio` nullo, le quattro domande non ancora finite) — dire "BASIC" prima che sia
-            davvero deciso sarebbe un'informazione inventata. */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            davvero deciso sarebbe un'informazione inventata.
+            ⚠️ LA VERSIONE, SULLA STESSA RIGA — segnalato di nuovo: « metterei la versione
+            sulla stessa linea di BASIC Expert ». Stava sotto un'icona a sé, in una colonna
+            SEPARATA accanto a questa (v. sotto, tolta) — due letture piccole vicine invece di
+            una. `· {__SERENITY_VERSION__}` in coda a BASIC/EXPERT, stesso stile, un solo
+            punto medio a separarle: la stessa riga, non due. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-xl)', letterSpacing: '0.14em' }}>
             SERENITY
           </span>
@@ -3971,28 +4027,25 @@ export default function Serenity() {
               letterSpacing: '0.12em', color: 'var(--s-ink-faint)',
             }}>
               {espertoAttivo === true ? 'EXPERT' : LC('BASIC', 'BASIQUE', 'BASIC', 'BÁSICO', 'BASIC')}
+              {' · '}{__SERENITY_VERSION__}
             </span>
           )}
         </div>
-        {/* ⚠️ AGGIUNTO — segnalato: « inserisci sopra la versione accanto a SERENITY un
-            cerchio con all'interno l'immagine che utilizzi per l'icona dell'applicazione ».
-            La stessa icona che macOS mostra nel Dock/Launchpad (`build/icon-serenity.icns`,
-            qui la sua sorgente PNG copiata in `public/` — un asset SOLO di SERENITY, non
-            condiviso con EQUILIBRIUM, che ha la propria `build/icon.icns`), non un disegno
-            reinventato. Colonna a sé accanto al nome SERENITY (stesso gruppo del logo Alt.
-            Scientology più a sinistra): il cerchio sopra, il numero di build appena sotto —
-            "sopra la versione" preso alla lettera, non un'icona sparsa altrove nell'header. */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-          <div style={{
-            width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
-            boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.6), 0 1px 3px rgba(44,47,51,0.35)',
-            border: '1px solid var(--s-ink-ghost)',
-          }}>
-            <img src="/icon-serenity.png" alt="SERENITY" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          </div>
-          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)' }}>
-            {__SERENITY_VERSION__}
-          </span>
+        {/* ⚠️ SEGNALATO: « inserisci sopra la versione accanto a SERENITY un cerchio con
+            all'interno l'immagine che utilizzi per l'icona dell'applicazione ». La stessa
+            icona che macOS mostra nel Dock/Launchpad (`build/icon-serenity.icns`, qui la sua
+            sorgente PNG copiata in `public/` — un asset SOLO di SERENITY, non condiviso con
+            EQUILIBRIUM, che ha la propria `build/icon.icns`), non un disegno reinventato.
+            ⚠️ LA VERSIONE SOTTO L'ICONA, TOLTA — segnalato di nuovo (v. la nota sul gruppo
+            SERENITY/BASIC, qui accanto): duplicava quella ora accanto a BASIC/EXPERT, due
+            posti per lo stesso numero. Resta solo il cerchio, un po' più grande (22→26px) per
+            restare in proporzione col resto ingrandito. */}
+        <div style={{
+          width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+          boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.6), 0 1px 3px rgba(44,47,51,0.35)',
+          border: '1px solid var(--s-ink-ghost)',
+        }}>
+          <img src="/icon-serenity.png" alt="SERENITY" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
         {/* ⚠️ SEGNALATO: « la langue doit pouvoir être changée en cours de route » — non solo
             alle quattro domande d'avvio. Stessi due selettori di `Avvio.tsx`, condivisi da
@@ -5653,9 +5706,20 @@ export default function Serenity() {
                     Non più un `<div>` a sé fuori da questo riquadro: ora è la PRIMA riga di un
                     riquadro diventato `flexDirection:'column'` — sopra la colonna, dentro le
                     sue stesse coordinate (`left:-150…310`, la striscia laterale), mai vicino
-                    all'angolo in alto a sinistra. */}
+                    all'angolo in alto a sinistra.
+                    ⚠️ CORRETTO ANCORA (segnalato di nuovo con screenshot: « le indicazioni in
+                    giallo sopra la scala del tono... la prova delle lattine è fuori dai punti
+                    tarati che non si vedono completamente ») — la causa vera non era qui:
+                    `left:-150…310` mette apposta questo riquadro nella STESSA striscia
+                    orizzontale di `.ser-comandi` (`left:20, width:272, zIndex:8` — la colonna
+                    APRI/PAUSA/CONTACT/NULL/…, sempre montata, anche a ciclo armato). Senza un
+                    suo `zIndex`, questo riquadro vale `auto` (≈0): `.ser-comandi`, con
+                    `zIndex:8` esplicito, gli dipinge SOPRA — non dietro l'arco (mai stato il
+                    problema), dietro la barra laterale, che nasconde la metà sinistra del
+                    badge "rifai la prova delle lattine" e taglia il resto. `zIndex:9` basta:
+                    un solo gradino sopra `.ser-comandi`, non sopra tutto lo schermo. */}
                 <div style={{
-                  position: 'absolute', left: -150, top: '22%', bottom: '6%', width: 460,
+                  position: 'absolute', left: -150, top: '22%', bottom: '6%', width: 460, zIndex: 9,
                   pointerEvents: 'none', display: 'flex', flexDirection: 'column', gap: 4,
                 }}>
                 {tone.toneAtStart !== null && (

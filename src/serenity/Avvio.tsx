@@ -150,6 +150,14 @@ export function Avvio({ onPronto, onRichiama }: {
   const [configurazioni, setConfigurazioni] = useState<ConfigurazioneSalvata[]>(() => leggiConfigurazioni());
   const nomeProfilo = (lista: Array<{ id: string; name: string }>, id: string | null) =>
     id === null ? '' : (lista.find(p => p.id === id)?.name ?? '—');
+  /** ⚠️ AGGIUNTO — segnalato: « nella configurazione salvata... metti anche le foto
+   *  dell'auditor e del PC ». Stessa idea di `nomeProfilo`, appena sopra: la configurazione
+   *  salva solo l'`id`, la foto vera si legge da `liste.a`/`liste.p` (gli stessi profili di
+   *  EQUILIBRIUM) al momento di disegnare la pillola — non una seconda copia della foto dentro
+   *  `ConfigurazioneSalvata` (`configurazioniStore.ts` invariato: se il profilo cambia foto, la
+   *  pillola mostra quella nuova, non una vecchia congelata al salvataggio). */
+  const fotoProfilo = (lista: Array<{ id: string; photo?: string }>, id: string | null) =>
+    id === null ? undefined : lista.find(p => p.id === id)?.photo;
 
   // I profili sono quelli di EQUILIBRIUM, dallo stesso armadio. Si rileggono dopo ogni
   // creazione: il profilo appena fatto dev'essere lì fra gli altri, non in un elenco a parte.
@@ -359,11 +367,36 @@ export function Avvio({ onPronto, onRichiama }: {
               const strumento = cfg.strumenti.none
                 ? (t('no_instruments_mode') as string)
                 : [cfg.strumenti.muse && 'MUSE', cfg.strumenti.theta && (t('theta_cans') as string)].filter(Boolean).join(' + ');
+              const fotoAud = fotoProfilo(liste.a, cfg.avvio.auditorId);
+              const fotoPc = cfg.avvio.solo ? undefined : fotoProfilo(liste.p, cfg.avvio.pcId);
               return (
                 <span key={cfg.id} className="s-glass" style={{
                   display: 'flex', alignItems: 'center', gap: 8, borderRadius: 999,
-                  padding: '6px 6px 6px 14px', background: 'var(--s-disc)',
+                  padding: '6px 6px 6px 8px', background: 'var(--s-disc)',
                 }}>
+                  {/* ⚠️ AGGIUNTO — segnalato: « metti anche le foto dell'auditor e del PC ».
+                      Due cerchietti (28px, la stessa forma di `Scelta` più sopra, solo più
+                      piccola — qui sono un promemoria visivo dentro una pillola, non la
+                      scelta stessa) prima del testo: l'auditor sempre, il PC solo se la
+                      configurazione non è SOLO (in SOLO l'auditor è il preclear — un secondo
+                      cerchio ripeterebbe la stessa foto senza dire niente in più). Senza foto
+                      salvata (`photo` assente) niente cerchio: non c'è un segnaposto grigio da
+                      inventare, il nome basta da solo come già faceva. */}
+                  {fotoAud && (
+                    <img src={fotoAud} alt="" style={{
+                      width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0,
+                      border: '1px solid var(--s-ink-ghost)',
+                    }} />
+                  )}
+                  {fotoPc && (
+                    <img src={fotoPc} alt="" style={{
+                      width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0,
+                      // Si accavalla al cerchio dell'auditor SOLO se c'è anche lui — altrimenti
+                      // (foto del PC sola, auditor senza foto) resterebbe un margine negativo
+                      // senza niente da sovrapporre, spinto a sinistra senza motivo.
+                      marginLeft: fotoAud ? -14 : 0, border: '1px solid var(--s-ink-ghost)',
+                    }} />
+                  )}
                   <button className="s-glass-btn" onClick={() => onRichiama?.(cfg)} style={{
                     border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', borderRadius: 999,
                     fontFamily: 'var(--s-sans)', color: 'var(--s-ink)',

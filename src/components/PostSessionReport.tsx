@@ -636,7 +636,13 @@ export function PostSessionReport({ history, csvData, logs, mass, startTime, end
 
   // Keep a lightweight text PDF generator available (used for downloads fallback)
   const generateTextPdf = async (): Promise<string> => {
-    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    // ⚠️ `compress: true` — segnalato di nuovo: « il PDF in History è lento a scorrere ».
+    // La correzione era stata applicata SOLO al generatore di SERENITY (sessionReport.ts,
+    // giro del 2026-09-02) — questo, quello vero di EQUILIBRIUM (l'unico che PostSessionReport
+    // genera davvero: SERENITY ha il proprio, mai questo componente), era rimasto scoperto.
+    // Stesso ragionamento: una seduta lunga è molte pagine di solo testo, jsPDF le scrive non
+    // compresse di default. Nessun cambiamento visivo — stesso identico PDF, solo compresso.
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
     let y = 12;
