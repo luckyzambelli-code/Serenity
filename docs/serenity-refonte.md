@@ -9466,3 +9466,22 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (59) — ventinovesimo blocco dizionario (1450/2541, oltre il 57%)
+
+Voci 1400→1449: MOTION, MOTIVATOR (con HUNGER, MOTIVATORISH CASE, MOTIVATOR-OVERT ACT), il
+cluster MOTOR (CONTROL TIME TRACK, STRIP, STRIP TIME TRACK), MSH (con M/U annesso), MULTIPLE
+(ACKS, DECLARE, ILLNESS, SOMATICS), MULTIVALENCE, MURDER ROUTINE, MUTTER TR, MUTUALLY
+RESTIMULATIVE/MUTUAL OUT RUDS, MUZZLED AUDITING/COACHING (con MW/H annesso), MYSTERY/MYSTERY
+SANDWICH, MYSTICAL MYSTIC, MYSTIQUE (con la transizione alla lettera N incorporata),
+NARCOSYNTHESIS, NARRATIVE CHAIN/ITEM, NATIVE STATE, NATTER, NATURAL AUDITOR, NCG, NECESSITY
+LEVEL, NEEDLE PATTERN/REACTIONS/REACTIONS ABOVE GRADE IV/READS, NEGATIVE BLOWDOWN/GAIN/
+POSTULATE, NERVOUSNESS, NEUROSIS/NEUROTIC, NEW PRECLEAR, NINTH DYNAMIC, NIP/NIPPING, NO
+AUDITING, NO CASE GAIN, NO-GAIN-CASE, fino a NO-GAME. Dati: `dizionario-fr.json`/
+`dizionario-es.json` ora a 1450 voci ciascuno (57,1% del corpus).
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
