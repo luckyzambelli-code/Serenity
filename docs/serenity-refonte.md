@@ -9228,3 +9228,23 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (47) — diciassettesimo blocco dizionario (850/2541, oltre un terzo)
+
+Voci 800→849: FALSE CLEAR READ/FALSE FOUR/FALSE MOTIVATOR/FALSE OVERTS/FALSE PIANOLA CASE/
+FALSE READ/FALSE SOLUTIONS/FALSE TA (con la checklist annessa)/FALSE III/FALSE VALENCE, FAST
+FLOW/FAST FLOW STUDENT, FAT FOLDER, il cluster FC/FCCI/FDN, FEAR/FEAR MERCHANTS, FEELING
+SHUT-OFF, FELLOW OF SCIENTOLOGY, FES/FFD/FFT, FIELD/FIELD AUDITOR, il cluster FIFTH (DYNAMIC,
+INVADER FORCE, STAGE RELEASE), FIGURE-FIGURE CASE, FILE CLERK, FIRE/FIREFIGHT, il cluster
+FIRST (DYNAMIC, GOAL CLEAR, GPM, OVERT, PHENOMENON, POSTULATE) fino al lunghissimo VALENCE (13
+definizioni numerate — la voce sorgente inglese 839-840 presenta la consueta anomalia OCR, un
+"FIRST" isolato che confluisce nella voce "VALENCE" successiva, riprodotta fedelmente), FISH
+AND FUMBLE, FISHING A COGNITION (con "5000 OHMS" annesso), FIXED ATTENTION UNITS/FIXED IDEA/
+FIXED THETA, FLAG, FLASH ANSWER, FLAT/FLAT BALL BEARING. Dati: `dizionario-fr.json`/
+`dizionario-es.json` ora a 850 voci ciascuno (33,5% — oltre un terzo del corpus).
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
