@@ -9364,3 +9364,25 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (54) — ventiquattresimo blocco dizionario (1200/2541, quasi metà)
+
+Voci 1150→1199: INTENSIVE PROCEDURE, INTENTION/INTENTIONAL WITHHOLD, INTEREST/INTERESTED-
+INTERESTING, INTERIORIZATION (con RUNDOWN e i termini INTERN(E)/INTERN(E)SHIP annessi),
+INTERROGATION, il cluster INT-EXT/INT RD, INTRODUCTION OF AN ARBITRARY, INTROSPECTION RUNDOWN,
+INTROVERSION/INTROVERTED, INT RUNDOWN CORRECTION LIST, INVADER FORCES (5 forze d'invasione
+delle conferenze), IN VALENCE, il lungo INVALIDATION (5 definizioni) con INVALIDATION OF
+AUDITORS, INVENTION PROCESSING, INVERSION/INVERTED DYNAMICS, INVISIBLE CASE/FIELD, IP/IQ,
+IRRATIONALITY, il cluster IS-ES/IS-NESS, ITEM, il cluster ITSA (ITSA, ITSA LINE, ITSA MAKER
+LINE), IVORY TOWER RULE (con la transizione alla lettera J incorporata), JAMMING THE TRACK,
+JEALOUSY, JIGGLE-JIGGLE, JOBURG, JOINT POSITION, JUDICIARY DIANETICS, JUMP CHAINS, JUNIOR
+CASE, JUSTICE, JUSTIFICATION, JUSTIFIED THOUGHT, JUSTIFIER/JUSTIFIER-HUNGRY (con la
+transizione alla lettera K incorporata), fino a KEEPER OF TECH/KERFUFFLE. Dati:
+`dizionario-fr.json`/`dizionario-es.json` ora a **1200 voci ciascuno (47,2% del corpus)** —
+quasi a metà strada.
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
