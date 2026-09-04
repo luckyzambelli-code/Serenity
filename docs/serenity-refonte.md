@@ -9386,3 +9386,20 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (55) — venticinquesimo blocco dizionario (1250/2541, quasi metà esatta)
+
+Voci 1200→1249: KEYED-OUT CLEAR/OT, KEY-IN/KEY-OUT, KINESTHESIA/KINETIC/KINETIC MOTION, KNOW
+BEST, KNOWING CAUSE, KNOWINGNESS/KNOWLEDGE/KNOW-POINT/KNOW-TO-MYSTERY SCALE, KOT, KRC TRIANGLE,
+KUCDEIOF (con la transizione alla lettera L incorporata), L, LAMBDA, L&N/L&N LIST, LANGUAGE/
+LANGUAGE LOCKS, LARGE READS/LARGE THETA BOP, LAST GPM, LATENT READ, LATER ON THE TRACK,
+LAUDABLE WITHHOLD, LAUGHTER, LAW OF AFFINITY, LAWS, LEARNING DRILL, LEAVE OF ABSENCE, LEFT-HAND
+BUTTON, LEG OF A PROCESS, L-11/L-11 EXPANDED, LETTING THE PC HAVE HIS WIN, il cluster LEVEL
+(0 attraverso VII, con LEVEL OF AWARENESS), fino a LF/LFBD. Dati: `dizionario-fr.json`/
+`dizionario-es.json` ora a **1250 voci ciascuno (49,2% del corpus)** — quasi la metà esatta.
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
