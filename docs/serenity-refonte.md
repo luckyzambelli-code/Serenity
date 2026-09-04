@@ -9648,3 +9648,25 @@ Cluster principali:
 **File toccati — SOLO SERENITY (dati):**
 - `public/dizionario/dizionario-fr.json`
 - `public/dizionario/dizionario-es.json`
+
+## Giro — 2026-09-04 — dizionario: trentottesimo blocco, 1900/2541 voci (74,8%) — traguardo delle 1900 voci
+
+**Blocco 38 (indici 1850-1899)**, FR+ES, 50 voci ciascuna lingua. Termini coperti: da RED-HERRING a RESTIMULATOR LAG.
+
+Cluster principali:
+- **REDUCE/REDUCTION cluster**: REDUCE, REDUCED FACSIMILE, REDUCTION, RE-EXPERIENCE — la distinzione tecnica tra riduzione e cancellazione di un engramma.
+- **REGRET/REHAB cluster**: REGRET (4 definizioni sull'inversione della piste di tempo), REHAB, REHABBING DRUGS, REHABILITATION.
+- **RELEASE cluster (ampio)**: RELEASE (6 definizioni numerate — voce cardine), RELEASED OT, RELEASE OF AFFECT, RELIABLE ITEM (4 definizioni sul Rock Slam), RELIEF RELEASE.
+- **RELIGION cluster**: RELIGION, RELIGIOUS PHILOSOPHY, RELIGIOUS PRACTICE — distinzione filosofia/pratica religiosa.
+- **REMEDY cluster**: REMEDY, REMEDY A, REMEDY B, REMEDY OF HAVINGNESS (con il "Remedy of Laughter" R2-26 incorporato nella voce).
+- **REPEATER/REPETITIVE cluster (ampio)**: REPEATER TECHNIQUE (3 definizioni, incl. il racconto storico DMSMH p. 215), REPETITIVE AUDITING CYCLE, REPETITIVE COMMAND AUDITING, REPETITIVE PREPCHECKING, REPETITIVE PROCESS, REPETITIVE RUDIMENTS, REPETITIVE STRAIGHTWIRE.
+- **RESPONSIBILITY**: la voce più estesa del blocco, 10 definizioni numerate più il procedimento "RESPONSIBILITY (A PROCESS)" con le sue commands, incorporato nella stessa voce.
+- **RESTIMULATION cluster**: RESTIMULATION (4 definizioni), RESTIMULATION LOCK, RESTIMULATOR (4 definizioni), RESTIMULATOR LAG.
+
+Nessuna nuova anomalia OCR rilevata in questo blocco (a parte i consueti refusi di spaziatura tipo "CAS E" / "CAS ES" nei termini sorgente, riprodotti fedelmente in `termine_en`).
+
+**Verifica:** dati JSON puri — validati con `json.load` prima e dopo il merge (50/50 per lingua, totale 1900/1900 coerente in entrambi i file). `tsc`/`lint`/`vitest` non ri-eseguiti (nessun file TSX toccato in questo giro).
+
+**File toccati — SOLO SERENITY (dati):**
+- `public/dizionario/dizionario-fr.json`
+- `public/dizionario/dizionario-es.json`
