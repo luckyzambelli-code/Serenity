@@ -9266,3 +9266,23 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (49) — diciannovesimo blocco dizionario (950/2541, quasi 40%)
+
+Voci 900→949: FRANCHISE HOLDER, FREEDOM (con FREEDOM RELEASE), il cluster FREE (NEEDLE,
+NEEDLE-ITIS, THETA, THETAN, TRACK), FREEZE/FREEZES, F/S, FULL FLOW DIANETICS, FULL
+RESPONSIBILITY, FUTURE (inizio lettera G incorporato: GAEs), GAINS, GALACTIC CONFEDERACY,
+GAME e tutto il cluster GAMES (CONDITIONS, GAMES CONDITION, GAMES CONDITION PROCESS), GARBAGE,
+GE, GENERALITY (con O/W GENERAL e GENERAL TRs annessi), il cluster GENETIC (BEING, BLUEPRINT,
+ENTITY, INSANITY, LINE, PERSONALITY), GEOGRAPHICAL ANTIPATHIES, il cluster GF (GF, GF40RB,
+GF40XRR, GF MS con IB annesso), GITA, GLEE/GLEE OF INSANITY, GLIB IDITY/GLIB STUDENT, GLUM
+AREA, GOAL e tutti i suoi composti (OF DIANETICS, OF LIFE, OF PROCESSING, SERIES), fino al
+cluster GOALS FINDER/GOALS FINDER MODEL SESSION/GOALS LIST/GOALS PLOT. Dati:
+`dizionario-fr.json`/`dizionario-es.json` ora a 950 voci ciascuno (37,4% — quasi 40% del
+corpus).
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
