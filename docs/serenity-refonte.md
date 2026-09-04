@@ -9545,3 +9545,21 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (63) — trentatreesimo blocco dizionario (1650/2541, quasi il 65%)
+
+Voci 1600→1649: PATTY-CAKED, PC/PC EXAMINER, PCRD, PC TYPE A/B, PDH, PE, PERCEPTICS/PERCEPTION/
+PERCEPTION POINT, PERFECT COMMUNICATION/DUPLICATE/DUPLICATION, PERMANENT CERTIFICATE/
+RESTIMULATION, PERPETUATION, PERSISTENCE, PERSISTENT F/N, il cluster PERSONAL (IDENTITY,
+INTEGRITY, MOTION, PRESENCE ALTITUDE, ROLLER COASTER), PERSONALITY (con ACCESSIBLE e GRAPH),
+PGM, PHANTOM SLAM (con PHI annesso), PHILOSOPHY, PHRASE, PHS, PHYSICALLY ILL PC, PHYSICAL PAIN/
+UNIVERSE/WELL-BEING, PHYSIO-ANIMAL BRAIN/MIND, PIANOLA CASE, PICTURE (con PICTURE AND MASSES
+REMEDY), PINCH TEST, PINK SHEET, PL, PLATEN, PLAY, PLEASURE (con PLEASURE MOMENTS), PLOTTING
+(con PLS annesso), fino a PLUS-POINT LIST. Dati: `dizionario-fr.json`/`dizionario-es.json` ora
+a 1650 voci ciascuno (64,9% del corpus).
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
