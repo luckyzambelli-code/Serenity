@@ -9326,3 +9326,22 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (52) — ventiduesimo blocco dizionario (1100/2541, oltre il 43%)
+
+Voci 1050→1099: HELP/HELP FACTOR/HELP PROCESSING, il cluster HGC (HGC, HGC ADMIN), HIDDEN DATA
+LINE, HIDDEN STANDARD, HIGH CRIME CHECKOUTS/HIGH CRIMES, HIGH SCHOOL INDOCTRINATION, HI HI
+INDOC, HIGH TA, HIGH-TONE INDIVIDUAL, il cluster HI-LO TA, HIT, HO-HUM, HOLDER, HOLLOW SPOT,
+HOME UNIVERSE, HOMO NOVIS/HOMO SAPIENS, HONEST COMPLETION, HOPE/HOPE FACTOR, HOT QUESTION, il
+lungo cluster delle sigle Hubbard di Classe (HPA, HQS, HRS, HS, HSDC, HSS, HSST, HSTS, HTS) e i
+loro nomi per esteso (HUBBARD COMMUNICATIONS OFFICE BULLETIN/POLICY LETTER, HUBBARD CONSULTANT,
+HUBBARD ELECTROMETER, HUBBARD GUIDANCE CENTER, HUBBARD STANDARD DIANETICS COURSE), HUMAN
+ENGINEERING/EVALUATION, HUMANITARIAN OBJECTIVE, HUMAN MIND, HUMOR, HURDY-GURDY SYSTEM, HVA,
+fino a HYPER-SONIC/HYPER-VISIO. Dati: `dizionario-fr.json`/`dizionario-es.json` ora a 1100
+voci ciascuno (43,3% del corpus).
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
