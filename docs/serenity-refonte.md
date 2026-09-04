@@ -9563,3 +9563,24 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (64) — trentaquattresimo blocco dizionario (1700/2541, quasi il 67%)
+
+Voci 1650→1699: PLUS RANDOMITY, P.M./PN, POINT OF VIEW, POINTS/POINTS SYSTEM, POLE THETA TRAP,
+POLITICAL DIANETICS, POOR MEMORY, POSITIONAL ALTITUDE, POSITIVE POSTULATE/PROCESSING, POST
+INJURY/POSTOPERATIVE/POSTPARTUM PSYCHOSIS, POST PURPOSE CLEARING, il lungo POSTULATE (con le
+sue 7 definizioni tra sostantivo e verbo), POSTULATE PROCESSING, POSTULATED REALITY, il lungo
+POTENTIAL TROUBLE SOURCE (4 definizioni — PTS), POTENTIAL VALUE (con le formule), POWER (con
+POWER AUDITOR e POWER PROCESSES), PPC, PR (con PR/PUBLIC RELATIONS annesso), PRACTICAL, PRD,
+PRECIPITATION, PRECLEAR (con PRECLEAR ASSESSMENT SHEET), PRECURSOR, PREDICTION/PREDISPOSITION,
+PREFRONTAL LOBOTOMY, il cluster PRE-HAVE/PREHAVINGNESS (BUTTONS, SCALE), PREMATURE
+ACKNOWLEDGEMENT, PRENATAL ESP (voce sorgente inglese interrotta a metà citazione — riprodotta
+fedelmente), PRENATALS/PRENATAL VISIO, PRE-OT, PREPARED LIST, il cluster PREPCHECK (PREPCHECK,
+BUTTONS, PREPCHECKING, PREPCLEARING), PRE-RELEASE, fino al lungo PRESENT TIME (8 definizioni).
+Dati: `dizionario-fr.json`/`dizionario-es.json` ora a 1700 voci ciascuno (66,9% del corpus).
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
