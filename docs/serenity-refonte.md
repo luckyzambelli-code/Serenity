@@ -8949,3 +8949,49 @@ AUDITOR, poi BAD/BANK/BASIC — molte voci "BASIC …" in fila, tradotte con lo 
 "basique"/"básico" davanti, come fa la fonte inglese con "BASIC"). Stesso formato fin
 dall'inizio del blocco (termine tradotto + `termine_en` + definizione insieme, non più un
 passaggio separato). Dati: `dizionario-fr.json`/`dizionario-es.json` ora a 200 voci.
+
+## Giro — 2026-09-04 (37) — quinto blocco dizionario (250/2541) + tre segnalazioni
+
+**Quinto blocco del corpo principale — 250/2541 (9,8%).** Voci 200→249 (fine BEING…,
+BETWEEN-LIVES, BIG MIDDLE RUDIMENTS, il lungo cluster BLACK…/BLOW…/BODY…, fino a BORROWED
+FACSIMILES). Stesso formato (termine tradotto + `termine_en` + definizione).
+
+**1) « Positionne le bouton ANGLAIS en premier dans les dictionnaires ».** Le quattro schede
+lingua del dizionario erano ITALIANO/INGLESE/FRANCESE/SPAGNOLO — riordinate in
+INGLESE/ITALIANO/FRANCESE/SPAGNOLO: la prima scheda da sinistra ora riflette la stessa lingua
+già scelta di default all'apertura (`lingua` iniziale, invariata), non solo quale scheda parte
+selezionata.
+
+**2) « Il Dizionario, i comandi devono essere presenti anche a seduta chiusa o non iniziata,
+per rivedere i termini o i comandi ».** Il riquadro EP+COMMANDS+DIZIONARIO stava dietro
+`{aperta && (…)}`, RADDOPPIATO da un secondo `{aperta && (…)}` identico su ciascuno dei tre
+bottoni — nessuno raggiungibile prima di aprire una seduta o dopo averla chiusa. Tolto il
+cancello su COMMANDS e DIZIONARIO (consultarli è un ripasso, non un'azione di seduta); EP
+resta legato ad `aperta` — registrare un EP senza seduta non ha senso.
+
+**3) « Hai sempre il bottone pausa acceso all'inizio session sotto l'orario, NON HA SENSO ».**
+Indagine dal vivo: la posizione era corretta (subito sotto "chiudi la seduta", come da
+progetto) e lo stato dell'icona pure (spenta finché non è davvero in pausa) — MA la condizione
+che lo mostra, `!(mostraBriefingIniziale && aperta)`, non ha MAI controllato `aperta` da sola:
+quando la seduta è chiusa, `aperta` è `false`, quindi `mostraBriefingIniziale && aperta` è
+`false` anch'essa, e la negazione torna `true` — il bottone restava a schermo ANCHE sulla
+schermata "APRI UNA SEDUTA", prima di qualunque apertura, dove premerlo non significa niente.
+`aperta &&` aggiunto in testa alla condizione: nascosto SEMPRE a seduta chiusa, ora coerente
+con timer e "chiudi/apri la seduta".
+Trovato indagando: l'icona ⏸ isolata, senza etichetta, è ambigua a colpo d'occhio — anche
+verificandola dal vivo in questo stesso giro è stata scambiata due volte per un cestino.
+Aggiunta un'etichetta neutra "pausa" accanto (visibile quando NON è in pausa — quando lo è, il
+badge ambra "in pausa"/"strumento perso" già la sostituisce), stesso stile micro delle
+etichette di EP/COMMANDS/DIZIONARIO poco sotto.
+
+Verificato dal vivo, ricostruendo l'intero ciclo: schermata "chi audisce" → DIZIONARIO (scheda
+INGLESE ora per prima) apribile; dashboard a seduta chiusa → COMMANDS/DIZIONARIO visibili,
+NESSUN bottone pausa; seduta aperta, briefing a schermo → ancora nessun pausa; premuto
+"inizia" → "chiudi la seduta" E il bottone pausa con l'etichetta "pausa" appaiono insieme,
+correttamente.
+
+`tsc --noEmit` pulito, `npm run lint` invariato (324 warning), `npx vitest run` 718/718 verdi.
+
+File toccati — SOLO SERENITY: [`src/serenity/Serenity.tsx`](../src/serenity/Serenity.tsx),
+[`src/serenity/DizionarioModal.tsx`](../src/serenity/DizionarioModal.tsx). Dati:
+`dizionario-fr.json`/`dizionario-es.json` a 250 voci.

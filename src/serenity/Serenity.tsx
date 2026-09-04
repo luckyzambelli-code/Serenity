@@ -3683,8 +3683,19 @@ export default function Serenity() {
             'briefing'`, v. l'effetto vicino a `mostraBriefingIniziale`) fa il resto: durante
             quella finestra la seduta È davvero in pausa, quindi anche l'orologio VERO non
             corre — questo bottone che la comanda resta comunque nascosto, coerente con
-            timer/chiudi, non con un motivo diverso da riflettere qui. */}
-        {!(mostraBriefingIniziale && aperta) && (
+            timer/chiudi, non con un motivo diverso da riflettere qui.
+            ⚠️ BUG VERO TROVATO SUBITO DOPO — segnalato di nuovo, con l'aiuto dell'etichetta
+            appena aggiunta accanto al bottone (v. sotto: prima, icona sola, difficile da
+            riconoscere a colpo d'occhio — persino scambiata per un cestino verificandola dal
+            vivo): « hai sempre il bottone pausa acceso all'inizio session sotto l'orario, non
+            ha senso ». Vero — la condizione qui sopra non ha MAI controllato `aperta` da sola:
+            `!(mostraBriefingIniziale && aperta)` è vera anche quando `aperta` è `false`
+            (mostraBriefingIniziale vale allora `false` pure, quindi la congiunzione è `false`,
+            la negazione `true`) — il bottone restava a schermo ANCHE sulla schermata
+            "APRI UNA SEDUTA", prima di qualunque apertura, quando premerlo non significa
+            niente. `aperta &&` in testa: nascosto SEMPRE a seduta chiusa, come timer e
+            "chiudi/apri la seduta" già fanno. */}
+        {aperta && !mostraBriefingIniziale && (
           <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             {pausata && (
               <span className="ser-pulse" style={{
@@ -3711,6 +3722,24 @@ export default function Serenity() {
               }}>
               {pausata ? <Play size={20} strokeWidth={1.8} fill="currentColor" /> : <Pause size={20} strokeWidth={1.8} />}
             </button>
+            {/* ⚠️ AGGIUNTA — segnalato: « hai sempre il bottone pausa acceso all'inizio
+                session sotto l'orario, non ha senso ». Verificato dal vivo: il bottone È
+                corretto (posizione giusta, subito sotto "chiudi la seduta"; stato giusto,
+                icona spenta finché non è davvero in pausa) — il problema era la sua
+                LEGGIBILITÀ: da solo, senza etichetta, l'icona ⏸ isolata è ambigua a
+                colpo d'occhio (persino qui, verificandolo, è stata scambiata due volte per
+                un cestino). Quando NON è in pausa non c'è alcun testo accanto (il badge
+                ambra "in pausa"/"strumento perso" esiste solo QUANDO lo è) — questa
+                etichetta neutra colma il vuoto, stesso stile micro/`--s-ink-faint` delle
+                etichette di EP/COMMANDS/DIZIONARIO poco sotto. */}
+            {!pausata && (
+              <span style={{
+                fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
+                letterSpacing: '0.04em', color: 'var(--s-ink-faint)',
+              }}>
+                {LC('pausa', 'pause', 'pause', 'pausa', 'paus')}
+              </span>
+            )}
           </div>
         )}
         </div>
@@ -3743,7 +3772,16 @@ export default function Serenity() {
             (`setProcessusAperto(true)`, l'intero modale PROCESSUS, PDF compresi) — solo la
             sezione COMANDI PROCEDIMENTI dentro di lui si fa notare di più (v. `ProcessusModal`,
             il suo stesso `procedimenti !== undefined`). */}
-        {aperta && (
+        {/* ⚠️ TOLTO IL CANCELLO `aperta` SU QUESTA RIGA — segnalato: « il Dizionario, i
+            comandi devono essere presenti anche a seduta chiusa o non iniziata, per
+            permettere all'auditor di rivedere i termini o i comandi ». Il riquadro intero
+            (EP + COMMANDS + DIZIONARIO) stava dietro `{aperta && (…)}`, doppiato da un
+            secondo `{aperta && (…)}` identico su OGNI bottone al suo interno — nessuno dei
+            tre raggiungibile prima di aprire o dopo aver chiuso. EP resta legato alla seduta
+            (registrare un EP senza seduta non ha senso, v. il suo `{aperta && (…)}` rimasto
+            invariato qui sotto) — COMMANDS e DIZIONARIO no: consultarli è un ripasso, non
+            un'azione di seduta, e l'auditor deve poterlo fare anche prima di iniziare o dopo
+            aver finito. */}
         <div style={{
           display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 10, width: 272,
           background: 'var(--s-zone-bg)', border: '1px solid var(--s-zone-border)',
@@ -3767,7 +3805,6 @@ export default function Serenity() {
             }}>{ep.epValidated ? 'EP ✓' : 'EP'}</span>
           </div>
         )}
-        {aperta && (
           <div style={{ display: 'grid', justifyItems: 'center', gap: 4, pointerEvents: 'auto' }}>
             <button
               className="s-glass s-glass-btn"
@@ -3800,12 +3837,10 @@ export default function Serenity() {
               color: 'var(--s-ink-faint)',
             }}>COMMANDS</span>
           </div>
-        )}
         {/* ── DIZIONARIO TECNICO — segnalato: « si potrebbe integrare il dizionario tecnico?
             ...un bottone come comands e processus sarebbe l'ideale ». Stessa forma esatta del
             bottone COMMANDS appena sopra (icona rotonda 54px, etichetta sotto) — v.
             `DizionarioModal.tsx` per la fonte dei dati e la nota sul copyright. */}
-        {aperta && (
           <div style={{ display: 'grid', justifyItems: 'center', gap: 4, pointerEvents: 'auto' }}>
             <button
               className="s-glass s-glass-btn"
@@ -3832,9 +3867,7 @@ export default function Serenity() {
               color: 'var(--s-ink-faint)',
             }}>{LC('DIZIONARIO', 'DICTIONNAIRE', 'DICTIONARY', 'DICCIONARIO', 'ORDBOK')}</span>
           </div>
-        )}
         </div>
-        )}
         {/* ── IL GIORNALE, SOTTO EP — segnalato: « cambia di posizione il giornale con
             l'assessment ». Stava nella colonna destra, sotto Santé Système; l'Assessment stava
             qui, sotto i bottoni dei metodi. Scambiati — stessa logica di entrambi

@@ -248,7 +248,11 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
               sopra: bianco/nero fissi sostituiti dai token — la pillola piena "inchiostro con
               sopra il colore del fondo" (v. tokens.css). */}
           <div style={{ display: 'flex', borderRadius: 999, overflow: 'hidden', border: '1px solid var(--s-ink-ghost)' }}>
-            {(['it', 'en', 'fr', 'es'] as const).map(l => (
+            {/* ⚠️ INGLESE PRIMA — segnalato: « posiziona il bottone INGLESE per primo nei
+                dizionari ». Stesso ordine dell'INGLESE già scelto come lingua di default
+                all'apertura (v. `lingua`, sopra) — ora anche la prima scheda da sinistra lo
+                riflette, non solo quale scheda parte selezionata. */}
+            {(['en', 'it', 'fr', 'es'] as const).map(l => (
               <button key={l} onClick={() => { setLingua(l); setEspanso(null); setLetteraFiltro(null); }}
                 style={{
                   border: 'none', cursor: 'pointer', padding: '6px 16px',
