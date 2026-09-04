@@ -9505,3 +9505,23 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (61) — trentunesimo blocco dizionario (1550/2541, oltre il 61%)
+
+Voci 1500→1549: OKAY TO AUDIT, OLD AGE/OLD CUFFS/OLD TIMER, OLFACTORY (con -OLOGY e ONE-FIVE
+annessi), ONENESS, ONE-SHOT CLEAR, ONE-VALUED LOGIC, ONE WITH THE UNIVERSE, ONLY ONE, OPENING
+PROCEDURE BY DUPLICATION/OF 8-C, OPERATING, il lungo OPERATING THETAN (7 definizioni),
+OPERATIVE SHOCK, OPPOSE LIST, OPPOSITE POSTULATE/VECTOR CASE, OPPOSITION TERMINAL, OP PRO BY
+DUP/OPPTERM, OPTIMUM PRECLEAR/RANDOMITY/SOLUTION, O-RATING, ORG, ORGANIC/ORGANICALLY INSANE/
+PERCEPTIONS/SENSATION, ORGANISM, ORIENTATION/ORIENTATION POINT, ORIGIN, ORIGINAL FORMULA,
+ORIGINATION (con ORIGIN "I" annesso), ORIGIN OF THE PRECLEAR, O/R LISTING, O.T./O.T.
+ACTIVITIES, OTHER-DETERMINED REALITY/DETERMINISM, OTHER SIDE OF WITHHOLDS, OTHER TECH (con OT
+METERS annesso), OT-3A (voce sorgente inglese interrotta a metà frase — riprodotta fedelmente,
+non completata), OT TR-0, OUT, OUT-CREATED, OUT-ETHICS, fino a OUTFLOW. Dati:
+`dizionario-fr.json`/`dizionario-es.json` ora a 1550 voci ciascuno (61,0% del corpus).
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
