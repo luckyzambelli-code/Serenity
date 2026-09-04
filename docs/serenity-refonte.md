@@ -9525,3 +9525,23 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (62) — trentaduesimo blocco dizionario (1600/2541, traguardo del 63%)
+
+Voci 1550→1599: OUT LIST, OUT OF, OUT OF ARC PROCESS, OUT OF PLUMB, OUT OF SESSION, OUT OF
+VALENCE, OUT-POINT LIST, OUT RUDIMENT/OUT RUDS, OUT-SCANNING, OUT TECH, OUT THE BOTTOM, OVER
+ACKNOWLEDGEMENT, OVERAUDITING, OVERBURDEN, OVERLISTED LIST, OVER-PERCEPTION, OVER-
+RESTIMULATION, il lungo OVERRUN (5 definizioni), OVERRUNNING, OVERSHOOTING/OVERSHOT, il lungo
+OVERT ACT, OVERT HOSTILITY, OVERT-MOTIVATOR SEQUENCE (con "OVERT OF" spezzato nella voce
+successiva OMISSION — la consueta anomalia OCR), OVERWHELM ING, OVERWHUMPED, O/W, O-W BY
+TRANSFER, OWN/OWNERSHIP/OWN VALENCE, la transizione alla lettera P (frammento OCR "P" come le
+voci precedenti "E"/"H"/"M"), PAB, PACKAGE, il lungo PAIN (9 definizioni numerate), PAIN
+ASSOCIATION, PAINFUL EMOTION ENGRAM/INCIDENT, PAN-DETERMINISM/KNOWINGNESS, PAPER TRICK,
+PARANOID, PARA-SCIENTOLOGY, PARTICLE, PARTS OF MAN, PAST/PAST POSTULATES, fino a PATHOLOGY.
+Dati: `dizionario-fr.json`/`dizionario-es.json` ora a 1600 voci ciascuno (63,0% del corpus).
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
