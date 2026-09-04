@@ -9286,3 +9286,23 @@ non impattati, non ri-eseguiti per questo giro.
 
 File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
 `public/dizionario/dizionario-es.json`.
+
+## Giro — 2026-09-04 (50) — ventesimo blocco dizionario (1000/2541, traguardo delle mille voci)
+
+Voci 950→999: GOALS PROBLEM MASS (5 definizioni numerate), GOALS TERMINAL, GOES THROUGH 7, GO
+IN, GOING UP THE POLE, GOOD AUDITOR/AUTOMATICITY/CASE CONDITION/CONDUCT, GOOD/EVIL, GOOD
+INDICATORS, GOOD PHYSICAL CONDITION (con PTS annesso — la consueta anomalia OCR, riprodotta
+fedelmente), GOVERNOR, G PLUS M/GPM, GRAD/GRADATION/GRADATION CHART, il lungo cluster GRADE
+(con GRADE 0 attraverso GRADE VII, tutti gli otto gradi di release per esteso), GRADIENT/
+GRADIENT SCALE/GRADIENTS OF CASES, GRAND TOUR, GRANT BEINGNESS, GREASING THE TRACK/GREASY ON
+THE TRACK, GREEN FORM, GRIEF, GRINDING, GROOVE IN THE QUESTION (con TR-1 annesso — altra
+anomalia OCR dello stesso tipo), GROSS AUDITING ERRORS, fino al cluster GROUP (ANALYTICAL
+MIND, AUDITOR, AUDITOR'S HANDBOOK, BANK, GROUPED, ENGRAM, ENGRAM INTENSIVE). Dati:
+`dizionario-fr.json`/`dizionario-es.json` ora a **1000 voci ciascuno (39,4% del corpus)** —
+prima soglia tonda delle mille voci raggiunta.
+
+`tsc --noEmit` pulito. Modifica puramente dati (JSON), nessun tocco a JSX/TSX: lint e vitest
+non impattati, non ri-eseguiti per questo giro.
+
+File toccati — SOLO SERENITY (dati): `public/dizionario/dizionario-fr.json`,
+`public/dizionario/dizionario-es.json`.
