@@ -199,7 +199,46 @@ export interface ItemRecord extends Base {
   indica?: boolean;
 }
 
-export type CorpusRecord = SessionRecord | ReactionRecord | CycleRecord | FnRecord | ItemRecord;
+/**
+ * Un ciclo TONE concluso — LE DUE VOCI A CONFRONTO.
+ *
+ * ⚠️ AGGIUNTO — segnalato: « questo permette di vedere chiaramente le sensazioni del PC,
+ * l'osservazione dell'auditor e le misure ». Verificato PRIMA di scrivere questa riga: il ciclo
+ * TONE non finiva MAI nel corpus, in nessuna forma — né il numero strumentale, né quello
+ * dichiarato. Le due voci non sono tre: chiarito dall'utente, `toneStart` (quando `source` vale
+ * `'assessed'`) è GIÀ il giudizio dell'auditor DOPO aver chiesto al PC — le due si fondono in un
+ * solo numero nel modo in cui si conduce, non in due campi separati da inventare qui.
+ *
+ * Restano quindi DUE voci da confrontare, mai insieme sullo STESSO ciclo — `deveScegliereTono`
+ * (SERENITY) mostra la scelta manuale solo `senzaMisura`, mai insieme a uno strumento connesso:
+ *   · `source: 'assessed'` → `toneStart` è la dichiarazione (PC + obnosi dell'auditor);
+ *   · `source: 'meter'/'meter+eeg'` → `toneStart`/`toneEnd` sono la misura (TA e/o bande EEG).
+ * Il confronto che serve — stessa persona, sedute diverse, dichiarato vs misurato — si fa DOPO,
+ * accumulando righe di entrambi i tipi nel tempo: esattamente come `eegLeadSeconds`/
+ * `fnConcordance` fanno già per i due aghi.
+ */
+export interface ToneRecord extends Base {
+  t: 'tone';
+  /** Durata del ciclo, dalla localizzazione alla chiusura (s). */
+  durSec: number;
+  /** Tono di PARTENZA (misurato o dichiarato). `null` se chiuso prima di localizzare. */
+  toneStart: number | null;
+  /** Tono RAGGIUNTO alla chiusura — la stessa lettura mostrata a schermo in quel momento. */
+  toneEnd: number;
+  /** Quante volte è stato dato « porta questo a tono quaranta ». */
+  repeats: number;
+  /** Da dove viene questo ciclo — mai due sorgenti sullo stesso ciclo, v. la nota sopra. */
+  source: 'meter' | 'meter+eeg' | 'assessed';
+  /** Tono quaranta raggiunto. */
+  asIs: boolean;
+  /** Il TA (due lattine) alla chiusura, se c'è il meter — il dato grezzo dietro `toneEnd`. */
+  ta?: number;
+  /** La carica EEG (qL) alla chiusura, se c'è il MUSE — l'altro dato grezzo dietro `toneEnd`. */
+  ql?: number;
+  proc?: string;
+}
+
+export type CorpusRecord = SessionRecord | ReactionRecord | CycleRecord | FnRecord | ItemRecord | ToneRecord;
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════
 // COSTRUTTORI
@@ -239,6 +278,10 @@ export const chiaveItem = (testo: string): string =>
 export const fnRecord = (
   s: string, at: string, d: Omit<FnRecord, 't' | 'v' | 'at' | 's'>,
 ): FnRecord => compact({ v: CORPUS_VERSION, t: 'fn', at, s, ...d });
+
+export const toneRecord = (
+  s: string, at: string, d: Omit<ToneRecord, 't' | 'v' | 'at' | 's'>,
+): ToneRecord => compact({ v: CORPUS_VERSION, t: 'tone', at, s, ...d });
 
 /** Una riga JSON Lines. Mai a capo dentro: una riga = un evento, o il file non si legge più. */
 export const toLine = (r: CorpusRecord): string => JSON.stringify(r);

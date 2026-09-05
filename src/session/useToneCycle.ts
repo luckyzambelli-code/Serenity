@@ -52,6 +52,19 @@ export interface ToneCycleRecord {
   asIs: boolean;
 }
 
+/** Quel che si scrive nel CORPUS a ogni ciclo TONE concluso — v. `ToneRecord` in `engine/corpus.ts`
+ *  per il perché delle due sole sorgenti (mai "PC" e "auditor" separati sullo stesso ciclo). */
+export interface ToneCorpusRow {
+  durSec: number;
+  toneStart: number | null;
+  toneEnd: number;
+  repeats: number;
+  source: 'meter' | 'meter+eeg' | 'assessed';
+  asIs: boolean;
+  ta?: number;
+  ql?: number;
+}
+
 /** Quel che il ciclo ha bisogno di sapere dal resto della seduta. */
 export interface ToneCycleDeps {
   /** Il TA del BRACCIO — lento, è quello che ancora il ciclo. `null` senza meter. */
@@ -81,6 +94,9 @@ export interface ToneCycleDeps {
   logLength: () => number;
   /** Scrive una riga nel giornale. */
   log: (text: string, type: 'normal' | 'success') => void;
+  /** Scrive la riga d'archivio del ciclo TONE. Chi la riceve sa se la seduta è aperta — stesso
+   *  patto di `writeCycleCorpus` in `useContactNullCycle.ts`. */
+  logTone: (row: ToneCorpusRow) => void;
   /** « L'item è stato detto » va riazzerato a ogni nuova resistenza. */
   setItemSpoken: (v: boolean) => void;
   /** Resistenza detta a voce → l'assessment si accende da sé, se non gira già. */
@@ -372,13 +388,32 @@ export function useToneCycle(d: ToneCycleDeps) {
   const toneStartSecRef = useRef(0);
 
   const chiudiTone = useCallback((raggiunto: boolean) => {
+    const source: 'meter' | 'meter+eeg' | 'assessed' =
+      toneHasMeter ? (d.hasMuse ? 'meter+eeg' : 'meter') : 'assessed';
     toneCyclesRef.current.push({
       n: ++toneNRef.current, question: d.auditingQuestion.trim(),
       tStartSec: toneStartSecRef.current, tEndSec: d.nowSec(),
       located: toneAtStart, repeats: toneRipetizioni,
-      source: toneHasMeter ? (d.hasMuse ? 'meter+eeg' : 'meter') : 'assessed',
-      anchor: toneAnchor?.how ?? 'settled',
+      source, anchor: toneAnchor?.how ?? 'settled',
       witnesses: [...toneFired], asIs: raggiunto,
+    });
+    /**
+     * ⚠️ AGGIUNTO — segnalato: « vedere chiaramente le sensazioni del PC, l'osservazione
+     * dell'auditor e le misure ». Prima verifica, prima di scrivere questa riga: il ciclo TONE
+     * non finiva MAI nel corpus — v. `ToneRecord` (`engine/corpus.ts`) per il perché delle due
+     * sole sorgenti (`'assessed'` include già la domanda al PC, non una terza voce separata).
+     *
+     * `toneOra`/`taCorretto` non sono nelle dipendenze storiche di questo `useCallback` (sotto):
+     * aggiunti ORA, insieme a questa chiamata — leggerli qui SENZA di loro sarebbe la stessa
+     * chiusura ferma già trovata due volte in questo file (v. le note su `qLRef`/`d.qL` e su
+     * `localizzaTone`). `qLRef.current`, non `d.qL` diretto, per la STESSA ragione di sempre.
+     */
+    d.logTone({
+      durSec: d.nowSec() - toneStartSecRef.current,
+      toneStart: toneAtStart, toneEnd: toneOra, repeats: toneRipetizioni,
+      source, asIs: raggiunto,
+      ta: taCorretto ?? undefined,
+      ql: d.hasMuse ? qLRef.current : undefined,
     });
     // SENZA METER non si scrive un « ? » al posto del tono di partenza: un punto interrogativo
     // sembra un dato mancante per errore, mentre è semplicemente una seduta off-meter — come
@@ -395,7 +430,7 @@ export function useToneCycle(d: ToneCycleDeps) {
       raggiunto ? 'success' : 'normal');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [d.auditingQuestion, toneAtStart, toneAnchor, toneFired, toneRipetizioni,
-      toneHasMeter, d.hasMuse, d.LC]);
+      toneHasMeter, d.hasMuse, d.LC, d.logTone, toneOra, taCorretto]);
 
   const resetTone = useCallback(() => {
     setTonePhase('locate');

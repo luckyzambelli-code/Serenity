@@ -66,7 +66,7 @@ import {
 } from '../engine/canTest';
 import { SQUEEZE_TARGET_OFFSET } from '../engine/thetaSetup';
 import { sessionRecorder } from '../engine/SessionRecorder';
-import { sessionRecord, cycleRecord, fnRecord, itemRecord, chiaveItem } from '../engine/corpus';
+import { sessionRecord, cycleRecord, fnRecord, itemRecord, toneRecord, chiaveItem } from '../engine/corpus';
 import { corpusWrite, corpusAvailable } from '../lib/corpusWriter';
 import { getProfiles, getPcProfiles, saveSession, saveSessionPdf, saveSessionPdfAsync, getAllProcessusFiles, getSessionsByProfile } from '../lib/storage';
 import { isServerAvailable, serverGetProcessusList, serverProcessusUrl, serverSaveSessionPdf } from '../lib/serverStorage';
@@ -1801,6 +1801,13 @@ export default function Serenity() {
     setItemSpoken,
     ensureAssessmentOn: attivaAssessment,
     LC,
+    // ⚠️ AGGIUNTO — segnalato: « vedere chiaramente le sensazioni del PC, l'osservazione
+    // dell'auditor e le misure ». Stesso patto di `writeCycleCorpus` più sopra. V. `ToneRecord`
+    // in `engine/corpus.ts` per il perché delle due sole sorgenti.
+    logTone: row => {
+      if (!corpusSessionRef.current) return;   // fuori seduta non si archivia
+      corpusWrite(toneRecord(corpusSessionRef.current, new Date().toISOString(), row));
+    },
   });
   trackToneRef.current = tone.trackTone;
   /** ⚠️ SEGNALATO DI NUOVO, con forza: « non hai capito. Nel ciclo TONO 40 devi far vedere la

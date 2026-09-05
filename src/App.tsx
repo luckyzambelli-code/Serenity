@@ -20,7 +20,7 @@ import { useStableReleaseState } from './hooks/useStableReleaseState';
 import { useMediaRelayFallback } from './hooks/useMediaRelayFallback';
 import { useThetaMeter } from './hooks/useThetaMeter';
 import { effectiveModules, eegModulesHidden, noInstruments } from './engine/instrumentModules';
-import { sessionRecord, reactionRecord, cycleRecord, fnRecord, itemRecord,
+import { sessionRecord, reactionRecord, cycleRecord, fnRecord, itemRecord, toneRecord,
          chiaveItem } from './engine/corpus';
 import { corpusWrite, corpusFlushNow, corpusStato, corpusAvailable } from './lib/corpusWriter';
 import { SQUEEZE_TARGET_OFFSET } from './engine/thetaSetup';
@@ -3183,6 +3183,16 @@ export default function App() {
     setItemSpoken,
     ensureAssessmentOn: () => { if (!assessActiveRef.current) toggleAssessment(); },
     LC,
+    // ⚠️ AGGIUNTO — segnalato: « vedere chiaramente le sensazioni del PC, l'osservazione
+    // dell'auditor e le misure ». Stesso patto di `writeCycleCorpus` sopra: chi riceve la riga
+    // sa se la seduta è aperta, `useToneCycle` non deve saperlo. V. `ToneRecord` in
+    // `engine/corpus.ts` per il perché delle due sole sorgenti.
+    logTone: row => {
+      if (!corpusSessionRef.current) return;   // fuori seduta non si archivia
+      corpusWrite(toneRecord(corpusSessionRef.current, new Date().toISOString(), {
+        ...row, proc: sessionProcObjRef.current.trim() || undefined,
+      }));
+    },
   });
   // Il gestore del worker si aggancia UNA volta sola, prima che il hook esista: prende la
   // funzione da un ref, che qui sotto si tiene aggiornato.

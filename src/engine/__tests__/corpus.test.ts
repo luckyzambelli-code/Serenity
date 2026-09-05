@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   sessionRecord, reactionRecord, cycleRecord, toLine, corpusFileName,
   parseCorpus, eegLeadSeconds, CORPUS_VERSION,
-  fnRecord,
+  fnRecord, toneRecord,
   fnConcordance,
 } from '../corpus';
 
@@ -36,6 +36,25 @@ describe('righe del corpus', () => {
 
   it('un file al MESE', () => {
     expect(corpusFileName(AT)).toBe('2026-07.jsonl');
+  });
+
+  // ⚠️ AGGIUNTO — v. la nota grande su `ToneRecord` in `corpus.ts`: DUE sorgenti, mai tre — il
+  // dichiarato ('assessed') include già la domanda al PC, non un campo a parte.
+  it('un ciclo TONE dichiarato non porta né TA né qL: nessuno strumento li ha misurati', () => {
+    const r = toneRecord('s1', AT, {
+      durSec: 42, toneStart: -8, toneEnd: 12, repeats: 3, source: 'assessed', asIs: true,
+    });
+    expect('ta' in r).toBe(false);
+    expect('ql' in r).toBe(false);
+  });
+
+  it('un ciclo TONE misurato porta il dato grezzo dietro il numero', () => {
+    const r = toneRecord('s1', AT, {
+      durSec: 30, toneStart: 0, toneEnd: 30, repeats: 1, source: 'meter+eeg', asIs: false,
+      ta: 2.4, ql: 0.62,
+    });
+    expect(r.ta).toBe(2.4);
+    expect(r.ql).toBe(0.62);
   });
 });
 

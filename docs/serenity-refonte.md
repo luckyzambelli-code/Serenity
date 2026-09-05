@@ -10028,3 +10028,30 @@ Segnalato: "se abbiamo solo il METER, non è necessario fare apparire l'MNA, poi
 - SOLO SERENITY: `src/serenity/Serenity.tsx`
 
 **Build**: SERENITY 3.0.259 (nessuna modifica a file condivisi o a EQUILIBRIUM in questo giro — solo la build SERENITY).
+
+## Giro — 2026-09-05 (continuazione) — Fondamenta per la proposta NeuroTone: il ciclo TONE finisce nel CORPUS
+
+Ripreso dalla discussione sulla proposta di rifare il calcolo del Tono a partire dalle bande EEG (invece della retta fissa TA→Tone) — segnalato: "vediamo insieme di tarare... registriamo il CORPUS e vediamo se una relazione esiste prima di scrivere una riga nel motore vivo", con la precisazione decisiva: "quando l'auditor scrive il tono è perché lo ha chiesto al PC anche, per cui questa informazione raggruppa la sua obnosi e la sensazione del PC".
+
+**Verifica fatta PRIMA di scrivere qualunque script di correlazione**: il CORPUS (`engine/corpus.ts`) non registrava il Tono in NESSUNA forma — i cinque tipi di riga esistenti (`session`/`reaction`/`cycle`/`fn`/`item`) non hanno mai avuto un campo tono. Uno script che leggesse il CORPUS in cerca di una relazione EEG↔Tono non avrebbe trovato niente da leggere.
+
+**Chiarito il modello a DUE voci, non tre**: `toneAssessed` (`useToneCycle.ts`) — la dichiarazione manuale dell'auditor, mostrata SOLO nelle sedute `senzaMisura` via `ScalaTonoCompleta` — è GIÀ il giudizio dell'auditor dopo aver chiesto al PC: non sono due campi separati da inventare, sono uno solo. Le due voci reali da confrontare, mai insieme sullo stesso ciclo (l'app non ha modo di chiedere la dichiarazione mentre uno strumento guida già il quadrante):
+- `source: 'assessed'` → dichiarato (PC + obnosi dell'auditor), nelle sedute senza strumenti;
+- `source: 'meter'/'meter+eeg'` → misurato (TA e/o bande EEG), nelle sedute con strumenti.
+
+**Aggiunto**: `ToneRecord` (nuovo tipo di riga in `engine/corpus.ts`) e il suo costruttore `toneRecord()` — porta `toneStart`/`toneEnd` (in unità di Tono, non TA: è il punto della proposta), `repeats`, `source`, `asIs`, e il dato grezzo dietro la misura quando c'è (`ta`, `ql`). `useToneCycle.ts` guadagna una nuova dipendenza `logTone` (stesso patto di `writeCycleCorpus` già in uso in `useContactNullCycle.ts`: il hook non sa se la seduta è aperta, chi riceve la riga sì), chiamata dentro `chiudiTone` — l'UNICO punto dove il ciclo TONE si chiude, in entrambe le app. Cablato in `App.tsx` (con `proc`, come già fa il suo `cycleRecord`) e in `Serenity.tsx` (senza, come già fa il suo).
+
+**Attenzione alle chiusure ferme, di nuovo**: `chiudiTone` non aveva `toneOra`/`taCorretto` fra le sue dipendenze storiche — aggiunti insieme a `logTone` nell'array delle dipendenze del `useCallback`, altrimenti la riga scritta avrebbe portato per sempre il valore dell'ultima volta che la funzione si era ricreata (lo stesso bug già trovato due volte in questo file, per `qLRef`/`d.qL` e per `localizzaTone`). `qLRef.current`, non `d.qL` diretto, per la stessa ragione già documentata lì.
+
+**Non toccato**: nessuna riga del calcolo del Tono (`toneFromTa`/`toneFromDelta`/il ratchet "solo salire") — solo logging, additivo. Nessuna nuova interazione nella seduta: `toneAssessed` si compila esattamente come prima, si limita a finire anche su disco adesso.
+
+**Prossimo passo**, quando ci sarà accumulo sufficiente: uno script offline che legge i file `.jsonl` del CORPUS, guarda le righe `tone` per sessione, e verifica se un `source:'assessed'` e un `source:'meter'/'meter+eeg'` della STESSA persona in sedute diverse si muovono insieme — prima ancora di costruire un qualunque `N = wᵀz`.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 715/715 verdi (2 nuovi test per `toneRecord`). Verificato dal vivo (browser, seduta BASIC senza strumenti): ciclo TONE armato → resistenza detta → tono dichiarato dalla scala → tono quaranta raggiunto, nessun errore in console — `logTone` cablato correttamente. `corpusWrite` fuori da Electron è volutamente un no-op (nessun filesystem nel browser): la scrittura vera su disco si verifica solo nell'app installata.
+
+**File toccati:**
+- CONDIVISI: `src/engine/corpus.ts`, `src/session/useToneCycle.ts`, `src/engine/__tests__/corpus.test.ts`
+- SOLO EQUILIBRIUM: `src/App.tsx`
+- SOLO SERENITY: `src/serenity/Serenity.tsx`
+
+**Build**: SERENITY 3.0.260 + EQUILIBRIUM 2.0.272, entrambe spedite.
