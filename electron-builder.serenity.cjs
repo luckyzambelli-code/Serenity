@@ -46,7 +46,16 @@ module.exports = {
   // EQUILIBRIUM (il quadrante "STATIC Meter") tale e quale: le due applicazioni sono
   // distinte anche nel Dock/Launchpad ora, non solo nell'interfaccia.
   mac: { ...b.mac, icon: 'build/icon-serenity.icns' },
-  extraResources: b.extraResources || [],
+  // ⚠️ AGGIUNTO — la versione Windows. `extraResources` (sm-stt, il riconoscimento vocale
+  // nativo) è ORA dentro `b.mac` (spostato da `package.json`, v. la nota lì): niente da
+  // escludere qui a mano, lo spread di `b.mac` sopra lo porta con sé SOLO sul mac, come deve
+  // essere — `main.cjs` già risponde « native STT is macOS-only » senza quel binario, invece
+  // di romperlo. `win`/`nsis` restano quelli di EQUILIBRIUM (`b.win`/`b.nsis`), tranne
+  // l'icona — stessa ragione dell'icona mac, sopra: le due app restano distinte anche
+  // nell'elenco programmi di Windows, non solo nel Dock di macOS.
+  win: { ...b.win, icon: 'build/icon-serenity.ico' },
+  nsis: b.nsis,
+  extraResources: [],
   // ⚠️ L'ENTRATA SI SCRIVE, non si indovina. Prima `main.cjs` la deduceva da `app.getName()`,
   // che su macOS può venire dall'Info.plist e su un'altra piattaforma dal package.json: una
   // deduzione che, sbagliando, aprirebbe l'interfaccia SBAGLIATA senza dire niente. Qui il

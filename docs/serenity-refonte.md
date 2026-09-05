@@ -10173,3 +10173,24 @@ Segnalato subito dopo la spedizione precedente: « dove hai messo "serve un seco
 - SOLO SERENITY: `src/serenity/PannelloMeter.tsx`
 
 **Build**: SERENITY 3.0.265 + EQUILIBRIUM 2.0.277, entrambe spedite.
+
+## Giro — 2026-09-05 (continuazione) — Aggiunta la configurazione per una build Windows
+
+Segnalato: « è possibile creare una versione per Windows? ». Poi, in risposta alla domanda su come costruire il `.exe` vero: « se ho una macchina virtuale va bene? » — sì, va benissimo, `electron-builder`/`npm install` non sanno né interessa loro se il Windows sotto è fisico o virtuale.
+
+**Verificato prima di aggiungere qualunque cosa**: `build.win` in `package.json` era vuoto — nessuna configurazione Windows esisteva. WebHID (Theta-Meter) e Web Bluetooth (MUSE) sono API di Chromium, portate identiche su Windows da Electron — nessun codice applicativo da cambiare lì. L'unico blocco vero: `better-sqlite3` è un modulo NATIVO, e non si può cross-compilare in modo affidabile da macOS per Windows — va ricompilato SU un vero Windows (fisico o VM, indifferentemente), cosa che `electron-builder` fa già da solo (`@electron/rebuild`, la stessa cosa che fa oggi per l'arm64 di macOS, visibile in ogni log di build).
+
+**Aggiunto**:
+- `package.json` → `build.win` (icona, NSIS x64), `build.nsis` (installer classico, cartella scelta dall'utente), script `dist:win`/`dist:win-serenity` (senza `build:stt`: `swiftc` non esiste su Windows).
+- `build.mac.extraResources` — lo spostamento di `sm-stt` (il binario Swift del riconoscimento vocale) da un `extraResources` in cima a `build` (che sarebbe stato incluso anche nel pacchetto Windows, dove quel file non esiste mai, fermando la build) a dentro `mac` soltanto.
+- `electron-builder.serenity.cjs` → stesso `win`/`nsis` di EQUILIBRIUM, con l'icona di SERENITY.
+- `build/icon.ico` + `build/icon-serenity.ico`, generati con un nuovo script (`scripts/make-ico.cjs`, usa `sharp` — già una dipendenza — per scrivere il contenitore `.ico` a mano, niente ImageMagick installato su questa macchina).
+- `docs/build-windows.md` — cosa non funziona uguale (STT nativo, macOS-esclusivo, già gestito con grazia da `main.cjs`), come costruire davvero il `.exe` sulla macchina Windows, cosa resta da verificare dal vivo (mai eseguito su un vero Windows da questa sessione).
+
+**Verifica**: `tsc --noEmit` pulito, `npx vitest run` 724/724 verdi (modifica di tooling, nessun codice applicativo toccato). Rieseguiti `dist:mac` E `dist:serenity` per confermare che lo spostamento di `extraResources` non avesse rotto il pacchetto macOS esistente — verificato `sm-stt` ancora presente in `Contents/Resources/` di entrambe le app.
+
+**File toccati:**
+- CONDIVISI: `package.json`, `electron-builder.serenity.cjs`
+- NUOVI: `scripts/make-ico.cjs`, `build/icon.ico`, `build/icon-serenity.ico`, `docs/build-windows.md`
+
+**Build**: SERENITY 3.0.266 + EQUILIBRIUM 2.0.278 (macOS, per verifica — nessuna build Windows eseguibile da questa macchina), entrambe spedite.
