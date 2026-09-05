@@ -9670,3 +9670,22 @@ Nessuna nuova anomalia OCR rilevata in questo blocco (a parte i consueti refusi 
 **File toccati — SOLO SERENITY (dati):**
 - `public/dizionario/dizionario-fr.json`
 - `public/dizionario/dizionario-es.json`
+
+## Giro — 2026-09-05 — dizionario: trentanovesimo blocco, 1950/2541 voci (76,7%)
+
+**Blocco 39 (indici 1900-1949)**, FR+ES, 50 voci ciascuna lingua. Termini coperti: da REST POINT a ROUTINE 1CM.
+
+Cluster principali:
+- **RETRACTOR/RETURN cluster**: RETRACTOR, RETRACTOR BEAM, RETURN, RETURNING (3 definizioni) — il meccanismo del "ritorno" in auditing Dianetics.
+- **REVIEW cluster**: REVIEW (Department of Review), REVIEW CODE (i quattro simboli REV!/REV FL?/DECLARE?/ETH?), REVIVIFICATION/REVIVIFY/REVIV.
+- **RIDGE**: 8 definizioni numerate sulla nozione energetica di "crête/cresta" in Scn 8-8008/8-80.
+- **RIGHTNESS/THOUGHT**: anomalia OCR classica del dizionario sorgente — la voce RIGHTNESS termina con il frammento "RIGHT" e la voce successiva è etichettata "THOUGHT" ma il contenuto corrisponde chiaramente a "RIGHT THOUGHT" (7 definizioni numerate sulla natura del pensiero). Riprodotta fedelmente in FR/ES come da regola permanente, headword `termine_en` invariato ("THOUGHT").
+- **ROCK SLAM cluster (ampio)**: ROCK, ROCKET READ, ROCK SLAM (9 definizioni numerate — la voce più estesa del blocco, sul fenomeno cardine del mètro E in Scn), ROCK SLAM CHANNEL, ROCK SLAMMER, ROCK SLAMMING LIST.
+- **ROLLER-COASTER cluster**: ROLLER-COASTER, ROLLER-COASTERING, ROLLER COASTER CASE, ROLLING A PHRASE.
+- **ROUTINE cluster**: ROUTINE, ROUTINE 1A, ROUTINE 1C, ROUTINE 1CM, ROUTE 1 (con nota redazionale tra parentesi quadre sul rimando a Creation of Human Ability).
+
+**Verifica:** dati JSON puri — validati con `json.load` prima e dopo il merge (50/50 per lingua, totale 1950/1950 coerente in entrambi i file). `tsc`/`lint`/`vitest` non ri-eseguiti (nessun file TSX toccato in questo giro).
+
+**File toccati — SOLO SERENITY (dati):**
+- `public/dizionario/dizionario-fr.json`
+- `public/dizionario/dizionario-es.json`
