@@ -485,11 +485,7 @@ export default function Serenity() {
    *      `useState` interno a quel componente: la trascrizione del PC (`remote.onTrascrizione`,
    *      sotto) deve sapere SU QUALE comando scrivere, e quello stato vive nel motore della
    *      connessione, non nel componente di sola lettura.
-   *   2. `risposteProcedimento` — per ciascun comando (indice), le DUE risposte separate: quella
-   *      scritta a mano dall'auditor e quella arrivata per trascrizione dal PC. Restano DUE
-   *      campi, mai fusi in uno solo, perché il Giornale (v. `committaRispostaProcedimento`,
-   *      sotto) deve poterle scrivere ENTRAMBE, ciascuna etichettata — la richiesta lo dice
-   *      esplicitamente: « nel giornale si scrivono i due testi, con l'indicazione di cosa è ».
+   *   2. `risposteProcedimento` — per ciascun comando (indice), lo stato della sua risposta.
    *   3. `domandeLoggateRef` — un `Set` (non uno stato: serve solo a non ripetere la stessa
    *      domanda nel Giornale se l'auditor torna sul comando già aperto una volta) di quali
    *      indici hanno già ricevuto la loro riga « domanda » nel Giornale.
@@ -497,25 +493,38 @@ export default function Serenity() {
    * Tutti e tre si azzerano quando un procedimento NUOVO si sceglie (`onSelectProcedimento`,
    * sotto) — mai quando lo stesso resta aperto, altrimenti ogni ridisegno perderebbe le risposte
    * già scritte.
+   *
+   * ⚠️ CORRETTO — segnalato di nuovo, dopo aver visto la prima versione: « la frase del PC, ma
+   * con la possibilità per l'auditor di riscrivere SOPRA, sempre mantenendo la risposta del PC
+   * nel Giornale — la risposta del PC si scrive ANCHE nello spazio dove l'auditor può
+   * riscrivere ». La prima versione teneva `auditor`/`pc` come due campi indipendenti: il campo
+   * visibile mostrava `pc` SOLO finché `auditor` restava vuoto, e la prima lettera digitata lo
+   * sostituiva con un testo ripartito da zero — non « riscrivere sopra » la frase del PC, ma
+   * ricominciare accanto a lei. Ora `auditor` PARTE dalla trascrizione e la SEGUE dal vivo
+   * (mentre il PC continua a parlare, il campo si aggiorna) finché l'auditor non lo tocca
+   * (`modificato`, sotto): da quel momento è la SUA versione, editabile liberamente, e nuove
+   * parole del PC non la sovrascrivono più. `pc` resta SEMPRE il testo grezzo, intatto, per il
+   * Giornale — indipendentemente da quanto l'auditor riscrive sopra la sua copia.
    */
   const [fuocoProcedimento, setFuocoProcedimentoStato] = useState(0);
-  const [risposteProcedimento, setRisposteProcedimento] = useState<Record<number, { auditor: string; pc: string }>>({});
+  const [risposteProcedimento, setRisposteProcedimento] = useState<Record<number, { auditor: string; pc: string; modificato: boolean }>>({});
   const risposteProcedimentoRef = useRef(risposteProcedimento); risposteProcedimentoRef.current = risposteProcedimento;
   const domandeLoggateRef = useRef<Set<number>>(new Set());
-  /** Scrive nel Giornale le risposte accumulate per UN comando — sempre DUE righe separate
-   *  quando esistono entrambe, mai fuse: la trascrizione del PC così com'è arrivata, poi quella
-   *  che l'auditor ha scritto a mano — marcata esplicitamente come tale, per non confonderla
-   *  con una battuta vera del preclear rileggendo il Giornale o il rapporto PDF. */
+  /** Scrive nel Giornale le risposte accumulate per UN comando. La trascrizione del PC, se
+   *  arrivata, sempre — è il dato grezzo, intatto. La versione dell'auditor SOLO se `modificato`
+   *  è vero: se l'auditor non ha toccato nulla, `auditor === pc` (la segue dal vivo, v. la nota
+   *  grande sopra) e scriverla una seconda volta sarebbe un doppione puro, non una seconda
+   *  informazione. */
   const committaRispostaProcedimento = useCallback((indice: number) => {
     const r = risposteProcedimentoRef.current[indice];
     if (!r) return;
     if (r.pc.trim()) journal.addLog({ speaker: 'PC', text: r.pc.trim(), time: sessionClock.now() });
-    if (r.auditor.trim()) {
+    if (r.modificato && r.auditor.trim()) {
       journal.addLog({
         speaker: 'Aud', type: 'highlight', time: sessionClock.now(),
-        text: LC('↳ risposta del PC (scritta dall\'auditor): ', '↳ réponse du PC (écrite par l\'auditeur) : ',
-                  '↳ PC\'s response (typed by the auditor): ', '↳ respuesta del PC (escrita por el auditor): ',
-                  '↳ PC:s svar (skrivet av auditören): ') + r.auditor.trim(),
+        text: LC('↳ risposta del PC (riscritta dall\'auditor): ', '↳ réponse du PC (réécrite par l\'auditeur) : ',
+                  '↳ PC\'s response (rewritten by the auditor): ', '↳ respuesta del PC (reescrita por el auditor): ',
+                  '↳ PC:s svar (omskrivet av auditören): ') + r.auditor.trim(),
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -549,9 +558,12 @@ export default function Serenity() {
     if (!comando) return;
     journal.addLog({ speaker: 'Aud', text: comando.testo, time: sessionClock.now() });
   }, [journal, procedimentoAttivo]);
+  /** L'auditor tocca il campo — da qui in poi è la SUA versione: `modificato:true` lo
+   *  distacca dalla trascrizione dal vivo (v. la nota grande sopra), e lo tiene per il resto
+   *  di questo comando, anche se il PC continua a parlare. */
   const scriviRispostaProcedimento = useCallback((indice: number, valore: string) => {
     setRisposteProcedimento(prev => ({
-      ...prev, [indice]: { auditor: valore, pc: prev[indice]?.pc ?? '' },
+      ...prev, [indice]: { auditor: valore, pc: prev[indice]?.pc ?? '', modificato: true },
     }));
   }, []);
   useEffect(() => {
@@ -843,12 +855,17 @@ export default function Serenity() {
     // rispecchia già questa funzione in un ref ad OGNI render (`onTrascrizioneRef.current =
     // opts.onTrascrizione`, senza array di dipendenze): la chiusura qui è già quella
     // dell'ultimo render, un secondo specchio sarebbe ridondante.
+    // ⚠️ CORRETTO — segnalato: « la risposta del PC si scrive ANCHE nello spazio dove l'auditor
+    // può riscrivere ». `auditor` segue `pc` dal vivo finché non è `modificato` (v. la nota
+    // grande su `risposteProcedimento`, sopra) — non resta un secondo campo che compare solo
+    // se quello dell'auditor è vuoto: È il campo dell'auditor, semplicemente non ancora toccato.
     onTrascrizione: testo => {
       if (procedimentoAttivo) {
         setRisposteProcedimento(prev => {
-          const attuale = prev[fuocoProcedimento];
-          const pc = attuale?.pc ? `${attuale.pc} ${testo}` : testo;
-          return { ...prev, [fuocoProcedimento]: { auditor: attuale?.auditor ?? '', pc } };
+          const attuale = prev[fuocoProcedimento] ?? { auditor: '', pc: '', modificato: false };
+          const pc = attuale.pc ? `${attuale.pc} ${testo}` : testo;
+          const auditor = attuale.modificato ? attuale.auditor : pc;
+          return { ...prev, [fuocoProcedimento]: { auditor, pc, modificato: attuale.modificato } };
         });
       } else {
         journal.addLog({ speaker: 'PC', text: testo, time: sessionClock.now() });

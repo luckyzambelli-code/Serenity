@@ -80,7 +80,7 @@ export function PistaProcedimento({
   onImpostaFuoco: (indice: number) => void;
   /** Le due risposte del comando A FUOCO (e di ogni altro già visitato) — mai una fusa
    *  nell'altra, v. la nota grande in `Serenity.tsx` su `risposteProcedimento`. */
-  risposte: Record<number, { auditor: string; pc: string }>;
+  risposte: Record<number, { auditor: string; pc: string; modificato: boolean }>;
   onScriviRisposta: (indice: number, valore: string) => void;
   /** La prima volta che l'auditor apre lo spazio risposta di un comando, la SUA domanda entra
    *  nel Giornale — chiamato da `onFocus` del campo, non da un semplice passaggio col fuoco
@@ -208,11 +208,13 @@ export function PistaProcedimento({
         // si propaga come clic sul bottone — un `<div>` che avvolge ENTRAMBI come fratelli
         // evita il problema, senza cambiare nulla del bottone stesso.
         const risposta = risposte[i];
-        const testoMostrato = risposta?.auditor || risposta?.pc || '';
-        // Corsivo grigio SOLO quando si vede la trascrizione del PC e l'auditor non ha ancora
-        // scritto nulla di suo — v. la richiesta: « quello che scrive l'auditor è nero (o
-        // bianco in dark), quello del PC in corsivo grigio chiaro ».
-        const mostraTrascrizione = !risposta?.auditor && !!risposta?.pc;
+        // ⚠️ CORRETTO — segnalato: « la risposta del PC si scrive ANCHE nello spazio dove
+        // l'auditor può riscrivere ». Non più « pc SOLO se auditor è vuoto »: il campo mostra
+        // SEMPRE `auditor`, che la trascrizione riempie e segue dal vivo finché `modificato`
+        // resta falso (v. la nota grande in `Serenity.tsx`) — l'auditor riscrive SOPRA la
+        // frase vera del PC, non ricomincia da un campo vuoto accanto a lei.
+        const testoMostrato = risposta?.auditor ?? '';
+        const mostraTrascrizione = !risposta?.modificato && !!testoMostrato;
         return (
           <div key={i} style={{ width: '100%' }}>
           <button ref={el => { righeRef.current[i] = el; }} type="button" onClick={() => onImpostaFuoco(i)}
