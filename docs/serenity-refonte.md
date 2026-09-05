@@ -9889,3 +9889,26 @@ Superata la soglia del 96%: mancano ora solo circa 90 voci al completamento dell
 **File toccati — SOLO SERENITY (dati):**
 - `public/dizionario/dizionario-fr.json`
 - `public/dizionario/dizionario-es.json`
+
+## Giro — 2026-09-05 — dizionario: cinquantesimo blocco, 2500/2541 voci (98,4%) — traguardo delle 2500 voci
+
+**Blocco 50 (indici 2450-2499)**, FR+ES, 50 voci ciascuna lingua. Termini coperti: da VALENCE WALL a WITHHOLDY CASE.
+
+Cluster principali:
+- **VALIDATION/VEDA cluster**: VALENCE WALL, VALIDATION EFFORT PROCESSING, VALIDATION STRAIGHTWIRE, VAMPIRE IDEA (con VBIs incorporato), VEDA (le origini storico-religiose della Scn), VERY WELL DONE (con VGIs incorporato).
+- **VIEWPOINT cluster (ampio)**: VIA, VICTIM, VIEWPOINT (3 definizioni sulla nozione cardine di punto di vista analitico/reattivo), VIEWPOINT PROCESSING, VIEWPOINT STRAIGHTWIRE.
+- **VISIO cluster**: VISIO (3 definizioni), VISIO IMAGERY, VISIO SEMANTIC.
+- **VITAMIN/V UNIT**: VITAMIN E, VITAMINS, V UNIT.
+- **WALKING/WAR/WASTE cluster**: WALKING OUT PROCESSES, WANTS HANDLED, WAR, WASTE-HAVE, WATERLOO STATION.
+- **WAVE/WELL DONE cluster**: WAVE, WAVE-LENGTH (con WC incorporato), WCCL (con WDAHs incorporato), WELL DONE, WELL DONE AUDITING HOURS, WELL DONE BY EXAMS (con WH/W-H incorporato).
+- **WHAT cluster**: WHAT QUESTION (con l'esempio didattico completo sul furto d'auto), WHAT'S IT, WHAT'S-IT LINE, WHAT TO AUDIT.
+- **WHITE/WHOLE/WIDE cluster**: WHITE FLOW, WHITE FORM, WHOLE TRACK (con "WHY" incorporato), WIDE OPEN CASE (4 definizioni), WIDE ROCK SLAM.
+- **WITHHOLD cluster (ampio, chiusura del blocco)**: WILDCAT, WILLPOWER, WIN, WINNING VALENCE, WINS, WITH A SESSION, WITHDRAWAL SYMPTOMS, WITHHELD COGNITION, WITHHOLD (9 definizioni numerate — voce cardine della tecnologia Scn su ammissioni/omissioni), WITHHOLD OF OMISSION, WITHHOLDS LONG DURATION, WITHHOLD SYSTEM, WITHHOLDY CASE.
+
+Restano solo 41 voci al completamento dell'intero dizionario (2541 totali) — un solo blocco finale.
+
+**Verifica:** dati JSON puri — validati con `json.load` prima e dopo il merge (50/50 per lingua, totale 2500/2500 coerente in entrambi i file). `tsc`/`lint`/`vitest` non ri-eseguiti (nessun file TSX toccato in questo giro).
+
+**File toccati — SOLO SERENITY (dati):**
+- `public/dizionario/dizionario-fr.json`
+- `public/dizionario/dizionario-es.json`
