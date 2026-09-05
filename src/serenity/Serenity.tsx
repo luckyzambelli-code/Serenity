@@ -444,6 +444,19 @@ export default function Serenity() {
    *  più accanto a EP/COMMANDS (v. `DizionarioModal.tsx` per la fonte dei dati e il motivo del
    *  copyright), stesso principio di `processusAperto`: uno stato, un solo modale montato. */
   const [dizionarioAperto, setDizionarioAperto] = useState(false);
+  /**
+   * ⚠️ AGGIUNTO — segnalato: « il telefono per vedere (camera) e trascrivere (microfono del
+   * telefonino) le risposte del PC — c'è già in EQUILIBRIUM, dovrebbe essere facile ». Vero,
+   * a metà: `Connessione`/`useRemoteSession` (link, QR, WebRTC, `remote.remoteStream`,
+   * `remote.onTrascrizione`) esistono già QUI, per intero — ma erano raggiungibili SOLO
+   * rispondendo « a distanza » alla domanda iniziale di `Avvio` (`avvio.distanza`), una scelta
+   * fatta UNA volta prima di cominciare, mai più. Il caso segnalato è diverso: una seduta
+   * LOCALE (auditor e PC nella stessa stanza — `avvio.distanza === false`) dove il telefono del
+   * PC fa solo da camera/microfono AGGIUNTIVI, senza che il MUSE/METER (locali, sull'auditor)
+   * ne sappiano nulla. Serve quindi un secondo modo di raggiungere LA STESSA `Connessione`,
+   * DURANTE la seduta già aperta — non un secondo motore di rete, mai.
+   */
+  const [satelliteAperto, setSatelliteAperto] = useState(false);
   /** ⚠️ SEGNALATO DI NUOVO: « quando schiacci sul bottone COMMANDS, devono apparire solo i
    *  file dei comandi, non tutti i processus ». COMMANDS e "Processus" aprono lo STESSO
    *  modale (`setProcessusAperto(true)`, un solo `<ProcessusModal>` montato) — questo stato
@@ -5096,25 +5109,54 @@ export default function Serenity() {
           seduta REMOTA lo stesso autoritratto diventa utile (sapere di essere inquadrati per
           la videochiamata, come in Zoom/Meet) — quindi non sparisce del tutto, solo fuori da
           `avvio.distanza`. */}
-      {aperta && (cam2Mostrata || cam1Mostrata) && (
+      {aperta && (cam2Mostrata || cam1Mostrata) && (() => {
+        // ⚠️ AGGIUNTO — v. la nota grande su `satelliteAperto`, sopra: una seduta LOCALE
+        // (`!avvio.distanza`) può avere invitato un telefono lo stesso, DURANTE la seduta —
+        // `remote.isConnected` non può diventarlo per nessun'altra via quando `avvio.distanza`
+        // è falso (nessun altro gesto chiama `remote.avvia()`), quindi basta da solo a dire
+        // « c'è un telefono collegato ». MUSE/METER non lo guardano: restano locali, sempre —
+        // solo CAM 2 (immagine e, dentro `CameraCerchio`, il suo audio) passa al telefono.
+        const telefonoPcCollegato = !avvio.distanza && remote.isConnected;
+        const daRemoto = !!avvio.distanza || telefonoPcCollegato;
+        return (
         <div style={{
           position: 'absolute', top: -8, right: 32, zIndex: 5,
           display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16,
           pointerEvents: 'none',
         }}>
           {cam2Mostrata && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
             <CameraCerchio
               dimensione={255}
               dimensioneCollassata={88}
               titolo={t('cam2') as string}
-              externalStream={avvio.distanza ? (remote.remoteStream ?? null) : undefined}
+              externalStream={daRemoto ? (remote.remoteStream ?? null) : undefined}
               offlineLabel={t('camera_offline') as string}
               opacita={uiAlpha}
               collassata={cam2Collassata}
               onToggleCollasso={() => setCam2Collassata(v => !v)}
               statoTesto={statoCamPc}
-              inDiretta={!!avvio.distanza}
+              inDiretta={daRemoto}
             />
+            {/* ⚠️ AGGIUNTO — segnalato: « il telefono per vedere e trascrivere le risposte del
+                PC, come in EQUILIBRIUM ». Visibile SOLO quando ha senso: una seduta con un
+                preclear vero (mai in SOLO — v. `avvio.solo`), locale (a distanza ha già la sua
+                `Connessione` a schermo intero, PRIMA di arrivare qui), e senza un telefono già
+                collegato (una volta collegato, il cerchio stesso lo mostra — un secondo
+                bottone accanto sarebbe ridondante). */}
+            {!avvio.solo && !avvio.distanza && !telefonoPcCollegato && (
+              <button className="s-glass s-glass-btn" onClick={() => setSatelliteAperto(true)}
+                style={{
+                  pointerEvents: 'auto', cursor: 'pointer', borderRadius: 999, padding: '4px 12px',
+                  border: 'none', background: 'var(--s-disc)', color: 'var(--s-ink-soft)',
+                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.04em',
+                  display: 'flex', alignItems: 'center', gap: 5,
+                }}>
+                📱 {LC('collega il telefono del PC', 'connecter le téléphone du PC', 'connect the PC\'s phone',
+                       'conectar el teléfono del PC', 'anslut PC:ns telefon')}
+              </button>
+            )}
+            </div>
           )}
           {cam1Mostrata && (
             <CameraCerchio
@@ -5127,6 +5169,24 @@ export default function Serenity() {
               onToggleCollasso={() => setCam1Collassata(v => !v)}
             />
           )}
+        </div>
+        );
+      })()}
+
+      {/* ⚠️ AGGIUNTO — l'overlay di `Connessione` DURANTE la seduta, per il gesto « collega il
+          telefono del PC » sopra. Stesso componente della schermata a schermo intero prima
+          della seduta (`avvio.distanza`, più su) — qui montato come un modale sopra la seduta
+          in corso (stesso schema di `DizionarioModal`/`ProcessusModal`, un fratello in più
+          nell'albero), non una sostituzione di `<main>`: chiudendolo (✕, o « pronti ») si
+          torna alla seduta esattamente com'era, il telefono restando collegato se lo è. */}
+      {satelliteAperto && (
+        <div className="absolute inset-0 z-50" style={{
+          background: 'color-mix(in srgb, var(--s-ground) 96%, transparent)',
+          backdropFilter: 'blur(24px)',
+        }}>
+          <Connessione remote={remote}
+            onAnnulla={() => setSatelliteAperto(false)}
+            onPronti={() => setSatelliteAperto(false)} />
         </div>
       )}
 

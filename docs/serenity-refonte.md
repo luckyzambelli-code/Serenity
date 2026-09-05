@@ -10217,3 +10217,23 @@ Segnalato: « quando abbiamo i comandi allo schermo, ad ogni domanda, potresti f
 **File toccati (SOLO SERENITY, nessun file condiviso — build unica)**: `src/serenity/Serenity.tsx`, `src/serenity/PistaProcedimento.tsx`
 
 **Build**: SERENITY 3.0.267.
+
+## Giro — 2026-09-06 — collegare il telefono del PC anche in seduta locale (no "a distanza")
+
+Segnalato: « non hai ancora inserito la possibilità di utilizzare il telefono per vedere (camera) e trascrivere (microfono) le risposte del PC? » — poi, dopo la prima risposta ("è un pezzo grosso, satellite non esiste in SERENITY"): « c'è già in Equilibrium, per cui dovrebbe essere facile da fare ».
+
+**Verificato con `graphify` prima di scrivere codice — la scoperta che cambia tutto**: SERENITY ha GIÀ `Connessione.tsx` per intero — link, QR (`qrcode`), `useRemoteSession`, `remote.remoteStream`/`remote.onTrascrizione` — e `CameraCerchio` (CAM 2) sa GIÀ mostrare `remote.remoteStream` al posto della webcam locale. L'UNICO cancello era `avvio.distanza`: una scelta fatta UNA volta, all'inizio, prima ancora di aprire la seduta — chi rispondeva "qui" (locale) non vedeva mai `Connessione`, quindi non poteva mai invitare un telefono. Non mancava il motore (quello è condiviso con EQUILIBRIUM e già tutto qui): mancava un SECONDO modo di raggiungerlo, DURANTE una seduta già aperta.
+
+**Costruito**:
+- `satelliteAperto` — nuovo stato: apre `<Connessione>` come un OVERLAY sopra la seduta in corso (stesso schema di `DizionarioModal`/`ProcessusModal`), non come sostituzione di `<main>` — chiudendolo (torna indietro/pronti) si ritorna alla seduta esattamente com'era.
+- Un bottone « 📱 collega il telefono del PC », visibile sotto CAM 2 SOLO quando ha senso: seduta con un preclear vero (mai in SOLO), locale (non « a distanza », che ha già la sua `Connessione` a schermo intero PRIMA di arrivare qui), e senza un telefono già collegato.
+- `telefonoPcCollegato = !avvio.distanza && remote.isConnected` — in una seduta locale, `remote` diventa connesso SOLO per questa via (nessun altro gesto chiama `remote.avvia()`), quindi basta da sola a dire "un telefono è collegato". CAM 2 (`externalStream`/`inDiretta`) ora guarda `avvio.distanza || telefonoPcCollegato`, non più solo `avvio.distanza`.
+- MUSE/METER NON toccati: restano sempre locali (sull'auditor) — il telefono del PC serve solo da camera/microfono aggiuntivi, esattamente come nella modalità satellite di EQUILIBRIUM.
+
+**Verificato dal vivo**: seduta EXPERT "con un preclear", "qui" (locale) — il bottone appare sotto CAM 2 solo in questo caso; cliccandolo si apre "MODALITÀ AUDITORE" (link/QR, "in attesa del Preclear…") come overlay sopra la seduta già in corso (timer che continua a correre sotto); "torna indietro" chiude l'overlay e restituisce la seduta intatta. Gli errori di WebSocket in console (`peerjs`, "Lost connection to server") sono la stessa, nota limitazione ambientale del sandbox di sviluppo (nessun server di segnalazione reale raggiungibile) — non introdotti da questo giro, la STESSA cosa capita già oggi aprendo `Connessione` dal flusso "a distanza".
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 724/724 verdi.
+
+**File toccati (SOLO SERENITY — nessun file condiviso, build unica)**: `src/serenity/Serenity.tsx`
+
+**Build**: SERENITY 3.0.269.
