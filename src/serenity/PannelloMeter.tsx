@@ -87,6 +87,27 @@ const scelta = (selezionata: boolean): React.CSSProperties => ({
   transition: 'background var(--s-slow) var(--s-ease), color var(--s-slow) var(--s-ease), border-color var(--s-slow) var(--s-ease)',
 });
 
+/**
+ * pillolaTest — IL BOTTONE CHE FA LA PROVA VERA (stretta/respiro), DISTINTO da "avanti"/
+ * "indietro".
+ *
+ * ── PERCHÉ ────────────────────────────────────────────────────────────────────────────────
+ * Segnalato: « il bottone per fare i test mettilo più evidenziato degli altri (indietro/
+ * avanti) ». Prima usava `pillola(true)`, IDENTICO al bottone "avanti": stesso fondo
+ * (`--s-disc`), stesso colore (`--s-ink`) — nessuna differenza fra "vai al passo successivo"
+ * e "fai la stretta/il respiro adesso", che sono gesti di natura opposta (uno naviga, l'altro
+ * agisce sul preclear). Stessa ricetta cromatica di `scelta(true)` qui sopra — l'ambra
+ * `--s-reserve` è già il colore che SERENITY usa per "questo è ciò che conta qui", non un
+ * terzo colore inventato per l'occasione.
+ */
+const pillolaTest: React.CSSProperties = {
+  cursor: 'pointer', borderRadius: 999, padding: '8px 18px',
+  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', fontWeight: 700, letterSpacing: '0.04em',
+  background: 'color-mix(in srgb, var(--s-reserve) 22%, var(--s-disc))',
+  border: '1.5px solid color-mix(in srgb, var(--s-reserve) 65%, transparent)',
+  color: 'var(--s-reserve)',
+};
+
 const PASSI = ['config', 'stretta', 'respiro', 'taratura'] as const;
 type Passo = typeof PASSI[number];
 
@@ -149,8 +170,16 @@ export function PannelloMeter({ theta, provaTa, onFatto, passoIniziale }: {
         ))}
       </div>
 
+      {/* ⚠️ CORRETTO — segnalato: « non si vede molto bene cosa c'è scritto (STEP 1 a 3).
+          Scrivilo in nero, sarà meglio ». `--s-ink-soft` a colori invariati (`#3d4045` in
+          chiaro, tarato per ≈7:1 su `--s-ground`, v. `tokens.css`) — ma questo titolo non sta
+          su `--s-ground`: sta sul vetro liquido `--s-disc` del pannello, che lascia trasparire
+          il quadrante sotto. `--s-ink`, il token di massimo contrasto (il "nero" di SERENITY —
+          v. la nota in `tokens.css`, "nessun nero puro"), più il grassetto: la differenza da
+          `--s-ink-soft` è di un solo passo di scurezza ma su un fondo instabile è quella che
+          si vede. */}
       <div style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.1em',
-                    textTransform: 'uppercase', color: 'var(--s-ink-soft)', textAlign: 'center' }}>
+                    textTransform: 'uppercase', fontWeight: 700, color: 'var(--s-ink)', textAlign: 'center' }}>
         {TITOLI[passo]}
       </div>
 
@@ -203,8 +232,11 @@ export function PannelloMeter({ theta, provaTa, onFatto, passoIniziale }: {
                 nessun comportamento diverso da preservare: collassato nella sua unica resa. */}
             {t('theta_squeeze_hint')}
           </div>
+          {/* ⚠️ CORRETTO — segnalato: bottone del test più evidenziato di indietro/avanti.
+              v. `pillolaTest`, sopra: stessa ricetta ambra di `scelta(true)`, non più
+              indistinguibile da "avanti". */}
           <button onClick={() => theta.startSqueezeTest()} disabled={theta.testing !== null}
-            className="s-glass s-glass-btn" style={pillola(true)}>
+            className="s-glass s-glass-btn" style={pillolaTest}>
             {t('theta_squeeze')}
           </button>
           {theta.testing === 'squeeze' && (
@@ -259,8 +291,9 @@ export function PannelloMeter({ theta, provaTa, onFatto, passoIniziale }: {
           <div style={{ fontSize: 'var(--s-fs-base)', lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
             {t('theta_breath_hint')}
           </div>
+          {/* ⚠️ CORRETTO — stessa ragione del bottone della stretta, sopra. */}
           <button onClick={() => theta.startBreathTest()} disabled={theta.testing !== null}
-            className="s-glass s-glass-btn" style={pillola(true)}>
+            className="s-glass s-glass-btn" style={pillolaTest}>
             {t('theta_breath')}
           </button>
           {theta.testing === 'breath' && (
@@ -343,7 +376,8 @@ export function PannelloMeter({ theta, provaTa, onFatto, passoIniziale }: {
                     </button>
                   </div>
                 ) : (
-                  <button className="s-glass s-glass-btn" onClick={() => theta.startSqueezeTest()} style={pillola(true)}>
+                  // ⚠️ CORRETTO — stessa ragione del bottone della stretta al passo 2.
+                  <button className="s-glass s-glass-btn" onClick={() => theta.startSqueezeTest()} style={pillolaTest}>
                     {LC('stringi le due lattine', 'serre les deux boîtes', 'squeeze the two cans', 'aprieta las dos latas', 'kläm de två burkarna')}
                   </button>
                 )
@@ -385,7 +419,8 @@ export function PannelloMeter({ theta, provaTa, onFatto, passoIniziale }: {
                     </button>
                   </div>
                 ) : (
-                  <button className="s-glass s-glass-btn" onClick={() => theta.startSqueezeTest()} style={pillola(true)}>
+                  // ⚠️ CORRETTO — stessa ragione del bottone della stretta al passo 2.
+                  <button className="s-glass s-glass-btn" onClick={() => theta.startSqueezeTest()} style={pillolaTest}>
                     {LC('stringi la lattina sola', 'serre la boîte seule', 'squeeze the solo can', 'aprieta la lata sola', 'kläm den ensamma burken')}
                   </button>
                 )
@@ -432,17 +467,31 @@ export function PannelloMeter({ theta, provaTa, onFatto, passoIniziale }: {
               apposta dal blocco sopra: quella corregge lo SCARTO fra due configurazioni con LO
               STESSO strumento, questa corregge la SCALA dello strumento stesso contro un
               riferimento esterno. Due tarature diverse, due riquadri diversi. */}
+          {/* ⚠️ CORRETTO — segnalato tre cose insieme, dopo aver visto il mockup:
+              1. il titolo diventa CALIBRATION (era "la taratura della scala"/l'étalonnage);
+              2. il numero grezzo ("Theta-Meter reads · 2 188 340") è tolto — confondeva,
+                 resta solo il campo dove scrivere il TA letto sul Theta-Meter vero;
+              3. il testo lungo (`t('theta_ref_hint')`, il perché del blocco) è accorciato.
+              Locale con `LC`, non più le chiavi condivise `t('theta_ref_hint')`/
+              `t('theta_ref_label')`: quelle le usa anche `ThetaReadyCheck.tsx` in EQUILIBRIUM
+              (verificato) — cambiarle lì avrebbe spostato un testo mai chiesto per
+              EQUILIBRIUM. Qui restano SOLO parole di questo pannello. */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 4, borderTop: '1px solid var(--s-ink-ghost)' }}>
             <div style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.1em',
                           textTransform: 'uppercase', color: 'var(--s-ink-soft)', textAlign: 'center' }}>
-              {LC('la taratura della scala', 'l\'étalonnage de l\'échelle', 'the scale calibration', 'el calibrado de la escala', 'skalkalibreringen')}
+              {LC('calibrazione', 'calibration', 'calibration', 'calibración', 'kalibrering')}
             </div>
           <div style={{ fontSize: 'var(--s-fs-base)', lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
-            {t('theta_ref_hint')}
+            {LC('impugna le lattine, leggi il Theta-Meter e aggiungi il punto',
+                'tenez les boîtes, lisez le Theta-Meter et ajoutez le point',
+                'hold the cans, read the Theta-Meter and add the point',
+                'sujeta las latas, lee el Theta-Meter y añade el punto',
+                'håll burkarna, läs Theta-Meter och lägg till punkten')}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>{t('theta_ref_label')}</span>
-            <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-base)' }}>{theta.rawSmooth.toFixed(0)}</span>
+            <span style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
+              {LC('TA sul Theta-Meter', 'TA sur le Theta-Meter', 'TA on the Theta-Meter', 'TA en el Theta-Meter', 'TA på Theta-Meter')}
+            </span>
             <input
               type="number" step="0.1" value={riferimento}
               onChange={e => setRiferimento(e.target.value)}
@@ -458,17 +507,6 @@ export function PannelloMeter({ theta, provaTa, onFatto, passoIniziale }: {
             }} className="s-glass s-glass-btn" style={pillola(false)}>
               {t('theta_cal_record')}
             </button>
-          </div>
-          <div style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)', textAlign: 'center' }}>
-            {theta.taScale ? `${theta.taScale.points.length} · ${theta.taScale.madeAt === 0 ? t('theta_scale_factory') : t('theta_scale_own')}` : ''}
-            {theta.taScale && theta.taScale.madeAt !== 0 && (
-              <button className="s-glass s-glass-btn" onClick={() => theta.clearTaCalibration()} style={{
-                cursor: 'pointer', borderRadius: 999, padding: '4px 12px', marginLeft: 8, background: 'var(--s-disc)',
-                fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)',
-              }}>
-                {t('theta_cal_clear')}
-              </button>
-            )}
           </div>
           </div>
         </div>

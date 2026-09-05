@@ -2462,6 +2462,11 @@ export default function Serenity() {
     tone.resetTone(); setToneAttivo(false); setTonoScelto(false);   // niente TONE residuo da una seduta precedente
     setCampiSessioneNascosti(false);   // OBIETTIVO/STATO FISICO/R-FACTOR di nuovo in vista
     setProvaTa({ two: null, solo: null });   // niente prova doppia residua da un'altra persona
+    // ⚠️ AGGIUNTO — segnalato: lo scarto lattina-sola (`theta.setup.offsets`) sopravviveva al
+    // cambio di preclear perché si salvava sotto un'unica chiave globale — v. la nota grande
+    // su `resetPerSessionSetup` in `useThetaMeter.ts`. Azzerato QUI, insieme a `provaTa`
+    // appena sopra: sono la stessa correzione, letture grezze e valore applicato.
+    theta.resetPerSessionSetup();
     setAssessAttivo(false); setAssessItems([]); assessLogCursorRef.current = 0;   // idem, ASSESSMENT
     assessTimesRef.current = []; assessPrevAtRef.current = -Infinity; gruppiItemRef.current = new Map();
     shownReadsRef.current = [];   // niente reazioni di una seduta precedente nella finestra del primo item

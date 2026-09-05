@@ -3991,6 +3991,14 @@ export default function App() {
       cycleStateMachine.reset();    // per-item charge phase FSM
       reactionClassifier.reset();   // dirty-needle + F/N latch persistence
       cycles.resetCycles(); setAuditingQuestion('');
+      // ⚠️ AGGIUNTO — segnalato: lo scarto lattina-sola (+1,12 nell'esempio) restava applicato
+      // qualunque fosse il PC, perché `theta.setup.offsets` si salva sotto un'unica chiave
+      // globale (v. la nota grande su `resetPerSessionSetup` in `useThetaMeter.ts`) e QUESTA
+      // funzione, a differenza dell'equivalente in SERENITY, non azzerava nemmeno `provaTa` —
+      // la prova doppia di una persona restava leggibile per la successiva. Stessa correzione
+      // dei due file: letture grezze e scarto applicato azzerati insieme, a ogni seduta nuova.
+      setProvaTa({ two: null, solo: null });
+      theta.resetPerSessionSetup();
       // Comm lag : on part du BASELINE (Pre-Read ~450 ms) déjà VISIBLE (au lieu de « — »),
       // puis il se personnalise par cycle. N=0 → l'UI le marque « ~ » (estimation, pas encore
       // mesuré sur ce PC). Évite le « je ne vois plus le comm lag » quand aucun cycle n'a encore

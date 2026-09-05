@@ -24,6 +24,7 @@
  * @see docs/serenity-refonte.md — fase 6.
  */
 
+import { useState } from 'react';
 import { primeFreqAudio } from '../lib/primeFreqAudio';
 import type { PrimePhase, Zone as PrimeZone } from '../lib/primeFreqEngine';
 import type { MnaSession } from '../hooks/useMnaModule';
@@ -48,6 +49,21 @@ export function PannelloMna({
   onChiudi: () => void;
 }) {
   const { t } = useI18n();
+
+  /**
+   * ⚠️ AGGIUNTO — segnalato: « il MNA quando appare, fallo apparire "chiuso", con il bottone
+   * per aprirlo. Questo permette di avere una più grande spazio per l'arco ».
+   *
+   * ── CHIUSO DI DEFAULT, QUI — E NON PER `MnaPanel.tsx` (EQUILIBRIUM) ─────────────────────
+   * `MnaPanel.tsx` (src/components/, EQUILIBRIUM) ha già un `collapsed` ma APERTO di default,
+   * per una ragione opposta e già decisa lì: in EQUILIBRIUM il pannello compare SOLO quando lo
+   * si chiede esplicitamente (un click su MNA), quindi aprirlo già pieno non ruba spazio non
+   * richiesto. Qui in SERENITY invece — v. `Serenity.tsx`, `aperta && moduleVis.mna` — il
+   * pannello resta a schermo per tutta la durata del modulo attivo, ancorato in basso SOPRA
+   * l'arco: pieno, copre la parte bassa del quadrante anche quando non lo si sta usando in
+   * quel momento. Richiesta esplicita e diversa da quella di EQUILIBRIUM: qui parte chiuso.
+   */
+  const [collapsed, setCollapsed] = useState(true);
 
   // ── LA STESSA SEQUENZA DI MnaPanel.tsx, non una nuova ─────────────────────────────────────
   const handleAzione = () => {
@@ -140,6 +156,21 @@ export function PannelloMna({
           <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', color: 'var(--s-still)' }}>✦ {t('mna_prime_zone')}</span>
         )}
         <span style={{ flex: 1 }} />
+        {/* ⚠️ AGGIUNTO — il chevron che apre/chiude, PRIMA della ✕: si chiude il modulo (via
+            `onChiudi`, sopra) o si ripiega la sua vista (qui) sono due gesti diversi, come già
+            per `PannelloMeter`/`Avvio` altrove in SERENITY — la ✕ resta l'unica che fa
+            sparire il pannello del tutto. */}
+        {/* Nessun `title` tradotto: il chevron (▾ chiuso · ▴ aperto) è la stessa convenzione
+            già usata altrove in SERENITY (v. l'indicatore "configura il meter" in
+            `Serenity.tsx`) — non serve una nuova voce di dizionario per un simbolo che si
+            legge da solo. */}
+        <button className="s-glass s-glass-btn" onClick={() => setCollapsed(c => !c)}
+          style={{
+            cursor: 'pointer', borderRadius: 999, padding: '4px 10px', background: 'var(--s-disc)',
+            fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)',
+          }}>
+          {collapsed ? '▾' : '▴'}
+        </button>
         <button className="s-glass s-glass-btn" onClick={onChiudi} style={{
           cursor: 'pointer', borderRadius: 999, padding: '4px 10px', background: 'var(--s-disc)',
           fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)',
@@ -148,57 +179,64 @@ export function PannelloMna({
         </button>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 22, marginTop: 6 }}>
-        {campo(t('mna_im') as string, primeCaptured ? primeIm.toFixed(0) : '—')}
-        {campo(t('mna_zone') as string, primeCaptured ? primeZone : '', primeCaptured)}
-        {campo(t('mna_fd') as string, primeCaptured ? `${primeFd.toFixed(1)} Hz` : '—')}
-        {campo(t('mna_delta') as string, `${primeDelta.toFixed(2)} Hz`, primePhase === 'CLEAN')}
-        {campo(t('mna_pstar') as string, String(primePStar), primePhase === 'SONIFY' || primePhase === 'HARMONICS')}
-        {campo(t('mna_copies') as string, String(primeCopies.length), primePhase === 'HARMONICS')}
+      {/* ⚠️ AGGIUNTO — tutto il corpo (letture + bottone d'azione + barra di avvicinamento)
+          resta sotto `!collapsed`: chiuso, del pannello rimane solo la barra del titolo appena
+          sopra — l'ingombro che chiedeva di lasciare più spazio all'arco. */}
+      {!collapsed && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 22, marginTop: 6 }}>
+            {campo(t('mna_im') as string, primeCaptured ? primeIm.toFixed(0) : '—')}
+            {campo(t('mna_zone') as string, primeCaptured ? primeZone : '', primeCaptured)}
+            {campo(t('mna_fd') as string, primeCaptured ? `${primeFd.toFixed(1)} Hz` : '—')}
+            {campo(t('mna_delta') as string, `${primeDelta.toFixed(2)} Hz`, primePhase === 'CLEAN')}
+            {campo(t('mna_pstar') as string, String(primePStar), primePhase === 'SONIFY' || primePhase === 'HARMONICS')}
+            {campo(t('mna_copies') as string, String(primeCopies.length), primePhase === 'HARMONICS')}
 
-        <span style={{ flex: 1 }} />
+            <span style={{ flex: 1 }} />
 
-        {(primePhase === 'SONIFY' || primePhase === 'CLEAN' || primePhase === 'HARMONICS') && (
-          <button className="s-glass s-glass-btn" onClick={handleStop} style={{
-            cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
-            fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.08em', color: 'var(--s-reserve)',
-          }}>
-            {t('mna_btn_stop')}
-          </button>
-        )}
+            {(primePhase === 'SONIFY' || primePhase === 'CLEAN' || primePhase === 'HARMONICS') && (
+              <button className="s-glass s-glass-btn" onClick={handleStop} style={{
+                cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',
+                fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.08em', color: 'var(--s-reserve)',
+              }}>
+                {t('mna_btn_stop')}
+              </button>
+            )}
 
-        {testoBottone && (
-          <button
-            onClick={canAdvance ? handleAzione : undefined}
-            style={{
-              border: 'none', cursor: canAdvance ? 'pointer' : 'default', borderRadius: 999,
-              padding: '9px 20px', minWidth: 160,
-              fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.04em',
-              background: canAdvance ? 'var(--s-ink)' : 'var(--s-disc-sunk)',
-              color: canAdvance ? 'var(--s-ground-warm)' : 'var(--s-ink-soft)',
-              opacity: canAdvance || primePhase === 'HARMONICS' ? 1 : 0.6,
-              transition: 'background var(--s-slow) var(--s-ease), color var(--s-slow) var(--s-ease)',
-            }}>
-            {testoBottone}
-          </button>
-        )}
-      </div>
-
-      {(primePhase === 'SONIFY' || primePhase === 'CLEAN' || primePhase === 'HARMONICS') && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.08em', color: 'var(--s-ink-faint)', textTransform: 'uppercase' }}>
-            → PRIME {primePStar}
-          </span>
-          <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--s-disc-sunk)', overflow: 'hidden' }}>
-            <div style={{
-              width: `${Math.round(avvicinamento * 100)}%`, height: '100%', borderRadius: 3,
-              background: 'var(--s-ink)', transition: 'width var(--s-slow) var(--s-ease)',
-            }} />
+            {testoBottone && (
+              <button
+                onClick={canAdvance ? handleAzione : undefined}
+                style={{
+                  border: 'none', cursor: canAdvance ? 'pointer' : 'default', borderRadius: 999,
+                  padding: '9px 20px', minWidth: 160,
+                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', letterSpacing: '0.04em',
+                  background: canAdvance ? 'var(--s-ink)' : 'var(--s-disc-sunk)',
+                  color: canAdvance ? 'var(--s-ground-warm)' : 'var(--s-ink-soft)',
+                  opacity: canAdvance || primePhase === 'HARMONICS' ? 1 : 0.6,
+                  transition: 'background var(--s-slow) var(--s-ease), color var(--s-slow) var(--s-ease)',
+                }}>
+                {testoBottone}
+              </button>
+            )}
           </div>
-          <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-soft)', fontVariantNumeric: 'tabular-nums' }}>
-            Δ {primeDelta.toFixed(2)} · {Math.round(avvicinamento * 100)}%
-          </span>
-        </div>
+
+          {(primePhase === 'SONIFY' || primePhase === 'CLEAN' || primePhase === 'HARMONICS') && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+              <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.08em', color: 'var(--s-ink-faint)', textTransform: 'uppercase' }}>
+                → PRIME {primePStar}
+              </span>
+              <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--s-disc-sunk)', overflow: 'hidden' }}>
+                <div style={{
+                  width: `${Math.round(avvicinamento * 100)}%`, height: '100%', borderRadius: 3,
+                  background: 'var(--s-ink)', transition: 'width var(--s-slow) var(--s-ease)',
+                }} />
+              </div>
+              <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-soft)', fontVariantNumeric: 'tabular-nums' }}>
+                Δ {primeDelta.toFixed(2)} · {Math.round(avvicinamento * 100)}%
+              </span>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

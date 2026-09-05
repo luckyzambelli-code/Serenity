@@ -384,6 +384,43 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
   const setSensTrim = useCallback((v: number) => {
     setState(p => ({ ...p, setup: { ...p.setup, sensTrim: Math.max(-10, Math.min(10, v)) } }));
   }, []);
+
+  /**
+   * ⚠️ AGGIUNTO — segnalato: « perché scriviamo sempre, qualsiasi sia il PC, 1 boîte corrigée
+   * de +1.12 = équivaut à 2 boîtes? ». Deciso in seguito: SÌ, dipende dalla pelle/presa di
+   * CIASCUN preclear (« è la seconda » — non solo dalla geometria dell'apparecchio) — la
+   * stessa idea già scritta in `canTest.ts`: « la prova doppia si rifà a ogni seduta — la
+   * pelle non è quella di ieri, e la presa nemmeno ».
+   *
+   * ── LA CAUSA VERA ────────────────────────────────────────────────────────────────────────
+   * `offsets['solo-can']` (fissato da `setSoloOffset`, sotto) veniva scritto in un'unica
+   * chiave `localStorage` GLOBALE (`saveSetup`/`sm_theta_setup`, in `thetaSetup.ts`) — non per
+   * preclear. Cambiando persona, l'app non aveva modo di saperlo e continuava ad applicare lo
+   * scarto misurato sull'ULTIMA persona che aveva fatto la prova, silenziosamente.
+   *
+   * ── PERCHÉ NON UNO STORICO PER PRECLEAR (come `PcCanHistory`) ───────────────────────────
+   * Sarebbe la via più fedele, ma il commento in `canTest.ts` è già la scelta più semplice e
+   * coerente col resto: la prova NON è pensata per valere "per sempre" nemmeno per la STESSA
+   * persona — va rifatta ogni seduta, perché "la pelle non è quella di ieri". Riportare
+   * `offsets`/`needleScale`/`scaleMeasured`/`sensTrim` al loro punto di partenza a ogni nuova
+   * seduta (esattamente come già fa `loadSetup` quando l'app riparte da zero) ottiene lo
+   * stesso risultato — mai un numero della persona precedente — senza una seconda cassa
+   * persistente da tenere sincronizzata con la prima.
+   *
+   * `config` (due lattine/lattina sola) NON si tocca: è una scelta di modalità di seduta, non
+   * una misura della persona, e resettarla obbligherebbe a ridirla ogni volta anche a chi
+   * audita sempre nello stesso modo.
+   */
+  const resetPerSessionSetup = useCallback(() => {
+    setState(p => {
+      const s: ThetaSetup = {
+        ...p.setup, offsets: { 'two-cans': 0, 'solo-can': 0 },
+        needleScale: THETA_NEEDLE_SCALE, scaleMeasured: false, sensTrim: 0,
+      };
+      saveSetup(s);
+      return { ...p, setup: s };
+    });
+  }, []);
   /**
    * Aggiunge un PUNTO DI TARATURA dal confronto affiancato: si legge il TA sul Theta-Meter e lo
    * si scrive, e la coppia (grezzo corrente, quel TA) entra nella scala.
@@ -489,6 +526,7 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
   return {
     ...state, connect, disconnect, resetTotal, captureRaw, applyTaPoints, clearTaCalibration,
     setConfig, setSoloOffset, addPointFromReference, startSqueezeTest, startBreathTest, cancelTest, setSensTrim, resetToSet,
+    resetPerSessionSetup,
     /** Diagnosi: quanto si è mosso l'ago fra due istanti, e se c'era agitazione. */
     escursione: (daSec: number, aSec: number) => {
       // SPAN = massimo − minimo: è QUANTO l'ago si è mosso. La sola distanza da SET non lo dice

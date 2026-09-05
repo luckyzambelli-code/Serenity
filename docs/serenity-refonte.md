@@ -9937,3 +9937,43 @@ Il progetto è iniziato da un dizionario parziale (300/2541 voci, 13,8%) ed è p
 **File toccati — SOLO SERENITY (dati):**
 - `public/dizionario/dizionario-fr.json` (2541/2541 voci)
 - `public/dizionario/dizionario-es.json` (2541/2541 voci)
+
+## Giro — 2026-09-05 — revisione TA/taratura, pannello METER, MNA collassabile — FILE CONDIVISI, doppia build
+
+**Contesto**: dopo il completamento del dizionario, ripresa la revisione del ciclo TONE partendo dal punto chiave: il TA. Discussione sulla taratura con l'artefatto, mostrato un mockup del pannello METER, e trovato — nel corso della discussione — un bug reale nel calcolo condiviso.
+
+### 1. Il pannello METER (`PannelloMeter.tsx`, SOLO SERENITY)
+- **Titolo del passo più leggibile**: `--s-ink-soft` → `--s-ink` + grassetto. Segnalato: "non si vede molto bene cosa c'è scritto (STEP 1 a 3)".
+- **Bottoni dei test più evidenziati**: nuovo stile `pillolaTest` (ricetta ambra `--s-reserve`, la stessa di `scelta(true)`) applicato ai quattro bottoni che avviano davvero una prova (stretta passo 2, respiro passo 3, le due "stringi..." nel passo 4) — prima erano identici al bottone "avanti".
+- **Blocco "calibrazione" (confronto affiancato col Theta-Meter vero) semplificato**, dopo revisione col mockup:
+  - titolo → "calibrazione"/"calibration" (uniforme, breve);
+  - tolto il numero grezzo ("Theta-Meter reads · 2 188 340") — confondeva, resta solo il campo per scrivere il TA visto sul Theta-Meter;
+  - testo esplicativo accorciato a una riga (era un paragrafo lungo);
+  - tolta la riga "N pt · taratura di fabbrica" + bottone di reset — giudicata fonte di confusione, non necessaria.
+  - Testi mossi da chiavi condivise (`t('theta_ref_hint')`/`t('theta_ref_label')`) a `LC()` locale: quelle chiavi le usa ANCHE `ThetaReadyCheck.tsx` in EQUILIBRIUM — cambiarle avrebbe spostato un testo mai chiesto lì.
+  - Deciso di TENERE il meccanismo (non è "la gestione con l'artefatto" — è un affinamento via TRIM, senza l'accessorio fisico).
+
+### 2. MNA chiuso di default (`PannelloMna.tsx`, SOLO SERENITY)
+Segnalato: "il MNA quando appare, fallo apparire chiuso, con il bottone per aprirlo — più spazio per l'arco". Aggiunto `collapsed` (default `true`), chevron ▾/▴ prima della ✕. Verificato dal vivo: chiuso all'apertura del modulo, si espande/richiude col chevron. **Diverso da `MnaPanel.tsx` (EQUILIBRIUM)**, che resta aperto di default per una ragione opposta già decisa lì (si apre solo su richiesta esplicita) — non toccato.
+
+### 3. BUG TROVATO E CORRETTO — lo scarto lattina-sola non era per preclear (FILE CONDIVISI)
+Segnalato: "perché scriviamo sempre, qualsiasi sia il PC, 1 boîte corrigée de +1.12 = équivaut à 2 boîtes?"
+
+**Causa**: `ThetaSetup.offsets['solo-can']` (`thetaSetup.ts`) si salvava sotto un'unica chiave `localStorage` GLOBALE (`sm_theta_setup`) — non per preclear. Cambiando persona, l'app non se ne accorgeva e continuava ad applicare lo scarto dell'ULTIMA persona che aveva fatto la prova.
+
+**Decisione dell'utente** (dopo spiegazione pratica): la resistenza mano-lattina dipende anche dalla pelle/presa di ciascuno, non solo dalla geometria — va quindi trattata come dato di sessione/persona, non come proprietà fissa dell'apparecchio. Coerente con quanto `canTest.ts` dichiara già di suo: "la prova doppia si rifà a ogni seduta — la pelle non è quella di ieri".
+
+**Correzione**: nuova `theta.resetPerSessionSetup()` in `useThetaMeter.ts` (shared) — azzera `offsets`/`needleScale`/`scaleMeasured`/`sensTrim` (mai `config`, che è una scelta di modalità, non una misura della persona) e persiste l'azzeramento. Richiamata:
+- in `Serenity.tsx`, `avviaSeduta()`, accanto al già esistente `setProvaTa({two:null,solo:null})`;
+- in `App.tsx`, `handleStart`, dove **mancava anche l'azzeramento di `provaTa`** — bug gemello, più esteso, mai segnalato prima ora corretto nello stesso giro.
+
+Il margine di una divisione quando la prova non è stata fatta (`TA_MARGIN_SOLO_NO_TEST`, `canTest.ts`) resta invariato e ora si applica correttamente a OGNI preclear che non ha (ancora) rimisurato in questa seduta, invece che solo al primo mai testato.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 718/718 verdi. Verificato dal vivo (browser) l'espansione/chiusura del pannello MNA in SERENITY, sessione EXPERT.
+
+**File toccati:**
+- SOLO SERENITY: `src/serenity/PannelloMeter.tsx`, `src/serenity/PannelloMna.tsx`
+- CONDIVISI (richiedono le due build): `src/hooks/useThetaMeter.ts`
+- SOLO EQUILIBRIUM: `src/App.tsx` (chiamata al nuovo reset, stesso punto di `handleStart`)
+
+**Build**: SERENITY 3.0.257 + EQUILIBRIUM 2.0.270, entrambe spedite.
