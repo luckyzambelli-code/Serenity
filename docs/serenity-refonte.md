@@ -9912,3 +9912,28 @@ Restano solo 41 voci al completamento dell'intero dizionario (2541 totali) — u
 **File toccati — SOLO SERENITY (dati):**
 - `public/dizionario/dizionario-fr.json`
 - `public/dizionario/dizionario-es.json`
+
+## Giro — 2026-09-05 — dizionario: cinquantunesimo e ULTIMO blocco, 2541/2541 voci (100%) — DIZIONARIO COMPLETATO
+
+**Blocco 51 (indici 2500-2540), 41 voci finali**, FR+ES. Termini coperti: da WITHHOLDY PC a ZOMBIE.
+
+Con questo blocco il dizionario tecnico Dianetics/Scientology è **completo al 100% in tutte e tre le lingue** (EN sorgente, FR, ES) — 2541/2541 voci ciascuna, perfettamente allineate per `termine_en`.
+
+Cluster principali dell'ultimo blocco:
+- **WORD CLEARING cluster (ampio)**: WORD (4 definizioni), WORD CLEARER (con WORD CLEARING e WCCL incorporati), le nove Methods complete — WORD CLEARING METHOD ONE attraverso NINE (M1-M9), ciascuna con la propria procedura tecnica dettagliata, e WORD LIST.
+- **WORK/WORRY cluster**: WORK, WORKABILITY, WORKSHEETS, WORRIED, WORRY, WORSENED GRAPH.
+- **WRONG cluster**: WRAPPED AROUND A TELEGRAPH POLE (con l'origine gergale del "West americano"), WRONG, WRONGNESS, WRONG SOURCE, WRONG WAY, WRONG WAY OPPOSE, WRONG WHY.
+- **Voci finali dell'alfabeto**: W.S.U., X (voce anomala — frammento OCR troncato, riprodotto fedelmente), X 1, X 2, YELLOW SHEET, YELLOW TAB, ZERO (con la definizione filosofica cardine dello zero e ZERO scritto (O) incorporato), ZERO A & ZERO B QUESTIONS, ZERO QUESTION, ZERO RATE (con ZERO RATING incorporato), **ZOMBIE** — la voce che chiude l'intero dizionario.
+
+**Verifica completa di fine-progetto** (non solo JSON, l'intero ciclo standard essendo un traguardo):
+- `json.load` su entrambi i file: 2541/2541 voci, coerenti.
+- `npx tsc --noEmit`: pulito, nessun errore.
+- `npm run lint`: 324 warning (baseline invariata, 0 errori).
+- `npx vitest run`: **718/718 test verdi**.
+
+### Riepilogo del lavoro sui dizionari FR/ES
+Il progetto è iniziato da un dizionario parziale (300/2541 voci, 13,8%) ed è proseguito per **51 batch consecutivi di traduzione** (circa 50 voci ciascuno), portando la copertura al 100% in entrambe le lingue. Ogni voce rispetta le convenzioni stabilite: i termini/acronimi coniati da Scientology (ARC, AS-IS, TR, GPM, F/N, SP, PTS, HCOB, HCO PL, R3R, R6, 8-C, Q&A, ecc.) restano non tradotti come headword; le frasi descrittive ordinarie sono tradotte; le anomalie OCR del dizionario sorgente inglese (troncamenti a metà frase, voci "fuse" con la successiva, refusi di spaziatura) sono state riprodotte fedelmente piuttosto che corrette silenziosamente, secondo la regola permanente stabilita a inizio progetto.
+
+**File toccati — SOLO SERENITY (dati):**
+- `public/dizionario/dizionario-fr.json` (2541/2541 voci)
+- `public/dizionario/dizionario-es.json` (2541/2541 voci)
