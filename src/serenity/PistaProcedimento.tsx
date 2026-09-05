@@ -60,16 +60,38 @@ import { pick5 } from '../i18n5';
  * stretta costringeva a scorrere anche il testo » — quella si è risolta allargando la
  * LARGHEZZA, non c'entra con l'altezza) ma apposta per dare al centraggio un centro vero.
  */
-export function PistaProcedimento({ nome, comandi, onChiudi, lang }: {
+export function PistaProcedimento({
+  nome, comandi, onChiudi, lang,
+  fuoco, onImpostaFuoco, risposte, onScriviRisposta, onApriRisposta,
+}: {
   nome: string;
   comandi: ComandoProcedimento[];
   onChiudi: () => void;
   lang: string;
+  /**
+   * ⚠️ AGGIUNTO — segnalato: « ad ogni domanda, uno spazio per scrivere la risposta
+   * dell'auditor / includere la risposta verbale del PC ». Il fuoco era uno `useState` interno
+   * a questo file — sollevato in `Serenity.tsx`, che deve saperlo per instradare lì la
+   * trascrizione del PC (arriva dal motore della connessione, non da qui) verso il comando
+   * giusto. Questo componente resta di sola LETTURA sullo stato: naviga chiamando
+   * `onImpostaFuoco`, non scrive mai `fuoco` da sé.
+   */
+  fuoco: number;
+  onImpostaFuoco: (indice: number) => void;
+  /** Le due risposte del comando A FUOCO (e di ogni altro già visitato) — mai una fusa
+   *  nell'altra, v. la nota grande in `Serenity.tsx` su `risposteProcedimento`. */
+  risposte: Record<number, { auditor: string; pc: string }>;
+  onScriviRisposta: (indice: number, valore: string) => void;
+  /** La prima volta che l'auditor apre lo spazio risposta di un comando, la SUA domanda entra
+   *  nel Giornale — chiamato da `onFocus` del campo, non da un semplice passaggio col fuoco
+   *  (scorrere con la rotellina/le frecce resta una lettura passiva, come sempre). */
+  onApriRisposta: (indice: number) => void;
 }) {
   const titoloChiudi = pick5(lang, 'chiudi il procedimento', 'fermer le procédé',
     'close the procedure', 'cerrar el procedimiento', 'stäng proceduren') as string;
   const etichettaChiudi = pick5(lang, 'CHIUDI', 'FERMER', 'CLOSE', 'CERRAR', 'STÄNG') as string;
-  const [fuoco, setFuoco] = useState(0);
+  const rispostaPlaceholder = pick5(lang, 'scrivi la risposta del PC…', 'écris la réponse du PC…',
+    'type the PC\'s response…', 'escribe la respuesta del PC…', 'skriv PC:ns svar…') as string;
   const [ultimoScroll, setUltimoScroll] = useState(0);
   const contenitoreRef = useRef<HTMLDivElement>(null);
   const righeRef = useRef<(HTMLButtonElement | null)[]>([]);
@@ -84,7 +106,7 @@ export function PistaProcedimento({ nome, comandi, onChiudi, lang }: {
   if (!comandi.length) return null;
 
   const vaia = (delta: number) => {
-    setFuoco(f => Math.max(0, Math.min(comandi.length - 1, f + delta)));
+    onImpostaFuoco(Math.max(0, Math.min(comandi.length - 1, fuoco + delta)));
   };
 
   return (
@@ -180,8 +202,20 @@ export function PistaProcedimento({ nome, comandi, onChiudi, lang }: {
         const fs = inFuoco ? 'var(--s-fs-xl)' : distanza === 1 ? 'var(--s-fs-base)' : 'var(--s-fs-sm)';
         const opacita = inFuoco ? 1 : distanza === 1 ? 0.55 : 0.26;
         const colore = inFuoco ? 'var(--s-ink)' : 'var(--s-ink-soft)';
+        // ⚠️ AGGIUNTO — segnalato: « ad ogni domanda, uno spazio per scrivere la risposta ».
+        // Il campo NON può vivere dentro il `<button>` della riga: un `<input>` annidato in un
+        // `<button>` è contenuto non valido (spec HTML) e in alcuni browser il clic sul campo
+        // si propaga come clic sul bottone — un `<div>` che avvolge ENTRAMBI come fratelli
+        // evita il problema, senza cambiare nulla del bottone stesso.
+        const risposta = risposte[i];
+        const testoMostrato = risposta?.auditor || risposta?.pc || '';
+        // Corsivo grigio SOLO quando si vede la trascrizione del PC e l'auditor non ha ancora
+        // scritto nulla di suo — v. la richiesta: « quello che scrive l'auditor è nero (o
+        // bianco in dark), quello del PC in corsivo grigio chiaro ».
+        const mostraTrascrizione = !risposta?.auditor && !!risposta?.pc;
         return (
-          <button key={i} ref={el => { righeRef.current[i] = el; }} type="button" onClick={() => setFuoco(i)}
+          <div key={i} style={{ width: '100%' }}>
+          <button ref={el => { righeRef.current[i] = el; }} type="button" onClick={() => onImpostaFuoco(i)}
             style={{
               display: 'flex', alignItems: 'flex-start', gap: 10, border: 'none',
               cursor: 'pointer', padding: '3px 10px', borderRadius: 14, textAlign: 'left',
@@ -223,6 +257,33 @@ export function PistaProcedimento({ nome, comandi, onChiudi, lang }: {
               )}
             </span>
           </button>
+          {/* ── LO SPAZIO RISPOSTA — solo sul comando a fuoco, stessa ragione delle note sopra:
+              affollerebbe una pista smorzata se restasse visibile ovunque. Il valore mostrato è
+              SEMPRE `risposta.auditor` per la scrittura (l'auditor digita sempre nel proprio
+              campo, mai "sopra" al testo trascritto) — ma finché è vuoto il campo MOSTRA la
+              trascrizione del PC, in corsivo grigio: la si vede, la si può correggere
+              iniziando a scrivere (da quel momento diventa testo dell'auditor, non più un
+              proseguimento della trascrizione — v. la nota di `Serenity.tsx` sul perché sono
+              DUE campi separati). */}
+          {inFuoco && (
+            <div style={{ padding: '4px 10px 8px 46px' }}>
+              <input
+                type="text"
+                value={testoMostrato}
+                onFocus={() => onApriRisposta(i)}
+                onChange={e => onScriviRisposta(i, e.target.value)}
+                placeholder={rispostaPlaceholder}
+                style={{
+                  width: '100%', boxSizing: 'border-box', border: 'none', borderBottom: '1px solid var(--s-ink-ghost)',
+                  background: 'none', outline: 'none', padding: '4px 2px',
+                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)',
+                  fontStyle: mostraTrascrizione ? 'italic' : 'normal',
+                  color: mostraTrascrizione ? 'var(--s-ink-faint)' : 'var(--s-ink)',
+                }}
+              />
+            </div>
+          )}
+          </div>
         );
       })}
       </div>

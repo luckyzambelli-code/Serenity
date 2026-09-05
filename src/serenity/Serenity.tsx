@@ -477,6 +477,83 @@ export default function Serenity() {
    *  di caricare qualcosa. */
   const [procedimenti, setProcedimenti] = useState<Procedimento[]>([]);
   const [procedimentoAttivo, setProcedimentoAttivo] = useState<Procedimento | null>(null);
+  /**
+   * ⚠️ AGGIUNTO — segnalato: « ad ogni domanda, accanto, uno spazio per scrivere la risposta
+   * dell'auditor / includere la risposta verbale del PC (riconoscimento vocale) ». Tre pezzi:
+   *
+   *   1. `fuocoProcedimento` — il comando A FUOCO in `PistaProcedimento`, sollevato QUI da uno
+   *      `useState` interno a quel componente: la trascrizione del PC (`remote.onTrascrizione`,
+   *      sotto) deve sapere SU QUALE comando scrivere, e quello stato vive nel motore della
+   *      connessione, non nel componente di sola lettura.
+   *   2. `risposteProcedimento` — per ciascun comando (indice), le DUE risposte separate: quella
+   *      scritta a mano dall'auditor e quella arrivata per trascrizione dal PC. Restano DUE
+   *      campi, mai fusi in uno solo, perché il Giornale (v. `committaRispostaProcedimento`,
+   *      sotto) deve poterle scrivere ENTRAMBE, ciascuna etichettata — la richiesta lo dice
+   *      esplicitamente: « nel giornale si scrivono i due testi, con l'indicazione di cosa è ».
+   *   3. `domandeLoggateRef` — un `Set` (non uno stato: serve solo a non ripetere la stessa
+   *      domanda nel Giornale se l'auditor torna sul comando già aperto una volta) di quali
+   *      indici hanno già ricevuto la loro riga « domanda » nel Giornale.
+   *
+   * Tutti e tre si azzerano quando un procedimento NUOVO si sceglie (`onSelectProcedimento`,
+   * sotto) — mai quando lo stesso resta aperto, altrimenti ogni ridisegno perderebbe le risposte
+   * già scritte.
+   */
+  const [fuocoProcedimento, setFuocoProcedimentoStato] = useState(0);
+  const [risposteProcedimento, setRisposteProcedimento] = useState<Record<number, { auditor: string; pc: string }>>({});
+  const risposteProcedimentoRef = useRef(risposteProcedimento); risposteProcedimentoRef.current = risposteProcedimento;
+  const domandeLoggateRef = useRef<Set<number>>(new Set());
+  /** Scrive nel Giornale le risposte accumulate per UN comando — sempre DUE righe separate
+   *  quando esistono entrambe, mai fuse: la trascrizione del PC così com'è arrivata, poi quella
+   *  che l'auditor ha scritto a mano — marcata esplicitamente come tale, per non confonderla
+   *  con una battuta vera del preclear rileggendo il Giornale o il rapporto PDF. */
+  const committaRispostaProcedimento = useCallback((indice: number) => {
+    const r = risposteProcedimentoRef.current[indice];
+    if (!r) return;
+    if (r.pc.trim()) journal.addLog({ speaker: 'PC', text: r.pc.trim(), time: sessionClock.now() });
+    if (r.auditor.trim()) {
+      journal.addLog({
+        speaker: 'Aud', type: 'highlight', time: sessionClock.now(),
+        text: LC('↳ risposta del PC (scritta dall\'auditor): ', '↳ réponse du PC (écrite par l\'auditeur) : ',
+                  '↳ PC\'s response (typed by the auditor): ', '↳ respuesta del PC (escrita por el auditor): ',
+                  '↳ PC:s svar (skrivet av auditören): ') + r.auditor.trim(),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [journal]);
+  /**
+   * Sposta il fuoco fra i comandi del procedimento — MAI un `setFuocoProcedimento` diretto
+   * altrove: passando da un comando all'altro si COMMITTA prima la sua risposta (se c'è
+   * qualcosa da scrivere), altrimenti lasciarlo silenzioso finché il procedimento non si
+   * chiude terrebbe le risposte intermedie fuori dal Giornale fino all'ultimo comando.
+   *
+   * ⚠️ BUG TROVATO verificando dal vivo — la riga di commit compariva DUE VOLTE nel Giornale.
+   * Causa: `committaRispostaProcedimento` (un EFFETTO — scrive nel Giornale) viveva dentro
+   * l'updater funzionale di `setFuocoProcedimentoStato`. React può richiamare un updater più
+   * di una volta per lo stesso aggiornamento (StrictMode in sviluppo lo fa apposta, per
+   * scovare esattamente questo: un effetto che non dovrebbe stare lì) — un secondo richiamo
+   * scriveva la stessa riga una seconda volta. `fuocoProcedimento` letto DIRETTAMENTE dalla
+   * chiusura (non da dentro l'updater) e il commit spostato FUORI, prima di `setState`: un
+   * gesto dell'auditor (il clic), non un ricalcolo di stato che React possa ripetere.
+   */
+  const impostaFuocoProcedimento = useCallback((indice: number) => {
+    if (indice !== fuocoProcedimento) committaRispostaProcedimento(fuocoProcedimento);
+    setFuocoProcedimentoStato(indice);
+  }, [fuocoProcedimento, committaRispostaProcedimento]);
+  /** La prima volta che l'auditor apre lo spazio risposta di un comando (schiaccia/si posiziona
+   *  su di esso — v. la richiesta), la SUA domanda entra nel Giornale. Una volta sola per
+   *  comando: tornarci sopra una seconda volta non deve ripeterla. */
+  const apriRispostaProcedimento = useCallback((indice: number) => {
+    if (domandeLoggateRef.current.has(indice)) return;
+    domandeLoggateRef.current.add(indice);
+    const comando = procedimentoAttivo?.comandi[indice];
+    if (!comando) return;
+    journal.addLog({ speaker: 'Aud', text: comando.testo, time: sessionClock.now() });
+  }, [journal, procedimentoAttivo]);
+  const scriviRispostaProcedimento = useCallback((indice: number, valore: string) => {
+    setRisposteProcedimento(prev => ({
+      ...prev, [indice]: { auditor: valore, pc: prev[indice]?.pc ?? '' },
+    }));
+  }, []);
   useEffect(() => {
     listaProcedimenti().then(setProcedimenti);
   }, [processusAperto]);
@@ -755,7 +832,28 @@ export default function Serenity() {
   }, [wallpaperUrl]);
   const remote = useRemoteSession({
     lang,
-    onTrascrizione: testo => journal.addLog({ speaker: 'PC', text: testo, time: sessionClock.now() }),
+    // ⚠️ CORRETTO — segnalato: « includi la risposta verbale del PC (riconoscimento vocale)
+    // nello spazio della domanda a fuoco ». Con un procedimento aperto, la trascrizione non va
+    // più SUBITO nel Giornale: si accumula nella risposta del comando A FUOCO adesso
+    // (`fuocoProcedimento`), e sarà `committaRispostaProcedimento` a scriverla — una volta sola,
+    // quando l'auditor passa al comando successivo o chiude — altrimenti la STESSA frase
+    // finirebbe nel Giornale due volte (qui, subito; e di nuovo al commit). Senza procedimento
+    // aperto, il comportamento di sempre: una conversazione a distanza normale, riga per riga.
+    // ⚠️ `procedimentoAttivo`/`fuocoProcedimento` DIRETTI, non un ref — `useRemoteSession`
+    // rispecchia già questa funzione in un ref ad OGNI render (`onTrascrizioneRef.current =
+    // opts.onTrascrizione`, senza array di dipendenze): la chiusura qui è già quella
+    // dell'ultimo render, un secondo specchio sarebbe ridondante.
+    onTrascrizione: testo => {
+      if (procedimentoAttivo) {
+        setRisposteProcedimento(prev => {
+          const attuale = prev[fuocoProcedimento];
+          const pc = attuale?.pc ? `${attuale.pc} ${testo}` : testo;
+          return { ...prev, [fuocoProcedimento]: { auditor: attuale?.auditor ?? '', pc } };
+        });
+      } else {
+        journal.addLog({ speaker: 'PC', text: testo, time: sessionClock.now() });
+      }
+    },
   });
 
   // L'orologio è QUELLO DI EQUILIBRIUM: `sessionClock` è un modulo unico, e conta i secondi
@@ -4749,7 +4847,13 @@ export default function Serenity() {
             onClose={() => setProcessusAperto(false)}
             t={k => t(k as never) as string}
             procedimenti={procedimenti}
-            onSelectProcedimento={p => { setProcedimentoAttivo(p); setProcessusAperto(false); }}
+            onSelectProcedimento={p => {
+              // ⚠️ AGGIUNTO — un procedimento NUOVO riparte pulito: fuoco al primo comando,
+              // nessuna risposta/domanda ereditata da un giro precedente (anche con lo STESSO
+              // procedimento riaperto — v. la nota grande sulle tre variabili, sopra).
+              setProcedimentoAttivo(p); setProcessusAperto(false);
+              setFuocoProcedimentoStato(0); setRisposteProcedimento({}); domandeLoggateRef.current.clear();
+            }}
             onApriCartellaProcedimenti={() => { apriCartellaProcedimenti(); }}
             soloComandi={processusSoloComandi}
           />
@@ -6299,7 +6403,17 @@ export default function Serenity() {
         {(procedimentoAttivo || !senzaMisura) && (
           procedimentoAttivo
             ? <PistaProcedimento nome={procedimentoAttivo.nome} comandi={procedimentoAttivo.comandi}
-                onChiudi={() => setProcedimentoAttivo(null)} lang={lang} />
+                onChiudi={() => {
+                  // ⚠️ AGGIUNTO — chiudere non deve perdere l'ultima risposta rimasta aperta:
+                  // stesso commit che avviene passando a un altro comando (v.
+                  // `impostaFuocoProcedimento`), qui per il comando su cui si stava quando si
+                  // preme CHIUDI.
+                  committaRispostaProcedimento(fuocoProcedimento);
+                  setProcedimentoAttivo(null);
+                }} lang={lang}
+                fuoco={fuocoProcedimento} onImpostaFuoco={impostaFuocoProcedimento}
+                risposte={risposteProcedimento} onScriviRisposta={scriviRispostaProcedimento}
+                onApriRisposta={apriRispostaProcedimento} />
             : <PistaCiclo mode={mode} phase={faseCiclo} lang={lang}
                 item={item} setItem={setItemManuale} itemPlaceholder={t('ser_item_placeholder') as string}
                 spiegazione={spiegazioneCiclo} onDichiaraDetto={dichiaraItemDetto}>

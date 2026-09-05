@@ -10194,3 +10194,26 @@ Segnalato: « è possibile creare una versione per Windows? ». Poi, in risposta
 - NUOVI: `scripts/make-ico.cjs`, `build/icon.ico`, `build/icon-serenity.ico`, `docs/build-windows.md`
 
 **Build**: SERENITY 3.0.266 + EQUILIBRIUM 2.0.278 (macOS, per verifica — nessuna build Windows eseguibile da questa macchina), entrambe spedite.
+
+## Giro — 2026-09-05 (continuazione) — COMMANDS: uno spazio risposta accanto a ogni domanda
+
+Segnalato: « quando abbiamo i comandi allo schermo, ad ogni domanda, potresti far apparire accanto uno spazio per scrivere la risposta dell'auditor / includere la risposta verbale del PC (riconoscimento vocale) ». Flusso descritto: si apre un procedimento, si clicca/ci si posiziona sulla risposta → la domanda entra nel Giornale; l'auditor scrive a mano o la trascrizione del PC riempie da sola lo spazio; la trascrizione in corsivo grigio chiaro, la scrittura dell'auditor in nero (bianco in dark), non corsivo; l'auditor è prioritario ma nel Giornale finiscono ENTRAMBI i testi, etichettati.
+
+**Verificato prima di scrivere codice — il limite reale**: `useVoiceItem.ts` (SERENITY) trascrive SOLO la voce dell'AUDITOR, dichiaratamente ("SERENITY è sempre l'auditor in locale"). La trascrizione con `speaker:'PC'` esiste già nel Giornale ma arriva SOLO da `useRemoteSession`/`onTrascrizione` — cioè da un dispositivo CONNESSO (a distanza, o un telefono nella stessa stanza — la modalità SATELLITE). Verificato che SERENITY porta `remote = useRemoteSession(...)` (la parte che RICEVE funziona già) ma non ha `satelliteMode` (`() => false`, fisso — mai implementato qui, a differenza di EQUILIBRIUM che ce l'ha per intero) né alcuna UI per generare un link/QR e far entrare un telefono nella seduta. Confermato dall'utente: esiste già nel protocollo di EQUILIBRIUM, manca in SERENITY — resta un pezzo SEPARATO, più grosso, rimandato a un giro dedicato.
+
+**Costruito questo giro** (funziona SUBITO per chi ha già una seduta a distanza connessa; per le sedute in presenza, l'auditor scrive a mano finché la modalità satellite non sarà portata anche qui):
+- Il fuoco del comando in `PistaProcedimento.tsx` è salito a `Serenity.tsx` (`fuocoProcedimento`) — prima uno `useState` interno, ora la trascrizione in arrivo deve sapere su quale comando scrivere.
+- `risposteProcedimento: Record<indice, {auditor, pc}>` — le DUE risposte, mai fuse: il Giornale deve poterle scrivere entrambe, etichettate separatamente.
+- Uno spazio risposta (`<input>`) compare SOLO sul comando a fuoco, sotto le note — se l'auditor non ha ancora scritto nulla, mostra la trascrizione del PC in corsivo `--s-ink-faint`; appena l'auditor digita, il campo passa a `--s-ink` (nero/bianco secondo tema), non corsivo — e da quel momento è la SUA versione a contare.
+- La domanda entra nel Giornale (`speaker:'Aud'`) al primo `onFocus` del campo risposta — una volta sola per comando (`domandeLoggateRef`).
+- Passando a un altro comando (clic, rotellina, frecce) o chiudendo il procedimento, le risposte accumulate si "committano" nel Giornale: la trascrizione del PC così com'è arrivata (`speaker:'PC'`), e se l'auditor ha scritto qualcosa, una riga SEPARATA (`speaker:'Aud'`, `type:'highlight'`) con un prefisso esplicito (« ↳ risposta del PC (scritta dall'auditor): ») — leggibile senza ambiguità nel Giornale o nel rapporto PDF.
+
+**Bug trovato E corretto verificando dal vivo**: la riga di commit compariva DUE VOLTE. Causa: la funzione che scrive nel Giornale viveva dentro l'updater funzionale di `setFuocoProcedimentoStato` — React può richiamare un updater più di una volta per lo stesso aggiornamento (visto qui, in sviluppo), e un secondo richiamo duplicava la riga. Spostato il commit FUORI dall'updater, in un gesto letto direttamente dalla chiusura — non più un effetto dentro un ricalcolo di stato che React può ripetere.
+
+**Verificato dal vivo** (con un `electronAPI.listProcedimenti` finto, dato che i procedimenti richiedono il filesystem reale): selezionato un procedimento di prova, aperta la risposta del primo comando (Giornale 2→3 righe, la domanda), scritto un testo (stile nero/non corsivo confermato via `getComputedStyle`), passato al comando successivo (Giornale 3→4, non più 3→5 dopo la correzione del duplicato).
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato — un nuovo warning introdotto e tolto nello stesso giro, spostando `LC` fuori dalle dipendenze con lo stesso `eslint-disable-next-line` già in uso altrove in questo file), `npx vitest run` 724/724 verdi.
+
+**File toccati (SOLO SERENITY, nessun file condiviso — build unica)**: `src/serenity/Serenity.tsx`, `src/serenity/PistaProcedimento.tsx`
+
+**Build**: SERENITY 3.0.267.
