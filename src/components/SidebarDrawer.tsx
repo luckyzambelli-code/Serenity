@@ -12,6 +12,8 @@ import { useLayoutStore } from '../store/layoutStore';
 import { importWallpaper } from '../lib/wallpaperImport';
 import { TOKEN } from '../ui/tokens';
 import { LAYER } from "../ui/layers";
+import { pick5 } from '../i18n5';
+import { taAccumulator } from '../engine/TaAccumulator';
 
 export type DrawerKey = 'link' | 'auditor' | 'pc' | 'trim' | 'session' | 'lang' | 'config';
 
@@ -508,7 +510,7 @@ function TrimDrawer({ needleTrim, setNeedleTrim, needleInertia, setNeedleInertia
                      thetaSensTrim = 0, setThetaSensTrim, thetaConnected = false, museConnected = false,
                      thetaConfig = 'two-cans', setThetaConfig, thetaAddPoint,
                      thetaTaNow = null, onOpenThetaTester,
-                     t, theme }: SubProps) {
+                     t, theme, lang }: SubProps) {
   const { titleColor, labelColor, inputBg, inputBorder } = theme;
   /** Il TA che il Theta-Meter mostra ADESSO, digitato per il confronto affiancato. */
   const [rifTa, setRifTa] = React.useState('');
@@ -678,6 +680,33 @@ function TrimDrawer({ needleTrim, setNeedleTrim, needleInertia, setNeedleInertia
                 {t('theta_ref_apply')}
               </button>
             </div>
+            {/* ⚠️ AGGIUNTO — segnalato: « perché non si scrive il TA del MUSE corrispondente...
+                quando ho registrato la misura del Theta-Meter? ». Un punto solo non basta a
+                tarare (due incognite, un punto solo è indeterminato — v. `fitGainSpan`,
+                `TaAccumulator.ts`): restava silenzioso, sembrava che il clic non avesse fatto
+                niente. Stesso avviso di `PannelloMeter.tsx` (SERENITY), qui nella lingua
+                dell'app invece delle chiavi condivise — testo nuovo, non toccare `i18n.tsx`
+                per un pannello EXPERT di un solo posto. */}
+            {(() => {
+              const nPunti = taAccumulator.getCalibrationPoints().length;
+              if (nPunti === 0) return null;
+              return (
+                <div style={{ marginTop: 6, fontSize: 9, lineHeight: 1.4,
+                              color: nPunti === 1 ? TOKEN.warn : '#34d399' }}>
+                  {nPunti === 1
+                    ? pick5(lang, '1 punto registrato per il TA del MUSE — serve un secondo, a una resistenza diversa, prima che la taratura scatti',
+                        '1 point enregistré pour le TA du MUSE — il en faut un second, à une résistance différente, avant que l\'étalonnage ne démarre',
+                        '1 point recorded for the MUSE TA — a second one, at a different resistance, is needed before the calibration kicks in',
+                        '1 punto registrado para el TA del MUSE — hace falta un segundo, a una resistencia distinta, antes de que el calibrado arranque',
+                        '1 punkt registrerad för MUSE-TA — det behövs en till, vid ett annat motstånd, innan kalibreringen slår till')
+                    : pick5(lang, `${nPunti} punti per il TA del MUSE — taratura attiva`,
+                        `${nPunti} points pour le TA du MUSE — étalonnage actif`,
+                        `${nPunti} points for the MUSE TA — calibration active`,
+                        `${nPunti} puntos para el TA del MUSE — calibrado activo`,
+                        `${nPunti} punkter för MUSE-TA — kalibrering aktiv`)}
+                </div>
+              );
+            })()}
           </div>
 
           {/* L'artefatto è uno strumento da laboratorio: dietro un bottone, per non mettere

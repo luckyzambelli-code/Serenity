@@ -10128,3 +10128,29 @@ Aggiunti anche `getCalibrationPoints()` e `clearCalibration()` (fabbrica, senza 
 - NUOVO: `src/engine/__tests__/TaAccumulator.test.ts`
 
 **Build**: SERENITY 3.0.263 + EQUILIBRIUM 2.0.275, entrambe spedite.
+
+## Giro — 2026-09-05 (continuazione) — DUE per default con due strumenti, avviso "serve un secondo punto", dizionario nella lingua della sessione
+
+Tre richieste separate.
+
+### 1. Con due strumenti collegati, la vista dell'ago non partiva su "DUE"
+
+Segnalato: « quando hai due strumenti collegati, devi per default indicare DEUX nella visualizzazione AGO ».
+
+**Verifica**: EQUILIBRIUM ha già ESATTAMENTE questo effetto (« CON DUE STRUMENTI SI PARTE DA "DUE" », commento suo) — mai portato in SERENITY. Porta lo stesso identico meccanismo: un `useEffect` con una guardia (`dueGiaImpostatoRef`) che scatta una sola volta per collegamento, quando sia MUSE sia METER risultano connessi insieme, e MAI contro una scelta già fatta dall'auditor nella stessa seduta.
+
+### 2. Avviso "serve un secondo punto" per il MUSE TA
+
+Seguito diretto della domanda: « perché non si scrive il TA del MUSE corrispondente... quando ho registrato la misura del Theta-Meter? ». Risposta: un punto solo non basta matematicamente (due incognite, `fitGainSpan` — v. il giro precedente). Aggiunto un piccolo avviso, in entrambe le app, sotto il bottone di registrazione: con 1 punto dice che ne serve un secondo a una resistenza diversa; con 2+ conferma che la taratura è attiva.
+
+### 3. Il dizionario si apriva sempre in inglese, mai nella lingua della sessione
+
+Segnalato: « quando siamo in sessione e si apre il dizionario, seleziona automaticamente sulla lingua della sessione ». Prima sempre l'inglese (una scelta esplicita di un giro precedente, mai più tolta) qualunque fosse la lingua di SERENITY in quel momento. Ora la scheda di apertura segue `lang` quando esiste un dizionario per quella lingua (italiano/francese/spagnolo); l'inglese resta il fallback — per l'inglese stesso, e per lo svedese, che non ha un proprio dizionario. L'ordine fisso delle schede (inglese per primo, richiesto a parte) non cambia.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 724/724 verdi (nessun test nuovo — tre correzioni di comportamento UI, coperte dalla verifica dal vivo). Verificato dal vivo (SERENITY, IT): il dizionario si apre sulla scheda ITALIANO.
+
+**File toccati:**
+- SOLO SERENITY: `src/serenity/Serenity.tsx`, `src/serenity/PannelloMeter.tsx`, `src/serenity/DizionarioModal.tsx`
+- CONDIVISO: `src/components/SidebarDrawer.tsx` (avviso nel pannello TRIM di EQUILIBRIUM)
+
+**Build**: SERENITY 3.0.264 + EQUILIBRIUM 2.0.276, entrambe spedite.

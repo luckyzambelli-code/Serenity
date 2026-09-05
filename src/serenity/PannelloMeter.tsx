@@ -50,6 +50,7 @@ import { pick5 } from '../i18n5';
 import { compareReady, soloTaOffset } from '../engine/canTest';
 import type { useThetaMeter } from '../hooks/useThetaMeter';
 import type { ElectrodeConfig } from '../engine/thetaSetup';
+import { taAccumulator } from '../engine/TaAccumulator';
 
 const pillola = (piena: boolean): React.CSSProperties => ({
   cursor: 'pointer', borderRadius: 999, padding: '8px 18px',
@@ -533,6 +534,33 @@ export function PannelloMeter({ theta, provaTa, onFatto, passoIniziale }: {
               {t('theta_cal_record')}
             </button>
           </div>
+          {/* ⚠️ AGGIUNTO — segnalato: « perché non si scrive il TA del MUSE corrispondente...
+              quando ho registrato la misura del Theta-Meter? ». Un solo punto non basta a
+              tarare (v. `fitGainSpan`, `TaAccumulator.ts`: due incognite, un punto solo è
+              indeterminato) — restava silenzioso, e sembrava che il primo clic non avesse
+              fatto niente. Letto a ogni render: `theta.addPointFromReference` fa scattare un
+              nuovo stato in `useThetaMeter`, e questo pannello lo riceve come prop — nessun
+              specchio da tenere aggiornato a parte. */}
+          {(() => {
+            const nPunti = taAccumulator.getCalibrationPoints().length;
+            if (nPunti === 0) return null;
+            return (
+              <div style={{ fontSize: 'var(--s-fs-sm)', textAlign: 'center',
+                            color: nPunti === 1 ? 'var(--s-reserve)' : 'var(--s-still)' }}>
+                {nPunti === 1
+                  ? LC('1 punto registrato per il MUSE TA — serve un secondo, a una resistenza diversa, prima che la taratura scatti',
+                       '1 point enregistré pour le TA du MUSE — il en faut un second, à une résistance différente, avant que l\'étalonnage ne démarre',
+                       '1 point recorded for the MUSE TA — a second one, at a different resistance, is needed before the calibration kicks in',
+                       '1 punto registrado para el TA del MUSE — hace falta un segundo, a una resistencia distinta, antes de que el calibrado arranque',
+                       '1 punkt registrerad för MUSE-TA — det behövs en till, vid ett annat motstånd, innan kalibreringen slår till')
+                  : LC(`${nPunti} punti per il MUSE TA — taratura attiva`,
+                       `${nPunti} points pour le TA du MUSE — étalonnage actif`,
+                       `${nPunti} points for the MUSE TA — calibration active`,
+                       `${nPunti} puntos para el TA del MUSE — calibrado activo`,
+                       `${nPunti} punkter för MUSE-TA — kalibrering aktiv`)}
+              </div>
+            );
+          })()}
           </div>
         </div>
       )}

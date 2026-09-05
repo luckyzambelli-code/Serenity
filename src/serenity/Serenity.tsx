@@ -1613,6 +1613,27 @@ export default function Serenity() {
    *  sempre uno solo, scelta del decimo giro), le sue REAZIONI in più. */
   const [reazioniViste, setReazioniViste] = useState<'eeg' | 'theta' | 'both'>('eeg');
   const museOk = muse.museConnection === 'connected';
+  /**
+   * ⚠️ AGGIUNTO — segnalato: « quando hai due strumenti collegati, devi per default indicare
+   * DEUX nella visualizzazione AGO ». App.tsx ha ESATTAMENTE questo effetto (« CON DUE
+   * STRUMENTI SI PARTE DA "DUE" », commento suo, mai portato qui): averli collegati tutti e
+   * due e vederne UNO SOLO nasconde metà di quel che si è preparato — il difetto giusto è
+   * mostrare tutto e lasciare che l'auditor restringa, non il contrario.
+   *
+   * Una volta sola per collegamento, e MAI contro una scelta già fatta: se l'auditor ha già
+   * toccato il selettore in questa seduta (o gli strumenti si scollegano e riconnettono), la
+   * sua scelta resta finché non tornano a scollegarsi entrambi — stessa guardia
+   * (`dueGiaImpostatoRef`) e stessa condizione (`museOk && meterC`, l'equivalente qui di
+   * `instruments.muse && instruments.theta`) di App.tsx, parola per parola. */
+  const dueGiaImpostatoRef = useRef(false);
+  useEffect(() => {
+    const dueStrumenti = museOk && meterC;
+    if (!dueStrumenti) { dueGiaImpostatoRef.current = false; return; }
+    if (dueGiaImpostatoRef.current) return;
+    dueGiaImpostatoRef.current = true;
+    setReazioniViste('both');
+    setAgoScelto('theta');
+  }, [museOk, meterC]);
   /** SERENITY non ha un selettore di modo persistente come App.tsx (`mode`): qui il TONE si
    *  "attiva" con un gesto diretto, esclusivo con CONTACT/NULL/MIRROR. Dichiarato QUI (non più
    *  giù, dove viveva prima) perché la logica dell'ago qui sotto ne ha bisogno. */

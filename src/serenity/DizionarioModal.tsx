@@ -96,10 +96,18 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
   // copertura si allarga a ogni giro successivo.
   const [vociFr, setVociFr] = useState<Voce[]>([]);
   const [vociEs, setVociEs] = useState<Voce[]>([]);
-  // ⚠️ INGLESE PER DEFAULT — segnalato. La ricerca bilingue (italiano che confronta anche
-  // `termineEn`) resta invariata su TUTTE le schede: qui cambia solo quale si vede aprendo il
-  // pannello, non la logica di ricerca.
-  const [lingua, setLingua] = useState<'it' | 'en' | 'fr' | 'es'>('en');
+  // ⚠️ CORRETTO — segnalato: « quando siamo in sessione e si apre il dizionario, seleziona
+  // automaticamente sulla lingua della sessione ». Prima sempre l'inglese (« INGLESE PER
+  // DEFAULT », la scelta di un giro precedente) qualunque fosse la lingua di SERENITY in
+  // quel momento — chi lavora in italiano o in francese doveva cambiare scheda a mano ogni
+  // volta. Ora la scheda di apertura segue `lang` (la lingua della sessione, la stessa che
+  // guida `LC` qui sopra) quando esiste un dizionario per lei; l'inglese resta il fallback —
+  // per l'inglese stesso, e per lo svedese, che non ha un proprio dizionario qui (solo
+  // it/en/fr/es, mai stato tradotto in cinque lingue come i menù). La ricerca bilingue
+  // (italiano che confronta anche `termineEn`) resta invariata su TUTTE le schede: qui cambia
+  // solo quale si vede aprendo il pannello, non la logica di ricerca.
+  const [lingua, setLingua] = useState<'it' | 'en' | 'fr' | 'es'>(() =>
+    lang === 'it' || lang === 'fr' || lang === 'es' ? lang : 'en');
   const [ricerca, setRicerca] = useState('');
   // ⚠️ AGGIUNTA — segnalato: « puoi mettere una ricerca anche via lettera dell'alfabeto ».
   // Alternativa al campo di testo, non insieme a lui (le due ricerche si annullano a vicenda
@@ -249,9 +257,10 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
               sopra il colore del fondo" (v. tokens.css). */}
           <div style={{ display: 'flex', borderRadius: 999, overflow: 'hidden', border: '1px solid var(--s-ink-ghost)' }}>
             {/* ⚠️ INGLESE PRIMA — segnalato: « posiziona il bottone INGLESE per primo nei
-                dizionari ». Stesso ordine dell'INGLESE già scelto come lingua di default
-                all'apertura (v. `lingua`, sopra) — ora anche la prima scheda da sinistra lo
-                riflette, non solo quale scheda parte selezionata. */}
+                dizionari ». Un ordine FISSO delle schede, indipendente da quale parte
+                selezionata all'apertura (v. `lingua`, sopra — ora segue la lingua della
+                sessione, non più sempre l'inglese): l'inglese resta la prima scheda da
+                sinistra comunque, anche in una sessione che si apre su un'altra lingua. */}
             {(['en', 'it', 'fr', 'es'] as const).map(l => (
               <button key={l} onClick={() => { setLingua(l); setEspanso(null); setLetteraFiltro(null); }}
                 style={{
