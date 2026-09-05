@@ -9848,3 +9848,22 @@ Cluster principali:
 **File toccati — SOLO SERENITY (dati):**
 - `public/dizionario/dizionario-fr.json`
 - `public/dizionario/dizionario-es.json`
+
+## Giro — 2026-09-05 — dizionario: quarantottesimo blocco, 2400/2541 voci (94,5%) — traguardo delle 2400 voci
+
+**Blocco 48 (indici 2350-2399)**, FR+ES, 50 voci ciascuna lingua. Termini coperti: da TONE a TRIO.
+
+Cluster principali:
+- **TONE ARM cluster**: TONE, TONE ARM (5 definizioni), TONE ARM ACTION, TONE ARM BLOWDOWN, TONE ARM COUNTER, TONE ARM MOTION.
+- **TONE 40 cluster**: TONE FOUR (con TONE 40 incorporato, 4 definizioni), TONE 40 AUDITING, TONE 40 BOOK AND BOTTLE, TONE 40 COMMAND, TONE 40 8-C.
+- **TONE SCALE**: la voce più estesa del blocco, 7 definizioni numerate sulla scala dei toni, fondamento dell'intera teoria emozionale di Dianetics/Scn.
+- **TR cluster (molto ampio — l'intera serie storica dei Training Routines)**: TR (definizione generale), TR-0 (con TR-1 incorporato, "Dear Alice"), TR-2, TR-3, TR-4, TR-5 (con l'esercizio "Hand Mimicry"), TR-5N, TR-6, TR-7, TR-8, TR-9, TR-10, TR-101, TR-102 ("Auditing a Doll"), TR-103, TR-104.
+- **TOTAL cluster**: TOTAL FREEDOM, TOTAL KNOWINGNESS, TOTAL POWER, TOUCH, TOUCH ASSIST, TOUGH CASE.
+- **TRACTOR/TRAINING cluster**: TRACK, TRACTOR BEAM (4 definizioni), TRACTOR RIDGE, TRAINED SCIENTOLOGIST, TRAINING, TRAINING PATTERN.
+- **TRANSFERENCE/TRAP cluster**: TRANSFERENCE, TRANSGRESSION, TRANS-ORBITAL LEUCOTOMY (con la descrizione storica dell'intervento chirurgico), TRANSPOSITION, TRAP (3 definizioni), TRAVELING RR, TRIO (il predecessore del Terrible Trio, con rimando incrociato).
+
+**Verifica:** dati JSON puri — validati con `json.load` prima e dopo il merge (50/50 per lingua, totale 2400/2400 coerente in entrambi i file). `tsc`/`lint`/`vitest` non ri-eseguiti (nessun file TSX toccato in questo giro).
+
+**File toccati — SOLO SERENITY (dati):**
+- `public/dizionario/dizionario-fr.json`
+- `public/dizionario/dizionario-es.json`
