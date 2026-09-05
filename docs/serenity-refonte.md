@@ -9772,3 +9772,23 @@ Cluster principali:
 **File toccati — SOLO SERENITY (dati):**
 - `public/dizionario/dizionario-fr.json`
 - `public/dizionario/dizionario-es.json`
+
+## Giro — 2026-09-05 — dizionario: quarantaquattresimo blocco, 2200/2541 voci (86,6%) — traguardo delle 2200 voci
+
+**Blocco 44 (indici 2150-2199)**, FR+ES, 50 voci ciascuna lingua. Termini coperti: da SPACATION a STOP SUPREME.
+
+Cluster principali:
+- **SPACE cluster**: SPACATION (4 definizioni), SPACE (5 definizioni sulla nozione cardine di spazio-punto di vista), SPACE OPERA.
+- **SPECTRUM/SPEECH/SPIRIT**: SPECTRUM, SPECTRUM PRINCIPLE, SPEECH, SPERM DREAM, SPHERES OF INTEREST, SPINNER/SPINNINESS/SPINNING, SPIRALS, SPIRIT.
+- **SPOT cluster**: SPOT, SPOTTING SPOTS (il celebre procedimento locazionale del "puntare punti nello spazio").
+- **SQUIRREL cluster**: SQUIRREL, SQUIRRELLING — la terminologia gergale sulle pratiche non-standard.
+- **STABLE DATUM / STAGE cluster**: STABLE DATUM (con rimando a DOCTRINE OF THE STABLE DATUM), STAGE FOUR NEEDLE, STAGES OF RELEASE (la voce più estesa del blocco: i cinque Stadi di Release da First a Fifth, con le rispettive formule tecniche R6/GPMI).
+- **STANDARD cluster**: STANDARD, STANDARD AUDITING CYCLE, STANDARD DIANETICS, STANDARD MEMORY BANKS (3 definizioni), STANDARD PATTERN OF A TRACK, STANDARD TECH (troncata a fine voce nel sorgente inglese — riprodotta fedelmente).
+- **STATE OF CASE SCALE**: la seconda voce più estesa, l'intera scala degli 8 livelli di stato del caso con le rispettive descrizioni cliniche.
+- **STATES OF RELEASE, STATIC, STEERING THE PC, STEP V/SIX/6 SOP-8C, STICKY/STILL TA, STIMULUS-RESPONSE, STOP/STOPPED READ/STOP SUPREME**.
+
+**Verifica:** dati JSON puri — validati con `json.load` prima e dopo il merge (50/50 per lingua, totale 2200/2200 coerente in entrambi i file). `tsc`/`lint`/`vitest` non ri-eseguiti (nessun file TSX toccato in questo giro).
+
+**File toccati — SOLO SERENITY (dati):**
+- `public/dizionario/dizionario-fr.json`
+- `public/dizionario/dizionario-es.json`
