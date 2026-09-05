@@ -438,6 +438,33 @@ export function useToneCycle(d: ToneCycleDeps) {
     toneTaAtStartRef.current = null; toneQAtStartRef.current = null;
     toneHighRef.current = null; taSmoothRef.current = null;   // niente "punto più alto" residuo
     toneCandidateRef.current = null;   // né un candidato in prova rimasto a metà
+    /**
+     * ⚠️ AGGIUNTO — BUG TROVATO, segnalato dal vivo: « senza misure, vedo che la scala del
+     * tono resta [al valore vecchio]. Poi il ciclo comincia PORTA A TONO QUARANTA ». Causa:
+     * `toneAssessed` — la dichiarazione manuale (PC + obnosi dell'auditor) quando non c'è
+     * strumento — non veniva MAI svuotata qui, solo l'item lo era (la nota di `Serenity.tsx`
+     * lo diceva già: « toneAssessed non viene mai svuotato da resetTone(), solo l'item lo è »).
+     *
+     * SERENITY non lo vedeva perché ha una PROPRIA toppa locale al chiamante (`altra
+     * resistenza`, `setToneAssessed(0)` + `correggiToneAtStart(0)`, subito dopo aver richiamato
+     * questa funzione) — ma quella toppa vive in UN SOLO gesto di UNA SOLA app: il gesto
+     * equivalente in EQUILIBRIUM (« altra resistenza »/annulla, App.tsx) chiama solo
+     * `resetTone()` e basta, senza saperlo. Il valore stale ci restava sopra, silenzioso: la
+     * tendina di scelta del tono (locabile && !toneHasMeter, App.tsx) mostrava ancora l'ULTIMA
+     * resistenza scelta, e un clic su "DAI L'ITEM" senza toccarla ripartiva da lì — una
+     * resistenza nuova che eredita il tono di quella appena chiusa.
+     *
+     * Il rimedio giusto è QUI, non un'altra toppa nel chiamante che ha già dimenticato una
+     * volta: `resetTone()` è l'UNICO punto che sia SERENITY sia EQUILIBRIUM chiamano per dire
+     * «si passa a un'altra resistenza» — azzerarlo qui vale per entrambi, per sempre, anche per
+     * gesti futuri che non sono ancora stati scritti. Il caso di SERENITY resta corretto lo
+     * stesso (stessa idempotenza già usata altrove: scrivere 0 due volte non fa danno), e la sua
+     * toppa locale resta — serve ANCORA per il caso, suo soltanto, di `localizzaTone()`
+     * chiamata nello STESSO gesto sincrono subito dopo (v. la nota grande lì, `appenaResettato`):
+     * quella richiede comunque la correzione esplicita di `toneAtStart` via
+     * `correggiToneAtStart`, che questo `resetTone()` da solo non può anticipare.
+     */
+    setToneAssessed(0);
     setToneRipetizioni(0);   // il conto è di QUESTA resistenza, e la resistenza cambia.
     // Il campo si svuota: una resistenza nuova non porta l'etichetta di quella di prima.
     d.setAuditingQuestion('');

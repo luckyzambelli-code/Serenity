@@ -10055,3 +10055,20 @@ Ripreso dalla discussione sulla proposta di rifare il calcolo del Tono a partire
 - SOLO SERENITY: `src/serenity/Serenity.tsx`
 
 **Build**: SERENITY 3.0.260 + EQUILIBRIUM 2.0.272, entrambe spedite.
+
+## Giro — 2026-09-05 (continuazione) — BUG CORRETTO: il tono dichiarato restava appiccicato fra una resistenza e l'altra
+
+Segnalato dal vivo, appena dopo la spedizione del giro precedente: « senza misure, vedo che la scala del Tono resta a +40. Poi il ciclo comincia PORTA QUESTO A TONO QUARANTA, ma la fase prima l'hai tolta??? ».
+
+**Causa, trovata riproducendo dal vivo in entrambe le app**: `toneAssessed` — la dichiarazione manuale (PC + obnosi dell'auditor) usata quando non c'è strumento — non veniva MAI svuotata da `resetTone()` (`useToneCycle.ts`, condiviso), solo l'item lo era. La cosa era già nota e corretta UNA volta, ma solo localmente: SERENITY porta da tempo una toppa propria nel gesto "altra resistenza" (`tone.setToneAssessed(0)` + `correggiToneAtStart(0)`, commentata a lungo sul posto) — il gesto equivalente in EQUILIBRIUM (bottone "ANNULLA"/altra resistenza) chiama solo `resetTone()` e non ha mai ricevuto la stessa toppa. Risultato: in EQUILIBRIUM, dopo aver dichiarato un tono la prima volta, ogni resistenza successiva ripartiva silenziosamente dall'ULTIMO valore scelto (o raggiunto) — la tendina `<select>` mostrava ancora quel numero, e un clic su "DAI L'ITEM" senza toccarla localizzava la nuova resistenza sul tono vecchio.
+
+**Correzione**: `resetTone()` stesso azzera ora `toneAssessed` a 0 — non un'altra toppa nel chiamante (che si era già dimostrata dimenticabile), ma il punto UNICO che entrambe le app chiamano per dire "si passa a un'altra resistenza". La toppa locale di SERENITY resta: serve ancora per il suo caso specifico (arma+localizza nello stesso click sincrono, dove la correzione di `toneAtStart` non può aspettare il render successivo) — nessun danno a scriverlo a 0 due volte.
+
+**Verificato dal vivo, EQUILIBRIUM**: dichiarato +9 · Simpatia → portato a tono 40 → "altra resistenza" → la tendina torna correttamente a "0 · Morte del corpo", non più a +9 né a +40.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 715/715 verdi (nessun test toccato, comportamento già coperto indirettamente).
+
+**File toccati:**
+- CONDIVISO: `src/session/useToneCycle.ts` (unico file toccato)
+
+**Build**: SERENITY 3.0.261 + EQUILIBRIUM 2.0.273, entrambe spedite.
