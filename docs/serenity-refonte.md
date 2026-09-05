@@ -9792,3 +9792,23 @@ Cluster principali:
 **File toccati — SOLO SERENITY (dati):**
 - `public/dizionario/dizionario-fr.json`
 - `public/dizionario/dizionario-es.json`
+
+## Giro — 2026-09-05 — dizionario: quarantacinquesimo blocco, 2250/2541 voci (88,5%) — build 3.0.250
+
+**Blocco 45 (indici 2200-2249)**, FR+ES, 50 voci ciascuna lingua. Termini coperti: da STRAIGHT LINE MEMORY a SUPPRESSIVE GROUPS.
+
+Cluster principali:
+- **STRAIGHTWIRE cluster**: STRAIGHT LINE MEMORY, STRAIGHT MEMORY, STRAIGHTWIRE (5 definizioni sulla tecnica cardine della memoria diretta), STRAY RI, STRESS ANALYSIS, STRIPPING.
+- **STUCK cluster (ampio)**: STUCK FLOW, STUCK IN A WIN, STUCK IN PRESENT TIME, STUCK IN THE PAST, STUCK NEEDLE, STUCK ON THE TRACK, STUCK PICTURE — l'intera famiglia dei fenomeni di "blocco" in Dianetics/Scn.
+- **STUDENT cluster**: STUDENT, STUDENT AUDITOR, STUDENT FOLDER, STUDENT HAT, STUDENT RESCUE INTENSIVE (con anomalia OCR: la definizione si interrompe su "(LRH" e la voce successiva del sorgente, etichettata "ED 57 INT", ne contiene il seguito — riprodotta fedelmente in FR/ES), STUDENTS' RABBLE ROUSE LINE.
+- **STUDY cluster**: STUDY, STUDY CORRECTION LIST, STUDY STRESS ANALYSIS, STUPIDITY.
+- **SUBJECTIVE cluster**: SUB-ITSA (con SUBJECTIVE incorporato come definizione da dizionario standard), SUBJECTIVE CONFRONT PROCESSES, SUBJECTIVE DUB-IN, SUBJECTIVE ENVIRONMENT, SUBJECTIVE HAVINGNESS, SUBJECTIVE PROCESSES (5 definizioni).
+- **SUCCESS/SUCCUMB/SUICIDE**: SUCCESS STORY, SUCCUMB (4 definizioni), SUICIDE.
+- **SUPER-LITERATE/SUPERVISOR cluster**: SUPER-LITERATE, SUPERSTITION, SUPERVISOR (la lunga descrizione del ruolo del supervisor di corso, "NOT an instructor"), SUPERVISOR CHECKOUT, SUPERVISOR'S DUTY.
+- **SUPPRESS/SUPPRESSIVE cluster**: SUPPRESS, SUPPRESSED LIST, SUPPRESSION, SUPPRESSIVE ACTS, SUPPRESSIVE GROUPS — apertura della grande famiglia terminologica sulla soppressione, che proseguirà nei prossimi blocchi.
+
+**Verifica:** dati JSON puri — validati con `json.load` prima e dopo il merge (50/50 per lingua, totale 2250/2250 coerente in entrambi i file). `tsc`/`lint`/`vitest` non ri-eseguiti (nessun file TSX toccato in questo giro).
+
+**File toccati — SOLO SERENITY (dati):**
+- `public/dizionario/dizionario-fr.json`
+- `public/dizionario/dizionario-es.json`
