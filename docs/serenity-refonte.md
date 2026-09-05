@@ -9867,3 +9867,25 @@ Cluster principali:
 **File toccati — SOLO SERENITY (dati):**
 - `public/dizionario/dizionario-fr.json`
 - `public/dizionario/dizionario-es.json`
+
+## Giro — 2026-09-05 — dizionario: quarantanovesimo blocco, 2450/2541 voci (96,4%)
+
+**Blocco 49 (indici 2400-2449)**, FR+ES, 50 voci ciascuna lingua. Termini coperti: da TRIPLE FLOWS a VALENCE SHIFTER.
+
+Cluster principali:
+- **TRIPLE/TRUNCATED cluster**: TRIPLE FLOWS, TRIPLE GRADES, TRIPLES (con TRs WENT OUT incorporato), TRUNCATED GPM.
+- **TRUTH/VIII**: TRUTH (troncata a metà frase — "by definition-is what is. (Class" — e la voce successiva del sorgente, etichettata erroneamente "VIII", ne contiene il seguito bibliografico insieme a TWC e 12.500 OHMS), riprodotta fedelmente in FR/ES.
+- **TWIN/TWO-WAY COMM cluster**: TWENTY-TEN, TWIN, TWIN CHECKOUT (con TWO-VALUED LOGIC incorporato), TWO-WAY COMM (4 definizioni sul cardine della comunicazione a due vie).
+- **UNCONSCIOUS cluster**: UNCONSCIOUS (con L'INCONSCIENT/Freud incorporato), UNCONSCIOUS MIND, UNCONSCIOUSNESS (6 definizioni numerate).
+- **UNDER-/UNDERSTANDING cluster**: UNCONTROLLED LISTING, UNDERCUTS, UNDERLISTED LIST, UNDER-RESTIMULATION, UNDERSHOOTING, UNDERSTANDING (3 definizioni sul concetto cardine A-R-C→comprensione).
+- **UNIVERSE cluster**: UNIVERSE, UNIVERSE OF THOUGHT, UNIVERSE O/W.
+- **UNREALITY/UNUSUAL SOLUTIONS**: UNREALITY (4 definizioni), UNREDUCED FACSIMILE, UNUSUAL SOLUTIONS, UNWILLING CAUSE.
+- **UPPER/VALENCE cluster**: UPPER INDOCTRINATION, UPPER LEVEL, UP SCALE, URGES, VACUUM, e apertura del grande cluster VALENCE: VALENCE BOUNCER, VALENCE CASE, VALENCE CLOSURE, VALENCE DENYER, VALENCE GROUPER, VALENCE SHIFT, VALENCE SHIFTER (4 definizioni).
+
+Superata la soglia del 96%: mancano ora solo circa 90 voci al completamento dell'intero dizionario (2541 voci totali).
+
+**Verifica:** dati JSON puri — validati con `json.load` prima e dopo il merge (50/50 per lingua, totale 2450/2450 coerente in entrambi i file). `tsc`/`lint`/`vitest` non ri-eseguiti (nessun file TSX toccato in questo giro).
+
+**File toccati — SOLO SERENITY (dati):**
+- `public/dizionario/dizionario-fr.json`
+- `public/dizionario/dizionario-es.json`
