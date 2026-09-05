@@ -27,6 +27,93 @@ const msCompress = (mS: number): number => Math.log10(1 + Math.abs(mS));
 
 export interface TaCalibration { baseline: number; gain: number; span: number; }
 
+/** Una coppia di taratura: mS GIÀ compresso (`msCompress`, non il grezzo) e il TA di
+ *  riferimento letto sul Theta-Meter VERO in quello stesso istante. */
+export interface TaCalibPoint { m: number; ta: number; }
+
+/**
+ * ⚠️ AGGIUNTO — segnalato: « quando entro il valore del TA su Theta-Meter, dovresti cambiare
+ * il TA del MUSE che appare ». `lastMs`/`taForMs` esistevano già « pour capturer des paires
+ * (mS, TA_meter) et faire le fit » (v. il commento su `lastMs`, sotto) — ma nessuna interfaccia
+ * chiamava mai `setCalibration` con un fit vero: verificato, zero chiamanti in tutto il
+ * deposito. Il numero restava quello di fabbrica (GAIN 0.6, SPAN 2.1) per sempre, indifferente
+ * a qualunque confronto fatto col Theta-Meter reale.
+ *
+ * ── PERCHÉ UN FIT, E NON UNA RETTA ────────────────────────────────────────────────────────
+ * Il modello (v. `taForMs`) è `TA = baseline + span·(1 − exp(−m·gain))` — non lineare in
+ * `gain`. Con `baseline` FISSO (è per persona, sesso — v. `setBaseline` — non per strumento:
+ * la calibrazione qui è dichiaratamente « instrument-level, indép. du PC »), restano due
+ * incognite accoppiate in modo non lineare: non c'è una formula chiusa per `gain` da due punti
+ * qualunque.
+ *
+ * ── IL METODO — PROIEZIONE VARIABILE, SENZA LIBRERIE ────────────────────────────────────────
+ * Per un `gain` FISSATO, `x_i = 1 − exp(−m_i·gain)` è un numero noto per ogni punto: lo `span`
+ * migliore (minimi quadrati, retta per l'origine spostata di `baseline`) ha allora una formula
+ * chiusa — `span = Σ(x_i·(ta_i−baseline)) / Σ(x_i²)`. Resta una sola incognita, `gain`, su cui
+ * cercare il minimo dell'errore residuo: una ricerca a griglia (due passate, una grossa poi una
+ * fine intorno al meglio trovato) — niente Gauss-Newton, niente derivate, solo `Math.exp`
+ * valutato N_GRIGLIA × N_PUNTI volte, un costo trascurabile per una manciata di punti presi a
+ * mano in seduta.
+ *
+ * Con UN punto solo il sistema è indeterminato (una famiglia intera di coppie gain/span passa
+ * esattamente per un punto): si aspetta il secondo prima di correggere qualunque cosa — il
+ * numero di fabbrica resta buono fino ad allora, invece di saltare su un fit arbitrario.
+ */
+const GAIN_MIN = 0.05, GAIN_MAX = 3;   // stessi limiti di setCalibration, sotto
+const FIT_GRID_COARSE = 60, FIT_GRID_FINE = 60;
+
+const spanForGain = (points: TaCalibPoint[], baseline: number, gain: number): number => {
+  let sxx = 0, sxy = 0;
+  for (const p of points) {
+    const x = 1 - Math.exp(-p.m * gain);
+    sxx += x * x;
+    sxy += x * (p.ta - baseline);
+  }
+  return sxx > 1e-9 ? sxy / sxx : 0;
+};
+
+const sseForGain = (points: TaCalibPoint[], baseline: number, gain: number, span: number): number => {
+  let sse = 0;
+  for (const p of points) {
+    const pred = baseline + span * (1 - Math.exp(-p.m * gain));
+    const d = p.ta - pred;
+    sse += d * d;
+  }
+  return sse;
+};
+
+/** Cerca il miglior (gain, span) su una griglia entro [lo, hi], N campioni. */
+const gridSearch = (
+  points: TaCalibPoint[], baseline: number, lo: number, hi: number, n: number,
+): { gain: number; span: number; sse: number } => {
+  let best = { gain: lo, span: spanForGain(points, baseline, lo), sse: Infinity };
+  for (let i = 0; i < n; i++) {
+    const gain = lo + (hi - lo) * (i / (n - 1));
+    const span = spanForGain(points, baseline, gain);
+    const sse = sseForGain(points, baseline, gain, span);
+    if (sse < best.sse) best = { gain, span, sse };
+  }
+  return best;
+};
+
+/**
+ * Il FIT vero e proprio: due passate di `gridSearch` (grossa su tutto il range, poi fine
+ * intorno al meglio trovato) — la seconda passata restringe l'intervallo di un fattore ~30,
+ * dando una precisione sul `gain` ben oltre quella con cui lo si userebbe (differenze di
+ * TA sotto 0,01 su tutto lo strumento). `null` se i punti sono meno di due: v. la nota sopra.
+ */
+export const fitGainSpan = (points: TaCalibPoint[], baseline: number): { gain: number; span: number } | null => {
+  if (points.length < 2) return null;
+  const grosso = gridSearch(points, baseline, GAIN_MIN, GAIN_MAX, FIT_GRID_COARSE);
+  const passo = (GAIN_MAX - GAIN_MIN) / (FIT_GRID_COARSE - 1);
+  const fine = gridSearch(
+    points, baseline,
+    Math.max(GAIN_MIN, grosso.gain - passo), Math.min(GAIN_MAX, grosso.gain + passo),
+    FIT_GRID_FINE,
+  );
+  return { gain: fine.gain, span: fine.span };
+};
+
 export class TaAccumulator {
   /** Current smoothed Tone Arm (baseline–6.0). */
   toneArm = 2.0;
@@ -45,6 +132,14 @@ export class TaAccumulator {
   /** Horodatage (Date.now) du dernier update(). Le panneau s'en sert pour savoir si le mS est
    *  VIVANT (session en cours + EEG qui scorre) ou FIGÉ → interdit les captures sur mS figé. */
   lastMsAt = 0;
+  /** ⚠️ AGGIUNTO — le coppie (mS compresso, TA di riferimento) da cui `gain`/`span` sono
+   *  stati derivati l'ultima volta. Persistite insieme alla calibrazione: senza, ogni nuovo
+   *  punto rifarebbe il fit da zero, perdendo quelli già raccolti nelle sedute precedenti. */
+  private points: TaCalibPoint[] = [];
+  /** Quanto vecchio può essere `lastMsAt` per accettare ancora un punto (ms). Oltre, il
+   *  segnale è considerato fermo — v. il commento francese sopra, « interdit les captures
+   *  sur mS figé »: senza MUSE che scorre non c'è niente da imparare, solo rumore congelato. */
+  private static readonly FRESCHEZZA_MAX_MS = 3000;
 
   private highWater: number | null = null;
   private countedFromHigh = 0;
@@ -58,6 +153,11 @@ export class TaAccumulator {
         if (typeof c?.gain === 'number' && isFinite(c.gain)) this.gain = c.gain;
         if (typeof c?.span === 'number' && isFinite(c.span)) this.span = c.span;
         if (typeof c?.baseline === 'number' && c.baseline > 0) this.baseline = c.baseline;
+        if (Array.isArray(c?.points)) {
+          this.points = c.points.filter((p: unknown): p is TaCalibPoint =>
+            !!p && typeof (p as TaCalibPoint).m === 'number' && typeof (p as TaCalibPoint).ta === 'number'
+            && isFinite((p as TaCalibPoint).m) && isFinite((p as TaCalibPoint).ta));
+        }
       }
     } catch { /* pas de calibration persistée */ }
   }
@@ -78,7 +178,54 @@ export class TaAccumulator {
     if (typeof c.gain === 'number' && isFinite(c.gain)) this.gain = Math.max(0.05, Math.min(3, c.gain));
     if (typeof c.span === 'number' && isFinite(c.span)) this.span = Math.max(0.2, Math.min(4.5, c.span));
     if (typeof c.baseline === 'number' && c.baseline > 0) { this.baseline = c.baseline; if (Math.abs(this.toneArm - this.baseline) < 0.3) this.toneArm = this.baseline; }
-    try { localStorage.setItem(TA_CALIB_KEY, JSON.stringify(this.getCalibration())); } catch { /* quota */ }
+    this.persist();
+  }
+
+  private persist(): void {
+    try {
+      localStorage.setItem(TA_CALIB_KEY, JSON.stringify({ ...this.getCalibration(), points: this.points }));
+    } catch { /* quota */ }
+  }
+
+  /**
+   * ⚠️ AGGIUNTO — segnalato: « quando entro il valore del TA su Theta-Meter, dovresti cambiare
+   * il TA del MUSE che appare ». Chiamato dalla STESSA azione che registra un punto sulla
+   * scala del Theta-Meter (`useThetaMeter.ts`, `addPointFromReference`) — `ta` è già il valore
+   * riportato all'equivalente due lattine, la stessa correzione che riceve l'altra scala:
+   * le due tarature devono concordare sulla STESSA convenzione, non ciascuna con la propria.
+   *
+   * Restituisce `null` (nessun effetto) in due casi, entrambi onesti piuttosto che sbagliati
+   * in silenzio:
+   *   · il segnale è FERMO (`lastMsAt` più vecchio di `FRESCHEZZA_MAX_MS`) — senza MUSE che
+   *     scorre non c'è niente da imparare, solo un numero congelato spacciato per una lettura;
+   *   · resta UN punto solo dopo l'aggiunta — il sistema (gain, span) è indeterminato con un
+   *     punto solo (v. la nota grande su `fitGainSpan`, sopra): si accumula, non si corregge
+   *     ancora nulla, finché non ne arriva un secondo.
+   */
+  addCalibrationPoint(ta: number): TaCalibration | null {
+    if (!Number.isFinite(ta)) return null;
+    if (Date.now() - this.lastMsAt > TaAccumulator.FRESCHEZZA_MAX_MS) return null;
+    const m = msCompress(this.lastMs);
+    // Si sostituisce un punto quasi coincidente invece di affiancarlo — stessa ragione di
+    // `addPointFromReference` (Theta-Meter): due punti sullo stesso mS renderebbero il fit
+    // instabile (il denominatore `Σx²` diventerebbe quasi degenere fra i due).
+    const tenuti = this.points.filter(p => Math.abs(p.m - m) > 0.02);
+    const nuovi = [...tenuti, { m, ta }];
+    const fit = fitGainSpan(nuovi, this.baseline);
+    this.points = nuovi;
+    if (fit) { this.gain = fit.gain; this.span = fit.span; }
+    this.persist();
+    return this.getCalibration();
+  }
+
+  /** I punti di taratura raccolti finora — per l'UI (« N punti », un modo di annullare). */
+  getCalibrationPoints(): TaCalibPoint[] { return [...this.points]; }
+
+  /** Torna alla taratura di fabbrica, senza punti — stesso gesto di `clearTaScale` per la
+   *  scala del Theta-Meter, per lo strumento che ricostruisce dall'EEG. */
+  clearCalibration(): void {
+    this.gain = TA_GAIN_DEFAULT; this.span = TA_SPAN_DEFAULT; this.points = [];
+    this.persist();
   }
 
   /** TA prédit pour un mS donné avec la calibration COURANTE (utilisé par le fit / preview). */

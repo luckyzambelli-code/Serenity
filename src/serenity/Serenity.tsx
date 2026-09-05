@@ -3063,25 +3063,16 @@ export default function Serenity() {
               <button className="s-glass s-glass-btn" onClick={() => { tone.chiudiTone(true); tone.setTonePhase('done'); }} style={pillBtn('var(--s-still)')}>
                 {LC('tono quaranta raggiunto', 'ton quarante atteint', 'tone forty reached', 'tono cuarenta alcanzado', 'ton fyrtio nådd')}
               </button>
-              {/* ⚠️ AGGIUNTO (revisione dei calcoli TONE, 01/09/2026) — il ratchet "solo salire"
-                  (v. `useToneCycle.ts`, `toneHighRef`) non si poteva correggere DURANTE la
-                  salita: un colpo isolato (un movimento del corpo, un cavo) che regge per caso
-                  `TONE_HOLD_S` viene promosso a pavimento garantito, e da lì in poi il tono
-                  mostrato non scende più — l'unica via era annullare tutta la resistenza. Visto
-                  SOLO con uno strumento vero (`!senzaMisura`: senza, nulla muove il numero, il
-                  ratchet non entra mai in gioco) e solo quando c'è davvero un pavimento da
-                  sciogliere (`tonePavimentoAttivo`) — altrimenti il bottone non farebbe niente. */}
-              {!senzaMisura && tone.tonePavimentoAttivo && (
-                <button className="s-glass s-glass-btn" onClick={() => tone.sciogliPavimento()} style={pillBtn('var(--s-ink-ghost)')}
-                  title={LC(
-                    'un salto isolato dell\'ago ha fissato il tono più in alto di quanto sia davvero — scioglilo, la resistenza in corso resta la stessa',
-                    'un sursaut isolé de l\'aiguille a fixé le ton plus haut qu\'il ne l\'est vraiment — dénoue-le, la résistance en cours reste la même',
-                    'an isolated needle spike fixed the tone higher than it really is — release it, the resistance in progress stays the same',
-                    'un salto aislado de la aguja fijó el tono más alto de lo que realmente es — suéltalo, la resistencia en curso sigue siendo la misma',
-                    'ett isolerat nålhopp fastställde tonen högre än den verkligen är — lossa det, det pågående motståndet är detsamma') as string}>
-                  {LC('era un colpo isolato', 'un sursaut isolé', 'an isolated spike', 'un salto aislado', 'ett isolerat hopp')}
-                </button>
-              )}
+              {/* ⚠️ RIMOSSO — segnalato di nuovo, con forza: « devi togliere UN SURSAUT ISOLÉ,
+                  te lo avevo già chiesto in TONE ». Il bottone (« era un colpo isolato »)
+                  serviva a sciogliere il pavimento del ratchet "solo salire" quando un colpo
+                  isolato veniva promosso a torto — ma esporre all'auditor un dettaglio interno
+                  del motore (« pavimento », « ratchet ») non è la sua richiesta: chi conduce non
+                  deve capire l'implementazione per correggere una lettura sbagliata. Tolto
+                  interamente, non solo nascosto — e con lui, verificato zero chiamanti rimasti
+                  in tutto il deposito (SERENITY era l'unico), anche `sciogliPavimento`/
+                  `tonePavimentoAttivo` in `useToneCycle.ts`. Il ratchet stesso resta: solo la
+                  via per correggerlo a mano durante la salita sparisce. */}
             </>
           )}
           {tone.tonePhase === 'done' && (
@@ -4327,9 +4318,17 @@ export default function Serenity() {
             strumento a metà lettura (un'interruzione vera, quella resta vietata), sbagliato per
             chi vuole AGGIUNGERNE uno che non c'era: se il MUSE si scollega da solo a metà
             seduta, o si decide di affiancare il Meter, aspettare la fine del ciclo per poterlo
-            ricollegare non serve a nessuno. Ora il gesto resta permesso quando lo strumento
-            NON è ancora connesso (`!s.connesso`) — disattivato SOLO quando cliccarlo
-            DISCONNETTEREBBE uno strumento già attivo durante un ciclo. */}
+            ricollegare non serve a nessuno. Il gesto era rimasto permesso solo quando lo
+            strumento NON era ancora connesso (`!s.connesso`) — disattivato quando cliccarlo
+            avrebbe DISCONNESSO uno strumento già attivo durante un ciclo.
+            ⚠️ RIMOSSO ANCHE QUEL BLOCCO — segnalato di nuovo, con forza: « durante la sessione,
+            se voglio togliere il MUSE o il METER, devi lasciarlo fare. Ora non è possibile ».
+            La restrizione era `modalitaCiclo` (` mode !== 'free' `, cioè QUALUNQUE metodo
+            armato — CONTACT/NULL/MIRROR/TONE), non solo l'istante di un ciclo: in una seduta
+            reale l'auditor lavora quasi sempre con un metodo armato, quindi il pulsante restava
+            di fatto SEMPRE spento non appena uno strumento era connesso — visibile, cliccabile
+            in apparenza, ma senza alcun effetto. L'auditor decide, non il ciclo: staccare uno
+            strumento a metà lettura resta una sua scelta, non un errore da impedire qui. */}
         {/* ── LE CONNESSIONI, UN SOLO BOTTONE, SOLO ICONE — segnalato di nuovo: « i bottoni
             MUSE, Meter, No instrument devono essere un solo bottone con solo le icone
             (survolando ogni icona si scrive cosa significa), così guadagniamo spazio in
@@ -4446,7 +4445,7 @@ export default function Serenity() {
               borderRadius: 999, padding: '4px 6px',
             }}>
               {strumenti.map(s => {
-                const clic = (modalitaCiclo && s.connesso) ? undefined : s.onClick;
+                const clic = s.onClick;
                 return (
                 <button key={s.key} className="s-glass-btn" onClick={clic} title={s.title} data-help={s.title}
                   style={{

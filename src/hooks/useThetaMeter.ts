@@ -14,6 +14,7 @@ import {
   type ElectrodeConfig, type ThetaSetup,
 } from '../engine/thetaSetup';
 import { taToTwoCans } from '../engine/canTest';
+import { taAccumulator } from '../engine/TaAccumulator';
 import { THETA_NEEDLE_SCALE, SQUEEZE_TEST_MS, BREATH_TEST_MS, NEEDLE_REST_OFFSET, THETA_TEST_FOLLOW, THETA_MIN_RATE, THETA_TEST_START_DEV, THETA_TEST_MUTE_AFTER_S } from '../engine/tuning';
 
 /**
@@ -424,7 +425,18 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
    * lattine: un punto preso a una lattina sola va riportato all'equivalente due PRIMA di
    * entrarci, o mescolerebbe nella stessa curva letture non confrontabili. Stessa correzione
    * già in uso ovunque nel ciclo TONE — non una seconda regola.
-   */
+   *
+   * ⚠️ AGGIUNTO `taAccumulator.addCalibrationPoint` — segnalato: « quando entro il valore del
+   * TA su Theta-Meter, dovresti cambiare il TA del MUSE che appare ». `taAccumulator` (il
+   * ricostruttore dall'EEG, `TaAccumulator.ts` — il "MUSE TA" mostrato da `LetturaTA` in
+   * SERENITY) è un singleton a modulo, del tutto separato da questo hook — importato qui
+   * apposta, non incapsulato da lui: le due tarature restano due sistemi distinti, questa è
+   * la SOLA azione che li fa concordare, perché è la sola in cui l'auditor guarda ENTRAMBI gli
+   * strumenti insieme e scrive un numero che vale per tutti e due. `taDueLattine` (già
+   * calcolato qui sopra, la stessa correzione per la scala del Theta-Meter) è lo stesso valore
+   * passato a entrambe: due tarature sulla STESSA convenzione, non ciascuna con la propria. Se
+   * il MUSE non è connesso o il segnale è fermo, `addCalibrationPoint` non fa nulla da sé (v.
+   * la sua nota) — nessun controllo da ripetere qui. */
   const addPointFromReference = useCallback((taRiferimento: number, config: ElectrodeConfig) => {
     setState(p => {
       const raw = needleRef.current.lastRaw;
@@ -438,6 +450,7 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
       const scale = buildTaScale([...tenuti, { ta: taDueLattine, raw }], Date.now());
       if (!scale) return p;
       saveTaScale(scale);
+      taAccumulator.addCalibrationPoint(taDueLattine);
       return { ...p, taScale: scale };
     });
   }, []);

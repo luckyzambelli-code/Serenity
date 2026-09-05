@@ -10093,3 +10093,38 @@ Segnalato: « nel test TARATURA TA dobbiamo poter iscrivere ANCHE A MANO il TA C
 - SOLO SERENITY: `src/serenity/PannelloMeter.tsx`
 
 **Build**: SERENITY 3.0.262 + EQUILIBRIUM 2.0.274, entrambe spedite.
+
+## Giro — 2026-09-05 (continuazione) — SERENITY: disconnessione strumenti in seduta, tolto "un colpo isolato", fit non lineare per il MUSE TA
+
+Tre richieste separate, arrivate nello stesso scambio.
+
+### 1. In SERENITY, durante la seduta, non si poteva togliere il MUSE o il METER
+
+Segnalato: « durante la sessione, se voglio togliere il MUSE o il METER, devi lasciarlo fare. Ora non è possibile ».
+
+**Causa**: la selezione degli strumenti (in alto) disattivava il click su uno strumento già connesso quando `modalitaCiclo` era vero — ma `modalitaCiclo = mode !== 'free'` è vero per QUALUNQUE metodo armato (CONTACT/NULL/MIRROR/TONE), non solo per un ciclo davvero in corso: in una seduta reale l'auditor lavora quasi sempre con un metodo armato, quindi il pulsante restava di fatto SEMPRE spento non appena uno strumento era connesso — cliccabile in apparenza, senza alcun effetto. Era una restrizione deliberata di un giro precedente (« un'interruzione vera resta vietata »), ma troppo larga nella pratica.
+
+**Correzione**: tolto il blocco. L'auditor decide, non il ciclo — staccare uno strumento a metà lettura resta una sua scelta.
+
+### 2. Tolto il bottone "un colpo isolato" ("un sursaut isolé") nel ciclo TONE
+
+Segnalato di nuovo, con forza: « devi togliere UN SURSAUT ISOLÉ, te lo avevo già chiesto in TONE ». Il bottone scioglieva il "pavimento" del ratchet "solo salire" quando un colpo isolato veniva promosso a torto — ma esponeva all'auditor un dettaglio interno del motore (pavimento, ratchet) invece di restare nei suoi termini. Tolto interamente dall'interfaccia; verificato zero chiamanti rimasti in tutto il deposito (SERENITY era l'unico), tolte anche `sciogliPavimento`/`tonePavimentoAttivo` da `useToneCycle.ts`. Il ratchet stesso resta: solo la via per correggerlo a mano durante la salita sparisce.
+
+### 3. Il fit non lineare per il "MUSE TA"
+
+Ripreso dalla nota lasciata aperta nel giro precedente: il "MUSE TA" (`TaAccumulator.toneArm`, il TA ricostruito dall'EEG, mostrato accanto al "METER TA" in SERENITY) aveva una API di calibrazione (`setCalibration`/`taForMs`/`lastMs`) mai collegata a nessuna interfaccia — il numero restava quello di fabbrica (GAIN 0.6, SPAN 2.1) per sempre.
+
+**Il modello** (`TA = baseline + span·(1 − exp(−mS_compresso·gain))`) è non lineare in `gain`: niente formula chiusa da due punti qualunque. **Il metodo** — proiezione variabile, senza librerie: per un `gain` fissato, lo `span` migliore ha una formula chiusa (minimi quadrati); resta una ricerca a griglia (due passate, una grossa poi una fine) sulla sola incognita `gain`. Con un punto solo il sistema resta indeterminato — si accumula, non si corregge nulla, finché non arriva un secondo punto.
+
+**Collegato alla STESSA azione** che registra un punto sulla scala del Theta-Meter (`useThetaMeter.ts`, `addPointFromReference`) — il valore passato (`taDueLattine`, già riportato all'equivalente due lattine) è lo stesso per entrambe le tarature: devono concordare sulla stessa convenzione. Se il MUSE non è connesso o il segnale è fermo (`lastMsAt` troppo vecchio), `addCalibrationPoint` non fa nulla, silenziosamente onesto invece che sbagliato.
+
+Aggiunti anche `getCalibrationPoints()` e `clearCalibration()` (fabbrica, senza punti) per un'eventuale interfaccia futura — non usati da nessun pannello oggi, nessuna nuova UI in questo giro.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 724/724 verdi (9 nuovi test per il fit e `TaAccumulator`). Verificato dal vivo (SERENITY, seduta senza strumenti): ciclo TONE armato → resistenza → tono dichiarato → fase "porta a tono 40" senza il bottone tolto, nessun errore in console.
+
+**File toccati:**
+- CONDIVISI: `src/session/useToneCycle.ts`, `src/engine/TaAccumulator.ts`, `src/hooks/useThetaMeter.ts`
+- SOLO SERENITY: `src/serenity/Serenity.tsx`
+- NUOVO: `src/engine/__tests__/TaAccumulator.test.ts`
+
+**Build**: SERENITY 3.0.263 + EQUILIBRIUM 2.0.275, entrambe spedite.

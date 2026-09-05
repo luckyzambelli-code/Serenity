@@ -327,16 +327,6 @@ export function useToneCycle(d: ToneCycleDeps) {
         // un pavimento da garantire, e aspettare la prima conferma lascerebbe lo schermo fermo.
         return toneHighRef.current ?? toneOraGrezzo;
       })();
-  /**
-   * ⚠️ AGGIUNTO (revisione dei calcoli TONE, 01/09/2026) — C'È UN PAVIMENTO DA SCIOGLIERE?
-   *
-   * `toneHighRef.current` è appena stato scritto dall'IIFE sopra, nello stesso passaggio di
-   * render: leggerlo qui è già il valore di ADESSO, non quello del render precedente. Serve
-   * SOLO a decidere se mostrare il gesto `sciogliPavimento` — mostrarlo quando non c'è ancora
-   * nessun pavimento confermato non farebbe niente di sbagliato, ma inviterebbe a un gesto
-   * senza effetto.
-   */
-  const tonePavimentoAttivo = toneAtStart !== null && toneHighRef.current !== null;
   /** Il secondo sguardo per la colonna (`ToneColumn`'s `toneEeg`) — quando il MUSE È già il
    *  cursore primario (sopra) è la STESSA lettura: la colonna mostra il trattino "EEG" solo se
    *  diverge di oltre 3 unità dal cursore, quindi coincidendo semplicemente non compare più,
@@ -562,25 +552,15 @@ export function useToneCycle(d: ToneCycleDeps) {
   }, []);
 
   /**
-   * ⚠️ AGGIUNTO (revisione dei calcoli TONE, 01/09/2026) — SCIOGLIERE IL PAVIMENTO A METÀ
-   * SALITA, SENZA PERDERE L'ORIGINE.
-   *
-   * Segnalato in revisione: il ratchet "solo salire" (v. `toneHighRef`/`TONE_HOLD_S` sopra)
-   * non si può correggere DURANTE `raise` — un colpo isolato (un movimento del corpo, un cavo)
-   * che regge per caso `TONE_HOLD_S` viene promosso a pavimento garantito, e da lì in poi il
-   * tono mostrato non scende più sotto di lui: l'unico modo di uscirne era annullare TUTTA la
-   * resistenza e rilocalizzare, perdendo `toneAtStart` insieme al pavimento sbagliato.
-   *
-   * `correggiToneAtStart` (sopra) già azzera lo stesso ratchet, ma cambiando anche l'origine —
-   * giusto quando la correzione È l'origine (la scelta manuale del tono), sbagliato quando la
-   * resistenza è la stessa e solo il pavimento va tolto. Questa funzione fa SOLO quello: stessa
-   * origine, stesso ciclo, pavimento vergine — il prossimo `toneOraGrezzo` torna a essere il
-   * numero mostrato, finché un nuovo massimo non regge per il suo `TONE_HOLD_S`.
+   * ⚠️ RIMOSSO — `sciogliPavimento`/`tonePavimentoAttivo` stavano qui: scioglievano il ratchet
+   * "solo salire" a metà salita senza perdere `toneAtStart`, per il bottone SERENITY « era un
+   * colpo isolato ». Segnalato: « devi togliere UN SURSAUT ISOLÉ » — quel bottone esponeva
+   * all'auditor un dettaglio interno del motore (« pavimento », « ratchet ») invece di
+   * correggere una lettura sbagliata in termini che ha senso capire mentre si conduce. Tolto il
+   * bottone (`Serenity.tsx`) e, verificato zero chiamanti rimasti in tutto il deposito, anche
+   * queste due funzioni — mai state lette da EQUILIBRIUM. Il ratchet stesso (`toneHighRef`/
+   * `TONE_HOLD_S`, sopra) resta: solo la via per correggerlo A MANO durante la salita sparisce.
    */
-  const sciogliPavimento = useCallback(() => {
-    toneHighRef.current = null;
-    toneCandidateRef.current = null;
-  }, []);
 
   /**
    * IL LOCATORE SI ALIMENTA DA FUORI — lo chiama il gestore del worker EEG, a ogni campione.
@@ -612,11 +592,10 @@ export function useToneCycle(d: ToneCycleDeps) {
     // misure derivate
     taMostrato, taCorretto, taClear,
     toneMeasured, toneHasMeter, toneMisurato, margineTono, toneOra, toneOraEeg,
-    // ⚠️ AGGIUNTO (revisione dei calcoli TONE, 01/09/2026, additivo) — `toneSource` (sopra) è
-    // di quale strumento è il numero ADESSO; `sciogliPavimento` (sopra) toglie il pavimento del
-    // ratchet senza toccare `toneAtStart`. Nessun chiamante esistente (EQUILIBRIUM) legge
-    // questi due campi: comportamento suo invariato.
-    toneSource, sciogliPavimento, tonePavimentoAttivo,
+    // ⚠️ AGGIUNTO (revisione dei calcoli TONE, 01/09/2026, additivo) — di quale strumento è il
+    // numero ADESSO. Nessun chiamante esistente (EQUILIBRIUM) legge questo campo: comportamento
+    // suo invariato.
+    toneSource,
     // gesti
     localizzaTone, chiudiTone, resetTone,
     // registrazione e voce
