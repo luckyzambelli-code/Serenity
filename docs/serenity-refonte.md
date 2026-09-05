@@ -9812,3 +9812,22 @@ Cluster principali:
 **File toccati — SOLO SERENITY (dati):**
 - `public/dizionario/dizionario-fr.json`
 - `public/dizionario/dizionario-es.json`
+
+## Giro — 2026-09-05 — dizionario: quarantaseiesimo blocco, 2300/2541 voci (90,5%) — superata la soglia del 90%
+
+**Blocco 46 (indici 2250-2299)**, FR+ES, 50 voci ciascuna lingua. Termini coperti: da SUPPRESSIVE PERSON a TERMINAL ASSESSMENT.
+
+Cluster principali:
+- **SUPPRESSIVE PERSON**: la voce più estesa del blocco, 9 definizioni numerate — l'intera anatomia storica della SP secondo LRH, dal "no-confront case" al "counter-postulate".
+- **SUPPRESSOR/SUPREME TEST/SURVIVAL cluster**: SUPPRESSOR, SUPREME TEST (con SURGES incorporato), SURPRISE, SURVIVAL (3 definizioni), SURVIVAL GOAL, SURVIVAL SUPPRESSOR, SURVIVE.
+- **SYMBOL/SYMBIOTE cluster**: SYMBIOTE, SYMBOL (5 definizioni), SYMBOL FOR THETA, SYMBOL OF DIANETICS (il simbolo Delta a quattro bande delle quattro dinamiche).
+- **SYMPATHY cluster (ampio)**: SYMPATHY (5 definizioni), SYMPATHY COMPUTATION, SYMPATHY ENGRAM (con il celebre esempio narrativo del bambino e della nonna), SYMPATHY EXCITER.
+- **T/TA cluster**: T (voce anomala — un frammento di footer OCR "U, V, W, X, Y, Z — Tech Fair use quotes..." erroneamente catturato come voce, riprodotto fedelmente), TA (4 definizioni sul Tone Arm), TACIT CONSENT, TACTILE, TALKING THE TA DOWN.
+- **TAPE/TECH cluster**: TAPE LECTURE NUMBER (con la spiegazione dettagliata del sistema di numerazione), TAPE PLAYERS, TAPE RECORDERS, TECH (3 definizioni), TECH IS IN, TECHNICAL EXPERTISE, TECHNICAL TERM, TECHNIQUE, TECHNIQUE 8-80, TECHNIQUE 80 (2 definizioni), TECHNIQUE 88 (3 definizioni), TECHNOLOGY.
+- **TERMINAL cluster**: TERM, TERMINAL (7 definizioni numerate — voce cardine per la teoria dei GPM), TERMINAL ASSESSMENT.
+
+**Verifica:** dati JSON puri — validati con `json.load` prima e dopo il merge (50/50 per lingua, totale 2300/2300 coerente in entrambi i file). `tsc`/`lint`/`vitest` non ri-eseguiti (nessun file TSX toccato in questo giro).
+
+**File toccati — SOLO SERENITY (dati):**
+- `public/dizionario/dizionario-fr.json`
+- `public/dizionario/dizionario-es.json`
