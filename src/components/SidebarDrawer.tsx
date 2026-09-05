@@ -55,8 +55,14 @@ interface SidebarDrawerProps {
   /** Configurazione degli elettrodi: due boîtes o boîte solo (SOLO AUDITING). */
   thetaConfig?: 'two-cans' | 'solo-can';
   setThetaConfig?: (c: 'two-cans' | 'solo-can') => void;
-  /** Aggiunge un punto alla scala del TA leggendo il valore sul Theta-Meter. */
-  thetaAddPoint?: (ta: number) => void;
+  /** Aggiunge un punto alla scala del TA leggendo il valore sul Theta-Meter.
+   *  ⚠️ AGGIUNTO il secondo parametro — segnalato: « nel test TARATURA TA dobbiamo poter
+   *  iscrivere anche a mano il TA con una o due lattine ». Con QUALE presa è stato letto
+   *  quel numero: senza saperlo, un punto preso a una lattina sola finirebbe nella stessa
+   *  scala delle due, che non gli appartiene (v. la nota su `addPointFromReference`,
+   *  `useThetaMeter.ts`). Qui si passa `thetaConfig` — la stessa presa già scelta sopra,
+   *  in questo stesso pannello, per lo scarto due/una: nessun secondo selettore da aggiungere. */
+  thetaAddPoint?: (ta: number, config: 'two-cans' | 'solo-can') => void;
   /** Il TA che leggiamo NOI in questo istante, per il confronto affiancato. */
   thetaTaNow?: number | null;
   /** Apre l'E-meter Tester (taratura con l'artefatto fisico). */
@@ -665,7 +671,7 @@ function TrimDrawer({ needleTrim, setNeedleTrim, needleInertia, setNeedleInertia
                          background: inputBg, border: inputBorder, color: titleColor, outline: 'none' }} />
               <button
                 disabled={!Number.isFinite(parseFloat(rifTa))}
-                onClick={() => { thetaAddPoint?.(parseFloat(rifTa)); setRifTa(''); }}
+                onClick={() => { thetaAddPoint?.(parseFloat(rifTa), thetaConfig); setRifTa(''); }}
                 style={{ flex: 1, padding: '6px', borderRadius: 5, fontSize: 10, cursor: 'pointer',
                          opacity: Number.isFinite(parseFloat(rifTa)) ? 1 : 0.4,
                          background: inputBg, border: inputBorder, color: titleColor }}>

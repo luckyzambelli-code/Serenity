@@ -13,6 +13,7 @@ import {
   effectiveScale,
   type ElectrodeConfig, type ThetaSetup,
 } from '../engine/thetaSetup';
+import { taToTwoCans } from '../engine/canTest';
 import { THETA_NEEDLE_SCALE, SQUEEZE_TEST_MS, BREATH_TEST_MS, NEEDLE_REST_OFFSET, THETA_TEST_FOLLOW, THETA_MIN_RATE, THETA_TEST_START_DEV, THETA_TEST_MUTE_AFTER_S } from '../engine/tuning';
 
 /**
@@ -414,15 +415,27 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
    * osserva: uno scarto di 0,6–0,7 che si riduce col tempo, mentre la resistenza scende.
    * Una costante non può correggerlo — sposta anche dove era giusto. Un punto in più sì:
    * corregge la FORMA proprio dove manca.
+   *
+   * ⚠️ AGGIUNTO `config` — segnalato: « nel test TARATURA TA dobbiamo poter iscrivere anche a
+   * mano il TA con una o due lattine ». Il grezzo (`needleRef.current.lastRaw`) è quel che è,
+   * qualunque sia la presa — ma `taRiferimento` è il numero letto sul Theta-Meter VERO, e
+   * quella lettura dipende dalla presa esattamente come le nostre (v. `taToTwoCans`,
+   * `canTest.ts`). La scala (`taScale`, `FACTORY_TA_POINTS` compresi) è tarata sulle DUE
+   * lattine: un punto preso a una lattina sola va riportato all'equivalente due PRIMA di
+   * entrarci, o mescolerebbe nella stessa curva letture non confrontabili. Stessa correzione
+   * già in uso ovunque nel ciclo TONE — non una seconda regola.
    */
-  const addPointFromReference = useCallback((taRiferimento: number) => {
+  const addPointFromReference = useCallback((taRiferimento: number, config: ElectrodeConfig) => {
     setState(p => {
       const raw = needleRef.current.lastRaw;
       if (!raw || !Number.isFinite(taRiferimento)) return p;
+      const taDueLattine = config === 'two-cans'
+        ? taRiferimento
+        : taToTwoCans(taRiferimento, config, p.setup.offsets?.['solo-can'] ?? 0).ta;
       // Si sostituisce un eventuale punto quasi coincidente invece di affiancarlo: due punti
       // sullo stesso grezzo renderebbero la scala indeterminata.
       const tenuti = (p.taScale?.points ?? []).filter(q => Math.abs(q.raw - raw) > raw * 0.01);
-      const scale = buildTaScale([...tenuti, { ta: taRiferimento, raw }], Date.now());
+      const scale = buildTaScale([...tenuti, { ta: taDueLattine, raw }], Date.now());
       if (!scale) return p;
       saveTaScale(scale);
       return { ...p, taScale: scale };

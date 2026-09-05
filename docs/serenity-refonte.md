@@ -10072,3 +10072,24 @@ Segnalato dal vivo, appena dopo la spedizione del giro precedente: « senza misu
 - CONDIVISO: `src/session/useToneCycle.ts` (unico file toccato)
 
 **Build**: SERENITY 3.0.261 + EQUILIBRIUM 2.0.273, entrambe spedite.
+
+## Giro — 2026-09-05 (continuazione) — TARATURA TA: anche a mano, con una o due lattine
+
+Segnalato: « nel test TARATURA TA dobbiamo poter iscrivere ANCHE A MANO il TA CON UNA o DUE LATTINE ».
+
+**Causa**: `theta.addPointFromReference(taRiferimento)` (il "confronto affiancato" col Theta-Meter vero) prendeva il numero scritto dall'auditor e lo trattava SEMPRE come se fosse la lettura a due lattine — la scala che costruisce (`taScale`, `FACTORY_TA_POINTS` compresi) è tarata sulle due lattine, ma nessuno lo verificava. Una lattina sola legge una resistenza diversa (la stessa ragione per cui esiste tutto il meccanismo dello scarto due/una in `canTest.ts`): un punto preso a una lattina sola e scritto tale e quale avrebbe mescolato nella stessa curva letture non confrontabili.
+
+**Correzione**: `addPointFromReference` prende ora un secondo argomento, `config: ElectrodeConfig` — se `'solo-can'`, il valore scritto viene riportato all'equivalente due lattine (`taToTwoCans`, la STESSA correzione già in uso in tutto il ciclo TONE) prima di entrare nella scala.
+
+- **SERENITY** (`PannelloMeter.tsx`): due pillole nuove, "due lattine"/"lattina sola", accanto al campo di scrittura — di default seguono `theta.setup.config` (la presa della seduta) ma sono un campo a sé: si può testare una presa diversa da quella con cui si sta conducendo, senza doverla cambiare davvero.
+- **EQUILIBRIUM** (`SidebarDrawer.tsx`, pannello TRIM): nessuna UI nuova — il selettore "con quante lattine" (`thetaConfig`) esisteva già in quello stesso pannello, per lo scarto due/una; semplicemente non veniva più letto quando si registrava il punto di calibrazione. Ora sì.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 715/715 verdi (nessun test toccato — comportamento nuovo, senza contratto pubblico da testare a parte; considerare un test dedicato in un giro futuro).
+
+**Nota lasciata aperta**, segnalata nello stesso scambio ma NON nell'ambito di oggi: esiste un SECONDO "TA ricostruito dall'EEG" (`TaAccumulator.toneArm`, mostrato in SERENITY come "MUSE TA" accanto al "METER TA" del Theta-Meter) — un sistema di calibrazione DIVERSO (gain/span/baseline su una curva esponenziale, `TaAccumulator.setCalibration`/`taForMs`), verificato: la sua API di fit non è mai chiamata da nessuna interfaccia (orfana, come le altre tarature morte tolte in giri precedenti). Registrare un punto in TARATURA TA oggi corregge SOLO la scala del Theta-Meter, non anche questa seconda curva — collegarle è un lavoro a sé (serve un fit non lineare su almeno due coppie), rimandato a un giro dedicato.
+
+**File toccati:**
+- CONDIVISI: `src/hooks/useThetaMeter.ts`, `src/components/SidebarDrawer.tsx`
+- SOLO SERENITY: `src/serenity/PannelloMeter.tsx`
+
+**Build**: SERENITY 3.0.262 + EQUILIBRIUM 2.0.274, entrambe spedite.

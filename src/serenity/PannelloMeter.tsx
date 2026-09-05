@@ -49,6 +49,7 @@ import { useI18n } from '../i18n';
 import { pick5 } from '../i18n5';
 import { compareReady, soloTaOffset } from '../engine/canTest';
 import type { useThetaMeter } from '../hooks/useThetaMeter';
+import type { ElectrodeConfig } from '../engine/thetaSetup';
 
 const pillola = (piena: boolean): React.CSSProperties => ({
   cursor: 'pointer', borderRadius: 999, padding: '8px 18px',
@@ -132,6 +133,14 @@ export function PannelloMeter({ theta, provaTa, onFatto, passoIniziale }: {
 }) {
   const { t, lang } = useI18n();
   const [riferimento, setRiferimento] = useState('2.0');
+  /**
+   * ⚠️ AGGIUNTO — segnalato: « nel test TARATURA TA dobbiamo poter iscrivere anche a mano il TA
+   * con una o due lattine ». Di default segue la configurazione della seduta (`theta.setup.
+   * config`, la stessa che governa il blocco A qui sopra) — ma resta un campo A SÉ: l'auditor
+   * può testare una presa diversa da quella con cui sta conducendo, senza doverla cambiare
+   * davvero (il che sposterebbe anche `theta.setup.config` per il resto della seduta).
+   */
+  const [letturaConfig, setLetturaConfig] = useState<ElectrodeConfig>(theta.setup.config);
   const [passo, setPasso] = useState<Passo>(passoIniziale ?? 'config');
   const idx = PASSI.indexOf(passo);
   const LC = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang as string, it, fr, en, es, sv);
@@ -490,6 +499,20 @@ export function PannelloMeter({ theta, provaTa, onFatto, passoIniziale }: {
                 'abre la aplicación Theta-Meter, sujeta las latas, lee el TA en el Theta-Meter y escríbelo aquí',
                 'öppna Theta-Meter-programmet, håll burkarna, läs TA på Theta-Metern och skriv det här')}
           </div>
+          {/* ⚠️ AGGIUNTO — v. la nota su `letturaConfig`, sopra: due pillole piccole, stesso
+              linguaggio del blocco A (« con DUE lattine »/« con la LATTINA SOLA »), per dire con
+              quale presa è stato letto IL NUMERO che si sta per scrivere — non quella con cui si
+              sta conducendo la seduta, necessariamente. */}
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+            {(['two-cans', 'solo-can'] as const).map(c => (
+              <button key={c} onClick={() => setLetturaConfig(c)} className="s-glass s-glass-btn"
+                style={pillola(letturaConfig === c)}>
+                {c === 'two-cans'
+                  ? LC('due lattine', 'deux boîtes', 'two cans', 'dos latas', 'två burkar')
+                  : LC('lattina sola', 'une boîte', 'solo can', 'una lata', 'en burk')}
+              </button>
+            ))}
+          </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
               {LC('TA sul Theta-Meter', 'TA sur le Theta-Meter', 'TA on the Theta-Meter', 'TA en el Theta-Meter', 'TA på Theta-Meter')}
@@ -505,7 +528,7 @@ export function PannelloMeter({ theta, provaTa, onFatto, passoIniziale }: {
             />
             <button onClick={() => {
               const v = parseFloat(riferimento);
-              if (Number.isFinite(v)) theta.addPointFromReference(v);
+              if (Number.isFinite(v)) theta.addPointFromReference(v, letturaConfig);
             }} className="s-glass s-glass-btn" style={pillola(false)}>
               {t('theta_cal_record')}
             </button>
