@@ -9831,3 +9831,20 @@ Cluster principali:
 **File toccati — SOLO SERENITY (dati):**
 - `public/dizionario/dizionario-fr.json`
 - `public/dizionario/dizionario-es.json`
+
+## Giro — 2026-09-05 — dizionario: quarantasettesimo blocco, 2350/2541 voci (92,5%)
+
+**Blocco 47 (indici 2300-2349)**, FR+ES, 50 voci ciascuna lingua. Termini coperti: da TERRIBLE TRIO a TOKEN.
+
+Cluster principali:
+- **THETA cluster (molto ampio)**: THETA (7 definizioni), THETA BEING, THETA BODY, THETA BOP (3 definizioni sul fenomeno di mètro), THETA CLEAR (9 definizioni numerate — voce cardine della Scientologia classica), THETA CLEARING, THETA LINE, THETA-MEST THEORY, THETAN (10 definizioni numerate — la voce più estesa e cardine dell'intero dizionario), THETAN EXTERIOR (con THETAN PLUS BODY incorporato), THETAN TONE SCALE, THETA PERCEPTICS, THETA PERCEPTION, THETA POSTULATE, THETA TIME, THETA TO THE NTH DEGREE, THETA TRAPS, THETA UNIVERSE.
+- **THINKING/THIRD cluster**: THINKING (5 definizioni), THINKINGNESS, THIRD DYNAMIC, THIRD PARTY LAW, THIRD POSTULATE, THIRD STAGE RELEASE.
+- **THREE cluster**: THREE D, THREE D CRISS CROSS, THREE FLOWS (con THREE GA XX/3GAXX e THREE S&Ds incorporati), THREE UNIVERSES.
+- **TIGER/TIME cluster (ampio)**: TIGER, TIGER DRILL, TIME (8 definizioni numerate sulla nozione filosofica cardine del tempo), TIMELESSNESS, TIME LIMITER, TIME SHIFT, TIME TAB, TIME TRACK (4 definizioni, inclusa la celebre stima "350.000 miliardi di anni").
+- **Anomalie OCR ricorrenti**: TERROR termina con un frammento duplicato "TERROR"; THETA LINE e THETA-MEST THEORY si interrompono a metà frase; TIP si interrompe su "(TIP 1" e la voce successiva "FAO" ne contiene il seguito ("20 Jun 71)") — tutte riprodotte fedelmente in FR/ES.
+
+**Verifica:** dati JSON puri — validati con `json.load` prima e dopo il merge (50/50 per lingua, totale 2350/2350 coerente in entrambi i file). `tsc`/`lint`/`vitest` non ri-eseguiti (nessun file TSX toccato in questo giro).
+
+**File toccati — SOLO SERENITY (dati):**
+- `public/dizionario/dizionario-fr.json`
+- `public/dizionario/dizionario-es.json`
