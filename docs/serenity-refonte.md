@@ -10009,3 +10009,22 @@ Ripreso da dove era stato lasciato in sospeso a inizio di questa serie di modifi
 - RIMOSSO: `src/components/ThetaTaCalibration.tsx`
 
 **Build**: SERENITY 3.0.258 + EQUILIBRIUM 2.0.271, entrambe spedite.
+
+## Giro — 2026-09-05 (continuazione) — MNA: non appare più senza MUSE
+
+Segnalato: "se abbiamo solo il METER, non è necessario fare apparire l'MNA, poiché non si può utilizzare".
+
+**Verifica della causa**: `PannelloMna` gira su `primeFreqTracker` (`engine/PrimeFreqTracker.ts`), che si alimenta di `bands` — lo spettro EEG del MUSE, scritto da `useChargeEngine.ts`. Senza MUSE non c'è `bands`: nessun I_m/F_d da capturare o sonificare, il pannello restava montato ma inerte.
+
+**Correzione**: aggiunto il cancello `&& museOk` alla condizione che monta `PannelloMna` in `Serenity.tsx` — stesso pattern già in uso per Santé Système (`moduleVis.health && museOk`) e per l'Intégrité biométrique (`museOk && moduleVis.biometric`). `moduleVis.mna` resta la preferenza scritta da CONFIG; `museOk` decide se ha senso mostrarla adesso. Verificato una sola condizione di montaggio (niente duplicato dimenticato, il bug già trovato una volta per Santé Système).
+
+**Verificato dal vivo**: seduta EXPERT "senza strumenti" con "Modulation Neuro-Acoustique" attiva in CONFIG — il pannello non compare (assenza confermata delle etichette uniche del suo ciclo, CAPTURE/SONIFY/CLEAN/HARMONICS, nel testo di pagina).
+
+**Nota lasciata aperta, non toccata in questo giro**: `museOk` qui (e già per Santé Système/biométrique) non considera `remote.remoteMuseConnected` — in una seduta VERAMENTE a distanza, dove il MUSE è quello del PC e arriva via P2P, questi tre moduli potrebbero nascondersi anche quando i `bands` arrivano davvero. EQUILIBRIUM lo gestisce già correttamente per il suo bottone MNA (`instruments.muse = museConnection==='connected' || remoteMuseConnected`). Non è quello che è stato segnalato oggi (il caso segnalato era "solo METER", dove il nascondimento è giusto) — ma è lo stesso divario architetturale già noto per i segnali MUSE dell'auditor remoto. Da riprendere se emerge in seduta a distanza vera.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 713/713 verdi (nessun test toccato da questa modifica).
+
+**File toccati:**
+- SOLO SERENITY: `src/serenity/Serenity.tsx`
+
+**Build**: SERENITY 3.0.259 (nessuna modifica a file condivisi o a EQUILIBRIUM in questo giro — solo la build SERENITY).

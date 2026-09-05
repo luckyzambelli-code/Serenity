@@ -6470,7 +6470,14 @@ export default function Serenity() {
             spazio che mancava. `PannelloMna` stesso è stato ristretto in parallelo (v. la
             sua nota, `padding`/`marginTop`) — 140 lascia comunque un margine reale sopra il
             pannello più stretto, senza sprecare il resto. */}
-        {aperta && moduleVis.mna && (
+        {/* ⚠️ AGGIUNTO `&& museOk` — segnalato: « se abbiamo solo il METER, non è necessario
+            fare apparire l'MNA, poiché non si può utilizzare ». Vero: `primeFreqTracker`
+            (il motore dietro I_m/F_d, `engine/PrimeFreqTracker.ts`) si alimenta di `bands`,
+            lo spettro EEG del MUSE (`useChargeEngine.ts`) — senza MUSE non gira, non c'è
+            niente da capturare/sonificare. Stesso cancello già in uso per Santé Système
+            (`moduleVis.health && museOk`, qui sotto) e per il biometrico: `moduleVis.mna`
+            resta la preferenza scritta da CONFIG, `museOk` decide se ha senso mostrarla ORA. */}
+        {aperta && moduleVis.mna && museOk && (
           // ⚠️ CORRETTO — segnalato: « vedo che l'MNA è ridotto, ma non per questo hai
           // aumentato la grandezza dell'arco. Lo scopo era proprio questo, aumentare l'arco
           // riducendo l'MNA quando non utilizzato ». `minHeight:140` era FISSO, indifferente
