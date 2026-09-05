@@ -9731,3 +9731,24 @@ Cluster principali:
 **File toccati — SOLO SERENITY (dati):**
 - `public/dizionario/dizionario-fr.json`
 - `public/dizionario/dizionario-es.json`
+
+## Giro — 2026-09-05 — dizionario: quarantaduesimo blocco, 2100/2541 voci (82,6%)
+
+**Blocco 42 (indici 2050-2099)**, FR+ES, 50 voci ciascuna lingua. Termini coperti: da SELF AUDITING a SICKNESS.
+
+Cluster principali:
+- **SELF- cluster (ampio)**: SELF AUDITING (4 definizioni), SELF-COACHING, SELF-CONFIDENCE, SELF-DETERMINED, SELF-DETERMINISM (7 definizioni che proseguono nella voce successiva), SELF-INVALIDATING ENGRAM, SELF-INVALIDATION, SELFNESS, SELF-PERPETUATING ENGRAM, SELF-PROCESSING.
+- **Anomalia OCR**: la voce SELF-DETERMINISM si interrompe a metà della settima definizione ("means the ability to direct himself. (2") e la voce successiva del dizionario sorgente è etichettata con l'intestazione garbled "ACC 30A" (frammento di riferimento bibliografico "2ACC 30A") che contiene in realtà le definizioni 8, 9, 10 della stessa voce SELF-DETERMINISM. Riprodotta fedelmente in FR/ES, headword `termine_en` invariato ("ACC 30A").
+- **SENSATION cluster**: SEN, SENSATION (definizione cardine che elenca le 5 categorie: pressione/movimento/vertigine/sensazione sessuale/emozione), SENSITIVITY BOOSTER, SENSITIVITY KNOB.
+- **SERVICE FACSIMILE**: la voce più estesa del blocco, 6 definizioni numerate sul meccanismo cardine del "facsimile di servizio" in Dianetics moderna.
+- **SESSION cluster**: SESSION, SESSION ARC BREAK, SESSION MISSED WITHHOLD.
+- **SEVEN RESISTIVE CASES**: l'elenco completo dei sette tipi di casi problematici (HCOB 23 Sep 68).
+- **SEX cluster**: SEX (6 definizioni), SEXUAL SENSATION.
+- **SH/SAINT HILL cluster**: SH, SH DEMO, SHPA, SHSBC.
+- **SHORT cluster**: SHORT 8, SHORT LIST, SHORT SESSIONING, SHORT SPOTTING, SHORT TERM PTP.
+
+**Verifica:** dati JSON puri — validati con `json.load` prima e dopo il merge (50/50 per lingua, totale 2100/2100 coerente in entrambi i file). `tsc`/`lint`/`vitest` non ri-eseguiti (nessun file TSX toccato in questo giro).
+
+**File toccati — SOLO SERENITY (dati):**
+- `public/dizionario/dizionario-fr.json`
+- `public/dizionario/dizionario-es.json`
