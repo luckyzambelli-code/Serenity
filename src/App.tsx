@@ -25,7 +25,6 @@ import { sessionRecord, reactionRecord, cycleRecord, fnRecord, itemRecord,
 import { corpusWrite, corpusFlushNow, corpusStato, corpusAvailable } from './lib/corpusWriter';
 import { SQUEEZE_TARGET_OFFSET } from './engine/thetaSetup';
 import { ThetaReadyCheck } from './components/ThetaReadyCheck';
-import { ThetaTaCalibration } from './components/ThetaTaCalibration';
 
 // ⚠️ THETA_AMBER si usava solo nel badge del Theta-Meter, ora in `InstrumentBadges.tsx`
 // (che ne tiene la propria copia — deve restare identica a QuantumSphere, v. lì). Tolto da
@@ -3830,8 +3829,6 @@ export default function App() {
     setAgoScelto('theta');
   }, [instruments.muse, instruments.theta]);
 
-  const [showThetaCal, setShowThetaCal] = useState(false);
-
   // ESC chiude il selettore d'apertura. Chi ha aperto per sbaglio cerca ESC prima di cercare
   // una croce, e senza questo il pannello era senza uscita (segnalato).
   useEffect(() => {
@@ -4472,21 +4469,14 @@ export default function App() {
     <>
     {showSplash && <SplashScreen onDismiss={() => setShowSplash(false)} />}
     {showCredits && <CreditsModal onClose={() => setShowCredits(false)} />}
-    {showThetaCal && (
-      <ThetaTaCalibration
-        captureRaw={theta.captureRaw}
-        applyTaPoints={theta.applyTaPoints}
-        clearTaCalibration={theta.clearTaCalibration}
-        taScale={theta.taScale}
-        connected={theta.status === 'connected'}
-        info={theta.info}
-        counters={theta.counters}
-        onConnect={() => { void theta.connect(); }}
-        taNow={theta.taNow}
-        rawNow={theta.rawSmooth}
-        onClose={() => setShowThetaCal(false)}
-      />
-    )}
+    {/* ⚠️ RIMOSSO — segnalato: « non abbiamo bisogno di integrare la taratura con l'artefatto,
+        una volta che lo abbiamo fatto. Teniamo i valori trovati... togliere la parte di
+        gestione con l'artefatto ». Qui montava `ThetaTaCalibration` (il pannello coi 4
+        pulsanti dell'accessorio fisico) — tolto insieme al file stesso e alla sua
+        importazione: la taratura di fabbrica (`FACTORY_TA_POINTS`, in `thetaTaScale.ts`,
+        misurata il 29/07/2026) resta l'UNICA via, scritta nel codice. Il confronto affiancato
+        col Theta-Meter vero (`theta.addPointFromReference`, nel pannello TRIM di
+        `SidebarDrawer.tsx`) è un meccanismo DIVERSO — non usa l'artefatto — e resta. */}
 
     {/* CONN-48: connection status window with progress bar during handshake. */}
     <ConnectionProgress
@@ -4934,7 +4924,6 @@ export default function App() {
             setThetaConfig={theta.setConfig}
             thetaAddPoint={theta.addPointFromReference}
             thetaTaNow={theta.taNow}
-            onOpenThetaTester={() => { setSidebarDrawer(null); setShowThetaCal(true); }}
           drawer={sidebarDrawer}
           onClose={sdOnClose}
           t={tWide}

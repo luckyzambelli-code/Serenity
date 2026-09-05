@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildTaScale, taFromRaw, linearitaResidua, MIN_TA_POINTS, TA_MAX, TA_MIN,
-  factoryTaScale, isFactoryScale, FACTORY_TA_POINTS, findNonMonotonic,
+  factoryTaScale, FACTORY_TA_POINTS, findNonMonotonic,
   type ThetaTaPoint,
 } from '../thetaTaScale';
 
@@ -170,11 +170,6 @@ describe('taratura di fabbrica', () => {
   it('rende esattamente i TA misurati', () => {
     const s = factoryTaScale()!;
     for (const p of FACTORY_TA_POINTS) expect(taFromRaw(p.raw, s)).toBeCloseTo(p.ta, 9);
-  });
-
-  it('si riconosce da una taratura propria', () => {
-    expect(isFactoryScale(factoryTaScale())).toBe(true);
-    expect(isFactoryScale(buildTaScale(PUNTI, Date.now()))).toBe(false);
   });
 });
 

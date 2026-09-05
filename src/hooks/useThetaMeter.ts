@@ -4,8 +4,8 @@ import { ThetaNeedle } from '../engine/thetaNeedle';
 import { ThetaReactionTracker, type ThetaReaction } from '../engine/thetaReactions';
 import { ThetaFloatDetector, type ThetaFloatState } from '../engine/thetaFloat';
 import {
-  buildTaScale, taFromRaw, loadTaScale, saveTaScale, clearTaScale, factoryTaScale,
-  type ThetaTaPoint, type ThetaTaScale,
+  buildTaScale, taFromRaw, loadTaScale, saveTaScale,
+  type ThetaTaScale,
 } from '../engine/thetaTaScale';
 import {
   loadSetup, saveSetup, scaleFromSqueeze, breathIsValid, taWithSetup,
@@ -324,35 +324,18 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
     setState(p => ({ ...p, totalTa: 0 }));
   }, []);
 
-  // ── TARATURA con l'artefatto fisico ────────────────────────────────────────────────────
-  /** La LETTURA in questo istante — da chiamare con un pulsante dell'artefatto premuto.
-   *  ⚠️ NON il braccio: quello insegue con una costante di tempo di ~20 s, e registrarlo dava
-   *  punti presi a metà strada fra un valore e il successivo, quindi compressi fra loro — la
-   *  scala usciva dilatata (TA 2 letto 1,3 · TA 5 letto 7,0). La lettura lisciata si assesta
-   *  invece in un decimo di secondo. */
-  const captureRaw = useCallback(() => needleRef.current.lastRaw, []);
-
-  /** Fissa la scala dai punti raccolti. Restituisce false se sono inutilizzabili (troppo pochi,
-   *  o due letture identiche: segno che l'artefatto non era attaccato). */
-  const applyTaPoints = useCallback((points: ThetaTaPoint[], now: number) => {
-    const scale = buildTaScale(points, now);
-    if (!scale) return false;
-    saveTaScale(scale);
-    // Le correzioni per configurazione erano misurate contro la scala PRECEDENTE: con una scala
-    // nuova non significano più nulla, e lasciarle applicate falserebbe le letture in silenzio.
-    setState(p => {
-      const setup = { ...p.setup, offsets: { 'two-cans': 0, 'solo-can': 0 } };
-      saveSetup(setup);
-      return { ...p, taScale: scale, setup };
-    });
-    return true;
-  }, []);
-
-  /** Torna alla taratura DI FABBRICA, non al nulla: senza scala il TA sparirebbe del tutto. */
-  const clearTaCalibration = useCallback(() => {
-    clearTaScale();
-    setState(p => ({ ...p, taScale: factoryTaScale(), ta: null }));
-  }, []);
+  /**
+   * ⚠️ RIMOSSO — `captureRaw`/`applyTaPoints`/`clearTaCalibration` (taratura con l'artefatto
+   * fisico) stavano qui. Segnalato: « non abbiamo bisogno di integrare la taratura con
+   * l'artefatto, una volta che lo abbiamo fatto. Teniamo i valori trovati... togliere la
+   * parte di gestione con l'artefatto ». Erano l'unico consumatore di questi tre — il pannello
+   * `ThetaTaCalibration.tsx` (tolto) — quindi via anche loro: `FACTORY_TA_POINTS`
+   * (`thetaTaScale.ts`, misurata il 29/07/2026) resta l'UNICA taratura, scritta nel codice.
+   *
+   * `buildTaScale`/`saveTaScale` NON si toccano: li usa ancora `addPointFromReference` (sotto),
+   * il confronto affiancato col Theta-Meter vero — un meccanismo diverso, senza l'artefatto,
+   * che resta.
+   */
 
   // ── ASSETTO ────────────────────────────────────────────────────────────────────────────
   const updateSetup = useCallback((patch: Partial<ThetaSetup>) => {
@@ -524,7 +507,7 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
   }, []);
 
   return {
-    ...state, connect, disconnect, resetTotal, captureRaw, applyTaPoints, clearTaCalibration,
+    ...state, connect, disconnect, resetTotal,
     setConfig, setSoloOffset, addPointFromReference, startSqueezeTest, startBreathTest, cancelTest, setSensTrim, resetToSet,
     resetPerSessionSetup,
     /** Diagnosi: quanto si è mosso l'ago fra due istanti, e se c'era agitazione. */

@@ -9977,3 +9977,35 @@ Il margine di una divisione quando la prova non è stata fatta (`TA_MARGIN_SOLO_
 - SOLO EQUILIBRIUM: `src/App.tsx` (chiamata al nuovo reset, stesso punto di `handleStart`)
 
 **Build**: SERENITY 3.0.257 + EQUILIBRIUM 2.0.270, entrambe spedite.
+
+## Giro — 2026-09-05 (continuazione) — MNA: la riserva di spazio segue il collasso; rimosso il pannello dell'artefatto; testo CALIBRATION corretto
+
+### 1. MNA — il BUG nel fix precedente
+Segnalato subito dopo la build precedente: "vedo che l'MNA è ridotto, ma non per questo hai aumentato la grandezza dell'arco. Lo scopo era proprio questo".
+
+**Causa**: il `collapsed` era stato aggiunto come `useState` INTERNO a `PannelloMna.tsx` — nascondeva il contenuto, ma il contenitore che gli riserva spazio in `Serenity.tsx` (`minHeight:140, flex:'0 0 auto'`) non lo sapeva, e restava alto 140px comunque. `gruppoAlto` (l'arco) non riguadagnava mai lo spazio.
+
+**Correzione**: lo stato sale al chiamante. `PannelloMna` ora riceve `collapsed`/`onToggleCollapsed` come prop, invece di gestirli da sé; `Serenity.tsx` possiede `mnaCollassato` e lo usa per il `minHeight` del contenitore (`44` chiuso, `140` aperto, con transizione). Verificato dal vivo via JS (`getComputedStyle`/ispezione della catena DOM): `min-height` passa correttamente da 44px a 140px al click del chevron.
+
+### 2. Testo del blocco calibrazione — ulteriore correzione
+Segnalato: la frase "tenez les boîtes, lisez le Theta-Meter et ajoutez le point" dava per scontato che il programma Theta-Meter fosse già aperto. Corretta in tutte le lingue: "apri il programma Theta-Meter, impugna le lattine, leggi il TA sul Theta-Meter e scrivilo qui" (e equivalenti FR/EN/ES/SV).
+
+### 3. COMPLETATO IL COMPITO ORIGINALE — rimossa la gestione con l'artefatto
+Ripreso da dove era stato lasciato in sospeso a inizio di questa serie di modifiche (le tre domande poste e già risposte dall'utente: tenere i valori del 29/07/2026, togliere pannello+persistenza, togliere anche il codice morto).
+
+- **Rimosso interamente** `src/components/ThetaTaCalibration.tsx` (il pannello con i 4 pulsanti dell'artefatto fisico) e la sua importazione/montaggio/stato (`showThetaCal`) in `App.tsx`. Il bottone che lo apriva in `SidebarDrawer.tsx` sparisce da solo (era già condizionale su `onOpenThetaTester`, mai reso obbligatorio).
+- **Rimossi da `useThetaMeter.ts`** (shared): `captureRaw`/`applyTaPoints`/`clearTaCalibration` — erano l'unico modo di usare il pannello appena tolto.
+- **Rimossi da `thetaTaScale.ts`** (shared): `clearTaScale`/`isFactoryScale` — orfani dopo la rimozione sopra.
+- **Rimosso da `thetaMeter.ts`** (shared): `ThetaCalibration`/`solveThetaCalibration`/`ohmFromRaw`/`linearityError` — una via di taratura a OHM mai collegata a nulla (verificato: zero chiamanti in tutto il deposito).
+- **KEPT**: `theta.addPointFromReference` (il "confronto affiancato" col Theta-Meter vero, via TRIM) — meccanismo diverso, senza l'artefatto, esplicitamente confermato dall'utente dopo aver visto il mockup. `FACTORY_TA_POINTS` (29/07/2026) resta l'unica taratura, scritta nel codice — nessuna nuova misura richiesta.
+- Test aggiornati di conseguenza: rimossi 5 test dei simboli tolti (`thetaTaScale.test.ts`: 1; `thetaMeter.test.ts`: 4) — 718 → 713, nessuna perdita di copertura reale (testavano codice mai raggiunto o appena rimosso).
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 713/713 verdi (post-rimozione, coerente).
+
+**File toccati:**
+- SOLO SERENITY: `src/serenity/PannelloMeter.tsx`, `src/serenity/PannelloMna.tsx`, `src/serenity/Serenity.tsx`
+- CONDIVISI: `src/hooks/useThetaMeter.ts`, `src/engine/thetaTaScale.ts`, `src/engine/thetaMeter.ts`, `src/engine/__tests__/thetaTaScale.test.ts`, `src/engine/__tests__/thetaMeter.test.ts`
+- SOLO EQUILIBRIUM: `src/App.tsx`
+- RIMOSSO: `src/components/ThetaTaCalibration.tsx`
+
+**Build**: SERENITY 3.0.258 + EQUILIBRIUM 2.0.271, entrambe spedite.

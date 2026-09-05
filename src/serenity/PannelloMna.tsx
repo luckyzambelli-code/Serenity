@@ -24,7 +24,6 @@
  * @see docs/serenity-refonte.md — fase 6.
  */
 
-import { useState } from 'react';
 import { primeFreqAudio } from '../lib/primeFreqAudio';
 import type { PrimePhase, Zone as PrimeZone } from '../lib/primeFreqEngine';
 import type { MnaSession } from '../hooks/useMnaModule';
@@ -35,6 +34,7 @@ export function PannelloMna({
   primeIm, primeFd, primeZone, primeDelta, primePStar,
   primeCopies, setPrimeCopies, primeCaptured,
   mnaSessionRef, onCapture, onAudio, onChiudi,
+  collapsed, onToggleCollapsed,
 }: {
   primePhase: PrimePhase;
   setPrimePhase: (p: PrimePhase) => void;
@@ -47,23 +47,32 @@ export function PannelloMna({
   onCapture: () => void;
   onAudio: (payload: { action: 'sonify' | 'clean' | 'harmonics' | 'stop'; fd?: number; delta?: number; zone?: PrimeZone; pStar?: number }) => void;
   onChiudi: () => void;
-}) {
-  const { t } = useI18n();
-
   /**
    * ⚠️ AGGIUNTO — segnalato: « il MNA quando appare, fallo apparire "chiuso", con il bottone
-   * per aprirlo. Questo permette di avere una più grande spazio per l'arco ».
+   * per aprirlo. Questo permette di avere una più grande spazio per l'arco ». E poi, verificato
+   * dal vivo: « vedo che l'MNA è ridotto, ma non per questo hai aumentato la grandezza
+   * dell'arco. Lo scopo era proprio questo ».
+   *
+   * ── PERCHÉ ORA È UN PROP, E NON PIÙ STATO INTERNO ───────────────────────────────────────
+   * Prima era un `useState` locale a questo file: il CONTENUTO si nascondeva, ma il
+   * contenitore che gli riserva spazio in `Serenity.tsx` (`minHeight:140, flex:'0 0 auto'`) non
+   * lo sapeva — restava alto 140 comunque, quindi `gruppoAlto` (l'arco) non riguadagnava mai
+   * quello spazio. Lo stato sale al chiamante perché è LUI a decidere quanto riservare: questo
+   * componente resta un pannello che sa disegnarsi in due modi, non il proprietario della
+   * riserva di spazio intorno a sé.
    *
    * ── CHIUSO DI DEFAULT, QUI — E NON PER `MnaPanel.tsx` (EQUILIBRIUM) ─────────────────────
-   * `MnaPanel.tsx` (src/components/, EQUILIBRIUM) ha già un `collapsed` ma APERTO di default,
-   * per una ragione opposta e già decisa lì: in EQUILIBRIUM il pannello compare SOLO quando lo
-   * si chiede esplicitamente (un click su MNA), quindi aprirlo già pieno non ruba spazio non
+   * `MnaPanel.tsx` (src/components/, EQUILIBRIUM) ha il suo `collapsed` APERTO di default, per
+   * una ragione opposta e già decisa lì: in EQUILIBRIUM il pannello compare SOLO quando lo si
+   * chiede esplicitamente (un click su MNA), quindi aprirlo già pieno non ruba spazio non
    * richiesto. Qui in SERENITY invece — v. `Serenity.tsx`, `aperta && moduleVis.mna` — il
    * pannello resta a schermo per tutta la durata del modulo attivo, ancorato in basso SOPRA
-   * l'arco: pieno, copre la parte bassa del quadrante anche quando non lo si sta usando in
-   * quel momento. Richiesta esplicita e diversa da quella di EQUILIBRIUM: qui parte chiuso.
+   * l'arco. Il default (`true`, chiuso) vive ora in `Serenity.tsx`, dove sta anche lo stato.
    */
-  const [collapsed, setCollapsed] = useState(true);
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
+}) {
+  const { t } = useI18n();
 
   // ── LA STESSA SEQUENZA DI MnaPanel.tsx, non una nuova ─────────────────────────────────────
   const handleAzione = () => {
@@ -164,7 +173,7 @@ export function PannelloMna({
             già usata altrove in SERENITY (v. l'indicatore "configura il meter" in
             `Serenity.tsx`) — non serve una nuova voce di dizionario per un simbolo che si
             legge da solo. */}
-        <button className="s-glass s-glass-btn" onClick={() => setCollapsed(c => !c)}
+        <button className="s-glass s-glass-btn" onClick={onToggleCollapsed}
           style={{
             cursor: 'pointer', borderRadius: 999, padding: '4px 10px', background: 'var(--s-disc)',
             fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)',

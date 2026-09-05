@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  parseThetaReport, ThetaMeter, solveThetaCalibration, ohmFromRaw, linearityError,
+  parseThetaReport, ThetaMeter,
   THETA_RAW_MAX,
 } from '../thetaMeter';
 import { THETA_HEADER_0, THETA_HEADER_1 } from '../tuning';
@@ -102,33 +102,9 @@ describe('ThetaMeter', () => {
   });
 });
 
-describe('taratura grezzo → ohm', () => {
-  it('ritrova la retta da due punti noti', () => {
-    // Verso osservato: stringendo le lattine il numero SCENDE, e stringere abbassa la
-    // resistenza → il grezzo cresce con gli ohm. La pendenza dev'essere POSITIVA.
-    const cal = solveThetaCalibration(8_000_000, 100_000, 11_000_000, 1_000_000)!;
-    expect(cal.slope).toBeGreaterThan(0);
-    expect(ohmFromRaw(8_000_000, cal)).toBeCloseTo(100_000, 3);
-    expect(ohmFromRaw(11_000_000, cal)).toBeCloseTo(1_000_000, 3);
-  });
-
-  it('RIFIUTA due punti sullo stesso grezzo (indeterminato)', () => {
-    expect(solveThetaCalibration(9_000_000, 100_000, 9_000_000, 1_000_000)).toBeNull();
-  });
-
-  it('non restituisce mai ohm negativi', () => {
-    const cal = solveThetaCalibration(8_000_000, 100_000, 11_000_000, 1_000_000)!;
-    expect(ohmFromRaw(0, cal)).toBe(0);
-  });
-
-  it('il terzo punto misura se la retta regge davvero', () => {
-    const cal = solveThetaCalibration(8_000_000, 100_000, 11_000_000, 1_000_000)!;
-    // punto perfettamente sulla retta → scarto nullo
-    expect(linearityError(cal, 9_500_000, 550_000)).toBeCloseTo(0, 6);
-    // punto lontano dalla retta → scarto grande: l'ipotesi lineare NON regge
-    expect(linearityError(cal, 9_500_000, 200_000)).toBeGreaterThan(0.5);
-  });
-});
+// ⚠️ RIMOSSO — il gruppo di test « taratura grezzo → ohm » (`solveThetaCalibration`/
+// `ohmFromRaw`/`linearityError`) stava qui: le funzioni che testava sono state tolte da
+// `thetaMeter.ts` nello stesso giro (mai chiamate da nessuna parte del programma).
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════
 // UN MODELLO CHE NON CONOSCIAMO

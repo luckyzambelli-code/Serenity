@@ -1234,6 +1234,14 @@ export default function Serenity() {
    *  disaccoppiate. */
   const setPrimePhase = (p: PrimePhase) => { setPrimePhaseState(p); primePhaseRef.current = p; };
   const mnaSessionRef = useRef<MnaSession>({ ...MNA_SESSION_VUOTA });
+  /**
+   * ⚠️ AGGIUNTO — lo stato del collasso di `PannelloMna` vive QUI, non dentro il pannello
+   * stesso: v. la nota grande su `collapsed`/`onToggleCollapsed` in `PannelloMna.tsx`. Serve
+   * qui perché è QUI che si decide quanto spazio riservargli (il contenitore poco più giù,
+   * `minHeight`) — un `useState` interno al pannello poteva nascondere il SUO contenuto ma non
+   * poteva mai dire al chiamante "adesso ti serve meno spazio".
+   */
+  const [mnaCollassato, setMnaCollassato] = useState(true);
   /** ── SANTÉ SYSTÈME / GIORNALE / MNA — segnalato: « integra anche il journal de session,
    *  Santé Système », poi di nuovo: « questi moduli non devono avere bottoni, si attivano
    *  solamente via CONFIG ». Non c'è più uno stato "aperto" separato da `moduleVis`: il
@@ -6463,8 +6471,23 @@ export default function Serenity() {
             sua nota, `padding`/`marginTop`) — 140 lascia comunque un margine reale sopra il
             pannello più stretto, senza sprecare il resto. */}
         {aperta && moduleVis.mna && (
-          <div style={{ position: 'relative', width: '100%', maxWidth: 1400, minHeight: 140, flex: '0 0 auto' }}>
+          // ⚠️ CORRETTO — segnalato: « vedo che l'MNA è ridotto, ma non per questo hai
+          // aumentato la grandezza dell'arco. Lo scopo era proprio questo, aumentare l'arco
+          // riducendo l'MNA quando non utilizzato ». `minHeight:140` era FISSO, indifferente
+          // al `collapsed` interno del pannello: `gruppoAlto` (l'arco, sopra) non riguadagnava
+          // mai lo spazio liberato dal collasso, perché a questo `flex:'0 0 auto'` bastava il
+          // vecchio pavimento di 140 per non restringersi mai sotto quello, contenuto o no.
+          // Ora il pavimento stesso segue `mnaCollassato`: chiuso, solo la barra del titolo
+          // serve davvero spazio (~44px, misurato: padding 8px×2 + una riga di testo a
+          // `--s-fs-sm` con margine) — l'arco sopra riprende il resto.
+          <div style={{
+            position: 'relative', width: '100%', maxWidth: 1400,
+            minHeight: mnaCollassato ? 44 : 140, flex: '0 0 auto',
+            transition: 'min-height var(--s-slow) var(--s-ease)',
+          }}>
             <PannelloMna
+              collapsed={mnaCollassato}
+              onToggleCollapsed={() => setMnaCollassato(c => !c)}
               primePhase={primePhase}
               setPrimePhase={setPrimePhase}
               primePhaseRef={primePhaseRef}

@@ -98,46 +98,11 @@ export class ThetaMeter {
                   this.samples.length = 0; }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════════════════
-// DAL VALORE GREZZO AGLI OHM
-// ═══════════════════════════════════════════════════════════════════════════════════════════
-
-/** Taratura lineare grezzo → ohm, da due punti noti. */
-export interface ThetaCalibration {
-  /** Ohm per unità grezza. */
-  slope: number;
-  /** Ohm a valore grezzo zero. */
-  offset: number;
-}
-
 /**
- * Ricava la taratura da due resistenze NOTE misurate al posto della persona.
- *
- * ⚠️ Assume che il legame grezzo→ohm sia **lineare**. È l'ipotesi più semplice e non è ancora
- * verificata: se il meter converte la resistenza in frequenza, il legame potrebbe essere
- * reciproco. Si verifica con un TERZO punto — se cade sulla retta, l'ipotesi regge.
- * Finché non è verificato, i valori RELATIVI sono attendibili e gli ohm assoluti no.
+ * ⚠️ RIMOSSI (segnalato: « togliere la parte di gestione con l'artefatto », pulizia dello
+ * stesso giro) — `ThetaCalibration`/`solveThetaCalibration`/`ohmFromRaw`/`linearityError`
+ * stavano qui: una taratura grezzo→OHM a due punti noti, abbozzata ma MAI collegata a nulla —
+ * verificato con una ricerca sul deposito, zero chiamanti in tutto il programma. Il ciclo TONE
+ * vivo passa sempre dal TA (`thetaTaScale.ts`, `taFromRaw`), mai dagli ohm diretti. Un'esca per
+ * chi legge: sembrava la via viva e non lo era.
  */
-export const solveThetaCalibration = (
-  raw1: number, ohm1: number,
-  raw2: number, ohm2: number,
-): ThetaCalibration | null => {
-  if (!Number.isFinite(raw1) || !Number.isFinite(raw2)) return null;
-  const dRaw = raw2 - raw1;
-  if (Math.abs(dRaw) < 1e-9) return null;        // due punti sullo stesso grezzo: indeterminato
-  const slope = (ohm2 - ohm1) / dRaw;
-  return { slope, offset: ohm1 - slope * raw1 };
-};
-
-/** Applica la taratura. Mai negativo: una resistenza non può esserlo. */
-export const ohmFromRaw = (raw: number, cal: ThetaCalibration): number =>
-  Math.max(0, cal.slope * raw + cal.offset);
-
-/**
- * Verifica dell'ipotesi lineare con un terzo punto noto: restituisce lo scarto RELATIVO fra
- * l'ohm previsto e quello vero. Sotto qualche percento la retta regge; molto sopra, il legame
- * non è lineare e la taratura a due punti non basta.
- */
-export const linearityError = (
-  cal: ThetaCalibration, raw3: number, ohm3: number,
-): number => (ohm3 > 0 ? Math.abs(ohmFromRaw(raw3, cal) - ohm3) / ohm3 : 0);

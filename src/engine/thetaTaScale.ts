@@ -230,11 +230,9 @@ export const loadTaScale = (): ThetaTaScale | null => {
   } catch (_) { return factoryTaScale(); }
 };
 
-/** Cancella la taratura PROPRIA e torna a quella di fabbrica — non al nulla. */
-export const clearTaScale = (): void => {
-  try { localStorage.removeItem(CHIAVE); } catch (_) { /* niente da fare */ }
-};
-
-/** true se la scala in uso è quella di fabbrica (nessuna misura propria salvata). */
-export const isFactoryScale = (scale: ThetaTaScale | null): boolean =>
-  !!scale && scale.madeAt === 0;
+/**
+ * ⚠️ RIMOSSI (segnalato: « togliere la parte di gestione con l'artefatto ») — `clearTaScale`
+ * e `isFactoryScale` stavano qui. Erano usati SOLO da `ThetaTaCalibration.tsx` (il pannello
+ * dei 4 pulsanti dell'artefatto fisico, tolto) e dal suo test — con `FACTORY_TA_POINTS` come
+ * unica taratura possibile, non c'è più una "propria" da cancellare né da distinguere.
+ */

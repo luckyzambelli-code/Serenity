@@ -482,11 +482,13 @@ export function PannelloMeter({ theta, provaTa, onFatto, passoIniziale }: {
               {LC('calibrazione', 'calibration', 'calibration', 'calibración', 'kalibrering')}
             </div>
           <div style={{ fontSize: 'var(--s-fs-base)', lineHeight: 1.5, color: 'var(--s-ink-faint)', textAlign: 'center' }}>
-            {LC('impugna le lattine, leggi il Theta-Meter e aggiungi il punto',
-                'tenez les boîtes, lisez le Theta-Meter et ajoutez le point',
-                'hold the cans, read the Theta-Meter and add the point',
-                'sujeta las latas, lee el Theta-Meter y añade el punto',
-                'håll burkarna, läs Theta-Meter och lägg till punkten')}
+            {/* ⚠️ CORRETTO — segnalato: la frase precedente non diceva di aprire il programma
+                Theta-Meter, dava per scontato che fosse già a schermo. */}
+            {LC('apri il programma Theta-Meter, impugna le lattine, leggi il TA sul Theta-Meter e scrivilo qui',
+                'ouvrez l\'application Theta-Meter, tenez les boîtes, lisez le TA du Theta-Meter et inscrivez-le ici',
+                'open the Theta-Meter app, hold the cans, read the TA on the Theta-Meter and write it here',
+                'abre la aplicación Theta-Meter, sujeta las latas, lee el TA en el Theta-Meter y escríbelo aquí',
+                'öppna Theta-Meter-programmet, håll burkarna, läs TA på Theta-Metern och skriv det här')}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-faint)' }}>
