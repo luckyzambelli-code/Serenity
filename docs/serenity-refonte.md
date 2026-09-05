@@ -9752,3 +9752,23 @@ Cluster principali:
 **File toccati — SOLO SERENITY (dati):**
 - `public/dizionario/dizionario-fr.json`
 - `public/dizionario/dizionario-es.json`
+
+## Giro — 2026-09-05 — dizionario: quarantatreesimo blocco, 2150/2541 voci (84,6%)
+
+**Blocco 43 (indici 2100-2149)**, FR+ES, 50 voci ciascuna lingua. Termini coperti: da SIGHT a SP.
+
+Cluster principali:
+- **SIGNIFICANCE/SLOW cluster**: SIGNIFICANCE, SIGNIFICANCE PROCESSING, SLOW ASSESSMENT, SLOW BOAT AUDITING, SLOW GAIN CASE.
+- **SOCIAL cluster**: SOCIAL MACHINERY, SOCIAL PERSONALITY — con l'anomalia OCR classica: il testo prosegue fondendosi con il frammento "SOFT TRs" (TR molli), riprodotto fedelmente in FR/ES.
+- **SOMATIC cluster (ampio)**: SOM, SOMA, SOMATIC (4 definizioni — voce cardine su dolore/sensazione in Dianetics), SOMATIC CHAIN, SOMATIC LOCATION, SOMATIC MIND (4 definizioni), SOMATIC SHUT-OFF, SOMATIC STRIP (descrizione dettagliata del meccanismo storico della "banda somatica").
+- **SONIC cluster**: SONIC (3 definizioni), SONIC CIRCUITS, SONIC SHUT-OFF.
+- **SOP cluster (Standard Operating Procedure)**: SOP, SOP-8, SOP 8A, SOP-8-C, SOP 8-D, SOP GOALS — l'intera famiglia storica delle procedure operative standard pre-Grade Chart.
+- **SOUND/SOURCE cluster**: SOUND (3 definizioni su altezza/timbro/volume), SOURCE, SOURCE LIST, SOURCE-POINT.
+- **SOUTH cluster**: SOUTH, SOUTH OF THE AUKS (curiosità gergale su "più a sud del Polo Sud", con l'AUK/pinguino).
+- Chiusura del blocco con **SP** (suppressive person), termine cardine per i round successivi.
+
+**Verifica:** dati JSON puri — validati con `json.load` prima e dopo il merge (50/50 per lingua, totale 2150/2150 coerente in entrambi i file). `tsc`/`lint`/`vitest` non ri-eseguiti (nessun file TSX toccato in questo giro).
+
+**File toccati — SOLO SERENITY (dati):**
+- `public/dizionario/dizionario-fr.json`
+- `public/dizionario/dizionario-es.json`
