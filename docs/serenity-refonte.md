@@ -9689,3 +9689,24 @@ Cluster principali:
 **File toccati — SOLO SERENITY (dati):**
 - `public/dizionario/dizionario-fr.json`
 - `public/dizionario/dizionario-es.json`
+
+## Giro — 2026-09-05 — dizionario: quarantesimo blocco, 2000/2541 voci (78,7%) — traguardo delle 2000 voci
+
+**Blocco 40 (indici 1950-1999)**, FR+ES, 50 voci ciascuna lingua. Termini coperti: da ROUTINE 2 a SALVAGE.
+
+Cluster principali:
+- **ROUTINE 2 cluster (ampio)**: ROUTINE 2, ROUTINE 2C, ROUTINE 2-G, ROUTINE 2-G1, ROUTINE 2-GPH, ROUTINE 2-GX, ROUTINE 2-H, ROUTINE 2-10, ROUTINE 2-12 (4 definizioni sulla localizzazione degli item del GPM), ROUTINE 2-12A, ROUTINE 2-16, ROUTINE 2-17 — l'intera famiglia storica delle routine di ricerca del goal.
+- **ROUTINE 3 cluster (ampio)**: ROUTINE 3 (3 definizioni, con il racconto narrativo su "trovare un obiettivo... esplodeva"), ROUTINE 3A, ROUTINE 3D, ROUTINE 3D CRISS CROSS (con rimando a 3GAXX), ROUTINE 3D CRISS CROSS ITEMS, ROUTINE-3G, ROUTINE 3 GA CRISS CROSS (rimando a THREE GA XX), ROUTINE 3H, ROUTINE 3M, ROUTINE 3-MX (con ROUTINE 3-N incorporato), ROUTINE 3N2, ROUTINE 3-R, ROUTINE 3-SC.
+- **ROUTINE 4 / R6 cluster**: ROUTINE 4-H, ROUTINE 4-SC (con ROUTINE 6 END WORDS incorporato), R6, R6 BANK, R6EW, R6-EW P, R6-EW S, R6 GPMI, R6O, R6R — l'intera nomenclatura del Livello VI.
+- **R/S cluster**: RR (rocket read), R/S, R/S HANDLING, RSM (curiosità storica: il nome originale della nave ammiraglia "Royal Scotman" prima di diventare la "Apollo"), R/S PC, R/S STATEMENTS.
+- **RUDIMENTS/RUN cluster**: RUDIMENTS (4 definizioni), RUDS, RUN, RUNDOWN, RUN OUT.
+- **SAD EFFECT / SAFE TECHNIQUE**: SAFE TECHNIQUE presenta la consueta anomalia OCR del dizionario sorgente — il testo continua fondendosi con la voce SAINT HILL (SH), riprodotta fedelmente in entrambe le lingue.
+- **SAINT HILL SPECIAL BRIEFING COURSE**, SALVAGE.
+
+Anche **SAD EFFECT** presenta un troncamento a fine voce nel sorgente inglese ("...found by finding the earliest ARC break on the chai...") — riprodotto fedelmente.
+
+**Verifica:** dati JSON puri — validati con `json.load` prima e dopo il merge (50/50 per lingua, totale 2000/2000 coerente in entrambi i file). `tsc`/`lint`/`vitest` non ri-eseguiti (nessun file TSX toccato in questo giro).
+
+**File toccati — SOLO SERENITY (dati):**
+- `public/dizionario/dizionario-fr.json`
+- `public/dizionario/dizionario-es.json`
