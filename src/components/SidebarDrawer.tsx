@@ -13,7 +13,7 @@ import { importWallpaper } from '../lib/wallpaperImport';
 import { TOKEN } from '../ui/tokens';
 import { LAYER } from "../ui/layers";
 import { pick5 } from '../i18n5';
-import { taAccumulator } from '../engine/TaAccumulator';
+import { taAccumulator, TA_CALIB_FRESCHEZZA_MS } from '../engine/TaAccumulator';
 
 export type DrawerKey = 'link' | 'auditor' | 'pc' | 'trim' | 'session' | 'lang' | 'config';
 
@@ -514,6 +514,11 @@ function TrimDrawer({ needleTrim, setNeedleTrim, needleInertia, setNeedleInertia
   const { titleColor, labelColor, inputBg, inputBorder } = theme;
   /** Il TA che il Theta-Meter mostra ADESSO, digitato per il confronto affiancato. */
   const [rifTa, setRifTa] = React.useState('');
+  /** ⚠️ AGGIUNTO — v. la nota gemella in `PannelloMeter.tsx` (SERENITY): fotografato al clic,
+   *  non un polling continuo — dice se il MUSE stava trasmettendo in quell'istante, il solo
+   *  modo di distinguere "non ho ancora provato" da "ho provato e il MUSE non c'era" (in quel
+   *  caso `getCalibrationPoints()` resta vuoto per sempre, silenziosamente). */
+  const [museVivoAlClick, setMuseVivoAlClick] = React.useState<boolean | null>(null);
   const inertia = needleInertia ?? 90;
   return (
     <>
@@ -673,7 +678,13 @@ function TrimDrawer({ needleTrim, setNeedleTrim, needleInertia, setNeedleInertia
                          background: inputBg, border: inputBorder, color: titleColor, outline: 'none' }} />
               <button
                 disabled={!Number.isFinite(parseFloat(rifTa))}
-                onClick={() => { thetaAddPoint?.(parseFloat(rifTa), thetaConfig); setRifTa(''); }}
+                onClick={() => {
+                  const v = parseFloat(rifTa);
+                  // ⚠️ Fotografato PRIMA della chiamata — v. la nota su `museVivoAlClick`, sopra.
+                  setMuseVivoAlClick(Date.now() - taAccumulator.lastMsAt <= TA_CALIB_FRESCHEZZA_MS);
+                  thetaAddPoint?.(v, thetaConfig);
+                  setRifTa('');
+                }}
                 style={{ flex: 1, padding: '6px', borderRadius: 5, fontSize: 10, cursor: 'pointer',
                          opacity: Number.isFinite(parseFloat(rifTa)) ? 1 : 0.4,
                          background: inputBg, border: inputBorder, color: titleColor }}>
@@ -681,14 +692,25 @@ function TrimDrawer({ needleTrim, setNeedleTrim, needleInertia, setNeedleInertia
               </button>
             </div>
             {/* ⚠️ AGGIUNTO — segnalato: « perché non si scrive il TA del MUSE corrispondente...
-                quando ho registrato la misura del Theta-Meter? ». Un punto solo non basta a
-                tarare (due incognite, un punto solo è indeterminato — v. `fitGainSpan`,
-                `TaAccumulator.ts`): restava silenzioso, sembrava che il clic non avesse fatto
-                niente. Stesso avviso di `PannelloMeter.tsx` (SERENITY), qui nella lingua
-                dell'app invece delle chiavi condivise — testo nuovo, non toccare `i18n.tsx`
-                per un pannello EXPERT di un solo posto. */}
-            {(() => {
+                quando ho registrato la misura del Theta-Meter? », poi: « dove hai messo "serve
+                un secondo punto"? non lo vedo ». Il caso silenzioso vero: SENZA MUSE collegato
+                (frequente qui, un pannello che si apre anche col solo Theta-Meter),
+                `addCalibrationPoint` rifiuta ogni punto e `getCalibrationPoints()` resta vuoto
+                per sempre — contare solo i punti non distingueva "non ho ancora provato" da
+                "ho provato e il MUSE non c'era". Stesso avviso di `PannelloMeter.tsx`
+                (SERENITY), qui nella lingua dell'app invece delle chiavi condivise — testo
+                nuovo, non toccare `i18n.tsx` per un pannello EXPERT di un solo posto. */}
+            {museVivoAlClick !== null && (() => {
               const nPunti = taAccumulator.getCalibrationPoints().length;
+              if (!museVivoAlClick) return (
+                <div style={{ marginTop: 6, fontSize: 9, lineHeight: 1.4, color: TOKEN.warn }}>
+                  {pick5(lang, 'il MUSE non sta trasmettendo — questo punto ha corretto solo la scala del Theta-Meter, non il TA del MUSE',
+                      'le MUSE ne transmet pas — ce point n\'a corrigé que l\'échelle du Theta-Meter, pas le TA du MUSE',
+                      'the MUSE isn\'t transmitting — this point only corrected the Theta-Meter scale, not the MUSE TA',
+                      'el MUSE no está transmitiendo — este punto solo corrigió la escala del Theta-Meter, no el TA del MUSE',
+                      'MUSE sänder inte — den här punkten korrigerade bara Theta-Meterns skala, inte MUSE-TA')}
+                </div>
+              );
               if (nPunti === 0) return null;
               return (
                 <div style={{ marginTop: 6, fontSize: 9, lineHeight: 1.4,

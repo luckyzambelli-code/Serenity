@@ -50,7 +50,7 @@ import { pick5 } from '../i18n5';
 import { compareReady, soloTaOffset } from '../engine/canTest';
 import type { useThetaMeter } from '../hooks/useThetaMeter';
 import type { ElectrodeConfig } from '../engine/thetaSetup';
-import { taAccumulator } from '../engine/TaAccumulator';
+import { taAccumulator, TA_CALIB_FRESCHEZZA_MS } from '../engine/TaAccumulator';
 
 const pillola = (piena: boolean): React.CSSProperties => ({
   cursor: 'pointer', borderRadius: 999, padding: '8px 18px',
@@ -142,6 +142,17 @@ export function PannelloMeter({ theta, provaTa, onFatto, passoIniziale }: {
    * davvero (il che sposterebbe anche `theta.setup.config` per il resto della seduta).
    */
   const [letturaConfig, setLetturaConfig] = useState<ElectrodeConfig>(theta.setup.config);
+  /**
+   * ⚠️ AGGIUNTO — segnalato: « dove hai messo "serve un secondo punto"? non lo vedo ». Restava
+   * silenzioso proprio nel caso più comune: si prova la taratura col solo Theta-Meter
+   * collegato (senza MUSE), quindi `taAccumulator.addCalibrationPoint` rifiuta OGNI punto (il
+   * segnale è fermo — v. `TA_CALIB_FRESCHEZZA_MS`) e i punti registrati restano zero per
+   * sempre. Contare solo `getCalibrationPoints().length` non bastava a dirlo: serve sapere se
+   * il MUSE stava trasmettendo AL MOMENTO del clic, non solo quanti punti sono passati.
+   * Fotografato al clic (non un polling continuo: la freschezza cambia col tempo che passa
+   * senza che nulla nel componente lo forzi a ridisegnarsi — inutile inseguirla fuori dal
+   * momento in cui conta davvero, cioè quando si registra). */
+  const [museVivoAlClick, setMuseVivoAlClick] = useState<boolean | null>(null);
   const [passo, setPasso] = useState<Passo>(passoIniziale ?? 'config');
   const idx = PASSI.indexOf(passo);
   const LC = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang as string, it, fr, en, es, sv);
@@ -529,20 +540,36 @@ export function PannelloMeter({ theta, provaTa, onFatto, passoIniziale }: {
             />
             <button onClick={() => {
               const v = parseFloat(riferimento);
-              if (Number.isFinite(v)) theta.addPointFromReference(v, letturaConfig);
+              if (!Number.isFinite(v)) return;
+              // ⚠️ Fotografato PRIMA della chiamata, non dopo: `addPointFromReference` legge
+              // `taAccumulator.lastMsAt` nello stesso istante, lo stesso valore. Farlo qui,
+              // esplicitamente, invece di dedurlo dal conteggio dei punti dopo — v. la nota
+              // grande su `museVivoAlClick`, sopra.
+              setMuseVivoAlClick(Date.now() - taAccumulator.lastMsAt <= TA_CALIB_FRESCHEZZA_MS);
+              theta.addPointFromReference(v, letturaConfig);
             }} className="s-glass s-glass-btn" style={pillola(false)}>
               {t('theta_cal_record')}
             </button>
           </div>
           {/* ⚠️ AGGIUNTO — segnalato: « perché non si scrive il TA del MUSE corrispondente...
-              quando ho registrato la misura del Theta-Meter? ». Un solo punto non basta a
-              tarare (v. `fitGainSpan`, `TaAccumulator.ts`: due incognite, un punto solo è
-              indeterminato) — restava silenzioso, e sembrava che il primo clic non avesse
-              fatto niente. Letto a ogni render: `theta.addPointFromReference` fa scattare un
-              nuovo stato in `useThetaMeter`, e questo pannello lo riceve come prop — nessun
-              specchio da tenere aggiornato a parte. */}
-          {(() => {
+              quando ho registrato la misura del Theta-Meter? », poi: « dove hai messo "serve
+              un secondo punto"? non lo vedo ». Un solo punto non basta a tarare (v.
+              `fitGainSpan`, `TaAccumulator.ts`: due incognite, un punto solo è indeterminato)
+              — ma il caso silenzioso vero era un altro: SENZA MUSE collegato (il test si fa
+              spesso col solo Theta-Meter), `addCalibrationPoint` rifiuta ogni punto e
+              `getCalibrationPoints()` resta vuoto PER SEMPRE — contare solo i punti non bastava
+              a distinguere "non ho ancora provato" da "ho provato e il MUSE non c'era". */}
+          {museVivoAlClick !== null && (() => {
             const nPunti = taAccumulator.getCalibrationPoints().length;
+            if (!museVivoAlClick) return (
+              <div style={{ fontSize: 'var(--s-fs-sm)', textAlign: 'center', color: 'var(--s-reserve)' }}>
+                {LC('il MUSE non sta trasmettendo — questo punto ha corretto solo la scala del Theta-Meter, non il MUSE TA',
+                    'le MUSE ne transmet pas — ce point n\'a corrigé que l\'échelle du Theta-Meter, pas le TA du MUSE',
+                    'the MUSE isn\'t transmitting — this point only corrected the Theta-Meter scale, not the MUSE TA',
+                    'el MUSE no está transmitiendo — este punto solo corrigió la escala del Theta-Meter, no el TA del MUSE',
+                    'MUSE sänder inte — den här punkten korrigerade bara Theta-Meterns skala, inte MUSE-TA')}
+              </div>
+            );
             if (nPunti === 0) return null;
             return (
               <div style={{ fontSize: 'var(--s-fs-sm)', textAlign: 'center',

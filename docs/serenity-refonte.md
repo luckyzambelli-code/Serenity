@@ -10154,3 +10154,22 @@ Segnalato: « quando siamo in sessione e si apre il dizionario, seleziona automa
 - CONDIVISO: `src/components/SidebarDrawer.tsx` (avviso nel pannello TRIM di EQUILIBRIUM)
 
 **Build**: SERENITY 3.0.264 + EQUILIBRIUM 2.0.276, entrambe spedite.
+
+## Giro — 2026-09-05 (continuazione) — BUG CORRETTO: l'avviso "serve un secondo punto" restava silenzioso senza MUSE
+
+Segnalato subito dopo la spedizione precedente: « dove hai messo "serve un secondo punto"? non lo vedo ».
+
+**Causa**: l'avviso contava `taAccumulator.getCalibrationPoints().length` — ma nel caso più comune (si prova la TARATURA TA col solo Theta-Meter collegato, senza MUSE) `addCalibrationPoint` rifiuta OGNI punto perché il segnale EEG è fermo (`lastMsAt` mai aggiornato) — quindi quel conteggio restava a zero PER SEMPRE, e l'avviso non compariva mai. Contare solo i punti registrati non distingueva "non ho ancora provato" da "ho provato e il MUSE non c'era" — esattamente il buco che l'avviso doveva coprire, riapparso in una forma diversa.
+
+**Correzione**: la soglia di freschezza del segnale (`TA_CALIB_FRESCHEZZA_MS`, prima privata alla classe) è ora esportata da `TaAccumulator.ts`. Il bottone "registra" fotografa, AL MOMENTO DEL CLIC, se il MUSE stava trasmettendo (`Date.now() - taAccumulator.lastMsAt <= TA_CALIB_FRESCHEZZA_MS`) — non un polling continuo (la freschezza cambia col tempo senza che nulla forzi un nuovo render: inseguirla fuori dal momento in cui conta sarebbe stato inutile). Tre stati ora coperti, in entrambe le app:
+- MUSE non trasmetteva al clic → avviso che il punto ha corretto SOLO la scala del Theta-Meter;
+- MUSE vivo, 1 punto → "serve un secondo, a una resistenza diversa";
+- MUSE vivo, 2+ punti → "taratura attiva".
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 724/724 verdi (nessun test nuovo — puro comportamento di interfaccia, `PannelloMeter.tsx` non è testabile senza hardware WebHID reale, come già annotato nei giri precedenti).
+
+**File toccati:**
+- CONDIVISI: `src/engine/TaAccumulator.ts`, `src/components/SidebarDrawer.tsx`
+- SOLO SERENITY: `src/serenity/PannelloMeter.tsx`
+
+**Build**: SERENITY 3.0.265 + EQUILIBRIUM 2.0.277, entrambe spedite.

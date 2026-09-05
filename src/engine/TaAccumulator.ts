@@ -19,6 +19,17 @@ const TA_SPAN_DEFAULT = 2.1;   // 2.0 (rest) … up to ~4.1 on strong charge
 const SMOOTHING_FACTOR = 0.04; // analogique lent
 const TA_CALIB_KEY = 'sm_ta_calib'; // { gain, span, baseline? } persisté (calibration vs meter réel)
 
+/** Quanto vecchio può essere `lastMsAt` per accettare ancora un punto di taratura (ms). Oltre,
+ *  il segnale è considerato fermo — v. il commento francese su `lastMsAt`, sotto: « interdit
+ *  les captures sur mS figé », senza MUSE che scorre non c'è niente da imparare, solo rumore
+ *  congelato. Esportata (non più privata alla classe) — segnalato: « dove hai messo "serve un
+ *  secondo punto"? non lo vedo »: l'avviso restava silenzioso proprio quando il MUSE non
+ *  trasmetteva affatto (il caso più comune: si prova la TARATURA TA col solo Theta-Meter
+ *  collegato), perché contava solo i punti REGISTRATI — mai nessuno, in quel caso, quindi mai
+ *  nessun avviso. L'interfaccia (`PannelloMeter.tsx`/`SidebarDrawer.tsx`) ora legge questa
+ *  stessa soglia per dire la cosa giusta anche PRIMA che un punto entri davvero. */
+export const TA_CALIB_FRESCHEZZA_MS = 3000;
+
 /** COMPRESSION du mS avant la formule TA. Les mS bruts s'étalent sur ~5 ordres de grandeur
  *  (0.003 … 256 dans les données réelles) → l'exponentielle SATURAIT (TA collée au max) et tous
  *  les fits s'effondraient à gain/span minimum. En log, |mS| 0…256 devient ~0…2.4 : réponse
@@ -136,10 +147,6 @@ export class TaAccumulator {
    *  stati derivati l'ultima volta. Persistite insieme alla calibrazione: senza, ogni nuovo
    *  punto rifarebbe il fit da zero, perdendo quelli già raccolti nelle sedute precedenti. */
   private points: TaCalibPoint[] = [];
-  /** Quanto vecchio può essere `lastMsAt` per accettare ancora un punto (ms). Oltre, il
-   *  segnale è considerato fermo — v. il commento francese sopra, « interdit les captures
-   *  sur mS figé »: senza MUSE che scorre non c'è niente da imparare, solo rumore congelato. */
-  private static readonly FRESCHEZZA_MAX_MS = 3000;
 
   private highWater: number | null = null;
   private countedFromHigh = 0;
@@ -196,15 +203,16 @@ export class TaAccumulator {
    *
    * Restituisce `null` (nessun effetto) in due casi, entrambi onesti piuttosto che sbagliati
    * in silenzio:
-   *   · il segnale è FERMO (`lastMsAt` più vecchio di `FRESCHEZZA_MAX_MS`) — senza MUSE che
-   *     scorre non c'è niente da imparare, solo un numero congelato spacciato per una lettura;
+   *   · il segnale è FERMO (`lastMsAt` più vecchio di `TA_CALIB_FRESCHEZZA_MS`) — senza MUSE
+   *     che scorre non c'è niente da imparare, solo un numero congelato spacciato per una
+   *     lettura;
    *   · resta UN punto solo dopo l'aggiunta — il sistema (gain, span) è indeterminato con un
    *     punto solo (v. la nota grande su `fitGainSpan`, sopra): si accumula, non si corregge
    *     ancora nulla, finché non ne arriva un secondo.
    */
   addCalibrationPoint(ta: number): TaCalibration | null {
     if (!Number.isFinite(ta)) return null;
-    if (Date.now() - this.lastMsAt > TaAccumulator.FRESCHEZZA_MAX_MS) return null;
+    if (Date.now() - this.lastMsAt > TA_CALIB_FRESCHEZZA_MS) return null;
     const m = msCompress(this.lastMs);
     // Si sostituisce un punto quasi coincidente invece di affiancarlo — stessa ragione di
     // `addPointFromReference` (Theta-Meter): due punti sullo stesso mS renderebbero il fit
