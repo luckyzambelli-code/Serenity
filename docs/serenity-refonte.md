@@ -9710,3 +9710,24 @@ Anche **SAD EFFECT** presenta un troncamento a fine voce nel sorgente inglese ("
 **File toccati — SOLO SERENITY (dati):**
 - `public/dizionario/dizionario-fr.json`
 - `public/dizionario/dizionario-es.json`
+
+## Giro — 2026-09-05 — dizionario: quarantunesimo blocco, 2050/2541 voci (80,7%) — superata la soglia dell'80%
+
+**Blocco 41 (indici 2000-2049)**, FR+ES, 50 voci ciascuna lingua. Termini coperti: da S AND D a SELF ANALYSIS LISTS.
+
+Cluster principali:
+- **S AND D cluster**: S AND D, S AND D TYPE S/U/W — le quattro varianti della domanda di ricerca e scoperta.
+- **SANITY**: la voce più estesa del blocco, 11 definizioni numerate sulla nozione cardine di sanità mentale in Dianetics/Scn.
+- **SCIENTOLOGY cluster (ampio)**: SCIENTIFIC TRUTH, SCIENTOLOGIST, SCIENTOLOGY (con l'anomalia OCR classica — la definizione si interrompe a metà frase su "Thus, SCIENTOLOGY means" e la voce successiva è etichettata "KNOWING ABOUT KNOWING", che ne è chiaramente il completamento naturale — riprodotta fedelmente in FR/ES), SCIENTOLOGY CLEAR, SCIENTOLOGY CROSS, SCIENTOLOGY 8-8008 (la celebre formula dell'infinito), SCIENTOLOGY PRECLEAR, SCIENTOLOGY PROCESSES, SCIENTOLOGY RELEASE, SCIENTOLOGY SYMBOL (S e doppio triangolo), SCIENTOMETRIC TESTING.
+- **SCHIZO/SCHIZOPHRENIC**, **SCANNING**, **SCALE OF REALITY**.
+- **SCREAMER/SCREEN/SCRAMBLER**: voci sui fenomeni energetici e comportamentali classici di Dianetics.
+- **SEA ORG ANIZATION**: le due definizioni storiche sulla Sea Organization (1968, Ron's Journal).
+- **SECONDARY cluster (ampio)**: SECONDARY (7 definizioni numerate), SECONDARY ENGRAM (4 definizioni), SECONDARY SCALE, SECONDARY STYLE, SECONDARY UNIVERSE, SECOND-DYNAMIC, SECOND FACSIMILES, SECOND GPM, SECOND PHENOMENON, SECOND POSTULATE, SECOND STAGE RELEASE.
+- **SECURITY cluster**: SECURITY (3 definizioni), SECURITY CHECKING.
+- **SELF cluster**: SELF, SELF ANALYSIS IN SCIENTOLOGY, SELF ANALYSIS LISTS.
+
+**Verifica:** dati JSON puri — validati con `json.load` prima e dopo il merge (50/50 per lingua, totale 2050/2050 coerente in entrambi i file). `tsc`/`lint`/`vitest` non ri-eseguiti (nessun file TSX toccato in questo giro).
+
+**File toccati — SOLO SERENITY (dati):**
+- `public/dizionario/dizionario-fr.json`
+- `public/dizionario/dizionario-es.json`
