@@ -10414,3 +10414,81 @@ Due correzioni dal vivo sullo stesso screenshot:
 **File toccati (SOLO SERENITY, più il dizionario — nessun file condiviso, build unica)**: `src/serenity/Serenity.tsx`, `public/dizionario/dizionario-it.json`.
 
 **Build**: SERENITY 3.0.274.
+
+## Giro — 2026-09-06 (continuazione) — sei segnalazioni dal vivo dopo la 3.0.274
+
+**1. « L'animazione di SERENITY non appare più / deve apparire PRIMA di CHI AUDISCE? »** — non una
+regressione di questo giro: verificato che il bug esisteva già nella 3.0.274 appena spedita (e
+prima), riproducendolo con le modifiche di oggi temporaneamente accantonate (`git stash`). Causa:
+`{showSplash && <SplashScreen/>}` viveva SOLO nel `return` principale di `Serenity.tsx` — quello
+raggiunto DOPO aver risposto a tutte le domande dell'avvio (`if (!avvio) return (...)` è un
+`return` anticipato, separato, che non arriva mai a quella riga). L'animazione compariva quindi
+alla FINE dell'avvio invece che all'inizio — dato che blocca l'interfaccia per tutta la sua durata
+(3,8 s), nella pratica appariva "attaccata" alla prima schermata di seduta, mai prima di « Chi
+audisce? ». Corretto duplicando `{showSplash && <SplashScreen/>}` in cima anche al ramo
+`if (!avvio)` — `showSplash` resta lo stesso stato unico, scritto a `false` una volta sola.
+Verificato dal vivo: caricamento pulito → animazione SUBITO, PRIMA di « Chi audisce? ».
+
+**2. Il bottone "opzionale — collega il telefono" ancora non della stessa taglia di "apri una
+seduta"** — il giro precedente pareggiava padding/altezza/riga-sola ma non la LARGHEZZA:
+"apri una seduta" condivide da sempre la sua riga con l'orologio (richiesto esplicitamente in un
+giro storico, « l'heure... à gauche du bouton »), quindi restava largo solo ~178px dei 272 della
+colonna — nessuno spaziatore riusciva a pareggiarlo a un testo per forza più lungo (39 caratteri
+contro 15) senza sforare la colonna o rimpicciolire il carattere all'illeggibile. Risolto alla
+radice: l'orologio è salito in una riga SUA, sopra — "apri/chiudi la seduta" ora è largo 272px
+come "opzionale", identico bordo sinistro E destro. Verificato dal vivo con `getBoundingClientRect`:
+`x` e `w` ora IDENTICI per i due bottoni (20 e 272), altezza 40 contro 38 (i 2px restanti vengono
+dal corpo del carattere più piccolo che il testo più lungo richiede per stare su una riga sola —
+irriducibile senza accorciare il testo o allargare la colonna).
+
+**3. « La CAM PC indica LIVE ma niente immagine, in SERENITY »** — `inDiretta` (il badge verde)
+si basava SOLO su `daRemoto`/`telefonoPcCollegato`, cioè sulla connessione DATI (segnalazione) —
+completamente separata dalla chiamata media WebRTC che porta il video vero. Un telefono può
+risultare connesso (e quindi "LIVE") senza che il suo video sia MAI arrivato (getUserMedia
+negato/fallito sul telefono, chiamata media non ancora stabilita). Corretto: `inDiretta` ora
+richiede anche `remote.remoteStream` (un fotogramma vero in arrivo). Aggiunto anche, in
+`CameraCerchio.tsx`, un avviso onesto (« in attesa del video… ») per il caso "connesso ma senza
+video" — prima era un cerchio nero muto, indistinguibile da un guasto.
+
+**4. « In attesa del flusso video dell'auditor, ma non lo vogliamo » (satellite)** — vero: in un
+satellite l'auditor non manda MAI il proprio video (v. `setSuppressOutgoingMedia`, giro
+precedente) — il messaggio "in attesa" in `ParticipantView.tsx` (lato telefono) era quindi falso,
+promettendo un video che per disegno non arriverà mai. Sostituito con un messaggio dedicato
+(`conn_satellite_no_video`, le 5 lingue) SOLO quando `pcCoLocated`.
+
+**5. « Non deve più esserci EQUILIBRIUM sul telefonino — solo SERENITY, ovunque »** — direttiva
+esplicita: EQUILIBRIUM resta archiviato, ma il codice che gestisce il telefono
+(`ParticipantView`, `ConnectionModal`, tutta la logica di connessione partecipante in `App.tsx`)
+resta, oggi, l'UNICA implementazione esistente di quella schermata — portarla fino a un riscritto
+nativo dentro SERENITY è un progetto A SÉ, troppo grande per questo giro (Web Speech, appaiamento
+Bluetooth del MUSE, audio MNA, sincronizzazione dell'orologio — centinaia di righe intrecciate in
+`App.tsx`, non un modulo separabile in un pomeriggio). Affrontata SUBITO la parte a costo/rischio
+più basso — la BRANDING VISIBILE, che è ciò che l'utente vede e da cui nasce la lamentela — senza
+toccare la logica:
+  - `SplashScreen` mostra `appName="SERENITY"` invece di `"EQUILIBRIUM"` quando la pagina è stata
+    raggiunta da un link/QR di SERENITY (`linkAutoRilevato`) — un vero secondo installo
+    EQUILIBRIUM, collegato a mano, continua a vedere onestamente "EQUILIBRIUM".
+  - Il titolo della scheda del browser (`document.title`, altrimenti bloccato per sempre su
+    "EQUILIBRIUM" dal `<title>` statico di `index.html`) viene riscritto a "SERENITY" nello stesso
+    punto.
+  Il resto (interfaccia PARTICIPANTVIEW/CONNECTIONMODAL nativa in SERENITY) resta un progetto
+  futuro, esplicitamente rimandato — non dimenticato.
+
+**6. « Come devo nominare l'immagine per il dizionario nella guida? »** — risposto senza toccare
+codice: `SERENITY-manuale.html` (fuori dal repo, `~/Downloads/Guide Static Meter/`) ha già
+la sezione "11. Dizionario tecnico" con lo slot immagine pronto:
+`docs/guide-screenshots-serenity/dizionario.png`. Basta salvare lo screenshot con ESATTAMENTE
+quel nome in quella cartella — `copy-guide.cjs` lo porta dentro l'app al prossimo build, e
+l'`onerror`/`onload` già presente nell'HTML nasconde da solo la didascalia "[schermata in
+arrivo]" appena il file esiste.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato),
+`npx vitest run` 724/724 verdi.
+
+**File toccati**: `src/serenity/Serenity.tsx`, `src/serenity/CameraCerchio.tsx` (SOLO SERENITY) —
+`src/App.tsx`, `src/components/ParticipantView.tsx`, `src/i18n.tsx` (CONDIVISI, testo/branding —
+nessuna logica toccata) → **build e spedizione di ENTRAMBE le app**, eccezione motivata allo
+stesso modo del giro "AUDITOR non AUDITORE": il telefono mostra questi schermi tramite il build di
+EQUILIBRIUM, quindi senza ricompilarlo la correzione non lo raggiungerebbe.
+
+**Build**: SERENITY 3.0.275 + EQUILIBRIUM 2.0.282.

@@ -221,10 +221,17 @@ export function ParticipantView({
             </div>
           </div>
         ) : (
+          // ⚠️ CORRETTO — segnalato dal vivo: « appare sempre in attesa del flusso video
+          // dell'auditor, [ma] non vogliamo un flusso video dell'auditor ». Vero per il
+          // satellite (co-located, `pcCoLocated`): l'auditor non manda MAI il proprio video in
+          // quel caso (v. `avvia(satellite)`/`setSuppressOutgoingMedia`, lato auditor) — quindi
+          // "in attesa" era falso, il video non stava per arrivare, non era ancora in transito.
           <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-            <div style={{ fontSize: 40 }}>👁</div>
-            <div style={{ fontSize: 12, color: '#64748b' }}>{t('conn_waiting_video')}</div>
-            <div style={{ fontSize: 10, color: '#334155' }}>{t('conn_video_hint')}</div>
+            <div style={{ fontSize: 40 }}>{pcCoLocated ? '📱' : '👁'}</div>
+            <div style={{ fontSize: 12, color: '#64748b' }}>
+              {t(pcCoLocated ? 'conn_satellite_no_video' : 'conn_waiting_video')}
+            </div>
+            {!pcCoLocated && <div style={{ fontSize: 10, color: '#334155' }}>{t('conn_video_hint')}</div>}
           </div>
         )}
 

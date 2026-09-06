@@ -3048,9 +3048,21 @@ export default function Serenity() {
   // audita, una seduta non si può nemmeno archiviare — finirebbe senza nome.
   if (!avvio) {
     return (
-      <main style={{ height: '100%', padding: '38px 44px' }}>
-        <Avvio onPronto={setAvvio} onRichiama={richiamaConfigurazione} />
-      </main>
+      <>
+        {/* ⚠️ CORRETTO — segnalato dal vivo: « l'animazione di SERENITY deve apparire PRIMA di
+            CHI AUDISCE? ». Questo `return` anticipato (nessuna risposta ancora data alle
+            domande dell'avvio) usciva PRIMA di raggiungere `{showSplash && <SplashScreen/>}`,
+            che vive più giù nel `return` principale — raggiunto solo DOPO aver risposto a
+            tutte le domande. L'animazione compariva quindi alla FINE dell'avvio, non all'inizio:
+            esattamente al contrario di un'animazione di apertura. Stessa riga duplicata qui,
+            in cima a QUESTO ramo — `showSplash` resta lo stesso stato unico, scritto a `false`
+            una volta sola (`onDismiss`), quindi non ricompare passando da questo ramo al
+            principale una volta risposto. */}
+        {showSplash && <SplashScreen onDismiss={() => setShowSplash(false)} appName="SERENITY" />}
+        <main style={{ height: '100%', padding: '38px 44px' }}>
+          <Avvio onPronto={setAvvio} onRichiama={richiamaConfigurazione} />
+        </main>
+      </>
     );
   }
 
@@ -3780,11 +3792,16 @@ export default function Serenity() {
             righe soltanto. 148 → 272, la STESSA larghezza della colonna e della riga dei
             cinque cerchi appena sotto: niente più un involucro suo più stretto. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 272, flexShrink: 0 }}>
-        {/* ── L'OROLOGIO, A SINISTRA DEL BOTTONE — segnalato di nuovo: « l'heure et le temps
-            de session à gauche du bouton fermer la séance ». Non più impilato SOPRA (giro
-            scorso) — una riga vera, l'orologio/tempo compatti a sinistra, il bottone a
-            destra: `alignItems:'center'` così i due si allineano sulla stessa linea invece
-            che l'uno sopra l'altro. */}
+        {/* ⚠️ CORRETTO — segnalato dal vivo, per la terza volta, sempre più esplicito:
+            « ESATTAMENTE della stessa dimensione [di "opzionale"] ED allineato ». Finché
+            l'orologio stava "a sinistra del bottone" (giro storico, nota conservata qui sotto)
+            il bottone vero restava largo ~178px dei 272 della colonna — nessuno spaziatore
+            poteva pareggiarlo a "opzionale" (39 caratteri contro 15) senza o sforare la
+            colonna o rimpicciolire il carattere fino all'illeggibile. L'unico modo di essere
+            DAVVERO identici — stessa larghezza (272, l'intera colonna), stesso bordo sinistro
+            E destro, stesso singolo rigo — era smettere di condividere la riga con l'orologio:
+            ora l'orologio sta SOPRA, come una sua riga a parte (resta visibile, resta compatto,
+            solo non più affiancato). */}
         <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {/* ⚠️ SEGNALATO DI NUOVO — « l'ora e il tempo di sessione devono essere più in
               grande, e l'ora più in evidenza del timer di sessione ». Il giro precedente
@@ -3835,24 +3852,29 @@ export default function Serenity() {
               </span>
             )}
           </div>
-          {/* ⚠️ SEGNALATO — « il bottone chiudi la session fallo più verso il giallo, ma poco
-              vistoso ». Solo quando DICE "chiudi la seduta" (`aperta` vero — chiudere è il
-              gesto che conta, aprire no): una tinta di `--s-reserve` (lo stesso ambra tenue
-              già usato per "il dato c'è ma non è sostenibile", il terzo dei tre segnali del
-              sistema — v. `tokens.css`) leggerissima sul fondo, un bordo appena percettibile
-              — non un rosso d'allarme, un giallo SUSSURRATO: si nota se lo cerchi, non salta
-              agli occhi. Aprire una seduta resta il vetro neutro di sempre.
-              ⚠️ SEGNALATO DI NUOVO — stessa ragione del timer qui sopra: « non devi... indicare
-              Chiudi la seduta se prima non si è schiacciato sul START che pulsa ». Il bottone
-              intero resta nascosto finché `mostraBriefingIniziale && aperta` (v. la nota
-              grande sul timer, appena sopra, sul perché serve anche `aperta`) — nessun
-              "CHIUDI LA SEDUTA" a schermo prima che l'auditor abbia premuto INIZIA, l'unico
-              comando visibile in quella finestra è quello, dentro il testo del briefing —
-              MA "OUVRIR UNE SÉANCE", sulla schermata iniziale prima di qualunque apertura,
-              resta sempre a vista. */}
-          {!(mostraBriefingIniziale && aperta) && (
+        </div>
+        {/* ⚠️ SPOSTATO IN UNA RIGA A SÉ — v. la nota grande più sopra, sull'orologio: prima
+            condivideva la riga CON l'orologio (`flex:1`, ~178px dei 272 della colonna) — ora
+            `width:'100%'`, ESATTAMENTE come "opzionale" qui sotto: stessa larghezza, stesso
+            bordo sinistro E destro, non solo lo stesso padding/altezza di prima. */}
+        {!(mostraBriefingIniziale && aperta) && (
+          // ⚠️ SEGNALATO — « il bottone chiudi la session fallo più verso il giallo, ma poco
+          // vistoso ». Solo quando DICE "chiudi la seduta" (`aperta` vero — chiudere è il
+          // gesto che conta, aprire no): una tinta di `--s-reserve` (lo stesso ambra tenue
+          // già usato per "il dato c'è ma non è sostenibile", il terzo dei tre segnali del
+          // sistema — v. `tokens.css`) leggerissima sul fondo, un bordo appena percettibile
+          // — non un rosso d'allarme, un giallo SUSSURRATO: si nota se lo cerchi, non salta
+          // agli occhi. Aprire una seduta resta il vetro neutro di sempre.
+          // ⚠️ SEGNALATO DI NUOVO — stessa ragione del timer qui sopra: « non devi... indicare
+          // Chiudi la seduta se prima non si è schiacciato sul START che pulsa ». Il bottone
+          // intero resta nascosto finché `mostraBriefingIniziale && aperta` (v. la nota
+          // grande sul timer, appena sopra, sul perché serve anche `aperta`) — nessun
+          // "CHIUDI LA SEDUTA" a schermo prima che l'auditor abbia premuto INIZIA, l'unico
+          // comando visibile in quella finestra è quello, dentro il testo del briefing —
+          // MA "OUVRIR UNE SÉANCE", sulla schermata iniziale prima di qualunque apertura,
+          // resta sempre a vista.
           <button className="s-glass s-glass-btn" onClick={aperta ? chiudi : apri} style={{
-            flex: 1, minWidth: 0, cursor: 'pointer', pointerEvents: 'auto',
+            width: '100%', boxSizing: 'border-box', cursor: 'pointer', pointerEvents: 'auto',
             background: aperta ? 'color-mix(in srgb, var(--s-reserve) 14%, var(--s-disc))' : 'var(--s-disc)',
             border: aperta ? '1px solid color-mix(in srgb, var(--s-reserve) 35%, transparent)' : 'none',
             color: 'var(--s-ink)',
@@ -3869,8 +3891,7 @@ export default function Serenity() {
               ? LC('chiudi la seduta', 'fermer la séance', 'close the session', 'cerrar la sesión', 'stäng sessionen')
               : LC('apri una seduta', 'ouvrir une séance', 'open a session', 'abrir una sesión', 'öppna en session')}
           </button>
-          )}
-        </div>
+        )}
         {/* ⚠️ SPOSTATO QUI — segnalato dal vivo: « COLLEGA il telefono del PC non si vede bene
             sotto la CAM 2, dovresti metterlo sotto il bottone di inizio sessione, poiché è lì
             che si sceglie o meno di connettere un telefonino, non a sessione iniziata ». Era un
@@ -3888,6 +3909,16 @@ export default function Serenity() {
             telefono È collegato, un badge di stato al suo posto invece di farlo sparire nel
             nulla (l'auditor deve poter vedere che la scelta fatta ha avuto effetto). */}
         {!aperta && !avvio.solo && !avvio.distanza && (
+          // ⚠️ CORRETTO — segnalato dal vivo, per la terza volta: « ESATTAMENTE della stessa
+          // dimensione di "apri una seduta" ED allineato ». Un tentativo con uno spaziatore
+          // (per pareggiare la larghezza che "apri" condivideva con l'orologio) andava in
+          // conflitto con un testo per forza più lungo ("opzionale — collega il telefono del
+          // PC", 39 caratteri, contro i 15 di "apri una seduta"): a parità di riga sola, o
+          // uno dei due sforava la colonna o l'altro diventava illeggibile. Risolto alla
+          // radice spostando l'orologio sopra "apri" (v. la sua nota, più su) invece che
+          // provare a pareggiare due larghezze in conflitto strutturale: ORA "apri" è a sua
+          // volta largo 272px come questo, quindi il semplice `width:'100%'` di sempre basta
+          // — nessuno spaziatore da mantenere in sincrono con la larghezza dell'orologio.
           telefonoPcCollegato ? (
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -3900,15 +3931,6 @@ export default function Serenity() {
                      'teléfono del PC conectado', 'PC-telefonen ansluten')}
             </div>
           ) : (
-            // ⚠️ STESSA TAGLIA di "apri una seduta" — segnalato dal vivo, DUE volte (la prima
-            // correzione non bastava: il testo, molto più lungo di "apri una seduta", andava
-            // comunque a capo su due righe e il bottone restava più alto). Stesso
-            // padding/borderRadius/maiuscolo di quel bottone, `width:'100%'` come già corretto
-            // — ma qui in più `whiteSpace:'nowrap'` con un `fontSize` ridotto QUANTO BASTA per
-            // stare su una riga sola nella stessa larghezza (272px): è la SCATOLA a dover
-            // combaciare (stessa altezza, un rigo solo, stesso padding), non il corpo del
-            // carattere — un bottone con un testo più lungo che restasse alla stessa taglia del
-            // font sarebbe per forza più alto, a prescindere da qualunque altra manopola.
             <button className="s-glass s-glass-btn" onClick={() => setSatelliteAperto(true)}
               style={{
                 cursor: 'pointer', pointerEvents: 'auto', width: '100%', boxSizing: 'border-box',
@@ -5235,7 +5257,15 @@ export default function Serenity() {
               collassata={cam2Collassata}
               onToggleCollasso={() => setCam2Collassata(v => !v)}
               statoTesto={statoCamPc}
-              inDiretta={daRemoto}
+              // ⚠️ CORRETTO — segnalato dal vivo: « la cam PC indica LIVE, ma niente immagine ».
+              // `daRemoto` da solo dice solo "un telefono è connesso" (canale dati/segnalazione)
+              // — completamente separato dalla chiamata media WebRTC che porta il VIDEO. Un
+              // telefono può risultare connesso e "LIVE" senza che il suo video sia mai
+              // arrivato (getUserMedia negato/fallito sul telefono, o la chiamata media
+              // separata non ancora stabilita) — mostrare LIVE in quel momento era un falso
+              // positivo. Ora richiede anche `remote.remoteStream` — un vero fotogramma in
+              // arrivo, non solo una connessione aperta.
+              inDiretta={daRemoto && !!remote.remoteStream}
             />
             </div>
           )}

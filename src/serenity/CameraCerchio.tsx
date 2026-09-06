@@ -53,6 +53,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { VideoOff } from 'lucide-react';
 import { attachAudioBoost } from '../lib/audioBoost';
+import { useI18n } from '../i18n';
 import { Cerchio } from './Cerchio';
 
 export function CameraCerchio({
@@ -88,6 +89,7 @@ export function CameraCerchio({
   /** Lo stesso badge « LIVE » di `CameraFeed.tsx` — solo quando lo stream è remoto davvero. */
   inDiretta?: boolean;
 }) {
+  const { t } = useI18n();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [errore, setErrore] = useState<string | null>(null);
 
@@ -172,6 +174,26 @@ export function CameraCerchio({
               ) : (
                 <video ref={attach} autoPlay playsInline muted={!externalStream || forceMuted}
                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              )}
+              {/* ⚠️ AGGIUNTO — segnalato dal vivo: « la cam PC indica LIVE, ma niente immagine ».
+                  `externalStream === null` (a differenza di `undefined`, che vuol dire "camera
+                  locale di questo dispositivo") significa: un flusso remoto ERA atteso, ma non
+                  è ancora arrivato — senza questo avviso il cerchio restava semplicemente nero,
+                  indistinguibile da un guasto muto. Non è collassabile via `errore` (quello è
+                  per un fallimento della camera LOCALE, un caso diverso): un piccolo avviso
+                  proprio, che sparisce da sé appena `attach()` riceve davvero uno stream. */}
+              {externalStream === null && !fallbackFrame && (
+                <div style={{
+                  position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',
+                  textAlign: 'center', padding: 10,
+                }}>
+                  <span style={{
+                    fontFamily: 'var(--s-sans)', fontSize: Math.max(8, dimEffettiva * 0.058),
+                    letterSpacing: '0.03em', color: 'rgba(255,255,255,0.6)',
+                  }}>
+                    ⏳ {t('cam_waiting_stream')}
+                  </span>
+                </div>
               )}
               {/* ── LIVE + LO STATO — segnalato: « nella cam PC devi mettere le indicazioni
                   che hai già in equilibrium ». Stesso badge verde e stesso testo di stato di

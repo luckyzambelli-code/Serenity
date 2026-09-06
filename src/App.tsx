@@ -4411,6 +4411,12 @@ export default function App() {
     setAppMode('participant');
     setParticipantLink(link);
     setLinkAutoRilevato(true);
+    // ⚠️ AGGIUNTO — v. la nota su `SplashScreen` più giù: la scheda del browser (titolo di
+    // pagina) diceva ancora "EQUILIBRIUM" anche qui — lo stesso `<title>` statico di
+    // `index.html`, mai più corretto dopo il primo caricamento. Impostato SOLO qui (non un
+    // default in `index.html`, che deve restare "EQUILIBRIUM" per chi apre davvero
+    // quell'applicazione senza passare da un link di SERENITY).
+    try { document.title = 'SERENITY'; } catch (_) {}
     // Satellite (co-located): the phone is a send-only mic+cam — no Muse pairing
     // here (the Mac owns the headset), and we won't play the auditor's audio.
     if (parsed.satellite) setPcCoLocated(true);
@@ -4522,7 +4528,13 @@ export default function App() {
 
   return (
     <>
-    {showSplash && <SplashScreen onDismiss={() => setShowSplash(false)} />}
+    {/* ⚠️ CORRETTO — segnalato dal vivo, in maiuscolo: « non deve più esserci EQUILIBRIUM sul
+        telefonino ». Un telefono arrivato qui da un link/QR di SERENITY (`linkAutoRilevato`,
+        v. `autoJoinDoneRef`) sta usando questo codice come companion di SERENITY, non come una
+        VERA installazione EQUILIBRIUM autonoma — la scritta disegnata dall'animazione deve dirlo.
+        Non tocca il caso genuino (`linkAutoRilevato` resta falso per un secondo EQUILIBRIUM VERO
+        collegato a mano in "MODALITÀ PRECLEAR"): quello resta, correttamente, EQUILIBRIUM. */}
+    {showSplash && <SplashScreen onDismiss={() => setShowSplash(false)} appName={linkAutoRilevato ? 'SERENITY' : 'EQUILIBRIUM'} />}
     {showCredits && <CreditsModal onClose={() => setShowCredits(false)} />}
     {/* ⚠️ RIMOSSO — segnalato: « non abbiamo bisogno di integrare la taratura con l'artefatto,
         una volta che lo abbiamo fatto. Teniamo i valori trovati... togliere la parte di
