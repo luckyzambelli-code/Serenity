@@ -10237,3 +10237,23 @@ Segnalato: « non hai ancora inserito la possibilità di utilizzare il telefono 
 **File toccati (SOLO SERENITY — nessun file condiviso, build unica)**: `src/serenity/Serenity.tsx`
 
 **Build**: SERENITY 3.0.269.
+
+## Giro — 2026-09-06 (continuazione) — il telefono apre « CHI AUDISCE? » invece della seduta
+
+Segnalato dal vivo, dopo un vero test: « quando apro il link mi dice sul telefonino CHI AUDISCE?, invece deve dare direttamente la connessione con l'auditor e far vedere la sessione in corso... COME IN EQUILIBRIUM ». Confermato dall'utente: il link era stato aperto inquadrando il QR con la fotocamera (non incollato a mano) — esclude quindi un banale `https://` mancante.
+
+**La causa, trovata leggendo `server-core.cjs`**: da un giro passato (« fai in modo che 127.0.0.1:7893 sia SERENITY »), la radice del tunnel serve `serenity.html` quando gira Serenity.app — non più sempre `index.html` (EQUILIBRIUM), come il commento di `Connessione.tsx` dava ancora per scontato (mai riallineato dopo quel giro). Un telefono che apre il link tramite il tunnel di un'istanza SERENITY riceve quindi il bundle di SERENITY — che non ha (e non deve avere, per la sua stessa regola « nessun ramo PC/satellite da gestire ») alcuna logica di riconoscimento di un link d'invito — e monta semplicemente l'interfaccia dell'AUDITORE, la prima domanda « Chi audisce? », su un dispositivo che dell'auditor non è.
+
+**Perché non si può correggere lato server**: il frammento dell'URL (`#peerId:relayToken:peerKey`) non viaggia MAI fino al server — resta solo nel browser che l'ha caricato. `server-core.cjs` non può quindi distinguere "una visita normale al tunnel" da "un telefono che segue un link d'invito": la distinzione è possibile SOLO lato client, prima ancora di montare l'interfaccia.
+
+**Corretto**: `src/serenity/main.tsx` ora controlla, PRIMA di montare `<Serenity />`, se `window.location.hash` è un link d'invito valido — stesso controllo di `App.tsx` (`autoJoinDoneRef`): `parseConnectionLink` (già condiviso, non toccato) deve riuscire a leggerne un `peerId`. Se sì, un rimando vero (`window.location.href = '/index.html' + hash`, non un `import()`) porta il telefono su EQUILIBRIUM — che ritrova lì lo stesso `ParticipantView` già collaudato e il suo `autoJoinDoneRef`, che apre da solo la schermata "tocca CONNETTI" con il link già precompilato. Nessuna duplicazione di `ParticipantView`: esattamente quanto il commento originale di `Connessione.tsx` voleva già, mai diventato vero finché la radice del tunnel poteva servire due pagine diverse.
+
+**Bug collegato, trovato durante questa stessa indagine e corretto nello stesso giro**: `useRemoteSession.generaLink()` non scriveva mai il quarto segmento `:sat` (marcatore satellite: telefono co-locato, solo camera/microfono d'appoggio, niente Muse né riproduzione audio) — a differenza del link che `App.tsx` costruisce per lo stesso caso in EQUILIBRIUM. Rilevante ORA perché il bottone « collega il telefono del PC » (giro precedente) genera un link con esattamente questo significato: senza il marcatore, un telefono connesso da lì sarebbe stato trattato come un preclear remoto vero, non come un doppione locale della camera. Aggiunto `avvia(satellite = false)` (retrocompatibile: ogni chiamata esistente senza argomento continua a comportarsi come prima) e propagato `satellite` fino a `<Connessione satellite>` nell'overlay in-seduta; il vero flusso "a distanza" (`avvio.distanza`) resta senza marcatore, come deve.
+
+**Verificato dal vivo** (server Vite puro, senza `server-core.cjs`/tunnel reale — non riproducibile fino in fondo senza un vero telefono, ma il passaggio client-side sì): caricamento diretto di `serenity.html#peerId:token:key` → rimando a `index.html` con lo stesso frammento intatto → EQUILIBRIUM mostra da solo "MODALITÀ PRECLEAR" con il link già incollato e "CONNETTI ALL'AUDITORE"; ripetuto con `...:sat` in coda, il marcatore arriva intatto fino al campo. Caricamento di `serenity.html` senza frammento: nessun rimando, SERENITY parte normalmente.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 724/724 verdi.
+
+**File toccati**: `src/serenity/main.tsx` (nuovo, SOLO SERENITY), `src/serenity/Connessione.tsx` (SOLO SERENITY), `src/hooks/useRemoteSession.ts` — quest'ultimo vive nella cartella condivisa `src/hooks/` (oggi importato solo da SERENITY, ma per la regola resta trattato come condiviso) → **build e spedizione di ENTRAMBE le app**, come da regola.
+
+**Build**: SERENITY 3.0.270 + EQUILIBRIUM 2.0.279.

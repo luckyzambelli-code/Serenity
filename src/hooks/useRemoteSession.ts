@@ -96,6 +96,13 @@ export function useRemoteSession(opts: {
   const seqRef          = useRef(0);
   const peerKeyRef      = useRef<string | undefined>(undefined);
   const relayTokenRef   = useRef<string | null>(null);
+  // FIX: marcatore satellite — v. `avvia(satellite)` qui sotto. Senza, un link generato per
+  // "collega il telefono del PC" (co-locato, SOLO camera/microfono d'appoggio) e un link per
+  // una VERA seduta a distanza erano indistinguibili una volta arrivati sul telefono: stesso
+  // formato di App.tsx (`parseConnectionLink`/`parsed.satellite`) sarebbe rimasto sempre
+  // `false`, e il telefono si sarebbe comportato da preclear remoto anche quando è solo un
+  // occhio in più nella stessa stanza.
+  const satelliteRef    = useRef(false);
   // FIX: token di cancellazione per `avvia()` — stesso pattern di `museTokenRef` in
   // useMuseConnection. Senza, un `disconnetti()` durante l'attesa di
   // `otteniChiaveServer()`/`networkManager.init()` poteva essere superato da quella
@@ -115,7 +122,18 @@ export function useRemoteSession(opts: {
       if (!data.url) { setErrore(data.error || 'tunnel'); return; }
       const tunnelHost = String(data.url).replace(/^https?:\/\//, '');
       const token = relayTokenRef.current;
-      const parte = token ? `:${token}${peerKeyRef.current ? `:${peerKeyRef.current}` : ''}` : '';
+      const key   = peerKeyRef.current;
+      const sat   = satelliteRef.current;
+      // FIX: `:sat` è il QUARTO segmento posizionale di `parseConnectionLink`
+      // (`peerId:relayToken:peerKey:sat`) — se il terzo segmento (peerKey) manca ma serve il
+      // quarto, va comunque scritto vuoto, altrimenti "sat" scivolerebbe in posizione 2 e
+      // `parts[3] === 'sat'` risulterebbe sempre falso.
+      let parte = '';
+      if (token || key || sat) {
+        parte = `:${token ?? ''}`;
+        if (key || sat) parte += `:${key ?? ''}`;
+        if (sat) parte += ':sat';
+      }
       setConnectionLink(`${tunnelHost}#${id}${parte}`);
     } catch (err: unknown) {
       setErrore(err instanceof Error ? err.message : String(err));
@@ -127,7 +145,8 @@ export function useRemoteSession(opts: {
   /** COMINCIA COME AUDITOR — pre-richiede camera/microfono, apre il peer, genera il link. Se
    *  chiamata di nuovo mentre un peer è già in piedi (es. il tunnel era fallito), rigenera solo
    *  il link invece di ricominciare tutto da capo. */
-  const avvia = useCallback(async () => {
+  const avvia = useCallback(async (satellite = false) => {
+    satelliteRef.current = satellite;
     if (useNetworkStore.getState().peerId) { await generaLink(); return; }
     // FIX: token catturato all'ingresso — v. avviaTokenRef. Nome diverso da `token`
     // (già usato più sotto per il relay token generato da `generaToken()`).
@@ -185,6 +204,7 @@ export function useRemoteSession(opts: {
     setAppMode('local');
     statoSedutaRef.current = 'idle'; seqRef.current = 0;
     peerKeyRef.current = undefined; relayTokenRef.current = null;
+    satelliteRef.current = false;
     setErrore(null);
   }, [setIsConnected, setPeerId, setConnectionLink, setRemoteStream,
       setRemoteMuseConnected, setRemoteBatteryLevel, setRemoteSignalQuality, setAppMode]);

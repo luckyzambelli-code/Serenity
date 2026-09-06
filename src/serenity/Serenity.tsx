@@ -5184,7 +5184,7 @@ export default function Serenity() {
           background: 'color-mix(in srgb, var(--s-ground) 96%, transparent)',
           backdropFilter: 'blur(24px)',
         }}>
-          <Connessione remote={remote}
+          <Connessione remote={remote} satellite
             onAnnulla={() => setSatelliteAperto(false)}
             onPronti={() => setSatelliteAperto(false)} />
         </div>

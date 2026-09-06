@@ -13,10 +13,14 @@
  * `lib/networkManager` e in `hooks/useRemoteSession`. Questo file legge `remote`, non decide
  * nulla: nessuna soglia, nessun protocollo, nessuna decisione di rete.
  *
- * ⚠️ IL PRECLEAR NON APRE SERENITY. Il link porta sempre alla pagina web di EQUILIBRIUM —
- * `server-core.cjs` serve `index.html` per qualunque richiesta arrivi dal tunnel, qualunque
- * applicazione desktop l'auditor abbia aperto. Il preclear ritrova quindi lo stesso
- * `ParticipantView` già collaudato: questa fase non ne costruisce un secondo.
+ * ⚠️ IL PRECLEAR NON APRE SERENITY — anche se, quando gira Serenity.app, `server-core.cjs`
+ * serve `serenity.html` alla radice del tunnel (non più sempre `index.html`: v. il giro che
+ * l'ha reso così, « fai in modo che 127.0.0.1:7893 sia SERENITY »). Chi tiene fede a questa
+ * frase È `src/serenity/main.tsx`: riconosce un link d'invito nel proprio frammento e rimanda
+ * subito a `index.html` PRIMA di montare qualunque interfaccia — così il preclear ritrova
+ * comunque lo stesso `ParticipantView` già collaudato, senza che questa fase ne costruisca
+ * un secondo. (Bug reale, corretto dopo un test dal vivo: senza quel rimando, il telefono
+ * mostrava la prima domanda di SERENITY, « Chi audisce? », invece della seduta in corso.)
  *
  * @see docs/serenity-refonte.md — fase 7.
  */
@@ -39,10 +43,16 @@ const bottone = (pieno: boolean): React.CSSProperties => ({
   fontFamily: 'var(--s-sans)',
 });
 
-export function Connessione({ remote, onAnnulla, onPronti }: {
+export function Connessione({ remote, onAnnulla, onPronti, satellite = false }: {
   remote: ReturnType<typeof useRemoteSession>;
   onAnnulla: () => void;
   onPronti: () => void;
+  /** true quando questa schermata si apre per "collega il telefono del PC" — una seduta LOCALE
+   *  a cui si aggiunge solo una camera/microfono d'appoggio, non una vera seduta a distanza. Va
+   *  al link generato (v. `useRemoteSession.avvia`) come marcatore `:sat`, lo stesso che
+   *  `App.tsx` scrive per il caso equivalente in EQUILIBRIUM — senza, il telefono che si unisce
+   *  verrebbe trattato come un preclear remoto vero e proprio. */
+  satellite?: boolean;
 }) {
   const { t } = useI18n();
   const [copiato, setCopiato] = useState(false);
@@ -53,7 +63,7 @@ export function Connessione({ remote, onAnnulla, onPronti }: {
   // (es. tornando qui dopo un tunnel fallito) rigenera solo il link, non tutto da capo — è
   // `avvia()` stessa a saperlo, qui basta chiamarla.
   useEffect(() => {
-    if (!remote.peerId) remote.avvia();
+    if (!remote.peerId) remote.avvia(satellite);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -136,7 +146,7 @@ export function Connessione({ remote, onAnnulla, onPronti }: {
               {remote.errore ? `⚠ ${remote.errore}` : t(remote.tunnelLoading ? 'conn_internet_loading' : 'conn_generating')}
             </span>
             {remote.errore && (
-              <button className="s-glass s-glass-btn" onClick={() => remote.avvia()} style={bottone(false)}>
+              <button className="s-glass s-glass-btn" onClick={() => remote.avvia(satellite)} style={bottone(false)}>
                 {t('conn_internet_btn')}
               </button>
             )}
