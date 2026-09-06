@@ -147,12 +147,21 @@ export function parseSignalingUrl(input: string): SignalingConfig {
  * Examples:
  *   "192.168.0.106:7893#abc123xyz"                    → LAN, no auth
  *   "abc.trycloudflare.com#abc123:relaytoken:peerkey" → remote, with auth
+ *
+ * ⚠️ AGGIUNTO `lang` (5° segmento) — segnalato dal vivo: « quando ci si connette come PC locale
+ * col telefono, deve apparire la lingua scelta dall'auditor, non l'inglese di default ». Il
+ * pacchetto `LANG` esistente (v. `useRemoteSession`/`App.tsx`) arriva SOLO dopo che la
+ * connessione P2P è stabilita — ma la schermata "MODALITÀ PRECLEAR"/"link rilevato dal QR" si
+ * vede PRIMA di quel momento (l'auditor vuole un gesto esplicito dell'utente prima di chiedere
+ * fotocamera/microfono — v. `autoJoinDoneRef` in App.tsx). L'unico modo di conoscere la lingua
+ * PRIMA di connettersi è scriverla nel link stesso, che è già disponibile al caricamento.
  */
 export function parseConnectionLink(link: string): {
   config:       SignalingConfig;
   peerId:       string;
   relayToken?:  string; // FIX C1: per-link relay auth token
   satellite?:   boolean; // phone-satellite (co-located): send-only AV, no Muse
+  lang?:        string; // lingua della seduta, PRIMA ancora di connettersi
 } | null {
   const trimmed = link.trim().replace(/^https?:\/\//, '');
   const hashIdx = trimmed.indexOf('#');
@@ -162,19 +171,21 @@ export function parseConnectionLink(link: string): {
   if (!serverPart || !credPart) return null;
 
   // credPart format: "peerId" | "peerId:relayToken" | "peerId:relayToken:peerKey"
-  //                  | "peerId:relayToken:peerKey:sat"  (satellite marker)
+  //                  | "peerId:relayToken:peerKey:sat"        (satellite marker)
+  //                  | "peerId:relayToken:peerKey:sat:lang"   (+ lingua della seduta)
   const parts      = credPart.split(':');
   const peerId     = parts[0];
   const relayToken = parts[1] || undefined;
   const peerKey    = parts[2] || undefined;
   const satellite  = parts[3] === 'sat';
+  const lang       = parts[4] || undefined;
 
   if (!peerId) return null;
 
   const config = parseSignalingUrl(serverPart);
   if (peerKey) config.peerKey = peerKey;
 
-  return { config, peerId, relayToken, satellite };
+  return { config, peerId, relayToken, satellite, lang };
 }
 
 // ── NetworkManager ───────────────────────────────────────────────────────────

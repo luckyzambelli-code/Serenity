@@ -124,16 +124,18 @@ export function useRemoteSession(opts: {
       const token = relayTokenRef.current;
       const key   = peerKeyRef.current;
       const sat   = satelliteRef.current;
-      // FIX: `:sat` è il QUARTO segmento posizionale di `parseConnectionLink`
-      // (`peerId:relayToken:peerKey:sat`) — se il terzo segmento (peerKey) manca ma serve il
-      // quarto, va comunque scritto vuoto, altrimenti "sat" scivolerebbe in posizione 2 e
-      // `parts[3] === 'sat'` risulterebbe sempre falso.
-      let parte = '';
-      if (token || key || sat) {
-        parte = `:${token ?? ''}`;
-        if (key || sat) parte += `:${key ?? ''}`;
-        if (sat) parte += ':sat';
-      }
+      // ⚠️ AGGIUNTO `lang` (5° segmento) — segnalato dal vivo: « quando ci si connette come PC
+      // locale col telefono, deve apparire la lingua dell'auditor, non l'inglese di default ».
+      // Il pacchetto `LANG` via dati arriva SOLO a connessione stabilita — troppo tardi per la
+      // primissima schermata ("link rilevato dal QR"), che l'auditor vede PRIMA di concedere
+      // fotocamera/microfono. Scritta qui nel link stesso, l'unica cosa già disponibile a quel
+      // momento. `langRef.current` è sempre valorizzata (mai vuota) — a differenza di `sat`,
+      // qui non serve un controllo "se serve": va scritta sempre, è sempre nota.
+      // FIX: `:sat` e `:lang` sono rispettivamente il 4° e 5° segmento POSIZIONALE di
+      // `parseConnectionLink` (`peerId:relayToken:peerKey:sat:lang`) — ora che il 5° è sempre
+      // scritto, anche i tre che lo precedono vanno sempre scritti (pure vuoti), altrimenti
+      // "lang" scivolerebbe in una posizione sbagliata quando uno degli altri manca.
+      const parte = `:${token ?? ''}:${key ?? ''}:${sat ? 'sat' : ''}:${langRef.current}`;
       setConnectionLink(`${tunnelHost}#${id}${parte}`);
     } catch (err: unknown) {
       setErrore(err instanceof Error ? err.message : String(err));

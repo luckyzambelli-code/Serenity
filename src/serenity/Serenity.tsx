@@ -909,6 +909,33 @@ export default function Serenity() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remote.isConnected, aperta]);
 
+  // ⚠️ AGGIUNTO — segnalato dal vivo: « la cam del preclear non manda nulla, ma le autorizzazioni
+  // sono concesse sul telefono ». Senza accesso agli strumenti di sviluppo dell'auditor (Electron
+  // li ha, ma non è comodo chiedere a chi sta testando dal vivo di aprirli), l'UNICO modo di
+  // capire DOVE si ferma la catena — la chiamata media non parte mai dal telefono? arriva
+  // all'auditor ma senza traccia video? arriva con una traccia ma non si disegna? — è scriverlo
+  // nel Giornale, che l'auditor legge comunque. Una riga sola, alla PRIMA volta che uno stream
+  // arriva per questa connessione (`giàLoggato`, azzerato alla disconnessione): non un log ad
+  // ogni render.
+  const streamLoggatoRef = useRef(false);
+  useEffect(() => {
+    if (!remote.isConnected) { streamLoggatoRef.current = false; return; }
+    if (!remote.remoteStream || streamLoggatoRef.current) return;
+    streamLoggatoRef.current = true;
+    const tracce = remote.remoteStream.getTracks();
+    const video = tracce.filter(t => t.kind === 'video').length;
+    const audio = tracce.filter(t => t.kind === 'audio').length;
+    journal.addLog({
+      speaker: 'SYS', time: sessionClock.now(),
+      text: `📹 ${LC(`flusso del PC ricevuto: ${video} video, ${audio} audio`,
+                      `flux du PC reçu : ${video} vidéo, ${audio} audio`,
+                      `PC stream received: ${video} video, ${audio} audio`,
+                      `flujo del PC recibido: ${video} vídeo, ${audio} audio`,
+                      `PC-flöde mottaget: ${video} video, ${audio} audio`)}`,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remote.isConnected, remote.remoteStream]);
+
   // L'orologio è QUELLO DI EQUILIBRIUM: `sessionClock` è un modulo unico, e conta i secondi
   // fuori da React perché il ridisegno non deve poter far perdere un secondo di seduta.
   // `timeRef` è lo specchio che i moduli fuori-React (il motore della carica) leggono senza

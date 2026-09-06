@@ -4417,6 +4417,15 @@ export default function App() {
     // default in `index.html`, che deve restare "EQUILIBRIUM" per chi apre davvero
     // quell'applicazione senza passare da un link di SERENITY).
     try { document.title = 'SERENITY'; } catch (_) {}
+    // ⚠️ AGGIUNTO — segnalato dal vivo: « quando ci si connette come PC locale col telefono,
+    // deve apparire la lingua scelta dall'auditor, non l'inglese di default ». Il pacchetto
+    // `LANG` via dati (v. sotto, `data.type === 'LANG'`) arriva SOLO a connessione stabilita —
+    // troppo tardi per QUESTA primissima schermata, vista prima ancora di toccare CONNETTI.
+    // `parsed.lang` (5° segmento del link, v. `parseConnectionLink`) è l'unica informazione
+    // sulla lingua già disponibile a questo punto.
+    if (parsed.lang && ['en', 'fr', 'it', 'es', 'sv'].includes(parsed.lang)) {
+      setLang(parsed.lang as Language);
+    }
     // Satellite (co-located): the phone is a send-only mic+cam — no Muse pairing
     // here (the Mac owns the headset), and we won't play the auditor's audio.
     if (parsed.satellite) setPcCoLocated(true);
@@ -4886,8 +4895,18 @@ export default function App() {
               // stream needed (and no audio = no Larsen). Normal remote keeps audio.
               const wantAudio = !pcCoLocatedRef.current;
               addLog({ time: timeRef.current, speaker: 'SYS', text: wantAudio ? '🎥 Requesting camera/microphone…' : '🎥 Requesting camera (satellite: audio via text)…' });
+              // FIX: the satellite path used to give up entirely (no fallback at all — see
+              // the removed `: Promise.reject(...)`) the moment a video-only
+              // `{video:true, audio:false}` request failed, even though some mobile browsers
+              // are inconsistent with an EXPLICIT `audio:false` and would happily grant
+              // `{video:true, audio:true}` instead. Reported live: "the phone's camera
+              // permission is granted, but nothing arrives at the auditor" — this closes that
+              // silent gap; the extra audio track this fallback may carry is simply never sent
+              // to the auditor's Mac (WebRTC only negotiates what the OTHER side answers with,
+              // and the auditor's `call.answer()` for a satellite is receive-only regardless).
               await navigator.mediaDevices.getUserMedia({ video: true, audio: wantAudio ? VOICE_AUDIO_CONSTRAINTS : false })
-                .catch(() => wantAudio ? navigator.mediaDevices.getUserMedia({ video: false, audio: VOICE_AUDIO_CONSTRAINTS }) : Promise.reject(new Error('no camera')))
+                .catch(() => navigator.mediaDevices.getUserMedia({ video: true, audio: wantAudio ? false : VOICE_AUDIO_CONSTRAINTS }))
+                .catch(() => navigator.mediaDevices.getUserMedia({ video: false, audio: VOICE_AUDIO_CONSTRAINTS }))
                 .then((s) => { (networkManager as any).localStream = s; })
                 .catch(() => { /* user denied — proceed data-only */ });
             } catch (_) { /* getUserMedia not available — proceed data-only */ }

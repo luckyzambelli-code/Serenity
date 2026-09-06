@@ -221,17 +221,31 @@ export function ParticipantView({
             </div>
           </div>
         ) : (
-          // ⚠️ CORRETTO — segnalato dal vivo: « appare sempre in attesa del flusso video
-          // dell'auditor, [ma] non vogliamo un flusso video dell'auditor ». Vero per il
-          // satellite (co-located, `pcCoLocated`): l'auditor non manda MAI il proprio video in
-          // quel caso (v. `avvia(satellite)`/`setSuppressOutgoingMedia`, lato auditor) — quindi
-          // "in attesa" era falso, il video non stava per arrivare, non era ancora in transito.
+          // ⚠️ CORRETTO — segnalato dal vivo, due volte: « appare sempre in attesa del flusso
+          // video dell'auditor, [ma] non vogliamo un flusso video dell'auditor » (vero per il
+          // satellite: l'auditor non manda MAI il proprio video in quel caso — "in attesa" era
+          // falso, il video non stava per arrivare). Poi: « IN SEDUTA deve essere in grande, il
+          // resto sotto in piccolo, ma senza parlare del microfono, poiché quello trasmette » —
+          // la prima versione diceva "(camera/microfono nella stessa stanza)", implicando che
+          // ANCHE il microfono fosse solo locale/passivo come la camera — falso: la sua
+          // trascrizione VIAGGIA fino all'auditor (v. `pc_mic_active`, il banner sotto
+          // l'header). "IN SEDUTA" ora è il titolo grande (`conn_satellite_headline`), il
+          // dettaglio resta SOLO sul video, senza più nominare il microfono.
           <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
             <div style={{ fontSize: 40 }}>{pcCoLocated ? '📱' : '👁'}</div>
-            <div style={{ fontSize: 12, color: '#64748b' }}>
-              {t(pcCoLocated ? 'conn_satellite_no_video' : 'conn_waiting_video')}
-            </div>
-            {!pcCoLocated && <div style={{ fontSize: 10, color: '#334155' }}>{t('conn_video_hint')}</div>}
+            {pcCoLocated ? (
+              <>
+                <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '0.06em', color: 'rgba(240,246,255,0.95)' }}>
+                  {t('conn_satellite_headline')}
+                </div>
+                <div style={{ fontSize: 12, color: '#64748b' }}>{t('conn_satellite_no_video')}</div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 12, color: '#64748b' }}>{t('conn_waiting_video')}</div>
+                <div style={{ fontSize: 10, color: '#334155' }}>{t('conn_video_hint')}</div>
+              </>
+            )}
           </div>
         )}
 

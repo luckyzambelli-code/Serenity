@@ -10492,3 +10492,55 @@ stesso modo del giro "AUDITOR non AUDITORE": il telefono mostra questi schermi t
 EQUILIBRIUM, quindi senza ricompilarlo la correzione non lo raggiungerebbe.
 
 **Build**: SERENITY 3.0.275 + EQUILIBRIUM 2.0.282.
+
+## Giro — 2026-09-06 (continuazione) — lingua nel link, video del PC ancora muto, "IN SEDUTA"
+
+**1. « Quando ci si connette come PC locale col telefono, deve apparire la lingua scelta
+dall'auditor, non l'inglese di default »** — il pacchetto `LANG` via dati arriva SOLO a
+connessione stabilita (v. `onConnectionEstablished`), ma la primissima schermata — "MODALITÀ
+PRECLEAR"/"link rilevato dal QR" — si vede PRIMA di quel momento, apposta (un gesto esplicito
+dell'utente resta necessario prima di chiedere fotocamera/microfono). L'unica informazione sulla
+lingua già disponibile a quel punto è il link stesso. Aggiunto un 5° segmento posizionale a
+`parseConnectionLink`/`generaLink` (`peerId:relayToken:peerKey:sat:lang` — CONDIVISO,
+`src/lib/networkManager.ts`, retrocompatibile: un link vecchio senza quel segmento dà
+`lang: undefined`, non un errore) e letto subito in `autoJoinDoneRef` (`App.tsx`) per impostare
+la lingua PRIMA ancora di connettersi. Verificato dal vivo: link con `:it` in coda → "MODALITÀ
+PRECLEAR" appare già in italiano, prima di toccare CONNETTI. Due nuovi test in
+`networkManager.test.ts`.
+
+**2. « La cam del preclear deve mandare il video al medaglione della cam PC in SERENITY, ora non
+arriva nulla (le autorizzazioni sono concesse sul telefono) »** — bug reale, non ancora risolto
+con certezza: il codice del percorso (auditor `answer()` senza stream proprio, telefono
+`getUserMedia`+`peer.call()`) sembra corretto a lettura, e con permessi concessi
+`{video:true,audio:false}` dovrebbe riuscire quasi sempre — non riproducibile in locale (niente
+WebRTC reale nella sandbox di sviluppo). Fatte due cose:
+  - Allargato il fallback lato telefono (`App.tsx`, `onConnect`): prima, se
+    `{video:true,audio:false}` falliva, il satellite si arrendeva SUBITO (nessun secondo
+    tentativo) — alcuni browser mobili sono incoerenti con un `audio:false` esplicito. Ora prova
+    anche `{video:true,audio:true}` prima di cedere all'audio-solo poi al niente-del-tutto.
+  - Aggiunta una riga diagnostica nel Giornale (SOLO SERENITY, `Serenity.tsx`): alla PRIMA volta
+    che uno stream arriva per una connessione, scrive "flusso del PC ricevuto: N video, N audio"
+    — senza dover aprire gli strumenti di sviluppo di Electron. Se al prossimo test quella riga
+    non compare mai, il problema è PRIMA (la chiamata media non parte/non arriva); se compare con
+    "0 video", il problema è la traccia video sul telefono; se compare con "1 video" ma
+    comunque non si vede nulla, il problema è nel disegno (`CameraCerchio`) — tre ipotesi
+    separabili al prossimo giro invece di indovinare alla cieca.
+
+**3. « IN SEDUTA deve essere in grande, il resto sotto in piccolo, ma senza parlare del
+microfono, poiché quello trasmette »** — il messaggio aggiunto nel giro precedente
+(`ParticipantView.tsx`, per il caso satellite senza video) diceva "(camera/microfono nella
+stessa stanza)", implicando FALSAMENTE che anche il microfono fosse solo locale come la camera —
+la sua trascrizione invece VIAGGIA fino all'auditor. Sdoppiato in due chiavi
+(`conn_satellite_headline` — "IN SEDUTA", grande e in grassetto — e `conn_satellite_no_video` —
+solo "nessun video dall'Auditor — è con te nella stanza", piccolo, senza più nominare il
+microfono), le 5 lingue.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato),
+`npx vitest run` 726/726 verdi (+2 test nuovi).
+
+**File toccati**: `src/serenity/Serenity.tsx` (SOLO SERENITY) — `src/lib/networkManager.ts`,
+`src/hooks/useRemoteSession.ts`, `src/App.tsx`, `src/components/ParticipantView.tsx`,
+`src/i18n.tsx` (CONDIVISI) → **build e spedizione di ENTRAMBE le app**, stessa eccezione motivata
+dei giri precedenti: il telefono mostra questi schermi tramite il build di EQUILIBRIUM.
+
+**Build**: SERENITY 3.0.276 + EQUILIBRIUM 2.0.283.

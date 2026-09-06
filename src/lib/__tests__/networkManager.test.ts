@@ -69,6 +69,17 @@ describe('parseConnectionLink', () => {
     expect(r!.satellite).toBe(true);
   });
 
+  it('lingua della seduta in 5a posizione (dopo il marcatore satellite)', () => {
+    const r = parseConnectionLink('abc.trycloudflare.com#abc123:relaytoken:peerkey:sat:it');
+    expect(r!.satellite).toBe(true);
+    expect(r!.lang).toBe('it');
+  });
+
+  it('nessuna lingua nel link → lang undefined (retrocompatibile)', () => {
+    const r = parseConnectionLink('abc.trycloudflare.com#abc123:relaytoken:peerkey:sat');
+    expect(r!.lang).toBeUndefined();
+  });
+
   it('lien invalide (sans "#") → null', () => {
     expect(parseConnectionLink('192.168.0.106:7893')).toBeNull();
   });
