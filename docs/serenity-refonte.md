@@ -10694,3 +10694,54 @@ ENTRAMBE le app**, motivata questa volta dal file più centrale di tutti: se il 
 riguarda ogni seduta a distanza esistente, non solo il satellite di SERENITY.
 
 **Build**: SERENITY 3.0.279 + EQUILIBRIUM 2.0.286.
+
+## Giro — 2026-09-06 (continuazione) — FASE 9: un partecipante nativo dentro SERENITY
+
+**« Ok, procedi »** — via libera al progetto rimandato esplicitamente due giri fa (« niente più
+EQUILIBRIUM sul telefono » è un progetto a sé, troppo grande per quel giro). Costruito ora:
+
+**`src/hooks/useParticipantSession.ts`** (nuovo, CONDIVISO nella cartella ma usato solo da
+SERENITY — stesso status di `useRemoteSession.ts`): la STESSA logica lato-partecipante di
+`App.tsx` — connessione (`init('participant',...)`+`connectToAuditor`), `getUserMedia`
+video-solo per il satellite (stessa ragione di sempre: niente microfono qui, contenderebbe col
+riconoscitore vocale DI QUESTO STESSO hook), `LANG`/`SESSION_STATE`/`CLOCK_SYNC`/`READINESS` in
+arrivo, e il riconoscitore vocale (Web Speech) con gli stessi `onresult`/`onerror`/`onend`/la
+stessa guardia periodica di `App.tsx` — MENO il ramo Electron (un telefono non lo è mai: niente
+scelta fra motore nativo/Whisper, un solo motore, quello del browser). Non una versione
+semplificata di una funzione ESISTENTE — è la stessa funzione, scritta per l'AMBIENTE giusto
+(un telefono, non un desktop Electron che deve sapere fare anche l'altro ruolo).
+
+**`src/serenity/VistaPartecipante.tsx`** (nuovo): il disegno, in SERENITY — non-connesso (link
+già pieno dal QR, `CONNETTI ALL'AUDITOR`), connesso (badge, microfono attivo, schermo EOS
+identico a `ParticipantView.tsx`/EQUILIBRIUM), uscito (lo stesso schermo neutro senza branding
+di `App.tsx`). Il satellite (l'unico caso provato dal vivo) ha piena parità; una VERA seduta a
+distanza vede la camera dell'auditor (`CameraCerchio`, riusato) ma non ancora lo specchio del
+respiro guidato né i toni neuro-acustici — rimandati, non dimenticati (v. la nota grande nel
+file).
+
+**`src/serenity/main.tsx`**: non rimanda più a `index.html` quando un link/QR viene rilevato —
+monta `<VistaPartecipante>` invece di `<Serenity>`, restando dentro SERENITY dall'inizio alla
+fine. Corretto un bug trovato SUBITO dal vivo: il link passato al componente era il solo
+frammento (`peerId:...`), ma `parseConnectionLink` pretende sempre anche la parte host prima
+del `#` — "link non valido" al primo tentativo di CONNETTI. Corretto passando lo stesso formato
+completo (`host#frammento`) che `App.tsx` usa da sempre per lo stesso scopo. Corretta anche la
+lingua: mancava la stessa lettura del 5° segmento del link già fatta per `App.tsx` — aggiunta a
+`VistaPartecipante` (prop `linguaInvito`, applicata al montaggio).
+
+**Verificato dal vivo** (server Vite puro, senza tunnel reale): `serenity.html#...:sat:it` monta
+ORA "MODALITÀ PRECLEAR" con la grafica di SERENITY (non più il boot scuro di EQUILIBRIUM), già
+in italiano, link precompilato; il tap su CONNETTI avvia davvero il tentativo di connessione
+(nessun crash, nessun "link non valido") — si ferma solo per l'assenza di un vero tunnel/peer in
+questa sandbox, lo stesso limite ambientale di ogni altro test fatto in questa sessione.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato, inclusi i
+due nuovi file — 8 warning nuovi trovati e tolti: `any` sui tipi di Web Speech, mai tipizzata
+nella libreria standard di TypeScript, sostituiti con un'interfaccia minima scritta a mano),
+`npx vitest run` 726/726 verdi.
+
+**File toccati (SOLO SERENITY — NESSUN file condiviso, build unica)**: `src/serenity/main.tsx`,
+`src/serenity/VistaPartecipante.tsx` (nuovo), `src/hooks/useParticipantSession.ts` (nuovo). Il
+primo giro dopo l'inizio del satellite (fase 7 in poi) che NON richiede di ricompilare
+EQUILIBRIUM — esattamente la direzione chiesta.
+
+**Build**: SERENITY 3.0.280.
