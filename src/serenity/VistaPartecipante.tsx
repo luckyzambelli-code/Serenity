@@ -22,6 +22,7 @@ import { useEffect, useState } from 'react';
 import { Power, Mic } from 'lucide-react';
 import { useI18n, type Language } from '../i18n';
 import { useParticipantSession } from '../hooks/useParticipantSession';
+import { useMediaRelayFallback } from '../hooks/useMediaRelayFallback';
 import { CameraCerchio } from './CameraCerchio';
 
 export function VistaPartecipante({ linkIniziale, linguaInvito }: {
@@ -38,6 +39,13 @@ export function VistaPartecipante({ linkIniziale, linguaInvito }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const p = useParticipantSession({ lang, setLang });
+  // ⚠️ AGGIUNTO — segnalato dal vivo: « non vedo né la video a distanza dell'auditor né quella
+  // del PC ». V. la nota gemella in `Serenity.tsx`/`useParticipantSession.ts`: senza questo
+  // hook, un WebRTC che non riesce a stabilirsi (ICE/TURN bloccato dalla rete) lasciava il
+  // telefono senza NESSUN ripiego — né riceveva i fotogrammi di scorta dell'auditor, né mandava
+  // i propri. Nessun parametro: legge da sé lo stato condiviso e `networkManager.localStream`
+  // (la stessa cattura già fatta da `useParticipantSession.connetti()`).
+  useMediaRelayFallback();
   const [link, setLink] = useState(linkIniziale);
   const [uscito, setUscito] = useState(false);
 
@@ -199,6 +207,9 @@ export function VistaPartecipante({ linkIniziale, linguaInvito }: {
           <CameraCerchio
             dimensione={260} titolo={t('cam1') as string}
             externalStream={p.remoteStream ?? null}
+            // ⚠️ AGGIUNTO — v. la nota su `useMediaRelayFallback` più su: il fotogramma JPEG di
+            // scorta dell'auditor, quando il WebRTC non arriva.
+            fallbackFrame={p.videoFallbackActive ? p.remoteVideoFrame : undefined}
             offlineLabel={t('camera_offline') as string}
           />
         )}

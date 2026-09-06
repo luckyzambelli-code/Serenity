@@ -90,6 +90,15 @@ export function useParticipantSession(opts: {
   const setRemoteStream    = useNetworkStore(s => s.setRemoteStream);
   const isConnected        = useNetworkStore(s => s.isConnected);
   const remoteStream       = useNetworkStore(s => s.remoteStream);
+  // ⚠️ AGGIUNTI — stessa correzione gemella di `useRemoteSession.ts` (v. la sua nota grande):
+  // « non vedo né la video a distanza dell'auditor né quella del PC ». Senza questi due, quando
+  // il WebRTC non arriva (rete che blocca ICE/TURN — la causa più probabile, la stessa già
+  // documentata in `networkManager.ts`, CONN-29) il telefono non aveva NESSUN ripiego: né
+  // riceveva i fotogrammi di scorta dell'auditor, né mandava i propri.
+  const setVideoFallbackActive = useNetworkStore(s => s.setVideoFallbackActive);
+  const setRemoteVideoFrame    = useNetworkStore(s => s.setRemoteVideoFrame);
+  const videoFallbackActive    = useNetworkStore(s => s.videoFallbackActive);
+  const remoteVideoFrame       = useNetworkStore(s => s.remoteVideoFrame);
 
   const [connecting, setConnecting] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
@@ -206,6 +215,9 @@ export function useParticipantSession(opts: {
 
     networkManager.onStreamReceived = (stream) => setRemoteStream(stream);
 
+    networkManager.onVideoFallbackNeeded = () => setVideoFallbackActive(true);
+    networkManager.onVideoFrame = (dataUrl) => setRemoteVideoFrame(dataUrl);
+
     networkManager.onConnectionEstablished = () => {
       setIsConnected(true);
       setErrore(null);
@@ -222,6 +234,8 @@ export function useParticipantSession(opts: {
     networkManager.onConnectionClosed = () => {
       setIsConnected(false);
       setRemoteStream(null);
+      setVideoFallbackActive(false);
+      setRemoteVideoFrame(null);
     };
 
     networkManager.onDataReceived = (data: unknown) => {
@@ -270,11 +284,13 @@ export function useParticipantSession(opts: {
     return () => {
       networkManager.onError = () => {};
       networkManager.onStreamReceived = () => {};
+      networkManager.onVideoFallbackNeeded = () => {};
+      networkManager.onVideoFrame = () => {};
       networkManager.onConnectionEstablished = () => {};
       networkManager.onConnectionClosed = () => {};
       networkManager.onDataReceived = () => {};
     };
-  }, [setIsConnected, setRemoteStream, fermaRiconoscimento]);
+  }, [setIsConnected, setRemoteStream, fermaRiconoscimento, setVideoFallbackActive, setRemoteVideoFrame]);
 
   /** CONNETTITI — un link (`peerId:relayToken:peerKey[:sat[:lang]]`, senza schema/host: quello
    *  arriva già incollato nel campo o rilevato dal QR). Un SOLO gesto dell'utente lo scatena
@@ -290,6 +306,7 @@ export function useParticipantSession(opts: {
     setSatellite(!!parsed.satellite);
     try { networkManager.disconnect(); } catch (_) {}
     setPeerId(''); setIsConnected(false); setRemoteStream(null);
+    setVideoFallbackActive(false); setRemoteVideoFrame(null);
 
     try {
       // SATELLITE (co-locato): SOLO video. Chiedere anche il microfono qui entrerebbe in
@@ -320,7 +337,7 @@ export function useParticipantSession(opts: {
       setConnecting(false);
       isConnectingRef.current = false;
     }
-  }, [setPeerId, setIsConnected, setRemoteStream]);
+  }, [setPeerId, setIsConnected, setRemoteStream, setVideoFallbackActive, setRemoteVideoFrame]);
 
   /** LASCIA LA SEDUTA — stesso "reset completo" di `App.tsx` (#7/#8, Roger): il preclear non
    *  deve mai poter far ricadere la seduta dell'auditor in uno stato incoerente. */
@@ -331,12 +348,14 @@ export function useParticipantSession(opts: {
     micArmedRef.current = false; setMicArmed(false);
     sessionStateRef.current = 'idle'; setSessionState('idle');
     setPeerId(''); setIsConnected(false); setRemoteStream(null);
+    setVideoFallbackActive(false); setRemoteVideoFrame(null);
     setPcReadiness(null);
-  }, [fermaRiconoscimento, setPeerId, setIsConnected, setRemoteStream]);
+  }, [fermaRiconoscimento, setPeerId, setIsConnected, setRemoteStream, setVideoFallbackActive, setRemoteVideoFrame]);
 
   return {
     connetti, lascia,
     isConnected, connecting, errore,
     satellite, remoteStream, sessionState, micArmed, pcReadiness,
+    videoFallbackActive, remoteVideoFrame,
   };
 }

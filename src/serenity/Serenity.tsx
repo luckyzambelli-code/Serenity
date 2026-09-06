@@ -80,6 +80,7 @@ import { pick5 } from '../i18n5';
 import { useUiStore } from '../store/uiStore';
 import { SelettoreLingua, SelettoreTema } from './Impostazioni';
 import { useRemoteSession } from '../hooks/useRemoteSession';
+import { useMediaRelayFallback } from '../hooks/useMediaRelayFallback';
 import { Connessione } from './Connessione';
 import { PannelloEp } from './PannelloEp';
 import { PannelloConfig } from './PannelloConfig';
@@ -898,6 +899,14 @@ export default function Serenity() {
       journal.addLog({ speaker: 'SYS', text: testo, time: sessionClock.now() });
     },
   });
+  // ⚠️ AGGIUNTO — segnalato dal vivo: « non vedo né la video a distanza dell'auditor né quella
+  // del PC » (v. la nota grande in `useRemoteSession.ts`). `App.tsx` monta SEMPRE questo hook —
+  // qui mancava del tutto: senza, un WebRTC che non riesce a stabilirsi (rete che blocca ICE/
+  // TURN) lasciava SERENITY senza alcun ripiego, mentre EQUILIBRIUM sarebbe passato ai
+  // fotogrammi JPEG di scorta. Non richiede parametri: legge da sé `videoFallbackActive` dallo
+  // store condiviso (`useNetworkStore`, già alimentato sopra da `remote.*`) e la propria camera
+  // (`networkManager.localStream`, la stessa che questa pagina già cattura per CAM 1).
+  useMediaRelayFallback();
 
   // ⚠️ AGGIUNTO — segnalato dal vivo: sul telefono non compariva mai « seduta in corso » e la
   // sua trascrizione non arrivava mai nel Giornale, pur mostrando « microfono attivo ». Causa:
@@ -5303,6 +5312,11 @@ export default function Serenity() {
               dimensioneCollassata={88}
               titolo={t('cam2') as string}
               externalStream={daRemoto ? (remote.remoteStream ?? null) : undefined}
+              // ⚠️ AGGIUNTO — v. la nota su `useMediaRelayFallback` più su: quando il WebRTC non
+              // arriva, questo è il fotogramma JPEG di scorta che il telefono manda sullo stesso
+              // canale dei dati — `CameraCerchio` sapeva già disegnarlo (fase 6), mancava solo chi
+              // lo passasse.
+              fallbackFrame={daRemoto && remote.videoFallbackActive ? remote.remoteVideoFrame : undefined}
               offlineLabel={t('camera_offline') as string}
               opacita={uiAlpha}
               collassata={cam2Collassata}
@@ -5316,7 +5330,9 @@ export default function Serenity() {
               // separata non ancora stabilita) — mostrare LIVE in quel momento era un falso
               // positivo. Ora richiede anche `remote.remoteStream` — un vero fotogramma in
               // arrivo, non solo una connessione aperta.
-              inDiretta={daRemoto && !!remote.remoteStream}
+              // ⚠️ AGGIUNTO `|| remoteVideoFrame` — un fotogramma di scorta È un'immagine vera in
+              // arrivo quanto lo stream WebRTC, la stessa onestà del commento sopra si applica.
+              inDiretta={daRemoto && !!(remote.remoteStream || (remote.videoFallbackActive && remote.remoteVideoFrame))}
             />
             </div>
           )}

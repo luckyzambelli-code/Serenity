@@ -10775,3 +10775,56 @@ stesso chip.
 condiviso allineato, anche se EQUILIBRIUM resta ormai solo l'eseguibile di backup.
 
 **Build**: SERENITY 3.0.281 + EQUILIBRIUM 2.0.287.
+
+## Giro — 2026-09-06 (continuazione) — trovato il vero buco: nessun ripiego video in SERENITY
+
+**« Io non vedo neanche la video a distanza dell'auditor e neanche del PC »** — la conferma
+decisiva: il video manca in ENTRAMBE le direzioni, sia in satellite/locale che in una vera
+seduta a distanza. Non un sintomo di un caso particolare — un buco strutturale.
+
+**Trovato leggendo il codice, non un altro tentativo alla cieca.** `App.tsx` (EQUILIBRIUM) ha da
+sempre un ripiego completo per quando il video WebRTC non riesce a stabilirsi (rete che blocca
+ICE/TURN — 5G, NAT simmetrico, o il TURN gratuito sovraccarico, già descritto nel commento
+CONN-29 di `networkManager.ts`): `onVideoFallbackNeeded` fa scattare `videoFallbackActive`,
+`useMediaRelayFallback` (hook a sé, già scritto e già pronto — mai serviva riscriverlo) cattura
+la propria camera e manda ~6 fps di JPEG sullo STESSO canale WS dei dati EEG, `onVideoFrame`
+li riceve dall'altra parte e li mostra al posto del (nero) video WebRTC.
+
+**SERENITY non collegava NESSUNO dei tre pezzi.** Né `useRemoteSession.ts` (lato auditor) né
+`useParticipantSession.ts` (lato preclear/telefono, fase 9) assegnavano
+`onVideoFallbackNeeded`/`onVideoFrame`; `useMediaRelayFallback()` non era mai montato in
+`Serenity.tsx` né in `VistaPartecipante.tsx`. Quando il WebRTC fallisce — probabile su questa
+rete, la stessa su cui EQUILIBRIUM mostrerebbe comunque qualcosa — SERENITY restava
+semplicemente muta: nessun ripiego, nessun avviso, un cerchio nero. `CameraCerchio` sapeva già
+disegnare un `fallbackFrame` (fase 6, mai usato) — mancava solo chi lo riempisse.
+
+**Corretto, sui quattro file coinvolti:**
+- `useRemoteSession.ts` — aggiunti `videoFallbackActive`/`remoteVideoFrame` dallo store
+  condiviso, i due callback collegati nell'effetto principale, azzerati alla disconnessione
+  (`onConnectionClosed`, `avvia()`, `disconnetti()`), restituiti dall'hook.
+- `useParticipantSession.ts` — la stessa correzione gemella (stessi campi, stesso azzeramento
+  in `onConnectionClosed`/`connetti()`/`lascia()`).
+- `Serenity.tsx` — montato `useMediaRelayFallback()` (nessun parametro, legge da sé lo store e
+  `networkManager.localStream`); passato `fallbackFrame` alla `CameraCerchio` di CAM 2 e
+  corretto `inDiretta` perché un fotogramma di scorta è un'immagine vera in arrivo quanto lo
+  stream WebRTC, la stessa onestà già scritta per `remote.remoteStream`.
+- `VistaPartecipante.tsx` — montato `useMediaRelayFallback()`; passato `fallbackFrame` alla
+  `CameraCerchio` che mostra l'auditor in una vera seduta a distanza.
+
+**Verificato dal vivo** (server Vite puro, senza tunnel reale): il percorso completo
+auditor→"a distanza"→"Qui, o a distanza?"→"A distanza"→MODALITÀ AUDITOR monta senza errori
+React, con l'indicatore "In attesa del Preclear…" già grande e pulsante (v. il giro precedente);
+nessun'eccezione non gestita in console — solo gli errori di rete attesi (nessun vero server di
+segnalazione in questa sandbox, lo stesso limite ambientale di sempre). Non è possibile
+verificare il ripiego stesso end-to-end senza un vero peer dall'altra parte — resta da
+confermare dal vivo con l'utente.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato),
+`npx vitest run` 726/726 verdi.
+
+**File toccati**: `src/hooks/useRemoteSession.ts`, `src/hooks/useParticipantSession.ts`,
+`src/serenity/Serenity.tsx`, `src/serenity/VistaPartecipante.tsx` — tutti e quattro SOLO
+SERENITY (nessun file condiviso toccato: `useMediaRelayFallback.ts`, `networkManager.ts` e
+`CameraCerchio.tsx` esistevano già, invariati).
+
+**Build**: SERENITY (solo).

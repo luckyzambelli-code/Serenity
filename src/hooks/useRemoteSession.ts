@@ -79,6 +79,18 @@ export function useRemoteSession(opts: {
   const setRemoteBatteryLevel  = useNetworkStore(s => s.setRemoteBatteryLevel);
   const setRemoteMuseConnected = useNetworkStore(s => s.setRemoteMuseConnected);
   const setRemoteSignalQuality = useNetworkStore(s => s.setRemoteSignalQuality);
+  // ⚠️ AGGIUNTI — segnalato dal vivo: « non vedo né la video a distanza dell'auditor né quella
+  // del PC ». Trovato leggendo il codice (non un altro tentativo alla cieca): `App.tsx` ha da
+  // sempre un intero ripiego per quando il video WebRTC non arriva (`onVideoFallbackNeeded`/
+  // `onVideoFrame`, alimentati da `useMediaRelayFallback` — fotogrammi JPEG sullo stesso canale
+  // WS dei dati EEG, per reti dove ICE/TURN non passa mai: 5G, NAT simmetrico, o semplicemente
+  // il TURN gratuito sovraccarico già descritto nel commento CONN-29 di `networkManager.ts`).
+  // `useRemoteSession`/`useParticipantSession` non collegavano NESSUNO dei due callback: quando
+  // il WebRTC falliva (probabile causa reale, non ipotesi — è la stessa rete su cui EQUILIBRIUM
+  // mostrerebbe comunque qualcosa) SERENITY restava semplicemente muta, senza nessun ripiego.
+  // `CameraCerchio` sa già disegnare un `fallbackFrame` (fase 6) — mancava solo chi lo riempisse.
+  const setVideoFallbackActive = useNetworkStore(s => s.setVideoFallbackActive);
+  const setRemoteVideoFrame    = useNetworkStore(s => s.setRemoteVideoFrame);
 
   const peerId          = useNetworkStore(s => s.peerId);
   const connectionLink  = useNetworkStore(s => s.connectionLink);
@@ -87,6 +99,8 @@ export function useRemoteSession(opts: {
   const remoteBatteryLevel  = useNetworkStore(s => s.remoteBatteryLevel);
   const remoteMuseConnected = useNetworkStore(s => s.remoteMuseConnected);
   const remoteSignalQuality = useNetworkStore(s => s.remoteSignalQuality);
+  const videoFallbackActive = useNetworkStore(s => s.videoFallbackActive);
+  const remoteVideoFrame    = useNetworkStore(s => s.remoteVideoFrame);
 
   const [tunnelLoading, setTunnelLoading] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
@@ -183,6 +197,7 @@ export function useRemoteSession(opts: {
     setPeerId(''); setConnectionLink('');
     setRemoteStream(null); setRemoteMuseConnected(false);
     setRemoteBatteryLevel(null); setRemoteSignalQuality(0);
+    setVideoFallbackActive(false); setRemoteVideoFrame(null);
 
     // FIX CONN-15 (stessa ragione di App.tsx): quando il preclear chiama, la callback
     // `peer.on('call')` deve poter rispondere con un MediaStream VERO, non vuoto. Chiederlo
@@ -225,7 +240,8 @@ export function useRemoteSession(opts: {
       setErrore(err instanceof Error ? err.message : String(err));
     }
   }, [generaLink, setAppMode, setIsConnected, setPeerId, setConnectionLink,
-      setRemoteStream, setRemoteMuseConnected, setRemoteBatteryLevel, setRemoteSignalQuality]);
+      setRemoteStream, setRemoteMuseConnected, setRemoteBatteryLevel, setRemoteSignalQuality,
+      setVideoFallbackActive, setRemoteVideoFrame]);
 
   /** CHIUDE LA CONNESSIONE. Torna 'local': non è più una seduta a distanza finché non se ne
    *  avvia un'altra con `avvia()`. */
@@ -236,13 +252,15 @@ export function useRemoteSession(opts: {
     setIsConnected(false); setPeerId(''); setConnectionLink('');
     setRemoteStream(null); setRemoteMuseConnected(false);
     setRemoteBatteryLevel(null); setRemoteSignalQuality(0);
+    setVideoFallbackActive(false); setRemoteVideoFrame(null);
     setAppMode('local');
     statoSedutaRef.current = 'idle'; seqRef.current = 0;
     peerKeyRef.current = undefined; relayTokenRef.current = null;
     satelliteRef.current = false;
     setErrore(null);
   }, [setIsConnected, setPeerId, setConnectionLink, setRemoteStream,
-      setRemoteMuseConnected, setRemoteBatteryLevel, setRemoteSignalQuality, setAppMode]);
+      setRemoteMuseConnected, setRemoteBatteryLevel, setRemoteSignalQuality, setAppMode,
+      setVideoFallbackActive, setRemoteVideoFrame]);
 
   /** APRI/CHIUDI SEDUTA, RIPORTATO AL PRECLEAR — stesso pacchetto `SESSION_STATE` che
    *  `App.tsx` invia: il device del preclear si arma/disarma la trascrizione da questo, non da
@@ -261,6 +279,12 @@ export function useRemoteSession(opts: {
     networkManager.onError = (msg) => setErrore(msg);
 
     networkManager.onStreamReceived = (stream) => setRemoteStream(stream);
+
+    // CONN-33 lato SERENITY: se il WebRTC non arriva, il preclear inizia a mandare fotogrammi
+    // JPEG sullo stesso canale (v. `useMediaRelayFallback`, montato in `Serenity.tsx`) — qui si
+    // riceve solo, esattamente come `onStreamReceived` sopra riceve il video vero.
+    networkManager.onVideoFallbackNeeded = () => setVideoFallbackActive(true);
+    networkManager.onVideoFrame = (dataUrl) => setRemoteVideoFrame(dataUrl);
 
     networkManager.onConnectionEstablished = () => {
       setIsConnected(true);
@@ -285,6 +309,8 @@ export function useRemoteSession(opts: {
       setRemoteBatteryLevel(null);
       setRemoteMuseConnected(false);
       setRemoteSignalQuality(0);
+      setVideoFallbackActive(false);
+      setRemoteVideoFrame(null);
       // Nessuna riconnessione attiva qui: è il DEVICE DEL PRECLEAR a richiamare (lo stesso
       // meccanismo di App.tsx) — il peer dell'auditor resta semplicemente in ascolto.
     };
@@ -331,15 +357,19 @@ export function useRemoteSession(opts: {
     return () => {
       networkManager.onError = () => {};
       networkManager.onStreamReceived = () => {};
+      networkManager.onVideoFallbackNeeded = () => {};
+      networkManager.onVideoFrame = () => {};
       networkManager.onConnectionEstablished = () => {};
       networkManager.onConnectionClosed = () => {};
       networkManager.onDataReceived = () => {};
     };
-  }, [setIsConnected, setRemoteStream, setRemoteBatteryLevel, setRemoteMuseConnected, setRemoteSignalQuality]);
+  }, [setIsConnected, setRemoteStream, setRemoteBatteryLevel, setRemoteMuseConnected, setRemoteSignalQuality,
+      setVideoFallbackActive, setRemoteVideoFrame]);
 
   return {
     peerId, connectionLink, isConnected, tunnelLoading, errore,
     remoteStream, remoteBatteryLevel, remoteMuseConnected, remoteSignalQuality,
+    videoFallbackActive, remoteVideoFrame,
     avvia, disconnetti, impostaStatoSeduta,
   };
 }
