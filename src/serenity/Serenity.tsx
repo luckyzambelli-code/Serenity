@@ -890,6 +890,13 @@ export default function Serenity() {
         journal.addLog({ speaker: 'PC', text: testo, time: sessionClock.now() });
       }
     },
+    // ⚠️ AGGIUNTO — un canale A PARTE da `onTrascrizione`, apposta: una riga diagnostica di
+    // sistema (« camera del PC: N video, N audio ») deve finire SEMPRE nel Giornale, mai
+    // dentro l'accumulo di risposta di un comando (quello che `onTrascrizione` fa quando
+    // `procedimentoAttivo`) — non è una parola del PC, è un rapporto sulla connessione.
+    onDiagnostica: testo => {
+      journal.addLog({ speaker: 'SYS', text: testo, time: sessionClock.now() });
+    },
   });
 
   // ⚠️ AGGIUNTO — segnalato dal vivo: sul telefono non compariva mai « seduta in corso » e la

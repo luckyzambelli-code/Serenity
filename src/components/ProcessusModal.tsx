@@ -336,7 +336,7 @@ export function ProcessusModal({
                   {procedimenti.map(p => (
                     <button key={p.nome} onClick={() => onSelectProcedimento?.(p)}
                       title={`${p.comandi.length} ${L('comandi', 'commandes', 'commands', 'comandos', 'kommandon')}`}
-                      className="px-3.5 py-1.5 rounded-full text-[11px] font-mono tracking-widest uppercase transition-all flex items-center gap-1.5"
+                      className="px-3.5 py-1.5 rounded-full text-[11px] font-mono font-bold tracking-widest uppercase transition-all flex items-center gap-1.5"
                       style={{ border: `1px solid ${th.accent}`, background: lt ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.08)', color: th.text }}>
                       ▸ {p.nome}
                       <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: lt ? 'rgba(8,145,178,0.12)' : 'rgba(255,255,255,0.15)' }}>

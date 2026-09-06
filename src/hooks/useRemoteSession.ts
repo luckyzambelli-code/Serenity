@@ -64,6 +64,12 @@ export function useRemoteSession(opts: {
    *  Facoltativo: senza, quelle righe si scartano invece di finire in un giornale che nessuno
    *  ha chiesto di scrivere. */
   onTrascrizione?: (testo: string) => void;
+  /** ⚠️ AGGIUNTO — una riga diagnostica di sistema (es. « camera del PC: N video, N audio »)
+   *  DEVE finire nel Giornale sempre e comunque, mai dentro l'accumulo di risposta di un
+   *  comando (v. `onTrascrizione`, sopra, quando `procedimentoAttivo`): non è una parola del
+   *  PC, è un rapporto tecnico sulla connessione. Un canale a parte, non un caso speciale
+   *  dentro `onTrascrizione`. */
+  onDiagnostica?: (testo: string) => void;
 }) {
   const setAppMode             = useNetworkStore(s => s.setAppMode);
   const setPeerId              = useNetworkStore(s => s.setPeerId);
@@ -92,6 +98,8 @@ export function useRemoteSession(opts: {
   langRef.current = opts.lang;
   const onTrascrizioneRef = useRef(opts.onTrascrizione);
   onTrascrizioneRef.current = opts.onTrascrizione;
+  const onDiagnosticaRef = useRef(opts.onDiagnostica);
+  onDiagnosticaRef.current = opts.onDiagnostica;
   const statoSedutaRef  = useRef<StatoSedutaRemota>('idle');
   const seqRef          = useRef(0);
   const peerKeyRef      = useRef<string | undefined>(undefined);
@@ -157,6 +165,14 @@ export function useRemoteSession(opts: {
     // una risposta futura.
     networkManager.setSuppressOutgoingMedia(satellite);
     if (useNetworkStore.getState().peerId) { await generaLink(); return; }
+    // ⚠️ AGGIUNTO — mancava rispetto a `App.tsx` (`handleModeChange`), che chiama SEMPRE
+    // `networkManager.disconnect()` prima di aprire una connessione nuova, qualunque sia lo
+    // stato precedente. Qui non c'era: un secondo "collega il telefono del PC" nella stessa
+    // seduta (l'auditor annulla e riprova, o disconnette e ricollega) partiva senza smontare
+    // prima l'eventuale peer/connessione media residua — esattamente il genere di stato sporco
+    // che la stessa nota di App.tsx (#8, Roger) descrive per la seduta a distanza. Innocuo se
+    // non c'è nulla da smontare (nessun peer ancora aperto).
+    try { networkManager.disconnect(); } catch (_) {}
     // FIX: token catturato all'ingresso — v. avviaTokenRef. Nome diverso da `token`
     // (già usato più sotto per il relay token generato da `generaToken()`).
     avviaTokenRef.current++;
@@ -289,6 +305,19 @@ export function useRemoteSession(opts: {
         case 'TRANSCRIPT':
           if (typeof msg.text === 'string' && msg.text.trim()) {
             onTrascrizioneRef.current?.(msg.text.trim().slice(0, 2000));
+          }
+          break;
+        // ⚠️ AGGIUNTO — un tipo A PARTE, non 'TRANSCRIPT': `networkManager.send(...,true)`
+        // deduplica i pacchetti "highPriority" ANCORA in coda per TIPO — una riga diagnostica
+        // spedita con lo stesso tipo 'TRANSCRIPT' del microfono (« [PC mic: ... ] », « [PC voix
+        // détectée] », la trascrizione vera) veniva rimpiazzata in coda dalla prima di quelle
+        // che arrivava subito dopo, se il canale non era ancora aperto in quel preciso istante
+        // — sparita PRIMA di essere spedita, non dopo. Confermato dal vivo: la riga diagnostica
+        // non è MAI comparsa nel Giornale, mentre le righe del microfono (spedite più tardi,
+        // stesso canale) arrivavano sempre tutte.
+        case 'DIAG':
+          if (typeof msg.text === 'string' && msg.text.trim()) {
+            onDiagnosticaRef.current?.(msg.text.trim().slice(0, 2000));
           }
           break;
         // RAW_EEG / RAW_PPG / RAW_GYRO / MNA_AUDIO / READINESS / CLOCK_SYNC / LATENCY:

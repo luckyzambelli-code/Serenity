@@ -2263,13 +2263,23 @@ export default function App() {
       // `speaker:'PC'`) già usato per gli avvisi del microfono — l'unico che risulta arrivare
       // per certo nel Giornale dell'auditor (v. i log dal vivo « [PC mic: ... ] »).
       if (appModeRef.current === 'participant') {
+        // ⚠️ CORRETTO — la riga diagnostica del giro precedente (`type:'TRANSCRIPT'`) non è
+        // MAI arrivata nel Giornale dell'auditor. Causa trovata: `networkManager.send(...,
+        // true)` deduplica i pacchetti "highPriority" ANCORA in coda per TIPO — se il canale
+        // non è ancora aperto in questo preciso istante (`onConnectionEstablished` può
+        // precedere di poco la vera apertura del canale dati/relay), la riga finiva in coda
+        // con tipo 'TRANSCRIPT' e veniva SOSTITUITA dalla prima riga del microfono che
+        // arrivava subito dopo con LO STESSO tipo (« [PC mic: ... ] », spedita anch'essa
+        // `highPriority`) — sparita prima di essere spedita, non dopo. Ora un tipo a sé
+        // (`DIAG`, v. `useRemoteSession.ts`), che nessun altro messaggio condivide: niente più
+        // da deduplicare via.
         try {
           const stream = (networkManager as unknown as { localStream: MediaStream | null }).localStream;
           const tracce = stream?.getTracks() ?? [];
           const video = tracce.filter(t => t.kind === 'video').length;
           const audio = tracce.filter(t => t.kind === 'audio').length;
           networkManager.send({
-            type: 'TRANSCRIPT', speaker: 'PC',
+            type: 'DIAG',
             text: stream ? `📷 [camera del PC: ${video} video, ${audio} audio]` : '📷 [camera del PC: nessuno stream — getUserMedia mai riuscito]',
             time: timeRef.current,
           }, true);

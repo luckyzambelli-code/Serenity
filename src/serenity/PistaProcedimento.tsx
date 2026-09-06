@@ -236,8 +236,13 @@ export function PistaProcedimento({
               {i + 1}
             </span>
             <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+              {/* ⚠️ CORRETTO — segnalato: « metti in grassetto i nomi dei processus e dei
+                  comandi procedimenti ». Era in grassetto SOLO il comando a fuoco (700), gli
+                  altri restavano a peso medio (500) — ora sempre 700, a fuoco o no: distanza
+                  e opacità restano il modo di dire "non è questo", il peso del carattere non
+                  deve più farne parte. */}
               <span style={{
-                fontFamily: 'var(--s-serif)', fontSize: fs, fontWeight: inFuoco ? 700 : 500,
+                fontFamily: 'var(--s-serif)', fontSize: fs, fontWeight: 700,
                 color: colore, lineHeight: 1.25,
               }}>
                 {c.testo}

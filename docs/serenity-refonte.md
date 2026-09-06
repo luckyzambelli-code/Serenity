@@ -10596,3 +10596,47 @@ app**, stessa eccezione motivata dei giri precedenti. `SERENITY-manuale.html` (f
 nessuna build necessaria per quel file).
 
 **Build**: SERENITY 3.0.277 + EQUILIBRIUM 2.0.284.
+
+## Giro — 2026-09-06 (continuazione) — la riga diagnostica trovata muta, un giro mancante, grassetto
+
+**Perché la riga diagnostica non compariva MAI** — trovato: `networkManager.send(...,true)`
+deduplica i pacchetti "highPriority" ANCORA in coda **per TIPO** — la riga diagnostica veniva
+spedita con `type:'TRANSCRIPT'`, lo STESSO tipo di « [PC mic: ... ] »/« [PC voix détectée] » e
+della trascrizione vera. Se il canale non era ancora aperto nel preciso istante di
+`onConnectionEstablished` (plausibile: è il primo momento utile, forse prima che il canale dati
+sia DAVVERO pronto a scrivere), la riga diagnostica finiva in coda e veniva SOSTITUITA dalla prima
+riga del microfono che arrivava subito dopo con lo stesso tipo — sparita PRIMA di essere spedita,
+mai dopo. Aggiunto un tipo a sé (`DIAG`, CONDIVISO in `networkManager.ts`/`useRemoteSession.ts`),
+che nessun altro messaggio condivide: niente più da deduplicare via. Instradato in `Serenity.tsx`
+su un canale a parte da `onTrascrizione` (mai dentro l'accumulo di risposta di un comando — è un
+rapporto di sistema, non una parola del PC).
+
+**« In EQUILIBRIUM funzionava benissimo, perché adesso hai problemi? »** — domanda giusta, e ha
+portato a un confronto riga per riga fra `handleModeChange('auditor',{satellite})` (App.tsx, la
+via EQUILIBRIUM, PROVATA) e `avvia(satellite)` (`useRemoteSession.ts`, la via SERENITY): trovata
+UNA differenza reale — `handleModeChange` chiama SEMPRE `networkManager.disconnect()` prima di
+aprire una connessione nuova, qualunque fosse lo stato precedente; `avvia()` non lo faceva MAI.
+Un secondo "collega il telefono del PC" nella stessa seduta (annullato e riprovato, o
+disconnesso e ricollegato) partiva quindi senza smontare prima l'eventuale peer/connessione
+media residua — lo stesso genere di stato sporco che una nota già scritta in App.tsx (#8, Roger)
+descrive per la seduta a distanza, mai riprodotto qui. Aggiunta la stessa chiamata, nello stesso
+punto. Non è la controprova definitiva del guasto video (serve il prossimo test per saperlo con
+certezza, ORA che la riga diagnostica arriverà davvero), ma è una differenza reale e concreta
+trovata dal confronto diretto con la via che l'utente conferma funzionare.
+
+**« Metti in grassetto i nomi dei processus e dei comandi procedimenti »** — il comando a fuoco
+nella pista (`PistaProcedimento.tsx`) era già in grassetto (700), gli altri restavano a peso
+medio (500): ora sempre 700, a fuoco o no — distanza/opacità restano il modo di dire "non è
+questo". I nomi dei processus nella finestra di selezione (`ProcessusModal.tsx`, CONDIVISA) non
+avevano alcun peso esplicito (400 di default): aggiunto `font-bold`.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato),
+`npx vitest run` 726/726 verdi.
+
+**File toccati**: `src/serenity/PistaProcedimento.tsx` (SOLO SERENITY) — `src/App.tsx`,
+`src/hooks/useRemoteSession.ts`, `src/components/ProcessusModal.tsx` (CONDIVISI) → **build e
+spedizione di ENTRAMBE le app**: i primi due per la stessa eccezione motivata dei giri
+precedenti (fase satellite/telefono), il terzo perché la build di EQUILIBRIUM parte comunque in
+questo giro — nessuna eccezione aggiuntiva da giustificare a parte.
+
+**Build**: SERENITY 3.0.278 + EQUILIBRIUM 2.0.285.
