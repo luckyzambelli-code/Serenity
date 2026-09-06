@@ -177,6 +177,10 @@ export function ProcessusModal({
           {/* FIX #2: tag chips on their OWN full-width row — bigger, themed, with per-tag counts */}
           {/* ⚠️ SOLO SERENITY — nascosti con `soloComandi` (v. la nota sulla prop, in cima al
               file): filtrano i PDF sotto, che con `soloComandi` non compaiono affatto. */}
+          {/* ⚠️ GRASSETTO — segnalato dal vivo: « i titoli dei tags non sono in grassetto ».
+              I tre className qui sotto (◈ ALL, l'input di rinomina, il chip normale) erano
+              `font-mono` senza `font-bold` — aggiunto a tutti e tre per restare coerenti fra
+              stato normale/attivo/in-modifica dello stesso chip. */}
           {!soloComandi && <div className="flex items-center gap-2 flex-wrap">
             {(() => {
               const chipStyle = (active: boolean): React.CSSProperties => ({
@@ -190,7 +194,7 @@ export function ProcessusModal({
                 <button onClick={() => setProcessusTagFilter('all')}
                   title={L('mostra tutti i processus', 'afficher tous les processus', 'show all processus',
                     'mostrar todos los processus', 'visa alla processus')}
-                  className="px-3.5 py-1.5 rounded-full text-[11px] font-mono tracking-widest uppercase transition-all flex items-center gap-1.5"
+                  className="px-3.5 py-1.5 rounded-full text-[11px] font-mono font-bold tracking-widest uppercase transition-all flex items-center gap-1.5"
                   style={chipStyle(processusTagFilter === 'all')}>
                   ◈ ALL
                   <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={countBadge}>{processusPdfs.length}</span>
@@ -223,7 +227,7 @@ export function ProcessusModal({
                           if (e.key === 'Escape') setEditingTag(null);
                         }}
                         onBlur={() => setEditingTag(null)}
-                        className="px-3.5 py-1.5 rounded-full text-[11px] font-mono tracking-widest uppercase outline-none"
+                        className="px-3.5 py-1.5 rounded-full text-[11px] font-mono font-bold tracking-widest uppercase outline-none"
                         style={{ border: `1px solid ${th.accent}`, background: lt ? 'rgba(8,145,178,0.14)' : 'rgba(255,255,255,0.15)', color: th.accent, width: `${Math.max(70, editingTagValue.length * 9)}px` }}
                       />
                     ) : (
@@ -231,7 +235,7 @@ export function ProcessusModal({
                         onClick={() => setProcessusTagFilter(tag)}
                         onDoubleClick={() => { setEditingTag(tag); setEditingTagValue(tag); }}
                         title={t('tip_filter_rename')}
-                        className="px-3.5 py-1.5 rounded-full text-[11px] font-mono tracking-widest uppercase transition-all flex items-center gap-1.5"
+                        className="px-3.5 py-1.5 rounded-full text-[11px] font-mono font-bold tracking-widest uppercase transition-all flex items-center gap-1.5"
                         style={chipStyle(processusTagFilter === tag)}>
                         ⬡ {tag}
                         <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={countBadge}>{tagCount(tag)}</span>

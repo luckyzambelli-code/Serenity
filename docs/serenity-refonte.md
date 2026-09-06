@@ -10745,3 +10745,33 @@ primo giro dopo l'inizio del satellite (fase 7 in poi) che NON richiede di ricom
 EQUILIBRIUM — esattamente la direzione chiesta.
 
 **Build**: SERENITY 3.0.280.
+
+## Giro — 2026-09-06 (continuazione) — IN ATTESA DEL PRECLEAR ingrandito, tag in grassetto
+
+Due segnalazioni dal vivo, entrambe di leggibilità.
+
+**`src/serenity/Connessione.tsx`**: « quando il PC chiude, IN ATTESA DEL PRECLEAR è troppo
+piccolo, mettilo in grande, magari che pulsa ». Era alla taglia del testo normale
+(`--s-fs-base`, 15px) — la stessa indicazione che l'auditor deve notare SUBITO, anche da lontano
+dallo schermo, restava un dettaglio fra tanti. Portato a `--s-fs-xl` (21px, la stessa del nome
+SERENITY), `fontWeight: 700`, il pallino di stato da 9px a 14px, e applicata `.ser-pulse` (già
+scritta altrove, per lo stesso motivo — « il ciclo sta ASPETTANDO una risposta, deve farsi
+notare ») ma SOLO mentre non è ancora connesso: una volta connesso, l'attesa è finita, non deve
+più pulsare.
+
+**`src/components/ProcessusModal.tsx`** (CONDIVISO, solo lo stile): « i titoli dei tags non sono
+in grassetto ». Non i separatori per gruppo nella griglia PDF (`⬡ {tag}` sopra ogni gruppo — quelli
+erano già in `font-bold`, verificato prima di toccare nulla), ma i CHIP-FILTRO in cima (◈ ALL e
+ogni tag) — tre className quasi identici (chip normale, chip attivo passa per lo stesso stile, e
+l'`<input>` che appare rinominando un tag al doppio-clic), nessuno dei tre aveva `font-bold`.
+Aggiunto a tutti e tre, per restare coerenti fra lo stato normale e quello in modifica dello
+stesso chip.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato),
+`npx vitest run` 726/726 verdi.
+
+**File toccati**: `src/serenity/Connessione.tsx` (SOLO SERENITY) — `src/components/ProcessusModal.tsx`
+(CONDIVISO, solo classi CSS, nessuna logica) → build di entrambe le app per tenere il file
+condiviso allineato, anche se EQUILIBRIUM resta ormai solo l'eseguibile di backup.
+
+**Build**: SERENITY 3.0.281 + EQUILIBRIUM 2.0.287.

@@ -153,12 +153,19 @@ export function Connessione({ remote, onAnnulla, onPronti, satellite = false }: 
           </div>
         )}
 
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 9, fontSize: 'var(--s-fs-base)',
-          color: remote.isConnected ? 'var(--s-still)' : 'var(--s-ink-faint)',
+        {/* ⚠️ INGRANDITO — segnalato dal vivo: « quando il PC chiude, IN ATTESA DEL PRECLEAR è
+            troppo piccolo, mettilo in grande, magari che pulsa ». Era alla taglia del testo
+            normale (`--s-fs-base`, 15px) — la stessa indicazione che l'auditor deve notare
+            SUBITO, anche da lontano dallo schermo, restava un dettaglio fra tanti. `--s-fs-xl`
+            (21px, la stessa del nome SERENITY) e `.ser-pulse` (già scritta per lo stesso scopo
+            altrove — « il ciclo sta ASPETTANDO una risposta, deve farsi notare ») SOLO mentre
+            si aspetta: una volta connesso, l'attesa è finita, non deve più pulsare. */}
+        <div className={remote.isConnected ? undefined : 'ser-pulse'} style={{
+          display: 'flex', alignItems: 'center', gap: 12, fontSize: 'var(--s-fs-xl)', fontWeight: 700,
+          color: remote.isConnected ? 'var(--s-still)' : 'var(--s-reserve)',
         }}>
           <span style={{
-            width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
+            width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
             background: remote.isConnected ? 'var(--s-still)' : 'var(--s-reserve)',
           }} />
           {t(remote.isConnected ? 'conn_preclear_connected_status' : 'conn_waiting_preclear')}
