@@ -49,6 +49,11 @@ function CreditAvatar({ src, name }: { src?: string; name: string }) {
  * comme un clin d'œil ; l'utilisateur l'a demandé VISIBLE à côté du nom du logiciel, et il a
  * raison : ces ondes SONT le sujet du programme, pas une signature discrète. 56 px, pleine
  * opacité, et l'anneau s'éclaire au survol.
+ * ⚠️ INGRANDITO — segnalato dal vivo: « il cerchio con l'immagine di SERENITY [nei Crediti] sia
+ * più grande ». 56→78 px, stessa proporzione (`objectFit: cover`, stesso `borderRadius: 50%`
+ * quindi resta un cerchio, non un ovale) — nessun'altra modifica: il pulsante che apre questa
+ * finestra (`Serenity.tsx`) non tocca `CreditsModal.tsx`, quindi la riga flessibile che lo
+ * contiene si allarga da sé senza bisogno di toccare il layout intorno.
  */
 function Medaillon({ title }: { title: string }) {
   const [survol, setSurvol] = useState(false);
@@ -63,9 +68,9 @@ function Medaillon({ title }: { title: string }) {
       onMouseEnter={() => setSurvol(true)}
       onMouseLeave={() => setSurvol(false)}
       style={{
-        // 56 px : PLUS GRAND que les 46 des portraits — le nom du logiciel et son image vont
-        // ensemble, et l'image ne doit pas avoir l'air d'un crédit de plus.
-        width: 56, height: 56, borderRadius: '50%', flexShrink: 0, objectFit: 'cover',
+        // 78 px (era 56, PLUS GRAND que les 46 des portraits) — le nom du logiciel et son image
+        // vont ensemble, et l'image ne doit pas avoir l'air d'un crédit de plus.
+        width: 78, height: 78, borderRadius: '50%', flexShrink: 0, objectFit: 'cover',
         border: `1px solid ${survol ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.22)'}`,
         boxShadow: survol
           ? '0 2px 14px rgba(0,0,0,0.5), 0 0 18px rgba(180,210,255,0.25)'

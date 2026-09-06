@@ -454,7 +454,13 @@ export default function Serenity() {
    * LOCALE (auditor e PC nella stessa stanza — `avvio.distanza === false`) dove il telefono del
    * PC fa solo da camera/microfono AGGIUNTIVI, senza che il MUSE/METER (locali, sull'auditor)
    * ne sappiano nulla. Serve quindi un secondo modo di raggiungere LA STESSA `Connessione`,
-   * DURANTE la seduta già aperta — non un secondo motore di rete, mai.
+   * non un secondo motore di rete, mai.
+   * ⚠️ SPOSTATO — primo giro: il gesto viveva DURANTE la seduta già aperta (un bottone sopra
+   * CAM 2). Segnalato dal vivo: « non si vede bene lì, dovrebbe stare sotto il bottone di
+   * inizio sessione — è lì che si sceglie di connettere un telefonino, non a sessione iniziata
+   * ». Lo stato resta lo stesso (un solo overlay, `<Connessione>` sopra tutto), è SOLO il
+   * bottone che lo apre a essere salito alla schermata prima dell'apertura — v. la sua nota,
+   * vicino al bottone "apri una seduta".
    */
   const [satelliteAperto, setSatelliteAperto] = useState(false);
   /** ⚠️ SEGNALATO DI NUOVO: « quando schiacci sul bottone COMMANDS, devono apparire solo i
@@ -885,6 +891,23 @@ export default function Serenity() {
       }
     },
   });
+
+  // ⚠️ AGGIUNTO — segnalato dal vivo: sul telefono non compariva mai « seduta in corso » e la
+  // sua trascrizione non arrivava mai nel Giornale, pur mostrando « microfono attivo ». Causa:
+  // `impostaStatoSeduta('running')` si chiama SOLO all'apertura della seduta (v. `avviaSeduta`,
+  // più giù) — ma il bottone « collega il telefono del PC » si preme DURANTE una seduta già
+  // aperta, quindi quel pacchetto era già passato quando il telefono si connette, e non c'è
+  // altro punto che lo rimandi. `useRemoteSession.onConnectionEstablished` rimanda già lo
+  // stato corrente ad ogni RICONNESSIONE — ma solo se quello stato non è mai stato 'idle', e
+  // qui non lo diventava mai in primo luogo. Questo effetto copre esattamente il varco: appena
+  // un telefono risulta connesso MENTRE la seduta è aperta (sia alla prima connessione che a
+  // una successiva), gli manda 'running' — è lui, non `avviaSeduta`, ad accorgersi che i due
+  // fatti (seduta aperta, telefono connesso) sono finalmente veri insieme. Innocuo se ripetuto:
+  // `impostaStatoSeduta` è idempotente lato PC (riarma una trascrizione già armata).
+  useEffect(() => {
+    if (remote.isConnected && aperta) remote.impostaStatoSeduta('running', sessionClock.now());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remote.isConnected, aperta]);
 
   // L'orologio è QUELLO DI EQUILIBRIUM: `sessionClock` è un modulo unico, e conta i secondi
   // fuori da React perché il ridisegno non deve poter far perdere un secondo di seduta.
@@ -2682,7 +2705,15 @@ export default function Serenity() {
     }
     // Il device del preclear si arma DA QUESTO pacchetto, non da un pulsante che lui preme —
     // stesso protocollo di App.tsx (`SESSION_STATE`).
-    if (avvio?.distanza) remote.impostaStatoSeduta('running');
+    // ⚠️ CORRETTO — segnalato dal vivo: gestiva solo `avvio.distanza` (vera seduta a distanza),
+    // ma un telefono collegato con « collega il telefono del PC » (satellite, seduta LOCALE:
+    // `avvio.distanza` resta false) non riceveva MAI questo pacchetto — restava fermo su "Chi
+    // audisce?"/nessuna indicazione di seduta in corso, e la trascrizione lato PC non si armava
+    // mai (v. `pcMicArmedRef` in App.tsx, armato solo da `SESSION_STATE:'running'`), da cui
+    // « il microfono dice attivo ma non scrive nel giornale ». `remote.isConnected` copre
+    // ENTRAMBI i casi con un solo controllo: è vero solo quando un dispositivo remoto (a
+    // distanza o satellite) è davvero collegato.
+    if (avvio?.distanza || remote.isConnected) remote.impostaStatoSeduta('running');
     setAperta(true);
   };
   /** ── APRE DAVVERO, DOPO IL RESPIRO — `avviaSeduta()` chiama `journal.resetJournal(...)`:
@@ -2991,7 +3022,8 @@ export default function Serenity() {
       console.error('[SERENITY] salvataggio seduta in History fallito', e);
     }
     corpusSessionRef.current = '';
-    if (avvio?.distanza) remote.impostaStatoSeduta('ended');
+    // ⚠️ Stessa correzione del punto gemello sopra (avvio seduta) — v. quella nota.
+    if (avvio?.distanza || remote.isConnected) remote.impostaStatoSeduta('ended');
     // MNA — la seduta finisce, un tono acceso non deve sopravviverle (stessa regola di
     // App.tsx: « seduta finita/in pausa → azzera tutto l'audio »).
     primeFreqAudio.killAll();
@@ -3109,6 +3141,14 @@ export default function Serenity() {
   // con `avvio.distanza`. La riserva di spazio deve seguire la STESSA condizione, altrimenti
   // resterebbe un vuoto morto sopra Santé Système/journal in ogni seduta locale.
   const cam1Mostrata = moduleVis.cam1 && avvio.distanza;
+  // ⚠️ SPOSTATO QUI (era calcolato solo dentro il blocco CAM 2 più giù) — segnalato dal vivo:
+  // « COLLEGA il telefono del PC non si vede bene sotto la CAM 2, dovrebbe stare sotto il
+  // bottone di inizio seduta: è lì che si sceglie di connettere un telefonino, non a seduta
+  // iniziata ». Il bottone stesso trasloca (v. la riga di INIZIA/CHIUDI LA SEDUTA, più giù), ma
+  // questo valore serve ANCHE dov'era — CAM 2 durante la seduta deve continuare a sapere se
+  // mostrare il flusso del telefono — quindi sale di scope invece di restare locale a
+  // quell'unico punto.
+  const telefonoPcCollegato = !avvio.distanza && remote.isConnected;
   /**
    * ⚠️ AGGIUNTO — segnalato: « cam nascoste fuori sessione a distanza » (una delle quattro
    * proposte accettate, « tutti »). CAM 2 (la webcam locale generica) restava SEMPRE visibile
@@ -3831,6 +3871,48 @@ export default function Serenity() {
           </button>
           )}
         </div>
+        {/* ⚠️ SPOSTATO QUI — segnalato dal vivo: « COLLEGA il telefono del PC non si vede bene
+            sotto la CAM 2, dovresti metterlo sotto il bottone di inizio sessione, poiché è lì
+            che si sceglie o meno di connettere un telefonino, non a sessione iniziata ». Era un
+            bottone sopra CAM 2, quindi invisibile finché la seduta non era già aperta —
+            esattamente al contrario di una scelta fatta PRIMA di aprire. Ora è proprio qui,
+            SOTTO la riga di "apri una seduta" (una riga NUOVA nella stessa colonna, non dentro
+            quella riga: ci stava per sbaglio al primo tentativo, e la riga orologio+bottone
+            — larga 272px in tre — si schiacciava fino a 16px) — SOLO prima dell'apertura
+            (`!aperta` — a seduta già aperta il telefono si può ancora vedere/gestire da CAM 2,
+            ma non è più qui che lo si INIZIA a collegare), mai in SOLO, mai con `avvio.distanza`
+            (che ha già la sua `Connessione` a schermo intero).
+            ⚠️ « Deve essere una scelta, non una imposizione, per cui l'indicazione deve
+            chiaramente indicare che è una possibilità » — da cui l'etichetta "opzionale" SUL
+            bottone stesso (non in una didascalia a parte, facile da non notare) e, quando il
+            telefono È collegato, un badge di stato al suo posto invece di farlo sparire nel
+            nulla (l'auditor deve poter vedere che la scelta fatta ha avuto effetto). */}
+        {!aperta && !avvio.solo && !avvio.distanza && (
+          telefonoPcCollegato ? (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              padding: '6px 10px', borderRadius: 12,
+              background: 'color-mix(in srgb, var(--s-still) 14%, var(--s-disc))',
+              color: 'var(--s-still)', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)',
+              letterSpacing: '0.04em',
+            }}>
+              ✓ {LC('telefono del PC collegato', 'téléphone du PC connecté', "PC's phone connected",
+                     'teléfono del PC conectado', 'PC-telefonen ansluten')}
+            </div>
+          ) : (
+            <button className="s-glass s-glass-btn" onClick={() => setSatelliteAperto(true)}
+              style={{
+                cursor: 'pointer', pointerEvents: 'auto', borderRadius: 12, padding: '8px 10px', border: 'none',
+                background: 'var(--s-disc)', color: 'var(--s-ink-soft)',
+                fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.04em',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}>
+              📱 {LC('opzionale — collega il telefono del PC', 'facultatif — connecter le téléphone du PC',
+                     "optional — connect the PC's phone", 'opcional — conectar el teléfono del PC',
+                     'valfritt — anslut PC:ns telefon')}
+            </button>
+          )
+        )}
         {/* ── PAUSA/RIPRENDI, CON IL SUO STATO ACCANTO — segnalato: « il bottone di pausa
             deve essere vicino al bottone Fermer la séance » (giro scorso), poi: « le pavé en
             pause fais le apparaître à côté du bouton REPRISE ». Il badge "in pausa"/
@@ -4182,12 +4264,14 @@ export default function Serenity() {
             superficie chiara/scura di SERENITY, non c'è nulla da riadattare). In tema chiaro
             l'immagine (disegnata per un fondo scuro, il testo sparirebbe) prende la stessa
             pastiglia scura di App.tsx invece di un filtro che ne sporcherebbe il blu. */}
-        {/* ⚠️ INGRANDITO, POI RIBILANCIATO — segnalato: « anche il logo SERENITY con sotto la
-            versione è piccolo, non si vede » (primo giro: immagine 36/44→46/56px, scritta
-            "SERENITY" `--s-fs-xl`→`--s-fs-hero`), poi di nuovo: « riduci la scritta SERENITY
-            ed aumenta la taglia del logo ». L'immagine (il vero logo, Alt. Scientology) sale
-            ancora, 46/56→58/70px; la scritta "SERENITY" torna a `--s-fs-xl` (21px, la sua
-            taglia originale) — l'immagine porta il peso visivo, il nome accanto resta una
+        {/* ⚠️ INGRANDITO, POI RIBILANCIATO, POI ANCORA — segnalato: « anche il logo SERENITY con
+            sotto la versione è piccolo, non si vede » (primo giro: immagine 36/44→46/56px,
+            scritta "SERENITY" `--s-fs-xl`→`--s-fs-hero`), poi di nuovo: « riduci la scritta
+            SERENITY ed aumenta la taglia del logo » (46/56→58/70px, scritta tornata a
+            `--s-fs-xl`), e infine dal vivo: « anche il medaglione alla sinistra del bottone
+            DARK/LIGHT [sia più grande] » — QUESTO logo, descritto dalla sua posizione nella
+            barra (subito prima di `<SelettoreTema>`, poco più giù). 58/70→74/86px — stesso
+            principio di sempre: l'immagine porta il peso visivo, il nome accanto resta una
             didascalia, non un secondo logo in concorrenza con lei. */}
         <button type="button" onClick={() => setCreditiAperti(true)} title={t('tip_credits') as string} style={{
           border: 'none', padding: isLightTheme ? '5px 12px' : 0, borderRadius: 12,
@@ -4196,7 +4280,7 @@ export default function Serenity() {
           cursor: 'pointer', lineHeight: 0, flexShrink: 0,
         }}>
           <img src="/logo-alt-scientology.png" alt="Alt. Scientology" style={{
-            height: isLightTheme ? 58 : 70, width: 'auto',
+            height: isLightTheme ? 74 : 86, width: 'auto',
             filter: isLightTheme ? 'none' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.45)) brightness(1.05)',
           }} />
         </button>
@@ -5110,13 +5194,9 @@ export default function Serenity() {
           la videochiamata, come in Zoom/Meet) — quindi non sparisce del tutto, solo fuori da
           `avvio.distanza`. */}
       {aperta && (cam2Mostrata || cam1Mostrata) && (() => {
-        // ⚠️ AGGIUNTO — v. la nota grande su `satelliteAperto`, sopra: una seduta LOCALE
-        // (`!avvio.distanza`) può avere invitato un telefono lo stesso, DURANTE la seduta —
-        // `remote.isConnected` non può diventarlo per nessun'altra via quando `avvio.distanza`
-        // è falso (nessun altro gesto chiama `remote.avvia()`), quindi basta da solo a dire
-        // « c'è un telefono collegato ». MUSE/METER non lo guardano: restano locali, sempre —
-        // solo CAM 2 (immagine e, dentro `CameraCerchio`, il suo audio) passa al telefono.
-        const telefonoPcCollegato = !avvio.distanza && remote.isConnected;
+        // `telefonoPcCollegato` è ora calcolato più in alto (v. la sua nota grande, vicino a
+        // `cam1Mostrata`) — qui resta solo `daRemoto`, che ne dipende ma serve solo a QUESTO
+        // blocco (decidere se CAM 2 mostra il flusso locale o quello remoto/del telefono).
         const daRemoto = !!avvio.distanza || telefonoPcCollegato;
         return (
         <div style={{
@@ -5138,24 +5218,6 @@ export default function Serenity() {
               statoTesto={statoCamPc}
               inDiretta={daRemoto}
             />
-            {/* ⚠️ AGGIUNTO — segnalato: « il telefono per vedere e trascrivere le risposte del
-                PC, come in EQUILIBRIUM ». Visibile SOLO quando ha senso: una seduta con un
-                preclear vero (mai in SOLO — v. `avvio.solo`), locale (a distanza ha già la sua
-                `Connessione` a schermo intero, PRIMA di arrivare qui), e senza un telefono già
-                collegato (una volta collegato, il cerchio stesso lo mostra — un secondo
-                bottone accanto sarebbe ridondante). */}
-            {!avvio.solo && !avvio.distanza && !telefonoPcCollegato && (
-              <button className="s-glass s-glass-btn" onClick={() => setSatelliteAperto(true)}
-                style={{
-                  pointerEvents: 'auto', cursor: 'pointer', borderRadius: 999, padding: '4px 12px',
-                  border: 'none', background: 'var(--s-disc)', color: 'var(--s-ink-soft)',
-                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.04em',
-                  display: 'flex', alignItems: 'center', gap: 5,
-                }}>
-                📱 {LC('collega il telefono del PC', 'connecter le téléphone du PC', 'connect the PC\'s phone',
-                       'conectar el teléfono del PC', 'anslut PC:ns telefon')}
-              </button>
-            )}
             </div>
           )}
           {cam1Mostrata && (
@@ -5173,12 +5235,15 @@ export default function Serenity() {
         );
       })()}
 
-      {/* ⚠️ AGGIUNTO — l'overlay di `Connessione` DURANTE la seduta, per il gesto « collega il
-          telefono del PC » sopra. Stesso componente della schermata a schermo intero prima
-          della seduta (`avvio.distanza`, più su) — qui montato come un modale sopra la seduta
-          in corso (stesso schema di `DizionarioModal`/`ProcessusModal`, un fratello in più
-          nell'albero), non una sostituzione di `<main>`: chiudendolo (✕, o « pronti ») si
-          torna alla seduta esattamente com'era, il telefono restando collegato se lo è. */}
+      {/* ⚠️ AGGIUNTO, POI SPOSTATO — l'overlay di `Connessione` per il gesto « collega il
+          telefono del PC ». Stesso componente della schermata a schermo intero di `avvio.distanza`
+          (più su) — qui montato come un modale (stesso schema di `DizionarioModal`/
+          `ProcessusModal`, un fratello in più nell'albero), non una sostituzione di `<main>`.
+          Si apre ORA solo PRIMA di "apri una seduta" (v. la nota vicino a quel bottone): il
+          gate non serve qui, il bottone che lo apre esiste solo quando ha senso aprirlo.
+          Chiudendolo (✕, o « pronti » una volta connesso) si torna alla schermata di avvio, col
+          telefono collegato se lo è — pronta per "apri una seduta", che ora parte SAPENDO già
+          del telefono invece di scoprirlo a metà seduta. */}
       {satelliteAperto && (
         <div className="absolute inset-0 z-50" style={{
           background: 'color-mix(in srgb, var(--s-ground) 96%, transparent)',

@@ -223,6 +223,18 @@ export function PannelloConfig({ onChiudi }: {
             {MODULI_REALI.map(({ key, tKey }) =>
               rigaModulo(moduleVis[key], false, () => setModuleVis(v => ({ ...v, [key]: !v[key] })), tt(tKey)))}
           </div>
+          {/* ⚠️ AGGIUNTO — segnalato dal vivo: « la CAM auditor è attiva in Config [ma non si
+              vede da nessuna parte in seduta locale] ». Vero per disegno (v. `cam1Mostrata` in
+              `Serenity.tsx`: CAM 1 si mostra SOLO nelle sedute a distanza, mai in locale — anche
+              con un telefono collegato), ma l'interruttore da solo non lo dice: chi lo trova
+              acceso può pensare che qualcosa non funzioni, invece sta facendo esattamente quel
+              che deve. Mostrata SOLO quando l'interruttore è acceso — è in quel momento che la
+              domanda "perché non vedo niente?" nasce. */}
+          {moduleVis.cam1 && (
+            <div style={{ marginTop: 8, fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)', lineHeight: 1.5 }}>
+              {tt('config_mod_cam1_hint')}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 16, marginTop: 10 }}>
             <button className="s-glass s-glass-btn" onClick={() => setModuleVis(TUTTI_ACCESI)} style={{
               cursor: 'pointer', borderRadius: 999, padding: '4px 12px', background: 'var(--s-disc)',

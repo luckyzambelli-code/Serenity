@@ -401,6 +401,12 @@ export default function App() {
 
   // Local UI-only flags
   const [showConnectionModal, setShowConnectionModal] = useState(false);
+  // ⚠️ AGGIUNTO — segnalato dal vivo: chi scansiona il QR trova `participantLink` già pieno da
+  // `autoJoinDoneRef` (v. sotto), ma la guida statica del modale continuava a dire "incolla il
+  // link" — falso in quel caso, e confuso per chi non ha incollato nulla. Vero SOLO fra il
+  // rilevamento e la prossima modifica manuale del campo (v. `onSetParticipantLink` più giù) o
+  // una disconnessione — mai un default permanente.
+  const [linkAutoRilevato, setLinkAutoRilevato] = useState(false);
   // Phone-satellite: set when the host flow is entered from LOCAL (non-solo)
   // auditing to let the PC's phone join as a co-located mic/cam/EEG satellite.
   // Under the hood this is the same robust auditor-host networking; the flag only
@@ -413,6 +419,15 @@ export default function App() {
   const [pcCoLocated, setPcCoLocated] = useState(false);
   const pcCoLocatedRef = useRef(false);
   useEffect(() => { pcCoLocatedRef.current = pcCoLocated; }, [pcCoLocated]);
+  // ⚠️ AGGIUNTO — segnalato dal vivo: un telefono-satellite che si disconnette (a mano, o
+  // perché l'auditor ha chiuso la seduta) ricadeva in `appMode('local')` — la STESSA schermata
+  // di avvio EQUILIBRIUM che vedrebbe un vero secondo installo desktop. Su un telefono che è
+  // stato SOLO una camera/microfono d'appoggio, questo non è "torna alla modalità locale": è
+  // un'app estranea che compare al posto della seduta appena finita — da cui « appare
+  // EQUILIBRIUM [invece di qualcosa che dica che è finita] ». Gated SOLO su `pcCoLocated`: un
+  // vero preclear a distanza (un secondo installo VERO, non un telefono-satellite) conserva il
+  // comportamento di sempre — questo schermo non lo riguarda.
+  const [participantSessionEnded, setParticipantSessionEnded] = useState(false);
   const [serverLanIp, setServerLanIp]   = useState<string>('');
   const [tunnelLoading, setTunnelLoading] = useState<boolean>(false);
   // CONN-46: live P2P round-trip latency (ms). Measured on the participant
@@ -4306,7 +4321,7 @@ export default function App() {
     networkManager.setSuppressOutgoingMedia(!!opts?.satellite);
     try { networkManager.disconnect?.(); } catch (_) {}
     setPeerId(''); setIsConnected(false);
-    setConnectionLink(''); setParticipantLink('');
+    setConnectionLink(''); setParticipantLink(''); setLinkAutoRilevato(false);
     // #8 (Roger): after a REMOTE session the previous remote MediaStream + flags
     // were left dangling, so resuming a LOCAL session (own camera) or recreating
     // the link started from a dirty state and the video stayed black. Clear the
@@ -4395,6 +4410,7 @@ export default function App() {
     setIsSoloSession(false);
     setAppMode('participant');
     setParticipantLink(link);
+    setLinkAutoRilevato(true);
     // Satellite (co-located): the phone is a send-only mic+cam — no Muse pairing
     // here (the Mac owns the headset), and we won't play the auditor's audio.
     if (parsed.satellite) setPcCoLocated(true);
@@ -4440,6 +4456,9 @@ export default function App() {
   // PAS ramener la séance de l'auditeur en mode local, sinon elle reste « running/ended » et
   // fabrique une entrée fantôme dans l'historique — d'où la remise à zéro complète.
   const leaveSessionAsParticipant = () => {
+    // v. la nota su `participantSessionEnded`: va letto PRIMA che `setPcCoLocated(false)` qui
+    // sotto lo cancelli — dopo questa funzione `pcCoLocated` è già ridiventato false.
+    const eraSatellite = pcCoLocatedRef.current;
     auditorPeerIdRef.current = '';
     if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
     isReconnectingRef.current = false;
@@ -4450,8 +4469,34 @@ export default function App() {
     setSenzaStrumenti(false);   // la scelta vale per UNA seduta, non per il programma
     setShowReport(false);
     setSessionEndTime(null);
-    setIsConnected(false); setPeerId(''); setParticipantLink(''); setRemoteStream(null); setAppMode('local'); setPcCoLocated(false);
+    setIsConnected(false); setPeerId(''); setParticipantLink(''); setLinkAutoRilevato(false); setRemoteStream(null); setAppMode('local'); setPcCoLocated(false);
+    // v. la nota grande su `participantSessionEnded`, sopra: un telefono-satellite che lascia
+    // la seduta non deve ricadere nella schermata locale di EQUILIBRIUM.
+    if (eraSatellite) setParticipantSessionEnded(true);
   };
+
+  // ⚠️ AGGIUNTO — v. `participantSessionEnded`: un telefono-satellite arrivato fin qui ha
+  // finito il suo compito. Uno schermo minimo, SENZA branding (né EQUILIBRIUM né SERENITY —
+  // il telefono non sa quale delle due l'auditor stia usando, e non gli serve saperlo):
+  // segnalato dal vivo che vedersi ricomparire l'intera app EQUILIBRIUM al posto di un
+  // semplice "seduta finita" era confuso.
+  if (participantSessionEnded) {
+    return (
+      <div style={{
+        width: '100vw', height: '100vh', background: '#020617', color: '#fff',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        gap: 12, textAlign: 'center', padding: 24,
+      }}>
+        <div style={{ fontSize: 40 }}>✓</div>
+        <div style={{ fontSize: 'clamp(16px, 4.4vw, 22px)', fontWeight: 700, color: 'rgba(240,246,255,0.95)' }}>
+          {t('conn_participant_goodbye_title')}
+        </div>
+        <div style={{ fontSize: 13, color: '#64748b', maxWidth: 340 }}>
+          {t('conn_participant_goodbye_desc')}
+        </div>
+      </div>
+    );
+  }
 
   if (appMode === 'participant' && isConnected) {
     return (
@@ -4762,12 +4807,13 @@ export default function App() {
         <ConnectionModal
           appMode={appMode}
           satellite={satelliteMode}
+          linkAutoRilevato={linkAutoRilevato}
           isConnected={isConnected}
           peerId={peerId}
           connectionLink={connectionLink}
           tunnelLoading={tunnelLoading}
           participantLink={participantLink}
-          onSetParticipantLink={setParticipantLink}
+          onSetParticipantLink={(v) => { setLinkAutoRilevato(false); setParticipantLink(v); }}
           onCreateTunnel={async () => {
             setTunnelLoading(true);
             try {
@@ -4878,7 +4924,7 @@ export default function App() {
             if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
             isReconnectingRef.current = false;
             networkManager.disconnect();
-            setIsConnected(false); setPeerId(''); setParticipantLink('');
+            setIsConnected(false); setPeerId(''); setParticipantLink(''); setLinkAutoRilevato(false);
             setRemoteStream(null); setAppMode('local'); setSatelliteMode(false);
             setShowConnectionModal(false);
           }}

@@ -10257,3 +10257,118 @@ Segnalato dal vivo, dopo un vero test: « quando apro il link mi dice sul telefo
 **File toccati**: `src/serenity/main.tsx` (nuovo, SOLO SERENITY), `src/serenity/Connessione.tsx` (SOLO SERENITY), `src/hooks/useRemoteSession.ts` — quest'ultimo vive nella cartella condivisa `src/hooks/` (oggi importato solo da SERENITY, ma per la regola resta trattato come condiviso) → **build e spedizione di ENTRAMBE le app**, come da regola.
 
 **Build**: SERENITY 3.0.270 + EQUILIBRIUM 2.0.279.
+
+## Giro — 2026-09-06 (continuazione) — il satellite, provato dal vivo: quattro cose ancora storte
+
+Test dal vivo dopo il giro precedente. Quattro segnalazioni, quasi tutte con la STESSA radice:
+
+1. « La CAM dell'auditor appare solo come scritta [sul telefono] — non è necessario che ci sia il
+   video dell'auditor, si è in locale. La CAM auditor è però attiva in Config. »
+2. « Bisognerebbe avere un indicatore che la cam auditor è attiva, anche se non si vede
+   sull'interfaccia. »
+3. « Il microfono del telefonino non registra e niente si iscrive nel giornale, anche se dice
+   microfono attivo. »
+4. « Quando ci si connette [via QR], sul telefonino il link appare già copiato, ma c'è sempre
+   scritto di copiarlo — il PC potrebbe essere indotto in errore. »
+
+Più, mentre si scriveva la correzione: « quando l'auditor chiude la sessione, non appare END OF
+SESSION sul telefonino » e « ho visto che sul telefonino, quando ci si disconnette, appare
+EQUILIBRIUM e non SERENITY ».
+
+**La radice comune (punti 3 e "end of session")**: `remote.impostaStatoSeduta('running'/'ended')`
+si chiamava SOLO se `avvio.distanza` (vera seduta a distanza) — ma il bottone « collega il
+telefono del PC » (giro precedente) si preme DURANTE una seduta LOCALE già aperta
+(`avvio.distanza` resta `false`): quel pacchetto non partiva MAI per un telefono-satellite. Senza
+`SESSION_STATE:'running'`, `App.tsx` (lato preclear) non arma MAI la trascrizione del telefono
+(`pcMicArmedRef`, gestito SOLO da quel pacchetto) — da cui « dice microfono attivo [l'icona] ma
+non scrive nel giornale ». Stessa causa per `'ended'`: mai inviato, quindi lo schermo EOS già
+pronto in `ParticipantView.tsx` (« EOS — End of Session », con bottone Disconnetti) non compariva
+mai. Corretto in due punti (`src/serenity/Serenity.tsx`): la condizione è diventata
+`avvio?.distanza || remote.isConnected` (un telefono connesso, satellite o vero a distanza, deve
+sempre sapere lo stato); e un nuovo effetto rimanda 'running' appena `remote.isConnected` diventa
+vero MENTRE la seduta è già aperta — il varco vero, dato che il bottone si preme A SEDUTA
+INIZIATA, quando il primo invio (in `avviaSeduta`) è già passato a vuoto.
+
+**La radice del punto 1**: `useRemoteSession.avvia()` chiedeva SEMPRE la camera/microfono
+dell'auditor (`getUserMedia`) per mandarli al dispositivo remoto — corretto per una VERA seduta a
+distanza (il preclear deve vedere l'auditor), sbagliato per il satellite (stessa stanza, nessun
+bisogno). `App.tsx` lo sa già fare bene (`handleModeChange`: « the host sends NO camera/mic to
+the phone... so skip the auditor getUserMedia » quando `satellite` è vero) — la STESSA condizione
+mancava qui. Aggiunta: `avvia(satellite)` ora salta `getUserMedia` E chiama
+`networkManager.setSuppressOutgoingMedia(satellite)` (la stessa doppia barriera di `App.tsx`)
+quando `satellite` è vero. Il telefono, in un satellite, non riceve più NESSUN flusso in arrivo
+dall'auditor — niente più "appare solo come scritta" (il placeholder "in attesa del video" di
+`ParticipantView`), perché non c'è più nulla da aspettare.
+
+**Il punto 2 (l'indicatore)**: dato il punto 1, l'interruttore CAM 1 in Config governa ORA solo
+una preferenza per un'EVENTUALE futura seduta a distanza — in locale (satellite incluso) resta
+SEMPRE invisibile per disegno (`cam1Mostrata = moduleVis.cam1 && avvio.distanza`, deciso in un
+giro precedente: « la cam dell'auditor non è necessaria, falla sparire dall'interfaccia... lasciala
+per le connessioni a distanza »). Aggiunta una nota (`config_mod_cam1_hint`, le 5 lingue) sotto
+la lista moduli in `PannelloConfig.tsx`, visibile SOLO quando l'interruttore è acceso: spiega che
+resta accesa ma nascosta finché non si è in seduta a distanza — la domanda "perché non vedo
+niente?" nasce esattamente in quel momento.
+
+**Il punto 4**: `App.tsx` non distingueva "il PC ha incollato il link a mano" da "il link è
+arrivato già pieno perché una URL con un frammento d'invito è stata rilevata al caricamento"
+(`autoJoinDoneRef`) — la guida statica di `ConnectionModal.tsx` (« 1. l'Auditore apre... 2. ti
+manda un link... 3. INCOLLA il link e clicca CONNETTI ») restava scritta anche quando il campo
+era già pieno da sé. Aggiunto `linkAutoRilevato` (App.tsx, azzerato alla prima modifica manuale
+del campo o a una disconnessione) → `ConnectionModal` mostra invece un riquadro verde « Link
+rilevato dal QR code — controllalo qui sotto e tocca CONNETTI » quando è vero.
+
+**« EQUILIBRIUM invece di SERENITY alla disconnessione »**: non un refuso di branding — un
+telefono-satellite che lascia la seduta (bottone Disconnetti, sull'header o sullo schermo EOS)
+ricadeva in `appMode('local')`, cioè l'INTERA schermata di avvio EQUILIBRIUM (lo stesso hologram
+"ALTERNATIVE SCIENTOLOGY EQUILIBRIUM" che vedrebbe un secondo installo desktop vero) — sensata per
+un vero preclear a distanza con un proprio EQUILIBRIUM, sbagliata per un telefono che è stato solo
+una camera d'appoggio: gli compare un'app estranea al posto di "la seduta è finita". Aggiunto
+`participantSessionEnded` (App.tsx), acceso SOLO quando `pcCoLocatedRef.current` era vero al
+momento della disconnessione (un vero preclear a distanza non è mai toccato: comportamento
+invariato) — mostra uno schermo minimo, di proposito SENZA branding né EQUILIBRIUM né SERENITY
+(il telefono non sa quale delle due l'auditor stia usando, e non gli serve saperlo): « Sessione
+terminata — puoi chiudere questa pagina. »
+
+**Verificato dal vivo** (server Vite puro, senza tunnel reale): caricamento di
+`serenity.html#peer:token:key` → rimando a `index.html` → il modale mostra ORA il riquadro verde
+« Link rilevato dal QR code » al posto della guida a 3 passi. Gli altri quattro punti (arma
+mic/EOS sul telefono, niente flusso auditor in satellite, nota Config, schermo di commiato) sono
+verificati per lettura/costruzione — la prova end-to-end con un vero telefono e tunnel resta da
+fare da parte dell'utente, come per il giro precedente.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato — un nuovo
+warning introdotto e tolto nello stesso giro, `useEffect` con `remote.impostaStatoSeduta` nei
+dependency array: `remote` non è memoizzato, aggiungerlo avrebbe rifatto scattare l'effetto ad
+ogni render — stesso `eslint-disable-next-line` già in uso altrove in questo file per la stessa
+ragione), `npx vitest run` 724/724 verdi.
+
+**File toccati**: `src/serenity/Serenity.tsx` (SOLO SERENITY), `src/serenity/PannelloConfig.tsx`
+(SOLO SERENITY) — ma anche `src/App.tsx`, `src/hooks/useRemoteSession.ts`,
+`src/components/ConnectionModal.tsx`, `src/i18n.tsx` (tutti CONDIVISI) → **build e spedizione di
+ENTRAMBE le app**.
+
+**Build**: SERENITY 3.0.271 + EQUILIBRIUM 2.0.279 (nota: la build 2.0.280 elencata più sotto è quella VERA per questo numero — v. il giro seguente).
+
+## Giro — 2026-09-06 (continuazione) — dizionario, taglie, e il collegamento telefono si sposta prima di INIZIA
+
+**Segnalato, dizionario IT**: « la definizione ABERRAZIONE è seguita da B. Questa B è il seguito della definizione di ABERRAZIONE. In francese e spagnolo l'hai fatto giusto. » Verificato in `public/dizionario/dizionario-it.json`: la voce #7 (ABERRAZIONE) finiva a metà frase (« Una linea che deve andare da A a ») e la voce #8, con `termine:"B"` (un artefatto dell'estrazione originale — probabilmente un'illustrazione "A→B" scambiata per una nuova voce alfabetica), ne conteneva il seguito esatto (« se è «aberrata» andrà da A fino a... »). Unite in una sola voce (« ...da A a B, se è «aberrata»... »), la voce "B" tolta. **Nota per un giro futuro**: la stessa ricognizione ha trovato ALTRI candidati sospetti nello stesso file (voci a una/due lettere con definizioni troncate a metà frase o ridotte alla sola citazione — "A", "TR", "IN", "L", "OJ", "Q", "R", "SW", "II" fra gli altri) — non toccati ora: unirli correttamente richiede lo stesso confronto frase-per-frase fatto qui, senza il testo originale a fianco il rischio è di unire MALE invece che lasciare imperfetto.
+
+**Segnalato, taglie**: « il cerchio con l'immagine di SERENITY sia più grande » → chiarito con l'utente (due candidati, `AskUserQuestion`): il medaglione "onde" nei Crediti (`CreditsModal.tsx`, CONDIVISO — 56→78px). Poi, di nuovo: « anche il medaglione alla sinistra del bottone DARK/LIGHT » → il logo Alt.Scientology in cima a SERENITY (SOLO SERENITY — 58/70→74/86px, terzo giro di ingrandimento per questo stesso elemento).
+
+**Segnalato, il collegamento telefono**: « COLLEGA il telefono del PC non si vede bene sotto la CAM 2, dovresti metterlo sotto il bottone di inizio sessione: è lì che si sceglie o meno di connettere un telefonino, non a sessione iniziata. Deve essere una scelta, non un'imposizione — l'indicazione deve dirlo chiaramente. » Più il nuovo ciclo voluto: START come sempre se non si sceglie il telefono; se invece si preme il telefono, il protocollo di connessione entra in gioco e SOLO una volta connesso si preme START.
+
+**Costruito**: il bottone si è spostato dalla riga di CAM 2 (visibile solo a `aperta === true`, quindi DURANTE la seduta — l'esatto contrario di una scelta fatta prima) a una riga nuova subito sotto "apri una seduta"/"chiudi la seduta", visibile SOLO `!aperta` (prima dell'apertura), mai in SOLO, mai con `avvio.distanza`. Etichetta esplicita "opzionale — collega il telefono del PC" (non un'imposizione); una volta connesso, un badge verde "telefono del PC collegato" prende il suo posto (l'auditor vede che la scelta ha avuto effetto). `telefonoPcCollegato` (booleano) è salito di scope — da un calcolo locale dentro il blocco CAM 2 a una costante di componente, letta ORA da due punti: il nuovo bottone pre-seduta, e CAM 2 stesso (che durante la seduta deve ancora sapere se mostrare il flusso del telefono). Il ciclo risultante è ESATTAMENTE quello richiesto: si preme "apri una seduta" direttamente (come sempre, nessun telefono) OPPURE si preme "collega il telefono" (si apre `Connessione`, la stessa schermata QR/link di sempre, PRIMA della seduta), e una volta connesso si torna alla stessa schermata di avvio — con "apri una seduta" già lì, pronto — senza che nulla la forzi ad aprirsi da sola.
+
+**Bug trovato e corretto durante la verifica dal vivo (due, non segnalati dall'utente)**:
+1. Il bottone, al primo tentativo, finiva DENTRO la riga flessibile orologio+bottone START invece che come riga a sé sotto di lei — la riga (272px, tre elementi in fila) si schiacciava, il bottone START crollava a 16px di larghezza. Spostato fuori da quella riga, come riga NUOVA nella stessa colonna.
+2. Il bottone non rispondeva ai click: gli mancava `pointerEvents:'auto'` — il contenitore che lo racchiude ha `pointerEvents:'none'` di base (lascia passare i click dove non c'è nulla da premere), e ogni bottone VERO al suo interno deve riaccenderlo esplicitamente (lo fa già "apri una seduta", accanto a lui) — dimenticato sul nuovo bottone.
+
+**Verificato dal vivo**: seduta EXPERT "con un preclear", "qui" — il nuovo bottone appare SOLO in questo caso, sotto "APRI UNA SEDUTA", su due righe leggibili; cliccandolo si apre "MODALITÀ AUDITORE" (link/QR) come nel giro precedente; "torna indietro" chiude l'overlay e riporta alla stessa schermata di avvio, "apri una seduta" ancora lì.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 724/724 verdi.
+
+**File toccati**: `src/serenity/Serenity.tsx` (SOLO SERENITY) — `src/components/CreditsModal.tsx` (CONDIVISO, solo taglia del medaglione) — `public/dizionario/dizionario-it.json` (dato condiviso, non codice).
+
+**⚠️ Da questo giro in poi, EQUILIBRIUM è CONGELATO** — decisione esplicita dell'utente: « ormai EQUILIBRIUM non ci serve più... lascia EQUILIBRIUM come è, non fare più modificazioni... interviene solo su SERENITY ». La build 2.0.280 qui sotto è l'ULTIMA build di EQUILIBRIUM fatta apposta, come "rete di salvataggio" finale — non un precedente per i giri futuri. Restano permesse SOLO le LETTURE di `App.tsx`/altri file esclusivi di EQUILIBRIUM (per riprodurne la logica in SERENITY, come sempre) — non le scritture. V. la nota completa in memoria (`equilibrium_freeze`).
+
+**Build**: SERENITY 3.0.272 + EQUILIBRIUM 2.0.280 (ULTIMA build EQUILIBRIUM).

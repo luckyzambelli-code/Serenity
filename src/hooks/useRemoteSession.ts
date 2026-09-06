@@ -147,6 +147,13 @@ export function useRemoteSession(opts: {
    *  il link invece di ricominciare tutto da capo. */
   const avvia = useCallback(async (satellite = false) => {
     satelliteRef.current = satellite;
+    // ⚠️ AGGIUNTO — stessa chiamata di App.tsx (`handleModeChange`), stessa ragione: una seconda
+    // barriera, dentro `networkManager` stesso, che impedisce l'invio di media in uscita per il
+    // caso satellite anche se un flusso locale esistesse già per un altro motivo — non basta non
+    // richiederlo qui sotto (v. il blocco `getUserMedia`), perché quello copre solo QUESTA
+    // chiamata a `avvia()`, non ogni punto di `networkManager` che potrebbe allegare un flusso a
+    // una risposta futura.
+    networkManager.setSuppressOutgoingMedia(satellite);
     if (useNetworkStore.getState().peerId) { await generaLink(); return; }
     // FIX: token catturato all'ingresso — v. avviaTokenRef. Nome diverso da `token`
     // (già usato più sotto per il relay token generato da `generaToken()`).
@@ -162,10 +169,20 @@ export function useRemoteSession(opts: {
     // FIX CONN-15 (stessa ragione di App.tsx): quando il preclear chiama, la callback
     // `peer.on('call')` deve poter rispondere con un MediaStream VERO, non vuoto. Chiederlo
     // solo dopo la chiamata sarebbe già tardi.
-    navigator.mediaDevices?.getUserMedia?.({ video: true, audio: VOICE_AUDIO_CONSTRAINTS })
-      .catch(() => navigator.mediaDevices.getUserMedia({ video: false, audio: VOICE_AUDIO_CONSTRAINTS }))
-      .then(s => { (networkManager as unknown as { localStream: MediaStream | null }).localStream = s; })
-      .catch(() => { /* negato: seduta senza video/audio in uscita, il resto funziona comunque */ });
+    // ⚠️ CORRETTO — segnalato dal vivo: « la CAM dell'auditor appare solo come scritta [sul
+    // telefono] — non è necessario che ci sia il video dell'auditor, si è in locale ». Questo
+    // `getUserMedia` mancava della STESSA condizione già scritta in `App.tsx` (righe vicino a
+    // `handleModeChange('auditor', {satellite})`, commento identico): « il Mac non manda
+    // camera/microfono al telefono — l'auditor è nella stanza » — risparmia banda e toglie
+    // l'anello di Larsen. Qui mancava perché `avvia()` non sapeva ancora distinguere satellite
+    // da vera seduta a distanza quando fu scritta; ora che lo sa (`satellite`, v. sopra), la
+    // stessa condizione si applica: nessuna richiesta di camera/microfono per il caso satellite.
+    if (!satellite) {
+      navigator.mediaDevices?.getUserMedia?.({ video: true, audio: VOICE_AUDIO_CONSTRAINTS })
+        .catch(() => navigator.mediaDevices.getUserMedia({ video: false, audio: VOICE_AUDIO_CONSTRAINTS }))
+        .then(s => { (networkManager as unknown as { localStream: MediaStream | null }).localStream = s; })
+        .catch(() => { /* negato: seduta senza video/audio in uscita, il resto funziona comunque */ });
+    }
 
     peerKeyRef.current = await otteniChiaveServer();
     const token = generaToken();

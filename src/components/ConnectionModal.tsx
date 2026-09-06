@@ -20,6 +20,12 @@ interface ConnectionModalProps {
   /** Co-located phone-satellite session (local non-solo). Uses the auditor-host
    *  networking under the hood but relabels the window as "telefono-satellite". */
   satellite?: boolean;
+  /** true quando `participantLink` è già stato riempito da sé (hash della URL rilevato al
+   *  caricamento, v. `autoJoinDoneRef` in App.tsx — un telefono che ha scansionato il QR) e
+   *  non da un incolla manuale. Senza questo, la guida "Incolla il link qui sotto" restava
+   *  scritta anche quando il campo era già pieno e il PC non aveva incollato nulla — confuso,
+   *  segnalato dal vivo: "il PC potrebbe essere indotto in errore". */
+  linkAutoRilevato?: boolean;
   isConnected: boolean;
   peerId: string;
   connectionLink: string;
@@ -35,6 +41,7 @@ interface ConnectionModalProps {
 export const ConnectionModal: React.FC<ConnectionModalProps> = ({
   appMode,
   satellite = false,
+  linkAutoRilevato = false,
   isConnected,
   peerId,
   connectionLink,
@@ -340,22 +347,42 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
             <>
               {!isConnected ? (
                 <>
-                  {/* Guide */}
-                  <div style={{
-                    padding: '16px 20px',
-                    background: 'rgba(255,255,255,0.08)',
-                    border: '1px solid rgba(255,255,255,0.25)',
-                    borderRadius: 12,
-                  }}>
-                    <div style={{ fontSize: 14, color: 'rgba(240,246,255,0.95)', fontWeight: 'bold', marginBottom: 10 }}>
-                      {t('conn_how_title')}
+                  {/* Guide — DUE testi diversi: chi ha incollato il link a mano ha bisogno dei
+                      passi (deve sapere cosa fare); chi l'ha già ricevuto da un QR scansionato
+                      (`linkAutoRilevato`) l'ha già FATTO, quei passi sarebbero una domanda a cui
+                      si è già risposto, e "incolla il link" apparirebbe falso — il campo sotto è
+                      già pieno. */}
+                  {linkAutoRilevato ? (
+                    <div style={{
+                      padding: '16px 20px',
+                      background: 'rgba(34,197,94,0.10)',
+                      border: '1px solid rgba(34,197,94,0.35)',
+                      borderRadius: 12,
+                    }}>
+                      <div style={{ fontSize: 14, color: '#4ade80', fontWeight: 'bold', marginBottom: 6 }}>
+                        📱 {t('conn_qr_detected_title')}
+                      </div>
+                      <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>
+                        {t('conn_qr_detected_desc')}
+                      </div>
                     </div>
-                    <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: '#94a3b8', lineHeight: 2.0 }}>
-                      <li>{t('conn_how_step1')}</li>
-                      <li>{t('conn_how_step2')}</li>
-                      <li><strong style={{ color: '#e2e8f0' }}>{t('conn_how_step3')}</strong></li>
-                    </ol>
-                  </div>
+                  ) : (
+                    <div style={{
+                      padding: '16px 20px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.25)',
+                      borderRadius: 12,
+                    }}>
+                      <div style={{ fontSize: 14, color: 'rgba(240,246,255,0.95)', fontWeight: 'bold', marginBottom: 10 }}>
+                        {t('conn_how_title')}
+                      </div>
+                      <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: '#94a3b8', lineHeight: 2.0 }}>
+                        <li>{t('conn_how_step1')}</li>
+                        <li>{t('conn_how_step2')}</li>
+                        <li><strong style={{ color: '#e2e8f0' }}>{t('conn_how_step3')}</strong></li>
+                      </ol>
+                    </div>
+                  )}
 
                   {/* Champ de saisie */}
                   <div>
