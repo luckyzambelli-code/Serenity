@@ -10544,3 +10544,55 @@ microfono), le 5 lingue.
 dei giri precedenti: il telefono mostra questi schermi tramite il build di EQUILIBRIUM.
 
 **Build**: SERENITY 3.0.276 + EQUILIBRIUM 2.0.283.
+
+## Giro — 2026-09-06 (continuazione) — un regresso trovato e tolto, il bottone in francese, la guida
+
+**⚠️ REGRESSO TROVATO DAL VIVO E RIPRISTINATO**: il fallback allargato del giro precedente (« se
+`{video:true,audio:false}` fallisce, prova anche `{video:true,audio:true}` ») ragionava SOLO sulla
+negoziazione di rete (« l'audio in più non arriverebbe comunque all'auditor ») — sbagliato:
+`getUserMedia({audio:true})` occupa il MICROFONO a livello di sistema/browser ANCHE se quella
+traccia non lascia mai il dispositivo, esattamente il conflitto che il commento originale del
+codice avvertiva, con il riconoscitore vocale dello STESSO telefono. Il Giornale mandato
+dall'utente lo confermava: un loop di « [PC mic: network] »/« [PC mic: not-allowed] » comparso
+esattamente dopo quel giro — la correzione pensata per il video ha rotto la trascrizione del PC,
+che PRIMA funzionava. Ripristinato il comportamento originale (nessun secondo tentativo che tocchi
+il microfono per il satellite); il video resta un problema APERTO — aggiunta però una seconda riga
+diagnostica, questa volta lato TELEFONO (`App.tsx`, `onConnectionEstablished`): riferisce
+all'auditor, via lo stesso canale `TRANSCRIPT` già affidabile per gli errori del microfono, quante
+tracce video/audio `getUserMedia` ha davvero ottenuto — o se non ne ha ottenuta nessuna. Fra questa
+e la riga già aggiunta lato SERENITY, il prossimo test isola il guasto senza ulteriori congetture.
+
+**La lingua sul telefono, PRIMA di connettersi** — risolto con certezza: aggiunto un 5° segmento
+al link/QR (`peerId:relayToken:peerKey:sat:lang`, CONDIVISO in `networkManager.ts`,
+retrocompatibile) letto subito in `autoJoinDoneRef` — verificato dal vivo, la schermata
+"MODALITÀ PRECLEAR" appare già nella lingua dell'auditor.
+
+**« FACULTATIF — connecter le télé... sort du cadre »** — segnalato dal vivo in francese: il
+`fontSize:11` fisso del giro precedente era stato tarato guardando SOLO l'italiano (39 caratteri)
+— il francese (43 caratteri, il più lungo delle 5 lingue) sforava il bottone alla stessa taglia.
+Un numero fisso non può reggere testi di lunghezza diversa nella stessa larghezza: il corpo del
+carattere si calcola ORA dalla lunghezza vera del testo scelto (scala da un riferimento di 39
+caratteri → 11px, con un margine del 5% e un minimo/massimo 9–13px) — si adatta da sé a QUALUNQUE
+lingua, non solo alle cinque di oggi. Verificato dal vivo in francese (`scrollWidth` uguale a
+`width`, zero sforamento) e con un test sintetico per le altre quattro.
+
+**« Nel guide non parli del dizionario in francese e spagnolo »** — non un problema di traduzione
+mancante nella guida (il francese della sezione 11 c'era già, verificato): la guida descriveva
+un dizionario a DUE schede (Anglais/Italien) — la vecchia versione della funzione. La funzione VERA
+(`DizionarioModal.tsx`) ha da tempo QUATTRO schede (Inglese, Italiano, Francese, Spagnolo, con
+Francese/Spagnolo segnalate da un avviso "traduzione semantica non confermata" e una ricerca
+bilingue con l'inglese, la stessa dell'italiano) — la guida non era mai stata aggiornata dopo
+quel giro. Corretto in `SERENITY-manuale.html` (fuori dal repo): quattro schede invece di due, la
+ricerca bilingue estesa a francese/spagnolo, e la nota sulle fonti aggiornata con l'avviso sulla
+traduzione semantica. La guida resta a tre lingue proprie (FR/IT/EN, mai avuta lo spagnolo come
+lingua DELLA guida stessa — un limite pre-esistente, non toccato in questo giro).
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato),
+`npx vitest run` 726/726 verdi.
+
+**File toccati**: `src/serenity/Serenity.tsx` (SOLO SERENITY) — `src/App.tsx` (CONDIVISO, il
+ripristino del fallback media + la nuova riga diagnostica) → **build e spedizione di ENTRAMBE le
+app**, stessa eccezione motivata dei giri precedenti. `SERENITY-manuale.html` (fuori dal repo,
+nessuna build necessaria per quel file).
+
+**Build**: SERENITY 3.0.277 + EQUILIBRIUM 2.0.284.

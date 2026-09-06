@@ -3957,21 +3957,38 @@ export default function Serenity() {
               ✓ {LC('telefono del PC collegato', 'téléphone du PC connecté', "PC's phone connected",
                      'teléfono del PC conectado', 'PC-telefonen ansluten')}
             </div>
-          ) : (
-            <button className="s-glass s-glass-btn" onClick={() => setSatelliteAperto(true)}
-              style={{
-                cursor: 'pointer', pointerEvents: 'auto', width: '100%', boxSizing: 'border-box',
-                borderRadius: 16, padding: '12px 8px', border: 'none',
-                background: 'var(--s-disc)', color: 'var(--s-ink-soft)',
-                fontFamily: 'var(--s-sans)', fontSize: 11, letterSpacing: '0.03em',
-                textTransform: 'uppercase', lineHeight: 1.25, textAlign: 'center', whiteSpace: 'nowrap',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              }}>
-              📱 {LC('opzionale — collega il telefono del PC', 'facultatif — connecter le téléphone du PC',
-                     "optional — connect the PC's phone", 'opcional — conectar el teléfono del PC',
-                     'valfritt — anslut PC:ns telefon')}
-            </button>
-          )
+          ) : (() => {
+            // ⚠️ CORRETTO — segnalato dal vivo: « FACULTATIF — connecter le télé... sort du
+            // cadre dans différentes langues ». `fontSize: 11` era stato tarato guardando SOLO
+            // l'italiano (39 caratteri) — il francese (43 caratteri, il più lungo delle 5
+            // lingue) sforava il bottone alla stessa taglia. Un numero fisso non può reggere
+            // testi di lunghezza diversa nella STESSA larghezza: qui il corpo del carattere si
+            // calcola dalla lunghezza vera del testo scelto (39 caratteri → gli 11px già
+            // verificati dal vivo restano il punto di riferimento), con un minimo leggibile
+            // (9px) e un massimo (13px, la taglia di "apri una seduta") — si adatta da sé a
+            // QUALUNQUE lingua, non solo alle cinque di oggi.
+            const testo = LC('opzionale — collega il telefono del PC', 'facultatif — connecter le téléphone du PC',
+                              "optional — connect the PC's phone", 'opcional — conectar el teléfono del PC',
+                              'valfritt — anslut PC:ns telefon') as string;
+            // ⚠️ CORRETTO ANCORA — verificato dal vivo in francese (43 caratteri, il più lungo):
+            // `Math.round` a 10px sforava ancora di qualche pixel (`scrollWidth` 275 contro
+            // `width` 272). `Math.floor` + un margine del 5% bastano a chiudere quel margine
+            // per QUALUNQUE lunghezza, non solo per le cinque lingue misurate oggi.
+            const dimensioneFont = Math.max(9, Math.min(13, Math.floor(11 * 39 / testo.length * 0.95)));
+            return (
+              <button className="s-glass s-glass-btn" onClick={() => setSatelliteAperto(true)}
+                style={{
+                  cursor: 'pointer', pointerEvents: 'auto', width: '100%', boxSizing: 'border-box',
+                  borderRadius: 16, padding: '12px 8px', border: 'none',
+                  background: 'var(--s-disc)', color: 'var(--s-ink-soft)',
+                  fontFamily: 'var(--s-sans)', fontSize: dimensioneFont, letterSpacing: '0.03em',
+                  textTransform: 'uppercase', lineHeight: 1.25, textAlign: 'center', whiteSpace: 'nowrap',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}>
+                📱 {testo}
+              </button>
+            );
+          })()
         )}
         {/* ── PAUSA/RIPRENDI, CON IL SUO STATO ACCANTO — segnalato: « il bottone di pausa
             deve essere vicino al bottone Fermer la séance » (giro scorso), poi: « le pavé en

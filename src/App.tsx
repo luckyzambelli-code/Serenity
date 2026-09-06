@@ -2255,6 +2255,26 @@ export default function App() {
             seq:   ++sessionStateSeqRef.current }, true);
         }
       }
+      // ⚠️ AGGIUNTO — segnalato dal vivo: « la cam del preclear non manda nulla all'auditor,
+      // pur avendo i permessi concessi sul telefono ». Il canale dati è appena stabilito (siamo
+      // QUI dentro `onConnectionEstablished`) — è il primo momento in cui il telefono può
+      // riferire all'auditor cosa ha ottenuto DAVVERO da `getUserMedia` in `onConnect`, prima
+      // ancora che una chiamata media riesca o fallisca: stesso canale (`TRANSCRIPT`,
+      // `speaker:'PC'`) già usato per gli avvisi del microfono — l'unico che risulta arrivare
+      // per certo nel Giornale dell'auditor (v. i log dal vivo « [PC mic: ... ] »).
+      if (appModeRef.current === 'participant') {
+        try {
+          const stream = (networkManager as unknown as { localStream: MediaStream | null }).localStream;
+          const tracce = stream?.getTracks() ?? [];
+          const video = tracce.filter(t => t.kind === 'video').length;
+          const audio = tracce.filter(t => t.kind === 'audio').length;
+          networkManager.send({
+            type: 'TRANSCRIPT', speaker: 'PC',
+            text: stream ? `📷 [camera del PC: ${video} video, ${audio} audio]` : '📷 [camera del PC: nessuno stream — getUserMedia mai riuscito]',
+            time: timeRef.current,
+          }, true);
+        } catch (_) { /* non bloccare la connessione per un log diagnostico */ }
+      }
     };
 
     networkManager.onConnectionClosed = () => {
@@ -4895,18 +4915,21 @@ export default function App() {
               // stream needed (and no audio = no Larsen). Normal remote keeps audio.
               const wantAudio = !pcCoLocatedRef.current;
               addLog({ time: timeRef.current, speaker: 'SYS', text: wantAudio ? '🎥 Requesting camera/microphone…' : '🎥 Requesting camera (satellite: audio via text)…' });
-              // FIX: the satellite path used to give up entirely (no fallback at all — see
-              // the removed `: Promise.reject(...)`) the moment a video-only
-              // `{video:true, audio:false}` request failed, even though some mobile browsers
-              // are inconsistent with an EXPLICIT `audio:false` and would happily grant
-              // `{video:true, audio:true}` instead. Reported live: "the phone's camera
-              // permission is granted, but nothing arrives at the auditor" — this closes that
-              // silent gap; the extra audio track this fallback may carry is simply never sent
-              // to the auditor's Mac (WebRTC only negotiates what the OTHER side answers with,
-              // and the auditor's `call.answer()` for a satellite is receive-only regardless).
+              // ⚠️ RIPRISTINATO — il giro precedente aveva allargato questo fallback per il
+              // satellite ad anche `{video:true, audio:true}` in caso di fallimento del
+              // video-solo, ragionando SOLO sulla negoziazione di rete (« l'audio in più non
+              // arriverebbe comunque all'auditor, che risponde receive-only »). Sbagliato:
+              // `getUserMedia({audio:true})` occupa il MICROFONO a livello di sistema/browser
+              // ANCHE se quella traccia non lascia mai il dispositivo — esattamente il
+              // conflitto che il commento sopra avvertiva, con il riconoscitore vocale dello
+              // stesso telefono. Confermato dal vivo: dopo quel giro, il Giornale ha riempito
+              // « [PC mic: network] »/« [PC mic: not-allowed] » in loop — la trascrizione del PC
+              // rotta dalla stessa modifica che doveva sistemare il video (e che non lo ha
+              // nemmeno sistemato: la riga diagnostica "flusso del PC ricevuto" non è mai
+              // comparsa). Per il satellite, un fallimento del video-solo torna a arrendersi
+              // subito — nessun secondo tentativo che tocchi il microfono.
               await navigator.mediaDevices.getUserMedia({ video: true, audio: wantAudio ? VOICE_AUDIO_CONSTRAINTS : false })
-                .catch(() => navigator.mediaDevices.getUserMedia({ video: true, audio: wantAudio ? false : VOICE_AUDIO_CONSTRAINTS }))
-                .catch(() => navigator.mediaDevices.getUserMedia({ video: false, audio: VOICE_AUDIO_CONSTRAINTS }))
+                .catch(() => wantAudio ? navigator.mediaDevices.getUserMedia({ video: false, audio: VOICE_AUDIO_CONSTRAINTS }) : Promise.reject(new Error('no camera')))
                 .then((s) => { (networkManager as any).localStream = s; })
                 .catch(() => { /* user denied — proceed data-only */ });
             } catch (_) { /* getUserMedia not available — proceed data-only */ }
