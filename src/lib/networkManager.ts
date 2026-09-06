@@ -617,9 +617,18 @@ export class NetworkManager {
    * exceeds MAX_BUFFER_SIZE to avoid unbounded memory growth.
    */
   send(data: unknown, highPriority = false): boolean {
-    // Relay transport (remote mode — takes priority)
-    if (this._relayConnected) {
-      this._relaySend(data);
+    // ⚠️ CORRETTO — trovato leggendo il codice dopo una riga diagnostica mandata all'inizio di
+    // una connessione che non arrivava MAI, qualunque fosse il suo `type` (scartando quindi
+    // l'ipotesi della deduplica per tipo, corretta ma non la causa vera qui): `_relaySend`
+    // scarta il pacchetto IN SILENZIO se `this._relayWs` non è ancora `OPEN` (il suo stesso
+    // `if (!ws || ws.readyState !== WebSocket.OPEN) return;`) — ma questo `send()` restituiva
+    // `true` LO STESSO, senza controllare l'esito vero, e quindi senza mai passare al
+    // fallback del buffer qui sotto. `_relayConnected` (impostato quando l'handshake di più
+    // alto livello si conclude) e "il websocket `_relayWs` è aperto per scrivere" possono
+    // essere due istanti leggermente diversi — un messaggio mandato esattamente in quella
+    // finestra spariva per sempre, mai bufferizzato, mai riprovato. Ora `_relaySend` riferisce
+    // il proprio esito vero, e solo un invio VERAMENTE riuscito salta il fallback.
+    if (this._relayConnected && this._relaySend(data)) {
       return true;
     }
     // WebRTC DataChannel (LAN mode)
@@ -750,7 +759,13 @@ export class NetworkManager {
         // types). Replaying seconds-old EEG bursts causes a spike artifact on the
         // needle. Control packets (SESSION_STATE, SIGNAL_QUALITY, BATTERY,
         // MUSE_STATUS) are small, timestamped by context, and must be delivered.
-        const CONTROL_TYPES = new Set(['SESSION_STATE', 'SIGNAL_QUALITY', 'BATTERY', 'MUSE_STATUS']);
+        // ⚠️ AGGIUNTI 'TRANSCRIPT'/'DIAG' — segnalato dal vivo: una riga diagnostica mandata
+        // nel primissimo istante della connessione finiva bufferizzata (canale non ancora
+        // aperto in quel preciso momento) ma questo elenco la scartava per sempre al primo
+        // (e unico) svuotamento del buffer, invece di spedirla insieme agli altri pacchetti
+        // di controllo. Non cambia nulla per il flusso normale (la trascrizione in corso non
+        // passa mai da qui: il canale è già aperto da tempo quando arriva).
+        const CONTROL_TYPES = new Set(['SESSION_STATE', 'SIGNAL_QUALITY', 'BATTERY', 'MUSE_STATUS', 'TRANSCRIPT', 'DIAG']);
         const toFlush = this._outBuffer.filter((p) => {
           const t = (p as any)?.type as string | undefined;
           return t !== undefined && CONTROL_TYPES.has(t);
@@ -982,10 +997,15 @@ export class NetworkManager {
   }
 
   /** Send a message over the relay WebSocket (CONN-17). */
-  private _relaySend(data: unknown): void {
+  // ⚠️ CORRETTO — restituiva `void`: chi chiamava (`send()`, sopra) non poteva sapere se
+  // l'invio fosse davvero riuscito o scartato in silenzio (websocket non ancora aperto),
+  // quindi trattava OGNI chiamata come un successo — anche quella scartata. Ora un booleano
+  // vero, letto da `send()` per decidere se ripiegare sul buffer invece di dare per perso
+  // silenziosamente un pacchetto.
+  private _relaySend(data: unknown): boolean {
     const ws = this._relayWs;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    try { ws.send(JSON.stringify(data)); } catch (_) { /* socket dying */ }
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+    try { ws.send(JSON.stringify(data)); return true; } catch (_) { return false; /* socket dying */ }
   }
 
   /** Stop and clean up the relay WebSocket (CONN-17). */
@@ -1012,7 +1032,8 @@ export class NetworkManager {
 
     // Flush buffered control packets (same logic as DataChannel path)
     if (this._outBuffer.length > 0) {
-      const CONTROL_TYPES = new Set(['SESSION_STATE', 'SIGNAL_QUALITY', 'BATTERY', 'MUSE_STATUS']);
+      // v. la nota gemella nel flush del DataChannel LAN, sopra: stessa aggiunta, stessa ragione.
+      const CONTROL_TYPES = new Set(['SESSION_STATE', 'SIGNAL_QUALITY', 'BATTERY', 'MUSE_STATUS', 'TRANSCRIPT', 'DIAG']);
       const toFlush = this._outBuffer.filter(p => {
         const t = (p as any)?.type as string | undefined;
         return t !== undefined && CONTROL_TYPES.has(t);

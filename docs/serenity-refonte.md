@@ -10640,3 +10640,57 @@ precedenti (fase satellite/telefono), il terzo perché la build di EQUILIBRIUM p
 questo giro — nessuna eccezione aggiuntiva da giustificare a parte.
 
 **Build**: SERENITY 3.0.278 + EQUILIBRIUM 2.0.285.
+
+## Giro — 2026-09-06 (continuazione) — trovato il bug vero della riga diagnostica, grassetto completo
+
+**Il bug vero, questa volta confermato dal codice, non da un'ipotesi**: la riga diagnostica
+(qualunque `type` le si desse, `TRANSCRIPT` o `DIAG`) non arrivava MAI perché `send()` in
+`networkManager.ts` (CONDIVISO) dichiarava un invio riuscito (`return true`) SENZA verificare
+l'esito vero di `_relaySend()` — che scarta il pacchetto IN SILENZIO se il websocket del relay
+(`_relayWs`) non è ancora `OPEN`. `_relayConnected` (l'handshake di alto livello) e "il
+websocket è aperto per scrivere" possono essere due istanti leggermente diversi: un messaggio
+spedito esattamente in quella finestra spariva per sempre, mai bufferizzato, mai riprovato — a
+prescindere dal tipo, a prescindere dalla deduplica del giro precedente (quella correzione
+restava comunque giusta da fare, solo non era la causa di QUESTO sintomo). Corretto in due
+punti: `_relaySend` ora riferisce un booleano vero (riuscito/fallito), e `send()` ripiega sul
+buffer quando fallisce invece di darlo per riuscito. Aggiunto anche `TRANSCRIPT`/`DIAG` ai tipi
+che i DUE punti di svuotamento del buffer (DataChannel LAN e relay) sanno effettivamente
+spedire — prima venivano scartati anche loro al primo (unico) svuotamento, quindi anche
+bufferizzarli correttamente non sarebbe bastato da solo.
+
+**Come si è arrivati a trovarlo**: la domanda dell'utente — « in EQUILIBRIUM funzionava
+benissimo, perché adesso hai problemi? » — ha portato al confronto diretto fra
+`handleModeChange` (App.tsx) e `avvia()` (useRemoteSession.ts) del giro precedente (trovato un
+`disconnect()` mancante, corretto). Non bastava a spiegare la riga diagnostica ancora muta: la
+lettura riga per riga di `send()`/`_relaySend()` (mai toccati prima da questo giro) ha trovato
+il guasto vero, indipendente da entrambe le ipotesi precedenti (fallback allargato, poi
+deduplica per tipo) — nessuna delle due era sbagliata di per sé, semplicemente nessuna era
+LA causa di questo sintomo specifico.
+
+**« Non hai messo in grassetto i PROCESSI »** — vero: il giro precedente aveva messo in
+grassetto SOLO l'elenco più in basso in `ProcessusModal.tsx` (PROCESSUS→PROCEDIMENTI, i file
+.txt con i comandi) — la griglia di card più in alto, i VERI file PROCESSUS (PDF, quella che
+l'utente vedeva e intendeva), era rimasta senza. Aggiunto `font-bold` anche lì.
+
+**Spiegato all'utente, per esteso, perché EQUILIBRIUM non si può semplicemente "congelare fino
+in fondo"**: il codice che il telefono esegue quando si unisce a una seduta SERENITY (via QR)
+è, ad oggi, letteralmente il codice di EQUILIBRIUM (`ParticipantView.tsx`, la logica
+partecipante di `App.tsx`) — non una copia, l'unica implementazione che esiste. Idem
+`networkManager.ts`: motore di rete UNICO, condiviso, non due copie. "Basta non toccare più
+EQUILIBRIUM" varrebbe per l'interfaccia SUA — ma i bug del telefono (lingua, video, righe nel
+Giornale) vivono in codice che quell'interfaccia non possiede da sola: sono la base tecnica del
+satellite di SERENITY. Smettere di spedire il file EQUILIBRIUM.dmg è immediato (e da qui in poi
+lo si fa); smettere di TOCCARE quel codice vorrebbe dire smettere di correggere il telefono. La
+via per rendere EQUILIBRIUM davvero non necessario è un partecipante nativo dentro SERENITY
+(rimandato, per la sua taglia, dal giro « niente più EQUILIBRIUM sul telefono ») — l'unica che
+elimina la dipendenza per davvero, non solo la sua vetrina.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato),
+`npx vitest run` 726/726 verdi.
+
+**File toccati**: `src/components/ProcessusModal.tsx` (CONDIVISO, solo lo stile) —
+`src/lib/networkManager.ts` (CONDIVISO, il cuore della connessione) → **build e spedizione di
+ENTRAMBE le app**, motivata questa volta dal file più centrale di tutti: se il bug era lì,
+riguarda ogni seduta a distanza esistente, non solo il satellite di SERENITY.
+
+**Build**: SERENITY 3.0.279 + EQUILIBRIUM 2.0.286.

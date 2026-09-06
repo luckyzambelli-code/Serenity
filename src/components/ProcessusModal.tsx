@@ -430,7 +430,11 @@ export function ProcessusModal({
                       </div>
 
                       {/* File name */}
-                      <span className="text-center text-[10px] font-mono leading-tight line-clamp-2"
+                      {/* ⚠️ CORRETTO — segnalato: « non hai messo in grassetto i PROCESSI ». Il
+                          giro precedente aveva messo in grassetto SOLO l'elenco più in basso
+                          (PROCESSUS→PROCEDIMENTI, i file .txt con i comandi) — questa griglia di
+                          card, i veri file PROCESSUS (PDF), era rimasta senza `font-bold`. */}
+                      <span className="text-center text-[10px] font-mono font-bold leading-tight line-clamp-2"
                         style={{ color: th.text, maxWidth: '100%', wordBreak: 'break-word' }}>
                         {p.name}
                       </span>
