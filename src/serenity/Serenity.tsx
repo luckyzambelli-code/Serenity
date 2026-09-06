@@ -3891,20 +3891,28 @@ export default function Serenity() {
           telefonoPcCollegato ? (
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              padding: '6px 10px', borderRadius: 12,
+              width: '100%', boxSizing: 'border-box', borderRadius: 16, padding: '12px 8px',
               background: 'color-mix(in srgb, var(--s-still) 14%, var(--s-disc))',
               color: 'var(--s-still)', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)',
-              letterSpacing: '0.04em',
+              letterSpacing: '0.06em', textTransform: 'uppercase', lineHeight: 1.25, textAlign: 'center',
             }}>
               ✓ {LC('telefono del PC collegato', 'téléphone du PC connecté', "PC's phone connected",
                      'teléfono del PC conectado', 'PC-telefonen ansluten')}
             </div>
           ) : (
+            // ⚠️ STESSA TAGLIA di "apri una seduta" — segnalato dal vivo: « fallo della stessa
+            // dimensione ». Stesso padding/borderRadius/maiuscolo/interlinea di quel bottone
+            // (v. la sua nota, sopra) — `width:'100%'` perché QUESTO bottone, a differenza di
+            // quello, non condivide la riga con l'orologio: da solo nella sua riga, la stessa
+            // larghezza di sempre (272px, l'intera colonna) è il modo giusto di dire "stessa
+            // taglia", non un valore fisso in pixel che coinciderebbe per caso.
             <button className="s-glass s-glass-btn" onClick={() => setSatelliteAperto(true)}
               style={{
-                cursor: 'pointer', pointerEvents: 'auto', borderRadius: 12, padding: '8px 10px', border: 'none',
+                cursor: 'pointer', pointerEvents: 'auto', width: '100%', boxSizing: 'border-box',
+                borderRadius: 16, padding: '12px 8px', border: 'none',
                 background: 'var(--s-disc)', color: 'var(--s-ink-soft)',
-                fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.04em',
+                fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.06em',
+                textTransform: 'uppercase', lineHeight: 1.25, textAlign: 'center',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               }}>
               📱 {LC('opzionale — collega il telefono del PC', 'facultatif — connecter le téléphone du PC',
@@ -5221,6 +5229,14 @@ export default function Serenity() {
             </div>
           )}
           {cam1Mostrata && (
+            // ⚠️ AGGIUNTO `inDiretta` — segnalato dal vivo: « un indicatore nell'interfaccia
+            // dell'auditor per indicare che la sua CAM sta mandando segnale, quando c'è una
+            // sessione a distanza ». `CameraCerchio` sa già disegnare il badge "LIVE" (lo stesso
+            // di CAM 2, `inDiretta`, sopra) — mancava solo di passarglielo qui. `cam1Mostrata`
+            // è già vero SOLO con `avvio.distanza`, quindi basta `remote.isConnected`: non "a
+            // distanza è stato scelto" ma "il preclear è davvero collegato e sta ricevendo
+            // questa camera" — l'indicatore onesto di quando il segnale VERAMENTE parte, non
+            // prima.
             <CameraCerchio
               dimensione={158}
               dimensioneCollassata={88}
@@ -5229,6 +5245,7 @@ export default function Serenity() {
               opacita={uiAlpha}
               collassata={cam1Collassata}
               onToggleCollasso={() => setCam1Collassata(v => !v)}
+              inDiretta={remote.isConnected}
             />
           )}
         </div>

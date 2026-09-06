@@ -10372,3 +10372,23 @@ ENTRAMBE le app**.
 **⚠️ Da questo giro in poi, EQUILIBRIUM è CONGELATO** — decisione esplicita dell'utente: « ormai EQUILIBRIUM non ci serve più... lascia EQUILIBRIUM come è, non fare più modificazioni... interviene solo su SERENITY ». La build 2.0.280 qui sotto è l'ULTIMA build di EQUILIBRIUM fatta apposta, come "rete di salvataggio" finale — non un precedente per i giri futuri. Restano permesse SOLO le LETTURE di `App.tsx`/altri file esclusivi di EQUILIBRIUM (per riprodurne la logica in SERENITY, come sempre) — non le scritture. V. la nota completa in memoria (`equilibrium_freeze`).
 
 **Build**: SERENITY 3.0.272 + EQUILIBRIUM 2.0.280 (ULTIMA build EQUILIBRIUM).
+
+## Giro — 2026-09-06 (continuazione) — AUDITOR non AUDITORE, e due rifiniture
+
+**Segnalato**: « devi scrivere MODALITÀ AUDITOR, non AUDITORE... CAMBIA TUTTE LE SCRITTE AUDITORE con AUDITOR ». Tredici chiavi nel dizionario ITALIANO condiviso (`src/i18n.tsx`) scrivevano "Auditore"/"AUDITORE" — `conn_auditor_title` (« MODALITÀ AUDITORE », quella vista sul telefono), `conn_waiting_video`, `conn_badge_preclear_ok`, `conn_link_label`, `config_mod_cam1`, `ep_auditor_note_label` e altre sette. Sostituite tutte con "Auditor"/"AUDITOR" (l'elisione resta corretta: "Auditor" inizia comunque per vocale, quindi "l'Auditor"/"dell'Auditor"/"all'Auditor" restano giuste). Nessuna occorrenza di "Auditore" rimasta nel blocco italiano.
+
+**⚠️ Eccezione alla regola del congelamento (v. giro precedente)**: questa chiave (`conn_auditor_title`) è ESATTAMENTE quella che il telefono mostra tramite `ConnectionModal.tsx` — cioè tramite EQUILIBRIUM. Senza ricompilare anche EQUILIBRIUM, il telefono avrebbe continuato a mostrare "AUDITORE" a prescindere dalla correzione nel sorgente condiviso. Ricompilato UNA VOLTA in più, motivato esplicitamente da questo — non un ritorno alla vecchia abitudine di ricompilare EQUILIBRIUM ad ogni giro.
+
+**Segnalato anche**: « il bottone OPZIONALE — collega il telefono... fallo della stessa dimensione di APRI UNA SEDUTA » → stesso padding/borderRadius/maiuscolo/interlinea del bottone "apri una seduta", `width:'100%'` (la stessa riga intera, non condividendo più lo spazio con l'orologio). E: « vorrei un indicatore nell'interfaccia dell'auditor per indicare che la sua CAM sta mandando segnale quando c'è una sessione a distanza » → `CameraCerchio` sapeva già disegnare il badge "LIVE" (lo stesso già usato su CAM 2 per il telefono/preclear remoto) — mancava solo passare `inDiretta={remote.isConnected}` a CAM 1, che si monta solo con `avvio.distanza`: l'indicatore si accende quando il preclear È davvero collegato, non solo quando "a distanza" è stato scelto.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato — il conteggio doppio di `vitest` osservato in questo giro, 1448 anziché 724, viene da un worktree di un agente in background annidato dentro il repo che `vitest` scopriva per errore: non un regressione, spariva risolvendo/rimuovendo quel worktree), `npx vitest run` verde.
+
+**File toccati**: `src/serenity/Serenity.tsx` (SOLO SERENITY) — `src/i18n.tsx` (CONDIVISO, solo valori di traduzione — nessuna riga di codice).
+
+**Build**: SERENITY 3.0.273 + EQUILIBRIUM 2.0.281 (eccezione motivata al congelamento, v. sopra).
+
+## Giro — 2026-09-06 (continuazione) — il dizionario italiano, verificato contro l'inglese
+
+**Segnalato**: dopo la correzione di ABERRAZIONE/B (giro precedente), l'utente ha chiesto quali altre voci del dizionario italiano fossero troncate allo stesso modo, offrendo di verificarle lui stesso o lasciando che lo facessi da solo confrontando con la versione inglese. Delegato a un agente in background (compito autonomo, ben definito, che avrebbe appesantito troppo questo turno): confrontare `dizionario-it.json` con `dizionario-en.json` voce per voce, distinguere gli SPACCHI VERI (come ABERRAZIONE/B — da unire) dalle "PERDITE DI CODA" (molto più comuni: la definizione è già completa ma finisce con un frammento della voce alfabetica SUCCESSIVA incollato per errore — da tagliare, senza toccare la voce successiva, che sta già bene da sola), e a lasciare STARE senza indovinare qualunque voce non abbastanza chiara nel confronto con l'inglese.
+
+[Risultato dell'agente da riportare qui non appena disponibile — v. il prossimo giro.]
