@@ -10391,4 +10391,26 @@ ENTRAMBE le app**.
 
 **Segnalato**: dopo la correzione di ABERRAZIONE/B (giro precedente), l'utente ha chiesto quali altre voci del dizionario italiano fossero troncate allo stesso modo, offrendo di verificarle lui stesso o lasciando che lo facessi da solo confrontando con la versione inglese. Delegato a un agente in background (compito autonomo, ben definito, che avrebbe appesantito troppo questo turno): confrontare `dizionario-it.json` con `dizionario-en.json` voce per voce, distinguere gli SPACCHI VERI (come ABERRAZIONE/B — da unire) dalle "PERDITE DI CODA" (molto più comuni: la definizione è già completa ma finisce con un frammento della voce alfabetica SUCCESSIVA incollato per errore — da tagliare, senza toccare la voce successiva, che sta già bene da sola), e a lasciare STARE senza indovinare qualunque voce non abbastanza chiara nel confronto con l'inglese.
 
-[Risultato dell'agente da riportare qui non appena disponibile — v. il prossimo giro.]
+**Risultato**: 2623 → 2612 voci (-11). Tre categorie:
+- **11 SPACCHI VERI, fusi** (come ABERRAZIONE/B): ACCOPPIARE I TERMINALI, ELENCARE ED ANNULLARE, ELEVATEZZA, LIVELLO V, OGGETTIVO, QUADRO DELLE CLASSI, QUADRO DI CLASSIFICAZIONE, RIGHE, RUNDOWN DELL'INFORMAZIONE VITALE, SCIENTOLOGY, TONO — la voce fittizia successiva cancellata dopo aver spostato la sua definizione dov'era il vero seguito. 5 casi più complessi (testo redistribuito fra DUE o TRE voci reali, non solo fuso in una) — es. AUDITING IMBAVAGLIATO/TR/METODO PER INDIVIDUARE PASTICCI, dove una singola voce fittizia "TR" conteneva in sequenza pezzi di TRE definizioni diverse.
+- **~53 PERDITE DI CODA, tagliate** (definizione già completa, solo il frammento della voce successiva rimosso dalla fine) — es. AFFLIZIONE, CARTELLA, DINAMICHE. Fra queste, 6 (BANKY, CORSO CLINICO SUPERIORE, GRUPPI SOPPRESSIVI, TRE UNIVERSI, VETERANO, SMEMORATORE) avevano in coda un'INTERA voce orfana coerente (es. TRIANGOLO DI ARC, VGI, S.O.) senza posto proprio nel dizionario — tagliata comunque (creare nuove voci era fuori mandato), ma quel contenuto reale resta perso: da recuperare a mano se vale la pena.
+- **8 SKIPPATE di proposito**, troncate a metà frase senza un seguito recuperabile nelle voci vicine — richiedono revisione umana: AUTODETERMINAZIONE, PROGRAMMA, RELAZIONI PUBBLICHE, ROUTINE DELL'ASSASSINO (qui la coda è un intero, importante elenco orfano di sotto-routine — segnalato esplicitamente, non tagliato via), SEI PROCEDIMENTI DI BASE, SISTEMA DEL POLLICE, TA BASSO, VECCHI POLSINI.
+- 10 falsi positivi dell'euristica iniziale (CLASSE, DIANETICS, FABBRICANTE, ecc.): già complete, segnalate solo per un carattere di chiusura anomalo — nessuna azione.
+
+**Verifica**: JSON validato (`json.load`), riscansione finale: restano "aperte" solo le 8 skippate + le 10 falsi-positivi + 2 residui di punteggiatura preesistenti e indipendenti — nessuna rottura introdotta. File toccato con edit chirurgici (niente reserializzazione), diff proporzionato (~64 voci, non l'intero file).
+
+## Giro — 2026-09-06 (continuazione) — il medaglione con le onde, e il bottone che restava più alto
+
+Due correzioni dal vivo sullo stesso screenshot:
+
+**Il medaglione accanto a DARK/LIGHT**: mostrava `icon-serenity.png` (128×128, SOLO testa+costellazione — il ritaglio pensato per restare leggibile minuscolo nel Dock di macOS), non `credits/ondes.png` (l'immagine intera, CON le onde che attraversano la testa — quella da cui il file prende il nome, già usata più grande nella finestra Crediti). Cambiata la sorgente a `credits/ondes.png` e ingrandito 26→40px, stessa proporzione delle altre volte in questo file.
+
+**Il bottone "opzionale — collega il telefono del PC" restava più alto di "apri una seduta"**: la correzione del giro precedente (padding/borderRadius/`width:100%` uguali) non bastava — il suo testo, molto più lungo, andava comunque a capo su due righe. Aggiunto `whiteSpace:'nowrap'` con `fontSize` ridotto (13→11px) quanto basta per stare su una riga sola nella stessa larghezza: è la SCATOLA del bottone a dover combaciare (un rigo, stesso padding, stessa altezza), non il corpo del carattere — a parità di font-size un testo più lungo sarebbe stato per forza più alto, qualunque altra manopola si fosse toccata.
+
+**Verificato dal vivo**: entrambe confermate via screenshot nel browser di sviluppo — medaglione visibilmente più grande con l'immagine delle onde, bottone opzionale su una riga sola, altezza vicina a "apri una seduta".
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 724/724 verdi (il conteggio doppio, 1448, visto nel giro precedente durante l'esecuzione dell'agente in background è sparito rimuovendo il suo worktree — confermato NON essere una regressione).
+
+**File toccati (SOLO SERENITY, più il dizionario — nessun file condiviso, build unica)**: `src/serenity/Serenity.tsx`, `public/dizionario/dizionario-it.json`.
+
+**Build**: SERENITY 3.0.274.

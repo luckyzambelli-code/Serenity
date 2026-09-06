@@ -156,5 +156,5 @@
       "artifactName": "${productName}-${version}-setup.${ext}"
     }
   },
-  "serenityVersion": "3.0.273"
+  "serenityVersion": "3.0.274"
 }

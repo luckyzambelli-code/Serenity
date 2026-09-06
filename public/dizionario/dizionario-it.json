@@ -107,7 +107,7 @@
  {
   "termine": "ACCERTAMENTO DELLE ROTTURE DI ARC",
   "termine_en": "ARC BREAK ASSESSMENT",
-  "definizione": "1. leggere al pc mentre è all' Elettrometro una lista di rotture di ARC appropriata all'attività e non fare nient'altro che localizzare e poi indicare le cariche trovate, dicendo al pc ciò che è stato registrato sull'ago. (HCOB 7 Set 64 II) 2. non è auditing perché non viene usato il ciclo di comunicazione dell'auditing. Non date riconoscimento a ciò che dice il pc, non gli chiedete che cos' è. Non comunicate. Accertate la lista tra voi e l'Elettrometro, come se il pc non fosse lì. Scoprite ciò che legge e lo dite al pc. Questo è tutto. (HCOB 7 Set 64 II) ACCERTAMENTO DEL TA ALTO O BASSO PER LE CONFESSIONI - Hl-LO TA ASSESSMENT FOR CONFESSIONALS, v.: ACCERTAMENTO DEL TA ALTO O BASSO PER I PROCEDIMENTI DI INTEGRITÀ. ACCERTAMENTO DEL TA ALTO O BASSO PER I PROCEDIMENTI DI INTEGRITÀ - Hl-LO TA ASSESSMENT FOR"
+  "definizione": "1. leggere al pc mentre è all' Elettrometro una lista di rotture di ARC appropriata all'attività e non fare nient'altro che localizzare e poi indicare le cariche trovate, dicendo al pc ciò che è stato registrato sull'ago. (HCOB 7 Set 64 II) 2. non è auditing perché non viene usato il ciclo di comunicazione dell'auditing. Non date riconoscimento a ciò che dice il pc, non gli chiedete che cos' è. Non comunicate. Accertate la lista tra voi e l'Elettrometro, come se il pc non fosse lì. Scoprite ciò che legge e lo dite al pc. Questo è tutto. (HCOB 7 Set 64 II)"
  },
  {
   "termine": "INTEGRITY PROCESSING",
@@ -177,12 +177,7 @@
  {
   "termine": "ACCOPPIARE I TERMINALI",
   "termine_en": "MATCHING TERMINALS",
-  "definizione": "mettere una persona di fronte ad una persona, la stessa persona di fronte alla stessa persona. (5304M07) V. anche TERMINALI"
- },
- {
-  "termine": "DOPPI",
-  "termine_en": null,
-  "definizione": "FARE."
+  "definizione": "mettere una persona di fronte ad una persona, la stessa persona di fronte alla stessa persona. (5304M07) V. anche TERMINALI DOPPI."
  },
  {
   "termine": "ACCORDO",
@@ -262,7 +257,7 @@
  {
   "termine": "AFFLIZIONE",
   "termine_en": "GRIEF",
-  "definizione": "1. è un ridge, ed è causato da una perdita. (Scn 8-8008, pago 21) 2. 0,5 sulla scala del tono. (SOS, pago 57) 3. l'afflizione ha luogo quando una persona riconosce la sua perdita o fallimento come nel caso della morte di qualcuno che amava e che ha cercato di aiutare. (HFP, pago 85) Afflizione"
+  "definizione": "1. è un ridge, ed è causato da una perdita. (Scn 8-8008, pago 21) 2. 0,5 sulla scala del tono. (SOS, pago 57) 3. l'afflizione ha luogo quando una persona riconosce la sua perdita o fallimento come nel caso della morte di qualcuno che amava e che ha cercato di aiutare. (HFP, pago 85)"
  },
  {
   "termine": "AGGANCIARE",
@@ -517,7 +512,7 @@
  {
   "termine": "AMNESIA",
   "termine_en": "AMNESIA",
-  "definizione": "un tizio è così terrorizzato da non osare ricordare dieci secondi fa. Egli ha avuto una qualche esperienza, e non intende ricordare prima di 'essa, e neanche l'esperienza stessa, così è disposto a ricordare solo qualche istante dopo quell'esperienza. (SH Spec 72, 6607C28) Amare"
+  "definizione": "un tizio è così terrorizzato da non osare ricordare dieci secondi fa. Egli ha avuto una qualche esperienza, e non intende ricordare prima di 'essa, e neanche l'esperienza stessa, così è disposto a ricordare solo qualche istante dopo quell'esperienza. (SH Spec 72, 6607C28)"
  },
  {
   "termine": "AMORE",
@@ -607,7 +602,7 @@
  {
   "termine": "ANSIETÀ",
   "termine_en": "ANXIETY",
-  "definizione": "un calcolo costantemente insoluto. Un calcolo costante su un certo punto od un certo problema. Questo è ciò che è la preoccupazione ed è ciò che è l'ansietà. (T-802A 5205C20) Antagonismo"
+  "definizione": "un calcolo costantemente insoluto. Un calcolo costante su un certo punto od un certo problema. Questo è ciò che è la preoccupazione ed è ciò che è l'ansietà. (T-802A 5205C20)"
  },
  {
   "termine": "ANTAGONISMO",
@@ -922,12 +917,12 @@
  {
   "termine": "AUDITING IMBAVAGLIATO",
   "termine_en": "MUZZLED AUDITING",
-  "definizione": "1. usando solo il linguaggio e i comandi della seduta modello ed i"
+  "definizione": "1. usando solo il linguaggio e i comandi della seduta modello ed i TR. si ottengono sempre i risultati migliori. (HCOB 20 Giu 72 II) 2. potrebbe anche essere chiamato stile di auditing meccanico. Abbiamo usato l'auditing imbavagliato per molti anni. Sono i TR veri e propri da O a 4 senza l'aggiunta di nient'altro. L'auditing con i comandi ripetitivi, usando i TR da O a 4, al Livello 1 viene fatto completamente imbavagliato. (HCOB 6 Nov 64) 3. nell'auditing imbavagliato l'Auditor dice solo 2 cose. Dà il comando e dà il riconoscimento alla risposta a quel comando. Se il pc dice qualsiasi cosa che non sia una risposta a quel comando, l'Auditor fa un cenno col capo ed aspetta una risposta prima di dare il riconoscimento. (HCOB 25 Mar 59)"
  },
  {
   "termine": "TR",
   "termine_en": "TR",
-  "definizione": "si ottengono sempre i risultati migliori. (HCOB 20 Giu 72 II) 2. potrebbe anche essere chiamato stile di auditing meccanico. Abbiamo usato l'auditing imbavagliato per molti anni. Sono i TR veri e propri da O a 4 senza l'aggiunta di nient'altro. L'auditing con i comandi ripetitivi, usando i TR da O a 4, al Livello 1 viene fatto completamente imbavagliato. (HCOB 6 Nov 64) 3. nell'auditing imbavagliato l'Auditor dice solo 2 cose. Dà il comando e dà il riconoscimento alla risposta a quel comando. Se il pc dice qualsiasi cosa che non sia una risposta a quel comando, l'Auditor fa un cenno col capo ed aspetta una risposta prima di dare il riconoscimento. (HCOB 25 Mar 59) tutto per migliorare la consegna (delivery) della tecnologia. (HCOB 6 Ott 70) 2. individuare i pasticci significa quel sistema che scopre la tecnologia alterata, ne ordina la correzione e la fa correggere. In altre parole individua il pasticcio. (FO 2442R) training regimen or routine, regime o routine di addestramento. Spesso sono chiamati training drill (= esercizi di addestramento. ) TR sono una precisa azione di addestramento che fa passare gradatamente lo studente attraverso delle azioni pratiche prestabilite per insegnargli ad applicare con s-icurezza ciò che ha imparato. (HCOB 19 Giu 71 III)"
+  "definizione": "training regimen or routine, regime o routine di addestramento. Spesso sono chiamati training drill (= esercizi di addestramento. ) TR sono una precisa azione di addestramento che fa passare gradatamente lo studente attraverso delle azioni pratiche prestabilite per insegnargli ad applicare con s-icurezza ciò che ha imparato. (HCOB 19 Giu 71 III)"
  },
  {
   "termine": "AUDITING IN STILE DI ASCOLTO",
@@ -957,12 +952,12 @@
  {
   "termine": "AUDITING PROFESSIONALE",
   "termine_en": "PROFESSIONAL AUDITING",
-  "definizione": "sedute date da un Auditor addestrato le cui azioni sono guidate dai codici etici e l'abilità tecnica, che dirige l'attenzione del pc ad aree che, una volta esaminate, provocheranno la liberazione di una quantità di carica sufficente a produrre azione del"
+  "definizione": "sedute date da un Auditor addestrato le cui azioni sono guidate dai codici etici e l'abilità tecnica, che dirige l'attenzione del pc ad aree che, una volta esaminate, provocheranno la liberazione di una quantità di carica sufficente a produrre azione del raggiungendo così alla fine lo stato di Chiaro. (HCO PL 21 Ago 63)"
  },
  {
   "termine": "TA",
   "termine_en": "TA",
-  "definizione": "raggiungendo così alla fine lo stato di Chiaro. (HCO PL 21 Ago 63) 1. Tone arm action, Azione della leva del tono. Il termine tecnico di una misura quantitativa dei guadagni del caso nei procedimenti di Scn dati ad un prechiaro in una data unità di tempo. (ISE, pago 38) 2. tone arm (lett. leva del tono) si riferisce alla leva del tono od al suo movimento. (RCOB 13 Apr 64, prima parte del Glossario dei termini di Scn VI) 3. il numero totale di divisioni verso il basso che la leva del tono ha percorso esattamente in una unità di tempo. (RCOB 24 Lug 64) 4. una misura della forza incistata che sta abbandonando il caso. (SR Spec 291, 6308C06)"
+  "definizione": "1. Tone arm action, Azione della leva del tono. Il termine tecnico di una misura quantitativa dei guadagni del caso nei procedimenti di Scn dati ad un prechiaro in una data unità di tempo. (ISE, pago 38) 2. tone arm (lett. leva del tono) si riferisce alla leva del tono od al suo movimento. (RCOB 13 Apr 64, prima parte del Glossario dei termini di Scn VI) 3. il numero totale di divisioni verso il basso che la leva del tono ha percorso esattamente in una unità di tempo. (RCOB 24 Lug 64) 4. una misura della forza incistata che sta abbandonando il caso. (SR Spec 291, 6308C06)"
  },
  {
   "termine": "AUDITING STENOGRAFICO",
@@ -1152,7 +1147,7 @@
  {
   "termine": "BANKY",
   "termine_en": "BANKY",
-  "definizione": "gergo. Un termine che significa che una persona è influenzata dal suo bank e manifesta cattivo umore, irritabilità, mancanza di cooperazione e i segni della drammatizzazione. È irrazionale. (Scn AD) BARRA (I) - SLANT (I), 1. se la voce è attiva costantemente o sporadicamente ma non va nulla (vedi ago nullo) per tre letture consecutive, mettete una barra. (SH Spec 137, 6204C24) 2. l'Auditor per annullare l'elenco indica ogni voce che è rimasta attiva nell'elenco con una barra. (HCOB 5 Dic 62) Barriera (Def. 2) materia o Barriera (Def. 2) spazio o o O o oo"
+  "definizione": "gergo. Un termine che significa che una persona è influenzata dal suo bank e manifesta cattivo umore, irritabilità, mancanza di cooperazione e i segni della drammatizzazione. È irrazionale. (Scn AD)"
  },
  {
   "termine": "BARRIERA",
@@ -1362,7 +1357,7 @@
  {
   "termine": "BUDDA",
   "termine_en": "BUDDHA",
-  "definizione": "semplicemente colui che ha raggiunto il bodhy. Ci sono stati molti budda, e ci si aspetta che ce ne saranno molti altri. (PAB 32) Budda"
+  "definizione": "semplicemente colui che ha raggiunto il bodhy. Ci sono stati molti budda, e ci si aspetta che ce ne saranno molti altri. (PAB 32)"
  },
  {
   "termine": "BUGIA",
@@ -1382,7 +1377,7 @@
  {
   "termine": "BUON AUTOMATISMO",
   "termine_en": "GOOD AUTOMATICITY",
-  "definizione": "ciò che ha elevato l'autodeterminazione degli altri e che li ha lasciati, sempre più in scala crescente, pensare, agire e provvedere a se stessi. (PDC 21) ,"
+  "definizione": "ciò che ha elevato l'autodeterminazione degli altri e che li ha lasciati, sempre più in scala crescente, pensare, agire e provvedere a se stessi. (PDC 21)"
  },
  {
   "termine": "BUONA CONDIZIONE DI CASO",
@@ -1577,7 +1572,7 @@
  {
   "termine": "CARTELLA",
   "termine_en": "FOLDER",
-  "definizione": "un foglio di cartone piegato che contiene tutti i rapporti delle sedute ed altre cose. La cartella è formato protocollo di cartone leggero, di solito di colore blu o grigio. (BTB 3 Nov 72R) 2. una compilazione di dati, la documentazione tenuta da un Auditor. (Abi1218) Cartella"
+  "definizione": "un foglio di cartone piegato che contiene tutti i rapporti delle sedute ed altre cose. La cartella è formato protocollo di cartone leggero, di solito di colore blu o grigio. (BTB 3 Nov 72R) 2. una compilazione di dati, la documentazione tenuta da un Auditor. (Abi1218)"
  },
  {
   "termine": "CARTELLA DELLO STUDENTE",
@@ -1842,7 +1837,7 @@
  {
   "termine": "CATENA DI EPISODI",
   "termine_en": "CHAIN OF INCIDENTS",
-  "definizione": "1. quando si parla di una catena di episodi, si intende di solito una catena di lock od una catena di engram o una catena di secondari con contenuti simili. (SOS, Libro 2, pago 194) 2. un insieme di avventure o di azioni collegate dallo stesso argomento, collocazione generica o persone, inteso come avente luogo in un lungo periodo di tempo, settimane, 'mesi, anni o persino miliardi o migliaia di miliardi di anni. (HCOB 15 Mag 63) v. anche CATENA. cA1f.NA ;,7 / \"I~I--- ~I I l, / I 'C\"!e\"\"A' (I .'- l I I \" Catena"
+  "definizione": "1. quando si parla di una catena di episodi, si intende di solito una catena di lock od una catena di engram o una catena di secondari con contenuti simili. (SOS, Libro 2, pago 194) 2. un insieme di avventure o di azioni collegate dallo stesso argomento, collocazione generica o persone, inteso come avente luogo in un lungo periodo di tempo, settimane, 'mesi, anni o persino miliardi o migliaia di miliardi di anni. (HCOB 15 Mag 63) v. anche CATENA."
  },
  {
   "termine": "CATENA ENGRAMICA",
@@ -2037,7 +2032,7 @@
  {
   "termine": "CERTIFICATO",
   "termine_en": "CERTIFICATE",
-  "definizione": "un premio dato dall' Ufficio delle comunicazioni Hubbard per indicare il completamento di studio e di esercitazioni pratiche ed il conseguimento di abilità. Non è un titolo poiché indica competenza mentre i titoli generalmente simbolizzano il tempo speso nello studio teorico e non forniscono alcune indicazioni di abilità. (Aud 2 UK) Abbr. Cert. Certificato"
+  "definizione": "un premio dato dall' Ufficio delle comunicazioni Hubbard per indicare il completamento di studio e di esercitazioni pratiche ed il conseguimento di abilità. Non è un titolo poiché indica competenza mentre i titoli generalmente simbolizzano il tempo speso nello studio teorico e non forniscono alcune indicazioni di abilità. (Aud 2 UK) Abbr. Cert."
  },
  {
   "termine": "CERTIFICATO PERMANENTE",
@@ -2982,7 +2977,7 @@
  {
   "termine": "CORSO CLINICO SUPERIORE",
   "termine_en": "ADVANCED CLINICAL COURSE",
-  "definizione": "1. fondamentalmente un corso di teoria e di ricerca che fornisce una penetrazione molto maggiore sui fenomeni della mente, sui fondamenti logici della ricerca e dell'investigazione (PAB 71) 2. Corsi speciali di L. Ron Hubbard, tenuti personalmente da lui, con orari stabiliti da lui, e finanziati per lui da un ufficio di HCO. (HCO PL 24 Feb 60) Abbr. ACC CORSO DI ANATOMIA DELLA MENTE UNANA - ANATOMY OF HUMAN MIND COURSE. un corso di base di Scientology che insegna ad osservare oda coniprendere le parti essenziali della mente umana. Non vi sono requisiti per questo corso. (CG&AC 75) abbr. AHMC"
+  "definizione": "1. fondamentalmente un corso di teoria e di ricerca che fornisce una penetrazione molto maggiore sui fenomeni della mente, sui fondamenti logici della ricerca e dell'investigazione (PAB 71) 2. Corsi speciali di L. Ron Hubbard, tenuti personalmente da lui, con orari stabiliti da lui, e finanziati per lui da un ufficio di HCO. (HCO PL 24 Feb 60) Abbr. ACC"
  },
  {
   "termine": "CORSO DI CERTIFICAZIONE",
@@ -3317,7 +3312,7 @@
  {
   "termine": "DEMO IN PLASTILINA",
   "termine_en": "CLAY DEMO",
-  "definizione": "abbreviazione di dimostrazione (ingl. demonstration) in plastilina. Una tecnica di studio di Scn, per mezzo della quale lo studente dimostra definizioni, principi ecc. in plastilina per ottenere una m,aggior comprensione traducendo la significanza con massa effettiva. (BTB 12 Apr 72R) Dimostrazione in plastilina"
+  "definizione": "abbreviazione di dimostrazione (ingl. demonstration) in plastilina. Una tecnica di studio di Scn, per mezzo della quale lo studente dimostra definizioni, principi ecc. in plastilina per ottenere una m,aggior comprensione traducendo la significanza con massa effettiva. (BTB 12 Apr 72R)"
  },
  {
   "termine": "DEMO KIT",
@@ -3327,7 +3322,7 @@
  {
   "termine": "DEMONE",
   "termine_en": "DEMON",
-  "definizione": "gergo. 1. un circuito in derivazione nella mente, vkne chiamato demone perché per molto tempo è stato interpretato in quel modo. Probabilmente è un meccanismo elettronico. (Glossario di DMSMH) 2. un demone autentico è uno che dà voce ai pensieri, o fa eco interiormente alla parola parlata, o che dà esteriormente consigli complicati di tutti i tipi come una voce viva e reale. (DMSMH pago 88) 3. l'uso della parola in Dn è un gergo descrittivo. (EOS, pago 16) Demo Kit"
+  "definizione": "gergo. 1. un circuito in derivazione nella mente, vkne chiamato demone perché per molto tempo è stato interpretato in quel modo. Probabilmente è un meccanismo elettronico. (Glossario di DMSMH) 2. un demone autentico è uno che dà voce ai pensieri, o fa eco interiormente alla parola parlata, o che dà esteriormente consigli complicati di tutti i tipi come una voce viva e reale. (DMSMH pago 88) 3. l'uso della parola in Dn è un gergo descrittivo. (EOS, pago 16)"
  },
  {
   "termine": "DEPOSITI STANDARD DELLA MEMORIA",
@@ -3527,7 +3522,7 @@
  {
   "termine": "DINAMICHE",
   "termine_en": "DYNAMICS",
-  "definizione": "si potrebbe dire che vi sono otto forze motrici (spinte, impulsi) nella vita. Noi le chiamiamo dinamiche. Queste sono dei motivi o delle motivazioni. Le chiamiamo le otto dinamiche. La prima dinamica è la spinta verso l'esistenza in quanto sé stessi. Qui abbiamo l'individualità espressa completamente. Questa può essere chiamata la dinamica del sé. La seconda dinamica è la spinta verso l'esistenza come attività sessuale o bisessuale. Questa dinamica ha in realtà due suddivisioni. La seconda dinamica (a) è l'atto sessuale stesso, e la seconda dinamica (b) è l'unità familiare, che include l'educazione e la cura dei figli. Questa può essere chiamata la dinamica del sesso. La terza dinamica è la spinta verso l'esistenza in gruppi di individui. Qualsiasi gruppo o parte di un'intera classe potrebbe essere considerato come parte della terza dinamica. La scuola, la società, la città, la nazione, ciascuna di queste cose fa parte della terza dinamica e ciascuna è una terza dinamica. Questa può essere chiamata la dinamica del gruppo. La quarta dinamica è la spinta verso l'esistenza come umanità. Mentre la razza bianca, per esempio, sarà considerata una terza dinamica, tutte le razze sono considerate quarta dinamica. Questa può essere chiamata la dinamica dell'umanità. La quinta dinamica è la spinta verso l'esistenza del regno animale. Include tutte le forme viventi, sia animali che vegetali. I pesci del mare, le creature dei campi o della foresta, l'erba, gli alberi, i fiori o qualsiasi cosa direttamente o intimamente motivata dalla vita. Questa può essere chiamata la dinamica animale. La sesta dinamica è la spinta verso l'esistenza in quanto universo fisico. L'universo è 'composto da materia, energia, spazio e tempo. In Scientology prendiamo la prima lettera di ciascuna di queste parole e coniamo una parola, mesto Questa può essere chiamata la dinamica dell'universo. La settima dinamica è la spinta verso l'esistenza come spirito, o degli spiriti. Qualsiasi cosa che ha a che fare con lo spirito, con o senza identità, andrà sotto l'intestazione di settima dinamica. Questa può essere chiamata la dinamica dello spirito. L'ottava dinamica è la spinta verso l'esistenza in quanto infinito, che viene identificato come Essere Supremo. Si fa attentamente notare qui, che la scienza di Scientology non si intromette nella dinamica dell'Essere Supremo. Si chiama ottava dinamica perché il simbolo dell'infinito 00 volto verso l'alto forma il numero «8». Questa può essere chiamata la dinamica dell'infinito o di Dio. (FOT, pago 36-38) Dinamiche prima dinamica se stessi Terza dinamica dinamica del gruppo Quarta dinamica dinamica dell'umanità DINAMICHE 166 Quinta dinamica dinamica animale Sesta dinamica Dinamica dell'universo Settima dinamica (vecchio simbolo greco per lo spirito) Dinamica dello spirito Ottava dinamica (simbolo dell'infinito) Dinamica dell'infinito o di Dio"
+  "definizione": "si potrebbe dire che vi sono otto forze motrici (spinte, impulsi) nella vita. Noi le chiamiamo dinamiche. Queste sono dei motivi o delle motivazioni. Le chiamiamo le otto dinamiche. La prima dinamica è la spinta verso l'esistenza in quanto sé stessi. Qui abbiamo l'individualità espressa completamente. Questa può essere chiamata la dinamica del sé. La seconda dinamica è la spinta verso l'esistenza come attività sessuale o bisessuale. Questa dinamica ha in realtà due suddivisioni. La seconda dinamica (a) è l'atto sessuale stesso, e la seconda dinamica (b) è l'unità familiare, che include l'educazione e la cura dei figli. Questa può essere chiamata la dinamica del sesso. La terza dinamica è la spinta verso l'esistenza in gruppi di individui. Qualsiasi gruppo o parte di un'intera classe potrebbe essere considerato come parte della terza dinamica. La scuola, la società, la città, la nazione, ciascuna di queste cose fa parte della terza dinamica e ciascuna è una terza dinamica. Questa può essere chiamata la dinamica del gruppo. La quarta dinamica è la spinta verso l'esistenza come umanità. Mentre la razza bianca, per esempio, sarà considerata una terza dinamica, tutte le razze sono considerate quarta dinamica. Questa può essere chiamata la dinamica dell'umanità. La quinta dinamica è la spinta verso l'esistenza del regno animale. Include tutte le forme viventi, sia animali che vegetali. I pesci del mare, le creature dei campi o della foresta, l'erba, gli alberi, i fiori o qualsiasi cosa direttamente o intimamente motivata dalla vita. Questa può essere chiamata la dinamica animale. La sesta dinamica è la spinta verso l'esistenza in quanto universo fisico. L'universo è 'composto da materia, energia, spazio e tempo. In Scientology prendiamo la prima lettera di ciascuna di queste parole e coniamo una parola, mesto Questa può essere chiamata la dinamica dell'universo. La settima dinamica è la spinta verso l'esistenza come spirito, o degli spiriti. Qualsiasi cosa che ha a che fare con lo spirito, con o senza identità, andrà sotto l'intestazione di settima dinamica. Questa può essere chiamata la dinamica dello spirito. L'ottava dinamica è la spinta verso l'esistenza in quanto infinito, che viene identificato come Essere Supremo. Si fa attentamente notare qui, che la scienza di Scientology non si intromette nella dinamica dell'Essere Supremo. Si chiama ottava dinamica perché il simbolo dell'infinito 00 volto verso l'alto forma il numero «8». Questa può essere chiamata la dinamica dell'infinito o di Dio. (FOT, pago 36-38)"
  },
  {
   "termine": "DINAMICHE INVERTITE",
@@ -3672,7 +3667,7 @@
  {
   "termine": "DOLORE",
   "termine_en": "PAIN",
-  "definizione": "1. è composto da calore, freddo, elettrico e l'effetto combinato di una sofferenza acuta. Se si conficca una forchetta nel braccio, si sperimenta dolore. Quando si usa dolore in collegamento con il chiarimento si intende la consapevolezza di calore, freddo, elettrico e sofferenza che derivano dalla mente reattiva. Secondo degli esperimenti fatti ad Harvard, fabbricando una grata di tubi riscaldati verticali e di tubi raffreddati orizzontali ed immettendo nel tutto una debole corrente elettrica, il congegno, fatto toccare ad un corpo produrrebbe una sensazione di dolore. Non è necessario che sia formato da qualcosa di molto caldo o freddo, né che ci sia un voltaggio elevato per produrre una sensazione di dolore molto intensa. Perciò ciò che chiamiamo dolore è in sé: calore, freddo ed elettrico. Se un pc sperimenta una o più di queste cose derivanti dalla sua mente reattiva diciamo che sta sperimentando dolore. Simbolo: PN. (HCOB 8 Nov 62) 2. l'impulso sordo o acuto di calore, freddo ed elettrico. (SH Spec 202A, 621OC23) 3. la sensazione di dolore è in realtà una sensazione di perdita. È perdita di condizione di essere, perdita di posizione, perdita di consapevolezza. (COHA, pago 210) 4. troppo movimento con troppa velocità. (5203CM05B) 5. il dolore, tecnicamente, è provocato da uno sforzo opposto allo sforzo dell'individuo preso nella sua totalità. (Scn Jour 5-G) 6. dolore è la casualità provocata da improvvisi od intensi contro-sforzi. (AP&A, pago 100) 7. l'improvviso impatto di theta con mest può essere considerato una turbolenza che crea dissonanza in theta. Questo viene percepito e registrato come dolore. (SOS, pago 40) 8. theta e mest che si uniscono troppo violentemente causano un'agitazione che chiamiamo dolore. (SOS, pago 5) 9. il dolore è un segnale di non-sopravvivenza o di possibile morte. (SA, pago 27) Dolore"
+  "definizione": "1. è composto da calore, freddo, elettrico e l'effetto combinato di una sofferenza acuta. Se si conficca una forchetta nel braccio, si sperimenta dolore. Quando si usa dolore in collegamento con il chiarimento si intende la consapevolezza di calore, freddo, elettrico e sofferenza che derivano dalla mente reattiva. Secondo degli esperimenti fatti ad Harvard, fabbricando una grata di tubi riscaldati verticali e di tubi raffreddati orizzontali ed immettendo nel tutto una debole corrente elettrica, il congegno, fatto toccare ad un corpo produrrebbe una sensazione di dolore. Non è necessario che sia formato da qualcosa di molto caldo o freddo, né che ci sia un voltaggio elevato per produrre una sensazione di dolore molto intensa. Perciò ciò che chiamiamo dolore è in sé: calore, freddo ed elettrico. Se un pc sperimenta una o più di queste cose derivanti dalla sua mente reattiva diciamo che sta sperimentando dolore. Simbolo: PN. (HCOB 8 Nov 62) 2. l'impulso sordo o acuto di calore, freddo ed elettrico. (SH Spec 202A, 621OC23) 3. la sensazione di dolore è in realtà una sensazione di perdita. È perdita di condizione di essere, perdita di posizione, perdita di consapevolezza. (COHA, pago 210) 4. troppo movimento con troppa velocità. (5203CM05B) 5. il dolore, tecnicamente, è provocato da uno sforzo opposto allo sforzo dell'individuo preso nella sua totalità. (Scn Jour 5-G) 6. dolore è la casualità provocata da improvvisi od intensi contro-sforzi. (AP&A, pago 100) 7. l'improvviso impatto di theta con mest può essere considerato una turbolenza che crea dissonanza in theta. Questo viene percepito e registrato come dolore. (SOS, pago 40) 8. theta e mest che si uniscono troppo violentemente causano un'agitazione che chiamiamo dolore. (SOS, pago 5) 9. il dolore è un segnale di non-sopravvivenza o di possibile morte. (SA, pago 27)"
  },
  {
   "termine": "DOLORE FISICO",
@@ -3707,12 +3702,12 @@
  {
   "termine": "DOMANDA ZERO",
   "termine_en": "ZERO QUESTION",
-  "definizione": "nella preverifica (prechiarimento) si usa l'intero argomento da chiarire come domanda O (HCOB 1 Mar 62) v. i MODULI DELLA VERIFICA DI"
+  "definizione": "nella preverifica (prechiarimento) si usa l'intero argomento da chiarire come domanda O (HCOB 1 Mar 62) v. i MODULI DELLA VERIFICA DI SICUREZZA. questi sono domande O. (HCOB 24 Giu 62)"
  },
  {
   "termine": "SICUREZZA",
   "termine_en": "SECURITY",
-  "definizione": "questi sono domande O. (HCOB 24 Giu 62) l. sicurezza in sè è comprensione. Gli uomini che sanno sono sicuri. L'insicurezza esiste nell'assenza di conoscenza. Tutta la sicurezza deriva dalla conoscenza. (POW, pago 16) 2. solo la fiducia in te stesso è sicurezza. La tua abilità è la tua sicurezza. Non c'è nessun'altra sicurezza a parte te stesso. (HFP, pago 53) 3. non è una cosa statica. La sicurezza sta solo nella fiducia di un uomo nel raggiungimento dei propri scopi e certamente nell'avere degli scopi da raggiungere. (SOS, libro 2, pago 86)"
+  "definizione": "l. sicurezza in sè è comprensione. Gli uomini che sanno sono sicuri. L'insicurezza esiste nell'assenza di conoscenza. Tutta la sicurezza deriva dalla conoscenza. (POW, pago 16) 2. solo la fiducia in te stesso è sicurezza. La tua abilità è la tua sicurezza. Non c'è nessun'altra sicurezza a parte te stesso. (HFP, pago 53) 3. non è una cosa statica. La sicurezza sta solo nella fiducia di un uomo nel raggiungimento dei propri scopi e certamente nell'avere degli scopi da raggiungere. (SOS, libro 2, pago 86)"
  },
  {
   "termine": "DOMANDE COSA",
@@ -3847,7 +3842,7 @@
  {
   "termine": "EFFETTO",
   "termine_en": "EFFECT",
-  "definizione": "1. punto ricevente e ciò che viene ricevuto dal punto ricevente. (PAB 30) 2. una potenziale ricezione di flusso. (COHA, pago 258) Effetto"
+  "definizione": "1. punto ricevente e ciò che viene ricevuto dal punto ricevente. (PAB 30) 2. una potenziale ricezione di flusso. (COHA, pago 258)"
  },
  {
   "termine": "EFFETTO ACCETTABILE",
@@ -3862,12 +3857,7 @@
  {
   "termine": "ELENCARE ED ANNULLARE",
   "termine_en": "LISTING AND NULLING",
-  "definizione": "1. questo è qualcosa che viene elencato dal pc. È il pc che lo dice. Deriva da una domanda. l\"!.'Auditor pone la domanda, quindi il pc gli dice delle voci che l'Auditor scrive. (Classe VIII No. 11) 2. voi fate una domanda al pc, il pc vi dà una voce, una voce, una voce, una voce. L'Auditor le scrive e poi annulla l'elenco. In ogni caso ci deve essere solo una voce che ha una lettura di qualsiasi tipo in quell'elenco. (Classe VIII No. 11) v. anche"
- },
- {
-  "termine": "ELENCARE",
-  "termine_en": null,
-  "definizione": "v. anche ANNULLARE."
+  "definizione": "1. questo è qualcosa che viene elencato dal pc. È il pc che lo dice. Deriva da una domanda. l\"!.'Auditor pone la domanda, quindi il pc gli dice delle voci che l'Auditor scrive. (Classe VIII No. 11) 2. voi fate una domanda al pc, il pc vi dà una voce, una voce, una voce, una voce. L'Auditor le scrive e poi annulla l'elenco. In ogni caso ci deve essere solo una voce che ha una lettura di qualsiasi tipo in quell'elenco. (Classe VIII No. 11) v. anche ELENCARE, v. anche ANNULLARE."
  },
  {
   "termine": "ELENCARE GLI OIR",
@@ -3962,7 +3952,7 @@
  {
   "termine": "ELETTROMETRO",
   "termine_en": "E-METER",
-  "definizione": "1. l'Elettrometro Hubbard è un manufatto religioso usato per le confessioni nella Chiesa. In sé non fa nulla ed è usato solo dai ministri per aiutare i fedeli a localizzare aree di angoscia o sofferenza spirituale. (BPL 24 Set 73R II) 2. Elettrometro Hubbard. Uno strumento elettronico usato per misurare lo stato mentale ed i suoi cambiamenti negli individui per favorire la precisione e la velocità in auditing. L'Elettrometro non è destinato, né è efficace per la diagnosi, cura o prevenzione di alcuna malattia. (Scn AD) 3. usato per verificare i guadagni del pc e indicare quando ciascuna azione distinta di auditing giunge al suo termine. (HCOB 5 Apr 69R) 4. significa un «elettropsicometro», uno strumento che misura la reazione emozionale per mezzo dei piccoli impulsi elettrici generati dal pensiero. (HCOB 6 Set 71) S.I'Elettrometro vi dice cosa sta facendo la mente del prechiaro quando gli si fa pensare a qualcosa. L'Elettrometro dà l'indicazione prima che il prechiaro diventi cosciente del dato. Perciò è un Elettrometro pre-cosciente. Fa passare una piccola corrente attraverso il corpo del prechiaro, questa corrente è influenzata dalle masse mentali: immagini, circuiti e macchinari. Quando il prechiaro, che non sia ancora Chiaro, pensa a qualcosa, queste cose si spostano e questo viene registrato sull'Elettrometro. (EME, pago 8) Elettrometro"
+  "definizione": "1. l'Elettrometro Hubbard è un manufatto religioso usato per le confessioni nella Chiesa. In sé non fa nulla ed è usato solo dai ministri per aiutare i fedeli a localizzare aree di angoscia o sofferenza spirituale. (BPL 24 Set 73R II) 2. Elettrometro Hubbard. Uno strumento elettronico usato per misurare lo stato mentale ed i suoi cambiamenti negli individui per favorire la precisione e la velocità in auditing. L'Elettrometro non è destinato, né è efficace per la diagnosi, cura o prevenzione di alcuna malattia. (Scn AD) 3. usato per verificare i guadagni del pc e indicare quando ciascuna azione distinta di auditing giunge al suo termine. (HCOB 5 Apr 69R) 4. significa un «elettropsicometro», uno strumento che misura la reazione emozionale per mezzo dei piccoli impulsi elettrici generati dal pensiero. (HCOB 6 Set 71) S.I'Elettrometro vi dice cosa sta facendo la mente del prechiaro quando gli si fa pensare a qualcosa. L'Elettrometro dà l'indicazione prima che il prechiaro diventi cosciente del dato. Perciò è un Elettrometro pre-cosciente. Fa passare una piccola corrente attraverso il corpo del prechiaro, questa corrente è influenzata dalle masse mentali: immagini, circuiti e macchinari. Quando il prechiaro, che non sia ancora Chiaro, pensa a qualcosa, queste cose si spostano e questo viene registrato sull'Elettrometro. (EME, pago 8)"
  },
  {
   "termine": "ELETTROMETRO BIP",
@@ -4016,11 +4006,6 @@
  },
  {
   "termine": "ELEVATEZZA",
-  "termine_en": null,
-  "definizione": "DI ELABORAZIONE - COMPUTATIONAL"
- },
- {
-  "termine": "ALTITUDE",
   "termine_en": null,
   "definizione": "significa che l'individuo ha una rilevante abilità a pensare, ad elaborare i dati. Albert Einstein aveva una elevatezza di elaborazione. (Glossario di SOS)"
  },
@@ -4342,17 +4327,17 @@
  {
   "termine": "ESSERE DEGRADATO",
   "termine_en": "DEGRADED BEING",
-  "definizione": "gli esseri degradati trovano dolorosa qualunque cosa poiché essi sono stati indottrinati dolorosamente con metodi violenti nel passato. Perciò essi alterano qualsiasi ordine o non lo eseguono. Un essere degradato non è un soppressivo perché può avere dei guadagni di caso, ma egli è talmente PTS da lavorare solo per i soppressivi. È una specie di super continuo PTS veramente oltre la portata di una semplice S&D e viene maneggiato solo nella sezione 3 del corso or. Gli esseri degradati, prendendo spunto dai soci"
+  "definizione": "gli esseri degradati trovano dolorosa qualunque cosa poiché essi sono stati indottrinati dolorosamente con metodi violenti nel passato. Perciò essi alterano qualsiasi ordine o non lo eseguono. Un essere degradato non è un soppressivo perché può avere dei guadagni di caso, ma egli è talmente PTS da lavorare solo per i soppressivi. È una specie di super continuo PTS veramente oltre la portata di una semplice S&D e viene maneggiato solo nella sezione 3 del corso or. Gli esseri degradati, prendendo spunto dai soci SP istintivamente si risentono, odiano e cercano di ostacolare qualsiasi persona responsabile di qualsiasi cosa o qualsiasi grande essere. (HCOB 22 Mar 67)"
  },
  {
   "termine": "SP",
   "termine_en": "SP",
-  "definizione": "istintivamente si risentono, odiano e cercano di ostacolare qualsiasi persona responsabile di qualsiasi cosa o qualsiasi grande essere. (HCOB 22 Mar 67) suppressive person, persona soppressiva. (HCOB 5 Feb 66)"
+  "definizione": "suppressive person, persona soppressiva. (HCOB 5 Feb 66)"
  },
  {
   "termine": "ESSERE GENETICO",
   "termine_en": "GENETIC BEING",
-  "definizione": "V. ENTITÀ"
+  "definizione": "V. ENTITÀ GENETICA."
  },
  {
   "termine": "GENETICA ESSERE MALATO",
@@ -4397,7 +4382,7 @@
  {
   "termine": "ESTRAPOLARE",
   "termine_en": "ESTRAPOLATING",
-  "definizione": "trovare un numero sempre maggiore di applicazioni dallo stesso dato. Un accrescimento di dati mediante la teoria. (5211ClO) Estroversione"
+  "definizione": "trovare un numero sempre maggiore di applicazioni dallo stesso dato. Un accrescimento di dati mediante la teoria. (5211ClO)"
  },
  {
   "termine": "ESTROVERSIONE",
@@ -4512,7 +4497,7 @@
  {
   "termine": "FALL",
   "termine_en": "FALL",
-  "definizione": "l. una piccola fall (da mezzo centimetro ad un centimetro), una fall (circa da 2 a 5 centimetri), una fall lunga (da 5 a 7 centimetri), una lunga fall blowdown (una lunga fall seguita da «blowdown» o un movimento verso il basso del TA). Tutte le fall sono verso destra. L'Elettrometro misura la consapevolezza del pc. Troverete che la sua realtà, sulle cose che non leggono durante un accertamento, è povera. Troverete che le cose che leggono bene durante un accertamento sono quelle sulle quali egli ha una elevata realtà ed un elevato livello di interesse. (HCOB 29 Apr 69) 2. una fall avviene subito dopo la fine dell'ultima parola della domanda che è stata posta. (Note di definizione di LRH) 3. un movimento dell'ago verso la vostra destra quando siete di fronte all' Elettrometro. Può essere un movimento corto o lungo e può addirittura richiedere una regolazione del TA. Il movimento può essere sia rapido che lento. (BIEM, pago 41) 4. è chiamata anche una fall, un tuffo, ed una registrazione. Indica che -la domanda posta ha incontrato un disaccordo con la vita sul quale il pc ha realtà. maggiore o minore (EME, pago 14) Fall e"
+  "definizione": "l. una piccola fall (da mezzo centimetro ad un centimetro), una fall (circa da 2 a 5 centimetri), una fall lunga (da 5 a 7 centimetri), una lunga fall blowdown (una lunga fall seguita da «blowdown» o un movimento verso il basso del TA). Tutte le fall sono verso destra. L'Elettrometro misura la consapevolezza del pc. Troverete che la sua realtà, sulle cose che non leggono durante un accertamento, è povera. Troverete che le cose che leggono bene durante un accertamento sono quelle sulle quali egli ha una elevata realtà ed un elevato livello di interesse. (HCOB 29 Apr 69) 2. una fall avviene subito dopo la fine dell'ultima parola della domanda che è stata posta. (Note di definizione di LRH) 3. un movimento dell'ago verso la vostra destra quando siete di fronte all' Elettrometro. Può essere un movimento corto o lungo e può addirittura richiedere una regolazione del TA. Il movimento può essere sia rapido che lento. (BIEM, pago 41) 4. è chiamata anche una fall, un tuffo, ed una registrazione. Indica che -la domanda posta ha incontrato un disaccordo con la vita sul quale il pc ha realtà. maggiore o minore (EME, pago 14)"
  },
  {
   "termine": "FALLIMENTO",
@@ -5332,7 +5317,7 @@
  {
   "termine": "GRUPPI SOPPRESSIVI",
   "termine_en": "SUPPRESSIVE GROUPS",
-  "definizione": "sono definiti come quei gruppi che cercano di distruggere Scn o che si specializzano nel ferire od uccidere le persone o nel danneggiare i loro casi o che sostengono la soppressione dell'umanità. (HCO PL 29 Giu 68) GRUPPO DI CONSULENZA DI DIANETIcS - DIANETIc cOUNSELING GROUP, il gruppo di consulenza di Dianetics è formato, quando in piena azione, da Consulenti Hubbard di Dianetics, da poche persone per l'amministrazione, anche se solo part time, che si occupano dell'amministrazione dell'unità, da un diplomato Hubbard di Dianetics per istruire i Consulenti Hubbard di Dianetics nel campo, e da un Auditor di Scn che si occupa della revisione. (6905C29) Abbr. DCG. GRUPPO DI INFORMAZIONE DI DIANETIcS - DIANETIc"
+  "definizione": "sono definiti come quei gruppi che cercano di distruggere Scn o che si specializzano nel ferire od uccidere le persone o nel danneggiare i loro casi o che sostengono la soppressione dell'umanità. (HCO PL 29 Giu 68)"
  },
  {
   "termine": "INFORMATION GROUP",
@@ -5367,7 +5352,7 @@
  {
   "termine": "GUARDIA SINISTRA",
   "termine_en": "GUARD OF THE LEFT",
-  "definizione": "voi avete: represso, attento a, e non rivelato. Questi bottoni: represso, attento a, non rivelato producono sensazioni. Quando lo scopo non spara si trova sulla colonna sinistra. (SH Spec 195, 6209C27) GUARIGIONE AL TAVOLO DELLA PLASTILINA - cLAY"
+  "definizione": "voi avete: represso, attento a, e non rivelato. Questi bottoni: represso, attento a, non rivelato producono sensazioni. Quando lo scopo non spara si trova sulla colonna sinistra. (SH Spec 195, 6209C27)"
  },
  {
   "termine": "TABLE HEALING",
@@ -6007,7 +5992,7 @@
  {
   "termine": "INTROVERSIONE",
   "termine_en": "INTROVERSION",
-  "definizione": "1. esaminare troppo da vicino. (POW, pago 92) 2. una manifestazione della mente analitica che cerca di risolvere problemi con dati impropri e l'osservare l'organismo occupato in attività che non portano sopravvivenza lungo le dinamiche. (DTOT, pago 105) Introversione"
+  "definizione": "1. esaminare troppo da vicino. (POW, pago 92) 2. una manifestazione della mente analitica che cerca di risolvere problemi con dati impropri e l'osservare l'organismo occupato in attività che non portano sopravvivenza lungo le dinamiche. (DTOT, pago 105)"
  },
  {
   "termine": "INTROVERSO",
@@ -6177,7 +6162,7 @@
  {
   "termine": "LA TEC H È IN",
   "termine_en": "TEC H IS IN",
-  "definizione": "Scn viene applicata e in modo corretto. (HCOB 13 Set 65) Lattine"
+  "definizione": "Scn viene applicata e in modo corretto. (HCOB 13 Set 65)"
  },
  {
   "termine": "LATTINE",
@@ -6377,7 +6362,7 @@
  {
   "termine": "LIBERATO SUI PROBLEMI",
   "termine_en": "PROBLEMS RELEASE",
-  "definizione": "Liberato di Grado I espanso. (CG&AC 75) v. LIBERATO DI"
+  "definizione": "Liberato di Grado I espanso. (CG&AC 75) v. LIBERATO DI GRADO L."
  },
  {
   "termine": "GRADO L LIBERATO SULL'ABILITÀ",
@@ -6692,12 +6677,7 @@
  {
   "termine": "LIVELLO V",
   "termine_en": "LEVEL V",
-  "definizione": "v. HVA. LIVELLO (5), STATO DEL CASO - LEVEL (5), STATE OF"
- },
- {
-  "termine": "CASE",
-  "termine_en": null,
-  "definizione": "dub-in: alcune aree della traccia sono così pesantemente caricate che il pc è al di sotto di coscienza in esse. (HCOB 8 Giu 63) [Per una lista completa degli 8 livelli di caso della SOP 8-C, v. SCALA DELLO STATO DEL CASO]."
+  "definizione": "v. HVA. LIVELLO (5), STATO DEL CASO - LEVEL (5), STATE OF CASE, dub-in: alcune aree della traccia sono così pesantemente caricate che il pc è al di sotto di coscienza in esse. (HCOB 8 Giu 63) [Per una lista completa degli 8 livelli di caso della SOP 8-C, v. SCALA DELLO STATO DEL CASO]."
  },
  {
   "termine": "LIVELLO VI",
@@ -6767,7 +6747,7 @@
  {
   "termine": "LOCALIZZAZIONE DEL SOMATICO",
   "termine_en": "SOMATIC LOCATION",
-  "definizione": "la tecnica utilizzabile dall'Auditor mediante la quale si localizza il momento di ricezione del somatico, nello sforzo di capire se è stato ricevuto in quell'engram o di scoprire un engram che lo contenga. (DMSMH, pago 226),"
+  "definizione": "la tecnica utilizzabile dall'Auditor mediante la quale si localizza il momento di ricezione del somatico, nello sforzo di capire se è stato ricevuto in quell'engram o di scoprire un engram che lo contenga. (DMSMH, pago 226)"
  },
  {
   "termine": "LOCK",
@@ -6792,7 +6772,7 @@
  {
   "termine": "LOCK LINGUISTICI",
   "termine_en": "LANGUAGE LOCKS",
-  "definizione": "lock in cui il principale contenuto aberrativo è linguistico. Possono essere considerati restimolatori simbolici di lock mest, che sono più fondamentali. (SOS glossario) ,"
+  "definizione": "lock in cui il principale contenuto aberrativo è linguistico. Possono essere considerati restimolatori simbolici di lock mest, che sono più fondamentali. (SOS glossario)"
  },
  {
   "termine": "LOCK MEST",
@@ -7012,7 +6992,7 @@
  {
   "termine": "MANUALE DELL' AUDITOR",
   "termine_en": "AUDITOR'S HANDBOOK",
-  "definizione": "il manuale in uso ai tempi delle Conferenze di Phoenix che conteneva gli assiomi ed i procedimenti Route 1 e Route 2 della Procedura intensiva. Costituisce la base ed è incluso nella sua interezza in «La Creazione dell'Abilità Umana» (The Creation of Human Ability). (Glossario di PXL) Manopola della sensibilità"
+  "definizione": "il manuale in uso ai tempi delle Conferenze di Phoenix che conteneva gli assiomi ed i procedimenti Route 1 e Route 2 della Procedura intensiva. Costituisce la base ed è incluso nella sua interezza in «La Creazione dell'Abilità Umana» (The Creation of Human Ability). (Glossario di PXL)"
  },
  {
   "termine": "MANUALE DELL' AUDITOR DI GRUPPO",
@@ -7037,7 +7017,7 @@
  {
   "termine": "MATERIA",
   "termine_en": "MATTER",
-  "definizione": "1. un gruppo di particelle di energia collegate in un rapporto relativamente stabile l'una con l'altra. (9ACC-24, 5501C14) 2. un pezzo di materia è in effetti pensiero, sforzo ed emozione, tutti uniti nello stesso tempo. (PDC 61) 3. una particella che non ha spazio per andare da nessuna parte. (PDC 16) 4. è chiamata un pensiero molto solido che è abbastanza caotico nella sua sistemazione delle unità di attenzione che non si può fare molto a riguardo. (5206CM23B) Materia (Def. Il"
+  "definizione": "1. un gruppo di particelle di energia collegate in un rapporto relativamente stabile l'una con l'altra. (9ACC-24, 5501C14) 2. un pezzo di materia è in effetti pensiero, sforzo ed emozione, tutti uniti nello stesso tempo. (PDC 61) 3. una particella che non ha spazio per andare da nessuna parte. (PDC 16) 4. è chiamata un pensiero molto solido che è abbastanza caotico nella sua sistemazione delle unità di attenzione che non si può fare molto a riguardo. (5206CM23B)"
  },
  {
   "termine": "MATERIALI DEL CORSO",
@@ -7077,7 +7057,7 @@
  {
   "termine": "MEMORIA",
   "termine_en": "MEMORY",
-  "definizione": "1. una registrazione dell'universo fisico. Ogni memoria contiene un indicatore temporale (quando è successo) ed un tipo di movimento. Come un lago riflette gli alberi. e le nuvole in moto, così una memoria riflette l'universo fisico. Vista, suono, dolore, emozione, sforzo, conclusioni e molte altre cose sono registrate in questo statico per ogni dato istante di osservazione. Una tale memoria la chiamiamo un facsimile. (Scn 8-80, pago 13) 2. una memoria in Dn è considerata qualsiasi concetto di percetti immagazzinati nei depositi standard della memoria che sia potenzialmente ricordabile dall' «io». (DMSMH, pago 61) 3. memoria di solito significa ricordare dati di tempi recenti. (HFP, pago 26) 4. memoria ha implicitamente il significato che voi semplicemente sapete che è successo. (SH Spec 84, 6612C13) DEPOSITI STANDARD - MEMORY BANKS,"
+  "definizione": "1. una registrazione dell'universo fisico. Ogni memoria contiene un indicatore temporale (quando è successo) ed un tipo di movimento. Come un lago riflette gli alberi. e le nuvole in moto, così una memoria riflette l'universo fisico. Vista, suono, dolore, emozione, sforzo, conclusioni e molte altre cose sono registrate in questo statico per ogni dato istante di osservazione. Una tale memoria la chiamiamo un facsimile. (Scn 8-80, pago 13) 2. una memoria in Dn è considerata qualsiasi concetto di percetti immagazzinati nei depositi standard della memoria che sia potenzialmente ricordabile dall' «io». (DMSMH, pago 61) 3. memoria di solito significa ricordare dati di tempi recenti. (HFP, pago 26) 4. memoria ha implicitamente il significato che voi semplicemente sapete che è successo. (SH Spec 84, 6612C13)"
  },
  {
   "termine": "STANDARD",
@@ -7207,7 +7187,7 @@
  {
   "termine": "METODO PER INDIVIDUARE PASTICCI",
   "termine_en": "FLUB CATCH SYSTEM",
-  "definizione": "1. a Flag viene fatto un accurato FES per scoprire le aree del mondo in cui la tecnologia è stata alterata. Questo viene chiamato «metodo per individuare pasticci». Gli Auditor ed i CIS trovati in questo modo vengono mandati in Cramming nelle loro aree per perfezionare la loro tecnologia, conoscenza o"
+  "definizione": "1. a Flag viene fatto un accurato FES per scoprire le aree del mondo in cui la tecnologia è stata alterata. Questo viene chiamato «metodo per individuare pasticci». Gli Auditor ed i CIS trovati in questo modo vengono mandati in Cramming nelle loro aree per perfezionare la loro tecnologia, conoscenza o tutto per migliorare la consegna (delivery) della tecnologia. (HCOB 6 Ott 70) 2. individuare i pasticci significa quel sistema che scopre la tecnologia alterata, ne ordina la correzione e la fa correggere. In altre parole individua il pasticcio. (FO 2442R)"
  },
  {
   "termine": "MEZZO RICONOSCIMENTO",
@@ -7577,7 +7557,7 @@
  {
   "termine": "NON CONOSCERE",
   "termine_en": "NOT KNOW",
-  "definizione": "1. cercare di non ricordare. (FOT, pago 84) 2. un'effettiva abilità di «non conoscere» è un'abilità a cancellare per mezzo di un proprio ordine il passato senza sopprimerlo con l'energia o senza passare a qualsiasi altro metodo. (PAB 87) 3. nella sua manifestazione più estrema è incoscienza. Non conoscere è, in una manifestazione inferiore, la morte. La manifestazione più estrema è quando una persona non può diventare incosciente e noi fa chiamiamo follia. (SH Spec 15X, 6106e15) Non a piombo"
+  "definizione": "1. cercare di non ricordare. (FOT, pago 84) 2. un'effettiva abilità di «non conoscere» è un'abilità a cancellare per mezzo di un proprio ordine il passato senza sopprimerlo con l'energia o senza passare a qualsiasi altro metodo. (PAB 87) 3. nella sua manifestazione più estrema è incoscienza. Non conoscere è, in una manifestazione inferiore, la morte. La manifestazione più estrema è quando una persona non può diventare incosciente e noi fa chiamiamo follia. (SH Spec 15X, 6106e15)"
  },
  {
   "termine": "NON ESEGUIRE IL COMANDO DI AUDITING",
@@ -7712,7 +7692,7 @@
  {
   "termine": "O-ELETTROMETRO",
   "termine_en": "O-METER",
-  "definizione": "nel 1955 venne progettato un Elettrometro nuovo e migliore di quanto fosse mai stato costruito prima, sotto il nome commerciale registrato (trademark) di fisiogalvanometro o O-elettrometro. (PAB 52) Oggetto"
+  "definizione": "nel 1955 venne progettato un Elettrometro nuovo e migliore di quanto fosse mai stato costruito prima, sotto il nome commerciale registrato (trademark) di fisiogalvanometro o O-elettrometro. (PAB 52)"
  },
  {
   "termine": "OFF",
@@ -7722,12 +7702,7 @@
  {
   "termine": "OGGETTIVO",
   "termine_en": "OBJECTIVE",
-  "definizione": "definizione del dizionario «di o che ha a che fare con oggetti materiali in quanto distinti dai concetti, idee o credenze mentali». Significa oggetti qui ed ora in"
- },
- {
-  "termine": "PT",
-  "termine_en": null,
-  "definizione": "in opposizione a «soggettivo». (HeOB 2 Nov 57RA)"
+  "definizione": "definizione del dizionario «di o che ha a che fare con oggetti materiali in quanto distinti dai concetti, idee o credenze mentali». Significa oggetti qui ed ora in PT, in opposizione a «soggettivo». (HeOB 2 Nov 57RA)"
  },
  {
   "termine": "OGGETTO",
@@ -7962,7 +7937,7 @@
  {
   "termine": "PACCO",
   "termine_en": "PACK",
-  "definizione": "un pacco è una raccolta di materiali scritti che si accoppia ad un foglio di verifica. È fatto in vari modi: come a fogli sciolti o dentro una cartella di cartone oppure, bollettini cuciti assieme con le graffette in una copertina. Un pacco non include necessariamente un opuscolo od un libro a copertina rigida che possono essere richiesti come parte del foglio di verifica. (HeOB 19 Giu 71 III) Pacco"
+  "definizione": "un pacco è una raccolta di materiali scritti che si accoppia ad un foglio di verifica. È fatto in vari modi: come a fogli sciolti o dentro una cartella di cartone oppure, bollettini cuciti assieme con le graffette in una copertina. Un pacco non include necessariamente un opuscolo od un libro a copertina rigida che possono essere richiesti come parte del foglio di verifica. (HeOB 19 Giu 71 III)"
  },
  {
   "termine": "PACCO PREMIO",
@@ -8057,7 +8032,7 @@
  {
   "termine": "PAURA",
   "termine_en": "FEAR",
-  "definizione": "1. una condizione di allarme verso controsforzi che minacciano la sopravviyenz{l~ (HeL 7, 5203e M06A) 2. un fIu.§$Q veloce e privo di controllo. (PDe 8) 3. l'emozione della paura e la dispersione dell'energia sono la medesima cosa perché la dispersione dell'energia fa sentire una persona come se avesse voglia di scappar via. (5208CM07C) Paura"
+  "definizione": "1. una condizione di allarme verso controsforzi che minacciano la sopravviyenz{l~ (HeL 7, 5203e M06A) 2. un fIu.§$Q veloce e privo di controllo. (PDe 8) 3. l'emozione della paura e la dispersione dell'energia sono la medesima cosa perché la dispersione dell'energia fa sentire una persona come se avesse voglia di scappar via. (5208CM07C)"
  },
  {
   "termine": "PAZIENTE",
@@ -8267,7 +8242,7 @@
  {
   "termine": "PERDERE",
   "termine_en": "LOSE",
-  "definizione": "intendere fare qualcosa e non farlo, e intendere non fare qualcosa e farlo. (SH Spec 278, 6306e25) Perdita"
+  "definizione": "intendere fare qualcosa e non farlo, e intendere non fare qualcosa e farlo. (SH Spec 278, 6306e25)"
  },
  {
   "termine": "PERDITA",
@@ -8452,7 +8427,7 @@
  {
   "termine": "POSSEDERE",
   "termine_en": "OWN",
-  "definizione": "possedere non è mettere un'etichetta o portar via. Possedere è essere in grado di vedere, toccare ed occupare. (FOT, pago 33) Proprio Vedere Toccare Occupare \\\" \\ dliTr\\' \\ \\ \\ \\ \\~ \\\\~U.'.,\\J,.J.'J,\\.\" 'é' -"
+  "definizione": "possedere non è mettere un'etichetta o portar via. Possedere è essere in grado di vedere, toccare ed occupare. (FOT, pago 33)"
  },
  {
   "termine": "POSSESSO-OWNERSHIP",
@@ -8582,7 +8557,7 @@
  {
   "termine": "PRECHIARO",
   "termine_en": "PRECLEAR",
-  "definizione": "1. una persona che, attraverso i procedimenti di Scn, sta scoprendo di più riguardo sé stessa ed alla vita. (PXL, pago 20) 2. un essere spirituale che è ora sulla strada per diventare Chiaro, da cui prechiaro. (HeOB 5 Apr 69) 3. una persona che sta scoprendo delle cose su sé stessa e sta diventando più chiaro. (HeO PL 21 Ago 63) Prechiaro"
+  "definizione": "1. una persona che, attraverso i procedimenti di Scn, sta scoprendo di più riguardo sé stessa ed alla vita. (PXL, pago 20) 2. un essere spirituale che è ora sulla strada per diventare Chiaro, da cui prechiaro. (HeOB 5 Apr 69) 3. una persona che sta scoprendo delle cose su sé stessa e sta diventando più chiaro. (HeO PL 21 Ago 63)"
  },
  {
   "termine": "PRECHIARO DI CARNE CRUDA",
@@ -8712,7 +8687,7 @@
  {
   "termine": "PRIMO FENOMENO",
   "termine_en": "FIRST PHENOMENON",
-  "definizione": "quando uno studente non comprende una parola, la sezione subito dopo quella parola è come un vuoto nella sua memoria. Potete sempre rintracciare la parola appena prima del vuoto, farla comprendere e troverete miracolosamente che l'area precedentemente vuota ora non è più vuota nel bollettino. Questa è pura magia. (HCO PL 24 Set 64) ,"
+  "definizione": "quando uno studente non comprende una parola, la sezione subito dopo quella parola è come un vuoto nella sua memoria. Potete sempre rintracciare la parola appena prima del vuoto, farla comprendere e troverete miracolosamente che l'area precedentemente vuota ora non è più vuota nel bollettino. Questa è pura magia. (HCO PL 24 Set 64)"
  },
  {
   "termine": "PRIMO OVERT",
@@ -8962,7 +8937,7 @@
  {
   "termine": "PROCEDIMENTO SULLA FINE DEI CICLI",
   "termine_en": "END OF CYCLE PROCESSING",
-  "definizione": "nel procedimento sulla fine dei cicli semplicemente voi continuate a fare il mock-up di un compito, di uno scopo e così via completati e finiti, fino al punto in cui avrete ottenuto quello scopo. (5312CM21Y PROCEDIMENTO SULL'ASSEN,ZA DI ARC - OUT OF ARC"
+  "definizione": "nel procedimento sulla fine dei cicli semplicemente voi continuate a fare il mock-up di un compito, di uno scopo e così via completati e finiti, fino al punto in cui avrete ottenuto quello scopo. (5312CM21Y"
  },
  {
   "termine": "PROCESS",
@@ -9142,7 +9117,7 @@
  {
   "termine": "PROLUNGAMENTO",
   "termine_en": "PROLUNGATION",
-  "definizione": "andato avanti In continuazione (7204C07 SO III) Propiziazione"
+  "definizione": "andato avanti In continuazione (7204C07 SO III)"
  },
  {
   "termine": "PROPIZIAZIONE",
@@ -9442,22 +9417,12 @@
  {
   "termine": "QUADRO DELLE CLASSI",
   "termine_en": "CLASS CHART",
-  "definizione": "V. QUADRO"
- },
- {
-  "termine": "DI CLASSIFICAZIONE",
-  "termine_en": null,
-  "definizione": "GRADAZIONE E CONSAPEVOLEZZA."
+  "definizione": "V. QUADRO DI CLASSIFICAZIONE, GRADAZIONE E CONSAPEVOLEZZA."
  },
  {
   "termine": "QUADRO DI CLASSIFICAZIONE",
   "termine_en": null,
-  "definizione": "GRADAZIONE E CONSAPEVOLEZZA - CLASSIFICATION GRADATION AND"
- },
- {
-  "termine": "AWARENESS CHART",
-  "termine_en": null,
-  "definizione": "la strada verso Chiaro, il Ponte. Dalla parte destra del quadro vi sono varie parti chiamate gli stadi di liberazione. Dalla parte sinistra il quadro descrive le parti più importanti dell'addestramento, per mezzo del quale una persona acquisisce la conoscenza e le abilità necessarie a fornire l'auditing dei gradi di liberazione ad un'altra persona. È una guida per l'individuo dal primo momento in cui diventa vagamente consapevole di cosa è uno Scientologo o Scn e gli mostra come e dove dovrebbe muoversi per farcela. Scn contiene la completa mappa per far salire ad una persona tutti i punti della Scala della gradazione e per fargli attraversare il Ponte portandolo ad uno stato più elevato di esistenza. (Aud 107 ASHO)"
+  "definizione": "GRADAZIONE E CONSAPEVOLEZZA - CLASSIFICATION GRADATION AND AWARENESS CHART. la strada verso Chiaro, il Ponte. Dalla parte destra del quadro vi sono varie parti chiamate gli stadi di liberazione. Dalla parte sinistra il quadro descrive le parti più importanti dell'addestramento, per mezzo del quale una persona acquisisce la conoscenza e le abilità necessarie a fornire l'auditing dei gradi di liberazione ad un'altra persona. È una guida per l'individuo dal primo momento in cui diventa vagamente consapevole di cosa è uno Scientologo o Scn e gli mostra come e dove dovrebbe muoversi per farcela. Scn contiene la completa mappa per far salire ad una persona tutti i punti della Scala della gradazione e per fargli attraversare il Ponte portandolo ad uno stato più elevato di esistenza. (Aud 107 ASHO)"
  },
  {
   "termine": "QUADRO DI GRADAZIONE",
@@ -9587,7 +9552,7 @@
  {
   "termine": "RAGGRUPPATORE",
   "termine_en": "GROUPER",
-  "definizione": "l. un tipo di comandi che interpretati letteralmente, significano che tutti gli episodi sono in un solo posto sulla traccia del tempo: «Mi crolla tutto addosso», «Accade tutto insieme», «Mi capita tutto nello stesso momento», «Salderemo tutto io e te» ecc. (DMSMH, pago 213) 2. qualsiasi cosa che ammucchi la traccia' del tempo in uno o più punti. Quando il raggruppatore se ne è andato la traccia del tempo viene percepita come rettilinea. (HCOB 15 Mag 63) 3. è un certo numero di episodi che apparentemente sono collocati in un solo momento temporale. (SH Spec 56, 6109C20) 4. frasi d'azione che tendono ad ammucchiare tutti gli episodi nello stesso posto crea l'illusione che la traccia del tempo sia crollata e che tutti gli episodi si trovino nello stesso punto nel tempo. Esempio: «Mi crolla tutto addosso», «Succede tutto in una volta sola». (SOS, pago 103) ,"
+  "definizione": "l. un tipo di comandi che interpretati letteralmente, significano che tutti gli episodi sono in un solo posto sulla traccia del tempo: «Mi crolla tutto addosso», «Accade tutto insieme», «Mi capita tutto nello stesso momento», «Salderemo tutto io e te» ecc. (DMSMH, pago 213) 2. qualsiasi cosa che ammucchi la traccia' del tempo in uno o più punti. Quando il raggruppatore se ne è andato la traccia del tempo viene percepita come rettilinea. (HCOB 15 Mag 63) 3. è un certo numero di episodi che apparentemente sono collocati in un solo momento temporale. (SH Spec 56, 6109C20) 4. frasi d'azione che tendono ad ammucchiare tutti gli episodi nello stesso posto crea l'illusione che la traccia del tempo sia crollata e che tutti gli episodi si trovino nello stesso punto nel tempo. Esempio: «Mi crolla tutto addosso», «Succede tutto in una volta sola». (SOS, pago 103)"
  },
  {
   "termine": "RAGGRUPPATORE DI VALENZA",
@@ -10027,11 +9992,6 @@
  {
   "termine": "RIGHE",
   "termine_en": null,
-  "definizione": "LE QUATTRO FONDAMENTALI - LINES, BASIC"
- },
- {
-  "termine": "FOUR",
-  "termine_en": null,
   "definizione": "(1) Chi o che cosa vorrebbe ... ? (2) Chi o che cosa non vorrebbe ... ? (3) Chi o che cosa si opporrebbe a ... ? (4) Chi o che cosa non si opporrebbe a ... ? (HCOB 7 Nov 62)"
  },
  {
@@ -10147,7 +10107,7 @@
  {
   "termine": "RISE",
   "termine_en": "RISE",
-  "definizione": "(lett. ASCESA), è esattamente l'opposto di caduta, l'ago si muove verso la vostra sinistra invece che verso destra. (BIEM, pago 42) Rise e"
+  "definizione": "(lett. ASCESA), è esattamente l'opposto di caduta, l'ago si muove verso la vostra sinistra invece che verso destra. (BIEM, pago 42)"
  },
  {
   "termine": "RISO",
@@ -10182,7 +10142,7 @@
  {
   "termine": "RITARDO DI COM",
   "termine_en": "COMM LAG",
-  "definizione": "communication lag, ritardo di comunicazione. (Abil SW) ,"
+  "definizione": "communication lag, ritardo di comunicazione. (Abil SW)"
  },
  {
   "termine": "RITARDO DI COMUNICAZIONE",
@@ -10422,12 +10382,7 @@
  {
   "termine": "RUNDOWN DELL'INFORMAZIONE VITALE",
   "termine_en": "VITAL INFORMATION RUNDOWN",
-  "definizione": "detto in modo semplice: ho scoperto che laddove INFORMAZIONI VITALI NON VENGONO"
- },
- {
-  "termine": "INOLTRATE",
-  "termine_en": null,
-  "definizione": "O VENGONO NASCOSTE O FALSIFICATE, LE PERSONE RESPONSABILI DI QUESTO STANNO. DRAMMATIZZANDO DEI WITHHOLD. La risposta che si adatta a tutti i casi è un fallimento nell'inoltrare informazioni, nell'istruire, insegnare, addestrare o supervedere che deriva da un OVERT generale del passato o del presente di TRATTENERE INFORMAZIONI VITALI. Non è solo trattenere informazioni. È (o è stato) l' overt intenzionale di trattenere informazioni vitali. Sarebbe una catena molto lunga e influenzerebbe la condotta in generale; questo RD è molto potente. (HCOB 6 Ott 74R)"
+  "definizione": "detto in modo semplice: ho scoperto che laddove INFORMAZIONI VITALI NON VENGONO INOLTRATE O VENGONO NASCOSTE O FALSIFICATE, LE PERSONE RESPONSABILI DI QUESTO STANNO. DRAMMATIZZANDO DEI WITHHOLD. La risposta che si adatta a tutti i casi è un fallimento nell'inoltrare informazioni, nell'istruire, insegnare, addestrare o supervedere che deriva da un OVERT generale del passato o del presente di TRATTENERE INFORMAZIONI VITALI. Non è solo trattenere informazioni. È (o è stato) l' overt intenzionale di trattenere informazioni vitali. Sarebbe una catena molto lunga e influenzerebbe la condotta in generale; questo RD è molto potente. (HCOB 6 Ott 74R)"
  },
  {
   "termine": "RUNDOWN DELL'INTERIORIZZAZIONE",
@@ -10777,12 +10732,7 @@
  {
   "termine": "SCIENTOLOGY",
   "termine_en": "SCIENTOLOGY",
-  "definizione": "l. è composta dalla parola latina «scio», che significa sapere o distinguere, essendo collegata alla parola scindo che significa fendere (in questo modo l'idea della differenziazione è fortemente implicata), e dalla parola greca «1ogos» che significa LA PAROLA o la FORMA LISTA UNO DI - SCIENTOLOGY LIST"
- },
- {
-  "termine": "ESTERIORE MEDIANTE LA QUALE IL PENSIERO INTERIORE VIENE ESPRESSO E FATTO CONOSCERE",
-  "termine_en": null,
-  "definizione": "e anche IL PENSIERO INTERIORE o LA RAGIONE STESSA. Perciò Scientology significa CONOSCERE RIGUARDO ALLA CONOSCENZA o SCIENZA DELLA CONOSCENZA. (Scn 8-80, pago 8) 2. Scientology è diretta al thetan. Scientology viene usata per accrescere la libertà spirituale, l'intelligenza, l'abilità e per produrre immortalità. (HCOB 22 Apr 69) 3. un corpo organizzato di conoscenza, derivante da ricerche scientifiche che riguarda la vita e la mente e che include esercizi che migliorano l'intelligenza, la condizione ed il comportamento di una persona. (HCOB 9 Lug 59) 4. una filosofia religiosa nel senso più elevato poiché porta l'uomo alla libertà e verità totali. (HCOB 18 Apr 67) 5. la scienza di sapere come conoscere le risposte. È la saggezza nella tradizione di diecimila anni di ricerca in Asia e nella civiltà occidentale. È la scienza delle faccende umane che si occupa delle vitalità e delle condizioni di essere dell'uomo, e che gli mostra chiaramente un sentiero verso una maggiore libertà. (COHA, pago 9) 6. un'organizzazione di tutte le attinenze ritenute comunemente vere da tutti gli uomini in tutti i tempi, e lo sviluppo di tecnologie che dimostrano l'esistenza di nuovi fenomeni sinora non conosciuti, tecnologie utili alla creazione degli stati di essere considerati più desiderabili dall'uomo. (COHA, pago 9) 7. la scienza di sapere come conoscere. È la scienza che riguarda il conoscere le scienze. Cerca di includere sia le discipline umanistiche che quelle scientifiche come una chiarificazione della stessa conoscenza. In tutte queste cose: biologia, fisica, psicologia e la vita stessa, le capacità di Scientology possono portare ordine e semplificazione. (Scn 88008, pago 11) 8. lo studio dello spirito umano nelle sue relazioni con l'universo fisico e le sue forme di vita. (Abil 146) 9. una scienza della vita. È l'unica cosa superiore alla vita poiché si occupa di tutti i fattori della vita. Contiene i dati necessari per vivere come essere libero. Una realtà in Scientology è una realtà nella vita. (Aud 27 UK) 10. un corpo di conoscenza che, quando usato nel modo appropriato all'individuo, dà libertà e verità. (COHA, pago 251) 11. conoscenza e la sua applicazione nella conquista dell'universo materiale. (H CL 1, 5203CM03A) 12. una filosofia applicata e sviluppata per rendere più abile colui che è già abile. In questo ambito essa ha un tremendo successo. (HCO PL 27 Ott 64) 13. è una filosofia religiosa applicata che tratta dello studio della conoscenza e che attraverso l'applicazione della propria tecnologia può produrre dei cambiamenti desiderabili nelle condizioni di vita. (HeO PL 15 Apr 71R)"
+  "definizione": "l. è composta dalla parola latina «scio», che significa sapere o distinguere, essendo collegata alla parola scindo che significa fendere (in questo modo l'idea della differenziazione è fortemente implicata), e dalla parola greca «1ogos» che significa LA PAROLA o la FORMA ESTERIORE MEDIANTE LA QUALE IL PENSIERO INTERIORE VIENE ESPRESSO E FATTO CONOSCERE e anche IL PENSIERO INTERIORE o LA RAGIONE STESSA. Perciò Scientology significa CONOSCERE RIGUARDO ALLA CONOSCENZA o SCIENZA DELLA CONOSCENZA. (Scn 8-80, pago 8) 2. Scientology è diretta al thetan. Scientology viene usata per accrescere la libertà spirituale, l'intelligenza, l'abilità e per produrre immortalità. (HCOB 22 Apr 69) 3. un corpo organizzato di conoscenza, derivante da ricerche scientifiche che riguarda la vita e la mente e che include esercizi che migliorano l'intelligenza, la condizione ed il comportamento di una persona. (HCOB 9 Lug 59) 4. una filosofia religiosa nel senso più elevato poiché porta l'uomo alla libertà e verità totali. (HCOB 18 Apr 67) 5. la scienza di sapere come conoscere le risposte. È la saggezza nella tradizione di diecimila anni di ricerca in Asia e nella civiltà occidentale. È la scienza delle faccende umane che si occupa delle vitalità e delle condizioni di essere dell'uomo, e che gli mostra chiaramente un sentiero verso una maggiore libertà. (COHA, pago 9) 6. un'organizzazione di tutte le attinenze ritenute comunemente vere da tutti gli uomini in tutti i tempi, e lo sviluppo di tecnologie che dimostrano l'esistenza di nuovi fenomeni sinora non conosciuti, tecnologie utili alla creazione degli stati di essere considerati più desiderabili dall'uomo. (COHA, pago 9) 7. la scienza di sapere come conoscere. È la scienza che riguarda il conoscere le scienze. Cerca di includere sia le discipline umanistiche che quelle scientifiche come una chiarificazione della stessa conoscenza. In tutte queste cose: biologia, fisica, psicologia e la vita stessa, le capacità di Scientology possono portare ordine e semplificazione. (Scn 88008, pago 11) 8. lo studio dello spirito umano nelle sue relazioni con l'universo fisico e le sue forme di vita. (Abil 146) 9. una scienza della vita. È l'unica cosa superiore alla vita poiché si occupa di tutti i fattori della vita. Contiene i dati necessari per vivere come essere libero. Una realtà in Scientology è una realtà nella vita. (Aud 27 UK) 10. un corpo di conoscenza che, quando usato nel modo appropriato all'individuo, dà libertà e verità. (COHA, pago 251) 11. conoscenza e la sua applicazione nella conquista dell'universo materiale. (H CL 1, 5203CM03A) 12. una filosofia applicata e sviluppata per rendere più abile colui che è già abile. In questo ambito essa ha un tremendo successo. (HCO PL 27 Ott 64) 13. è una filosofia religiosa applicata che tratta dello studio della conoscenza e che attraverso l'applicazione della propria tecnologia può produrre dei cambiamenti desiderabili nelle condizioni di vita. (HeO PL 15 Apr 71R)"
  },
  {
   "termine": "SCIENTOLOGY CINQUE",
@@ -10967,7 +10917,7 @@
  {
   "termine": "SECONDARI DI ARC",
   "termine_en": "ARC SECONDARIES",
-  "definizione": "lock di ARC di tale grandezza da dover essere percorsi come engram nel processing. Oppure, dato che i lock vengono percorsi spesso come engram, lock di ARC di notevole grandezza. (Glossario di SOS) r------~ Secondario"
+  "definizione": "lock di ARC di tale grandezza da dover essere percorsi come engram nel processing. Oppure, dato che i lock vengono percorsi spesso come engram, lock di ARC di notevole grandezza. (Glossario di SOS)"
  },
  {
   "termine": "SECONDARIO",
@@ -11227,22 +11177,22 @@
  {
   "termine": "SIMBOLO",
   "termine_en": "SYMBOL",
-  "definizione": "1. un oggetto che ha massa, significato e mobilità (COHA, pago 54) 2. qualcosa che potrebbe rappresentare un idea. E' un pezzo di energia sul quale vi è un accordo che rappresenti una certa idea. (2ACC-20A, 5312CM10) 3. in realtà un simbionte è un idea che è coperta da un' energia di qualsiasi tipo. Questa è la definizione di simbionte. È una idea fissata con l'energia in un qualsiasi spazio. (2ACC-22A, 5312CM13) 4. elementi di pensiero che rappresentano stati di essere nell'universo materiale. (5203CM06A) 5. un simbionte è un'idea fissa per quanto concerne l'energia e mobile nello spazio. (COHA, pago 259) v. FETICCIO. Simbolo dell'infinito"
+  "definizione": "1. un oggetto che ha massa, significato e mobilità (COHA, pago 54) 2. qualcosa che potrebbe rappresentare un idea. E' un pezzo di energia sul quale vi è un accordo che rappresenti una certa idea. (2ACC-20A, 5312CM10) 3. in realtà un simbionte è un idea che è coperta da un' energia di qualsiasi tipo. Questa è la definizione di simbionte. È una idea fissata con l'energia in un qualsiasi spazio. (2ACC-22A, 5312CM13) 4. elementi di pensiero che rappresentano stati di essere nell'universo materiale. (5203CM06A) 5. un simbionte è un'idea fissa per quanto concerne l'energia e mobile nello spazio. (COHA, pago 259) v. FETICCIO."
  },
  {
   "termine": "SIMBOLO DELL'INFINITO",
   "termine_en": "INFINITY SIMBOL",
-  "definizione": "00 Come si vede in alcuni libri di Scientology, messo verticale: 8 (HCOB 23 Ago 65) Simbolo di Dianetics"
+  "definizione": "00 Come si vede in alcuni libri di Scientology, messo verticale: 8 (HCOB 23 Ago 65)"
  },
  {
   "termine": "SIMBOLO DI DIANETICS",
   "termine_en": "SYMBOL OF DIANETICS",
-  "definizione": "la lettera greca delta è la forma di base. Verde per la crescita, giallo per la vita. Le otto striscie rappresentano le quattro dinamiche di Dianetics: sopravvivenza come io (I), come sesso e famiglia (II), come gruppo (III), e come umanità (IV). Questo simbolo è stato disegnato nel 1950 e viene usato da allora. (Dn Today) Simbolo di Scientology"
+  "definizione": "la lettera greca delta è la forma di base. Verde per la crescita, giallo per la vita. Le otto striscie rappresentano le quattro dinamiche di Dianetics: sopravvivenza come io (I), come sesso e famiglia (II), come gruppo (III), e come umanità (IV). Questo simbolo è stato disegnato nel 1950 e viene usato da allora. (Dn Today)"
  },
  {
   "termine": "SIMBOLO DI SCIENTOLOGY",
   "termine_en": "SCIENTOLOGY SYMBOL",
-  "definizione": "1. l'S ed il doppio triangolo. L'S per scio (conoscere nel senso più completo). Il triangolo inferiore è il triangolo di ARC, i suoi punti sono affinità, realtà e comunicazione che combinati danno comprensione. Il triangolo superiore è il triangolo di KRe. I punti sono K per conoscenza (knowledge) R per responsabilità e C per controllo. (6001C03) Simbolo di Theta"
+  "definizione": "1. l'S ed il doppio triangolo. L'S per scio (conoscere nel senso più completo). Il triangolo inferiore è il triangolo di ARC, i suoi punti sono affinità, realtà e comunicazione che combinati danno comprensione. Il triangolo superiore è il triangolo di KRe. I punti sono K per conoscenza (knowledge) R per responsabilità e C per controllo. (6001C03)"
  },
  {
   "termine": "SIMBOLO DI THETA",
@@ -11322,7 +11272,7 @@
  {
   "termine": "SMEMORATORE",
   "termine_en": "FORGETTER",
-  "definizione": "1. un meccanismo smemoratore sarebbe, «non farmelo venire in mente», «se me lo ricordassi impazzirei», «non riesco a ricordare», o anche un semplice «non so», come pure la frase principale di questa famiglia: «scordatelo!». Tutte impediscono alle informazioni di arrivare all'analizzatore. Un intero caso, aperto da poco, può continuare a rispondere a qualsiasi cosa con uno di questi negatori. Uno smemoratore, usato da un alleato, completamente da solo, e praticamente senza presenza di dolore od emozione, sommergerà i dati che, come ricordo, non sarebbero aberrativi, ma che, sepolti in tal modo dallo smemoratore, sentono aberrative e letterali le cose che sono state dette appena prima di esso. (DMSMH, pago 270) 2. Qualsiasi comando engramico che fa credere all'individuo di non poter ricordare. (Glossario di NOTL) s.o. - S.O., Sea Organization, Organizzazione del Mare. (FO 50S) , \\"
+  "definizione": "1. un meccanismo smemoratore sarebbe, «non farmelo venire in mente», «se me lo ricordassi impazzirei», «non riesco a ricordare», o anche un semplice «non so», come pure la frase principale di questa famiglia: «scordatelo!». Tutte impediscono alle informazioni di arrivare all'analizzatore. Un intero caso, aperto da poco, può continuare a rispondere a qualsiasi cosa con uno di questi negatori. Uno smemoratore, usato da un alleato, completamente da solo, e praticamente senza presenza di dolore od emozione, sommergerà i dati che, come ricordo, non sarebbero aberrativi, ma che, sepolti in tal modo dallo smemoratore, sentono aberrative e letterali le cose che sono state dette appena prima di esso. (DMSMH, pago 270) 2. Qualsiasi comando engramico che fa credere all'individuo di non poter ricordare. (Glossario di NOTL)"
  },
  {
   "termine": "SOCIETA DI TONO O",
@@ -11592,7 +11542,7 @@
  {
   "termine": "SPAZIO",
   "termine_en": "SPACE",
-  "definizione": "l. lo spazio è un punto di vista della dimensione. Non esiste senza un punto di vista. (5311CM17A) 2. lo spazio non è il nulla. Lo spazio è il punto di vista sulla dimensione, e questo è ciò che è lo spazio. È quanto lontano guardiamo e se nessuno guardasse non ci sarebbe alcuno spazio. (5608COO) 3. Lo spazio è causato dal guardare da un punto. La sola realtà dello spazio è l'accordo sulla considerazione che si percepisce attraverso qualcosa e questo è ciò che chiamiamo spazio (FOT, pago 71) 4. lo spazio viene creato dall'atteggiamento di un punto di vista che delimita un'area con punti di ancoraggio. (Scn 88008, pago 17) 5. può essere definito, naturalmente invertendo i termini, in base al tempo. Lo spazio è qualcosa che per andare dal lato sinistro della tavola al lato destro richiederebbe tempo. Questo definisce una cosa in base all'altra (tempo e spazio). (5203C03B) Spazio"
+  "definizione": "l. lo spazio è un punto di vista della dimensione. Non esiste senza un punto di vista. (5311CM17A) 2. lo spazio non è il nulla. Lo spazio è il punto di vista sulla dimensione, e questo è ciò che è lo spazio. È quanto lontano guardiamo e se nessuno guardasse non ci sarebbe alcuno spazio. (5608COO) 3. Lo spazio è causato dal guardare da un punto. La sola realtà dello spazio è l'accordo sulla considerazione che si percepisce attraverso qualcosa e questo è ciò che chiamiamo spazio (FOT, pago 71) 4. lo spazio viene creato dall'atteggiamento di un punto di vista che delimita un'area con punti di ancoraggio. (Scn 88008, pago 17) 5. può essere definito, naturalmente invertendo i termini, in base al tempo. Lo spazio è qualcosa che per andare dal lato sinistro della tavola al lato destro richiederebbe tempo. Questo definisce una cosa in base all'altra (tempo e spazio). (5203C03B)"
  },
  {
   "termine": "SPAZZATURA",
@@ -12392,12 +12342,7 @@
  {
   "termine": "TONO",
   "termine_en": "TONE",
-  "definizione": "1. i toni hanno a che fare con la fisica, hanno a che fare con le vibrazioni, hanno a che fare con le vibrazioni corrispondenti nelle scienze fisiche. Significa semplicemente una condizione. (5904C08) 2. qualità del suono; la differenza tra un'onda sonora aspra o stridente ed un'onda sonora armoniosa come in una nota musicale. (SA, pago 85) 3. la condizione emozionale di un engram o la condizione generale di un individuo. (Gloss di DTOT) TONO 40 - TONE 40, 1. definito come: dare il comando e sapere che verrà eseguito a dispetto di qualsiasi apparenza contraria. Tono 40 è postulare positivamente. (PAB 133) 2. un postulato positivo che non si aspetta, prevede alcun contro-pensiero o altro, vale a dire: controllo totale. (PAB 152) 3. l'esecuzione dell'intenzione. (HCOB 23 Ago 65) 4. significa spazio illimitato a volontà. (5707C25) TONO 40 CON LIBRO E BOTTIGLIA - TONE 40 BOOK AND"
- },
- {
-  "termine": "BOTTLE",
-  "termine_en": null,
-  "definizione": "non è la procedura di apertura tramite duplicazione. Dovete essere pronti ad assumere il totale controllo del prechiaro per usare il tono 40 con libro e bottiglia. I comandi sono gli stessi, salvo che non date mai riconoscimento a nulla se non all'esecuzione dei comandi di auditing. (PAB 153)"
+  "definizione": "1. i toni hanno a che fare con la fisica, hanno a che fare con le vibrazioni, hanno a che fare con le vibrazioni corrispondenti nelle scienze fisiche. Significa semplicemente una condizione. (5904C08) 2. qualità del suono; la differenza tra un'onda sonora aspra o stridente ed un'onda sonora armoniosa come in una nota musicale. (SA, pago 85) 3. la condizione emozionale di un engram o la condizione generale di un individuo. (Gloss di DTOT) TONO 40 - TONE 40, 1. definito come: dare il comando e sapere che verrà eseguito a dispetto di qualsiasi apparenza contraria. Tono 40 è postulare positivamente. (PAB 133) 2. un postulato positivo che non si aspetta, prevede alcun contro-pensiero o altro, vale a dire: controllo totale. (PAB 152) 3. l'esecuzione dell'intenzione. (HCOB 23 Ago 65) 4. significa spazio illimitato a volontà. (5707C25) TONO 40 CON LIBRO E BOTTIGLIA - TONE 40 BOOK AND BOTTLE. non è la procedura di apertura tramite duplicazione. Dovete essere pronti ad assumere il totale controllo del prechiaro per usare il tono 40 con libro e bottiglia. I comandi sono gli stessi, salvo che non date mai riconoscimento a nulla se non all'esecuzione dei comandi di auditing. (PAB 153)"
  },
  {
   "termine": "TONO QUATTRO",
@@ -12542,12 +12487,12 @@
  {
   "termine": "TRE UNIVERSI",
   "termine_en": "THREE UNIVERSES",
-  "definizione": "1. gli universi, quindi sono in numero di tre: l'universo creato da un punto di vista, l'universo creato da tutti gli altri punti di vista, l'universo creato dall'azione comune dei punti di vista sul quale vi è un accordo di mantenimento: l'universo fisico. (COHA, pago 185) 2. il primo è il proprio universo. Il secondo sarebbe l'universo materiale, che è l'universo della materia, dell'energia, dello spazio e del tempo e che è il terreno d'incontro comune di tutti noi. Il terzo universo è in realtà un insieme di universi che potrebbe essere chiamato «l'universo dell'altro», poiché questi e tutto l'insieme degli «altri» hanno universi propri. (COHA, pago 188) TR GENERALI - GENERAL TRs, vengono usati nell'auditing regolare. Sono naturali, rilassati, mentre controllano pienamente la seduta ed il pc. (BTB 13 Mar 75) TRIANGOLO DI ARC - ARe TRIANGLE, 1. è chiamato triangolo perchè ha tre punti collegati fra loro: affinità, realtà, e il più importante, comunicazione. Senza affinità, non c'è alcuna realtà o comunicazione, senza realtà, od un certo accordo, affinità e comunicazione, sono assenti. Senza comunicazione non c'è alcuna affinità o realtà. È necessario migliorare un solo angolo di questo triangolo, di notevole valore in Scientology, per migliorare i due angoli rimanenti. L'angolo più facile da migliorare è la comunicazione: migliorando la propria abilità a comunicare si eleva allo stesso tempo la propria affinità con gli altri e la vita, come pure la portata dei propri accordi. (Scn AD) 2. Questo triangolo è un simbolo del fatto che affinità, realtà e comunicazione agiscono insieme come un'entità unica e che non si può prendere in considerazione una di esse senza tener conto delle altre due. (NOTL, pago 20) Triangolo di ARC"
+  "definizione": "1. gli universi, quindi sono in numero di tre: l'universo creato da un punto di vista, l'universo creato da tutti gli altri punti di vista, l'universo creato dall'azione comune dei punti di vista sul quale vi è un accordo di mantenimento: l'universo fisico. (COHA, pago 185) 2. il primo è il proprio universo. Il secondo sarebbe l'universo materiale, che è l'universo della materia, dell'energia, dello spazio e del tempo e che è il terreno d'incontro comune di tutti noi. Il terzo universo è in realtà un insieme di universi che potrebbe essere chiamato «l'universo dell'altro», poiché questi e tutto l'insieme degli «altri» hanno universi propri. (COHA, pago 188)"
  },
  {
   "termine": "TRIANGOLO DI KRC",
   "termine_en": "KRC TRIANGLE",
-  "definizione": "il triangolo superiore del simbolo di Scientology. I punti sono, K per conoscenza (Knowledge), R per responsabilità e C per controllo. È difficile essere responsabile o controllare qualcosa se non lo si conosce. È folle cercare di controllare qualcosa o persino di conoscere qualcosa senza responsabilità. È difficile conoscere pienamente o essere responsabili di qualcosa su cui non si ha alcun controllo, altrimenti il risultato può essere che ne veniamo sopraffatti. Piano piano si può fare andare bene tutto: aumentando la Conoscenza su tutte le dinamiche, aumentando la Responsabilità su tutte le dinamiche, aumentando il Controllo su tutte le dinamiche. (HCO PL 18 Feb 72) K R Triangolo di KRC"
+  "definizione": "il triangolo superiore del simbolo di Scientology. I punti sono, K per conoscenza (Knowledge), R per responsabilità e C per controllo. È difficile essere responsabile o controllare qualcosa se non lo si conosce. È folle cercare di controllare qualcosa o persino di conoscere qualcosa senza responsabilità. È difficile conoscere pienamente o essere responsabili di qualcosa su cui non si ha alcun controllo, altrimenti il risultato può essere che ne veniamo sopraffatti. Piano piano si può fare andare bene tutto: aumentando la Conoscenza su tutte le dinamiche, aumentando la Responsabilità su tutte le dinamiche, aumentando il Controllo su tutte le dinamiche. (HCO PL 18 Feb 72)"
  },
  {
   "termine": "TRIANGOLO SUPERIORE",
@@ -12692,7 +12637,7 @@
  {
   "termine": "UNIVERSO REALE",
   "termine_en": "REAL UNIVERSE",
-  "definizione": "quello che contiene spazio, energia e tempo. (Cert, VoI. 10, No. 12) 60S"
+  "definizione": "quello che contiene spazio, energia e tempo. (Cert, VoI. 10, No. 12)"
  },
  {
   "termine": "VALENZA",
@@ -12867,7 +12812,7 @@
  {
   "termine": "VETERANO",
   "termine_en": "OLD TIMER",
-  "definizione": "vedi SCIENTOLOGO FONDATORE. VGI - VGIs, l. abbreviazione di very good indicators (indicatori molto buoni). Significa indicatori buoni in misura molto rilevante. Indicatori estremamente buoni. (BTB 12 Apr 72R) 2. felice. (HCOB 20 Feb 70) Via"
+  "definizione": "vedi SCIENTOLOGO FONDATORE."
  },
  {
   "termine": "VIA",
@@ -12962,7 +12907,7 @@
  {
   "termine": "VOCE DA PERCORRERE",
   "termine_en": "RUNNING ITEM",
-  "definizione": "l. L'auditor sceglie la voce che ha la lettura più ampia fornita dal pc e verifica l'interesse per la catena che ne consegue. Questa è la voce da percorrere. (HCOB 18 Giu 78R) 2. l'auditor prende la voce con lettura maggiore sulla lista delle voci da percorrere (se possibile una LF o LFBD o un F/N) e verifica sul pc: «sei interessato a percorrere questa voce?» Se è così, essa diventa la voce da percorrere che percorrete con R3RA Quad. (HCOB 18 Giu 78R) VOCI DELLA ROUTINE 3D INCROCIATA - ROUTINE 3D"
+  "definizione": "l. L'auditor sceglie la voce che ha la lettura più ampia fornita dal pc e verifica l'interesse per la catena che ne consegue. Questa è la voce da percorrere. (HCOB 18 Giu 78R) 2. l'auditor prende la voce con lettura maggiore sulla lista delle voci da percorrere (se possibile una LF o LFBD o un F/N) e verifica sul pc: «sei interessato a percorrere questa voce?» Se è così, essa diventa la voce da percorrere che percorrete con R3RA Quad. (HCOB 18 Giu 78R)"
  },
  {
   "termine": "CRISS CROSS ITEMS",

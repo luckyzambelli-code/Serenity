@@ -3900,19 +3900,22 @@ export default function Serenity() {
                      'teléfono del PC conectado', 'PC-telefonen ansluten')}
             </div>
           ) : (
-            // ⚠️ STESSA TAGLIA di "apri una seduta" — segnalato dal vivo: « fallo della stessa
-            // dimensione ». Stesso padding/borderRadius/maiuscolo/interlinea di quel bottone
-            // (v. la sua nota, sopra) — `width:'100%'` perché QUESTO bottone, a differenza di
-            // quello, non condivide la riga con l'orologio: da solo nella sua riga, la stessa
-            // larghezza di sempre (272px, l'intera colonna) è il modo giusto di dire "stessa
-            // taglia", non un valore fisso in pixel che coinciderebbe per caso.
+            // ⚠️ STESSA TAGLIA di "apri una seduta" — segnalato dal vivo, DUE volte (la prima
+            // correzione non bastava: il testo, molto più lungo di "apri una seduta", andava
+            // comunque a capo su due righe e il bottone restava più alto). Stesso
+            // padding/borderRadius/maiuscolo di quel bottone, `width:'100%'` come già corretto
+            // — ma qui in più `whiteSpace:'nowrap'` con un `fontSize` ridotto QUANTO BASTA per
+            // stare su una riga sola nella stessa larghezza (272px): è la SCATOLA a dover
+            // combaciare (stessa altezza, un rigo solo, stesso padding), non il corpo del
+            // carattere — un bottone con un testo più lungo che restasse alla stessa taglia del
+            // font sarebbe per forza più alto, a prescindere da qualunque altra manopola.
             <button className="s-glass s-glass-btn" onClick={() => setSatelliteAperto(true)}
               style={{
                 cursor: 'pointer', pointerEvents: 'auto', width: '100%', boxSizing: 'border-box',
                 borderRadius: 16, padding: '12px 8px', border: 'none',
                 background: 'var(--s-disc)', color: 'var(--s-ink-soft)',
-                fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.06em',
-                textTransform: 'uppercase', lineHeight: 1.25, textAlign: 'center',
+                fontFamily: 'var(--s-sans)', fontSize: 11, letterSpacing: '0.03em',
+                textTransform: 'uppercase', lineHeight: 1.25, textAlign: 'center', whiteSpace: 'nowrap',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               }}>
               📱 {LC('opzionale — collega il telefono del PC', 'facultatif — connecter le téléphone du PC',
@@ -4328,12 +4331,20 @@ export default function Serenity() {
             SERENITY/BASIC, qui accanto): duplicava quella ora accanto a BASIC/EXPERT, due
             posti per lo stesso numero. Resta solo il cerchio, un po' più grande (22→26px) per
             restare in proporzione col resto ingrandito. */}
+        {/* ⚠️ CORRETTO — segnalato dal vivo, due volte: « il medaglione [qui] con l'immagine
+            onde.png [va ingrandito] ». `icon-serenity.png` è un ritaglio 128×128 SENZA le onde
+            (solo testa/costellazione — quello che serve a un'icona macOS, leggibile anche
+            minuscola nel Dock); `credits/ondes.png` è l'immagine intera, CON le onde che
+            attraversano la testa — la stessa da cui questo file prende il nome. Qui non serve
+            un'icona leggibile in miniatura: serve l'immagine vera, quella con le onde — 26→40px
+            (la stessa proporzione delle altre volte in questo file: il peso visivo sale, il
+            testo accanto resta una didascalia). */}
         <div style={{
-          width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+          width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
           boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.6), 0 1px 3px rgba(44,47,51,0.35)',
           border: '1px solid var(--s-ink-ghost)',
         }}>
-          <img src="/icon-serenity.png" alt="SERENITY" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src="/credits/ondes.png" alt="SERENITY" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
         {/* ⚠️ SEGNALATO: « la langue doit pouvoir être changée en cours de route » — non solo
             alle quattro domande d'avvio. Stessi due selettori di `Avvio.tsx`, condivisi da
