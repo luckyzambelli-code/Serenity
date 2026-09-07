@@ -90,12 +90,13 @@ import { GiornaleSeduta } from './GiornaleSeduta';
 import { LogoSerenity } from './LogoSerenity';
 import { BottoniStoricoProcessus } from './BottoniStoricoProcessus';
 import { ChiAuditaAssetto } from './ChiAuditaAssetto';
-import { IndicatoreConnessione, COLORE_PUNTO } from './IndicatoreConnessione';
+import { SelettoreStrumenti } from './SelettoreStrumenti';
+import { IndicatoreConnessione } from './IndicatoreConnessione';
 import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ColonnaSaluteAssessment } from './ColonnaSaluteAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, Wifi, MessageSquareOff, HelpCircle, Play, Pause, BookOpen, Clock, Timer, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, Brain, Lightbulb, StickyNote, BookText } from 'lucide-react';
+import { Settings, Headphones, Wifi, HelpCircle, Play, Pause, BookOpen, Clock, Timer, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, Brain, Lightbulb, StickyNote, BookText } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
@@ -302,11 +303,6 @@ function AiutoOverlay({ attivo }: { attivo: boolean }) {
   );
 }
 
-/** ── L'INTEGRITÀ BIOMETRICA — segnalata assente nell'audit funzionale completo: « toutes les
- *  fonctions... METER/MUSE ». `runtime/SmoothingEngine`'s `integrityTracker` è condiviso e già
- *  NUTRITO qui (`hooks/useChargeEngine` gli scrive `setTarget` a ogni METRICS_UPDATE, montato
- *  da sempre) — mancava solo chi lo LEGGE. Isolato in un suo `React.memo` come `LetturaTA`:
- *  aggiorna spesso, non deve ridisegnare tutta l'intestazione. */
 /** ── L'ORA VERA, NON QUELLA DELLA SEDUTA — segnalato: « vicino all'ora [della seduta] ci
  *  deve essere l'icona che indica cosa è, e sopra un'icona con l'ora attuale ». Due letture
  *  diverse: `orologio(tempo)` (sotto, con l'icona `Timer`) dice DA QUANTO è aperta la seduta;
@@ -325,15 +321,8 @@ const OraReale = React.memo(function OraReale() {
     </span>
   );
 });
-
-const LetturaIntegrita = React.memo(function LetturaIntegrita() {
-  const pct = useSyncExternalStore(integrityTracker.subscribe, integrityTracker.getCurrent);
-  return (
-    <span style={{ fontFamily: 'var(--s-mono)', fontVariantNumeric: 'tabular-nums' }}>
-      {Math.round(pct)}%
-    </span>
-  );
-});
+// ⚠️ `LetturaIntegrita` — SPOSTATA in `SelettoreStrumenti.tsx` (giro di scomposizione del
+// 2026-09-07): era usata SOLO nella pillola MUSE/METER/SENZA STRUMENTI, ora lì dentro.
 
 /** ── IL DIVISORE VERTICALE — separa le zone della barra comandi in alto (« si deve capire che
  *  sono cose diverse », v. dove viene usato). Era scritto a mano, lo stesso `<span>` identico,
@@ -4359,152 +4348,25 @@ export default function Serenity() {
             mouse), niente più parole sempre visibili. Il colore del punto è lo STESSO di
             `IndicatoreConnessione` (`COLORE_PUNTO`, esportato da lì apposta: una sola mappa,
             non duplicata) — un pallino invece che punto+parola, in alto a destra sull'icona. */}
-        {(() => {
-          const museStato: import('./IndicatoreConnessione').StatoConnessione =
-            muse.museConnection === 'connected'
-              ? (museGate.museContact ? 'connesso' : 'errore')
-              : muse.museConnection === 'searching' ? 'cercando' : 'in-attesa';
-          const museTitolo = `MUSE — ${
-            muse.museConnection === 'connected'
-              ? (museGate.museContact
-                  ? (batteryLevel !== null ? `${batteryLevel}%` : '✓')
-                  : t('muse_tip_not_worn') as string)
-              : muse.museConnection === 'searching' ? t('searching') as string : t('ser_connect_muse') as string
-          }`;
-          const meterStato: import('./IndicatoreConnessione').StatoConnessione =
-            theta.unavailable ? 'spento'
-              : meterC ? 'connesso'
-              : theta.status === 'connecting' ? 'cercando' : 'in-attesa';
-          const meterTitolo = `METER — ${
-            theta.unavailable ? t('ser_meter_unavailable') as string
-              : meterC ? t('theta_cans') as string
-              : theta.status === 'connecting' ? t('searching') as string : t('theta_connect') as string
-          }`;
-          const noneTitolo = `${LC('SENZA STRUMENTI', 'SANS INSTRUMENTS', 'NO INSTRUMENTS', 'SIN INSTRUMENTOS', 'UTAN INSTRUMENT')} — ${t('no_instruments_mode') as string}`;
-          {/* ⚠️ BUG TROVATO — segnalato: « quando scelgo senza strumenti e poi scelgo ad
-              esempio cans, senza strumenti resta attivato ». Vero: scegliere MUSE o METER qui
-              non spegneva mai `senzaStrumenti` — solo "NESSUNO" lo toccava (accendendolo E
-              spegnendo gli altri due). Il verso opposto mancava: connettere UNO strumento deve
-              uscire dal gruppo di controllo, non restarci accanto in silenzio. */}
-          // ⚠️ `connesso` — SOLO lo stato ATTIVO/in ascolto di ciascuno strumento, non
-          // "ricerca in corso": cliccare durante una ricerca la riprova/annulla, non stacca un
-          // dato che sta arrivando davvero. Decide, sotto, quali bottoni restano vivi durante
-          // un ciclo (v. la nota sopra, « attivare uno strumento non attivato »).
-          const strumenti: Array<{ key: string; icona: React.ReactNode; onClick?: () => void; connesso: boolean; stato: import('./IndicatoreConnessione').StatoConnessione; title: string }> = [
-            { key: 'muse', icona: <Headphones size={22} strokeWidth={1.8} />,
-              onClick: () => { if (muse.museConnection === 'disconnected') setSenzaStrumenti(false); muse.handleConnectMuse(); },
-              connesso: muse.museConnection === 'connected', stato: museStato, title: museTitolo },
-            { key: 'meter', icona: <Gauge size={22} strokeWidth={1.8} />,
-              onClick: theta.unavailable ? undefined : () => {
-                if (!meterC) setSenzaStrumenti(false);
-                (meterC ? theta.disconnect : theta.connect)();
-              },
-              connesso: meterC, stato: meterStato, title: meterTitolo },
-            {
-              key: 'none', icona: <MessageSquareOff size={22} strokeWidth={1.8} />,
-              onClick: () => {
-                const nuovo = !senzaStrumenti;
-                setSenzaStrumenti(nuovo);
-                if (nuovo) {
-                  if (muse.museConnection !== 'disconnected') muse.handleConnectMuse();
-                  if (meterC) theta.disconnect();
-                }
-              },
-              // "NESSUNO" non attiva mai uno strumento fermo — al contrario, ne stacca due se
-              // acceso: resta un gesto di DISCONNESSIONE a tutti gli effetti, mai permesso a
-              // ciclo in corso (v. `connesso` sopra), qualunque sia il suo stato attuale.
-              connesso: true, stato: senzaStrumenti ? 'connesso' : 'in-attesa', title: noneTitolo,
-            },
-          ];
-          // ⚠️ AGGIUNTO — segnalato: « selettore strumenti ridotto a un pallino di stato »
-          // (una delle quattro proposte accettate, « tutti »). In BASIC, finché l'auditor non
-          // lo tocca, le tre pillole diventano UN pallino solo — non un indicatore muto: resta
-          // un bottone vero, un click lo espande alla fila intera (che poi resta così, niente
-          // riduzione automatica: espandere è una scelta dell'auditor, richiuderla pure). La
-          // funzione di CONNETTERE non sparisce mai, si raggiunge in un click in più soltanto
-          // finché non si è già cliccato una volta. In EXPERT la fila resta sempre intera,
-          // come prima di questa modifica.
-          // `!== true`, non `=== false` — v. la nota su `espertoAttivo`/`moduleVis` (« la MNA
-          // in basic non deve apparire »): una configurazione salvata senza questo campo
-          // (`null`/`undefined`) deve leggersi come BASIC.
-          if (espertoAttivo !== true && !strumentiEspansi) {
-            const ordinePriorita: Record<import('./IndicatoreConnessione').StatoConnessione, number> =
-              { connesso: 0, errore: 1, cercando: 2, spento: 3, 'in-attesa': 4 };
-            // ⚠️ Genere esplicito sul `reduce` — trovato attivando `strict`: senza, l'accumulatore
-            // partiva dal letterale 'in-attesa' allargato a `string` semplice (non più
-            // `StatoConnessione`), e `COLORE_PUNTO[statoAggregato]` sotto perdeva il controllo
-            // del tipo sulla chiave.
-            const statoAggregato = strumenti.reduce<import('./IndicatoreConnessione').StatoConnessione>((peggiore, s) =>
-              ordinePriorita[s.stato] < ordinePriorita[peggiore] ? s.stato : peggiore, 'in-attesa');
-            const IconaAggregata = strumenti.find(s => s.stato === statoAggregato)?.icona ?? strumenti[0].icona;
-            return (
-              <button className="s-glass s-glass-btn" onClick={() => setStrumentiEspansi(true)}
-                data-help={LC('strumenti — tocca per scegliere MUSE/METER/senza', 'instruments — touche pour choisir MUSE/METER/sans',
-                  'instruments — tap to choose MUSE/METER/none', 'instrumentos — toca para elegir MUSE/METER/ninguno',
-                  'instrument — tryck för att välja MUSE/METER/inga') as string}
-                title={LC('strumenti — tocca per scegliere', 'instruments — touche pour choisir',
-                  'instruments — tap to choose', 'instrumentos — toca para elegir',
-                  'instrument — tryck för att välja') as string}
-                style={{
-                  position: 'relative', cursor: 'pointer', padding: 7, borderRadius: 999,
-                  background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)', border: 'none',
-                }}>
-                {IconaAggregata}
-                <span aria-hidden="true" style={{
-                  position: 'absolute', top: 4, right: 4, width: 7, height: 7, borderRadius: '50%',
-                  background: COLORE_PUNTO[statoAggregato],
-                  boxShadow: (statoAggregato === 'connesso' || statoAggregato === 'errore')
-                    ? `0 0 0 2px color-mix(in srgb, ${COLORE_PUNTO[statoAggregato]} 25%, transparent)` : 'none',
-                }} />
-              </button>
-            );
-          }
-          return (
-            <span className="s-glass" style={{
-              display: 'flex', alignItems: 'center', gap: 2, background: 'var(--s-disc)',
-              borderRadius: 999, padding: '4px 6px',
-            }}>
-              {strumenti.map(s => {
-                const clic = s.onClick;
-                return (
-                <button key={s.key} className="s-glass-btn" onClick={clic} title={s.title} data-help={s.title}
-                  style={{
-                    position: 'relative', border: 'none', background: 'transparent',
-                    cursor: clic ? 'pointer' : 'default', padding: 6, borderRadius: 999,
-                    display: 'flex', color: 'var(--s-ink-soft)',
-                  }}>
-                  {s.icona}
-                  <span aria-hidden="true" style={{
-                    position: 'absolute', top: 3, right: 3, width: 7, height: 7, borderRadius: '50%',
-                    background: COLORE_PUNTO[s.stato],
-                    boxShadow: (s.stato === 'connesso' || s.stato === 'errore')
-                      ? `0 0 0 2px color-mix(in srgb, ${COLORE_PUNTO[s.stato]} 25%, transparent)` : 'none',
-                    transition: 'background var(--s-slow) var(--s-ease), box-shadow var(--s-slow) var(--s-ease)',
-                  }} />
-                </button>
-                );
-              })}
-              {/* ⚠️ SEGNALATO: « la percentuale che appare non so cosa sia. Se è l'integrità
-                  biometrica deve essere spostata sotto l'icona del MUSE in alto dove si
-                  connette ». Vero — `LetturaIntegrita` (un numero nudo, "82%", nessuna parola
-                  accanto) viveva nell'angolo dell'arco, lontano da MUSE/METER/NESSUNO a cui
-                  appartiene (è la qualità del SUO segnale). Spostata qui, nella stessa pillola
-                  — "INT" davanti al numero: mai più un numero senza dire cosa sia, la stessa
-                  regola già scritta più volte in questo file. */}
-              {museOk && moduleVis.biometric && (
-                <span title={t('biometric_integrity') as string} style={{
-                  display: 'flex', alignItems: 'baseline', gap: 3, padding: '0 8px 0 2px',
-                  fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', color: 'var(--s-ink-faint)',
-                }}>
-                  <span style={{ fontSize: 'var(--s-fs-micro)', letterSpacing: '0.06em' }}>
-                    {LC('INT', 'INT', 'INT', 'INT', 'INT')}
-                  </span>
-                  <LetturaIntegrita />
-                </span>
-              )}
-            </span>
-          );
-        })()}
+        {/* ── STRUMENTI — ESTRATTO in `SelettoreStrumenti.tsx`, segnalato nella revisione
+            completa. Nessuna logica cambiata, solo il disegno — la cronologia completa delle
+            segnalazioni che l'hanno formato (« un solo bottone, solo icone », « selettore
+            ridotto a un pallino di stato in BASIC »…) vive ora dentro `SelettoreStrumenti.tsx`. */}
+        <SelettoreStrumenti
+          muse={muse}
+          theta={theta}
+          museGate={museGate}
+          meterC={meterC}
+          batteryLevel={batteryLevel}
+          senzaStrumenti={senzaStrumenti}
+          onSenzaStrumenti={setSenzaStrumenti}
+          espertoAttivo={espertoAttivo}
+          strumentiEspansi={strumentiEspansi}
+          onEspandi={() => setStrumentiEspansi(true)}
+          mostraBiometria={!!moduleVis.biometric}
+          museOk={museOk}
+          LC={LC}
+        />
         {/* ── LA SUA ESPANSIONE — due lattine/lattina sola, le due prove, la taratura TA ──────
             Segnalato: la stessa connessione non deve avere due abitudini diverse (una in alto,
             una in fondo alla pagina) da imparare. Qui, SOLO a meter connesso, una freccia
