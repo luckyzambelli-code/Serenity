@@ -10896,3 +10896,58 @@ esattamente come prima — nessuna regressione sul funzionamento normale.
 (CONDIVISO), `server-core.cjs` + `api-routes.cjs` (CONDIVISI, processo Electron) → build e
 spedizione di ENTRAMBE le app, motivata dalla natura dei file: il cuore della sicurezza di
 rete e il processo Electron condiviso, non uno stile.
+
+## Giro — 2026-09-07 (continuazione) — FASCIA 2: build universale arm64+x64 (niente firma ancora)
+
+Continuazione della revisione completa. Segnalato: « solo Apple Silicon viene distribuito,
+niente Intel » — `electron-builder --mac` senza un'architettura esplicita builda solo per
+l'host (arm64, questa macchina). Chi ha un Mac Intel non poteva installare NESSUNA delle due
+app.
+
+**`package.json` (`build.mac.target`)**: ora `{ "target": "dmg", "arch": ["arm64", "x64"] }` —
+una build produce DUE DMG per applicazione, uno per architettura. `electron-builder.serenity.cjs`
+lo eredita da sé (deriva da `b.mac`, non lo ricopia), nessuna modifica separata necessaria lì.
+
+**Il problema trovato SUBITO, prima che diventasse un bug in campo**: `node_modules/cloudflared`
+scarica UN SOLO binario al momento di `npm install`, per l'architettura della macchina che fa
+la build — sempre arm64, qui. Un pacchetto x64 costruito su QUESTA macchina avrebbe spedito
+comunque il binario cloudflared arm64 dentro l'app: su un vero Mac Intel un binario ARM non può
+girare affatto (non è come Rosetta, che va nell'altro verso) — ogni tentativo di seduta a
+distanza sarebbe fallito in silenzio, un bug peggiore del "niente app per Intel" di prima
+(l'app si sarebbe aperta, sembrando funzionante, e solo il tunnel sarebbe morto muto).
+
+Corretto su tre fronti:
+- **`scripts/fetch-cloudflared-x64.cjs`** (nuovo): scarica (una volta, idempotente) il binario
+  x64 ufficiale di `cloudflared` dalla stessa fonte GitHub che il pacchetto npm usa già per
+  l'architettura locale, in `native/cloudflared-darwin-x64` — non versionato in git (è un
+  binario di terze parti da ~40 MB, la stessa ragione per cui `node_modules/` non lo è mai),
+  richiamato da `dist:mac`/`dist:serenity` prima della build.
+- **`server-core.cjs`**: quando l'app GIRA DAVVERO su x64 (`process.arch`, non l'architettura
+  di chi ha fatto la build), `use()` (l'API di `cloudflared` già usata per il fix dell'asar)
+  punta al binario x64 invece che a quello di `node_modules` — indipendentemente da quale
+  architettura ha prodotto il pacchetto.
+- **`.gitignore`**: aggiunta la riga per il nuovo binario.
+- **`scripts/prune-dmg.cjs`**: `KEEP` da 2 a 4 — con due architetture per versione, 2 teneva
+  ormai solo "questa versione" invece di "questa e la precedente" (lo stesso margine di
+  rollback per cui `KEEP` esisteva). 4 tiene di nuovo due versioni intere.
+
+**Verificato con una build vera, non solo letto**: `npm run dist:serenity` e `npm run dist:mac`
+hanno prodotto DAVVERO 4 DMG (`Serenity`/`Equilibrium` × `arm64`/`x64`). Controllato con `file`
+l'eseguibile principale di ciascun pacchetto (`arm64`/`x86_64` rispettivamente, corretti) E il
+binario cloudflared dentro `Resources/` della build x64 (`x86_64`, quello giusto — non quello
+di `node_modules`, che sarebbe stato arm64).
+
+**Ancora NON risolto, di proposito**: nessuna firma né notarizzazione Apple — richiede un
+account Developer ID che non è nella disponibilità di chi scrive questo codice. Un Mac Intel
+che scarica il DMG x64 vedrà lo stesso avviso Gatekeeper di sempre (tasto destro → Apri, o
+peggio "l'app è danneggiata" su macOS più recenti) — il prossimo passo della fascia 2, in
+attesa delle credenziali dell'utente.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato),
+`npx vitest run` 726/726 verdi, più le due build reali sopra.
+
+**File toccati**: `package.json`, `.gitignore`, `scripts/prune-dmg.cjs` (CONDIVISI),
+`scripts/fetch-cloudflared-x64.cjs` (nuovo, CONDIVISO), `server-core.cjs` (CONDIVISO) → build
+e spedizione di entrambe le app, entrambe le architetture.
+
+**Build**: SERENITY 3.0.284 (arm64 + x64) + EQUILIBRIUM 2.0.289 (arm64 + x64).

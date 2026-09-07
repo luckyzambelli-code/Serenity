@@ -131,9 +131,29 @@ function startTunnel(port) {
     try {
       const { Tunnel, use, DEFAULT_CLOUDFLARED_BIN } = require('cloudflared');
 
+      // ⚠️ AGGIUNTO — segnalato nella revisione completa: « solo Apple Silicon viene
+      // distribuito, niente Intel ». `node_modules/cloudflared` scarica UN SOLO binario al
+      // momento di `npm install`, per l'architettura della macchina che fa la build (arm64,
+      // qui) — un pacchetto x64 costruito sulla STESSA macchina spedirebbe comunque il binario
+      // arm64 dentro l'app, e ogni tunnel fallirebbe in silenzio su un vero Mac Intel. Il
+      // binario x64 (scaricato una volta dalla stessa fonte ufficiale di `cloudflared` su
+      // GitHub) vive in `native/`, come `sm-stt` — `use()` (la stessa funzione già chiamata
+      // due righe sotto per il fix dell'asar) lo sostituisce quando l'app GIRA DAVVERO su x64,
+      // indipendentemente da quale architettura ha fatto la build. `process.resourcesPath` è
+      // `undefined` fuori da Electron (modalità "Chrome"/`server.cjs`) — `path.join` non va in
+      // crash, semplicemente non trova nulla lì e il ripiego su `native/` (valido anche in
+      // quella modalità) prende il suo posto.
+      const isMacX64 = process.platform === 'darwin' && process.arch === 'x64';
+      if (isMacX64) {
+        const packaged = path.join(process.resourcesPath || '', 'cloudflared-darwin-x64');
+        const devPath  = path.join(__dirname, 'native', 'cloudflared-darwin-x64');
+        const x64Bin   = fs.existsSync(packaged) ? packaged : devPath;
+        if (fs.existsSync(x64Bin)) use(x64Bin);
+      }
+
       // Re-apply asar path fix in case require('cloudflared') was called fresh here
       const binPath = DEFAULT_CLOUDFLARED_BIN;
-      if (binPath && binPath.includes('.asar') && !binPath.includes('.asar.unpacked')) {
+      if (!isMacX64 && binPath && binPath.includes('.asar') && !binPath.includes('.asar.unpacked')) {
         use(binPath.replace(/\.asar([/\\])/, '.asar.unpacked$1'));
       }
 

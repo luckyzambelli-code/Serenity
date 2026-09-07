@@ -14,7 +14,13 @@
 const fs = require('fs');
 const path = require('path');
 
-const KEEP = 2; // how many newest DMGs to keep, PER APPLICATION
+// ⚠️ 2 → 4 — segnalato nella revisione completa: « solo Apple Silicon viene distribuito, niente
+// Intel ». Da quando `package.json`'s `build.mac.target` costruisce ENTRAMBE le architetture
+// (arm64 + x64) per ogni versione, una singola build produce due file per applicazione — con
+// KEEP fermo a 2 quel margine di rollback (« tieni anche la versione precedente ») si sarebbe
+// silenziosamente ridotto a "tieni solo questa versione, nelle sue due architetture". 4 tiene
+// di nuovo due versioni intere (2 architetture ciascuna) per applicazione.
+const KEEP = 4; // how many newest DMGs to keep, PER APPLICATION (2 versions × 2 archs)
 const dir = path.join(__dirname, '..', 'release');
 
 try {

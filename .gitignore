@@ -16,6 +16,12 @@ release/
 # grafo di Graphify — rigenerato da `graphify update .`, mai a mano.
 graphify-out/
 
+# cloudflared per Intel (x64) — binario di terze parti da ~40 MB, scaricato da
+# `scripts/fetch-cloudflared-x64.cjs` (la stessa fonte ufficiale di GitHub che
+# `node_modules/cloudflared` usa già per l'architettura della macchina locale),
+# mai versionato — la stessa ragione per cui `node_modules/` non lo è.
+native/cloudflared-darwin-x64
+
 # Riferimenti per la TARATURA (video degli F/N reali filmati sul Theta-Meter).
 # Servono a tarare, non a far girare l'app: 115 MB che in git non tornerebbero mai indietro.
 #

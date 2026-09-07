@@ -1,7 +1,7 @@
 {
   "name": "staticmeter",
   "private": true,
-  "version": "2.0.288",
+  "version": "2.0.289",
   "main": "main.cjs",
   "type": "module",
   "scripts": {
@@ -11,7 +11,7 @@
     "clean": "rm -rf dist release",
     "lint": "eslint src",
     "electron": "electron .",
-    "dist:mac": "node scripts/bump-version.cjs && npm run build:stt && npm run build && electron-builder --mac && node scripts/prune-dmg.cjs",
+    "dist:mac": "node scripts/bump-version.cjs && npm run build:stt && node scripts/fetch-cloudflared-x64.cjs && npm run build && electron-builder --mac && node scripts/prune-dmg.cjs",
     "dist:win": "node scripts/bump-version.cjs && npm run build && electron-builder --win",
     "dist:win-serenity": "node scripts/bump-serenity.cjs && npm run build && electron-builder --win --config electron-builder.serenity.cjs",
     "serve": "node server.cjs",
@@ -22,7 +22,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "corpus": "tsx scripts/corpus-report.ts",
-    "dist:serenity": "node scripts/bump-serenity.cjs && npm run build:stt && npm run build && electron-builder --mac --config electron-builder.serenity.cjs && node scripts/prune-dmg.cjs"
+    "dist:serenity": "node scripts/bump-serenity.cjs && npm run build:stt && node scripts/fetch-cloudflared-x64.cjs && npm run build && electron-builder --mac --config electron-builder.serenity.cjs && node scripts/prune-dmg.cjs"
   },
   "dependencies": {
     "@neurosity/pipes": "^5.2.1",
@@ -100,7 +100,13 @@
       "category": "public.app-category.medical",
       "icon": "build/icon.icns",
       "target": [
-        "dmg"
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
       ],
       "entitlements": "entitlements.mac.plist",
       "entitlementsInherit": "entitlements.mac.plist",
@@ -119,6 +125,10 @@
         {
           "from": "native/sm-stt",
           "to": "sm-stt"
+        },
+        {
+          "from": "native/cloudflared-darwin-x64",
+          "to": "cloudflared-darwin-x64"
         }
       ]
     },
@@ -153,5 +163,5 @@
       "artifactName": "${productName}-${version}-setup.${ext}"
     }
   },
-  "serenityVersion": "3.0.283"
+  "serenityVersion": "3.0.284"
 }
