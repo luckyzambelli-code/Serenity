@@ -11472,3 +11472,40 @@ collegare): verificato solo per tipi/struttura, non visivamente — onestamente 
 taciuto.
 
 tsc --noEmit pulito, lint 324 warning/0 errori (invariato), vitest 754/754.
+
+## Giro — 2026-09-07 — FinestreSovrapposte: Guida, Crediti, HELP a post-it, Storico, Processus
+
+Ottavo pezzo staccato dal corpo di `Serenity.tsx`: i modali a tutta pagina montati fratelli
+dell'`<header>` — Guida, la modalità HELP a post-it (`AiutoOverlay`, con l'algoritmo `impila`
+di posizionamento), Crediti, l'animazione iniziale, Dizionario, Storico (`HistoryModal`,
+caricato `lazy`), Processus e il visore PDF.
+
+- `src/serenity/FinestreSovrapposte.tsx` (nuovo, 298 righe): tutti i modali, copiati verbatim —
+  ogni commento storico preservato. `AiutoOverlay`/`impila`/`POSTIT_W`/`POSTIT_H` (prima funzioni
+  locali di `Serenity.tsx` usate SOLO qui) e il caricamento `lazy` di `HistoryModal` si sono
+  trasferiti con lui, non duplicati. `t`/`lang`/`LC` presi internamente via `useI18n`/`pick5`.
+- `Serenity.tsx`: 3957 → 3790 righe. Rimossi gli import ormai inutilizzati (`GuideModal`,
+  `CreditsModal`, `DizionarioModal`, `ProcessusModal`, `apriCartellaProcedimenti`, `lazy`,
+  `Suspense`) e la vecchia dichiarazione locale `const HistoryModal = lazy(...)`.
+
+Verificato dal vivo, uno per uno: **Crediti** (SERENITY v3.0.292, i tre nomi, copyright) —
+**Dizionario** (2746 voci, ricerca funzionante) — **Storico** (`HistoryModal` lazy-loaded,
+mostra le sedute chiuse in questa stessa sessione di test con PDF/dettagli briefing) — **HELP a
+post-it** (`AiutoOverlay`, il pezzo con vera logica propria: tutti i post-it compaiono nel posto
+giusto, l'algoritmo `impila` li impila correttamente su più righe quando i bottoni sono vicini
+— CONFIG/MUSE/METER/SENZA STRUMENTI in alto a destra, verificato visivamente). Un errore
+`ReferenceError: lazy is not defined` è comparso nel log della console del browser di sviluppo:
+confermato TRANSITORIO (timestamp di un HMR intermedio fra due `Edit` consecutivi, quando
+l'import di `lazy` era già stato tolto ma la vecchia dichiarazione non ancora) — un refresh
+completo della pagina, dopo che entrambe le modifiche erano concluse, non lo riproduce più;
+`tsc --noEmit` sul file finale è pulito.
+
+tsc --noEmit pulito, lint 324 warning/0 errori (invariato), vitest 754/754.
+
+## Bilancio della scomposizione — fine del giro odierno
+
+Dall'inizio della sessione: **7058 → 3790 righe** in `Serenity.tsx` (−3268, il 46% del file),
+spostate in 20 file dedicati sotto `src/serenity/`. Ricercati ulteriori frammenti dopo questo
+giro: quel che resta (il banner "MUSE COLLEGATO MA NON INDOSSATO", il cassetto del meter) è
+sotto le 20 righe ciascuno — troppo piccolo perché un file a sé aggiunga chiarezza invece di
+puro overhead. La scomposizione di `Serenity.tsx` si considera completa per questo giro.
