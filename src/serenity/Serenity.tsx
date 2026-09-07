@@ -68,7 +68,7 @@ import { SQUEEZE_TARGET_OFFSET } from '../engine/thetaSetup';
 import { sessionRecorder } from '../engine/SessionRecorder';
 import { sessionRecord, cycleRecord, fnRecord, itemRecord, toneRecord, chiaveItem } from '../engine/corpus';
 import { corpusWrite, corpusAvailable } from '../lib/corpusWriter';
-import { getProfiles, getPcProfiles, saveSession, saveSessionPdf, saveSessionPdfAsync, getAllProcessusFiles, getSessionsByProfile } from '../lib/storage';
+import { getProfiles, getPcProfiles, saveSession, saveSessionPdf, saveSessionPdfAsync, getAllProcessusFiles } from '../lib/storage';
 import { isServerAvailable, serverGetProcessusList, serverProcessusUrl, serverSaveSessionPdf } from '../lib/serverStorage';
 import { ProcessusModal, type ProcessusEntry } from '../components/ProcessusModal';
 import { costruisciRiepilogo, generaPdf, type SerenityReportInput } from './sessionReport';
@@ -88,12 +88,14 @@ import { PannelloMna } from './PannelloMna';
 import { ZonaCamere } from './ZonaCamere';
 import { GiornaleSeduta } from './GiornaleSeduta';
 import { LogoSerenity } from './LogoSerenity';
+import { BottoniStoricoProcessus } from './BottoniStoricoProcessus';
+import { ChiAuditaAssetto } from './ChiAuditaAssetto';
 import { IndicatoreConnessione, COLORE_PUNTO } from './IndicatoreConnessione';
 import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ColonnaSaluteAssessment } from './ColonnaSaluteAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, SlidersHorizontal, Brain, Lightbulb, StickyNote, BookText } from 'lucide-react';
+import { Settings, Headphones, Gauge, Wifi, MessageSquareOff, HelpCircle, Play, Pause, BookOpen, Clock, Timer, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, Brain, Lightbulb, StickyNote, BookText } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
@@ -4280,47 +4282,14 @@ export default function Serenity() {
             `Impostazioni.tsx`: qui restano visibili per tutta la seduta, non solo prima. */}
         <SelettoreTema />
         <SelettoreLingua />
-        {/* ── STORICO E PROCESSUS, DOPO IL BOTTONE LINGUA — segnalato: « les boutons History et
-            Processus après le bouton langue ». Stavano subito dopo il numero di versione, PRIMA
-            di tema/lingua — spostati dopo. Stessa icona, stesso `onClick`, nessuna logica
-            toccata — solo la posizione. */}
-        {/* ── IL NUMERO SOPRA I DUE BOTTONI — segnalato: « i bottoni History e Processus devono
-            indicare il numero di elementi presenti sul bottone ». `getSessionsByProfile`
-            (già usato da `HistoryModal` per lo stesso conto — sincrona, localStorage, non
-            l'archivio CORPUS) per questo auditor; `processusPdfs.length`, lo stato già in
-            mano. Un pallino in alto a destra sul bottone, come un contatore di notifiche —
-            assente (nessun numero) quando l'archivio è vuoto, per non gridare uno zero. */}
-        <button className="s-glass s-glass-btn" onClick={() => setHistoryAperto(true)} title={t('sidebar_history') as string} data-help={t('sidebar_history') as string} style={{
-          position: 'relative', cursor: 'pointer', padding: 8, borderRadius: 999,
-          background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
-        }}>
-          <HistoryIcon size={22} strokeWidth={1.8} />
-          {(() => {
-            const n = (() => { try { return getSessionsByProfile(avvio?.auditorId || '_default').length; } catch { return 0; } })();
-            return n > 0 ? (
-              <span style={{
-                position: 'absolute', top: -4, right: -4, minWidth: 17, height: 17, borderRadius: 999,
-                background: 'var(--s-ink)', color: 'var(--s-ground)',
-                fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px',
-              }}>{n}</span>
-            ) : null;
-          })()}
-        </button>
-        <button className="s-glass s-glass-btn" onClick={() => { setProcessusSoloComandi(false); setProcessusAperto(true); }} title={t('processus_modal_title') as string} data-help={t('processus_modal_title') as string} style={{
-          position: 'relative', cursor: 'pointer', padding: 8, borderRadius: 999,
-          background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
-        }}>
-          <BookOpen size={22} strokeWidth={1.8} />
-          {processusPdfs.length > 0 && (
-            <span style={{
-              position: 'absolute', top: -4, right: -4, minWidth: 17, height: 17, borderRadius: 999,
-              background: 'var(--s-ink)', color: 'var(--s-ground)',
-              fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px',
-            }}>{processusPdfs.length}</span>
-          )}
-        </button>
+        {/* ── STORICO E PROCESSUS — ESTRATTI in `BottoniStoricoProcessus.tsx`, segnalato nella
+            revisione completa. Nessuna logica cambiata, solo il disegno. */}
+        <BottoniStoricoProcessus
+          auditorId={avvio?.auditorId}
+          processusCount={processusPdfs.length}
+          onApriStorico={() => setHistoryAperto(true)}
+          onApriProcessus={() => { setProcessusSoloComandi(false); setProcessusAperto(true); }}
+        />
         {/* ── DA QUI IN POI, ZONE SEPARATE E NOMINATE ─────────────────────────────────────────
             Segnalato: « en haut tu dois expliciter les écrits pour comprendre de quoi il
             s'agit, pas seulement les séparer. Il faut qu'on comprenne que ce sont des choses
@@ -4331,162 +4300,32 @@ export default function Serenity() {
             gridare — e le sole DUE zone davvero ambigue (STRUMENTI/A DISTANZA, più avanti:
             stessa parola "MUSE" poteva dire due dispositivi diversi) hanno anche il nome. */}
         <Divisore />
-        {/* Chi audita, chi si audita, e dove — detto in una riga sola e in grigio: sono cose
-            che si controllano una volta all'inizio, non che si guardano in seduta.
-            ⚠️ Segnalato: « met un icone... pour l'auditeur (SOLO, Expert, etc.) ». Le STESSE
-            icone di `Avvio.tsx` per queste stesse scelte (User/Users per solo/con preclear,
-            Wrench per esperto, Wifi per a distanza) — non un secondo set da imparare. */}
-        {/* ── STESSA PILLOLA DI VETRO DEGLI INDICATORI DI CONNESSIONE — segnalato: « le même
-            style pour les cycles doit être utilisé pour les inscriptions en haut ». Non più
-            parole nude: un'unica pillola `.s-glass`, come `IndicatoreConnessione` qui accanto —
-            stesso materiale per la stessa famiglia di informazioni (chi/come/dove di questa
-            seduta), non un secondo linguaggio visivo per dire cose simili. */}
-        <span className="s-glass" style={{
-          fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-soft)', display: 'flex', alignItems: 'center', gap: 10,
-          background: 'var(--s-disc)', padding: '5px 12px', borderRadius: 999,
-        }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            {avvio.solo
-              ? <User size={24} strokeWidth={1.8} aria-hidden="true" />
-              : <Users size={24} strokeWidth={1.8} aria-hidden="true" />}
-            {nomeAuditor}{avvio.solo ? ` · ${t('ser_alone_tag')}` : ` · ${nomePreclear}`}
-          </span>
-          {avvio.distanza && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <Wifi size={24} strokeWidth={1.8} aria-hidden="true" />
-              {t('ser_remote_tag')}
-            </span>
-          )}
-          {/* ── L'ASSETTO, UN'UNICA ICONA — v. la nota su `assettoAperto`, sopra. Prima qui
-              c'erano fino a TRE cose sempre in chiaro (interruttore Basic/Expert, cambia-
-              persone, salva-configurazione) — le stesse quattro domande che `Avvio.tsx` pone
-              UNA VOLTA sola, tornate a vista per tutta la seduta. Nessuna tolta: solo dietro
-              un solo gesto in più, non più tutte davanti agli occhi ad ogni sguardo alla
-              barra. */}
-          <div style={{ position: 'relative' }}>
-            <button
-              className="s-glass-btn"
-              onClick={() => setAssettoAperto(v => !v)}
-              title={LC('assetto della seduta — livello, e chi audita', 'réglages de la séance — niveau, et qui audite',
-                'session setup — level, and who is auditing', 'ajustes de la sesión — nivel, y quién audita',
-                'sessionsinställningar — nivå, och vem som auditerar') as string}
-              data-help={LC('assetto della seduta — livello, e chi audita', 'réglages de la séance — niveau, et qui audite',
-                'session setup — level, and who is auditing', 'ajustes de la sesión — nivel, y quién audita',
-                'sessionsinställningar — nivå, och vem som auditerar') as string}
-              style={{
-                display: 'flex', alignItems: 'center', border: 'none', background: 'none',
-                cursor: 'pointer', padding: 2, color: 'var(--s-ink-faint)', lineHeight: 0,
-              }}>
-              <SlidersHorizontal size={22} strokeWidth={1.8} aria-hidden="true" />
-            </button>
-            {assettoAperto && (
-              <div className="s-glass s-glass-lift" style={{
-                position: 'absolute', top: '100%', right: 0, marginTop: 8, zIndex: 40,
-                display: 'flex', flexDirection: 'column', gap: 4, padding: 8,
-                borderRadius: 12, background: 'var(--s-disc)', minWidth: 260,
-              }}>
-                {/* ── LIVELLO — stesso interruttore di prima, in riga invece che compresso
-                    dentro la pillola: dice il livello ATTUALE, lo capovolge al tocco. */}
-                <button
-                  onClick={() => setAvvio(a => a ? { ...a, esperto: !a.esperto } : a)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 10, border: 'none', background: 'none',
-                    cursor: 'pointer', padding: '8px 6px', borderRadius: 8, textAlign: 'left',
-                    fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
-                  }}>
-                  {avvio.esperto
-                    ? <Wrench size={20} strokeWidth={1.8} aria-hidden="true" />
-                    : <CircleUser size={20} strokeWidth={1.8} aria-hidden="true" />}
-                  {avvio.esperto ? t('ser_expert_tag') : t('ser_normal_tag')}
-                  <span style={{ marginLeft: 'auto', fontSize: 'var(--s-fs-sm)', color: 'var(--s-ink-faint)' }}>
-                    {LC('cambia', 'changer', 'change', 'cambiar', 'ändra')}
-                  </span>
-                </button>
-                {/* ── CAMBIA AUDITOR O PRECLEAR — solo prima di aprire (v. `ricomincia`: chiude
-                    anche la rete a distanza, non si fa a metà seduta). */}
-                {!aperta && (
-                  <button
-                    onClick={() => { setAssettoAperto(false); ricomincia(); }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 10, border: 'none', background: 'none',
-                      cursor: 'pointer', padding: '8px 6px', borderRadius: 8, textAlign: 'left',
-                      fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
-                    }}>
-                    <UserCog size={20} strokeWidth={1.8} aria-hidden="true" />
-                    {t('ser_change_people')}
-                  </button>
-                )}
-                {/* ── SALVA QUESTA CONFIGURAZIONE — stessa azione/stesso stato di prima
-                    (`salvaConfigAperto`/`salvaConfigurazione`), solo dentro questo pannello
-                    invece che nella sua propria icona a parte nella pillola. */}
-                {!aperta && (
-                  <>
-                    <button
-                      onClick={() => { setSalvaConfigAperto(v => !v); setConfigSalvata(false); }}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 10, border: 'none', background: 'none',
-                        cursor: 'pointer', padding: '8px 6px', borderRadius: 8, textAlign: 'left',
-                        fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
-                      }}>
-                      <Save size={20} strokeWidth={1.8} aria-hidden="true" />
-                      {LC('salva questa configurazione', 'sauvegarder cette configuration',
-                        'save this configuration', 'guardar esta configuración', 'spara denna konfiguration')}
-                    </button>
-                    {salvaConfigAperto && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 6px 8px' }}>
-                        <span style={{ fontSize: 'var(--s-fs-sm)', lineHeight: 1.5, color: 'var(--s-ink-faint)' }}>
-                          {LC('auditor, preclear, locale/distanza, e gli strumenti connessi in questo momento — tutto insieme.',
-                            'auditeur, préclair, local/distance, et les instruments connectés en ce moment — le tout ensemble.',
-                            'auditor, preclear, local/distance, and the instruments connected right now — all together.',
-                            'auditor, preclear, local/distancia, y los instrumentos conectados ahora mismo — todo junto.',
-                            'auditor, preclear, lokal/distans, och instrumenten som är anslutna just nu — allt tillsammans.')}
-                        </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {/* ⚠️ `autoFocus` — il cassetto si apre già col cursore acceso nel
-                              campo, e INVIO salva, lo stesso gesto del campo gemello nel
-                              dialogo d'apertura. */}
-                          <input
-                            autoFocus
-                            value={nomeConfigDaSalvare}
-                            onChange={e => { setNomeConfigDaSalvare(e.target.value); setConfigSalvata(false); }}
-                            onKeyDown={e => { if (e.key === 'Enter' && nomeConfigDaSalvare.trim()) {
-                              salvaConfigurazione(nomeConfigDaSalvare, avvio,
-                                { muse: museOk, theta: meterC, none: senzaStrumenti || (!museOk && !meterC) }, lang);
-                              setConfigSalvata(true);
-                            } }}
-                            placeholder={LC('nome di questa configurazione…', 'nom de cette configuration…',
-                              'name for this configuration…', 'nombre de esta configuración…', 'namn för denna konfiguration…') as string}
-                            style={{
-                              flex: 1, border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
-                              outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
-                              padding: '2px 4px',
-                            }}
-                          />
-                          <button
-                            disabled={!nomeConfigDaSalvare.trim()}
-                            onClick={() => {
-                              salvaConfigurazione(nomeConfigDaSalvare, avvio,
-                                { muse: museOk, theta: meterC, none: senzaStrumenti || (!museOk && !meterC) }, lang);
-                              setConfigSalvata(true);
-                            }}
-                            style={{
-                              border: 'none', background: 'none', cursor: nomeConfigDaSalvare.trim() ? 'pointer' : 'default',
-                              opacity: nomeConfigDaSalvare.trim() ? 1 : 0.4,
-                              fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink-soft)', whiteSpace: 'nowrap',
-                            }}>
-                            {configSalvata
-                              ? LC('salvata ✓', 'enregistrée ✓', 'saved ✓', 'guardada ✓', 'sparad ✓')
-                              : LC('salva', 'enregistrer', 'save', 'guardar', 'spara')}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </span>
+        {/* ── CHI AUDITA + ASSETTO — ESTRATTI in `ChiAuditaAssetto.tsx`, segnalato nella revisione
+            completa. Ogni azione composta (cambia livello, ricomincia, salva configurazione)
+            resta decisa QUI — il componente riceve solo "cosa succede quando premo", mai la
+            logica di cosa succede davvero. La cronologia completa delle segnalazioni che hanno
+            formato questo pannello vive ora dentro `ChiAuditaAssetto.tsx`. */}
+        <ChiAuditaAssetto
+          avvio={avvio}
+          nomeAuditor={nomeAuditor}
+          nomePreclear={nomePreclear}
+          aperta={aperta}
+          assettoAperto={assettoAperto}
+          onToggleAssetto={() => setAssettoAperto(v => !v)}
+          onCambiaLivello={() => setAvvio(a => a ? { ...a, esperto: !a.esperto } : a)}
+          onCambiaPersone={() => { setAssettoAperto(false); ricomincia(); }}
+          salvaConfigAperto={salvaConfigAperto}
+          onToggleSalvaConfig={() => { setSalvaConfigAperto(v => !v); setConfigSalvata(false); }}
+          configSalvata={configSalvata}
+          nomeConfigDaSalvare={nomeConfigDaSalvare}
+          onCambiaNomeConfig={v => { setNomeConfigDaSalvare(v); setConfigSalvata(false); }}
+          onSalvaConfig={() => {
+            salvaConfigurazione(nomeConfigDaSalvare, avvio,
+              { muse: museOk, theta: meterC, none: senzaStrumenti || (!museOk && !meterC) }, lang);
+            setConfigSalvata(true);
+          }}
+          LC={LC}
+        />
         <Divisore />
         </>
         )}
