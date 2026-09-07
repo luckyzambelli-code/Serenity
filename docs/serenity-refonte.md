@@ -11393,3 +11393,57 @@ il badge "in pausa" e l'icona Play/Pause; chiudere la seduta torna alla schermat
 lo storico aggiornato (badge "1"). Nessun errore console riconducibile al cambiamento.
 
 tsc --noEmit pulito, lint 324 warning/0 errori (invariato), vitest 754/754.
+
+## Giro — 2026-09-07 — GruppoAlto/GruppoBasso: l'ago, l'arco, il pezzo più a rischio
+
+Quinto e sesto pezzo del CORPO di `Serenity.tsx` — insieme, il taglio più grande e più a rischio
+di tutta la scomposizione. Quello che i commenti storici del file chiamavano già "gruppoAlto"/
+"gruppoBasso" (un'unica IIFE da ~1500 righe, mai isolata prima) è ora due componenti veri.
+
+**Perché era diverso da tutto il resto**: non UI che chiama sotto-componenti — geometria SVG
+viva (`QuantumSphere`, il motore fisico `needleEngine`), stato di animazione condiviso, decine
+di condizioni intrecciate (`vistaSenzaAgo`/`mirror.mirrorArmed`/`toneAttivo`/`truth.truthPhase`/
+`senzaMisura`/`metabolicOpen`…) che decidono quale dei tre archi (`ClearDial`/`MirrorDial`/
+`ToneDial`) e quale ago disegnare. Il sandbox non ha un vero MUSE o Theta-Meter — la verifica
+qui si è fermata a "nessun crash, il disegno giusto compare, le transizioni di stato sono
+corrette", non "l'ago reagisce a un segnale vero" (quello resta da controllare con l'hardware).
+
+- `src/serenity/GruppoAlto.tsx` (nuovo, 1366 righe): OBIETTIVO/STATO FISICO/R-FACTOR, le
+  letture TA (`LetturaTA`/`LetturaFase`/`LetturaTotalTa`/`LetturaVelocita`, prima funzioni
+  locali di `Serenity.tsx`, trasferite con lui), NEEDLE LIGHT, con/senza ago, `QuantumSphere`/
+  `VistaSenzaAgo`, il bottone PREMI START, i tre archi del ciclo, l'intera schermata di
+  briefing "INIZIO SESSIONE", la schermata "A CHE TONO SI TROVA?", il selettore MUSE/METER/DUE.
+  Copiato verbatim — ogni commento storico preservato.
+- `src/serenity/GruppoBasso.tsx` (nuovo, 283 righe): `PistaCiclo`/`PistaProcedimento` e i cinque
+  cerchi di scelta del metodo quando nessuno è armato. Copiato verbatim.
+- `Serenity.tsx`: 5434 → 4046 righe (**−1388, il taglio più grande di tutta la sessione**,
+  quasi il doppio del precedente). `comandiSottoAgo`/`cicloAttivo` restano calcolati in
+  `Serenity.tsx` (li usano entrambi i fratelli) e passati come prop — non ricalcolati due volte.
+  Rimossi tredici import ormai inutilizzati (`QuantumSphere`, `ClearDial`, `MirrorDial`,
+  `ToneDial`, `ToneColumn`, `VistaSenzaAgo`, `ScalaTonoCompleta`, `ItemDaScrivere`,
+  `PistaCiclo`, `PistaProcedimento`, `SegmentoVetro`, `chargeStateById`, `SET_OFFSET`,
+  `SQUEEZE_TARGET_OFFSET`) e la variabile `tWide`/`needleOffsetEeg` (spostate dentro
+  `GruppoAlto.tsx`, che le ricalcola dai propri hook/store globali).
+
+⚠️ Due errori trovati e corretti DA ME prima del commit, nessuno dei due un cambiamento di
+logica: (1) `museGate` aggiunta per errore alle prop di `GruppoAlto` — non era mai usata nel
+blocco originale (la banner "MUSE COLLEGATO MA NON INDOSSATO" che la legge vive PRIMA della IIFE,
+resta in `Serenity.tsx`) — tolta da interfaccia, destructuring e chiamata. (2) `faseCiclo` tipizzata
+`string` invece del vero `SessionPhase` — `tsc` l'ha segnalato subito, corretto con l'import
+mancante. Entrambi trovati da `tsc --noEmit` al primo giro, prima di qualunque altra verifica.
+
+Verificato dal vivo, seduta reale: il bottone PLAY del quadrante compare senza crash prima di
+aprire; 23 `<svg>` montati con `<path>` veri (`QuantumSphere` disegna, anche se il sandbox non
+ha un ago da muovere); con `senzaMisura` la sovrapposizione testuale di `GruppoAlto`
+(`spiegazioneCiclo`/`bottoniCiclo`) e i cinque cerchi di `GruppoBasso` si escludono a vicenda
+esattamente come da codice (`mode==='free'` → l'overlay è vuoto, i cerchi mostrano); CONTACT
+armato mostra "DÌ L'ITEM" con `bottoniCiclo` (1 · 0 AS-IS/ANNULLA/dichiara AS-IS) nel punto
+giusto; MIRROR armato mostra "quanta carica?" con i dieci bottoni; **TONE armato, con un item
+dato, mostra la schermata dedicata "A CHE TONO SI TROVA?" con `ScalaTonoCompleta` scorrevole e
+`onScegli` funzionante — scelto un tono, passa al ramo "PORTALO A TONO 40" con la stessa scala
+ora in sola lettura più `bottoniCiclo`**, il percorso più complesso di tutto il componente,
+identico all'originale. Chiudere la seduta torna alla schermata iniziale con lo storico
+aggiornato. Zero errori console riconducibili al cambiamento (solo i consueti
+`ERR_CONNECTION_REFUSED` per hardware assente in sandbox).
+
+tsc --noEmit pulito, lint 324 warning/0 errori (invariato), vitest 754/754.
