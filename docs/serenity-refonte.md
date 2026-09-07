@@ -11116,3 +11116,37 @@ verdi.
 SERENITY.
 
 **Build**: SERENITY (solo).
+
+## Giro — 2026-09-07 (continuazione) — scomposizione di Serenity.tsx: ColonnaSaluteAssessment
+
+Terzo pezzo staccato (dopo `ZonaCamere.tsx` e `GiornaleSeduta.tsx`): la colonna destra —
+`HealthPanel` (Santé Système) + `ZonaAssessment` — il più complesso finora (17 prop, contro le
+9-13 dei due precedenti).
+
+**`src/serenity/ColonnaSaluteAssessment.tsx`** (nuovo): riceve valori e callback già pronti da
+chi lo monta — `HealthPanel` montato TALE E QUALE ad `App.tsx` (stesso componente condiviso),
+`ZonaAssessment` (già un componente a sé da una fase precedente) invariata. Questo file monta
+SOLO la cornice che li tiene insieme — nessuna logica spostata, gli stessi due "cancelli" di
+prima (`aperta && moduleVis.health && museOk` per Santé Système, `aperta && moduleVis.ri` per
+l'Assessment) ora calcolati da chi monta il componente e passati come booleani già pronti
+(`mostraSalute`/`mostraAssessment`).
+
+**`Serenity.tsx`**: il blocco di ~80 righe sostituito da `<ColonnaSaluteAssessment ... />` —
+6910 → 6841 righe. Gli import diretti di `HealthPanel` e `ZonaAssessment` (non più usati
+altrove nel file) tolti, sostituiti da quello del nuovo componente.
+
+**Verificato dal vivo**: aperta una seduta vera in sandbox — il pannello ASSESSMENT appare
+correttamente (titolo, "ATTIVA"/"cattura disattivata"); il toggle ATTIVA→DISATTIVA funziona
+DAVVERO ("in ascolto..." compare) — conferma che `assessAttivo`/`onToggleAssess` passano
+correttamente attraverso il nuovo componente. Nessun errore in console. (Santé Système non
+verificabile in questa sandbox — richiede un vero MUSE connesso, `museOk`.)
+
+**Verifica**: `tsc --noEmit` pulito AL PRIMO COLPO nonostante i 17 prop (nessuno scarto di
+tipo, grazie al riuso diretto di `AssessItemSerenity` — già esportata da `ZonaAssessment.tsx` —
+invece di ridichiarare la stessa forma una seconda volta), `npm run lint` 324 warning/0 errori
+(invariato), `npx vitest run` 754/754 verdi.
+
+**File toccati**: `src/serenity/Serenity.tsx`, `src/serenity/ColonnaSaluteAssessment.tsx`
+(nuovo) — SOLO SERENITY.
+
+**Build**: SERENITY (solo).

@@ -90,14 +90,13 @@ import { GiornaleSeduta } from './GiornaleSeduta';
 import { IndicatoreConnessione, COLORE_PUNTO } from './IndicatoreConnessione';
 import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
-import { ZonaAssessment } from './ZonaAssessment';
+import { ColonnaSaluteAssessment } from './ColonnaSaluteAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
 import { Settings, Headphones, Gauge, User, Users, Wrench, Wifi, MessageSquareOff, HelpCircle, Save, Play, Pause, History as HistoryIcon, BookOpen, UserCog, Clock, Timer, CircleUser, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, SlidersHorizontal, Brain, Lightbulb, StickyNote, BookText } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
 import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
 import { SplashScreen } from '../components/SplashScreen';
-import { HealthPanel } from '../components/HealthPanel';
 /** ── HISTORY, CARICATA A RICHIESTA — segnalato: « il Report post session non ci sia più in
  *  Serenity, solo il PDF in History ». Lo stesso `HistoryModal` di App.tsx, TALE E QUALE (i
  *  suoi `getSessionsByProfile`/`getSessionPdfAsync` leggono l'ARCHIVIO UNICO — le sedute
@@ -6794,104 +6793,36 @@ export default function Serenity() {
             "LA RIGA A TRE COLONNE": la colonna destra (Santé/Journal) è un SUO fratello, non un
             figlio, nella riga a tre colonne. */}
         </div>
-        {/* ── COLONNA DESTRA — SANTÉ SYSTÈME E JOURNAL, FUORI DALL'ARCO ─────────────────────
-            Segnalato: « posiziona Santé Système, Journal de session a destra dell'arco... mais
-            tous en dehors de la zone arc, qui se réduit dès qu'un module apparaît ». Un giro fa
-            erano ancorati `position:absolute` a destra DEL QUADRANTE (`right:32`): non toccavano
-            la sua taglia, restavano sovrapposti quando aperti. Ora è la STESSA colonna vera
-            dell'assessment a sinistra (v. sopra) — `width:'50%'`, in flusso: l'arco si restringe
-            per farle posto invece di restarne coperto. `HealthPanel` — montato TALE E QUALE
-            (`eegBuffer`/`gyroBuffer` sono la STESSA coppia di ref che `useMuseConnection`
-            riempie in App.tsx; le sue zone interne restano il proprio SCHERMO scuro apposta,
-            uno strumento resta uno strumento a prescindere dal tema attorno — solo l'intestazione
-            segue `useUiStore().isLightTheme`). Journal — stessa lista di
-            `components/TranscriptLog.tsx`, riscritta coi token `var(--s-*)` di SERENITY. */}
-        {/* ⚠️ Segnalato: « la fenêtre Santé Système ne se voit pas en entier ». `overflow:'hidden'`
-            qui tagliava netto qualunque cosa non ci stesse (Santé Système non ha più un suo
-            `maxHeight`/scorrimento interno — tolto un giro fa apposta, « si deve vedere tutta »
-            — quindi se il contenuto supera lo spazio vero, con `hidden` spariva senza modo di
-            raggiungerlo). `overflowY:'auto'` invece: se tutto ci sta non cambia nulla, se no si
-            scorre per vedere il resto — mai più tagliato senza rimedio. */}
-        {rightColOpen && (
-          <div style={{
-            width: moduleColWidth, maxWidth: 560, flexShrink: 0, paddingTop: camStackH,
-            display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto',
-          }}>
-            {/* ⚠️ Segnalato: « la zona System Health deve essere larga la metà e si deve vedere
-                tutta ». `maxHeight:'78%', overflowY:'auto'` tagliava il pannello a metà,
-                costringendo a scorrere per vederlo intero — tolto: il pannello si vede per
-                intero, alla SUA altezza vera, non a una percentuale arbitraria. */}
-            {/* ⚠️ BUG TROVATO verificando dal vivo QUESTO stesso giro: `rightColOpen` (sopra)
-                aveva già il cancello `&& museOk`, ma QUESTA condizione — quella che monta
-                DAVVERO `<HealthPanel>` — era rimasta la vecchia, senza il cancello: Santé
-                Système continuava a comparire nel testo di pagina nonostante il contenitore
-                fosse "chiuso". Due condizioni per la stessa cosa, una sola aggiornata — la
-                stessa famiglia di bug della duplicazione segnalata nel resoconto. */}
-            {aperta && moduleVis.health && museOk && (
-              <div className="ser-health-wrap" style={{ borderRadius: 18 }}>
-                <HealthPanel
-                  eegBuffer={eegBuffer}
-                  gyroBuffer={gyroBuffer}
-                  displayBpm={realBpm}
-                  signalQuality={museGate.signalQuality}
-                  museConnection={muse.museConnection}
-                  batteryLevel={batteryLevel}
-                  sessionState={aperta ? 'running' : 'idle'}
-                  onHide={() => setModuleVis(v => ({ ...v, health: false }))}
-                  t={k => t(k as Parameters<typeof t>[0]) as string}
-                  /* ⚠️ Segnalato: « Santé Système devi cambiarlo... renderà meno alta la zona » —
-                      v. la nota su `compact` in `HealthPanel.tsx`. Solo SERENITY la chiede. */
-                  compact
-                  /* ⚠️ BUG TROVATO — segnalato: « quando in LIGHT, il systems HEALTH non si
-                      vede niente ». `--s-zone-bg` è `transparent` in ENTRAMBI i temi (v.
-                      `tokens.css`) — in scuro restava leggibile per un caso, non per un
-                      disegno: `HealthPanel` (condiviso, mai ridipinto) scrive tutto in
-                      `text-white/*`, e con fondo trasparente si vedeva la pagina SCURA dietro.
-                      In chiaro la stessa trasparenza mostra la pagina CHIARA — bianco su
-                      bianco, davvero invisibile. `--s-instrument-bg` (nuovo, v. `tokens.css`,
-                      accanto a `--tr-bg` di `ThetaReadyCheck`): fisso, scuro in ENTRAMBI i
-                      temi — uno strumento resta uno strumento, non l'inseguimento di uno zoccolo
-                      "trasparente" pensato per zone che il proprio testo lo colora da sé
-                      (`ZonaAssessment`/Giornale/`PannelloMna`, che RESTANO su `--s-zone-bg`:
-                      loro il colore lo seguono, `HealthPanel` no). */
-                  panelStyle={extra => ({
-                    background: 'var(--s-instrument-bg)',
-                    border: '1px solid var(--s-zone-border)',
-                    ...extra,
-                  })}
-                />
-              </div>
-            )}
-            {/* ── L'ASSESSMENT, ORA QUI — segnalato: « cambia di posizione il giornale con
-                l'assessment ». Stava sotto i bottoni dei metodi, a sinistra; il Giornale stava
-                qui, sotto Santé Système. Scambiati — stessa `ZonaAssessment`, stessi dati
-                (`assessAttivo`/`assessItems`, invariati), solo la POSIZIONE si scambia.
-                ⚠️ Segnalato: « la zona assessment non deve essere ridotta da non vedere quasi
-                più nulla, devi lasciarla ben visibile in altezza ». `maxHeight:'70%'` da solo,
-                in una colonna flex con Santé Système sopra (mai limitata, « si deve vedere
-                tutta »), lasciava questo `<div>` restringersi (`flex-shrink` di default) fin
-                quasi a sparire quando Santé Système era già alta — e `ZonaAssessment` al suo
-                interno ha il proprio `overflowY:'auto'`, quindi si comprimeva senza protestare,
-                mostrando poco più della sua intestazione. `flexShrink:0` + `minHeight:280`: non
-                può più scendere sotto una taglia leggibile, qualunque cosa ci sia sopra — se lo
-                spazio proprio non basta, scorre la COLONNA (`overflowY:'auto'`, già lì), non
-                lei che si schiaccia. */}
-            {aperta && moduleVis.ri && (
-              <div style={{ maxHeight: '70%', minHeight: 280, flexShrink: 0, display: 'flex', pointerEvents: 'auto' }}>
-                <ZonaAssessment
-                  attivo={assessAttivo}
-                  onToggle={() => setAssessAttivo(v => !v)}
-                  items={assessItems}
-                  LC={LC}
-                  dueAghi={museOk && meterC}
-                  onIndica={segnaIndicazione}
-                  onAggiungiItem={aggiungiItemManuale}
-                  cercaLettura={cercaLetturaPerParola}
-                />
-              </div>
-            )}
-          </div>
-        )}
+        {/* ── COLONNA DESTRA — ESTRATTA in `ColonnaSaluteAssessment.tsx` — segnalato nella
+            revisione completa (v. `ZonaCamere.tsx`/`GiornaleSeduta.tsx` per la stessa
+            scomposizione). Nessuna logica cambiata, solo il disegno: `HealthPanel` montato TALE
+            E QUALE ad App.tsx, `ZonaAssessment` invariata. La cronologia completa delle
+            segnalazioni che hanno formato questa colonna (« Santé Système a destra dell'arco »,
+            « in LIGHT non si vede niente », « cambia di posizione il giornale con
+            l'assessment »…) vive ora dentro `ColonnaSaluteAssessment.tsx`. */}
+        <ColonnaSaluteAssessment
+          aperta={rightColOpen}
+          larghezza={moduleColWidth}
+          paddingSopra={camStackH}
+          mostraSalute={aperta && !!moduleVis.health && museOk}
+          mostraAssessment={aperta && !!moduleVis.ri}
+          eegBuffer={eegBuffer}
+          gyroBuffer={gyroBuffer}
+          realBpm={realBpm}
+          signalQuality={museGate.signalQuality}
+          museConnection={muse.museConnection}
+          batteryLevel={batteryLevel}
+          sessionRunning={aperta}
+          onNascondiSalute={() => setModuleVis(v => ({ ...v, health: false }))}
+          assessAttivo={assessAttivo}
+          onToggleAssess={() => setAssessAttivo(v => !v)}
+          assessItems={assessItems}
+          LC={LC}
+          dueAghi={museOk && meterC}
+          onIndica={segnaIndicazione}
+          onAggiungiItem={aggiungiItemManuale}
+          cercaLettura={cercaLetturaPerParola}
+        />
       </div>
         {/* `CycleStatusBar` si è spostato nel blocco dei comandi CONTACT/NULL, sopra: stesso
             posto di App.tsx (« riga sotto la domanda »), non più qui vicino al quadrante. Le
