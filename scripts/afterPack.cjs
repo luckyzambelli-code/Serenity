@@ -5,11 +5,47 @@
  * On macOS 13+, the Renderer and other helper processes also need
  * NSBluetoothAlwaysUsageDescription or macOS kills them with a TCC crash.
  * This script patches all helper Info.plists after packing.
- */
+ *
+ * ── IL BINARIO CLOUDFLARED DELLA PIATTAFORMA SBAGLIATA, TOLTO QUI — segnalato: « affina le
+ * dimensioni ». `node_modules/cloudflared/bin/` porta, su questa macchina di sviluppo, DUE
+ * binari insieme (`cloudflared` per macOS, `cloudflared.exe` per Windows — v.
+ * `scripts/fetch-cloudflared-win.cjs` per il perché) — `files: [...]` in `package.json` non sa
+ * escluderne uno solo per piattaforma: un `files` messo dentro `mac`/`win` in electron-builder
+ * NON si aggiunge alla lista di sopra come sperato, la SOSTITUISCE — verificato dal vivo: il
+ * pacchetto Windows è esploso da 321 MB a 712 MB (l'INTERO `node_modules`, `vite`/`rollup`/
+ * `onnxruntime` compresi, tornava dentro). `afterPack` gira DOPO che electron-builder ha già
+ * scritto la cartella scompattata (con la lista `files` di base intatta, mai toccata) — qui
+ * basta CANCELLARE il file di troppo prima che `asar`/NSIS lo richiudano dentro, un intervento
+ * chirurgico che non tocca affatto la lista che già funzionava bene per l'inclusione. */
 const plist  = require('plist');
 const fs     = require('fs');
 const path   = require('path');
 const { execSync } = require('child_process');
+
+const CLOUDFLARED_BIN_BY_PLATFORM = { mac: 'cloudflared', windows: 'cloudflared.exe', linux: 'cloudflared' };
+
+function removeWrongPlatformCloudflared(appOutDir, packager) {
+  const platformName = packager.platform.name; // 'mac' | 'windows' | 'linux'
+  const wantedBin = CLOUDFLARED_BIN_BY_PLATFORM[platformName];
+  if (!wantedBin) return;
+
+  const resourcesDir = platformName === 'mac'
+    ? path.join(appOutDir, `${packager.appInfo.productFilename}.app`, 'Contents', 'Resources')
+    : path.join(appOutDir, 'resources');
+  const binDir = path.join(resourcesDir, 'app.asar.unpacked', 'node_modules', 'cloudflared', 'bin');
+  if (!fs.existsSync(binDir)) return;
+
+  for (const entry of fs.readdirSync(binDir)) {
+    if (entry === wantedBin) continue; // il binario giusto per QUESTA build resta
+    const stray = path.join(binDir, entry);
+    try {
+      fs.rmSync(stray, { force: true });
+      console.log(`  [afterPack] rimosso binario cloudflared di un'altra piattaforma: ${entry}`);
+    } catch (e) {
+      console.warn(`  [afterPack] impossibile rimuovere ${entry}: ${e.message}`);
+    }
+  }
+}
 
 const BT_KEYS = {
   NSBluetoothAlwaysUsageDescription:
@@ -20,6 +56,7 @@ const BT_KEYS = {
 
 module.exports = async function afterPack(context) {
   const { appOutDir, packager } = context;
+  removeWrongPlatformCloudflared(appOutDir, packager);
   if (packager.platform.name !== 'mac') return;
 
   // Find the .app inside appOutDir

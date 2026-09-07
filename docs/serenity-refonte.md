@@ -11554,3 +11554,36 @@ lista `files`, un affinamento a sé, non bloccante per la funzionalità).
 
 `Serenity-3.0.296-setup.exe` (NSIS, ~321 MB) consegnato all'utente per il test reale dentro
 Windows 11 su Parallels Desktop.
+
+## Giro — 2026-09-07 — Affinate le dimensioni: il binario cloudflared della piattaforma sbagliata
+
+Segnalato: « affina le dimensioni » — il pacchetto Windows (3.0.296) portava con sé anche il
+binario macOS di cloudflared (37 MB inutili). Primo tentativo, SBAGLIATO: aggiungere un `files`
+platform-specific dentro `mac`/`win` in `package.json`, con un pattern di negazione
+(`!node_modules/cloudflared/bin/cloudflared.exe`). ⚠️ **Verificato dal vivo che NON funziona
+come atteso**: un `files` messo dentro `mac`/`win` in electron-builder non si AGGIUNGE alla
+lista di sopra — la SOSTITUISCE. Con un array platform-specific che conteneva solo la
+negazione, l'installer Windows è esploso da 321 MB a **712 MB** (l'intero `node_modules`,
+`vite`/`rollup`/`onnxruntime` compresi, tornava dentro). Corretto l'array per essere completo
+(base + negazione) — ancora sbagliato, 436 MB: stesso sintomo, causa non del tutto chiara ma
+il segnale (una build peggiore della partenza) bastava a scartare la strada.
+
+**Soluzione buona**: spostata la pulizia in `scripts/afterPack.cjs` — l'hook `afterPack` di
+electron-builder già usato dal progetto (patch Bluetooth degli helper macOS). Gira DOPO che la
+cartella scompattata è già scritta con la lista `files` di base intatta (mai toccata, tornata
+al suo stato originale) — qui basta CANCELLARE il binario della piattaforma sbagliata prima che
+`asar`/NSIS lo richiudano dentro: un intervento chirurgico, non una nuova lista di inclusione da
+azzeccare. `CLOUDFLARED_BIN_BY_PLATFORM` mappa `mac`/`windows`/`linux` al nome del binario
+giusto; tutto il resto nella cartella `bin/` (in pratica, solo il binario dell'ALTRA
+piattaforma, visto che questa macchina di sviluppo li scarica entrambi) viene rimosso.
+
+Verificato dal vivo, entrambe le direzioni:
+- **Windows**: `[afterPack] rimosso binario cloudflared di un'altra piattaforma: cloudflared`
+  nel log — installer 3.0.296 sceso a **305 MB** (da 321 MB con entrambi i binari), solo
+  `cloudflared.exe` nella cartella finale.
+- **macOS**: ricostruito lo stesso giro (l'hook è condiviso, verificato che non regredisse) —
+  `Serenity-3.0.297-{arm64,x64}.dmg`, solo `cloudflared` (mac) nella cartella finale, nessun
+  `cloudflared.exe` residuo, dimensioni invariate rispetto ai giri precedenti (~380/385 MB).
+
+tsc --noEmit pulito, lint 324 warning/0 errori (invariato), vitest 754/754 — nessun file `src/`
+toccato in questo giro, solo `scripts/afterPack.cjs`.
