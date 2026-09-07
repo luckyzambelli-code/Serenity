@@ -11509,3 +11509,48 @@ spostate in 20 file dedicati sotto `src/serenity/`. Ricercati ulteriori framment
 giro: quel che resta (il banner "MUSE COLLEGATO MA NON INDOSSATO", il cassetto del meter) è
 sotto le 20 righe ciascuno — troppo piccolo perché un file a sé aggiunga chiarezza invece di
 puro overhead. La scomposizione di `Serenity.tsx` si considera completa per questo giro.
+
+## Giro — 2026-09-07 — La prima build Windows (cross-build da questo Mac)
+
+Primo tentativo di `npm run dist:win-serenity` da questo Mac (Parallels Desktop con Windows 11
+sarà dove l'utente la prova per davvero) — `electron-builder` sa cross-compilare un installer
+NSIS senza bisogno di una macchina Windows vera per il pacchetto in sé (scarica Wine per
+`signtool.exe`, gestito da solo).
+
+⚠️ **Bug reale trovato al primo giro, prima ancora di consegnare il pacchetto**: `node_modules/
+cloudflared` scarica UN SOLO binario al momento di `npm install`, per la piattaforma della
+macchina che fa la build — su questo deposito, sempre macOS (`bin/cloudflared`, un eseguibile
+Mach-O). Il pacchetto Windows, costruito sulla STESSA macchina, spediva quindi quel binario
+macOS — inutilizzabile su Windows vero, e con il nome SBAGLIATO: `node_modules/cloudflared/lib/
+constants.js` cerca `bin/cloudflared.exe` quando `process.platform === 'win32'`
+(`DEFAULT_CLOUDFLARED_BIN`, letto da `server-core.cjs`), non `bin/cloudflared`. Ogni tunnel a
+distanza sarebbe fallito in silenzio (`ENOENT`) sul primo vero PC Windows che l'avesse provato —
+stessa famiglia del bug già trovato e corretto per l'x64 mac (`fetch-cloudflared-x64.cjs`), qui
+cross-sistema operativo invece che cross-architettura.
+
+- `scripts/fetch-cloudflared-win.cjs` (nuovo): scarica `cloudflared-windows-amd64.exe` dalle
+  release ufficiali GitHub di `cloudflared`, direttamente in `node_modules/cloudflared/bin/
+  cloudflared.exe` — a differenza del caso x64 mac (che ha bisogno di uno switch A RUNTIME fra
+  due architetture possibili sulla STESSA build universale), qui basta un solo binario per
+  tutta la build Windows: messo esattamente dove il pacchetto `cloudflared` se lo aspetta già
+  da sé, nessuna riga nuova serve in `server-core.cjs`.
+- `package.json`: `dist:win`/`dist:win-serenity` ora chiamano questo script prima di
+  `electron-builder --win`, stesso schema di `fetch-cloudflared-x64.cjs` per `dist:mac`/
+  `dist:serenity`.
+
+Verificato: `cloudflared.exe` (PE32+ x86-64, il vero binario Windows) compare nel log di build
+("signing with signtool.exe path=.../app.asar.unpacked/node_modules/cloudflared/bin/
+cloudflared.exe" — estratto correttamente dall'asar, `asarUnpack` già copriva l'intera cartella
+`bin/**`). Icona Windows (`build/icon-serenity.ico`) presente. Riletti tutti i rami
+`process.platform` di `main.cjs`: STT nativo correttamente riservato a macOS (`!== 'darwin'` →
+messaggio esplicito, mai un crash), `window-all-closed`/Accessibility API già seguono la
+convenzione Electron standard mac/altre piattaforme.
+
+⚠️ Non verificabile da questo sandbox (nessun Windows vero disponibile qui): l'app IN
+ESECUZIONE su Windows — hardware MUSE/Theta-Meter via WebHID, il tunnel Cloudflare per davvero,
+l'installer NSIS stesso. Il binario mac (37 MB) resta ancora dentro il pacchetto Windows,
+innocuo ma inutile — non tolto in questo giro (richiederebbe un'esclusione per piattaforma nella
+lista `files`, un affinamento a sé, non bloccante per la funzionalità).
+
+`Serenity-3.0.296-setup.exe` (NSIS, ~321 MB) consegnato all'utente per il test reale dentro
+Windows 11 su Parallels Desktop.

@@ -12,8 +12,8 @@
     "lint": "eslint src",
     "electron": "electron .",
     "dist:mac": "node scripts/bump-version.cjs && npm run build:stt && node scripts/fetch-cloudflared-x64.cjs && npm run build && electron-builder --mac && node scripts/prune-dmg.cjs",
-    "dist:win": "node scripts/bump-version.cjs && npm run build && electron-builder --win",
-    "dist:win-serenity": "node scripts/bump-serenity.cjs && npm run build && electron-builder --win --config electron-builder.serenity.cjs",
+    "dist:win": "node scripts/bump-version.cjs && node scripts/fetch-cloudflared-win.cjs && npm run build && electron-builder --win",
+    "dist:win-serenity": "node scripts/bump-serenity.cjs && node scripts/fetch-cloudflared-win.cjs && npm run build && electron-builder --win --config electron-builder.serenity.cjs",
     "serve": "node server.cjs",
     "postinstall": "node -e \"const fs=require('fs'),p='node_modules/peer/package.json',j=JSON.parse(fs.readFileSync(p,'utf8'));if(typeof j.binary==='string'){j._binary=j.binary;delete j.binary;fs.writeFileSync(p,JSON.stringify(j,null,2));}\" || true",
     "build:stt": "swiftc -O native/sm-stt.swift -o native/sm-stt",
@@ -170,5 +170,5 @@
       "artifactName": "${productName}-${version}-setup.${ext}"
     }
   },
-  "serenityVersion": "3.0.295"
+  "serenityVersion": "3.0.296"
 }
