@@ -71,6 +71,26 @@ export class ThetaMeterHid {
    *  decodificatore di QUEL modello. */
   get rawSamples(): string[] { return this.meter.samples; }
 
+  /** Quando la connessione è riuscita — serve SOLO a `noSignal`, sotto, per non gridare « non
+   *  arriva niente » nell'istante stesso della connessione (il primo report può arrivare con
+   *  qualche decina di ms di ritardo, non è ancora un problema a quel punto). */
+  private connectedAtMs: number | null = null;
+
+  /**
+   * ⚠️ AGGIUNTO — segnalato: « collegato al Meter, ma non legge nulla » (su Windows). Diverso
+   * da `unknownFormat` (l'apparecchio TRASMETTE e nessun report è nel formato giusto): qui è
+   * il dispositivo che, aperto senza errori, non manda MAI un report — buono o scartato che
+   * sia. `unknownFormat` da solo non lo vede mai (richiede ALMENO 10 report scartati, che con
+   * zero report in arrivo non arrivano mai) — da qui il riquadro rosso non compariva affatto,
+   * lasciando un ago fermo senza NESSUNA spiegazione a schermo. Una soglia di tempo (1.5 s,
+   * più che sufficiente al primo report reale) invece di un conteggio: qui non c'è nulla da
+   * contare. */
+  get noSignal(): boolean {
+    if (this.status !== 'connected' || this.connectedAtMs === null) return false;
+    if (this.meter.count > 0 || this.meter.rejected > 0) return false;
+    return Date.now() - this.connectedAtMs > 1500;
+  }
+
   private setStatus(s: ThetaStatus): void {
     this.status = s;
     this.opts.onStatus?.(s);
@@ -116,7 +136,21 @@ export class ThetaMeterHid {
 
       d.addEventListener('inputreport', this.onInput);
       this.device = d;
-      this.info = `${d.productName || '?'} · ${hex(d.vendorId)}:${hex(d.productId)}`;
+      // ⚠️ AGGIUNTO — segnalato: « si connette ma non legge nulla », su Windows. Un dispositivo
+      // USB composito può esporre PIÙ collection HID di livello superiore con lo STESSO VID —
+      // WebHID ne restituisce una per collection, e l'ordine di enumerazione fra piattaforme
+      // può differire: `getDevices()`/`requestDevice()` potrebbero non prendere la STESSA
+      // collection su Windows che prendono su macOS, ed è del tutto possibile aprirne una che
+      // non trasmette mai input report (una di controllo, non quella dati). Prima `info`
+      // diceva solo nome/VID/PID — utile per sapere CHE APPARECCHIO si è agganciato, inutile
+      // per sapere QUALE PEZZO di quell'apparecchio. Ora anche le collection (usage page/usage/
+      // quanti input report dichiara ciascuna): senza, un « non arriva niente » non è
+      // diagnosticabile a distanza — bisogna vedere ESATTAMENTE cosa WebHID ha aperto.
+      const collInfo = (d.collections || [])
+        .map(c => `[up=${hex(c.usagePage ?? 0)} u=${hex(c.usage ?? 0)} in=${c.inputReports?.length ?? 0}]`)
+        .join(' ');
+      this.info = `${d.productName || '?'} · ${hex(d.vendorId)}:${hex(d.productId)} · ${collInfo || 'nessuna collection dichiarata'}`;
+      this.connectedAtMs = Date.now();
       this.setStatus('connected');
       return true;
     } catch (e) {
@@ -151,6 +185,7 @@ export class ThetaMeterHid {
     const d = this.device;
     this.device = null;
     this.info = null;
+    this.connectedAtMs = null;
     this.meter.reset();
     if (d) {
       d.removeEventListener('inputreport', this.onInput);

@@ -16,11 +16,24 @@ interface HIDInputReportEvent extends Event {
   readonly device: HIDDevice;
 }
 
+// ⚠️ AGGIUNTO — segnalato: « collegato al Meter, ma non legge nulla » (su Windows). Serve a
+// vedere, a distanza, QUALE collection HID il dispositivo dichiara — un dispositivo composito
+// può averne più di una con lo stesso VID, e WebHID può aprirne una diversa da quella dati a
+// seconda della piattaforma (v. la nota in `lib/thetaMeterHid.ts`, dove si legge). Stesso
+// principio del resto di questo file: il minimo indispensabile, non l'intera spec.
+interface HIDReportInfo { readonly reportId: number }
+interface HIDCollectionInfo {
+  readonly usagePage?: number;
+  readonly usage?: number;
+  readonly inputReports?: HIDReportInfo[];
+}
+
 interface HIDDevice extends EventTarget {
   readonly opened: boolean;
   readonly vendorId: number;
   readonly productId: number;
   readonly productName: string;
+  readonly collections: HIDCollectionInfo[];
   open(): Promise<void>;
   close(): Promise<void>;
   sendReport(reportId: number, data: BufferSource): Promise<void>;

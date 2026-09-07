@@ -69,6 +69,11 @@ export interface ThetaReadyCheckProps {
   unknownFormat?: boolean;
   /** I suoi report grezzi, da copiare e mandare per farne scrivere la decodifica. */
   rawSamples?: string[];
+  /** Aperto senza errori, ma non arriva NEMMENO un report — buono o scartato. Diverso da
+   *  `unknownFormat`: qui non c'è nulla da decodificare, il dato non arriva proprio. */
+  noSignal?: boolean;
+  /** Che dispositivo si è agganciato (nome · VID:PID · collection HID) — v. `noSignal`. */
+  deviceInfo?: string | null;
   onProceed: () => void;
   onCancel: () => void;
 }
@@ -77,7 +82,7 @@ export function ThetaReadyCheck({
   scaleMeasured, breathOk, squeezeOk, testing, peakOffset,
   startSqueezeTest, startBreathTest, sensTrim, setSensTrim, config, setConfig, onProceed, onCancel,
   soloOffsetMisurato = false, taTwo = null, taSolo = null, onApplySoloOffset,
-  unknownFormat = false, rawSamples = [],
+  unknownFormat = false, rawSamples = [], noSignal = false, deviceInfo = null,
 }: ThetaReadyCheckProps) {
   const { t, lang } = useI18n();
   const L = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang as string, it, fr, en, es, sv);
@@ -165,6 +170,43 @@ export function ThetaReadyCheck({
             </pre>
             <button type="button"
               onClick={() => { try { navigator.clipboard.writeText(rawSamples.join('\n')); } catch (_) { /* niente appunti: restano leggibili sopra */ } }}
+              style={{ marginTop: 8, width: '100%', height: 30, borderRadius: 8, cursor: 'pointer',
+                       border: '1px solid rgba(248,113,113,0.5)', background: 'rgba(248,113,113,0.12)',
+                       color: '#fca5a5', fontFamily: 'var(--font-sans)', fontSize: 11 }}>
+              {t('theta_copy_raw') as string}
+            </button>
+          </div>
+        )}
+
+        {/* ── NESSUN SEGNALE — segnalato: « collegato al Meter, ma non legge nulla », su
+            Windows. Diverso da MODELLO SCONOSCIUTO qui sopra: lì l'apparecchio TRASMETTE e i
+            report arrivano scartati (`rawSamples` non è mai vuoto) — qui il dispositivo si è
+            aperto senza errori ma non manda MAI un report, buono o scartato. Senza questo
+            riquadro l'auditor vedeva solo un ago fermo, indistinguibile da "sto ancora
+            provando" — nessun modo di capire che il problema è più a monte (un altro
+            programma tiene il device aperto, o WebHID ha scelto l'interfaccia sbagliata su
+            un dispositivo composito — v. `thetaMeterHid.ts`). `deviceInfo` mostra ESATTAMENTE
+            cosa WebHID ha agganciato (nome, VID:PID, e le sue collection HID) — la stessa
+            informazione che serve per capire perché, non solo che qualcosa non va. */}
+        {noSignal && (
+          <div style={{ border: '1px solid rgba(248,113,113,0.5)', borderRadius: 10,
+                        background: 'rgba(127,29,29,0.22)', padding: '12px 14px' }}>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 700,
+                          color: '#fca5a5', marginBottom: 6 }}>
+              {t('theta_no_signal') as string}
+            </div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, lineHeight: 1.5,
+                          color: 'rgba(240,246,255,0.8)', marginBottom: 8 }}>
+              {t('theta_no_signal_hint') as string}
+            </div>
+            <pre style={{ margin: 0, maxHeight: 96, overflow: 'auto', fontSize: 10,
+                          fontFamily: 'ui-monospace, monospace', color: 'rgba(240,246,255,0.7)',
+                          background: 'rgba(0,0,0,0.35)', borderRadius: 6, padding: '6px 8px',
+                          whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {deviceInfo || '—'}
+            </pre>
+            <button type="button"
+              onClick={() => { try { navigator.clipboard.writeText(deviceInfo || ''); } catch (_) { /* niente appunti: resta leggibile sopra */ } }}
               style={{ marginTop: 8, width: '100%', height: 30, borderRadius: 8, cursor: 'pointer',
                        border: '1px solid rgba(248,113,113,0.5)', background: 'rgba(248,113,113,0.12)',
                        color: '#fca5a5', fontFamily: 'var(--font-sans)', fontSize: 11 }}>

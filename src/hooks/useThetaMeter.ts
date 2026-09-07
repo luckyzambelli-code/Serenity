@@ -86,6 +86,11 @@ export interface ThetaMeterState {
   unknownFormat: boolean;
   /** I report non riconosciuti, in esadecimale, da mandare per far scrivere il decodificatore. */
   rawSamples: string[];
+  /** ⚠️ AGGIUNTO — segnalato: « collegato, ma non legge nulla » (Windows). Il dispositivo si
+   *  è aperto senza errori ma NON manda MAI un report, buono o scartato — diverso da
+   *  `unknownFormat` (che richiede report scartati DAVVERO arrivati). Senza questo, quello
+   *  scenario non aveva alcun segno a schermo: l'ago restava fermo, muto. */
+  noSignal: boolean;
   /** Il dispositivo non è utilizzabile in questo contesto (niente WebHID). */
   unavailable: boolean;
   /** Che dispositivo si è agganciato (nome · VID:PID). Senza, su una macchina altrui un
@@ -152,7 +157,7 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
     status: 'disconnected', offset: 0, arm: 0, raw: 0, rawSmooth: 0, totalTa: 0,
     offScale: false, bodyMotion: false,
     ta: null, taNow: null, taScale: loadTaScale(),
-    unknownFormat: false, rawSamples: [], testBaseOffset: NEEDLE_REST_OFFSET,
+    unknownFormat: false, rawSamples: [], noSignal: false, testBaseOffset: NEEDLE_REST_OFFSET,
     fn: { fn: false, sinceSec: null, widthAvg: 0, periodSec: 0, motion: false },
     setup: loadSetup(THETA_NEEDLE_SCALE), testing: null, testPeak: 0, breathOk: null, squeezeOk: null,
     testPeakOffset: 0,
@@ -249,8 +254,31 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
   useEffect(() => {
     const id = setInterval(() => {
       const p = pendingRef.current;
-      if (!p) return;
       pendingRef.current = null;
+      // ⚠️ CORRETTO — segnalato: « collegato, ma non legge nulla », su Windows. Questi tre
+      // campi (e `noSignal`, nuovo) uscivano SOLO dentro `if (!p) return` — cioè si
+      // aggiornavano SOLO quando arrivava ALMENO una lettura VALIDA. Ma `unknownFormat`/
+      // `noSignal` esistono proprio per lo scenario in cui NESSUNA lettura valida arriva mai:
+      // quel ramo, con zero letture buone, non veniva MAI raggiunto — la diagnostica restava
+      // congelata ai valori iniziali (`false`/`[]`) per l'intera sessione, anche se il
+      // dispositivo stava davvero trasmettendo report scartati o non trasmetteva affatto.
+      // Letti QUI, fuori dal cancello su `p`: si aggiornano a ogni giro (50 Hz), buona lettura
+      // o no — la stessa correzione, in sostanza, dello stesso bug già trovato altrove in
+      // questa sessione con `itemConfirmedRef`: uno stato che si azzera da sé ma dentro un
+      // ramo che una condizione diversa può non raggiungere mai.
+      if (!hidRef.current) return;
+      const counters = hidRef.current.counters;
+      const unknownFormat = hidRef.current.unknownFormat;
+      const rawSamples = hidRef.current.rawSamples;
+      const noSignal = hidRef.current.noSignal;
+      if (!p) {
+        setState(prev => (
+          prev.counters.ok === counters.ok && prev.counters.rejected === counters.rejected &&
+          prev.unknownFormat === unknownFormat && prev.noSignal === noSignal &&
+          prev.rawSamples === rawSamples
+        ) ? prev : { ...prev, counters, unknownFormat, rawSamples, noSignal });
+        return;
+      }
       setState(prev => ({
         ...prev, ...p,
         // Il TA vero è la posizione del BRACCIO letta sulla scala tarata — cioè esattamente
@@ -264,9 +292,7 @@ export function useThetaMeter(opts: UseThetaMeterOptions = {}) {
         testBaseOffset: testRef.current.baseOffset,
         testPeakOffset: testRef.current.peak * effectiveScale(prev.setup),
         fn: fnRef.current,
-        counters: hidRef.current!.counters,
-        unknownFormat: hidRef.current!.unknownFormat,
-        rawSamples: hidRef.current!.rawSamples,
+        counters, unknownFormat, rawSamples, noSignal,
       }));
     }, UI_PERIOD_MS);
     return () => clearInterval(id);

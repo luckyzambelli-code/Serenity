@@ -6690,6 +6690,8 @@ export default function App() {
               onApplySoloOffset={(off) => theta.setSoloOffset(off)}
               unknownFormat={theta.unknownFormat}
               rawSamples={theta.rawSamples}
+              noSignal={theta.noSignal}
+              deviceInfo={theta.info}
               // Col Muse collegato si passa alla SUA prova; da soli si parte e basta.
               onProceed={() => {
                 setThetaReadyDone(true);

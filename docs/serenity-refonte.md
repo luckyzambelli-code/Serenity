@@ -11587,3 +11587,64 @@ Verificato dal vivo, entrambe le direzioni:
 
 tsc --noEmit pulito, lint 324 warning/0 errori (invariato), vitest 754/754 — nessun file `src/`
 toccato in questo giro, solo `scripts/afterPack.cjs`.
+
+## Giro — 2026-09-07 — Il Meter "si connette ma non legge nulla" (Windows)
+
+Segnalato dall'utente, con l'hardware vero su Windows 11 (Parallels): il Theta-Meter si connette
+(nessun errore) ma l'ago resta fermo — nessun riquadro d'avviso, nessuna indicazione del perché.
+
+**Bug reale trovato in `useThetaMeter.ts`, indipendente da Windows**: `counters`/`unknownFormat`/
+`rawSamples` si aggiornavano SOLO dentro il ramo `if (!p) return` dell'intervallo di
+pubblicazione — cioè SOLO quando arrivava ALMENO una lettura EEG/TA valida. Ma `unknownFormat`
+esiste apposta per lo scenario "zero letture valide, magari report scartati arrivano lo stesso"
+— quel ramo, con zero letture buone, non veniva MAI raggiunto: la diagnostica restava congelata
+ai valori iniziali (`false`/`[]`) per l'intera sessione, il riquadro rosso "modello sconosciuto"
+non poteva comparire MAI nello scenario per cui è stato scritto. Corretto: `counters`/
+`unknownFormat`/`rawSamples` si leggono ora ad ogni giro dell'intervallo (50 Hz), non solo
+quando arriva una lettura.
+
+**Nuova diagnostica, per il caso "zero report, nemmeno scartati"**: `unknownFormat` da solo non
+copriva questo scenario (richiede report scartati DAVVERO arrivati — con zero report in arrivo
+`rejected` resta a zero). Aggiunto `noSignal` (in `ThetaMeterHid`/`useThetaMeter.ts`): vero
+quando il dispositivo si è aperto senza errori ma non ha mai mandato NESSUN report — buono o
+scartato — per più di 1.5 s. Un dispositivo USB composito può esporre PIÙ collection HID di
+livello superiore con lo STESSO VID, e l'ordine di enumerazione fra piattaforme può differire:
+`info` (già esistente, prima solo nome/VID/PID) ora elenca anche le collection HID dichiarate
+dal dispositivo agganciato (usage page/usage/quanti input report) — la stessa informazione che
+serve per capire QUALE PEZZO del dispositivo WebHID ha aperto, non solo CHE dispositivo.
+Nuovo riquadro in `ThetaReadyCheck.tsx` (condiviso EQUILIBRIUM/SERENITY), stesso stile del
+"modello sconosciuto" esistente: mostra `deviceInfo`, copiabile — la prossima volta che il
+meter "si connette ma non legge nulla", questo riquadro dirà ESATTAMENTE cosa si è aperto.
+
+- `src/vite-env.d.ts`: aggiunto `HIDCollectionInfo`/`collections` alla dichiarazione minima di
+  `HIDDevice` (WebHID non è nella libreria standard di TypeScript, dichiarata a mano in questo
+  file — v. la nota lì).
+- `src/lib/thetaMeterHid.ts`: `info` arricchito con le collection; nuovo getter `noSignal`.
+- `src/hooks/useThetaMeter.ts`: nuovo campo `noSignal`; **corretto** l'aggiornamento di
+  `counters`/`unknownFormat`/`rawSamples` (si legge ad ogni giro, non solo con una lettura
+  valida) — un confronto shallow evita un render in più quando nulla è cambiato.
+- `src/components/ThetaReadyCheck.tsx` (condiviso): nuovo riquadro "NESSUN SEGNALE", props
+  `noSignal`/`deviceInfo`.
+- `src/i18n.tsx`: nuove chiavi `theta_no_signal`/`theta_no_signal_hint` nelle 5 lingue.
+- `src/App.tsx` (EQUILIBRIUM) e `src/serenity/ControlloProntezza.tsx` (SERENITY): entrambi
+  passano `noSignal={theta.noSignal}`/`deviceInfo={theta.info}` a `ThetaReadyCheck`.
+
+⚠️ Non verificabile in sandbox (nessun Theta-Meter vero qui): il riquadro compare per davvero,
+e cosa dice `deviceInfo` sull'hardware reale dell'utente. Prossimo giro: leggere quel testo per
+capire se è un problema di collection HID sbagliata (allora si corregge la scelta in
+`main.cjs`'s `select-hid-device`) o qualcos'altro.
+
+tsc --noEmit pulito, lint 324 warning/0 errori (invariato), vitest 754/754.
+
+## Nota — il MUSE non visto su Windows (Parallels)
+
+Segnalato insieme: Windows non trova nemmeno il MUSE via Bluetooth. Riletto tutto il percorso
+`select-bluetooth-device` in `main.cjs` (il selettore automatico per nome "Muse", il timeout di
+12 s prima dell'errore) — nessun bug di codice trovato, e la logica è identica a quella già
+verificata funzionante su macOS. La causa più probabile è ambientale, non di codice: Parallels
+Desktop di norma NON dà a una VM Windows accesso diretto al radio Bluetooth del Mac per una
+scansione BLE generica — la condivisione Bluetooth di Parallels è pensata per periferiche
+specifiche già accoppiate (mouse/tastiera), non per lo scan che Web Bluetooth richiede. Da
+verificare lato utente: Windows Impostazioni → Bluetooth e dispositivi mostra un adattatore
+Bluetooth attivo? Se non c'è proprio un adattatore elencato, nessun software (incluso questo)
+può funzionare finché Parallels non lo espone alla VM.
