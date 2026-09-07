@@ -1,9 +1,10 @@
-const { app, BrowserWindow, ipcMain, shell, systemPreferences, screen, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, systemPreferences, screen, clipboard, dialog } = require('electron');
 const path = require('path');
 const fs   = require('fs');
 const os   = require('os');
 const { execSync, spawn } = require('child_process');
 const { createAppServer, getLanIp, stopTunnel } = require('./server-core.cjs');
+const { autoUpdater } = require('electron-updater');
 
 const PORT     = 7893;
 const DIST_DIR = path.join(__dirname, 'dist');
@@ -38,6 +39,46 @@ try {
 let ENTRY = 'index.html';
 try { ENTRY = process.env.SM_ENTRY || require('./package.json').smEntry || 'index.html'; }
 catch (_) { /* package.json illeggibile: EQUILIBRIUM */ }
+
+// ── AGGIORNAMENTO AUTOMATICO ────────────────────────────────────────────────────────────────
+// Segnalato nella revisione completa: ogni fix, finora, richiedeva spedire un DMG a mano a
+// ogni singolo utente — non regge oltre poche persone. `electron-updater` controlla da sé se
+// c'è una versione più nuova pubblicata (GitHub Releases, scelto dall'utente) e la scarica in
+// sottofondo; QUI si decide solo QUANDO proporre il riavvio — mai a metà di una seduta, lo
+// stesso principio della chiusura dell'app (`_sessionActive`, più sotto).
+//
+// ⚠️ NON FUNZIONA ANCORA DAVVERO SU macOS — annotato, non nascosto: Squirrel.Mac (il
+// meccanismo che `electron-updater` usa sotto il cofano su macOS) sostituisce l'app installata
+// con la nuova SOLO se entrambe sono firmate con lo stesso certificato Developer ID; senza
+// firma (v. la nota nella fascia 2 della revisione — nessun account Developer disponibile
+// finora) macOS blocca la sostituzione. Il collegamento è pronto apposta: il giorno in cui una
+// build firmata esce, l'aggiornamento automatico comincia a funzionare senza toccare
+// quest'area — fino ad allora `checkForUpdates()` fallisce in silenzio (variabile GH_TOKEN
+// assente, o nessuna release pubblicata) e la distribuzione resta quella di sempre.
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.on('error', (err) => {
+  // Normale finché non esiste un repository di pubblicazione configurato, o offline — non un
+  // guasto dell'app: non deve mai apparire come un errore all'utente.
+  console.warn('[updater] controllo fallito (normale se offline o senza release ancora):', err && err.message);
+});
+autoUpdater.on('update-downloaded', (info) => {
+  console.log('[updater] versione scaricata:', info && info.version);
+  const proponi = () => {
+    // Mai interrompere una seduta in corso — si ripropone da sola finché non finisce.
+    if (_sessionActive) { setTimeout(proponi, 60_000); return; }
+    const w = BrowserWindow.getAllWindows()[0];
+    dialog.showMessageBox(w || null, {
+      type: 'info',
+      buttons: ['Riavvia ora', 'Più tardi'],
+      defaultId: 0,
+      cancelId: 1,
+      title: 'Aggiornamento pronto',
+      message: `La versione ${info && info.version} è stata scaricata. Riavviare ora per installarla?`,
+    }).then(({ response }) => { if (response === 0) autoUpdater.quitAndInstall(); });
+  };
+  proponi();
+});
 
 // Kill whatever process is occupying PORT (macOS/Linux only)
 function freePort(port) {
@@ -471,6 +512,11 @@ app.whenReady().then(async () => {
       console.log('[TM] Accessibility already granted.');
     }
   }
+
+  // Controllo aggiornamenti IN SOTTOFONDO, dopo che la finestra è già visibile — mai bloccante
+  // per l'avvio, mai un `unpackaged`/dev a inciampare (electron-updater lancia da sé se manca
+  // app-update.yml, v. il catch qui sotto).
+  setTimeout(() => { autoUpdater.checkForUpdates().catch(() => {}); }, 5000);
 });
 
 app.on('window-all-closed', () => {

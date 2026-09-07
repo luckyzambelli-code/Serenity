@@ -10951,3 +10951,42 @@ attesa delle credenziali dell'utente.
 e spedizione di entrambe le app, entrambe le architetture.
 
 **Build**: SERENITY 3.0.284 (arm64 + x64) + EQUILIBRIUM 2.0.289 (arm64 + x64).
+
+## Giro — 2026-09-07 (continuazione) — FASCIA 3 (prima parte): il collegamento per l'aggiornamento automatico
+
+Chiesto conto delle tre decisioni che restavano in sospeso dalla revisione (serve materiale
+dell'utente, non solo codice): firma Apple → **saltata per ora** (nessun account Developer
+disponibile); TURN dedicato → **saltato per ora** (resta quello gratuito, col ripiego JPEG già
+collegato); aggiornamento automatico → **sì, via GitHub Releases**.
+
+**`main.cjs` + `package.json` (`electron-updater`)**: aggiunto il collegamento — controllo in
+sottofondo 5s dopo l'avvio (mai bloccante), download automatico, e una finestra di dialogo che
+propone il riavvio SOLO quando `_sessionActive` è falso (mai a metà di una seduta — si ripropone
+da sola ogni 60s finché la seduta non finisce, lo stesso principio già scritto per la chiusura
+dell'app). Ogni fallimento (offline, nessuna release ancora pubblicata, nessun `publish`
+configurato) è silenzioso — mai un errore visibile, mai un crash.
+
+**⚠️ Annotato di proposito, non nascosto**: su macOS l'aggiornamento automatico NON funzionerà
+davvero finché l'app non sarà firmata — Squirrel.Mac (il meccanismo sotto `electron-updater` su
+questa piattaforma) sostituisce l'installazione SOLO se entrambe le versioni portano lo stesso
+certificato Developer ID. Il collegamento è pronto apposta: il giorno in cui arriverà una build
+firmata, comincia a funzionare da sé, senza toccare quest'area.
+
+**Verificato non solo letto**: build reale (`dist:serenity`) e ispezionato l'`.asar` prodotto
+con `asar list` — `electron-updater` (`main.js`, `package.json`, l'intero albero) risulta
+davvero impacchettato, pur non essendo nell'elenco esplicito `files` di `package.json` (electron-
+builder include comunque le `dependencies` dichiarate, indipendentemente da quell'elenco — non
+serviva aggiungerlo a mano).
+
+**Resta da fare, prima che serva davvero a qualcosa**: la configurazione `publish` di
+electron-builder (repository GitHub, pubblico o privato, e chi lo crea) — chiesto all'utente,
+in attesa di risposta. Fino ad allora `checkForUpdates()` fallisce in silenzio per assenza di
+un feed, esattamente come progettato.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato),
+`npx vitest run` 726/726 verdi, più le due build reali (arm64+x64) sopra.
+
+**File toccati**: `main.cjs`, `package.json` (+ `package-lock.json`) — CONDIVISI (processo
+Electron) → build e spedizione di entrambe le app.
+
+**Build**: SERENITY 3.0.285 (arm64 + x64) + EQUILIBRIUM 2.0.290 (arm64 + x64).
