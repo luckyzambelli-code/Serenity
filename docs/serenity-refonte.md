@@ -11020,3 +11020,36 @@ test non ne aggiungono), `npx vitest run` **754/754 verdi** (36→39 file di tes
 
 **File toccati**: solo test, nessun file applicativo — **nessuna build necessaria**, zero
 impatto sul comportamento dell'app in esecuzione.
+
+## Giro — 2026-09-07 (continuazione) — comincia la scomposizione di Serenity.tsx: ZonaCamere
+
+Su indicazione esplicita: « comincia, per gradi — un dominio alla volta, verificando e
+costruendo un DMG dopo ogni pezzo staccato ». Primo pezzo, il più isolato: le due
+`CameraCerchio` (CAM 1 auditor, CAM 2 PC/preclear) e la loro cornice.
+
+**`src/serenity/ZonaCamere.tsx`** (nuovo): riceve SOLO valori già calcolati da chi lo monta
+(`statoCamPc`, `cam1Mostrata`/`cam2Mostrata`, i booleani della connessione remota) — un'
+estrazione di JSX, non una riscrittura di logica. La cronologia completa di ogni segnalazione
+che ha formato questo disegno (« non trovo più la camm PC », « le camm devono essere più in
+alto », « la cam LIVE indica segnale ma niente immagine »…) si è spostata lì con lui, perché
+appartiene a QUESTO pezzo.
+
+**`Serenity.tsx`**: il blocco IIFE di ~65 righe sostituito da `<ZonaCamere ... />` — 7058 → 6996
+righe (-62, +119 nel nuovo file: la differenza sono i commenti/JSDoc del componente, non logica
+persa). L'import di `CameraCerchio` (non più usato direttamente qui) sostituito da quello di
+`ZonaCamere`.
+
+**Verificato dal vivo, non solo compilato**: aperta una seduta vera in sandbox (Vite puro) —
+CAM 2 (PC) appare col titolo giusto, l'etichetta "fotocamera offline/negata" (attesa: niente
+vera camera nel browser di test), lo stato "RICERCA MASSE..." — e il collasso/espansione al
+click funziona esattamente come prima. Nessun errore in console.
+
+**Verifica**: `tsc --noEmit` pulito (corretto un piccolo scarto di tipo, `boolean | null` →
+`boolean` con un `!!` al punto di chiamata — `cam1Mostrata`/`cam2Mostrata` restano `boolean |
+null` in `Serenity.tsx`, la nuova prop del componente pretende `boolean`), `npm run lint` 324
+warning/0 errori (invariato), `npx vitest run` 754/754 verdi.
+
+**File toccati**: `src/serenity/Serenity.tsx`, `src/serenity/ZonaCamere.tsx` (nuovo) — SOLO
+SERENITY.
+
+**Build**: SERENITY (solo).

@@ -85,7 +85,7 @@ import { Connessione } from './Connessione';
 import { PannelloEp } from './PannelloEp';
 import { PannelloConfig } from './PannelloConfig';
 import { PannelloMna } from './PannelloMna';
-import { CameraCerchio } from './CameraCerchio';
+import { ZonaCamere } from './ZonaCamere';
 import { IndicatoreConnessione, COLORE_PUNTO } from './IndicatoreConnessione';
 import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
@@ -5273,92 +5273,30 @@ export default function Serenity() {
           sempre DOPO i comandi, qualunque sia la loro altezza — un ciclo armato ne occupa di
           più di uno spento) — `top:16` ora è relativo alla sezione, non più alla pagina
           intera, e non può più cadere sopra un elemento che sta prima di lei. */}
-      {/* ⚠️ BUG TROVATO — segnalato: « non trovo più la camm PC ». CAM 2 era ristretta a
-          `avvio.distanza || avvio.solo` — spariva del tutto nel caso più comune, una seduta
-          LOCALE con un preclear vero. App.tsx non ha QUESTA condizione: mostra CAM 2 ogni
-          volta che `moduleVis.cam2` è acceso, punto — la webcam locale generica quando non
-          c'è un flusso remoto (`CameraCerchio` chiama `getUserMedia` da sé), lo stream vero
-          solo quando `avvio.distanza` lo fornisce. La restrizione qui era un'invenzione, non
-          una scelta di EQUILIBRIUM: tolta, per la stessa regola di sempre — riprodurre la
-          stessa logica, non una più prudente inventata qui. */}
-      {/* ⚠️ SEGNALATO DI NUOVO: « les camm devono essere più in alto per guadagnare spazio e
-          riduci di 1/4 ». `top:16` → `top:-8`: più vicine al bordo superiore della sezione
-          (che comincia già SOTTO l'intestazione/i comandi, v. `<main>` più su — nessun
-          rischio di finire sopra di loro). Taglia ridotta di un quarto (× 0,75): 340→255 CAM 2,
-          210→158 CAM 1, stessa proporzione di sempre — insieme ai due centimetri guadagnati
-          in alto, il quadrante sotto resta libero su una fetta più larga. */}
-      {/* ⚠️ Segnalato: « la cam dell'auditor non è necessaria, falla sparire dall'interfaccia
-          dell'auditor. Lasciala per le connessioni a distanza ». Verificato in `CameraCerchio`:
-          CAM 1 non riceve mai `externalStream` — è SEMPRE la sua webcam locale via
-          `getUserMedia`, un autoritratto che non serve a chi lo guarda già di persona. In
-          seduta REMOTA lo stesso autoritratto diventa utile (sapere di essere inquadrati per
-          la videochiamata, come in Zoom/Meet) — quindi non sparisce del tutto, solo fuori da
-          `avvio.distanza`. */}
-      {aperta && (cam2Mostrata || cam1Mostrata) && (() => {
-        // `telefonoPcCollegato` è ora calcolato più in alto (v. la sua nota grande, vicino a
-        // `cam1Mostrata`) — qui resta solo `daRemoto`, che ne dipende ma serve solo a QUESTO
-        // blocco (decidere se CAM 2 mostra il flusso locale o quello remoto/del telefono).
-        const daRemoto = !!avvio.distanza || telefonoPcCollegato;
-        return (
-        <div style={{
-          position: 'absolute', top: -8, right: 32, zIndex: 5,
-          display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16,
-          pointerEvents: 'none',
-        }}>
-          {cam2Mostrata && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-            <CameraCerchio
-              dimensione={255}
-              dimensioneCollassata={88}
-              titolo={t('cam2') as string}
-              externalStream={daRemoto ? (remote.remoteStream ?? null) : undefined}
-              // ⚠️ AGGIUNTO — v. la nota su `useMediaRelayFallback` più su: quando il WebRTC non
-              // arriva, questo è il fotogramma JPEG di scorta che il telefono manda sullo stesso
-              // canale dei dati — `CameraCerchio` sapeva già disegnarlo (fase 6), mancava solo chi
-              // lo passasse.
-              fallbackFrame={daRemoto && remote.videoFallbackActive ? remote.remoteVideoFrame : undefined}
-              offlineLabel={t('camera_offline') as string}
-              opacita={uiAlpha}
-              collassata={cam2Collassata}
-              onToggleCollasso={() => setCam2Collassata(v => !v)}
-              statoTesto={statoCamPc}
-              // ⚠️ CORRETTO — segnalato dal vivo: « la cam PC indica LIVE, ma niente immagine ».
-              // `daRemoto` da solo dice solo "un telefono è connesso" (canale dati/segnalazione)
-              // — completamente separato dalla chiamata media WebRTC che porta il VIDEO. Un
-              // telefono può risultare connesso e "LIVE" senza che il suo video sia mai
-              // arrivato (getUserMedia negato/fallito sul telefono, o la chiamata media
-              // separata non ancora stabilita) — mostrare LIVE in quel momento era un falso
-              // positivo. Ora richiede anche `remote.remoteStream` — un vero fotogramma in
-              // arrivo, non solo una connessione aperta.
-              // ⚠️ AGGIUNTO `|| remoteVideoFrame` — un fotogramma di scorta È un'immagine vera in
-              // arrivo quanto lo stream WebRTC, la stessa onestà del commento sopra si applica.
-              inDiretta={daRemoto && !!(remote.remoteStream || (remote.videoFallbackActive && remote.remoteVideoFrame))}
-            />
-            </div>
-          )}
-          {cam1Mostrata && (
-            // ⚠️ AGGIUNTO `inDiretta` — segnalato dal vivo: « un indicatore nell'interfaccia
-            // dell'auditor per indicare che la sua CAM sta mandando segnale, quando c'è una
-            // sessione a distanza ». `CameraCerchio` sa già disegnare il badge "LIVE" (lo stesso
-            // di CAM 2, `inDiretta`, sopra) — mancava solo di passarglielo qui. `cam1Mostrata`
-            // è già vero SOLO con `avvio.distanza`, quindi basta `remote.isConnected`: non "a
-            // distanza è stato scelto" ma "il preclear è davvero collegato e sta ricevendo
-            // questa camera" — l'indicatore onesto di quando il segnale VERAMENTE parte, non
-            // prima.
-            <CameraCerchio
-              dimensione={158}
-              dimensioneCollassata={88}
-              titolo={t('cam1') as string}
-              offlineLabel={t('camera_offline') as string}
-              opacita={uiAlpha}
-              collassata={cam1Collassata}
-              onToggleCollasso={() => setCam1Collassata(v => !v)}
-              inDiretta={remote.isConnected}
-            />
-          )}
-        </div>
-        );
-      })()}
+      {/* ⚠️ ESTRATTA in `ZonaCamere.tsx` — segnalato nella revisione completa del codice:
+          `Serenity.tsx` è un "componente Dio" (7000+ righe), da scomporre un dominio alla
+          volta. Le due `CameraCerchio` e la loro cornice erano il pezzo più isolato — riceve
+          solo valori già calcolati qui (nessuna logica spostata, solo il disegno). La cronologia
+          completa di OGNI segnalazione che ha formato questo disegno (« non trovo più la camm
+          PC », « le camm devono essere più in alto », « la cam LIVE indica segnale ma niente
+          immagine »…) vive ora dentro `ZonaCamere.tsx`, non qui. */}
+      <ZonaCamere
+        aperta={aperta}
+        cam1Mostrata={!!cam1Mostrata}
+        cam2Mostrata={!!cam2Mostrata}
+        avvioDistanza={!!avvio.distanza}
+        telefonoPcCollegato={telefonoPcCollegato}
+        remoteStream={remote.remoteStream}
+        remoteVideoFrame={remote.remoteVideoFrame}
+        remoteVideoFallbackActive={remote.videoFallbackActive}
+        remoteIsConnected={remote.isConnected}
+        uiAlpha={uiAlpha}
+        cam1Collassata={cam1Collassata}
+        cam2Collassata={cam2Collassata}
+        onToggleCam1={() => setCam1Collassata(v => !v)}
+        onToggleCam2={() => setCam2Collassata(v => !v)}
+        statoCamPc={statoCamPc}
+      />
 
       {/* ⚠️ AGGIUNTO, POI SPOSTATO — l'overlay di `Connessione` per il gesto « collega il
           telefono del PC ». Stesso componente della schermata a schermo intero di `avvio.distanza`
