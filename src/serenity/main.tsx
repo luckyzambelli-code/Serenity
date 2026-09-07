@@ -20,6 +20,18 @@ import { I18nProvider } from '../i18n';
 import { parseConnectionLink } from '../lib/networkManager';
 import Serenity from './Serenity';
 import { VistaPartecipante } from './VistaPartecipante';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+import { installCrashGuard } from '../lib/crashGuard';
+
+// ⚠️ AGGIUNTI — mancavano DEL TUTTO, segnalati nella revisione completa del codice di SERENITY:
+// `src/main.tsx` (EQUILIBRIUM) li monta entrambi da sempre, questo file no. Senza
+// `ErrorBoundary`, un errore di rendering non gestito in `Serenity.tsx` (7000+ righe, 51 effetti,
+// nessun test) o in `VistaPartecipante.tsx` faceva sparire l'intera interfaccia a schermo bianco
+// — in seduta, senza nessun modo di recuperare senza riavviare l'app. Senza `installCrashGuard`,
+// nemmeno gli errori FUORI dal render di React (una promise non gestita, un callback asincrono)
+// finivano da qualche parte — sparivano in silenzio invece di finire nel registro che
+// `ErrorBoundary` stessa legge per il bottone "Copia il dettaglio".
+installCrashGuard();
 
 /**
  * ⚠️ RISCRITTO — segnalato dal vivo, con insistenza crescente: « non deve più esserci
@@ -52,10 +64,12 @@ const linguaInvito = invito?.lang && ['en', 'fr', 'it', 'es', 'sv'].includes(inv
 
 createRoot(document.getElementById('serenity')!).render(
   <StrictMode>
-    <I18nProvider>
-      {invito?.peerId
-        ? <VistaPartecipante linkIniziale={linkCompleto} linguaInvito={linguaInvito} />
-        : <Serenity />}
-    </I18nProvider>
+    <ErrorBoundary brand="SERENITY">
+      <I18nProvider>
+        {invito?.peerId
+          ? <VistaPartecipante linkIniziale={linkCompleto} linguaInvito={linguaInvito} />
+          : <Serenity />}
+      </I18nProvider>
+    </ErrorBoundary>
   </StrictMode>
 );

@@ -10828,3 +10828,71 @@ SERENITY (nessun file condiviso toccato: `useMediaRelayFallback.ts`, `networkMan
 `CameraCerchio.tsx` esistevano già, invariati).
 
 **Build**: SERENITY (solo).
+
+## Giro — 2026-09-07 — REVIEW COMPLETA + FASCIA 1: ErrorBoundary, dipendenze morte, la fuga della peerKey
+
+Seguito alla revisione completa e intensiva del codice di SERENITY (sicurezza, robustezza,
+architettura, prerequisiti di distribuzione) fatta su richiesta esplicita, SENZA interventi in
+quel momento. Questo giro comincia ad applicarla, a partire dalla fascia più economica e più
+seria — e vi si è aggiunta la prima parte della fascia 2 (l'autenticazione di `/api/*`), perché
+il meccanismo che risolve la fuga della `peerKey` (fascia 1) è LO STESSO che chiude l'intera
+API senza controlli (fascia 2): separarli in due giri avrebbe significato scrivere la stessa
+cosa due volte.
+
+**`src/components/ErrorBoundary.tsx` + `src/serenity/main.tsx`** — SERENITY non aveva NESSUN
+error boundary (EQUILIBRIUM sì, da sempre, in `src/main.tsx`). Un errore di rendering non
+gestito in `Serenity.tsx` (7000+ righe, 51 effetti, zero test) faceva sparire l'intera
+interfaccia a schermo bianco, IN SEDUTA, senza nessun modo di recuperare senza riavviare l'app.
+`ErrorBoundary` ora accetta un `brand` (`'EQUILIBRIUM' | 'SERENITY'`) invece di restare
+cablata su un nome solo — un componente, non due quasi identici. Aggiunto anche
+`installCrashGuard()` (mancava anche lui): senza, gli errori FUORI dal render di React
+(promise non gestite, callback asincroni) sparivano in silenzio invece di finire nel registro
+che il bottone "Copia il dettaglio" dell'ErrorBoundary legge.
+
+**Tre dipendenze morte tolte** (`package.json`): `better-sqlite3` (mai importato da nessuna
+parte — modulo NATIVO che veniva ricompilato per architettura a ogni build per zero beneficio),
+`localtunnel` (sostituito da `cloudflared` da tempo, restava solo come eredità), `@google/genai`
+(mai importato). `npm install` ha rimosso 29 pacchetti dall'albero delle dipendenze.
+
+**`vite.config.ts`** — tolto il `define` di `process.env.GEMINI_API_KEY`: `@google/genai` (che
+l'avrebbe usata) non esisteva più nel codice, quindi questa riga era una trappola dormiente —
+`define` di Vite scrive il valore IN CHIARO dentro il bundle spedito a ogni utente. Innocua
+finché la variabile d'ambiente resta vuota in build, ma pronta a far trapelare una vera chiave
+il giorno in cui qualcuno la impostasse pensando fosse lato server.
+
+**`server-core.cjs` + `api-routes.cjs` — la fuga della `peerKey` e l'intera API senza
+autenticazione.** Trovato nella revisione: `GET /api/server-info` restituiva la `peerKey`
+(la chiave che dovrebbe autenticare PeerJS) A CHIUNQUE, senza nessun controllo — bastava
+chiamarla sul tunnel per bypassare l'unico gate esistente. Più in generale, TUTTA `/api/*`
+(profili, sedute, PDF dei processus/sedute, le rotte che pilotano Theta-Meter via AppleScript)
+non aveva nessuna autenticazione — ed è raggiungibile non solo in LAN ma anche dal tunnel
+Cloudflare PUBBLICO durante ogni seduta a distanza, perché `cloudflared` non fa che inoltrare a
+questo stesso server.
+
+Corretto con un unico meccanismo (`isFromTunnel`, in `server-core.cjs`): il TCP non aiuta a
+distinguere una richiesta locale da una relayata dal tunnel (cloudflared è un processo LOCALE,
+quindi arriva comunque da loopback), ma l'header **Host** sì — cloudflared preserva quello
+originale (`xxxx.trycloudflare.com`) quando inoltra, mentre l'app stessa chiama sempre la
+propria origine (`127.0.0.1:porta` o l'IP di LAN). Le rotte che toccano dati personali o
+comandi macchina (`/api/server-info`, `/api/profiles`, `/api/pc-profiles`, `/api/sessions`,
+`/api/settings`, `/api/processus*`, `/api/session-pdfs*`, `/api/tombstones`, `/api/health`,
+`/api/theta-meter*`, `/api/tm/*`, e `/api/tunnel` per POST/DELETE) ora rispondono 403 quando
+l'Host combacia con quello del tunnel — **il vero canale della seduta a distanza
+(`/api/relay*`, `/peerjs/*`) resta aperto**, è l'unico scopo del tunnel. Il `GET /api/tunnel`
+resta aperto apposta: è chiamato DAL PARTECIPANTE remoto stesso (`refreshSignalingForReconnect`
+in `App.tsx`, CONN-3) per sapere se il tunnel è ancora vivo dopo un blip di rete.
+
+**Verificato dal vivo, non solo letto**: avviato un vero server locale + un vero tunnel
+Cloudflare. Una richiesta con l'Host del tunnel su `/api/server-info` e `/api/profiles` → 403;
+la stessa su `/api/relay/:roomId` → 200, `text/event-stream` (resta aperta, non toccata); una
+richiesta locale vera (`Host: 127.0.0.1:porta`) su `/api/server-info` → 200 con `peerKey`,
+esattamente come prima — nessuna regressione sul funzionamento normale.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato),
+`npx vitest run` 726/726 verdi, più il test end-to-end col tunnel reale sopra.
+
+**File toccati**: `src/components/ErrorBoundary.tsx` (CONDIVISO), `src/serenity/main.tsx`
+(SOLO SERENITY), `package.json` + `package-lock.json` (CONDIVISI), `vite.config.ts`
+(CONDIVISO), `server-core.cjs` + `api-routes.cjs` (CONDIVISI, processo Electron) → build e
+spedizione di ENTRAMBE le app, motivata dalla natura dei file: il cuore della sicurezza di
+rete e il processo Electron condiviso, non uno stile.

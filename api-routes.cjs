@@ -356,6 +356,31 @@ function json(res, data, status = 200) {
   res.end(JSON.stringify(data));
 }
 
+// ── SECURITY: rotte che non devono MAI rispondere a una richiesta arrivata dal tunnel
+// pubblico — segnalato nella revisione completa: profili, sedute, PDF dei processus/sedute,
+// e le rotte che lanciano/pilotano Theta-Meter via AppleScript, non avevano NESSUN controllo.
+// Durante ogni seduta a distanza queste rotte sono raggiungibili non solo in LAN ma anche dal
+// tunnel Cloudflare (v. la nota grande su `isFromTunnel` in `server-core.cjs`). Nessuna di
+// queste è mai chiamata da un preclear/partecipante — solo dall'app stessa, sulla propria
+// origine locale — quindi bloccarle per il tunnel non toglie nulla di reale: `/api/relay*`
+// (il vero canale dati della seduta a distanza) NON è in questo elenco, resta aperto.
+const LOCAL_ONLY_PREFIXES = [
+  '/api/health',       // rivela il percorso home dell'utente — nessun uso remoto
+  '/api/server-info',  // già bloccato anche in server-core.cjs; qui per lo stesso principio
+  '/api/profiles',
+  '/api/pc-profiles',
+  '/api/sessions',
+  '/api/settings',
+  '/api/processus',
+  '/api/session-pdfs',
+  '/api/tombstones',
+  '/api/theta-meter',  // GET (rileva) e /open (lancia l'app) — nessun bisogno remoto
+  '/api/tm/',          // tile/restore/close — pilotano finestre via AppleScript
+];
+function isLocalOnlyRoute(url) {
+  return LOCAL_ONLY_PREFIXES.some(p => url === p || url.startsWith(p));
+}
+
 // ── Main handler ─────────────────────────────────────────────────────────────
 // Returns true if the request was handled (so the caller skips static serving).
 async function handleApi(req, res) {
@@ -368,6 +393,12 @@ async function handleApi(req, res) {
 
   // OPTIONS pre-flight
   if (method === 'OPTIONS') { setCors(res); res.writeHead(204); res.end(); return true; }
+
+  // `req._smFromTunnel` è calcolato da `server-core.cjs` (è lì che vive `_tunnelUrl`).
+  if (req._smFromTunnel && isLocalOnlyRoute(url)) {
+    json(res, { error: 'not available over the public tunnel' }, 403);
+    return true;
+  }
 
   try {
     // ── Health ────────────────────────────────────────────────────────────

@@ -22,8 +22,15 @@ export default defineConfig({
     react(), 
     tailwindcss(),
   ],
+  // ⚠️ TOLTO `process.env.GEMINI_API_KEY` — segnalato nella revisione completa del codice:
+  // `@google/genai` (che l'avrebbe usata) non è importato da NESSUNA parte di `src/`, quindi
+  // questa riga era una trappola dormiente, non una funzione viva. `define` di Vite scrive il
+  // valore IN CHIARO dentro il bundle spedito a ogni utente — il giorno in cui qualcuno avesse
+  // impostato una vera `GEMINI_API_KEY` prima di una build pensando fosse lato server, quella
+  // chiave sarebbe finita leggibile nel JS di ogni DMG distribuito. Se un giorno servirà
+  // davvero un modello Gemini, la chiave va tenuta nel processo Electron (`main.cjs`/
+  // `api-routes.cjs`) dietro una rotta locale — mai definita qui.
   define: {
-    'process.env.GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || ''),
     __APP_VERSION__: JSON.stringify(APP_VERSION),
     __SERENITY_VERSION__: JSON.stringify(SERENITY_VERSION),
   },

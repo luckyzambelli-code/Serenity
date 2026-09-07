@@ -190,6 +190,29 @@ function stopTunnel() {
 
 function getTunnelUrl() { return _tunnelUrl; }
 
+// ── SECURITY: distinguere una richiesta arrivata dal tunnel pubblico da una locale/LAN ──
+// Segnalato nella revisione completa: l'intera `/api/*` (profili, sedute, PDF dei processus,
+// e le rotte che eseguono AppleScript per Theta-Meter) non aveva NESSUN controllo — e durante
+// ogni seduta a distanza è raggiungibile non solo in LAN ma dal tunnel Cloudflare PUBBLICO,
+// perché `cloudflared` non fa che inoltrare a questo stesso server (v. `startTunnel`, sopra:
+// `--url http://localhost:${port}`). Il TCP non aiuta a distinguere: cloudflared è un processo
+// LOCALE, quindi anche una richiesta relayata dal tunnel arriva con `remoteAddress` di loopback,
+// identico a una vera richiesta locale. Quel che INVECE resta diverso è l'header Host:
+// cloudflared preserva quello originale (`xxxx.trycloudflare.com`) quando inoltra, mentre
+// l'app stessa (il proprio renderer) chiama sempre la propria stessa origine
+// (`127.0.0.1:porta` o l'IP di LAN). Confrontare l'Host con l'hostname noto del tunnel è quindi
+// un segnale affidabile — usato sotto per tenere i dati personali e le rotte di controllo
+// macchina irraggiungibili da internet, lasciando aperto solo il percorso dati della seduta a
+// distanza vera e propria (`/peerjs/*`, `/api/relay*`), che è l'unico scopo del tunnel.
+function _tunnelHost() {
+  if (!_tunnelUrl) return null;
+  try { return new URL(_tunnelUrl).host.toLowerCase(); } catch (_) { return null; }
+}
+function isFromTunnel(req) {
+  const h = _tunnelHost();
+  return !!h && (req.headers.host || '').toLowerCase() === h;
+}
+
 // ── App factory ───────────────────────────────────────────────────────────────
 function createAppServer({ port, distDir, entry = 'index.html' }) {
   const app    = express();
@@ -251,16 +274,28 @@ function createAppServer({ port, distDir, entry = 'index.html' }) {
   }, peerMw);
 
   // 2. API routes
-  app.get('/api/server-info', (_req, res) => {
+  // ⚠️ CORRETTO — segnalato: la vecchia frase « external actors don't have it » era falsa,
+  // bastava chiamare QUESTA rotta sul tunnel per ottenere `peerKey` senza nessun link. Nessun
+  // preclear/partecipante la chiama mai (v. `useRemoteSession.ts`/`App.tsx`: solo l'auditor,
+  // sulla propria stessa origine) — bloccata quando arriva dal tunnel pubblico, invariata per
+  // chi la chiama davvero (l'app stessa, in locale/LAN).
+  app.get('/api/server-info', (req, res) => {
+    if (isFromTunnel(req)) { res.status(403).json({ error: 'not available over the public tunnel' }); return; }
     // FIX H1: include peerKey so the auditor frontend can embed it in the link.
-    // Legitimate participants receive it from the link; external actors don't have it.
     res.json({ lanIp: getLanIp(), port, tunnelUrl: _tunnelUrl, peerKey: PEERJS_KEY });
   });
 
   // POST /api/tunnel  → start tunnel, returns { url }
   // GET  /api/tunnel  → status, returns { url } or { url: null }
   // DELETE /api/tunnel → stop tunnel
-  app.post('/api/tunnel', express.json(), async (_req, res) => {
+  // ⚠️ POST/DELETE bloccati dal tunnel — nessun chiamante remoto legittimo (solo l'auditor
+  // avvia/ferma il PROPRIO tunnel, sempre in locale) e un estraneo che arrivasse a spegnerlo
+  // interromperebbe una seduta in corso. Il GET resta aperto apposta: `App.tsx`
+  // (`refreshSignalingForReconnect`, CONN-3) lo chiama DAL PARTECIPANTE proprio sull'host del
+  // tunnel per sapere se è ancora vivo dopo un blip di rete — bloccarlo romperebbe quel
+  // controllo, l'unico caso in cui una rotta di `/api/tunnel` è chiamata legittimamente da fuori.
+  app.post('/api/tunnel', express.json(), async (req, res) => {
+    if (isFromTunnel(req)) { res.status(403).json({ error: 'not available over the public tunnel' }); return; }
     try {
       const url = await startTunnel(port);
       res.json({ url });
@@ -271,7 +306,8 @@ function createAppServer({ port, distDir, entry = 'index.html' }) {
   app.get('/api/tunnel', (_req, res) => {
     res.json({ url: _tunnelUrl });
   });
-  app.delete('/api/tunnel', (_req, res) => {
+  app.delete('/api/tunnel', (req, res) => {
+    if (isFromTunnel(req)) { res.status(403).json({ error: 'not available over the public tunnel' }); return; }
     stopTunnel();
     res.json({ ok: true });
   });
@@ -282,6 +318,10 @@ function createAppServer({ port, distDir, entry = 'index.html' }) {
   app.use('/api', async (req, res, next) => {
     const saved  = req.url;
     req.url      = '/api' + (req.url || '/');
+    // ⚠️ AGGIUNTO — `handleApi` (in `api-routes.cjs`) usa questo per bloccare le rotte che
+    // toccano dati personali o comandi macchina quando la richiesta arriva dal tunnel pubblico.
+    // Calcolato qui perché `_tunnelUrl` vive in questo modulo, non in `api-routes.cjs`.
+    req._smFromTunnel = isFromTunnel(req);
     const handled = await handleApi(req, res);
     req.url = saved;          // restore in case next() needs the original path
     if (!handled) next();

@@ -11,8 +11,19 @@ import { LAYER } from "../ui/layers";
  * the thing that failed is a provider/context above it.
  */
 interface State { error: Error | null; info: string | null; }
+interface Props {
+  children: React.ReactNode;
+  /** ⚠️ AGGIUNTO — SERENITY non aveva NESSUN error boundary (solo EQUILIBRIUM lo montava in
+   *  `src/main.tsx`): un errore di rendering non gestito in `Serenity.tsx` (7000+ righe, 51
+   *  effetti, zero test) faceva sparire l'intera interfaccia a schermo bianco, IN SEDUTA, senza
+   *  nessun modo di recuperare senza riavviare l'app — lo stesso guasto che questo componente
+   *  esiste apposta per evitare in EQUILIBRIUM. Un `brand` invece di due componenti quasi
+   *  identici: la sola differenza reale fra le due schermate è il nome mostrato.
+   */
+  brand?: 'EQUILIBRIUM' | 'SERENITY';
+}
 
-export class ErrorBoundary extends React.Component<{ children: React.ReactNode }, State> {
+export class ErrorBoundary extends React.Component<Props, State> {
   state: State = { error: null, info: null };
 
   static getDerivedStateFromError(error: Error): Partial<State> {
@@ -30,7 +41,8 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
 
   private copyDetails = () => {
     const { error, info } = this.state;
-    const text = `Equilibrium error\n${error?.name}: ${error?.message}\n\n${error?.stack || ''}\n\nComponent stack:${info || ''}`;
+    const brand = this.props.brand || 'EQUILIBRIUM';
+    const text = `${brand} error\n${error?.name}: ${error?.message}\n\n${error?.stack || ''}\n\nComponent stack:${info || ''}`;
     try { navigator.clipboard?.writeText(text); } catch (_) {}
   };
 
@@ -44,7 +56,7 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
         color: '#e2e8f0', fontFamily: 'monospace', padding: 24, textAlign: 'center',
       }}>
         <div style={{ fontSize: 'clamp(22px,5vw,40px)', fontWeight: 900, letterSpacing: '0.08em', color: '#22d3ee', textShadow: '0 0 22px rgba(34,211,238,0.45)' }}>
-          EQUILIBRIUM
+          {this.props.brand || 'EQUILIBRIUM'}
         </div>
         <div style={{ fontSize: 16, fontWeight: 700, color: '#fca5a5' }}>
           Une erreur inattendue s'est produite · Si è verificato un errore imprevisto
