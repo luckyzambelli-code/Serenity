@@ -11086,3 +11086,33 @@ warning/0 errori (invariato).
 **File toccati**: `package.json`, `electron-builder.serenity.cjs` (CONDIVISI, solo
 configurazione di packaging) — nessuna build necessaria per questo giro (nessun cambiamento di
 comportamento a runtime finché non esiste una release pubblicata).
+
+## Giro — 2026-09-07 (continuazione) — scomposizione di Serenity.tsx: GiornaleSeduta
+
+Secondo pezzo staccato (dopo `ZonaCamere.tsx`): il pannello del Giornale — righe Aud/PC, tono
+di voce, reazione istantanea quando c'è.
+
+**`src/serenity/GiornaleSeduta.tsx`** (nuovo): riceve `journal.logs` già letto, i due ref
+(`shownReadsRef`/`agoEegRef`) da cui legge la reazione istantanea — la stessa fonte già usata
+altrove nel file per lo stesso calcolo — e importa da sé `computeInstantRead`/
+`READ_NON_MISURATO` (funzioni pure, nessun bisogno di passarle come prop). Il GIORNALE VERO
+resta `session/useSessionJournal` — decine di punti in `Serenity.tsx` continuano a scriverci,
+questo componente si limita a MOSTRARE. Filtro e ordine invariati; la cronologia completa delle
+segnalazioni che li hanno formati si è spostata col componente.
+
+**`Serenity.tsx`**: il blocco di ~98 righe sostituito da `<GiornaleSeduta ... />` — 6996 → 6910
+righe.
+
+**Verificato dal vivo**: aperta una seduta vera in sandbox — il pannello GIORNALE appare col
+titolo giusto; il bottone × lo chiude DAVVERO (compare l'indicatore "giornale · 2 righe" al suo
+posto, la stessa spia che c'era prima dell'estrazione). Nessun errore in console (solo gli
+attesi errori di rete della sandbox senza server vero).
+
+**Verifica**: `tsc --noEmit` pulito al primo colpo (nessuno scarto di tipo, a differenza del
+giro precedente), `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754
+verdi.
+
+**File toccati**: `src/serenity/Serenity.tsx`, `src/serenity/GiornaleSeduta.tsx` (nuovo) — SOLO
+SERENITY.
+
+**Build**: SERENITY (solo).

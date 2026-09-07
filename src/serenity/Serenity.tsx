@@ -86,6 +86,7 @@ import { PannelloEp } from './PannelloEp';
 import { PannelloConfig } from './PannelloConfig';
 import { PannelloMna } from './PannelloMna';
 import { ZonaCamere } from './ZonaCamere';
+import { GiornaleSeduta } from './GiornaleSeduta';
 import { IndicatoreConnessione, COLORE_PUNTO } from './IndicatoreConnessione';
 import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
@@ -4206,110 +4207,23 @@ export default function Serenity() {
             }}>{LC('DIZIONARIO', 'DICTIONNAIRE', 'DICTIONARY', 'DICCIONARIO', 'ORDBOK')}</span>
           </div>
         </div>
-        {/* ── IL GIORNALE, SOTTO EP — segnalato: « cambia di posizione il giornale con
-            l'assessment ». Stava nella colonna destra, sotto Santé Système; l'Assessment stava
-            qui, sotto i bottoni dei metodi. Scambiati — stessa logica di entrambi
-            (`moduleVis.journal`/`journal.logs`, invariati), solo la POSIZIONE si scambia. Il
-            contenitore intorno resta quello di prima (148/272px, v. sopra): la larghezza delle
-            due colonne è la stessa, il giornale ci sta esattamente come l'assessment ci stava. */}
-        {aperta && moduleVis.journal && (
-          <div style={{
-            width: '100%', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column',
-            background: 'var(--s-zone-bg)', border: '1px solid var(--s-zone-border)',
-            borderRadius: 18, padding: '10px 16px 14px', pointerEvents: 'auto',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexShrink: 0 }}>
-              <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.12em',
-                            textTransform: 'uppercase', color: 'var(--s-ink-faint)' }}>
-                {t('ser_journal')}
-              </span>
-              <button onClick={() => setModuleVis(v => ({ ...v, journal: false }))} style={{
-                border: 'none', background: 'none', cursor: 'pointer',
-                color: 'var(--s-ink-faint)', fontSize: 'var(--s-fs-lg)', lineHeight: 1, padding: 2,
-              }}>×</button>
-            </div>
-            {/* ⚠️ SEGNALATO: « la police de caractère dans Journal deve essere la stessa che nel
-                resto dell'applicazione, per uniformità e meno bianca — è troppo visibile e
-                disturba (in DARK), mentre in LIGHT va bene ». Era `--s-mono` — l'UNICA zona
-                dell'app a usarlo per il testo corrente (le altre lo riservano a numeri/orari,
-                v. il timestamp accanto), mentre tutto il resto (Assessment, PistaCiclo,
-                SuggerimentoCiclo…) usa `--s-sans`. Non un colore sbagliato — `--s-ink` è già
-                tarato per contrasto in ENTRAMBI i temi (v. `tokens.css`) — ma un font MONOSPAZIO
-                ha più inchiostro per carattere di un sans-serif alla STESSA dimensione e
-                colore: più "pieno", quindi percepito più chiaro/acceso su un fondo scuro. Lo
-                stesso colore, nel font di tutto il resto, si legge già più discreto — la
-                doppia richiesta (uniformità + meno bianco) risolta da un solo cambio, non due.
-                ⚠️ SEGNALATO DI NUOVO due volte: « la police... più in grigio per non disturbare
-                la vista ». Il cambio di font (primo giro) e la discesa a `--s-ink-soft`
-                (secondo giro) non bastavano ancora — sceso di un gradino ulteriore, a
-                `--s-ink-faint`: lo STESSO grigio già usato per le righe SYS, per il timestamp
-                accanto, per l'etichetta del pulsante ✕ qui sopra — non più un colore a parte
-                per il testo "importante" (Aud/PC) contro quello "di sistema": tutto il
-                giornale allo stesso grigio discreto, la voce di chi parla resta comunque
-                distinguibile dal grassetto (`<b>AUD:</b>`/`<b>PC:</b>`), non dal colore.
-                ⚠️ BUG TROVATO — segnalato: « nel journal non appare il testo ». La causa vera:
-                `.filter(l => !(avvio.solo && ...))` toglieva le righe Aud/PC PROPRIO in seduta
-                SOLO (`avvio.solo`, il caso più comune) — pensato per « l'auditor solo non ha
-                bisogno di rileggersi » (stessa scelta di `TranscriptLog.tsx`'s `hideSpeech` in
-                App.tsx), ma la verbalizzazione è esattamente quel che l'auditor voleva vedere
-                qui. Tolto.
-                ⚠️ SEGNALATO INSIEME: « poi appaiono troppe informazioni... non mettere visibili
-                le reazioni o la dissoluzione, solo il testo con il tono di voce e la reazione
-                se c'è sulla parola ». Filtrato a `speaker === 'Aud' || 'PC'` soltanto — NEEDLE
-                (le reazioni annunciate a parte) e SYS (l'andamento del ciclo, la "dissoluzione")
-                non compaiono più QUI: restano intatti in `journal.logs` (il PDF, gli effetti
-                che riempiono l'item alla voce, tutto il resto che li legge, non cambia). Al
-                posto delle righe NEEDLE separate: la REAZIONE, quando c'è, si legge ORA
-                INSIEME alla parola che l'ha causata — stesso `computeInstantRead` che
-                `aggiungiItemManuale`/`cercaLetturaPerParola` già usano altrove in questo file,
-                letto all'istante della riga, non una seconda fonte del dato. Il TONO DI VOCE
-                (`log.tone`, v. `onTranscript` più sopra — il pezzo che mancava del tutto)
-                mostrato con lo STESSO piccolo chip di `TranscriptLog.tsx` (App.tsx), tradotto
-                nella lingua di SERENITY. */}
-            <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 5 }}>
-              {[...journal.logs]
-                .filter(l => l.speaker === 'Aud' || l.speaker === 'PC')
-                .sort((a, b) => (a.time ?? 0) - (b.time ?? 0))
-                .reverse()
-                .map((log, i) => {
-                  const reazione = museOk || meterC
-                    ? computeInstantRead(shownReadsRef.current, log.time ?? 0, -Infinity, Infinity,
-                        agoEegRef.current ? 'eeg' : 'theta').read
-                    : undefined;
-                  const reazioneUtile = reazione && reazione !== 'NULL' && reazione !== READ_NON_MISURATO
-                    ? reazione : null;
-                  return (
-                    <div key={i} style={{ display: 'flex', gap: 8, fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.4 }}>
-                      <span style={{ color: 'var(--s-ink-faint)', width: 38, flexShrink: 0 }}>
-                        {(log.time || 0).toFixed(1)}s
-                      </span>
-                      <span style={{ color: 'var(--s-ink-faint)' }}>
-                        <b>{log.speaker === 'Aud' ? 'AUD' : 'PC'}: </b>
-                        {log.text}
-                        {log.tone && (
-                          <span style={{
-                            marginLeft: 6, fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)',
-                            padding: '1px 6px', borderRadius: 999, background: 'var(--s-disc-sunk)',
-                            color: 'var(--s-ink-faint)',
-                          }}>
-                            {(t(`tone_${log.tone.label}` as never) as string || '').toUpperCase()}
-                          </span>
-                        )}
-                        {reazioneUtile && (
-                          <span style={{
-                            marginLeft: 6, fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)',
-                            fontWeight: 700, color: 'var(--s-still)',
-                          }}>
-                            → {reazioneUtile}
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-        )}
+        {/* ── IL GIORNALE, SOTTO EP — ESTRATTO in `GiornaleSeduta.tsx` — segnalato nella
+            revisione completa (v. `ZonaCamere.tsx` per la stessa scomposizione). Nessuna
+            logica cambiata, solo il disegno: `moduleVis.journal`/`journal.logs`, i filtri, il
+            calcolo della reazione istantanea (`shownReadsRef`/`agoEegRef`) restano gli stessi.
+            La cronologia completa di ogni segnalazione che ha formato questo pannello (« cambia
+            di posizione il giornale con l'assessment », « nel journal non appare il testo »,
+            « la police... troppo bianca »…) vive ora dentro `GiornaleSeduta.tsx`. */}
+        <GiornaleSeduta
+          aperta={aperta}
+          visibile={!!moduleVis.journal}
+          onChiudi={() => setModuleVis(v => ({ ...v, journal: false }))}
+          logs={journal.logs}
+          museOk={museOk}
+          meterC={meterC}
+          shownReadsRef={shownReadsRef}
+          agoEegRef={agoEegRef}
+        />
       </div>
       {/* ── L'INTESTAZIONE, che non è una barra ───────────────────────────────────────────
           Nessun fondo, nessuna linea di separazione: il nome sta posato sulla stessa
