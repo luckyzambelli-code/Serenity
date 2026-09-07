@@ -11447,3 +11447,28 @@ aggiornato. Zero errori console riconducibili al cambiamento (solo i consueti
 `ERR_CONNECTION_REFUSED` per hardware assente in sandbox).
 
 tsc --noEmit pulito, lint 324 warning/0 errori (invariato), vitest 754/754.
+
+## Giro — 2026-09-07 — ControlloProntezza: la sequenza prima di aprire
+
+Settimo pezzo staccato dal corpo di `Serenity.tsx` — molto più piccolo dei due precedenti, un
+naturale passo indietro nel rischio dopo `GruppoAlto`/`GruppoBasso`. La sequenza di prontezza
+prima di aprire una seduta: la stretta/il respiro delle boîtes del Meter (`ThetaReadyCheck`),
+poi il respiro del MUSE (`MetabolicCheck`).
+
+- `src/serenity/ControlloProntezza.tsx` (nuovo, 168 righe): l'intera IIFE `{metabolicOpen &&
+  (() => {...})()}`, copiata verbatim — ogni commento storico preservato (compresi i tre bug
+  storici documentati: `onCancel` di `ThetaReadyCheck` che apriva la seduta per errore, l'onPhase
+  vuoto che lasciava `MetabolicCheck` senza dati, il MUSE "in ricerca" scambiato per "rinunciato").
+  `t`/`lang` presi internamente via `useI18n` — stessa ragione degli ultimi giri.
+- `Serenity.tsx`: 4046 → 3957 righe (**sotto le 4000 per la prima volta**). Rimossi gli import
+  ormai inutilizzati (`ThetaReadyCheck`, `MetabolicCheck`).
+
+Verificato dal vivo: scelto "LATTINE" (Meter, mai davvero collegabile in sandbox) e "APRI UNA
+SEDUTA", il flusso passa attraverso `ControlloProntezza` senza crash (il meter non si connette,
+il componente ricade correttamente nel ramo `return null`, la sessione apre comunque mostrando
+"INIZIO SESSIONE") — lo stesso comportamento di prima dell'estrazione. Il sandbox non permette
+di vedere `ThetaReadyCheck`/`MetabolicCheck` a schermo pieno (nessun Meter/MUSE vero da
+collegare): verificato solo per tipi/struttura, non visivamente — onestamente segnalato, non
+taciuto.
+
+tsc --noEmit pulito, lint 324 warning/0 errori (invariato), vitest 754/754.
