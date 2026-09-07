@@ -11322,3 +11322,37 @@ Nessun errore in console riconducibile al cambiamento (solo i consueti
 anche prima di questo giro).
 
 tsc --noEmit pulito, lint 324 warning/0 errori (invariato), vitest 754/754.
+
+## Giro — 2026-09-07 — Intestazione: il `<header>` stesso, non solo il suo interno
+
+Terzo pezzo del CORPO di `Serenity.tsx`. L'header (666 righe originarie) era già stato scomposto
+PIÙ A FONDO in un giro precedente — nove componenti (`LogoSerenity`, `ChiAuditaAssetto`,
+`SelettoreStrumenti`, `IndicatoriRemoti`, `AssistenteIA`, `BottoniStoricoProcessus`…) — ma il tag
+`<header>` che li monta tutti in fila restava un blocco inline di 254 righe: questo giro completa
+quella scomposizione, dando anche all'involucro un nome e un'interfaccia di prop vera.
+
+- `src/serenity/Intestazione.tsx` (nuovo, 394 righe): l'intero `<header>`, copiato verbatim —
+  ogni commento storico preservato. `Divisore` (il separatore verticale, prima una funzione
+  locale di `Serenity.tsx` usata SOLO nell'header) si è trasferito con lui, non duplicato.
+  `t`/`lang` (via `useI18n`), `isLightTheme` (via `useUiStore`) e `moduleVis.biometric` (via
+  `useSerenityModuleStore`) sono presi QUI dentro, dai loro stessi hook/store globali — non
+  passati come prop da `Serenity.tsx`: sono valori globali, non stato locale del componente
+  principale, e prenderli direttamente evita quattro prop in più senza duplicare nulla. Ogni
+  azione COMPOSTA (`onCambiaLivello`, `onCambiaPersone`, `onSalvaConfig`, `onApriProcessus`…)
+  resta invece costruita in `Serenity.tsx` e passata giù come callback, esattamente come già
+  fanno i nove componenti che questo file monta.
+- `Serenity.tsx`: 6098 → 5863 righe (−235). Rimossi gli import ormai inutilizzati (`LogoSerenity`,
+  `BottoniStoricoProcessus`, `ChiAuditaAssetto`, `SelettoreStrumenti`, `IndicatoriRemoti`,
+  `AssistenteIA`, `SelettoreTema`/`SelettoreLingua`, `Settings`/`HelpCircle` da lucide-react) e la
+  funzione locale `Divisore`.
+
+Verificato dal vivo: header renderizzato identico (logo/tema/lingua/storico/assetto/strumenti/
+CONFIG/guida/help in fila); popover dell'assetto ancora funzionante (il bug storico dello
+z-index — « il bottone salva configurazione non riceve i clic » — resta risolto dopo lo
+spostamento); toggle BASIC→EXPERT propagato correttamente sia al logo che al popover stesso;
+salvataggio di una configurazione con nome confermato ("salvata ✓"); CONFIG apre e chiude il suo
+pannello; un metodo armato (CONTACT) nasconde correttamente tutta la barra amministrativa
+(`modalitaCiclo`), lasciando solo le connessioni e CONFIG — esattamente come prima dell'estrazione.
+Nessun errore console riconducibile al cambiamento.
+
+tsc --noEmit pulito, lint 324 warning/0 errori (invariato), vitest 754/754.
