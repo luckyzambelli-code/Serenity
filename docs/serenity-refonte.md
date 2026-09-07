@@ -11356,3 +11356,40 @@ pannello; un metodo armato (CONTACT) nasconde correttamente tutta la barra ammin
 Nessun errore console riconducibile al cambiamento.
 
 tsc --noEmit pulito, lint 324 warning/0 errori (invariato), vitest 754/754.
+
+## Giro — 2026-09-07 — BarraLaterale: APRI/CHIUDI, PAUSA, EP/COMMANDS/DIZIONARIO, Giornale
+
+Quarto pezzo del CORPO di `Serenity.tsx`: la barra ancorata sul bordo sinistro di `<main>`,
+fuori dall'arco — orologio reale + timer di seduta, il bottone APRI/CHIUDI LA SEDUTA, l'avviso
+"opzionale — collega il telefono del PC", PAUSA/RIPRENDI col suo badge, EP/COMMANDS/DIZIONARIO
+e il Giornale (già `GiornaleSeduta.tsx`, ora montato da qui invece che da `Serenity.tsx`
+direttamente).
+
+- `src/serenity/BarraLaterale.tsx` (nuovo, 525 righe): l'intera barra, copiata verbatim — ogni
+  commento storico preservato. `OraReale` (l'orologio reale, prima una funzione locale usata
+  SOLO qui) si è trasferito con lei, non duplicato — stessa ragione di `Divisore` in
+  `Intestazione.tsx`. `moduleVis.journal`/`setModuleVis` sono presi QUI, internamente (via
+  `useSerenityModuleStore`): `setModuleVis` è già condiviso da altri pezzi di `Serenity.tsx`
+  (`ZonaAssessment`, `ColonnaSaluteAssessment`…), prenderlo qui non ne crea una seconda fonte.
+  Ogni azione COMPOSTA (`chiudi`/`apri` la seduta, `pausaManuale`) resta invece costruita in
+  `Serenity.tsx` e passata giù come callback.
+- `Serenity.tsx`: 6098 → 5434 righe nell'insieme di questo e del giro precedente (5863 → 5434,
+  −429 solo in questo giro — il taglio più grande finora in un solo giro). Rimossi gli import
+  ormai inutilizzati (`GiornaleSeduta`, `orologio`, le icone `Clock`/`Timer`/`Pause`/`BookOpen`/
+  `BadgeCheck`/`FileCheck`/`BookText` da lucide-react — `Play` resta, usata altrove per il
+  bottone START del quadrante).
+
+⚠️ Errore trovato e corretto DA ME prima di tsc: la prima stesura del bottone EP scriveva
+`ep.setEpTimestamp(Date.now() / 1000)` invece del vero `sessionClock.now()` (l'orologio di
+seduta, che si ferma in pausa — non l'orologio di sistema) — un'invenzione mia, non presente
+nell'originale. Trovato rileggendo il file subito dopo la scrittura, prima di qualunque verifica,
+corretto con l'import di `sessionClock` e la chiamata esatta.
+
+Verificato dal vivo: barra identica (orologio reale/timer, APRI/CHIUDI, "opzionale — collega il
+telefono del PC", EP/COMMANDS/DIZIONARIO, Giornale); una seduta aperta mostra "CHIUDI LA SEDUTA"
+in ambra e i tre bottoni con cornice; EP apre "END PHENOMENON" con VGI/VVGI (confermando che
+`sessionClock.now()` funziona, non l'orologio di sistema); PAUSA/RIPRENDI mostra correttamente
+il badge "in pausa" e l'icona Play/Pause; chiudere la seduta torna alla schermata iniziale con
+lo storico aggiornato (badge "1"). Nessun errore console riconducibile al cambiamento.
+
+tsc --noEmit pulito, lint 324 warning/0 errori (invariato), vitest 754/754.
