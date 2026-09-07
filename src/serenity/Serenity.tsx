@@ -84,7 +84,6 @@ import { useMediaRelayFallback } from '../hooks/useMediaRelayFallback';
 import { Connessione } from './Connessione';
 import { PannelloEp } from './PannelloEp';
 import { PannelloConfig } from './PannelloConfig';
-import { PannelloMna } from './PannelloMna';
 import { ZonaCamere } from './ZonaCamere';
 import { GiornaleSeduta } from './GiornaleSeduta';
 import { LogoSerenity } from './LogoSerenity';
@@ -93,6 +92,7 @@ import { ChiAuditaAssetto } from './ChiAuditaAssetto';
 import { SelettoreStrumenti } from './SelettoreStrumenti';
 import { IndicatoriRemoti } from './IndicatoriRemoti';
 import { AssistenteIA } from './AssistenteIA';
+import { ZonaMna } from './ZonaMna';
 import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ColonnaSaluteAssessment } from './ColonnaSaluteAssessment';
@@ -6316,55 +6316,44 @@ export default function Serenity() {
             niente da capturare/sonificare. Stesso cancello già in uso per Santé Système
             (`moduleVis.health && museOk`, qui sotto) e per il biometrico: `moduleVis.mna`
             resta la preferenza scritta da CONFIG, `museOk` decide se ha senso mostrarla ORA. */}
-        {aperta && moduleVis.mna && museOk && (
-          // ⚠️ CORRETTO — segnalato: « vedo che l'MNA è ridotto, ma non per questo hai
-          // aumentato la grandezza dell'arco. Lo scopo era proprio questo, aumentare l'arco
-          // riducendo l'MNA quando non utilizzato ». `minHeight:140` era FISSO, indifferente
-          // al `collapsed` interno del pannello: `gruppoAlto` (l'arco, sopra) non riguadagnava
-          // mai lo spazio liberato dal collasso, perché a questo `flex:'0 0 auto'` bastava il
-          // vecchio pavimento di 140 per non restringersi mai sotto quello, contenuto o no.
-          // Ora il pavimento stesso segue `mnaCollassato`: chiuso, solo la barra del titolo
-          // serve davvero spazio (~44px, misurato: padding 8px×2 + una riga di testo a
-          // `--s-fs-sm` con margine) — l'arco sopra riprende il resto.
-          <div style={{
-            position: 'relative', width: '100%', maxWidth: 1400,
-            minHeight: mnaCollassato ? 44 : 140, flex: '0 0 auto',
-            transition: 'min-height var(--s-slow) var(--s-ease)',
-          }}>
-            <PannelloMna
-              collapsed={mnaCollassato}
-              onToggleCollapsed={() => setMnaCollassato(c => !c)}
-              primePhase={primePhase}
-              setPrimePhase={setPrimePhase}
-              primePhaseRef={primePhaseRef}
-              primeIm={primeIm}
-              primeFd={primeFd}
-              primeZone={primeZone}
-              primeDelta={primeDelta}
-              primePStar={primePStar}
-              primeCopies={primeCopies}
-              setPrimeCopies={setPrimeCopies}
-              primeCaptured={primeCaptured}
-              mnaSessionRef={mnaSessionRef}
-              onCapture={() => {
-                // STESSO blocco sul PICCO di I_m della finestra recente di App.tsx
-                // (`engine/PrimeFreqTracker.ts`) — l'auditor/PC possono reagire in ritardo,
-                // l'istante del clic non è la risposta più forte.
-                const best = primeFreqTracker.peak();
-                if (!best) return;
-                setPrimeIm(best.im); setPrimeFd(best.fd); setPrimePStar(best.ps);
-                setPrimeDelta(best.dv); setPrimeZone(best.zone);
-                mnaSessionRef.current.finalZone = best.zone;
-              }}
-              onAudio={payload => {
-                // Il tono binaurale punta al cervello del PC — l'auditor lo sente solo in
-                // locale per controllo. Stesso inoltro di App.tsx.
-                try { networkManager.send({ type: 'MNA_AUDIO', ...payload }, true); } catch { /* noop */ }
-              }}
-              onChiudi={() => setModuleVis(v => ({ ...v, mna: false }))}
-            />
-          </div>
-        )}
+        {/* ── MNA — ESTRATTO in `ZonaMna.tsx`, segnalato nella revisione completa. Nessuna
+            logica cambiata, solo il disegno (`minHeight` che segue `mnaCollassato`, la cronologia
+            completa delle segnalazioni che l'hanno formato vive ora lì dentro). Lo STATO resta
+            qui — v. la nota grande in `ZonaMna.tsx` sul perché non si è passati a
+            `useMnaModule` in questo stesso giro. */}
+        <ZonaMna
+          mostra={aperta && !!moduleVis.mna && museOk}
+          collassato={mnaCollassato}
+          onToggleCollassato={() => setMnaCollassato(c => !c)}
+          primePhase={primePhase}
+          setPrimePhase={setPrimePhase}
+          primePhaseRef={primePhaseRef}
+          primeIm={primeIm}
+          primeFd={primeFd}
+          primeZone={primeZone}
+          primeDelta={primeDelta}
+          primePStar={primePStar}
+          primeCopies={primeCopies}
+          setPrimeCopies={setPrimeCopies}
+          primeCaptured={primeCaptured}
+          mnaSessionRef={mnaSessionRef}
+          onCapture={() => {
+            // STESSO blocco sul PICCO di I_m della finestra recente di App.tsx
+            // (`engine/PrimeFreqTracker.ts`) — l'auditor/PC possono reagire in ritardo,
+            // l'istante del clic non è la risposta più forte.
+            const best = primeFreqTracker.peak();
+            if (!best) return;
+            setPrimeIm(best.im); setPrimeFd(best.fd); setPrimePStar(best.ps);
+            setPrimeDelta(best.dv); setPrimeZone(best.zone);
+            mnaSessionRef.current.finalZone = best.zone;
+          }}
+          onAudio={payload => {
+            // Il tono binaurale punta al cervello del PC — l'auditor lo sente solo in
+            // locale per controllo. Stesso inoltro di App.tsx.
+            try { networkManager.send({ type: 'MNA_AUDIO', ...payload }, true); } catch { /* noop */ }
+          }}
+          onChiudi={() => setModuleVis(v => ({ ...v, mna: false }))}
+        />
         {/* chiude qui il `<>` e la IIFE che producono `gruppoAlto`/`gruppoBasso`/MNA insieme. */}
         </>
           );

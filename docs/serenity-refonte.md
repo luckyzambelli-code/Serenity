@@ -11233,3 +11233,42 @@ L'intestazione è finita; il resto del file (il quadrante, i quattro cicli, l'or
 della seduta) resta il prossimo passo, un giro a sé.
 
 **Build**: SERENITY (solo).
+
+## Giro — 2026-09-07 (continuazione) — scomposizione oltre l'intestazione: ZonaMna, e un duplicato trovato
+
+Primo pezzo del CORPO di `Serenity.tsx` (dopo i nove dell'intestazione): il pannello MNA
+(Multiple Neuro-Acoustic — i toni binaurali, `PannelloMna`).
+
+**Trovato leggendo il codice, prima di estrarre**: `hooks/useMnaModule.ts` esiste già —
+un hook CONDIVISO che `App.tsx` usa per lo stesso stato (`primeIm`/`primeFd`/`primePhase`/…) —
+ma `Serenity.tsx` non lo usa: ha una copia locale scritta a mano delle STESSE 8 `useState` + 2
+`useRef`. Un vero duplicato, non solo un'estrazione mancata. **Non consolidato in questo giro**:
+`Serenity.tsx` avvolge il proprio `setPrimePhase` per tenere `primePhaseRef.current` SEMPRE
+sincronizzato ad ogni chiamata (`(p) => { setPrimePhaseState(p); primePhaseRef.current = p; }`),
+mentre il `setPrimePhase` grezzo di `useMnaModule` non lo fa — sostituirlo alla cieca avrebbe
+introdotto un ref non aggiornato, un guasto silenzioso. Consolidare i due è un miglioramento
+vero ma tocca un file condiviso con EQUILIBRIUM (build doppia, verifica più attenta) — annotato
+per un giro dedicato, non confuso con una estrazione di puro disegno.
+
+**`src/serenity/ZonaMna.tsx`** (nuovo): l'involucro che riserva lo spazio (`minHeight` che
+segue `mnaCollassato`) e monta `PannelloMna` — nessuna logica cambiata, lo stato resta in
+`Serenity.tsx` per la ragione sopra.
+
+**`Serenity.tsx`**: 6421 → 6410 righe. **⚠️ Errore trovato e corretto DA ME, prima di `tsc`**:
+la prima stesura della sostituzione duplicava per sbaglio un commento "chiude qui
+`gruppoBasso`" già esistente altrove — un artefatto di copia-incolla, non un guasto funzionale,
+ma comunque scorretto. Rimosso rileggendo il file subito dopo l'edit, prima di qualunque
+verifica automatica.
+
+**Verificato dal vivo (parziale, di regressione)**: aperta una seduta vera in sandbox — nessun
+crash, nessun errore in console. Il pannello MNA stesso richiede un vero MUSE connesso
+(`museOk`) per comparire — non verificabile in questa sandbox, lo stesso limite ambientale di
+sempre; `ZonaMna` restituisce `null` correttamente quando `museOk` è falso.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx
+vitest run` 754/754 verdi.
+
+**File toccati**: `src/serenity/Serenity.tsx`, `src/serenity/ZonaMna.tsx` (nuovo) — SOLO
+SERENITY.
+
+**Build**: SERENITY (solo).
