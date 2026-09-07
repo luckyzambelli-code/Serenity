@@ -87,6 +87,7 @@ import { PannelloConfig } from './PannelloConfig';
 import { PannelloMna } from './PannelloMna';
 import { ZonaCamere } from './ZonaCamere';
 import { GiornaleSeduta } from './GiornaleSeduta';
+import { LogoSerenity } from './LogoSerenity';
 import { IndicatoreConnessione, COLORE_PUNTO } from './IndicatoreConnessione';
 import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
@@ -4263,84 +4264,17 @@ export default function Serenity() {
             esito), la STESSA condizione che già fa ricomparire i cinque cerchi dei metodi. */}
         {!modalitaCiclo && (
         <>
-        {/* ── IL LOGO — segnalato: « avant tout tu dois mettre le logo... comme pour
-            Equilibrium ». Stessa immagine (`/logo-alt-scientology.png`, nella cartella
-            pubblica condivisa dai due build), stesso gesto (apre i crediti — `CreditsModal`,
-            riusato tale e quale: è un velo scuro a sé, come `GuideModal` — non fa parte della
-            superficie chiara/scura di SERENITY, non c'è nulla da riadattare). In tema chiaro
-            l'immagine (disegnata per un fondo scuro, il testo sparirebbe) prende la stessa
-            pastiglia scura di App.tsx invece di un filtro che ne sporcherebbe il blu. */}
-        {/* ⚠️ INGRANDITO, POI RIBILANCIATO, POI ANCORA — segnalato: « anche il logo SERENITY con
-            sotto la versione è piccolo, non si vede » (primo giro: immagine 36/44→46/56px,
-            scritta "SERENITY" `--s-fs-xl`→`--s-fs-hero`), poi di nuovo: « riduci la scritta
-            SERENITY ed aumenta la taglia del logo » (46/56→58/70px, scritta tornata a
-            `--s-fs-xl`), e infine dal vivo: « anche il medaglione alla sinistra del bottone
-            DARK/LIGHT [sia più grande] » — QUESTO logo, descritto dalla sua posizione nella
-            barra (subito prima di `<SelettoreTema>`, poco più giù). 58/70→74/86px — stesso
-            principio di sempre: l'immagine porta il peso visivo, il nome accanto resta una
-            didascalia, non un secondo logo in concorrenza con lei. */}
-        <button type="button" onClick={() => setCreditiAperti(true)} title={t('tip_credits') as string} style={{
-          border: 'none', padding: isLightTheme ? '5px 12px' : 0, borderRadius: 12,
-          background: isLightTheme ? '#2a2a2f' : 'transparent',
-          boxShadow: isLightTheme ? '0 2px 8px rgba(38,40,48,0.22)' : 'none',
-          cursor: 'pointer', lineHeight: 0, flexShrink: 0,
-        }}>
-          <img src="/logo-alt-scientology.png" alt="Alt. Scientology" style={{
-            height: isLightTheme ? 74 : 86, width: 'auto',
-            filter: isLightTheme ? 'none' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.45)) brightness(1.05)',
-          }} />
-        </button>
-        {/* ⚠️ AGGIUNTO — segnalato: « fai apparire sotto SERENITY, vicino al logo, se
-            l'interfaccia è BASIC o EXPERT ». `espertoAttivo` (sopra, `avvio?.esperto`) è già
-            la stessa fonte che decide MNA/Santé Système/numeri esatti — qui si legge soltanto,
-            non un secondo stato. `!== true` conta come BASIC (stessa regola robusta della nota
-            grande su `espertoAttivo`/`moduleVis`: una configurazione ancora senza questo campo
-            si legge come BASIC, non come EXPERT). Non mostrata prima che l'avvio esista
-            (`avvio` nullo, le quattro domande non ancora finite) — dire "BASIC" prima che sia
-            davvero deciso sarebbe un'informazione inventata.
-            ⚠️ LA VERSIONE, SULLA STESSA RIGA — segnalato di nuovo: « metterei la versione
-            sulla stessa linea di BASIC Expert ». Stava sotto un'icona a sé, in una colonna
-            SEPARATA accanto a questa (v. sotto, tolta) — due letture piccole vicine invece di
-            una. `· {__SERENITY_VERSION__}` in coda a BASIC/EXPERT, stesso stile, un solo
-            punto medio a separarle: la stessa riga, non due. */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontFamily: 'var(--s-serif)', fontSize: 'var(--s-fs-xl)', letterSpacing: '0.14em' }}>
-            SERENITY
-          </span>
-          {avvio && (
-            <span style={{
-              fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
-              letterSpacing: '0.12em', color: 'var(--s-ink-faint)',
-            }}>
-              {espertoAttivo === true ? 'EXPERT' : LC('BASIC', 'BASIQUE', 'BASIC', 'BÁSICO', 'BASIC')}
-              {' · '}{__SERENITY_VERSION__}
-            </span>
-          )}
-        </div>
-        {/* ⚠️ SEGNALATO: « inserisci sopra la versione accanto a SERENITY un cerchio con
-            all'interno l'immagine che utilizzi per l'icona dell'applicazione ». La stessa
-            icona che macOS mostra nel Dock/Launchpad (`build/icon-serenity.icns`, qui la sua
-            sorgente PNG copiata in `public/` — un asset SOLO di SERENITY, non condiviso con
-            EQUILIBRIUM, che ha la propria `build/icon.icns`), non un disegno reinventato.
-            ⚠️ LA VERSIONE SOTTO L'ICONA, TOLTA — segnalato di nuovo (v. la nota sul gruppo
-            SERENITY/BASIC, qui accanto): duplicava quella ora accanto a BASIC/EXPERT, due
-            posti per lo stesso numero. Resta solo il cerchio, un po' più grande (22→26px) per
-            restare in proporzione col resto ingrandito. */}
-        {/* ⚠️ CORRETTO — segnalato dal vivo, due volte: « il medaglione [qui] con l'immagine
-            onde.png [va ingrandito] ». `icon-serenity.png` è un ritaglio 128×128 SENZA le onde
-            (solo testa/costellazione — quello che serve a un'icona macOS, leggibile anche
-            minuscola nel Dock); `credits/ondes.png` è l'immagine intera, CON le onde che
-            attraversano la testa — la stessa da cui questo file prende il nome. Qui non serve
-            un'icona leggibile in miniatura: serve l'immagine vera, quella con le onde — 26→40px
-            (la stessa proporzione delle altre volte in questo file: il peso visivo sale, il
-            testo accanto resta una didascalia). */}
-        <div style={{
-          width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
-          boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.6), 0 1px 3px rgba(44,47,51,0.35)',
-          border: '1px solid var(--s-ink-ghost)',
-        }}>
-          <img src="/credits/ondes.png" alt="SERENITY" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        </div>
+        {/* ── IL LOGO, IL NOME, IL MEDAGLIONE — ESTRATTI in `LogoSerenity.tsx` — segnalato nella
+            revisione completa: l'intestazione (666 righe) va scomposta PIÙ A FONDO, un pezzo
+            alla volta, non in un colpo solo. Nessuna logica cambiata, solo il disegno — la
+            cronologia completa delle segnalazioni che l'hanno formato vive ora lì dentro. */}
+        <LogoSerenity
+          onApriCrediti={() => setCreditiAperti(true)}
+          isLightTheme={isLightTheme}
+          mostraLivello={!!avvio}
+          esperto={espertoAttivo}
+          LC={LC}
+        />
         {/* ⚠️ SEGNALATO: « la langue doit pouvoir être changée en cours de route » — non solo
             alle quattro domande d'avvio. Stessi due selettori di `Avvio.tsx`, condivisi da
             `Impostazioni.tsx`: qui restano visibili per tutta la seduta, non solo prima. */}

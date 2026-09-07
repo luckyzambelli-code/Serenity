@@ -11150,3 +11150,43 @@ invece di ridichiarare la stessa forma una seconda volta), `npm run lint` 324 wa
 (nuovo) — SOLO SERENITY.
 
 **Build**: SERENITY (solo).
+
+## Giro — 2026-09-07 (continuazione) — scomposizione di Serenity.tsx: LogoSerenity, e una fuga di credenziale trovata da gitleaks
+
+**Prima, fuori dalla scomposizione**: l'utente ha reso pubblico il repository e fatto girare
+`gitleaks`, che ha trovato UNA credenziale reale — non un falso positivo — nella terza voce
+TURN di `networkManager.ts` ("ExpressTURN"). Il commento del codice diceva che tutte e tre le
+voci TURN (OpenRelay ×2, ExpressTURN) usassero "the same public, unauthenticated credentials
+documented in their respective READMEs" — vero per OpenRelay (verificato sul loro sito:
+pubblicano DAVVERO la stessa credenziale apposta per chiunque), **falso per ExpressTURN**
+(verificato sul loro sito: ogni account riceve credenziali proprie dalla propria dashboard, mai
+condivise) — un'affermazione generalizzata da OpenRelay senza controllarla per ExpressTURN
+specificamente, nella recensione completa di una settimana fa. `git log -S` ha confermato che
+la credenziale esisteva già dal commit `7223106` (20 luglio 2026, "Stato di riferimento:
+EQUILIBRIUM v1.0.373", con l'identità git dell'utente) — non introdotta in questa sessione.
+Tolta interamente (non sostituita con un'altra credenziale privata: un TURN è lato client per
+natura, una variabile d'ambiente non avrebbe risolto nulla) — resta OpenRelay più il ripiego
+JPEG via relay WS. `gitleaks git --verbose` rilanciato dall'utente su tutta la cronologia (451
+commit, ~67 MB) conferma UNA sola fuga, esattamente quella già tolta. Commit a sé (`5af7297`),
+spedito subito per urgenza, prima di riprendere la scomposizione.
+
+**Poi, la scomposizione**: quarto pezzo staccato (dopo `ZonaCamere.tsx`/`GiornaleSeduta.tsx`/
+`ColonnaSaluteAssessment.tsx`) — il primo pezzo DENTRO l'intestazione (666 righe, troppo grande
+per staccarla in un colpo solo). `src/serenity/LogoSerenity.tsx` (nuovo): il logo/crediti, il
+nome SERENITY con BASIC/EXPERT e la versione, il medaglione — puramente presentazionale,
+nessuno stato centrale della seduta toccato (a differenza del popover "assetto" più avanti
+nell'intestazione, che scrive `avvio` direttamente — quello resta un giro a sé, deliberatamente
+rimandato). `Serenity.tsx`: 6841 → 6775 righe.
+
+**Verificato dal vivo**: aperta una seduta vera in sandbox — logo, "SERENITY", "EXPERT ·
+3.0.288", il medaglione tondo tutti presenti; il click sul logo apre DAVVERO `CreditsModal`
+(nome/versione/crediti visibili). Nessun errore in console.
+
+**Verifica**: `tsc --noEmit` pulito (un piccolo scarto di tipo corretto — `avvio?.esperto` è
+`boolean | null | undefined`, non solo `boolean | undefined`), `npm run lint` 324 warning/0
+errori (invariato), `npx vitest run` 754/754 verdi.
+
+**File toccati**: `src/serenity/Serenity.tsx`, `src/serenity/LogoSerenity.tsx` (nuovo) — SOLO
+SERENITY.
+
+**Build**: SERENITY (solo).
