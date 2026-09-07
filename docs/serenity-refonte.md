@@ -10990,3 +10990,33 @@ un feed, esattamente come progettato.
 Electron) → build e spedizione di entrambe le app.
 
 **Build**: SERENITY 3.0.285 (arm64 + x64) + EQUILIBRIUM 2.0.290 (arm64 + x64).
+
+## Giro — 2026-09-07 (continuazione) — FASCIA 3 (seconda parte): test sul livello che si è rotto
+
+Continuazione della revisione completa: « il livello di rete/UI appena modificato per il bug
+del video non ha NESSUN test » era il punto più urgente rimasto della fascia 3, prima ancora di
+toccare `Serenity.tsx`. Tre file nuovi, nessuna modifica al codice applicativo:
+
+- **`src/hooks/__tests__/useMediaRelayFallback.test.tsx`** (8 test): verifica che il ripiego
+  JPEG catturi DAVVERO fotogrammi quando la bandiera è accesa + c'è una camera + si è connessi
+  (e MAI negli altri casi — bandiera spenta, solo `isConnected`, nessuna camera), che lo
+  smontaggio fermi la cattura, che il `<video>` di cattura resti agganciato al documento (FIX
+  CONN-37), e che il ramo audio apra un vero canale Web Audio solo quando c'è una traccia audio.
+- **`src/hooks/__tests__/useRemoteSession.test.tsx`** (9 test) e
+  **`src/hooks/__tests__/useParticipantSession.test.tsx`** (11 test): verificano che montare
+  l'hook colleghi DAVVERO ogni callback di `networkManager` allo stato React —
+  `onVideoFallbackNeeded`/`onVideoFrame` (segnati apposta con ⚠️: sono ESATTAMENTE il bug appena
+  trovato dal vivo), `onStreamReceived`, `onConnectionEstablished`/`onConnectionClosed` (con
+  l'azzeramento di tutto insieme), `onDataReceived` per ogni tipo di messaggio, e che lo
+  smontaggio riporti i callback a no-op (un evento tardivo del singleton non deve più toccare un
+  hook già smontato).
+
+Di proposito NON testato in questo giro (rimandato, come già `networkManager.test.ts` rimanda
+la sua parte più pesante): `avvia()`/`connetti()` — richiederebbero mockare `fetch`/PeerJS/il
+relay WebSocket, un passaggio più grande a sé.
+
+**Verifica**: `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato — i file di
+test non ne aggiungono), `npx vitest run` **754/754 verdi** (36→39 file di test, +28 test).
+
+**File toccati**: solo test, nessun file applicativo — **nessuna build necessaria**, zero
+impatto sul comportamento dell'app in esecuzione.
