@@ -11272,3 +11272,53 @@ vitest run` 754/754 verdi.
 SERENITY.
 
 **Build**: SERENITY (solo).
+
+## Giro — 2026-09-07 — BottoniCiclo: il pezzo più denso del corpo
+
+Secondo pezzo del CORPO di `Serenity.tsx` (dopo `ZonaMna`): l'intera
+interazione dei bottoni di ciclo — TONE SCALE, MIRROR, CONTACT/NULL, TRUTH —
+332 righe, il blocco singolo più denso trovato finora fuori
+dall'intestazione. Bersaglio ragionevolmente sicuro nonostante la mole:
+l'autore originale l'aveva già isolato come un unico `const` riusato in due
+punti del render — l'estrazione completa solo quel riconoscimento, dandogli
+un file e un'interfaccia di prop vere invece di una variabile catturata per
+chiusura.
+
+- `src/serenity/BottoniCiclo.tsx` (nuovo, 398 righe): tutti e quattro i rami
+  (TONE/MIRROR/CONTACT-NULL/TRUTH), copiati verbatim — ogni commento storico
+  "⚠️ segnalato"/"BUG TROVATO" preservato, nessuna riga di logica toccata.
+  Riceve i quattro hook di ciclo per intero (`tone`/`mirror`/`cycles`/
+  `truth`, tutti tipati `ReturnType<typeof useXxx>`), non i loro campi
+  singoli.
+- `Serenity.tsx`: rimossi `pillBtn` e l'intero blocco `bottoniCiclo` inline
+  (336 righe), sostituiti da una singola chiamata a `<BottoniCiclo ... />`
+  che mantiene lo stesso nome di variabile `bottoniCiclo` (letto invariato
+  nei due punti del render più giù nel file). Rimosso anche l'import diretto
+  di `CycleStatusBar`, ora usato solo dentro `BottoniCiclo.tsx`.
+  6410 → 6098 righe (−312, il taglio più grande finora in un solo giro).
+
+Verificato dal vivo, seduta reale senza strumenti (nessun MUSE necessario
+per questi quattro rami — sono gli unici cicli interamente testabili in
+sandbox):
+- **TONE**: armato → "DÌ LA RESISTENZA" → scelta livello di partenza →
+  "PORTALO A TONO 40" (ramo `raise`, pillole/bottoni pulsanti) → "tono
+  quaranta raggiunto" (ramo `done`, spunta ✓) → "altra resistenza" torna
+  correttamente a "DÌ LA RESISTENZA" pulita (il fix storico su
+  `itemConfirmedRef`/`localizzaTone(true)` funziona ancora identico dopo
+  l'estrazione) → ANNULLA torna al menu.
+- **MIRROR**: armato → "quanta carica?" (dieci bottoni 1–10) → click 5 →
+  🔒 bloccato, "portalo al doppio — 5 → 10" → "doppio raggiunto" → "ottenuto
+  — valida" → validato, torna al menu.
+- **NULL**: armato → contatore "0 · 0 CLEAR" → tutti e tre gli esiti
+  presenti (EQUILIBRIUM · VGI / senza VGI / NON RICARICA) → "NON RICARICA"
+  chiude il ciclo senza crash.
+- **CONTACT**: armato → contatore "1 · 0 AS-IS" → "dichiara AS-IS" presente
+  → ANNULLA chiude senza crash.
+- **TRUTH**: armato ("ACCORDO · 1 · DAI IL R/I") → "chiedi"/"ulteriore R/I
+  trovato"/ANNULLA tutti presenti e funzionanti.
+
+Nessun errore in console riconducibile al cambiamento (solo i consueti
+`ERR_CONNECTION_REFUSED` per hardware/relay assenti in sandbox, presenti
+anche prima di questo giro).
+
+tsc --noEmit pulito, lint 324 warning/0 errori (invariato), vitest 754/754.
