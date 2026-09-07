@@ -91,14 +91,14 @@ import { LogoSerenity } from './LogoSerenity';
 import { BottoniStoricoProcessus } from './BottoniStoricoProcessus';
 import { ChiAuditaAssetto } from './ChiAuditaAssetto';
 import { SelettoreStrumenti } from './SelettoreStrumenti';
-import { IndicatoreConnessione } from './IndicatoreConnessione';
+import { IndicatoriRemoti } from './IndicatoriRemoti';
+import { AssistenteIA } from './AssistenteIA';
 import { SegmentoVetro } from './SegmentoVetro';
 import { PannelloMeter } from './PannelloMeter';
 import { ColonnaSaluteAssessment } from './ColonnaSaluteAssessment';
 import { useSerenityModuleStore } from './serenityModuleStore';
-import { Settings, Headphones, Wifi, HelpCircle, Play, Pause, BookOpen, Clock, Timer, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, Brain, Lightbulb, StickyNote, BookText } from 'lucide-react';
+import { Settings, HelpCircle, Play, Pause, BookOpen, Clock, Timer, Crosshair, Scale, FlipHorizontal2, AudioWaveform, BadgeCheck, FileCheck, Lightbulb, StickyNote, BookText } from 'lucide-react';
 import { GuideModal } from '../components/GuideModal';
-import { AIAssistant } from '../components/AIAssistant';
 import { CreditsModal } from '../components/CreditsModal';
 import { SplashScreen } from '../components/SplashScreen';
 /** ── HISTORY, CARICATA A RICHIESTA — segnalato: « il Report post session non ci sia più in
@@ -4406,39 +4406,7 @@ export default function Serenity() {
         {avvio.distanza && (
           <>
             <Divisore />
-            <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', letterSpacing: '0.12em',
-                          textTransform: 'uppercase', color: 'var(--s-ink-ghost)' }}>
-              {LC('a distanza', 'à distance', 'remote', 'a distancia', 'på distans')}
-            </span>
-            <IndicatoreConnessione
-              icona={<Wifi size={26} strokeWidth={1.8} />}
-              etichetta={t('drawer_pc') as string}
-              stato={
-                remote.isConnected ? 'connesso'
-                  : remote.errore ? 'errore'
-                  : remote.tunnelLoading ? 'cercando' : 'in-attesa'
-              }
-              dettaglio={
-                remote.isConnected ? (t('conn_badge_auditor_ok') as string)
-                  : remote.errore ? remote.errore
-                  : t(remote.tunnelLoading ? 'conn_internet_loading' : 'conn_badge_auditor_waiting') as string
-              }
-            />
-            <IndicatoreConnessione
-              icona={<Headphones size={26} strokeWidth={1.8} />}
-              etichetta={LC('MUSE (preclear)', 'MUSE (préclair)', 'MUSE (preclear)', 'MUSE (preclear)', 'MUSE (preclear)') as string}
-              stato={
-                !remote.isConnected ? 'in-attesa'
-                  : remote.remoteMuseConnected ? 'connesso' : 'errore'
-              }
-              dettaglio={
-                remote.isConnected
-                  ? (remote.remoteMuseConnected
-                      ? (remote.remoteBatteryLevel !== null ? `${remote.remoteBatteryLevel}%` : '✓')
-                      : t('conn_muse_preclear_disconnected') as string)
-                  : null
-              }
-            />
+            <IndicatoriRemoti remote={remote} LC={LC} />
           </>
         )}
         {/* ⚠️ BUG TROVATO — segnalato: « il bottone CONFIG deve apparire anche in BASIC per
@@ -4471,50 +4439,27 @@ export default function Serenity() {
             `AIAssistant` usa per il proprio bottone interno — non un secondo linguaggio da
             imparare), il componente condiviso si monta SOLO da aperto, dentro un popover come
             quello dell'assetto poco più su — chiuso di default, non più sempre a vista. */}
+        {/* ⚠️ Segnalato: « una parte della zona resta fuori dalla finestra ». Il popover cresce
+            verso SINISTRA (l'icona sta vicino al bordo destro dello schermo, fra CONFIG e
+            Guide) — v. `AssistenteIA.tsx` per il dettaglio, e per l'intera cronologia di
+            segnalazioni che l'hanno formato. Nascosto in modalità ciclo: non è uno strumento
+            per la lettura in corso, e la sua barra di input competerebbe con lo spazio dedicato
+            al campo item del ciclo. */}
         {aperta && !modalitaCiclo && (
-          <div style={{ position: 'relative' }}>
-            <button className="s-glass s-glass-btn" onClick={() => setAiAperto(v => !v)}
-              title={LC('assistente IA (Gemini)', 'assistant IA (Gemini)', 'AI assistant (Gemini)',
-                'asistente IA (Gemini)', 'AI-assistent (Gemini)') as string} style={{
-              cursor: 'pointer', padding: 8, borderRadius: 999,
-              background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)',
-            }}>
-              <Brain size={32} strokeWidth={1.6} />
-            </button>
-            {/* ⚠️ Segnalato: « una parte della zona resta fuori dalla finestra ». `left:0`
-                faceva crescere il popover verso DESTRA dall'icona — che sta vicino al bordo
-                destro dello schermo (fra CONFIG e Guide) — e la barra di `AIAssistant` dentro
-                è larga almeno 380px: usciva sicuramente. `right:0`, come il popover
-                dell'assetto qui sopra: cresce verso SINISTRA, dentro lo schermo. */}
-            {aiAperto && (
-              <div className="s-glass s-glass-lift" style={{
-                position: 'absolute', top: '100%', right: 0, marginTop: 8, zIndex: 40,
-                borderRadius: 12, background: 'var(--s-disc)', padding: 8,
-              }}>
-                {/* ── STESSO COMPONENTE DI App.tsx, MONTATO TALE E QUALE (legge già
-                    `useUiStore` da sé, si adatta al tema di SERENITY senza bisogno di
-                    passarglielo): una chiave Gemini propria dell'auditor (mai inviata a
-                    SERENITY/EQUILIBRIUM), lo stesso contesto di seduta che App.tsx gli passa —
-                    nome/i, tempo, TA, carica, ultima reazione, le ultime righe del giornale.
-                    Nascosto in modalità ciclo (v. `modalitaCiclo` sopra) — non è uno strumento
-                    per la lettura in corso, e la sua barra di input competerebbe con lo spazio
-                    dedicato al campo item del ciclo. */}
-                <AIAssistant
-                  lang={lang as string}
-                  sessionContext={{
-                    pcName: avvio?.solo ? nomeAuditor : nomePreclear,
-                    auditorName: nomeAuditor,
-                    sessionTime: tempo,
-                    totalTa: meterC ? theta.totalTa : metricsStore.get().totalTa,
-                    qL: metricsStore.get().qL,
-                    eta: metricsStore.get().eta,
-                    needleReaction,
-                    recentLogs: journal.logs.slice(-15).map(l => ({ time: l.time, speaker: l.speaker ?? '', text: l.text })),
-                  }}
-                />
-              </div>
-            )}
-          </div>
+          <AssistenteIA
+            attivo={aiAperto}
+            onToggle={() => setAiAperto(v => !v)}
+            lang={lang as string}
+            avvioSolo={avvio?.solo}
+            nomeAuditor={nomeAuditor}
+            nomePreclear={nomePreclear}
+            tempo={tempo}
+            meterC={meterC}
+            totalTaTheta={theta.totalTa}
+            needleReaction={needleReaction}
+            journalLogs={journal.logs}
+            LC={LC}
+          />
         )}
         {/* ── LA GUIDA — segnalata assente nell'audit funzionale completo. `GuideModal` è
             autosufficiente (un iframe su `/guide/EQUILIBRIUM-manuale.html`, copiato a ogni

@@ -11190,3 +11190,46 @@ errori (invariato), `npx vitest run` 754/754 verdi.
 SERENITY.
 
 **Build**: SERENITY (solo).
+
+## Giro — 2026-09-07 (continuazione) — l'intestazione di Serenity.tsx è scomposta
+
+Ottavo e nono pezzo staccati dall'intestazione (dopo LogoSerenity/BottoniStoricoProcessus/
+ChiAuditaAssetto/SelettoreStrumenti) — con questi due, l'intestazione (666 righe originarie) è
+scomposta per intero: quel che resta inline in `Serenity.tsx` sono solo frammenti minuscoli
+(il bottone CONFIG, Guida, Help, l'errore hardware, l'espansione del meter — tutti sotto le 15
+righe, lasciati apposta dov'erano per non frammentare oltre il ragionevole).
+
+**`src/serenity/IndicatoriRemoti.tsx`** (nuovo): « A DISTANZA » — il tunnel verso il PC e il
+SUO MUSE, due indicatori. Puramente presentazionale, legge `remote` (lo stesso oggetto di
+`useRemoteSession()`).
+
+**`src/serenity/AssistenteIA.tsx`** (nuovo): l'icona `Brain` e il popover che monta
+`AIAssistant` (condiviso con App.tsx, MAI toccato) — questo file costruisce solo
+`sessionContext` dagli stessi valori che `Serenity.tsx` aveva già pronti.
+
+**`Serenity.tsx`**: 6614 → **6421 righe** (-637 dalle 7058 originarie, circa il 9%). Rimossi
+altri 5 import non più usati direttamente qui (`IndicatoreConnessione`, `Headphones`, `Wifi`,
+`Brain`, `AIAssistant`).
+
+**Verificato dal vivo**: aperta una seduta locale — il popover dell'assistente IA si apre
+DAVVERO (mostra la sua schermata "0 API" di default, confermando `AIAssistant` montato con un
+`sessionContext` strutturalmente corretto). `IndicatoriRemoti` non verificabile dal vivo in
+questa sandbox — una seduta "a distanza" vera resta bloccata sulla schermata di connessione
+finché non c'è un vero secondo dispositivo, lo stesso limite ambientale di sempre in questa
+sessione — coperto dalla stessa disciplina di tipo (`tsc` pulito, gli stessi campi `remote.*`
+già verificati dal vivo altrove in `ColonnaSaluteAssessment`).
+
+**Verifica**: `tsc --noEmit` pulito (un piccolo scarto di tipo corretto — `avvio?.solo` è
+`boolean | null | undefined`), `npm run lint` 324 warning/0 errori (invariato), `npx vitest
+run` 754/754 verdi.
+
+**File toccati**: `src/serenity/Serenity.tsx`, `src/serenity/IndicatoriRemoti.tsx` (nuovo),
+`src/serenity/AssistenteIA.tsx` (nuovo) — SOLO SERENITY.
+
+**Riepilogo della scomposizione fin qui**: 9 componenti nuovi (`ZonaCamere`, `GiornaleSeduta`,
+`ColonnaSaluteAssessment`, `LogoSerenity`, `BottoniStoricoProcessus`, `ChiAuditaAssetto`,
+`SelettoreStrumenti`, `IndicatoriRemoti`, `AssistenteIA`), `Serenity.tsx` da 7058 a 6421 righe.
+L'intestazione è finita; il resto del file (il quadrante, i quattro cicli, l'orchestrazione
+della seduta) resta il prossimo passo, un giro a sé.
+
+**Build**: SERENITY (solo).
