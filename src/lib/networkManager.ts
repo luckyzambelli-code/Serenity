@@ -33,9 +33,10 @@ const ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.cloudflare.com:3478' },
   // FIX CONN-24: multiple free TURN providers as fallback.
   // OpenRelay (metered.ca) used to be reliable but their free tier has been
-  // rate-limited / partly disabled. We layer several providers so the browser
-  // has options when one is unreachable. They all use the same public,
-  // unauthenticated credentials documented in their respective READMEs.
+  // rate-limited / partly disabled. We layer both their endpoints so the
+  // browser has options when one is unreachable — a GENUINELY public,
+  // unauthenticated credential, published by OpenRelay itself in their own
+  // README precisely so any app can embed it (verified — not an assumption).
   {
     urls: [
       'turn:openrelay.metered.ca:80',
@@ -56,15 +57,18 @@ const ICE_SERVERS: RTCIceServer[] = [
     username:   'openrelayproject',
     credential: 'openrelayproject',
   },
-  {
-    // ExpressTURN — alternate free service.
-    urls: [
-      'turn:relay1.expressturn.com:3478',
-      'turn:relay1.expressturn.com:3480',
-    ],
-    username:   'ef9SXSHRC59HFKBM3F',
-    credential: 'YOpoCAtCqB9aZsuw',
-  },
+  // ⚠️ TOLTA — segnalata dall'utente (gitleaks, dopo aver reso pubblico il repository su
+  // GitHub): una terza voce qui, "ExpressTURN — alternate free service", portava una vera
+  // credenziale PERSONALE (username/password dal proprio pannello ExpressTURN, verificato ora
+  // sul loro sito: ogni account riceve le SUE, mai condivise — a differenza di OpenRelay,
+  // sopra, che pubblica la stessa credenziale apposta per chiunque). Il commento precedente
+  // ("They all use the same public, unauthenticated credentials") era sbagliato per QUESTA
+  // voce — un'affermazione generalizzata da OpenRelay senza averla verificata per ExpressTURN
+  // specificamente. Una volta nella cronologia di un repository pubblico va considerata
+  // compromessa a prescindere: chi ha accesso al pannello ExpressTURN di origine dovrebbe
+  // ruotarla; qui la si toglie e basta, non si sostituisce con un'altra credenziale privata —
+  // OpenRelay (sopra) e il ripiego JPEG via relay WS (CONN-33, `useMediaRelayFallback`) restano
+  // come rete di sicurezza.
 ];
 
 // Connection timeout: if PeerJS open/error hasn't fired after this delay, reject.
