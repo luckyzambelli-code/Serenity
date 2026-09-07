@@ -80,6 +80,12 @@
     "productName": "Equilibrium",
     "artifactName": "${productName}-${version}-${arch}.${ext}",
     "afterPack": "./scripts/afterPack.cjs",
+    "publish": {
+      "provider": "github",
+      "owner": "luckyzambelli-code",
+      "repo": "Serenity",
+      "channel": "equilibrium"
+    },
     "directories": {
       "output": "release"
     },

@@ -56,6 +56,13 @@ module.exports = {
   win: { ...b.win, icon: 'build/icon-serenity.ico' },
   nsis: b.nsis,
   extraResources: [],
+  // ⚠️ AGGIUNTO — `channel` DIVERSO da quello di EQUILIBRIUM (`b.publish`, "equilibrium"),
+  // stesso repository. electron-builder scrive un file `<channel>-mac.yml` per applicazione —
+  // senza un canale a parte, le due app (stesso repository GitHub, uniche release pubblicate lì)
+  // si sovrascriverebbero a vicenda il file che `electron-updater` legge per sapere qual è
+  // l'ultima versione: EQUILIBRIUM proporrebbe di aggiornarsi all'ultima release di SERENITY
+  // (o viceversa), stesso repository ma prodotto sbagliato.
+  publish: { ...b.publish, channel: 'serenity' },
   // ⚠️ L'ENTRATA SI SCRIVE, non si indovina. Prima `main.cjs` la deduceva da `app.getName()`,
   // che su macOS può venire dall'Info.plist e su un'altra piattaforma dal package.json: una
   // deduzione che, sbagliando, aprirebbe l'interfaccia SBAGLIATA senza dire niente. Qui il

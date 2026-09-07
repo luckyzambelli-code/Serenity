@@ -11053,3 +11053,36 @@ warning/0 errori (invariato), `npx vitest run` 754/754 verdi.
 SERENITY.
 
 **Build**: SERENITY (solo).
+
+## Giro — 2026-09-07 (continuazione) — il repository GitHub, e la configurazione publish
+
+L'utente ha creato il repository (`luckyzambelli-code/Serenity`, privato) e aggiunto la chiave
+pubblica SSH generata per questa macchina. Spedito tutto il ramo `equilibrium-stable` come
+`main` — primo push, repository vuoto, nessun conflitto.
+
+**⚠️ Trovato subito dopo il push**: il repository risulta PRIVATO (verificato con una richiesta
+anonima all'API, risposta 404). Per un repository privato, il controllo aggiornamenti di ogni
+utente avrebbe bisogno di un token GitHub incorporato nell'app — la STESSA classe di rischio
+appena tolta con `GEMINI_API_KEY` (un segreto leggibile da chiunque apra il DMG). La cronologia
+completa è stata controllata PRIMA del push (pattern di chiavi/token comuni, file `.env*`
+committati) — pulita, nessun segreto trovato — quindi renderlo pubblico è la strada pulita. Non
+bloccante: annotato, la decisione resta dell'utente.
+
+**`package.json` (`build.publish`)** ed **`electron-builder.serenity.cjs` (`publish`)**:
+configurato `provider: 'github'`, stesso repository per entrambe le app, ma un **`channel`**
+diverso ciascuna (`equilibrium`/`serenity`) — senza, electron-builder scriverebbe lo stesso file
+`latest-mac.yml` per tutte e due, e ogni app proporrebbe di aggiornarsi all'ultima release
+DELL'ALTRA (stesso repository, un solo elenco di release altrimenti).
+
+**Non ancora fatto, di proposito**: nessuna release vera pubblicata — richiede un `GH_TOKEN`
+che non è stato chiesto all'utente (stessa cautela di sempre sui segreti: un token va generato
+e usato dall'utente stesso nel proprio terminale, non passato a chi scrive questo codice). La
+configurazione è pronta e dormiente finché non arriva la prima release.
+
+**Verifica**: `package.json` JSON valido, `electron-builder.serenity.cjs` sintassi corretta e
+`publish.channel` verificato con un require diretto, `tsc --noEmit` pulito, `npm run lint` 324
+warning/0 errori (invariato).
+
+**File toccati**: `package.json`, `electron-builder.serenity.cjs` (CONDIVISI, solo
+configurazione di packaging) — nessuna build necessaria per questo giro (nessun cambiamento di
+comportamento a runtime finché non esiste una release pubblicata).
