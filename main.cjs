@@ -55,6 +55,20 @@ catch (_) { /* package.json illeggibile: EQUILIBRIUM */ }
 // build firmata esce, l'aggiornamento automatico comincia a funzionare senza toccare
 // quest'area — fino ad allora `checkForUpdates()` fallisce in silenzio (variabile GH_TOKEN
 // assente, o nessuna release pubblicata) e la distribuzione resta quella di sempre.
+//
+// ⚠️ AGGIUNTO (08/09/2026) — segnalato: « come si fa per gli aggiornamenti senza rimandare il
+// DMG/setup.exe ». `checkForUpdates()`, sopra, legge le GitHub Releases del canale giusto — ma
+// nessuna build finora le PUBBLICAVA: `dist:*` costruisce solo in `release/`, in locale.
+// Aggiunti `dist:mac:publish`/`dist:win:publish`/`dist:serenity:publish`/
+// `dist:win-serenity:publish` (`package.json`) — identici ai corrispondenti senza `:publish`,
+// con `--publish always` in più sull'invocazione di `electron-builder`. Servono una variabile
+// d'ambiente `GH_TOKEN` (token GitHub con permesso di scrittura sulle Release del repository —
+// generato dall'utente, mai da questo codice) al momento della build: senza, `electron-builder`
+// si rifiuta di procedere con un errore chiaro, invece di costruire e non pubblicare in
+// silenzio. Su Windows l'aggiornamento automatico funziona anche senza certificato di firma
+// (con l'avviso SmartScreen già visto all'installazione); su macOS resta il limite descritto
+// sopra — pubblicare una release non basta, serve comunque un Developer ID per completare
+// DAVVERO la sostituzione dell'app.
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 autoUpdater.on('error', (err) => {

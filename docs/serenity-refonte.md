@@ -11798,3 +11798,32 @@ Risolto insieme al #1: il middleware `requireLocalAuth` sostituisce le tre righe
 `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run`
 754/754 (invariato). Verifica dal vivo nel browser (server reale, dist ricostruito) per il
 fix di sicurezza, come sopra.
+
+## Nota — 2026-09-08 — collegati gli script `:publish`, per gli aggiornamenti senza rimandare i file
+
+Chiesto: come fare gli aggiornamenti senza che ogni volta ti mandi di nuovo il DMG/il setup.exe.
+`electron-updater` era già cablato in `main.cjs` (v. la sua nota grande, sopra nel file) — legge
+le GitHub Releases del canale giusto (`equilibrium`/`serenity`, stesso repository) e propone da
+solo il riavvio quando trova una versione più nuova scaricata. Ma NESSUNA build finora
+pubblicava una release: `dist:*` costruisce solo in `release/`, in locale — ecco perché
+l'aggiornamento automatico non è mai partito, e i file sono sempre stati spediti a mano.
+
+Aggiunti quattro nuovi script in `package.json` — `dist:mac:publish`, `dist:win:publish`,
+`dist:serenity:publish`, `dist:win-serenity:publish` — identici ai corrispondenti senza
+`:publish`, con `--publish always` in più sull'invocazione di `electron-builder`. Nulla è
+cambiato negli script esistenti (nessun rischio di rompere una build normale senza token): i
+nuovi script sono un'AGGIUNTA, non una sostituzione.
+
+Per usarli serve una variabile d'ambiente `GH_TOKEN` — un Personal Access Token GitHub con
+permesso di scrivere Release sul repository, generato dall'utente dal proprio account (non da
+questo codice: creare credenziali per conto dell'utente non è nel novero di quel che questo
+assistente fa). Senza quella variabile, `electron-builder --publish always` si rifiuta di
+partire con un errore chiaro — mai una build "silenziosamente non pubblicata".
+
+**Il limite noto resta quello già scritto in `main.cjs`**: su Windows l'aggiornamento
+automatico via NSIS funziona anche senza certificato di firma (con lo stesso avviso SmartScreen
+già visto all'installazione). Su macOS invece pubblicare la release non basta — `Squirrel.Mac`
+sostituisce l'app installata SOLO se vecchia e nuova versione condividono lo stesso certificato
+Developer ID; senza quel certificato (99$/anno, non ancora acquistato), il download della
+nuova versione può anche riuscire ma l'installazione vera fallisce in silenzio, e l'app resta
+quella di prima — su Mac, fino a quel giorno, resta necessario reinstallare a mano ogni tanto.
