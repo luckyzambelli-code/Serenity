@@ -23,7 +23,7 @@
  * @see docs/serenity-refonte.md
  */
 
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useMetric, metricsStore } from '../store/metricsStore';
 import { sessionClock } from '../runtime/SessionClock';
 import { needleEngine, virtualNeedle } from '../runtime/NeedleEngine';
@@ -3281,6 +3281,7 @@ export default function Serenity() {
         setRisposteProcedimento={setRisposteProcedimento}
         domandeLoggateRef={domandeLoggateRef}
         processusSoloComandi={processusSoloComandi}
+        LC={LC}
       />
 
       {/* ── I COMANDI, ORA A SINISTRA SOTTO L'INTESTAZIONE — segnalato di nuovo: « le scritte
@@ -3666,6 +3667,7 @@ export default function Serenity() {
           confermaItemSePresente={confermaItemSePresente}
           setToneAttivo={setToneAttivo}
           setTonoScelto={setTonoScelto}
+          LC={LC}
         />
         {/* ── MNA — TERZO FRATELLO, NON PIÙ FIGLIO DI `gruppoBasso` ──────────────────────────
             Segnalato: « hai rialzato il MNA ma hai ridotto di molto la zona ago, non va bene.

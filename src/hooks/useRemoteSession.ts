@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { networkManager, parseSignalingUrl, VOICE_AUDIO_CONSTRAINTS } from '../lib/networkManager';
+import { localAuthHeaders } from '../lib/localAuth';
 import { useNetworkStore } from '../store/networkStore';
 import type { Language } from '../i18n';
 
@@ -49,7 +50,9 @@ function generaToken(): string {
  *  prova comunque, e il tunnel fallirà da sé con un messaggio leggibile. */
 async function otteniChiaveServer(): Promise<string | undefined> {
   try {
-    const r = await fetch('/api/server-info');
+    // FIX SEC-1: /api/server-info richiede ora il token locale — v. la nota grande su
+    // `LOCAL_AUTH_TOKEN` in `server-core.cjs`.
+    const r = await fetch('/api/server-info', { headers: await localAuthHeaders() });
     if (!r.ok) return undefined;
     const data = await r.json();
     return typeof data?.peerKey === 'string' ? data.peerKey : undefined;
@@ -139,7 +142,8 @@ export function useRemoteSession(opts: {
     setTunnelLoading(true);
     setErrore(null);
     try {
-      const r = await fetch('/api/tunnel', { method: 'POST' });
+      // FIX SEC-1: POST /api/tunnel richiede ora il token locale.
+      const r = await fetch('/api/tunnel', { method: 'POST', headers: await localAuthHeaders() });
       const data = await r.json();
       if (!data.url) { setErrore(data.error || 'tunnel'); return; }
       const tunnelHost = String(data.url).replace(/^https?:\/\//, '');

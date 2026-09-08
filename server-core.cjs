@@ -60,6 +60,43 @@ function _resolvePeerJsKey() {
 }
 const PEERJS_KEY = _resolvePeerJsKey();
 
+// ── SECURITY: token che prova « sono l'app stessa, in locale » ─────────────────
+// FIX SEC-1 — segnalato nella revisione completa (0776d49..854dd5c): il vecchio
+// `isFromTunnel(req)` decideva « questa richiesta viene dal tunnel pubblico » confrontando
+// l'header Host: con l'hostname noto del tunnel (`_tunnelHost()`, sotto — ORA RIMOSSO).
+// Verificato leggendo `startTunnel`: `cloudflared` gira SENZA `--http-host-header`, quindi
+// inoltra l'Host: del CHIAMANTE, verbatim — per qualunque client non-browser (curl, uno
+// script) quell'header è scelto liberamente da chi chiama. Un estraneo che avesse visto
+// l'URL pubblico del tunnel poteva fare
+//   curl -H "Host: 127.0.0.1:7893" https://xxxx.trycloudflare.com/api/profiles
+// e `isFromTunnel()` rispondeva FALSO — bypassando per intero la protezione "solo locale"
+// su profili, sedute, PDF dei processus e le rotte AppleScript del Theta-Meter.
+//
+// Rimedio: invece di « riconoscere il tunnel » (un negativo, aggirabile), si prova ORA
+// « sono davvero l'app locale » (un positivo, non falsificabile) — un token segreto
+// generato una volta per processo, mai esposto via HTTP pubblico:
+//   • Electron: passato al renderer via IPC puro (`get-local-auth-token`, main.cjs/
+//     preload.cjs) — invisibile al tunnel, che vede solo traffico HTTP.
+//   • Modalità "Chrome" (`server.cjs`): incorporato nell'URL locale stampato in console
+//     (`?token=...`) — l'utente lo copia insieme all'URL locale; l'URL PUBBLICO del tunnel,
+//     ottenuto con un meccanismo di invito completamente separato, non lo contiene mai.
+// Ogni fetch dell'app verso le rotte sensibili porta questo token in un header
+// (`X-Local-Auth`); `hasLocalToken()` lo confronta con un semplice `===` — niente più da
+// dedurre dall'Host:, niente più aggirabile da un `curl` con un header a piacere.
+const LOCAL_AUTH_TOKEN = crypto.randomBytes(24).toString('hex');
+function hasLocalToken(req) {
+  return req.headers['x-local-auth'] === LOCAL_AUTH_TOKEN;
+}
+// ⚠️ CORRETTO — segnalato nella revisione completa: le TRE rotte sotto (`/api/server-info`,
+// `POST /api/tunnel`, `DELETE /api/tunnel`) ripetevano la STESSA riga di guardia copiata tre
+// volte — già così col vecchio `isFromTunnel`, rimasto tale e quale nel portare il fix al
+// token. Un middleware Express unico invece di tre `if` identici: un solo posto dove questa
+// guardia vive, non tre da tenere allineati a mano.
+function requireLocalAuth(req, res, next) {
+  if (!hasLocalToken(req)) { res.status(403).json({ error: 'not available over the public tunnel' }); return; }
+  next();
+}
+
 // ── LAN IP ───────────────────────────────────────────────────────────────────
 function getLanIp() {
   const ifaces = os.networkInterfaces();
@@ -99,7 +136,10 @@ function _startTunnelKeepAlive() {
   if (_tunnelKeepAlive) return;
   _tunnelKeepAlive = setInterval(() => {
     if (!_tunnelUrl) return;
-    // Use the lightweight server-info endpoint — no side effects.
+    // Use the lightweight server-info endpoint — no side effects. FIX SEC-1: questa chiamata
+    // passa DAVVERO dal tunnel pubblico (è il proprio scopo: generare traffico sul tunnel) e
+    // ora riceve 403 dal nuovo gate a token — INTENZIONALE, non un guasto: la risposta non è
+    // mai letta, serve solo il round-trip HTTP per evitare l'idle-timeout di trycloudflare.
     fetch(`${_tunnelUrl}/api/server-info`, { method: 'GET' }).catch(() => {});
   }, 90_000);
   // Don't keep the process alive just for the keepalive
@@ -210,29 +250,6 @@ function stopTunnel() {
 
 function getTunnelUrl() { return _tunnelUrl; }
 
-// ── SECURITY: distinguere una richiesta arrivata dal tunnel pubblico da una locale/LAN ──
-// Segnalato nella revisione completa: l'intera `/api/*` (profili, sedute, PDF dei processus,
-// e le rotte che eseguono AppleScript per Theta-Meter) non aveva NESSUN controllo — e durante
-// ogni seduta a distanza è raggiungibile non solo in LAN ma dal tunnel Cloudflare PUBBLICO,
-// perché `cloudflared` non fa che inoltrare a questo stesso server (v. `startTunnel`, sopra:
-// `--url http://localhost:${port}`). Il TCP non aiuta a distinguere: cloudflared è un processo
-// LOCALE, quindi anche una richiesta relayata dal tunnel arriva con `remoteAddress` di loopback,
-// identico a una vera richiesta locale. Quel che INVECE resta diverso è l'header Host:
-// cloudflared preserva quello originale (`xxxx.trycloudflare.com`) quando inoltra, mentre
-// l'app stessa (il proprio renderer) chiama sempre la propria stessa origine
-// (`127.0.0.1:porta` o l'IP di LAN). Confrontare l'Host con l'hostname noto del tunnel è quindi
-// un segnale affidabile — usato sotto per tenere i dati personali e le rotte di controllo
-// macchina irraggiungibili da internet, lasciando aperto solo il percorso dati della seduta a
-// distanza vera e propria (`/peerjs/*`, `/api/relay*`), che è l'unico scopo del tunnel.
-function _tunnelHost() {
-  if (!_tunnelUrl) return null;
-  try { return new URL(_tunnelUrl).host.toLowerCase(); } catch (_) { return null; }
-}
-function isFromTunnel(req) {
-  const h = _tunnelHost();
-  return !!h && (req.headers.host || '').toLowerCase() === h;
-}
-
 // ── App factory ───────────────────────────────────────────────────────────────
 function createAppServer({ port, distDir, entry = 'index.html' }) {
   const app    = express();
@@ -299,8 +316,7 @@ function createAppServer({ port, distDir, entry = 'index.html' }) {
   // preclear/partecipante la chiama mai (v. `useRemoteSession.ts`/`App.tsx`: solo l'auditor,
   // sulla propria stessa origine) — bloccata quando arriva dal tunnel pubblico, invariata per
   // chi la chiama davvero (l'app stessa, in locale/LAN).
-  app.get('/api/server-info', (req, res) => {
-    if (isFromTunnel(req)) { res.status(403).json({ error: 'not available over the public tunnel' }); return; }
+  app.get('/api/server-info', requireLocalAuth, (req, res) => {
     // FIX H1: include peerKey so the auditor frontend can embed it in the link.
     res.json({ lanIp: getLanIp(), port, tunnelUrl: _tunnelUrl, peerKey: PEERJS_KEY });
   });
@@ -314,8 +330,7 @@ function createAppServer({ port, distDir, entry = 'index.html' }) {
   // (`refreshSignalingForReconnect`, CONN-3) lo chiama DAL PARTECIPANTE proprio sull'host del
   // tunnel per sapere se è ancora vivo dopo un blip di rete — bloccarlo romperebbe quel
   // controllo, l'unico caso in cui una rotta di `/api/tunnel` è chiamata legittimamente da fuori.
-  app.post('/api/tunnel', express.json(), async (req, res) => {
-    if (isFromTunnel(req)) { res.status(403).json({ error: 'not available over the public tunnel' }); return; }
+  app.post('/api/tunnel', requireLocalAuth, express.json(), async (req, res) => {
     try {
       const url = await startTunnel(port);
       res.json({ url });
@@ -326,8 +341,7 @@ function createAppServer({ port, distDir, entry = 'index.html' }) {
   app.get('/api/tunnel', (_req, res) => {
     res.json({ url: _tunnelUrl });
   });
-  app.delete('/api/tunnel', (req, res) => {
-    if (isFromTunnel(req)) { res.status(403).json({ error: 'not available over the public tunnel' }); return; }
+  app.delete('/api/tunnel', requireLocalAuth, (req, res) => {
     stopTunnel();
     res.json({ ok: true });
   });
@@ -338,10 +352,13 @@ function createAppServer({ port, distDir, entry = 'index.html' }) {
   app.use('/api', async (req, res, next) => {
     const saved  = req.url;
     req.url      = '/api' + (req.url || '/');
-    // ⚠️ AGGIUNTO — `handleApi` (in `api-routes.cjs`) usa questo per bloccare le rotte che
-    // toccano dati personali o comandi macchina quando la richiesta arriva dal tunnel pubblico.
-    // Calcolato qui perché `_tunnelUrl` vive in questo modulo, non in `api-routes.cjs`.
-    req._smFromTunnel = isFromTunnel(req);
+    // ⚠️ AGGIORNATO (FIX SEC-1) — `handleApi` (in `api-routes.cjs`) usa questo per bloccare
+    // le rotte che toccano dati personali o comandi macchina quando la richiesta NON porta il
+    // token locale (v. la nota grande su `LOCAL_AUTH_TOKEN`, in cima a questo file). Calcolato
+    // qui, non in `api-routes.cjs`, solo per restare vicino a dove `LOCAL_AUTH_TOKEN` è
+    // definito — la verifica stessa (`hasLocalToken`) non dipende da nessuno stato di questo
+    // modulo, a differenza del vecchio `isFromTunnel` che leggeva `_tunnelUrl`.
+    req._smLocalAuth = hasLocalToken(req);
     const handled = await handleApi(req, res);
     req.url = saved;          // restore in case next() needs the original path
     if (!handled) next();
@@ -399,4 +416,4 @@ function createAppServer({ port, distDir, entry = 'index.html' }) {
   return { server, app, getLanIp, stopTunnel, getTunnelUrl };
 }
 
-module.exports = { createAppServer, getLanIp, startTunnel, stopTunnel, getTunnelUrl };
+module.exports = { createAppServer, getLanIp, startTunnel, stopTunnel, getTunnelUrl, LOCAL_AUTH_TOKEN };

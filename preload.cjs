@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   /** CONN-76: read the OS clipboard (navigator.clipboard is blocked in Electron). */
   readClipboard: () => ipcRenderer.invoke('clipboard-read'),
+  // FIX SEC-1: il token che prova al server locale « sono l'app stessa » — v. la nota
+  // grande su LOCAL_AUTH_TOKEN in server-core.cjs. Canale IPC puro, mai visto dal tunnel.
+  getLocalAuthToken: () => ipcRenderer.invoke('get-local-auth-token'),
   // CORPUS — una riga in aggiunta all'archivio delle esperienze.
   corpusAppend: (args) => ipcRenderer.invoke('corpus-append', args),
   corpusFolder: () => ipcRenderer.invoke('corpus-folder'),

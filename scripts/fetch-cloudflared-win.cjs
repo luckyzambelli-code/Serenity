@@ -24,34 +24,17 @@
 // stesso non è mai versionato: si scarica, non si porta nel deposito.
 //
 // Idempotente: se `cloudflared.exe` esiste già, non riscarica nulla.
+//
+// `download()` vive in `scripts/lib/download.cjs`, condivisa con `fetch-cloudflared-x64.cjs` —
+// segnalato nella revisione completa (reuse): due copie identiche significavano due posti dove
+// dimenticare lo stesso fix (v. i due bug documentati nel commento di quel file).
 const fs   = require('fs');
 const path = require('path');
-const https = require('https');
+const { download } = require('./lib/download.cjs');
 
 const BIN_DIR   = path.join(__dirname, '..', 'node_modules', 'cloudflared', 'bin');
 const DEST_FILE = path.join(BIN_DIR, 'cloudflared.exe');
 const URL = 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe';
-
-function download(url, dest, redirectsLeft = 5) {
-  return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
-      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirectsLeft > 0) {
-        res.resume();
-        download(res.headers.location, dest, redirectsLeft - 1).then(resolve, reject);
-        return;
-      }
-      if (res.statusCode !== 200) {
-        res.resume();
-        reject(new Error(`HTTP ${res.statusCode} scaricando ${url}`));
-        return;
-      }
-      const file = fs.createWriteStream(dest);
-      res.pipe(file);
-      file.on('finish', () => file.close(resolve));
-      file.on('error', reject);
-    }).on('error', reject);
-  });
-}
 
 async function main() {
   if (fs.existsSync(DEST_FILE)) {

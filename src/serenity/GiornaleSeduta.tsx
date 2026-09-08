@@ -66,15 +66,24 @@ export function GiornaleSeduta({
           .filter(l => l.speaker === 'Aud' || l.speaker === 'PC')
           .sort((a, b) => (a.time ?? 0) - (b.time ?? 0))
           .reverse()
-          .map((log, i) => {
+          .map((log) => {
             const reazione = museOk || meterC
               ? computeInstantRead(shownReadsRef.current, log.time ?? 0, -Infinity, Infinity,
                   agoEegRef.current ? 'eeg' : 'theta').read
               : undefined;
             const reazioneUtile = reazione && reazione !== 'NULL' && reazione !== READ_NON_MISURATO
               ? reazione : null;
+            // ⚠️ CORRETTO — segnalato nella revisione completa: `key={i}` usava l'indice DOPO
+            // `sort`/`reverse` — ogni nuova riga del giornale (append-only, `logs` cresce ad
+            // ogni turno) fa SLITTARE l'indice di TUTTE le righe già a schermo (la più recente
+            // va in cima), quindi React vedeva ad ogni riga nuova « l'elemento all'indice N è
+            // cambiato » per righe che in realtà non sono cambiate affatto — solo spostate.
+            // `LogEntry` non ha un id proprio: la coppia (`time`, `speaker`) più i primi
+            // caratteri del testo è già stabile e specifica per QUEL turno, a differenza della
+            // posizione nell'array che cambia ad ogni riga aggiunta.
+            const chiave = `${log.time ?? 0}-${log.speaker ?? '?'}-${(log.text || '').slice(0, 40)}`;
             return (
-              <div key={i} style={{ display: 'flex', gap: 8, fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.4 }}>
+              <div key={chiave} style={{ display: 'flex', gap: 8, fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', lineHeight: 1.4 }}>
                 <span style={{ color: 'var(--s-ink-faint)', width: 38, flexShrink: 0 }}>
                   {(log.time || 0).toFixed(1)}s
                 </span>

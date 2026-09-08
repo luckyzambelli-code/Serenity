@@ -22,6 +22,18 @@ const fs     = require('fs');
 const path   = require('path');
 const { execSync } = require('child_process');
 
+// ⚠️ VERIFICATO — segnalato nella revisione completa: `mac` e `linux` condividono lo stesso
+// nome (`'cloudflared'`, senza estensione) — non una svista, è la convenzione del pacchetto
+// `cloudflared` a monte (lo stesso nome per entrambe le piattaforme Unix-like); Windows è
+// l'unica con un nome diverso (`.exe`). Nessuna collisione REALE oggi: `removeWrongPlatformCloudflared`
+// gira una volta per invocazione di `electron-builder`, sempre per UNA piattaforma sola
+// (`--mac` o `--win`) — non elabora mai mac e linux nella stessa cartella insieme, quindi il
+// valore duplicato non fa confondere nulla in pratica. Diventerebbe un problema SOLO se questo
+// deposito guadagnasse un giorno un cross-build Linux DA MAC (come `fetch-cloudflared-win.cjs`
+// fa oggi per Windows): a quel punto servirebbe lo stesso meccanismo di `server-core.cjs` per
+// l'x64 mac (uno switch A RUNTIME fra binari con nomi DIVERSI in `native/`), non una semplice
+// voce in questa mappa — annotato qui perché non si ripeta l'errore di pensare che basti
+// aggiungere `linux-arm64: 'cloudflared'` e sperare che funzioni.
 const CLOUDFLARED_BIN_BY_PLATFORM = { mac: 'cloudflared', windows: 'cloudflared.exe', linux: 'cloudflared' };
 
 function removeWrongPlatformCloudflared(appOutDir, packager) {

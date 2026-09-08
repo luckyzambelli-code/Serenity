@@ -17,35 +17,20 @@
 //
 // Idempotente: se il file esiste già, non riscarica nulla — un secondo giro di build resta
 // veloce quanto prima che questo script esistesse.
+//
+// `download()` vive in `scripts/lib/download.cjs`, condivisa con `fetch-cloudflared-win.cjs` —
+// segnalato nella revisione completa (reuse): due copie identiche significavano due posti dove
+// dimenticare lo stesso fix. V. il commento in quel file per i due bug corretti insieme
+// all'estrazione (`res.on('error', ...)` mancante; `file.close(resolve)` che trasformava un
+// errore di chiusura in un successo).
 const fs   = require('fs');
 const path = require('path');
-const https = require('https');
 const { execSync } = require('child_process');
+const { download } = require('./lib/download.cjs');
 
 const DEST_DIR  = path.join(__dirname, '..', 'native');
 const DEST_FILE = path.join(DEST_DIR, 'cloudflared-darwin-x64');
 const URL = 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-amd64.tgz';
-
-function download(url, dest, redirectsLeft = 5) {
-  return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
-      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirectsLeft > 0) {
-        res.resume();
-        download(res.headers.location, dest, redirectsLeft - 1).then(resolve, reject);
-        return;
-      }
-      if (res.statusCode !== 200) {
-        res.resume();
-        reject(new Error(`HTTP ${res.statusCode} scaricando ${url}`));
-        return;
-      }
-      const file = fs.createWriteStream(dest);
-      res.pipe(file);
-      file.on('finish', () => file.close(resolve));
-      file.on('error', reject);
-    }).on('error', reject);
-  });
-}
 
 async function main() {
   if (fs.existsSync(DEST_FILE)) {

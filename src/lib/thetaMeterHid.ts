@@ -36,6 +36,14 @@ export class ThetaMeterHid {
   private device: HIDDevice | null = null;
   private readonly meter = new ThetaMeter();
   private readonly onInput = (e: HIDInputReportEvent) => {
+    // ⚠️ AGGIUNTO — segnalato nella revisione completa: `noSignal` (v. sotto) confrontava
+    // SOLO col momento della connessione (`connectedAtMs`) — una volta arrivato UN report
+    // qualunque (buono o scartato, `meter.count`/`meter.rejected` sono cumulativi e si
+    // azzerano solo con `disconnect()`), restava incollato a `false` per il resto di quella
+    // connessione, anche se il dispositivo smetteva di parlare DOPO. Qui si registra invece
+    // il momento dell'ULTIMO report arrivato, buono o no — così `noSignal` può accorgersi
+    // tanto del « non ha mai parlato » quanto del « ha smesso di parlare a metà seduta ».
+    this.lastActivityMs = Date.now();
     const d = e.data;
     const bytes = new Uint8Array(d.byteLength);
     for (let i = 0; i < d.byteLength; i++) bytes[i] = d.getUint8(i);
@@ -71,10 +79,13 @@ export class ThetaMeterHid {
    *  decodificatore di QUEL modello. */
   get rawSamples(): string[] { return this.meter.samples; }
 
-  /** Quando la connessione è riuscita — serve SOLO a `noSignal`, sotto, per non gridare « non
-   *  arriva niente » nell'istante stesso della connessione (il primo report può arrivare con
-   *  qualche decina di ms di ritardo, non è ancora un problema a quel punto). */
+  /** Quando la connessione è riuscita — serve SOLO a `noSignal`, sotto, come punto di partenza
+   *  prima che arrivi il primo report (il primo può arrivare con qualche decina di ms di
+   *  ritardo, non è ancora un problema a quel punto). */
   private connectedAtMs: number | null = null;
+  /** Quando è arrivato l'ULTIMO report (buono o scartato) — v. la nota in `onInput`, sopra.
+   *  `null` finché non ne arriva nessuno: `noSignal` allora ripiega su `connectedAtMs`. */
+  private lastActivityMs: number | null = null;
 
   /**
    * ⚠️ AGGIUNTO — segnalato: « collegato al Meter, ma non legge nulla » (su Windows). Diverso
@@ -82,13 +93,20 @@ export class ThetaMeterHid {
    * il dispositivo che, aperto senza errori, non manda MAI un report — buono o scartato che
    * sia. `unknownFormat` da solo non lo vede mai (richiede ALMENO 10 report scartati, che con
    * zero report in arrivo non arrivano mai) — da qui il riquadro rosso non compariva affatto,
-   * lasciando un ago fermo senza NESSUNA spiegazione a schermo. Una soglia di tempo (1.5 s,
-   * più che sufficiente al primo report reale) invece di un conteggio: qui non c'è nulla da
-   * contare. */
+   * lasciando un ago fermo senza NESSUNA spiegazione a schermo.
+   *
+   * ⚠️ CORRETTO — segnalato nella revisione completa: la prima versione guardava SOLO
+   * `connectedAtMs` insieme a `meter.count`/`meter.rejected` — cumulativi, azzerati solo da
+   * `disconnect()` — quindi UN SOLO report (anche il primo, anche scartato) faceva restare
+   * `noSignal` incollato a `false` per SEMPRE, pure se il dispositivo smetteva di parlare due
+   * minuti dopo (cavo che si stacca a metà seduta, per esempio). Ora si confronta con
+   * `lastActivityMs` — l'ultimo report arrivato, aggiornato ad OGNI report in `onInput` — che
+   * ripiega su `connectedAtMs` finché non ne è mai arrivato nessuno: stessa soglia (1.5 s),
+   * ma capace di accorgersi tanto del « non ha mai parlato » quanto del « ha smesso a metà ». */
   get noSignal(): boolean {
     if (this.status !== 'connected' || this.connectedAtMs === null) return false;
-    if (this.meter.count > 0 || this.meter.rejected > 0) return false;
-    return Date.now() - this.connectedAtMs > 1500;
+    const last = this.lastActivityMs ?? this.connectedAtMs;
+    return Date.now() - last > 1500;
   }
 
   private setStatus(s: ThetaStatus): void {
@@ -186,6 +204,7 @@ export class ThetaMeterHid {
     this.device = null;
     this.info = null;
     this.connectedAtMs = null;
+    this.lastActivityMs = null;
     this.meter.reset();
     if (d) {
       d.removeEventListener('inputreport', this.onInput);

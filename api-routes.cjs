@@ -356,13 +356,17 @@ function json(res, data, status = 200) {
   res.end(JSON.stringify(data));
 }
 
-// ── SECURITY: rotte che non devono MAI rispondere a una richiesta arrivata dal tunnel
-// pubblico — segnalato nella revisione completa: profili, sedute, PDF dei processus/sedute,
-// e le rotte che lanciano/pilotano Theta-Meter via AppleScript, non avevano NESSUN controllo.
-// Durante ogni seduta a distanza queste rotte sono raggiungibili non solo in LAN ma anche dal
-// tunnel Cloudflare (v. la nota grande su `isFromTunnel` in `server-core.cjs`). Nessuna di
-// queste è mai chiamata da un preclear/partecipante — solo dall'app stessa, sulla propria
-// origine locale — quindi bloccarle per il tunnel non toglie nulla di reale: `/api/relay*`
+// ── SECURITY: rotte che rispondono SOLO a chi porta il token locale ──────────────────
+// Segnalato nella revisione completa: profili, sedute, PDF dei processus/sedute, e le rotte
+// che lanciano/pilotano Theta-Meter via AppleScript, non avevano NESSUN controllo. Durante
+// ogni seduta a distanza queste rotte sono raggiungibili non solo in LAN ma anche dal tunnel
+// Cloudflare. FIX SEC-1 (v. la nota grande su `LOCAL_AUTH_TOKEN` in `server-core.cjs`): il
+// vecchio controllo confrontava l'header Host: con l'hostname del tunnel — falsificabile da
+// qualunque chiamante non-browser (`curl -H "Host: ..."`). Ora si richiede invece un token
+// segreto che solo l'app stessa conosce (`X-Local-Auth`, verificato da `hasLocalToken` in
+// `server-core.cjs`, il cui risultato arriva qui come `req._smLocalAuth`). Nessuna di queste
+// è mai chiamata da un preclear/partecipante — solo dall'app stessa, sulla propria origine
+// locale — quindi bloccarle per chi non ha il token non toglie nulla di reale: `/api/relay*`
 // (il vero canale dati della seduta a distanza) NON è in questo elenco, resta aperto.
 const LOCAL_ONLY_PREFIXES = [
   '/api/health',       // rivela il percorso home dell'utente — nessun uso remoto
@@ -394,8 +398,8 @@ async function handleApi(req, res) {
   // OPTIONS pre-flight
   if (method === 'OPTIONS') { setCors(res); res.writeHead(204); res.end(); return true; }
 
-  // `req._smFromTunnel` è calcolato da `server-core.cjs` (è lì che vive `_tunnelUrl`).
-  if (req._smFromTunnel && isLocalOnlyRoute(url)) {
+  // `req._smLocalAuth` è calcolato da `server-core.cjs` (è lì che vive `LOCAL_AUTH_TOKEN`).
+  if (!req._smLocalAuth && isLocalOnlyRoute(url)) {
     json(res, { error: 'not available over the public tunnel' }, 403);
     return true;
   }

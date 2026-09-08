@@ -8,6 +8,11 @@
  * Falls back to localStorage / IndexedDB when the server is unreachable.
  */
 
+// FIX SEC-1: il token che prova « sono l'app locale » — v. la nota grande su
+// `LOCAL_AUTH_TOKEN` in `server-core.cjs`. Ogni fetch qui sotto lo porta, `/health` incluso
+// (è in `LOCAL_ONLY_PREFIXES`: senza il token riceverebbe 403 anche da un'app locale vera).
+import { localAuthHeaders } from './localAuth';
+
 // CONN-85: the API base MUST follow the origin the app was served from, not a
 // hardcoded localhost. Electron loads from http://127.0.0.1:7893 (same origin →
 // works), but a REMOTE Chrome (preclear's phone, a friend's browser) is served
@@ -43,7 +48,10 @@ export async function isServerAvailable(): Promise<boolean> {
   if (_serverAvailable === false && (now - _serverCheckedAt) < RETRY_AFTER_MS) return false;
   // null OR (false + TTL expired) → probe
   try {
-    const res = await fetch(`${API}/health`, { signal: AbortSignal.timeout(1500) });
+    const res = await fetch(`${API}/health`, {
+      headers: await localAuthHeaders(),
+      signal: AbortSignal.timeout(1500),
+    });
     _serverAvailable = res.ok;
   } catch {
     _serverAvailable = false;
@@ -56,7 +64,7 @@ export async function isServerAvailable(): Promise<boolean> {
 
 async function apiGet<T>(route: string): Promise<T | null> {
   try {
-    const res = await fetch(`${API}${route}`);
+    const res = await fetch(`${API}${route}`, { headers: await localAuthHeaders() });
     if (!res.ok) return null;
     return res.json() as Promise<T>;
   } catch {
@@ -68,7 +76,7 @@ async function apiPost(route: string, body: unknown): Promise<boolean> {
   try {
     const res = await fetch(`${API}${route}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...await localAuthHeaders() },
       body: JSON.stringify(body),
     });
     return res.ok;
@@ -79,7 +87,7 @@ async function apiPost(route: string, body: unknown): Promise<boolean> {
 
 async function apiDelete(route: string): Promise<boolean> {
   try {
-    const res = await fetch(`${API}${route}`, { method: 'DELETE' });
+    const res = await fetch(`${API}${route}`, { method: 'DELETE', headers: await localAuthHeaders() });
     return res.ok;
   } catch {
     return false;

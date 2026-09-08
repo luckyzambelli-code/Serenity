@@ -3,7 +3,7 @@ const path = require('path');
 const fs   = require('fs');
 const os   = require('os');
 const { execSync, spawn } = require('child_process');
-const { createAppServer, getLanIp, stopTunnel } = require('./server-core.cjs');
+const { createAppServer, getLanIp, stopTunnel, LOCAL_AUTH_TOKEN } = require('./server-core.cjs');
 const { autoUpdater } = require('electron-updater');
 
 const PORT     = 7893;
@@ -216,6 +216,13 @@ ipcMain.handle('procedimenti-folder-open', () => {
 // CONN-76: native clipboard read — navigator.clipboard.readText() is blocked in
 // the Electron renderer, so "paste from clipboard" never pasted. Read via the
 // main process instead.
+// FIX SEC-1: canale IPC puro — invisibile e irraggiungibile dal tunnel Cloudflare (che vede
+// solo traffico HTTP), a differenza di una rotta `/api/*`. Il renderer lo chiama una volta
+// all'avvio (v. `src/lib/localAuth.ts`) per ottenere il token da allegare (header
+// `X-Local-Auth`) a ogni fetch verso le rotte "solo locali" — v. la nota grande su
+// `LOCAL_AUTH_TOKEN` in `server-core.cjs`.
+ipcMain.handle('get-local-auth-token', () => LOCAL_AUTH_TOKEN);
+
 ipcMain.handle('clipboard-read', () => {
   try { return clipboard.readText() || ''; } catch (_) { return ''; }
 });

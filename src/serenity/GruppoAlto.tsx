@@ -19,7 +19,7 @@
  *
  * @see docs/serenity-refonte.md — giro di scomposizione, 2026-09-07.
  */
-import React, { useSyncExternalStore, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import React, { useMemo, useSyncExternalStore, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 import { Play, StickyNote } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { useUiStore } from '../store/uiStore';
@@ -117,6 +117,81 @@ const LetturaVelocita = React.memo(function LetturaVelocita({ t }: { t: (k: stri
   );
 });
 
+/**
+ * ── L'AGO, ISOLATO — segnalato nella revisione completa (efficienza): `needleOffsetEeg`
+ * (`useSyncExternalStore(needleEngine.subscribe, needleEngine.getPos)`) viveva nel corpo di
+ * `GruppoAlto` stesso — il motore fisico dell'ago aggiorna a ~60 Hz, quindi OGNI riga di questo
+ * componente (~1300 righe di JSX, una trentina di figli fra archi, letture, pannelli) veniva
+ * rivalutata 60 volte al secondo, non solo `QuantumSphere` che è l'UNICO a usare davvero quel
+ * valore. React salta il re-render dei figli memoizzati le cui prop non cambiano, ma la
+ * CREAZIONE di ogni elemento JSX del genitore — l'unica cosa che conta qui — no.
+ *
+ * Stesso principio già applicato sopra a `LetturaTA`/`LetturaFase`/`LetturaTotalTa`/
+ * `LetturaVelocita` (v. la loro nota): isolare la sottoscrizione ad alta frequenza nel PIÙ
+ * PICCOLO componente possibile, `React.memo`ato, così SOLO lui ridisegna a quella cadenza.
+ * Qui il componente da isolare non è un semplice `<span>` ma `QuantumSphere` per intero (con
+ * la sua condizione di montaggio, spostata dentro insieme — non dipende da `needleOffsetEeg`,
+ * ma non ha senso lasciarla fuori quando tutto il resto si sposta).
+ */
+const AgoQuantumSphere = React.memo(function AgoQuantumSphere({
+  agoEeg, meterC, vistaSenzaAgo, mirrorArmed, toneAttivo, senzaMisura, theta,
+  needleReactionKey, thetaReactionKey, asIsnessState, onClick, showTrail, sessionState,
+}: {
+  agoEeg: boolean; meterC: boolean; vistaSenzaAgo: boolean; mirrorArmed: boolean;
+  toneAttivo: boolean; senzaMisura: boolean; theta: ReturnType<typeof useThetaMeter>;
+  needleReactionKey: string; thetaReactionKey: string;
+  asIsnessState: ReturnType<typeof useEpValidation>['asIsnessState'];
+  onClick: () => void; showTrail: boolean; sessionState: 'running' | 'idle';
+}) {
+  const needleOffsetEeg = useSyncExternalStore(needleEngine.subscribe, needleEngine.getPos);
+  // Stessa condizione di montaggio già in `GruppoAlto` prima di questa estrazione — invariata,
+  // solo spostata qui insieme al resto (v. `!senzaMisura && !(vistaSenzaAgo && ...)` nel
+  // vecchio punto di chiamata, ora `AgoQuantumSphere` in `GruppoAlto.tsx`).
+  if (senzaMisura || (vistaSenzaAgo && !mirrorArmed && !toneAttivo)) return null;
+  return (
+    <QuantumSphere
+      needleOffsetProp={agoEeg ? needleOffsetEeg : SET_OFFSET}
+      /* ⚠️ BUG TROVATO — segnalato: « quand on choisit MUSE, apparaît toujours l'aiguille des
+         boîtes » e « l'aiguille du MUSE ne bouge pas ». La stessa causa per entrambi:
+         `QuantumSphere` disegna l'ago del Meter ogni volta che `thetaOffset` non è `null`
+         (nessun'altra guardia) — qui era `meterC ? theta.offset : null`, SENZA CONDIZIONE
+         sull'ago scelto: col meter connesso, il suo ago restava sempre disegnato ANCHE
+         scegliendo MUSE, fermo (a riposo, nessuna stretta in corso) proprio sopra quello EEG
+         che invece si muoveva — sembrava che l'ago del MUSE non si muovesse, era l'ago del
+         Meter, immobile, disegnato sopra il suo. App.tsx lo mostra SOLO quando è lui il
+         principale (`agoPrincipale === 'theta'`, la sua nota: « un ago solo »): stessa
+         esclusività qui, con `agoEeg` al posto di `agoPrincipale`. */
+      /* ⚠️ BUG TROVATO E CORRETTO — stessa famiglia del bug appena sopra in `ToneDial`:
+         segnalato di nuovo, « IN TONE... NON É PRESENTE » (e per estensione MIRROR), la vera
+         causa a monte era QUI. La condizione di montaggio (nel vecchio punto di chiamata,
+         ora nel guard `if` sopra) esclude `vistaSenzaAgo` SOLO quando `!mirrorArmed &&
+         !toneAttivo` — apposta, perché in MIRROR/TONE non esiste una `VistaSenzaAgo`
+         sostitutiva (le loro scale non sono CONTACT/DISSOLUTION/AS-IS) e l'arco di sfondo
+         deve restare. Ma restando MONTATO, disegnava anche l'AGO — con `!agoEeg`/`agoEeg`
+         che non sapevano nulla di `vistaSenzaAgo`, l'ago tornava visibile proprio nei due
+         cicli dove "senza ago" doveva valere di più. Ora entrambe le sorgenti dell'ago si
+         spengono con `!vistaSenzaAgo`: l'arco/le fasce restano (nessuna vista alternativa da
+         inventare), solo la lancetta sparisce — lo stesso principio di `hasMeter` in
+         `ToneDial`/`MirrorDial`. */
+      thetaOffset={meterC && !agoEeg && !vistaSenzaAgo ? theta.offset : null}
+      showEegNeedle={agoEeg && !vistaSenzaAgo}
+      /* ── IL BERSAGLIO DELLA PROVA, SULL'ARCO — segnalato: « lors du test de pression et
+         souffle, tu dois mettre la ligne pour le tir de l'arc comme dans equilibrium ».
+         `QuantumSphere` sa già disegnarlo (la linea tratteggiata verde a un terzo di
+         quadrante, con l'etichetta "1/3") — App.tsx gli passa `testBaseOffset +
+         SQUEEZE_TARGET_OFFSET` durante la prova; qui restava sempre `null`, quindi durante
+         stretta/respiro (aperti da `PannelloMeter` o da `ThetaReadyCheck`, entrambi già
+         montati) il quadrante non mostrava dove l'ago deve arrivare. */
+      targetOffset={theta.testing ? theta.testBaseOffset + SQUEEZE_TARGET_OFFSET : null}
+      needleReactionKey={agoEeg ? needleReactionKey : thetaReactionKey}
+      asIsnessState={asIsnessState}
+      onClick={onClick}
+      showTrail={showTrail}
+      sessionState={sessionState}
+    />
+  );
+});
+
 export interface GruppoAltoProps {
   /** Calcolati insieme a `gruppoBasso` dalla stessa IIFE in `Serenity.tsx` — non ricalcolati qui. */
   comandiSottoAgo: boolean;
@@ -187,9 +262,16 @@ export function GruppoAlto({
   item, setItemManuale, dichiaraItemDetto, bottoniCiclo,
 }: GruppoAltoProps) {
   const { t, lang } = useI18n();
-  const tWide = t as (key: string) => unknown;
+  // ⚠️ VERIFICATO — segnalato nella revisione completa come possibile rottura del
+  // `React.memo` di `LetturaFase`/`LetturaVelocita` (sotto): controllato di persona, NON lo è
+  // — `as` è un cast, sparisce del tutto a runtime (`tWide` è letteralmente `t`, non una nuova
+  // funzione), e `t` (da `useI18n`) è già stabilizzata con `useCallback` su `[lang]`: il memo
+  // funzionava già. `useMemo` qui non CORREGGE nulla — documenta esplicitamente l'intento
+  // (« questa prop deve restare la stessa finché la lingua non cambia ») invece di lasciarlo
+  // implicito in un dettaglio di TypeScript facile da rompere per sbaglio in futuro (bastasse
+  // scrivere `t2 = (k) => t(k)` invece del cast, la nuova funzione SÌ spezzerebbe il memo).
+  const tWide = useMemo(() => t as (key: string) => unknown, [t]);
   const isLightTheme = useUiStore(s => s.isLightTheme);
-  const needleOffsetEeg = useSyncExternalStore(needleEngine.subscribe, needleEngine.getPos);
   const qLnow = useMetric(m => m.qL);
 
   return (
@@ -682,49 +764,29 @@ export function GruppoAlto({
               isLightTheme={isLightTheme}
             />
           )}
-          {!senzaMisura && !(vistaSenzaAgo && !mirror.mirrorArmed && !toneAttivo) && (
-          <QuantumSphere
-            needleOffsetProp={agoEeg ? needleOffsetEeg : SET_OFFSET}
-            /* ⚠️ BUG TROVATO — segnalato: « quand on choisit MUSE, apparaît toujours
-               l'aiguille des boîtes » e « l'aiguille du MUSE ne bouge pas ». La stessa causa
-               per entrambi: `QuantumSphere` disegna l'ago del Meter ogni volta che
-               `thetaOffset` non è `null` (riga 644 del componente, nessun'altra guardia) —
-               qui era `meterC ? theta.offset : null`, SENZA CONDIZIONE sull'ago scelto:
-               col meter connesso, il suo ago restava sempre disegnato ANCHE scegliendo MUSE,
-               fermo (a riposo, nessuna stretta in corso) proprio sopra quello EEG che invece
-               si muoveva — sembrava che l'ago del MUSE non si muovesse, era l'ago del Meter,
-               immobile, disegnato sopra il suo. App.tsx lo mostra SOLO quando è lui il
-               principale (`agoPrincipale === 'theta'`, la sua nota: « un ago solo »): stessa
-               esclusività qui, con `agoEeg` al posto di `agoPrincipale`. */
-            /* ⚠️ BUG TROVATO E CORRETTO — stessa famiglia del bug appena sopra in `ToneDial`:
-               segnalato di nuovo, « IN TONE... NON É PRESENTE » (e per estensione MIRROR),
-               la vera causa a monte era QUI. La condizione di montaggio di `QuantumSphere`
-               (poco più su) esclude `vistaSenzaAgo` SOLO quando `!mirror.mirrorArmed &&
-               !toneAttivo` — apposta, perché in MIRROR/TONE non esiste una `VistaSenzaAgo`
-               sostitutiva (le loro scale non sono CONTACT/DISSOLUTION/AS-IS) e l'arco di
-               sfondo deve restare. Ma restando MONTATO, disegnava anche l'AGO — con
-               `!agoEeg`/`agoEeg` che non sapevano nulla di `vistaSenzaAgo`, l'ago tornava
-               visibile proprio nei due cicli dove "senza ago" doveva valere di più. Ora
-               entrambe le sorgenti dell'ago si spengono con `!vistaSenzaAgo`: l'arco/le
-               fasce restano (nessuna vista alternativa da inventare), solo la lancetta
-               sparisce — lo stesso principio di `hasMeter` in `ToneDial`/`MirrorDial`. */
-            thetaOffset={meterC && !agoEeg && !vistaSenzaAgo ? theta.offset : null}
-            showEegNeedle={agoEeg && !vistaSenzaAgo}
-            /* ── IL BERSAGLIO DELLA PROVA, SULL'ARCO — segnalato: « lors du test de pression
-               et souffle, tu dois mettre la ligne pour le tir de l'arc comme dans equilibrium ».
-               `QuantumSphere` sa già disegnarlo (la linea tratteggiata verde a un terzo di
-               quadrante, con l'etichetta "1/3") — App.tsx gli passa `testBaseOffset +
-               SQUEEZE_TARGET_OFFSET` durante la prova; qui restava sempre `null`, quindi
-               durante stretta/respiro (aperti da `PannelloMeter` o da `ThetaReadyCheck`,
-               entrambi già montati) il quadrante non mostrava dove l'ago deve arrivare. */
-            targetOffset={theta.testing ? theta.testBaseOffset + SQUEEZE_TARGET_OFFSET : null}
-            needleReactionKey={agoEeg ? needleReactionKey : thetaReactionKey}
+          {/* L'AGO — `AgoQuantumSphere`, sopra in questo file (v. la sua nota grande: isolato
+              in un `React.memo` a parte perché la sua sottoscrizione al motore fisico
+              dell'ago aggiorna a ~60 Hz — senza, OGNI riga di `GruppoAlto` ridisegnava a
+              quella cadenza, non solo lui). Porta con sé, invariata, sia la condizione di
+              montaggio (`!senzaMisura && !(vistaSenzaAgo && !mirror.mirrorArmed &&
+              !toneAttivo)`, ora un guard interno) sia tutta la storia dei bug già corretti
+              su `thetaOffset`/`showEegNeedle`/`targetOffset` — commenti spostati con lei,
+              non persi. */}
+          <AgoQuantumSphere
+            agoEeg={agoEeg}
+            meterC={meterC}
+            vistaSenzaAgo={vistaSenzaAgo}
+            mirrorArmed={mirror.mirrorArmed}
+            toneAttivo={toneAttivo}
+            senzaMisura={senzaMisura}
+            theta={theta}
+            needleReactionKey={needleReactionKey}
+            thetaReactionKey={thetaReactionKey}
             asIsnessState={ep.asIsnessState}
             onClick={handleQuantumSphereClick}
             showTrail={showTrailPref}
             sessionState={aperta ? 'running' : 'idle'}
           />
-          )}
           {/* ── « PREMI START », SUL QUADRANTE — segnalato: « pour démarrer la séance, je veux
               le même icône que dans equilibrium dans la zone aiguille ». App.tsx la mette
               centrata SUL quadrante, non solo nella barra comandi — stesso `Play` pieno,

@@ -9,14 +9,22 @@
  * `comandiSottoAgo` — calcolato dalla stessa IIFE che avvolge questo componente insieme al suo
  * fratello `GruppoAlto`, in `Serenity.tsx` — arriva già pronto come prop, non ricalcolato qui.
  * Ogni azione COMPOSTA (`committaRispostaProcedimento`, `dichiaraItemDetto`, gli `onClick` dei
- * cinque cerchi…) resta costruita in `Serenity.tsx`, passata giù come callback. `t`/`LC` sono
- * presi QUI, internamente — stessa ragione già scritta in `Intestazione.tsx`/`BarraLaterale.tsx`/
- * `GruppoAlto.tsx`.
+ * cinque cerchi…) resta costruita in `Serenity.tsx`, passata giù come callback. `t` è preso QUI,
+ * internamente (via `useI18n`) — stessa ragione già scritta altrove. `LC`, invece, arriva come
+ * PROP da `Serenity.tsx` (dove vive l'unica `const LC = ...`) — come in `Intestazione.tsx`/
+ * `BarraLaterale.tsx`/`GruppoAlto.tsx` e il resto dei fratelli.
+ * ⚠️ CORRETTO — segnalato nella revisione completa: questo file (e `FinestreSovrapposte.tsx`)
+ * erano gli UNICI due a ricalcolare `LC` da sé (`useI18n()` + `pick5` locali) invece di
+ * riceverla come prop — il commento qui sopra diceva perfino il contrario del vero (« stessa
+ * ragione già scritta in ... `BarraLaterale.tsx`/`GruppoAlto.tsx` », che invece la ricevono
+ * come prop, verificato riga per riga). Nessun bug visibile (`pick5(lang, ...)` dà lo stesso
+ * risultato calcolato qui o passato giù — `lang` è lo stesso in tutto l'albero), ma due
+ * implementazioni della stessa funzione pura sono due posti dove un domani si potrebbe
+ * correggerne solo una per sbaglio — allineato ora al resto.
  *
  * @see docs/serenity-refonte.md — giro di scomposizione, 2026-09-07.
  */
 import { useI18n } from '../i18n';
-import { pick5 } from '../i18n5';
 import { Crosshair, Scale, FlipHorizontal2, AudioWaveform, Lightbulb } from 'lucide-react';
 import { PistaProcedimento } from './PistaProcedimento';
 import { PistaCiclo } from './PistaCiclo';
@@ -56,6 +64,7 @@ export interface GruppoBassoProps {
   confermaItemSePresente: () => void;
   setToneAttivo: (v: boolean) => void;
   setTonoScelto: (v: boolean) => void;
+  LC: (it: string, fr: string, en: string, es: string, sv: string) => string;
 }
 
 export function GruppoBasso({
@@ -63,10 +72,9 @@ export function GruppoBasso({
   committaRispostaProcedimento, fuocoProcedimento, impostaFuocoProcedimento, risposteProcedimento,
   scriviRispostaProcedimento, apriRispostaProcedimento, mode, faseCiclo, item, setItemManuale,
   dichiaraItemDetto, spiegazioneCiclo, bottoniCiclo, cycles, mirror, toneAttivo, truth, tone,
-  confermaItemSePresente, setToneAttivo, setTonoScelto,
+  confermaItemSePresente, setToneAttivo, setTonoScelto, LC,
 }: GruppoBassoProps) {
   const { t, lang } = useI18n();
-  const LC = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang as string, it, fr, en, es, sv);
 
   return (
         <div style={{ flex: comandiSottoAgo ? '1 1 0%' : '0 0 0%', minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 16, overflow: comandiSottoAgo ? 'auto' : 'visible' }}>

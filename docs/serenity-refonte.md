@@ -11648,3 +11648,153 @@ specifiche già accoppiate (mouse/tastiera), non per lo scan che Web Bluetooth r
 verificare lato utente: Windows Impostazioni → Bluetooth e dispositivi mostra un adattatore
 Bluetooth attivo? Se non c'è proprio un adattatore elencato, nessun software (incluso questo)
 può funzionare finché Parallels non lo espone alla VM.
+
+## Giro — 2026-09-08 — Revisione completa del lavoro di ieri, e i 14 correttivi
+
+Richiesto dall'utente (in francese, tradotto qui): revisione critica dell'intero lavoro della
+sessione precedente (0776d49..854dd5c, 30 commit, ~10.900 righe, 43 file) — « non supporre,
+controlla e investiga », elencare tutto quel che è erroneo/incoerente/inefficiente/migliorabile,
+indipendentemente dall'impegno richiesto. Eseguita con `/code-review xhigh`: 8 sottoagenti in
+parallelo su 10 angolazioni (linea per linea, comportamento rimosso, tracciamento cross-file,
+insidie del linguaggio, correttezza wrapper, riuso, semplificazione, efficienza, altitudine,
+convenzioni CLAUDE.md), 1 voto di verifica per candidato, 14 correttivi confermati. L'utente ha
+poi chiesto di correggerli tutti, cominciando dal buco di sicurezza, mantenendo operative TUTTE
+E TRE le build (Mac Intel, Mac ARM, Windows).
+
+### #1 — IL BUCO DI SICUREZZA: l'header Host: si può falsificare
+
+Trovato indipendentemente da due sottoagenti (angolazione A e D) e verificato di persona
+leggendo il codice: `isFromTunnel(req)`, in `server-core.cjs`, decideva « questa richiesta viene
+dal tunnel pubblico » confrontando l'header `Host:` con l'hostname noto del tunnel
+(`xxxx.trycloudflare.com`). Verificato che `startTunnel` avvia `cloudflared` SENZA
+`--http-host-header` — cloudflared inoltra quindi l'header `Host:` del CHIAMANTE, verbatim.
+Per qualunque client non-browser (curl, uno script), quell'header è scelto liberamente da chi
+chiama:
+
+```
+curl -H "Host: 127.0.0.1:7893" https://xxxx.trycloudflare.com/api/profiles
+```
+
+`isFromTunnel()` rispondeva FALSO — bypassando per intero la protezione "solo locale" su
+profili, sedute, PDF dei processus e le rotte che eseguono AppleScript per il Theta-Meter,
+raggiungibili da CHIUNQUE avesse visto l'URL pubblico del tunnel durante una seduta a distanza.
+
+**Rimedio**: sostituito un negativo aggirabile (« riconosco il tunnel ») con un positivo non
+falsificabile (« provo di essere l'app locale »). Un token segreto (`LOCAL_AUTH_TOKEN`,
+`crypto.randomBytes(24)`) generato una volta per processo, mai esposto via HTTP pubblico:
+
+- **Electron**: canale IPC puro (`get-local-auth-token` in `main.cjs`/`preload.cjs`) —
+  invisibile al tunnel, che vede solo traffico HTTP.
+- **Modalità "Chrome"** (`server.cjs`): incorporato nell'URL locale stampato in console
+  (`?token=...`) — `src/lib/localAuth.ts` lo legge da `location.search` all'avvio e lo toglie
+  SUBITO dall'URL (`history.replaceState`), poi lo allega (header `X-Local-Auth`) a ogni fetch
+  verso le rotte "solo locali". L'URL pubblico del tunnel, ottenuto con un meccanismo di invito
+  completamente separato, non lo contiene mai.
+- I tre gate in `server-core.cjs` (`/api/server-info`, `POST`/`DELETE /api/tunnel`) e il flag
+  passato a `api-routes.cjs` (`LOCAL_ONLY_PREFIXES`: profili, sedute, processus, Theta-Meter…)
+  ora richiedono il token invece di dedurre dall'Host:. `GET /api/tunnel` resta apposta aperto
+  (il partecipante remoto lo interroga per il proprio controllo di riconnessione, CONN-3).
+- Le tre guardie duplicate in `server-core.cjs` (stessa riga copiata tre volte, già così prima
+  di questo fix) accorpate in un unico middleware Express (`requireLocalAuth`) — un solo posto,
+  non tre da tenere allineati a mano.
+- Lato renderer: `src/lib/serverStorage.ts` (i tre helper generici `apiGet`/`apiPost`/
+  `apiDelete`, più `isServerAvailable`'s `/health`) e i 4 fetch diretti sparsi
+  (`src/App.tsx:2108`/`:4871`, `src/hooks/useRemoteSession.ts:52`/`:146`) allegano ora
+  `localAuthHeaders()`. **Lasciati intenzionalmente intatti**: `App.tsx`'s `GET /api/tunnel`
+  (stato locale, la rotta resta aperta) e il probe del PARTECIPANTE sul tunnel remoto
+  (`fetch(https://${host}/api/tunnel)`, CONN-3 — mai locale per definizione).
+
+**Verificato a runtime**, non solo staticamente: uno script Node isolato ha confermato 403 senza
+token, 403 con token sbagliato, 200 col token giusto, e soprattutto 403 sul vecchio bypass
+(`Host:` falsificato) su `/api/profiles`. Poi verificato DAVVERO nel browser (server `server.cjs`
+reale, dist ricostruito): URL con `?token=...` → token letto, tolto dall'URL, `/api/health` e
+`/api/processus` → 200; stessa app aperta SENZA token → `/api/health` → 403, nessun crash,
+l'app degrada allo storage locale come già previsto.
+
+### #2 — `noSignal` si incollava a `false` per sempre dopo il primo report
+
+In `src/lib/thetaMeterHid.ts`: il getter confrontava solo col momento della CONNESSIONE
+(`connectedAtMs`) insieme a `meter.count`/`meter.rejected` — cumulativi, azzerati solo da
+`disconnect()`. Un solo report (anche scartato, anche il primissimo) faceva restare `noSignal`
+`false` per il resto della connessione, pure se il dispositivo smetteva di parlare due minuti
+dopo (un cavo che si stacca a metà seduta, per esempio) — la diagnostica aggiunta ieri per
+« si connette ma non legge nulla » non copriva « si connetteva, leggeva, e poi ha smesso ».
+Corretto: nuovo campo `lastActivityMs`, aggiornato ad OGNI report (buono o scartato) in
+`onInput`; `noSignal` confronta ora con l'ultimo report arrivato, non con la connessione.
+
+### #3 — `React.memo` mancante su `LetturaIntegrita`
+
+In `src/serenity/SelettoreStrumenti.tsx`: il commento diceva « isolato nel proprio `React.memo`
+» ma il codice non lo era mai stato — persa durante l'estrazione da `Serenity.tsx`. Corretto.
+
+### #4 — `tWide` in `GruppoAlto.tsx`: verificato, non era un bug vero
+
+Segnalato come possibile rottura del `React.memo` di `LetturaFase`/`LetturaVelocita`. Controllato
+di persona: `as` è un cast, sparisce del tutto a runtime — `tWide` è letteralmente `t`, non una
+nuova funzione, e `t` (da `useI18n`) è già stabilizzata con `useCallback` su `[lang]`. Il memo
+funzionava già. Avvolto comunque in `useMemo` — non corregge nulla, ma documenta esplicitamente
+l'intento invece di lasciarlo implicito in un dettaglio di TypeScript facile da rompere in futuro.
+
+### #5 / #6 / #11 — gli script di download del binario cloudflared
+
+`scripts/fetch-cloudflared-win.cjs` e `fetch-cloudflared-x64.cjs` avevano la STESSA `download()`
+copiata due volte, con due bug identici in entrambe le copie: mancava `res.on('error', ...)`
+sulla risposta HTTP (una connessione caduta a metà scaricamento avrebbe fatto crashare l'intero
+processo Node, bypassando il `.catch()` di `main()`); e `file.on('finish', () =>
+file.close(resolve))` passava `resolve` come callback DIRETTO di `close()` — un errore di
+chiusura sarebbe diventato il valore con cui la promise si risolve POSITIVAMENTE. Estratta in
+`scripts/lib/download.cjs`, condivisa, coi due bug corretti in un solo posto.
+
+### #7 — refuso `FinestreSovrappostreProps`
+
+In `src/serenity/FinestreSovrapposte.tsx` — rinominato `FinestreSovrapposteProps`, nessun uso
+esterno da aggiornare.
+
+### #8 — import `React` morto in `Serenity.tsx`
+
+Verificato: nessun `React.` nel codice (solo nei commenti). Rimosso.
+
+### #9 — la sottoscrizione a 60 Hz dell'ago isolata in `GruppoAlto.tsx`
+
+`needleOffsetEeg` (`useSyncExternalStore(needleEngine.subscribe, needleEngine.getPos)`) viveva
+nel corpo di `GruppoAlto` stesso — il motore fisico dell'ago aggiorna a ~60 Hz, quindi l'intero
+componente (~1300 righe di JSX, una trentina di figli) veniva rivalutato 60 volte al secondo,
+non solo `QuantumSphere` che è l'unico a usare davvero quel valore. Estratto un nuovo componente
+`AgoQuantumSphere` (`React.memo`), stesso principio già usato per `LetturaTA`/`LetturaFase`/
+`LetturaTotalTa`/`LetturaVelocita` nello stesso file: isolare la sottoscrizione ad alta
+frequenza nel più piccolo componente possibile. Porta con sé, invariata, sia la condizione di
+montaggio sia tutta la storia dei bug già corretti su `thetaOffset`/`showEegNeedle`/
+`targetOffset` (commenti spostati, non persi).
+
+### #10 — `afterPack.cjs`: `mac`/`linux` con lo stesso nome binario
+
+Verificato: non una svista, è la convenzione del pacchetto `cloudflared` a monte. Nessuna
+collisione reale oggi (`removeWrongPlatformCloudflared` gira una volta per piattaforma, mai due
+insieme). Annotato con un commento per non ripetere l'errore se un giorno arrivasse un
+cross-build Linux da Mac (servirebbe uno switch a runtime come per l'x64 mac, non questa mappa).
+
+### #12 — `LC` ricalcolato localmente in due file, contro la convenzione
+
+`src/serenity/GruppoBasso.tsx` e `FinestreSovrapposte.tsx` erano gli UNICI due a ricalcolare
+`LC` da sé (`useI18n()` + `pick5` locali) — il loro stesso commento affermava perfino il
+contrario del vero (« stessa ragione già scritta in ... `BarraLaterale.tsx`/`GruppoAlto.tsx` »,
+che invece la ricevono come PROP, verificato riga per riga). Allineati al resto: `LC` ora prop
+da `Serenity.tsx` (dove vive l'unica `const LC = ...`) in entrambi i file.
+
+### #13 — `key={i}` su liste riordinate
+
+`src/serenity/GiornaleSeduta.tsx`: il giornale è ordinato/invertito PRIMA di mappare — ogni
+riga nuova fa slittare l'indice di TUTTE le righe già a schermo. Sostituito con una chiave
+derivata dal contenuto (`time`+`speaker`+inizio del testo). Stessa correzione, a scopo
+preventivo, sul caso a rischio più basso in `FinestreSovrapposte.tsx` (`AiutoOverlay`, lista
+ricalcolata da zero ogni giro ma comunque indicizzata).
+
+### #14 — le tre guardie duplicate
+
+Risolto insieme al #1: il middleware `requireLocalAuth` sostituisce le tre righe copiate.
+
+---
+
+`tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run`
+754/754 (invariato). Verifica dal vivo nel browser (server reale, dist ricostruito) per il
+fix di sicurezza, come sopra.

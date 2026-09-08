@@ -9,16 +9,20 @@
  * Ogni azione COMPOSTA (`onSelectProcedimento` azzera tre stati insieme, non solo uno) resta
  * costruita QUI dentro TALE E QUALE com'era in `Serenity.tsx` — non incapsulata in un callback a
  * parte, perché non lo era nemmeno prima: i quattro `setX` che compone restano stato di
- * `Serenity.tsx`, passati giù singolarmente. `t`/`lang`/`LC` sono presi QUI, internamente (via
- * `useI18n`/`pick5`) — stessa ragione già scritta negli ultimi giri. `AiutoOverlay` (la
- * modalità HELP, prima una funzione locale di `Serenity.tsx` usata SOLO qui) si è trasferita
- * con lui, non duplicata — stessa ragione di `Divisore`/`OraReale` nei giri precedenti.
+ * `Serenity.tsx`, passati giù singolarmente. `t`/`lang` sono presi QUI, internamente (via
+ * `useI18n`) — stessa ragione già scritta negli ultimi giri. `AiutoOverlay` (la modalità HELP,
+ * prima una funzione locale di `Serenity.tsx` usata SOLO qui) si è trasferita con lui, non
+ * duplicata — stessa ragione di `Divisore`/`OraReale` nei giri precedenti.
+ * ⚠️ CORRETTO — segnalato nella revisione completa: `LC` invece NON è preso qui internamente,
+ * come diceva questo commento prima — era l'unico, insieme a `GruppoBasso.tsx` (v. la sua
+ * nota, stessa correzione), a ricalcolarla da sé (`useI18n()` + `pick5` locali) invece di
+ * riceverla come prop da `Serenity.tsx`, dove vive l'unica `const LC = ...` — come fanno
+ * `Intestazione.tsx`/`BarraLaterale.tsx`/`GruppoAlto.tsx` e il resto dei fratelli.
  *
  * @see docs/serenity-refonte.md — giro di scomposizione, 2026-09-07.
  */
 import React, { Suspense, lazy, useEffect, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 import { useI18n } from '../i18n';
-import { pick5 } from '../i18n5';
 import { GuideModal } from '../components/GuideModal';
 import { CreditsModal } from '../components/CreditsModal';
 import { SplashScreen } from '../components/SplashScreen';
@@ -102,8 +106,15 @@ function AiutoOverlay({ attivo }: { attivo: boolean }) {
   if (!attivo) return null;
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 400, pointerEvents: 'none' }}>
-      {postIt.map((p, i) => (
-        <React.Fragment key={i}>
+      {/* ⚠️ CORRETTO — segnalato nella revisione completa (stessa famiglia della correzione in
+          `GiornaleSeduta.tsx`, v. la sua nota): `key={i}` qui è meno rischioso (l'array è
+          RICALCOLATO da zero ogni giro da `querySelectorAll`, che restituisce sempre lo stesso
+          ordine — quello del DOM — non un elenco che cresce), ma resta un indice, non
+          un'identità. Il testo del post-it (`p.text`, unico per bottone spiegato) più la sua Y
+          di ancoraggio è già stabile e specifico per QUEL post-it, a prova anche del caso raro
+          di due bottoni con la stessa spiegazione a altezze diverse. */}
+      {postIt.map((p) => (
+        <React.Fragment key={`${p.text}-${Math.round(p.yBottone)}`}>
           {/* ⚠️ AGGIUNTO — segnalato: « i post-it non sono posizionati correttamente, devi
               mettere un qualcosa che li collega alla zona che spiegano ». Un post-it "impilato"
               (`impila`, sopra: righe successive per non sovrapporsi ai vicini) può finire
@@ -141,7 +152,7 @@ function AiutoOverlay({ attivo }: { attivo: boolean }) {
   );
 }
 
-export interface FinestreSovrappostreProps {
+export interface FinestreSovrapposteProps {
   helpAttivo: boolean;
   guidaAperta: boolean;
   setGuidaAperta: (v: boolean) => void;
@@ -177,6 +188,7 @@ export interface FinestreSovrappostreProps {
   setRisposteProcedimento: (v: Record<number, { auditor: string; pc: string; modificato: boolean }>) => void;
   domandeLoggateRef: MutableRefObject<Set<number>>;
   processusSoloComandi: boolean;
+  LC: (it: string, fr: string, en: string, es: string, sv: string) => string;
 }
 
 export function FinestreSovrapposte({
@@ -186,10 +198,9 @@ export function FinestreSovrapposte({
   pendingFiles, setPendingFiles, pendingTagInput, setPendingTagInput, processusTagFilter,
   setProcessusTagFilter, editingTag, setEditingTag, editingTagValue, setEditingTagValue,
   processusVisualizzato, setProcessusVisualizzato, procedimenti, setProcedimentoAttivo,
-  setFuocoProcedimentoStato, setRisposteProcedimento, domandeLoggateRef, processusSoloComandi,
-}: FinestreSovrappostreProps) {
+  setFuocoProcedimentoStato, setRisposteProcedimento, domandeLoggateRef, processusSoloComandi, LC,
+}: FinestreSovrapposteProps) {
   const { t, lang } = useI18n();
-  const LC = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang as string, it, fr, en, es, sv);
 
   return (
     <>

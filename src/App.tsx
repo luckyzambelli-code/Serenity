@@ -90,6 +90,7 @@ import { GuideModal } from './components/GuideModal';
 import { AIAssistant } from './components/AIAssistant';
 import { getProfiles, setActiveProfileId, saveProfile, saveSession, getSessions, getSessionsByProfile, saveSessionDraft, loadSessionDraftAsync, clearSessionDraft, SessionDraft } from './lib/storage';
 import { isServerAvailable, serverSaveProfiles, serverSaveSessions } from './lib/serverStorage';
+import { localAuthHeaders } from './lib/localAuth';
 import { voiceToneAnalyzer } from './lib/voiceToneAnalyzer';
 import { satelliteRedundancy } from './lib/satelliteRedundancy';
 import { attachAudioBoost } from './lib/audioBoost';
@@ -2105,7 +2106,9 @@ export default function App() {
 
   // Fetch LAN IP and PeerJS key from local server (only works when running via server.cjs)
   useEffect(() => {
-    fetch('/api/server-info')
+    // FIX SEC-1: /api/server-info richiede ora il token locale — v. la nota grande su
+    // `LOCAL_AUTH_TOKEN` in `server-core.cjs`.
+    localAuthHeaders().then(headers => fetch('/api/server-info', { headers }))
       .then(r => r.ok ? r.json() : null)
       .then((data: { lanIp: string; port: number; peerKey?: string } | null) => {
         if (data?.lanIp && data.lanIp !== '127.0.0.1') {
@@ -4868,7 +4871,8 @@ export default function App() {
           onCreateTunnel={async () => {
             setTunnelLoading(true);
             try {
-              const r = await fetch('/api/tunnel', { method: 'POST' });
+              // FIX SEC-1: POST /api/tunnel richiede ora il token locale.
+              const r = await fetch('/api/tunnel', { method: 'POST', headers: await localAuthHeaders() });
               const data = await r.json();
               if (data.url) {
                 const tunnelHost = data.url.replace(/^https?:\/\//, '');

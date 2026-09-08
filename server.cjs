@@ -16,7 +16,7 @@
 
 const path       = require('path');
 const { execSync } = require('child_process');
-const { createAppServer, getLanIp } = require('./server-core.cjs');
+const { createAppServer, getLanIp, LOCAL_AUTH_TOKEN } = require('./server-core.cjs');
 
 const PORT     = 7893;
 const DIST_DIR = path.join(__dirname, 'dist');
@@ -57,7 +57,12 @@ server.listen(PORT, '0.0.0.0', () => {
   const lanIp = getLanIp();
   console.log('');
   console.log(`  Static Meter — Chrome server ready (${ENTRY === 'serenity.html' ? 'SERENITY' : 'EQUILIBRIUM'})`);
-  console.log(`  → Local:    http://127.0.0.1:${PORT}`);
+  // FIX SEC-1: il token nel link "Local" (v. la nota grande su LOCAL_AUTH_TOKEN, in
+  // server-core.cjs) — `src/lib/localAuth.ts` lo legge da `location.search` all'avvio e lo
+  // toglie subito dall'URL (history.replaceState), poi lo allega alle fetch verso le rotte
+  // "solo locali". Il link "Réseau" (per il PARTECIPANTE, in LAN) resta senza — quelle rotte
+  // non gli servono mai.
+  console.log(`  → Local:    http://127.0.0.1:${PORT}/?token=${LOCAL_AUTH_TOKEN}`);
   console.log(`  → Réseau:   http://${lanIp}:${PORT}  ← LAN: partager au participant`);
   console.log('');
   console.log('  📡 PeerJS signaling intégré — pas de serveur cloud requis');

@@ -13,7 +13,7 @@
  *
  * @see docs/serenity-refonte.md — giro di scomposizione, 2026-09-07.
  */
-import { useSyncExternalStore } from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { Headphones, Gauge, MessageSquareOff } from 'lucide-react';
 import { integrityTracker } from '../runtime/SmoothingEngine';
 import { useI18n } from '../i18n';
@@ -24,15 +24,20 @@ import type { useMuseContactGate } from '../hooks/useMuseContactGate';
 
 /** Vedi la nota grande nel file: era un componente locale di `Serenity.tsx`, usato solo qui —
  *  isolato nel proprio `React.memo` perché aggiorna spesso (non deve ridisegnare l'intestazione
- *  intera) e legge `integrityTracker` (un tracker condiviso, non uno stato di questo file). */
-function LetturaIntegrita() {
+ *  intera) e legge `integrityTracker` (un tracker condiviso, non uno stato di questo file).
+ *  ⚠️ CORRETTO — segnalato nella revisione completa: durante l'estrazione il `React.memo` era
+ *  rimasto solo nel commento, non nel codice — senza argomenti (nessuna prop), il memo non
+ *  serviva a NIENTE per evitare re-render da genitore, ma qui il punto è un altro: senza,
+ *  `SelettoreStrumenti` (il genitore) ridisegnava anche questo span ad ogni suo stesso
+ *  re-render, invece di lasciare che sia SOLO `integrityTracker.subscribe` a deciderlo. */
+const LetturaIntegrita = React.memo(function LetturaIntegrita() {
   const pct = useSyncExternalStore(integrityTracker.subscribe, integrityTracker.getCurrent);
   return (
     <span style={{ fontFamily: 'var(--s-mono)', fontVariantNumeric: 'tabular-nums' }}>
       {Math.round(pct)}%
     </span>
   );
-}
+});
 
 export interface SelettoreStrumentiProps {
   muse: ReturnType<typeof useMuseConnection>;
