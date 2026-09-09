@@ -69,6 +69,22 @@ catch (_) { /* package.json illeggibile: EQUILIBRIUM */ }
 // (con l'avviso SmartScreen già visto all'installazione); su macOS resta il limite descritto
 // sopra — pubblicare una release non basta, serve comunque un Developer ID per completare
 // DAVVERO la sostituzione dell'app.
+//
+// ⚠️ TROVATO E CORRETTO (09/09/2026) — segnalato: « ho 3.0.303, dovrebbe fare l'aggiornamento ».
+// Verificato dal vivo (l'app girata da Terminale, non con un doppio clic, scrive questi log):
+// PRIMA di arrivare al problema della firma qui sopra, `checkForUpdates()` falliva per una
+// ragione completamente diversa e più a monte — `Error: ZIP file not provided`, da
+// `MacUpdater.doDownloadUpdate`. `Squirrel.Mac` (il meccanismo che `electron-updater` usa su
+// macOS) NON scarica mai il DMG per installare l'aggiornamento — vuole uno ZIP dell'app, un
+// formato del tutto diverso da quello che distribuiamo a mano. `build.mac.target`, in
+// `package.json`, costruiva SOLO `dmg`: lo ZIP non esisteva né nella build né nella release
+// pubblicata, quindi il download falliva SEMPRE, indipendentemente dalla firma — non si era
+// mai arrivati abbastanza avanti da incontrare quel secondo problema. Aggiunto `zip` accanto a
+// `dmg` in `build.mac.target` (costruito per entrambe le architetture, come il DMG) —
+// `scripts/prune-dmg.cjs` esteso per non lasciare accumulare anche questi file senza limite.
+// ⚠️ Il problema della firma (v. sopra) resta comunque il prossimo ostacolo da verificare: lo
+// ZIP ora dovrebbe scaricarsi, ma lo scambio vero dell'app al clic di "Riavvia ora" può ancora
+// fallire in silenzio senza un Developer ID — non confermato né escluso finché non si prova.
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 autoUpdater.on('error', (err) => {
