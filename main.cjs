@@ -82,9 +82,16 @@ catch (_) { /* package.json illeggibile: EQUILIBRIUM */ }
 // mai arrivati abbastanza avanti da incontrare quel secondo problema. Aggiunto `zip` accanto a
 // `dmg` in `build.mac.target` (costruito per entrambe le architetture, come il DMG) —
 // `scripts/prune-dmg.cjs` esteso per non lasciare accumulare anche questi file senza limite.
-// ⚠️ Il problema della firma (v. sopra) resta comunque il prossimo ostacolo da verificare: lo
-// ZIP ora dovrebbe scaricarsi, ma lo scambio vero dell'app al clic di "Riavvia ora" può ancora
-// fallire in silenzio senza un Developer ID — non confermato né escluso finché non si prova.
+// ⚠️ CONFERMATO DAL VIVO (09/09/2026, terzo giro) — non più solo previsto: con lo ZIP presente
+// (v. sopra), il download e l'estrazione riescono perfettamente — `ShipIt` (l'helper di
+// Squirrel.Mac che fa davvero lo scambio dei file) rifiuta poi l'app scaricata con:
+//   Code signature ... did not pass validation: le code n'a pas de ressources mais la
+//   signature indique qu'elles doivent être présentes
+// Cioè: nessuna firma valida, esattamente il limite descritto sopra — confermato che TUTTO il
+// resto della catena (pubblicazione GitHub, rilevamento versione, download, estrazione) già
+// funziona; SOLO l'ultimo passo (la sostituzione vera) resta bloccato, e resterà bloccato
+// finché non esiste un certificato Developer ID reale con cui firmare la build (v. la nota
+// sopra) — non è un bug da correggere qui, è `Squirrel.Mac` stesso che lo richiede.
 //
 // ⚠️ TROVATO E CORRETTO (09/09/2026, stesso giorno) — segnalato: « continua a fallire in
 // errore » (`socket hang up`, poi `write EPIPE`) durante `release:serenity`. Aggiungere `zip`
