@@ -13,7 +13,7 @@
     "electron": "electron .",
     "dist:mac": "node scripts/bump-version.cjs && npm run build:stt && node scripts/fetch-cloudflared-x64.cjs && npm run build && electron-builder --mac && node scripts/prune-dmg.cjs",
     "dist:mac:publish": "node scripts/bump-version.cjs && npm run build:stt && node scripts/fetch-cloudflared-x64.cjs && npm run build && electron-builder --mac --publish always && node scripts/prune-dmg.cjs",
-    "dist:mac:publish:nobump": "npm run build:stt && node scripts/fetch-cloudflared-x64.cjs && npm run build && electron-builder --mac --publish always && node scripts/prune-dmg.cjs",
+    "dist:mac:publish:nobump": "npm run build:stt && node scripts/fetch-cloudflared-x64.cjs && npm run build && electron-builder --mac --arm64 --publish always && electron-builder --mac --x64 --publish always && node scripts/prune-dmg.cjs",
     "dist:win": "node scripts/bump-version.cjs && node scripts/fetch-cloudflared-win.cjs && npm run build && electron-builder --win",
     "dist:win:publish": "node scripts/bump-version.cjs && node scripts/fetch-cloudflared-win.cjs && npm run build && electron-builder --win --publish always",
     "dist:win:publish:nobump": "node scripts/fetch-cloudflared-win.cjs && npm run build && electron-builder --win --publish always",
@@ -31,7 +31,7 @@
     "corpus": "tsx scripts/corpus-report.ts",
     "dist:serenity": "node scripts/bump-serenity.cjs && npm run build:stt && node scripts/fetch-cloudflared-x64.cjs && npm run build && electron-builder --mac --config electron-builder.serenity.cjs && node scripts/prune-dmg.cjs",
     "dist:serenity:publish": "node scripts/bump-serenity.cjs && npm run build:stt && node scripts/fetch-cloudflared-x64.cjs && npm run build && electron-builder --mac --config electron-builder.serenity.cjs --publish always && node scripts/prune-dmg.cjs",
-    "dist:serenity:publish:nobump": "npm run build:stt && node scripts/fetch-cloudflared-x64.cjs && npm run build && electron-builder --mac --config electron-builder.serenity.cjs --publish always && node scripts/prune-dmg.cjs",
+    "dist:serenity:publish:nobump": "npm run build:stt && node scripts/fetch-cloudflared-x64.cjs && npm run build && electron-builder --mac --arm64 --config electron-builder.serenity.cjs --publish always && electron-builder --mac --x64 --config electron-builder.serenity.cjs --publish always && node scripts/prune-dmg.cjs",
     "release:serenity": "node scripts/bump-serenity.cjs && npm run dist:serenity:publish:nobump && npm run dist:win-serenity:publish:nobump"
   },
   "dependencies": {
@@ -187,5 +187,5 @@
       "artifactName": "${productName}-${version}-setup.${ext}"
     }
   },
-  "serenityVersion": "3.0.306"
+  "serenityVersion": "3.0.310"
 }

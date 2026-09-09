@@ -85,6 +85,18 @@ catch (_) { /* package.json illeggibile: EQUILIBRIUM */ }
 // ⚠️ Il problema della firma (v. sopra) resta comunque il prossimo ostacolo da verificare: lo
 // ZIP ora dovrebbe scaricarsi, ma lo scambio vero dell'app al clic di "Riavvia ora" può ancora
 // fallire in silenzio senza un Developer ID — non confermato né escluso finché non si prova.
+//
+// ⚠️ TROVATO E CORRETTO (09/09/2026, stesso giorno) — segnalato: « continua a fallire in
+// errore » (`socket hang up`, poi `write EPIPE`) durante `release:serenity`. Aggiungere `zip`
+// (sopra) ha RADDOPPIATO il carico in upload verso GitHub: prima 2 file grandi in parallelo per
+// il lato Mac (i due DMG, arm64+x64), ora 4 (+ i due ZIP) — sulla connessione domestica
+// dell'utente (upload lento, già osservato) i 4 caricamenti simultanei si strozzavano a
+// vicenda fino quasi a fermarsi (tempi stimati arrivati a giorni interi), e GitHub chiudeva la
+// connessione da sé. Non è un bug del codice, è un limite di banda — risolto in
+// `package.json` (`dist:mac:publish:nobump`/`dist:serenity:publish:nobump`) chiamando
+// `electron-builder --arm64` e poi `--x64` come DUE invocazioni separate e in sequenza,
+// invece di lasciarlo costruire+caricare entrambe le architetture in un colpo solo: mai più di
+// 2 file (un DMG + uno ZIP) in upload contemporaneamente.
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 autoUpdater.on('error', (err) => {
