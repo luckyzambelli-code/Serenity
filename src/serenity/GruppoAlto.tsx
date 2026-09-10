@@ -334,12 +334,15 @@ export function GruppoAlto({
           }}>
             {/* ── RICHIUDI — mostrata SOLO quando i campi sono a vista per via del richiamo
                 manuale (`richiamati`), non quando lo sarebbero comunque (nessun ciclo attivo,
-                mai nascosti). Lo stesso identico filo della maniglia sotto: « un secondo tocco
-                richiude » diventa vero anche nel codice, non solo nel commento. */}
+                mai nascosti). Lo stesso identico filo della maniglia sotto (v. la sua nota
+                grande per la correzione « poco visibile »): « un secondo tocco richiude »
+                diventa vero anche nel codice, non solo nel commento. */}
             {richiamati && campiSessioneNascosti && (
               <button
                 type="button"
                 onClick={() => setRichiamati(false)}
+                onMouseEnter={e => { e.currentTarget.style.color = 'var(--s-ink-soft)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--s-ink-faint)'; }}
                 aria-label={LC(
                   'nascondi di nuovo obiettivo, stato fisico e r-factor',
                   "masquer à nouveau objectif, état physique et r-factor",
@@ -348,10 +351,12 @@ export function GruppoAlto({
                   'dölj mål, fysiskt tillstånd och r-factor igen',
                 ) as string}
                 style={{
-                  border: 'none', background: 'none', cursor: 'pointer', pointerEvents: 'auto',
-                  padding: '2px 22px 4px',
+                  border: 'none', cursor: 'pointer', pointerEvents: 'auto',
+                  padding: '6px 26px 5px', borderRadius: 999,
+                  background: 'var(--s-disc-sunk)',
+                  color: 'var(--s-ink-faint)', transition: 'color var(--s-slow) var(--s-ease)',
                 }}>
-                <span aria-hidden style={{ display: 'block', width: 34, height: 3, borderRadius: 999, background: 'var(--s-ink-ghost)' }} />
+                <span aria-hidden style={{ display: 'block', width: 40, height: 4, borderRadius: 999, background: 'currentColor' }} />
               </button>
             )}
             <div style={{
@@ -381,17 +386,26 @@ export function GruppoAlto({
             </div>
           </div>
         )}
-        {/* ── LA MANIGLIA — v. la nota grande sopra su `campiVisibili`/`richiamati`. Un solo
-            filo (3px, `--s-ink-ghost` — lo stesso token che `tokens.css` riserva a « nessun
-            segnale », non a un testo da leggere) invece di una pillola vera: deve trovarsi
-            SENZA competere con l'ago o con « DÌ L'ITEM » per l'attenzione. L'etichetta sotto
-            resta comunque leggibile a chi la cerca — la scoperta non deve dipendere dal
-            ricordarsi che esiste. Un secondo tocco richiude (stesso bottone, stesso gesto):
-            non serve una × a parte per un pannello così piccolo. */}
+        {/* ── LA MANIGLIA — v. la nota grande sopra su `campiVisibili`/`richiamati`.
+            ⚠️ CORRETTO — segnalato: « la maniglia è poco visibile, rendila più visibile anche
+            se non invasiva ». Il filo usava `--s-ink-ghost` — il token che `tokens.css` riserva
+            apposta a « nessun segnale » (i bordi di silenzio degli indicatori di connessione),
+            troppo tenue per un controllo che DEVE trovarsi. `--s-ink-faint` (lo stesso delle
+            etichette EP/COMMANDS/DIZIONARIO poco sotto — leggibile, non gridato) al suo posto,
+            un filo più largo e spesso, e un fondo a pillola (`--s-disc-sunk`, lo stesso « vetro
+            in rilievo » di ogni altro piccolo controllo di SERENITY) che dà alla maniglia un
+            bordo vero invece di lasciarla fluttuare sul fondo — resta un rilievo sottile, non
+            un bottone pieno: la differenza fra "poco visibile" e "invasivo" sta qui. Un
+            passaggio al colore pieno (`--s-ink-soft`) al passaggio del mouse, per chi la cerca
+            attivamente. L'etichetta sotto resta comunque leggibile a chi la cerca — la scoperta
+            non deve dipendere dal ricordarsi che esiste. Un secondo tocco richiude (stesso
+            bottone, stesso gesto): non serve una × a parte per un pannello così piccolo. */}
         {aperta && !campiVisibili && (
           <button
             type="button"
             onClick={() => setRichiamati(true)}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--s-ink-soft)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--s-ink-faint)'; }}
             aria-label={LC(
               'mostra obiettivo, stato fisico e r-factor',
               'afficher objectif, état physique et r-factor',
@@ -400,14 +414,16 @@ export function GruppoAlto({
               'visa mål, fysiskt tillstånd och r-factor',
             ) as string}
             style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-              border: 'none', background: 'none', cursor: 'pointer', pointerEvents: 'auto',
-              padding: '4px 22px 2px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+              border: 'none', cursor: 'pointer', pointerEvents: 'auto',
+              padding: '7px 26px 6px', borderRadius: 999,
+              background: 'var(--s-disc-sunk)',
+              color: 'var(--s-ink-faint)', transition: 'color var(--s-slow) var(--s-ease)',
             }}>
-            <span aria-hidden style={{ width: 34, height: 3, borderRadius: 999, background: 'var(--s-ink-ghost)' }} />
+            <span aria-hidden style={{ width: 40, height: 4, borderRadius: 999, background: 'currentColor' }} />
             <span style={{
-              fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', letterSpacing: '0.08em',
-              textTransform: 'uppercase', color: 'var(--s-ink-ghost)',
+              fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: 'currentColor',
             }}>
               {LC('obiettivo · stato · r-factor', 'objectif · état · r-factor', 'objective · state · r-factor',
                 'objetivo · estado · r-factor', 'mål · tillstånd · r-factor')}
