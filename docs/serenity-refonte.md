@@ -11827,3 +11827,76 @@ sostituisce l'app installata SOLO se vecchia e nuova versione condividono lo ste
 Developer ID; senza quel certificato (99$/anno, non ancora acquistato), il download della
 nuova versione può anche riuscire ma l'installazione vera fallisce in silenzio, e l'app resta
 quella di prima — su Mac, fino a quel giorno, resta necessario reinstallare a mano ogni tanto.
+
+## Giro — 2026-09-10 — « un solo fuoco per volta »: primo passo dell'interfaccia essenziale
+
+Chiesto: l'interfaccia « è ancora troppo complicata » — tenere la complessità nel motore,
+assoluta semplicità per l'utente, nessuna distrazione durante l'auditing, solo l'indispensabile
+al ciclo in corso. Proposto e discusso a voce un mockup interattivo (confronto "Oggi"/"Proposta"
+sullo stesso istante di seduta, « DÌ L'ITEM », costruito coi VERI token di `tokens.css` — non
+un'estetica nuova) — tre livelli di visibilità: **sempre** (durante il ciclo: ago, fase, item),
+**tra un ciclo e l'altro** (obiettivo/stato fisico/R-factor, la scelta del metodo — nascosti ma
+richiamabili con un tocco), **su richiesta, raro** (dizionario, storico, impostazioni…).
+Approvato: « il gesto del cassetto mi convince ». Ambito deciso: SOLO SERENITY (non
+EQUILIBRIUM), il livello 2 nascosto-ma-richiamabile con un tocco (non sparito per sempre),
+mockup prima del codice vero (fatto, poi approvato). Punto di ripristino creato prima di
+cominciare: tag `backup/serenity-3.0.311`, l'ultima versione pubblicata/installata.
+
+**Il metodo di lavoro**: non un'estetica inventata da zero — investigato PRIMA cosa esiste già.
+Trovato che `tokens.css` porta in cima una filosofia già identica a quella chiesta ora (« BIANCO
+PERLA... l'attenzione dell'auditor sta sul PRECLEAR, non sullo schermo »): il mockup e questo
+giro applicano quel linguaggio già scritto a una diversa disposizione delle informazioni, non
+un secondo stile.
+
+### Trovati due bug reali, non solo un'occasione di redesign
+
+Investigando dove vivono OBIETTIVO/STATO FISICO/R-FACTOR (`GruppoAlto.tsx`) per costruire il
+« Livello 2 », due cose vere emerse leggendo il codice, non supposte:
+
+1. **Il commento in `Serenity.tsx` mentiva** — diceva « una piccola maniglia li riporta in
+   vista, esattamente come il "chiuso" di `PistaCiclo` » — verificato in `GruppoAlto.tsx`: quella
+   maniglia era stata TOLTA in un giro precedente (segnalato allora: « fais la disparaitre
+   completement... elle n'est pas utile qu'elle reste » — sui TRE CAMPI, non sulla maniglia, ma
+   il taglio portò via anche lei). `campiSessioneNascosti`, una volta vero, non aveva più NESSUN
+   modo di tornare falso.
+2. **I tre campi restavano a schermo per l'INTERA seduta quando MAI riempiti** — il caso più
+   comune, sono facoltativi. Il timer dei 10 secondi (`useEffect` in `Serenity.tsx`) non parte
+   affatto su campi vuoti — verificato dal vivo: schermata « DÌ L'ITEM », i tre campi ancora lì,
+   vuoti, l'istante in cui contano di meno.
+
+### La correzione
+
+- `Serenity.tsx`: `campiSessioneNascosti={campiSessioneNascosti || !!cicloAttivo}` — nascosti
+  anche a campi vuoti non appena un ciclo è davvero in corso, non solo 10 secondi dopo averli
+  riempiti.
+- `GruppoAlto.tsx`: nuovo stato locale `richiamati` (puro stato di resa, non serve altrove —
+  resta qui invece di risalire a `Serenity.tsx`), `campiVisibili = aperta && (!campiSessioneNascosti
+  || richiamati)`. Si azzera da sé a ogni cambio di `cicloAttivo` (richiamarli durante un ciclo
+  non deve restare aperto insieme a quello successivo). Una maniglia VERA stavolta — un filo di
+  3px (`--s-ink-ghost`, lo stesso token che il progetto riserva a « nessun segnale ») con
+  un'etichetta minuscola sotto (`OBIETTIVO · STATO · R-FACTOR`), non una pillola isolata come
+  quella tolta un giro fa: un tocco la apre, lo stesso filo sopra i campi (mostrato solo quando
+  sono a vista PER via del richiamo, non quando lo sarebbero comunque) li richiude.
+
+Il selettore dei cinque cicli (CONTACT/NULL/MIRROR/TONE/TRUTH) **non ha avuto bisogno di alcuna
+correzione** — verificato dal vivo: `PistaCiclo.tsx` già monta SOLO quando un ciclo è scelto
+(`if (!steps.length || cur < 0) return null`), il selettore vive altrove e già sparisce da sé
+non appena un metodo è armato. Un'ipotesi di lavoro (« va nascosto anche lui ») verificata e
+scartata prima di scrivere codice inutile.
+
+### Verificato dal vivo (non solo tsc/lint/test)
+
+Sessione senza strumenti, ciclo CONTACT: campi vuoti spariti su « DÌ L'ITEM » (prima restavano),
+maniglia comparsa, tocco → campi tornati con la propria maniglia di richiusura sopra, secondo
+tocco → richiusi di nuovo. Il giro completo, non solo un lato.
+
+`tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run`
+754/754 (invariato).
+
+### Cosa resta per i prossimi giri
+
+Non toccato in questo giro (per scelta, non dimenticato): il pannello ASSESSMENT (colonna
+destra, sempre a vista anche durante « DÌ L'ITEM ») e la consolidazione del « Livello 3 »
+(dizionario/storico/impostazioni/profilo, oggi sparsi nella barra in alto invece che dietro un
+solo punto d'accesso) — il mockup li propone, questo giro si è fermato al pezzo più concreto e
+già mezzo costruito (i tre campi di sessione). Da valutare insieme prima del prossimo giro.

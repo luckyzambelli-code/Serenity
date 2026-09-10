@@ -1344,8 +1344,19 @@ export default function Serenity() {
    *  parte solo quando ALMENO uno dei tre ha del testo, si riazzera a ogni tocco (scrivere
    *  ancora rimanda la sparizione, non la accorcia) — `useEffect` su
    *  `[sessionObjective, sessionPhysicalCheck, sessionBriefing]`, un `setTimeout` unico.
-   *  `campiSessioneNascosti` non è per sempre: una piccola maniglia (sotto, nella resa) li
-   *  riporta in vista, esattamente come il "chiuso" di `PistaCiclo`. */
+   *  ⚠️ CORRETTO — proposta « un solo fuoco per volta » (mockup discusso a voce, 09/09/2026):
+   *  il commento qui diceva da tempo « una piccola maniglia li riporta in vista » — falso,
+   *  verificato leggendo `GruppoAlto.tsx`: quella maniglia era stata TOLTA in un giro
+   *  precedente (« elle n'est pas utile qu'elle reste » — segnalato sui tre campi, non sulla
+   *  maniglia, ma il taglio portò via anche lei), lasciando `campiSessioneNascosti` SENZA
+   *  modo di tornare indietro una volta vero. Ora davvero richiamabile — v. `richiamati`/la
+   *  maniglia in `GruppoAlto.tsx`.
+   *  ⚠️ AGGIUNTO — gli stessi tre campi restavano a schermo per l'INTERA seduta quando MAI
+   *  riempiti (il timer sopra non parte affatto su campi vuoti): esattamente il caso più
+   *  comune, verificato dal vivo (schermata « DÌ L'ITEM », i tre campi vuoti ancora lì).
+   *  `cicloAttivo` in più nel passaggio della prop, sotto: nascosti anche a campi vuoti non
+   *  appena un ciclo è davvero in corso — il momento in cui contano di meno, non quello in
+   *  cui l'auditor li ha appena scritti. */
   const [campiSessioneNascosti, setCampiSessioneNascosti] = useState(false);
   useEffect(() => {
     if (!aperta) return;
@@ -3619,7 +3630,7 @@ export default function Serenity() {
           setAgoScelto={setAgoScelto}
           metabolicOpen={metabolicOpen}
           mostraBriefingIniziale={mostraBriefingIniziale}
-          campiSessioneNascosti={campiSessioneNascosti}
+          campiSessioneNascosti={campiSessioneNascosti || !!cicloAttivo}
           sessionObjective={sessionObjective}
           setSessionObjective={setSessionObjective}
           sessionPhysicalCheck={sessionPhysicalCheck}

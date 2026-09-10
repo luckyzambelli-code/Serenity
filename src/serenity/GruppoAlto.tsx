@@ -19,7 +19,7 @@
  *
  * @see docs/serenity-refonte.md — giro di scomposizione, 2026-09-07.
  */
-import React, { useMemo, useSyncExternalStore, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import React, { useEffect, useMemo, useState, useSyncExternalStore, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 import { Play, StickyNote } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { useUiStore } from '../store/uiStore';
@@ -273,6 +273,17 @@ export function GruppoAlto({
   const tWide = useMemo(() => t as (key: string) => unknown, [t]);
   const isLightTheme = useUiStore(s => s.isLightTheme);
   const qLnow = useMetric(m => m.qL);
+  /** ── RICHIAMATI A MANO — v. la nota grande su « la maniglia », più giù nel render. Un
+   *  tocco sulla maniglia forza a vista obiettivo/stato fisico/r-factor anche quando
+   *  `campiSessioneNascosti` (prop, da `Serenity.tsx`) direbbe di no — puro stato di resa,
+   *  non c'è nulla che un altro componente debba sapere su « li ho richiamati », quindi
+   *  resta locale qui invece di risalire a `Serenity.tsx` come lo stato dei CAMPI stessi
+   *  (`sessionObjective` & co., quelli sì condivisi). Si azzera da sé all'inizio/fine di ogni
+   *  ciclo (`cicloAttivo` cambia): richiamarli DURANTE un ciclo non deve restare aperto per
+   *  sempre nei cicli successivi, a insaputa di chi ha toccato la maniglia una volta sola. */
+  const [richiamati, setRichiamati] = useState(false);
+  useEffect(() => { setRichiamati(false); }, [cicloAttivo]);
+  const campiVisibili = aperta && (!campiSessioneNascosti || richiamati);
 
   return (
         <div style={{ flex: comandiSottoAgo ? (cicloAttivo ? '3 1 0%' : '2 1 0%') : '1 1 0%', minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
@@ -287,9 +298,23 @@ export function GruppoAlto({
             disparaitre completement [...] elle n'est pas utile qu'elle reste pendant la
             seance ». Prima, scaduto il conto alla rovescia, restava una piccola maniglia
             cliccabile al suo posto (per poterla riaprire) — proprio quella maniglia era
-            l'ingombro segnalato: una riga si trasformava in un'altra riga, non spariva. Ora
-            `campiSessioneNascosti` non lascia più NULLA al suo posto: i tre campi restano
-            comunque scritti (nello stato, nel rapporto) — solo non più a vista. */}
+            l'ingombro segnalato: una riga si trasformava in un'altra riga, non spariva. Poi
+            `campiSessioneNascosti` non lasciava più NULLA al suo posto: i tre campi restavano
+            comunque scritti (nello stato, nel rapporto) — solo non più a vista, e SENZA MODO
+            di tornare a vederli (v. sotto per la correzione).
+            ⚠️ CORRETTO — proposta « un solo fuoco per volta » (mockup discusso a voce,
+            09/09/2026): due bug, non uno solo. Primo, quello appena sopra — nessuna maniglia
+            vera esisteva più, nonostante un commento altrove (`Serenity.tsx`) affermasse il
+            contrario. Secondo, verificato dal vivo: su una seduta dove questi tre campi
+            restano VUOTI (il caso più comune — sono facoltativi) il timer dei 10 secondi non
+            parte MAI, quindi restavano a schermo per l'INTERA seduta, anche nel bel mezzo di
+            « DÌ L'ITEM » — l'istante in cui contano di meno. `campiSessioneNascosti`, passata
+            da `Serenity.tsx`, ora è vera anche quando un ciclo è semplicemente IN CORSO
+            (`cicloAttivo`, indipendente dal timer) — v. la nota lì. Qui, una maniglia VERA
+            stavolta: `richiamati` (sotto) la riporta in vista con un tocco, esattamente come
+            chiesto (« nascosti, un tocco per richiamarli ») — non una pillola isolata come
+            quella tolta un giro fa, un filo appena percepibile, la stessa idea di « si coglie
+            con la coda dell'occhio » che già governa `tokens.css`. */}
         {/* ⚠️ SEGNALATO DI NUOVO — « hai fatto malissimo: appare il bottone CHIUDI LA SEDUTA
             mentre abbiamo in alto il bottone pulsante INIZIA, questo non va bene. Il bottone
             START deve essere posizionato sotto la frase INSERISCI L'R-FACTOR ». Il giro
@@ -302,32 +327,92 @@ export function GruppoAlto({
             (`!campiSessioneNascosti`, senza l'estensione `|| mostraBriefingIniziale`): non
             c'è più nessun bottone qui dentro che debba restare raggiungibile oltre i 10
             secondi. */}
-        {aperta && !campiSessioneNascosti && (
+        {campiVisibili && (
           <div style={{
-            display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 20,
-            width: 'min(96%, 2200px)', maxWidth: '100%', pointerEvents: 'auto',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+            width: 'min(96%, 2200px)', maxWidth: '100%',
           }}>
-            {([
-              [LC('obiettivo', 'objectif', 'objective', 'objetivo', 'mål') as string, sessionObjective, setSessionObjective],
-              [LC('stato fisico', 'état physique', 'physical state', 'estado físico', 'fysiskt tillstånd') as string, sessionPhysicalCheck, setSessionPhysicalCheck],
-              [LC('r-factor', 'r-factor', 'r-factor', 'r-factor', 'r-factor') as string, sessionBriefing, setSessionBriefing],
-            ] as const).map(([etichetta, valore, setValore]) => (
-              <div key={etichetta} style={{ display: 'flex', flexDirection: 'column', gap: 1, flex: '1 1 160px', minWidth: 140 }}>
-                <span style={{
-                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
-                  letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--s-ink-faint)',
+            {/* ── RICHIUDI — mostrata SOLO quando i campi sono a vista per via del richiamo
+                manuale (`richiamati`), non quando lo sarebbero comunque (nessun ciclo attivo,
+                mai nascosti). Lo stesso identico filo della maniglia sotto: « un secondo tocco
+                richiude » diventa vero anche nel codice, non solo nel commento. */}
+            {richiamati && campiSessioneNascosti && (
+              <button
+                type="button"
+                onClick={() => setRichiamati(false)}
+                aria-label={LC(
+                  'nascondi di nuovo obiettivo, stato fisico e r-factor',
+                  "masquer à nouveau objectif, état physique et r-factor",
+                  'hide objective, physical state and r-factor again',
+                  'ocultar de nuevo objetivo, estado físico y r-factor',
+                  'dölj mål, fysiskt tillstånd och r-factor igen',
+                ) as string}
+                style={{
+                  border: 'none', background: 'none', cursor: 'pointer', pointerEvents: 'auto',
+                  padding: '2px 22px 4px',
                 }}>
-                  {etichetta}
-                </span>
-                <input value={valore} onChange={e => setValore(e.target.value)} placeholder={etichetta}
-                  style={{
-                    border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
-                    outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)',
-                    color: 'var(--s-ink)', padding: '2px 0', width: '100%',
-                  }} />
-              </div>
-            ))}
+                <span aria-hidden style={{ display: 'block', width: 34, height: 3, borderRadius: 999, background: 'var(--s-ink-ghost)' }} />
+              </button>
+            )}
+            <div style={{
+              display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 20,
+              width: '100%', pointerEvents: 'auto',
+            }}>
+              {([
+                [LC('obiettivo', 'objectif', 'objective', 'objetivo', 'mål') as string, sessionObjective, setSessionObjective],
+                [LC('stato fisico', 'état physique', 'physical state', 'estado físico', 'fysiskt tillstånd') as string, sessionPhysicalCheck, setSessionPhysicalCheck],
+                [LC('r-factor', 'r-factor', 'r-factor', 'r-factor', 'r-factor') as string, sessionBriefing, setSessionBriefing],
+              ] as const).map(([etichetta, valore, setValore]) => (
+                <div key={etichetta} style={{ display: 'flex', flexDirection: 'column', gap: 1, flex: '1 1 160px', minWidth: 140 }}>
+                  <span style={{
+                    fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
+                    letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--s-ink-faint)',
+                  }}>
+                    {etichetta}
+                  </span>
+                  <input value={valore} onChange={e => setValore(e.target.value)} placeholder={etichetta}
+                    style={{
+                      border: 'none', borderBottom: '1px solid var(--s-ink-ghost)', background: 'none',
+                      outline: 'none', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)',
+                      color: 'var(--s-ink)', padding: '2px 0', width: '100%',
+                    }} />
+                </div>
+              ))}
+            </div>
           </div>
+        )}
+        {/* ── LA MANIGLIA — v. la nota grande sopra su `campiVisibili`/`richiamati`. Un solo
+            filo (3px, `--s-ink-ghost` — lo stesso token che `tokens.css` riserva a « nessun
+            segnale », non a un testo da leggere) invece di una pillola vera: deve trovarsi
+            SENZA competere con l'ago o con « DÌ L'ITEM » per l'attenzione. L'etichetta sotto
+            resta comunque leggibile a chi la cerca — la scoperta non deve dipendere dal
+            ricordarsi che esiste. Un secondo tocco richiude (stesso bottone, stesso gesto):
+            non serve una × a parte per un pannello così piccolo. */}
+        {aperta && !campiVisibili && (
+          <button
+            type="button"
+            onClick={() => setRichiamati(true)}
+            aria-label={LC(
+              'mostra obiettivo, stato fisico e r-factor',
+              'afficher objectif, état physique et r-factor',
+              'show objective, physical state and r-factor',
+              'mostrar objetivo, estado físico y r-factor',
+              'visa mål, fysiskt tillstånd och r-factor',
+            ) as string}
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+              border: 'none', background: 'none', cursor: 'pointer', pointerEvents: 'auto',
+              padding: '4px 22px 2px',
+            }}>
+            <span aria-hidden style={{ width: 34, height: 3, borderRadius: 999, background: 'var(--s-ink-ghost)' }} />
+            <span style={{
+              fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: 'var(--s-ink-ghost)',
+            }}>
+              {LC('obiettivo · stato · r-factor', 'objectif · état · r-factor', 'objective · state · r-factor',
+                'objetivo · estado · r-factor', 'mål · tillstånd · r-factor')}
+            </span>
+          </button>
         )}
         {/*
           ── LE STESSE DIMENSIONI, NON SOLO GLI STESSI COLORI ────────────────────────────
