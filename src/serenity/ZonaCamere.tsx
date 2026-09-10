@@ -50,18 +50,26 @@ export function ZonaCamere({
 }: ZonaCamereProps) {
   const { t } = useI18n();
 
-  // ⚠️ BUG TROVATO — segnalato: « non trovo più la camm PC ». CAM 2 era ristretta a
-  // `avvio.distanza || avvio.solo` — spariva del tutto nel caso più comune, una seduta LOCALE
-  // con un preclear vero. App.tsx non ha QUESTA condizione: mostra CAM 2 ogni volta che
-  // `moduleVis.cam2` è acceso, punto — la webcam locale generica quando non c'è un flusso
-  // remoto (`CameraCerchio` chiama `getUserMedia` da sé), lo stream vero solo quando
-  // `avvio.distanza` lo fornisce. La restrizione qui era un'invenzione, non una scelta di
-  // EQUILIBRIUM: tolta, per la stessa regola di sempre — riprodurre la stessa logica, non una
-  // più prudente inventata qui. (`cam1Mostrata`/`cam2Mostrata` arrivano già calcolate da chi
-  // monta questo componente — quella regola vive lì, non qui.)
+  // ⚠️ Cronologia — segnalato un tempo: « non trovo più la camm PC ». CAM 2 era ristretta a
+  // `avvio.distanza || avvio.solo` — spariva del tutto in una seduta LOCALE con un preclear
+  // vero. Tolta allora quella restrizione: App.tsx mostra CAM 2 ogni volta che `moduleVis.cam2`
+  // è acceso, ripiegando sulla webcam locale generica quando non c'è un flusso remoto
+  // (`CameraCerchio` chiama `getUserMedia` da sé).
+  // ⚠️ CORRETTO DI NUOVO — segnalato: « quando si è in locale [senza telefono] si avvia la camm
+  // del PC, dà la visione della camm frontale del computer, riprendendo l'AUDITOR ». Proprio
+  // quel ripiego (la webcam locale generica, sopra) è il problema: auditor e PC condividono lo
+  // stesso computer nella stessa stanza, quindi "la webcam locale" riprende CHI STA DAVANTI AL
+  // COMPUTER — l'auditor, non il PC — sotto un'etichetta che dice "CAM 2 (PC)". Confermato
+  // dall'utente, sapendo del rischio di far ricomparire la vecchia segnalazione: senza un
+  // flusso VERO (a distanza, o dal telefono del PC), CAM 2 non mostra più nulla — niente da
+  // scambiare per "la vista del PC" quando quella vista, in questo caso, non esiste per
+  // davvero. `cam1Mostrata`/`cam2Mostrata` restano invariate (calcolate da chi monta questo
+  // componente): qui si aggiunge solo `daRemoto` come condizione IN PIÙ per CAM 2, non si
+  // tocca quando può essere richiesta.
   if (!aperta || (!cam2Mostrata && !cam1Mostrata)) return null;
 
-  // Decide se CAM 2 mostra il flusso locale o quello remoto/del telefono.
+  // Decide se CAM 2 mostra il flusso locale o quello remoto/del telefono — e ora, se mostrarla
+  // AFFATTO (v. la nota grande sopra): senza un flusso vero, CAM 2 non ha più un ripiego locale.
   const daRemoto = avvioDistanza || telefonoPcCollegato;
 
   return (
@@ -70,7 +78,7 @@ export function ZonaCamere({
       display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16,
       pointerEvents: 'none',
     }}>
-      {cam2Mostrata && (
+      {cam2Mostrata && daRemoto && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
           <CameraCerchio
             dimensione={255}

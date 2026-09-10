@@ -12023,3 +12023,35 @@ sempre (voce locale → Giornale come `'Aud'`), invariato.
 754/754 (invariato). Non verificabile dal vivo nel dev server del browser (il riconoscimento
 vocale nativo e l'elenco dei procedimenti richiedono Electron, assenti nel preview Vite) —
 verificato leggendo il codice, riga per riga, con lo stesso rigore.
+
+## Giro — 2026-09-10 (continuazione) — CAM 2, niente più webcam dell'auditor spacciata per « (PC) »
+
+Chiesto, nella stessa conversazione sulla voce durante COMMANDS: « quando si è in locale si
+avvia la camm del PC, dà la visione della camm frontale del computer, riprendendo l'auditor ».
+Verificato in `ZonaCamere.tsx`: `daRemoto = avvioDistanza || telefonoPcCollegato` — senza
+nessuno dei due, `externalStream` passa `undefined` a `CameraCerchio`, che ripiega da sé sulla
+webcam locale generica (la STESSA che CAM 1 già mostra) sotto l'etichetta « CAM 2 (PC) ».
+Auditor e PC, nella stessa stanza, condividono un solo computer: quella webcam riprende chi le
+sta davanti — l'auditor, non il PC.
+
+⚠️ **Trovato un conflitto con una correzione precedente**, segnalato prima di toccare nulla:
+esiste già un commento storico nello stesso file — « non trovo più la camm PC » — che descrive
+la restrizione ESATTAMENTE opposta (`avvio.distanza || avvio.solo`), tolta apposta un giro fa
+perché faceva sparire CAM 2 in una seduta locale comune, per riprodurre la stessa logica di
+EQUILIBRIUM (mostra sempre, ripiega sul locale). Segnalato il rischio di far ricomparire quella
+vecchia lamentela — **confermato comunque dall'utente**, consapevole del compromesso.
+
+**Corretto**: `{cam2Mostrata && daRemoto && (...)}` in `ZonaCamere.tsx` — CAM 2 non mostra più
+nulla senza un flusso vero (a distanza, o dal telefono del PC collegato). `cam1Mostrata`/
+`cam2Mostrata` (quando CAM 2 PUÒ essere richiesta) restano invariate — cambia solo se, una volta
+richiesta, ha davvero qualcosa di vero da mostrare.
+
+`tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run`
+754/754 (invariato).
+
+## Nota — 2026-09-10 — d'ora in poi, ogni build è Mac E Windows insieme
+
+Segnalato: « la versione Windows non la aggiorni? » — dopo due giri di fix ero rimasto fermo al
+solo `npm run dist:serenity` (Mac). Corretto anche [[equilibrium-dmg-sempre]] (memoria
+permanente): da ora, ogni volta che il codice cambia, si costruiscono e si consegnano **Mac E
+Windows insieme** (`dist:serenity` + `dist:win-serenity`), non solo uno dei due.
