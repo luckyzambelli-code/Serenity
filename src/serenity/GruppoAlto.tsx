@@ -39,7 +39,6 @@ import { ItemDaScrivere } from './ItemDaScrivere';
 import { SegmentoVetro } from './SegmentoVetro';
 import type { SessionMode } from '../engine/sessionMode';
 import type { SessionPhase } from '../engine/sessionPhase';
-import type { Procedimento } from '../lib/procedimenti';
 import type { useThetaMeter } from '../hooks/useThetaMeter';
 import type { useToneCycle } from '../session/useToneCycle';
 import type { useMirrorCycle } from '../session/useMirrorCycle';
@@ -224,7 +223,6 @@ export interface GruppoAltoProps {
   deltaStar: number;
   deltaStarN: number;
   senzaMisura: boolean;
-  procedimentoAttivo: Procedimento | null;
   apri: () => void;
   senzaStrumenti: boolean;
   agoScelto: 'eeg' | 'theta';
@@ -255,7 +253,7 @@ export function GruppoAlto({
   comandiSottoAgo, cicloAttivo, aperta, museOk, meterC, needleReactionKey, thetaReactionKey,
   reazioniViste, setReazioniViste, agoEeg, espertoAttivo, theta, tone, mirror, cycles, ep, truth, LC,
   taRef, showTrailPref, setShowTrailPref, vistaSenzaAgo, setVistaSenzaAgo, toneAttivo, faseCiclo,
-  handleQuantumSphereClick, deltaStar, deltaStarN, senzaMisura, procedimentoAttivo, apri, senzaStrumenti, agoScelto,
+  handleQuantumSphereClick, deltaStar, deltaStarN, senzaMisura, apri, senzaStrumenti, agoScelto,
   setAgoScelto, metabolicOpen, mostraBriefingIniziale, campiSessioneNascosti, sessionObjective,
   setSessionObjective, sessionPhysicalCheck, setSessionPhysicalCheck, sessionBriefing, setSessionBriefing,
   setPrimaVoltaLibero, mode, deveScegliereTono, setTonoScelto, spiegazioneCiclo, comeSenzaAgo, senzaNumero,
@@ -547,19 +545,18 @@ export function GruppoAlto({
              tipico) — resta `100%` della larghezza vera lasciata libera qui sotto. */
           width: '100%', aspectRatio: '1600 / 850', maxHeight: '100%',
           borderRadius: 18, overflow: 'hidden', position: 'relative',
-          /* ⚠️ SEGNALATO con screenshot: « la disposizione è sbagliata con l'arco fuori
-             schermo — puoi nasconderlo, poiché stiamo vedendo solo i comandi ». Quando un
-             procedimento è aperto (`procedimentoAttivo`, v. sotto — mostra `PistaProcedimento`,
-             es. "RADIAL PROCEDURE") NESSUN ago vero lo accompagna: non è una lettura in corso,
-             è un testo di riferimento. Ma questo riquadro (l'intero quadrante — QuantumSphere,
-             ClearDial/ToneDial/MirrorDial, il bottone PREMI START, le letture in alto a
-             sinistra: tutti figli assoluti di QUESTO contenitore `position:relative`) restava
-             comunque montato sopra, con la sua `aspectRatio` che lo spinge oltre l'alto dello
-             schermo su una finestra bassa — proprio il "fuori schermo" segnalato. Un solo
-             `display:'none'` qui basta a nasconderlo TUTTO insieme (niente da toccare in
-             ciascun figlio): `PistaProcedimento`, più sotto nel flusso normale della colonna,
-             resta l'unica cosa a schermo. */
-          display: procedimentoAttivo ? 'none' : undefined,
+          /* ⚠️ CORRETTO — segnalato di nuovo (10/09/2026): « vedo che l'arco è sparito durante
+             i comandi???? ». Un giro precedente l'aveva nascosto apposta (« la disposizione è
+             sbagliata con l'arco fuori schermo — puoi nasconderlo, poiché stiamo vedendo solo i
+             comandi »), ragionando che durante COMMANDS « nessun ago vero lo accompagna: non è
+             una lettura in corso, è un testo di riferimento » — ma proprio nello stesso
+             scambio l'utente chiariva che la risposta del PC A UN COMANDO deve scriversi dal
+             vivo (trascrizione) sotto la domanda: se il PC risponde davvero, C'È una lettura in
+             corso, l'ipotesi che l'aveva fatto nascondere non regge. Confermato esplicitamente:
+             l'ago deve restare visibile durante i comandi come durante un ciclo normale — non
+             più nascosto. Il problema originale (fuori schermo su una finestra bassa) resta da
+             ricontrollare dal vivo ora che torna a schermo, non da rimediare nascondendolo di
+             nuovo. */
           /* ⚠️ Segnalato: « il fondo della zona arc deve essere trasparente ». In chiaro era
              `var(--s-ground)` — LO STESSO colore della pagina, ma un colore PIENO: con uno
              sfondo personalizzato (CONFIG → "importa la tua immagine") copriva comunque

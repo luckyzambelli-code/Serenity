@@ -354,6 +354,22 @@ export default function Serenity() {
       ...prev, [indice]: { auditor: valore, pc: prev[indice]?.pc ?? '', modificato: true },
     }));
   }, []);
+  /** ── LA VOCE, QUALUNQUE SIA LA SUA SORGENTE, DENTRO LO STESSO COMANDO A FUOCO — segnalato:
+   *  « quello che il PC dice non si scrive da solo... appare nell'assessment ma doveva
+   *  scriversi anche sotto la domanda ». Estratta da dentro `remote.onTrascrizione` (dove
+   *  viveva SOLO per il telefono del PC collegato) perché il microfono LOCALE ne ha bisogno
+   *  ora anch'esso — v. la nota grande su `useVoiceItem`, più giù, per il perché. Stessa
+   *  identica logica delle due sorgenti: si accumula nel campo `pc` (il dato grezzo, intatto,
+   *  per il Giornale), e in `auditor` SOLO se non ancora `modificato` (lo segue dal vivo finché
+   *  l'auditor non tocca il campo — v. la nota grande su `risposteProcedimento`, sopra). */
+  const registraRispostaVoceProcedimento = useCallback((testo: string) => {
+    setRisposteProcedimento(prev => {
+      const attuale = prev[fuocoProcedimento] ?? { auditor: '', pc: '', modificato: false };
+      const pc = attuale.pc ? `${attuale.pc} ${testo}` : testo;
+      const auditor = attuale.modificato ? attuale.auditor : pc;
+      return { ...prev, [fuocoProcedimento]: { auditor, pc, modificato: attuale.modificato } };
+    });
+  }, [fuocoProcedimento]);
   useEffect(() => {
     listaProcedimenti().then(setProcedimenti);
   }, [processusAperto]);
@@ -649,12 +665,7 @@ export default function Serenity() {
     // se quello dell'auditor è vuoto: È il campo dell'auditor, semplicemente non ancora toccato.
     onTrascrizione: testo => {
       if (procedimentoAttivo) {
-        setRisposteProcedimento(prev => {
-          const attuale = prev[fuocoProcedimento] ?? { auditor: '', pc: '', modificato: false };
-          const pc = attuale.pc ? `${attuale.pc} ${testo}` : testo;
-          const auditor = attuale.modificato ? attuale.auditor : pc;
-          return { ...prev, [fuocoProcedimento]: { auditor, pc, modificato: attuale.modificato } };
-        });
+        registraRispostaVoceProcedimento(testo);
       } else {
         journal.addLog({ speaker: 'PC', text: testo, time: sessionClock.now() });
       }
@@ -2345,6 +2356,25 @@ export default function Serenity() {
     active: aperta && !pausata,
     lang: lang as string,
     onTranscript: (text, speechEndMs) => {
+      // ⚠️ CORRETTO — segnalato: « quello che il PC dice non si scrive da solo [sotto la
+      // domanda]... appare nell'assessment ». Il commento qui sotto diceva « SERENITY è sempre
+      // l'auditor in locale » — vero SOLO quando non c'è un procedimento COMMANDS aperto: con
+      // UN comando a fuoco (`procedimentoAttivo`) e NESSUN telefono del PC collegato,
+      // l'auditor e il PC sono nella STESSA stanza, davanti allo STESSO microfono — la webcam
+      // frontale del computer li riprende entrambi (« CAM 2 (PC) »), non solo l'auditor.
+      // Chiarito dall'utente: se il telefono del PC È collegato, quel canale (sopra,
+      // `remote.onTrascrizione`) resta la fonte giusta per la SUA voce — qui si evita di
+      // duplicarla. Se NON è collegato, la voce locale durante un comando a fuoco è la
+      // risposta del PC, non una parola dell'auditor: va nello stesso posto,
+      // `registraRispostaVoceProcedimento` (condivisa col percorso del telefono, sopra), MAI
+      // nel Giornale come `'Aud'` — altrimenti l'effetto che riempie l'ASSESSMENT (che guarda
+      // proprio le righe `'Aud'`, v. la sua nota in `Serenity.tsx`) la intercetterebbe per
+      // sbaglio, esattamente il sintomo segnalato. Fuori da un procedimento, o con un telefono
+      // collegato, il comportamento resta quello di sempre — invariato, un solo `return` in più.
+      if (procedimentoAttivo && !avvio?.distanza && !remote.isConnected) {
+        registraRispostaVoceProcedimento(text);
+        return;
+      }
       const ritardoS = speechEndMs
         ? Math.min(3, Math.max(0, (performance.now() - speechEndMs) / 1000)) : 0;
       // ⚠️ IL TONO DI VOCE — segnalato: « solo il testo con il tono di voce ». Mancava per
@@ -2355,8 +2385,7 @@ export default function Serenity() {
       // riconoscitore vocale (v. `apri()`/`chiudi()` per l'avvio/arresto) — `.analyze()` letto
       // QUI, allo stesso punto in cui App.tsx lo legge (`const tone = voiceToneAnalyzer.analyze()`),
       // non dentro il riconoscitore: è il consumo della trascrizione a doverlo sapere, non chi
-      // la produce. SERENITY è sempre l'auditor in locale — nessun ramo PC/satellite da
-      // scegliere, il tono è sempre di chi sta parlando qui.
+      // la produce.
       const tono = voiceToneAnalyzer.analyze() ?? undefined;
       journal.addLog({ speaker: 'Aud', text, time: Math.max(0, sessionClock.now() - ritardoS), type: 'normal', tone: tono });
     },
@@ -3624,7 +3653,6 @@ export default function Serenity() {
           deltaStar={deltaStar}
           deltaStarN={deltaStarN}
           senzaMisura={senzaMisura}
-          procedimentoAttivo={procedimentoAttivo}
           apri={apri}
           senzaStrumenti={senzaStrumenti}
           agoScelto={agoScelto}

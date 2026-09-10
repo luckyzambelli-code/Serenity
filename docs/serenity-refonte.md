@@ -11967,3 +11967,59 @@ per richiamarli con un tocco. `node scripts/copy-guide.cjs` rilanciato per sincr
 `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run`
 754/754 (invariato). Verificato di nuovo dal vivo: seduta senza strumenti, ciclo CONTACT, campi
 vuoti — restano a schermo durante « DÌ L'ITEM », come voluto.
+
+## Giro — 2026-09-10 (continuazione) — COMMANDS: l'arco tornato visibile, la voce del PC scritta sotto la domanda
+
+Due segnalazioni, la stessa area (`GruppoAlto.tsx`/`Serenity.tsx`, il procedimento COMMANDS).
+
+### « Vedo che l'arco è sparito durante i comandi???? »
+
+Non un bug — una scelta esplicita di un giro passato: « la disposizione è sbagliata con l'arco
+fuori schermo — puoi nasconderlo, poiché stiamo vedendo solo i comandi », ragionando che durante
+COMMANDS « nessun ago vero lo accompagna: non è una lettura in corso ». `display:'none'` su
+tutto il quadrante quando `procedimentoAttivo`.
+
+Ma quella stessa ragione cade con l'altra segnalazione, sotto: se la risposta del PC a un
+comando si scrive dal vivo, C'È una lettura in corso — l'ipotesi che l'aveva fatto nascondere
+non regge più. Confermato dall'utente: l'ago deve restare visibile durante i comandi come
+durante un ciclo normale. Tolto il `display:'none'` — con lui, `procedimentoAttivo` non
+serviva più a `GruppoAlto.tsx` (la sua unica ragione d'essere lì): tolto anche dalla sua
+interfaccia di prop, dalla destrutturazione e dal passaggio in `Serenity.tsx` (resta, invariato,
+per `GruppoBasso.tsx`, che gli serve davvero per `PistaProcedimento`). Il rischio originale
+("fuori schermo su una finestra bassa") non si ripresenta: `PistaProcedimento` condivide lo
+STESSO slot/contenitore di `PistaCiclo` (già verificato coesistere con l'arco visibile in ogni
+ciclo normale) e ha un proprio `maxHeight`+scorrimento — il problema storico era quasi certo
+precedente a quel contenimento, mai ricontrollato dopo.
+
+### « Quello che il PC dice non si scrive da solo... appare nell'assessment »
+
+Investigato a fondo, non supposto — due fatti che si combinano:
+
+1. **Il microfono locale di SERENITY è sempre attribuito all'auditor** (`useVoiceItem`,
+   `journal.addLog({ speaker: 'Aud', ... })`, per scelta di design: « SERENITY è sempre
+   l'auditor in locale »). Solo la trascrizione da un **telefono del PC collegato** arriva come
+   `speaker: 'PC'` e scrive sotto la domanda del comando (`remote.onTrascrizione` →
+   `risposteProcedimento`) — quel percorso esisteva già e funzionava.
+2. Senza telefono, quella stessa riga `'Aud'` — se l'ASSESSMENT ha la cattura accesa — viene
+   raccolta lì come item (l'effetto che riempie `assessItems` guarda proprio `speaker === 'Aud'`,
+   v. `Serenity.tsx` righe vicino a `assessLogCursorRef`). Da qui il sintomo esatto: la voce
+   finisce sempre come "parola dell'auditor", mai sotto il comando, e l'assessment (se ascolta)
+   la intercetta.
+
+Chiarito dall'utente il caso reale: in locale (nessun telefono), auditor e PC sono nella STESSA
+stanza, davanti allo STESSO microfono — la webcam frontale del computer li riprende entrambi
+(« CAM 2 (PC) »), non solo l'auditor. Se il telefono del PC È collegato, quel canale resta la
+fonte giusta, invariato. Se NON è collegato, la voce catturata durante un comando a fuoco deve
+contare come risposta del PC.
+
+**Corretto**: estratta `registraRispostaVoceProcedimento` (condivisa) dalla logica che prima
+viveva solo dentro `remote.onTrascrizione` — la stessa funzione ora richiamata anche
+dall'`onTranscript` di `useVoiceItem` (il riconoscitore locale), quando `procedimentoAttivo &&
+!avvio?.distanza && !remote.isConnected` — esattamente « procedimento aperto, locale, nessun
+telefono ». Fuori da un procedimento, o con telefono collegato, il comportamento resta quello di
+sempre (voce locale → Giornale come `'Aud'`), invariato.
+
+`tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run`
+754/754 (invariato). Non verificabile dal vivo nel dev server del browser (il riconoscimento
+vocale nativo e l'elenco dei procedimenti richiedono Electron, assenti nel preview Vite) —
+verificato leggendo il codice, riga per riga, con lo stesso rigore.
