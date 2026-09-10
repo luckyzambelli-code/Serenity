@@ -12055,3 +12055,28 @@ Segnalato: « la versione Windows non la aggiorni? » — dopo due giri di fix e
 solo `npm run dist:serenity` (Mac). Corretto anche [[equilibrium-dmg-sempre]] (memoria
 permanente): da ora, ogni volta che il codice cambia, si costruiscono e si consegnano **Mac E
 Windows insieme** (`dist:serenity` + `dist:win-serenity`), non solo uno dei due.
+
+## Giro — 2026-09-10 (continuazione) — il telefono del PC, raggiungibile anche a seduta aperta
+
+Chiesto: « la parte opzionale del collegare il telefonino deve essere visibile per attivarla se
+l'auditor vuole attivarla durante la sessione — una volta la sessione iniziata mettila sotto
+forma di icona, comprensibile ». Verificato in `BarraLaterale.tsx`: il bottone/la pillola di
+stato « collega il telefono del PC » viveva dietro `!aperta` — spariva per intero appena la
+seduta cominciava, senza alcun modo di avviare il collegamento più tardi. Un commento storico lo
+giustificava (« a seduta già aperta si può ancora vedere/gestire da CAM 2 ») — non più vero da
+oggi: CAM 2 non mostra più nulla senza un flusso vero (v. il giro precedente), quindi proprio il
+momento in cui l'auditor scopre di aver bisogno del telefono è quello in cui il bottone è già
+sparito.
+
+**Corretto**: una nuova icona gemella, nella riga EP/COMMANDS/DIZIONARIO (stessa resa — cerchio
+54px, `Smartphone` di lucide-react, etichetta sotto), visibile per TUTTA la seduta (`aperta`,
+non più `!aperta`) — stesse tre guardie del bottone originale (`!avvio.solo && !avvio.distanza`,
+invariate). Stato riflesso nel colore (`--s-still`/verde quando collegato, come la pillola di
+prima) e nell'etichetta (« PC ✓ » / « telefono PC »), stesso `onApriSatellite` di sempre. Il
+bottone/la pillola prima dell'apertura restano invariati — l'icona si aggiunge, non li sostituisce.
+
+Verificato dal vivo: icona presente subito dopo EP a seduta aperta, clic apre correttamente
+« MODALITÀ AUDITOR — genera link internet » (lo stesso flusso di sempre).
+
+`tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run`
+754/754 (invariato).
