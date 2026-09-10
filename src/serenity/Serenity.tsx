@@ -1351,12 +1351,13 @@ export default function Serenity() {
    *  maniglia, ma il taglio portò via anche lei), lasciando `campiSessioneNascosti` SENZA
    *  modo di tornare indietro una volta vero. Ora davvero richiamabile — v. `richiamati`/la
    *  maniglia in `GruppoAlto.tsx`.
-   *  ⚠️ AGGIUNTO — gli stessi tre campi restavano a schermo per l'INTERA seduta quando MAI
-   *  riempiti (il timer sopra non parte affatto su campi vuoti): esattamente il caso più
-   *  comune, verificato dal vivo (schermata « DÌ L'ITEM », i tre campi vuoti ancora lì).
-   *  `cicloAttivo` in più nel passaggio della prop, sotto: nascosti anche a campi vuoti non
-   *  appena un ciclo è davvero in corso — il momento in cui contano di meno, non quello in
-   *  cui l'auditor li ha appena scritti. */
+   *  ⚠️ PROVATO E RITIRATO — lo stesso giro aveva anche legato `campiSessioneNascosti` a
+   *  `cicloAttivo` (nascosti anche a campi vuoti durante un ciclo, non solo 10s dopo averli
+   *  riempiti): tecnicamente vero che restavano a schermo per sempre se mai riempiti, ma
+   *  giudicato — dopo aver visto il quadro completo — un nascondimento non necessario: questi
+   *  tre campi non valgono lo sforzo di sparire da soli, la maniglia (appena aggiunta) basta
+   *  quando servisse liberare lo sguardo. Tornato al comportamento originale: SOLO il timer
+   *  dei 10s, `cicloAttivo` non c'entra più. */
   const [campiSessioneNascosti, setCampiSessioneNascosti] = useState(false);
   useEffect(() => {
     if (!aperta) return;
@@ -3630,7 +3631,7 @@ export default function Serenity() {
           setAgoScelto={setAgoScelto}
           metabolicOpen={metabolicOpen}
           mostraBriefingIniziale={mostraBriefingIniziale}
-          campiSessioneNascosti={campiSessioneNascosti || !!cicloAttivo}
+          campiSessioneNascosti={campiSessioneNascosti}
           sessionObjective={sessionObjective}
           setSessionObjective={setSessionObjective}
           sessionPhysicalCheck={sessionPhysicalCheck}

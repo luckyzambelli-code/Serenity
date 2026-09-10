@@ -11900,3 +11900,70 @@ destra, sempre a vista anche durante « DÌ L'ITEM ») e la consolidazione del �
 (dizionario/storico/impostazioni/profilo, oggi sparsi nella barra in alto invece che dietro un
 solo punto d'accesso) — il mockup li propone, questo giro si è fermato al pezzo più concreto e
 già mezzo costruito (i tre campi di sessione). Da valutare insieme prima del prossimo giro.
+
+## Giro — 2026-09-10 (continuazione) — « avanza col resto »: la maniglia più visibile, e due ipotesi verificate e scartate
+
+Chiesto: « la maniglia è poco visibile, rendila più visibile anche se non invasiva. poi avanza
+con il resto ». Due parti.
+
+**La maniglia** — `--s-ink-ghost` (il token che `tokens.css` riserva a « nessun segnale »)
+sostituito da `--s-ink-faint` (le stesse etichette EP/COMMANDS/DIZIONARIO), filo più
+largo/spesso, un fondo a pillola (`--s-disc-sunk`, lo stesso vetro in rilievo di ogni altro
+piccolo controllo di SERENITY) invece di fluttuare sul fondo nudo, colore pieno al passaggio del
+mouse. Stessa correzione sul filo di richiusura. Verificato dal vivo: ben visibile senza
+competere con « DÌ L'ITEM ».
+
+**« Il resto »** — prima di scrivere altro codice, investigate le due voci rimaste dalla lista
+di ieri (barra in alto/« Livello 3 », selettore dei 5 cicli). Entrambe **già corrette**,
+verificato leggendo il codice, non supposto:
+
+- Il selettore dei cicli: già confermato ieri (`PistaCiclo.tsx` monta solo a ciclo scelto).
+- La barra in alto: `Intestazione.tsx` ha già un `modalitaCiclo` che nasconde logo/crediti/
+  tema/lingua/storico/assetto/IA/guida/help non appena un metodo è armato — durante « DÌ L'ITEM
+  » restano solo le icone di connessione strumenti e CONFIG, esattamente il « Livello 3 »
+  proposto dal mockup. Nessuna riga toccata: sarebbe stato codice ridondante su un pezzo che
+  funzionava già.
+
+Restava una sola voce davvero aperta: il pannello ASSESSMENT, l'unico ancora a vista sempre,
+anche a metà ciclo. Qui una vera ambiguità FUNZIONALE, non estetica — ASSESSMENT/R&I è
+un'attività di audit a sé, e nascondere uno strumento che un auditor potrebbe voler controllare
+proprio a metà di un altro ciclo sarebbe un rischio d'uso, non solo una scelta di schermo.
+Chiesto invece di supporre: **risposta dell'utente — resta sempre raggiungibile, invariato**.
+
+Con questo, la proposta « un solo fuoco per volta » discussa il 09/09 è chiusa per tutti e tre
+i pezzi che la componevano: uno corretto (i tre campi di sessione), due verificati già a posto
+(cicli, barra in alto), uno confermato invariato per scelta esplicita (ASSESSMENT) — non per
+mancanza di tempo.
+
+`tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run`
+754/754 (invariato).
+
+### ⚠️ PROVATO E RITIRATO — il legame con `cicloAttivo`, tolto dopo un chiarimento dell'utente
+
+Segnalato subito dopo: « il R-FACTOR OBIETTIVO ecc non vale la pena di nasconderli, si
+nascondono da soli una volta riempiti. Questo era già fatto ». Vero solo in parte — verificato
+di nuovo, per essere sicuri prima di rispondere: il timer dei 10s **c'era già** e funziona SOLO
+se almeno uno dei tre campi ha del testo; a vuoto (il caso più comune, sono facoltativi)
+restavano a schermo per sempre, come verificato dal vivo poco sopra. Spiegato questo, chiesto
+comunque di **non** legare `campiSessioneNascosti` a `cicloAttivo` — questi tre campi, per
+l'utente, non valgono lo sforzo di un nascondimento più aggressivo di quello che avevano già.
+
+Ritirato: `Serenity.tsx` torna a `campiSessioneNascosti={campiSessioneNascosti}` (solo il
+timer, `cicloAttivo` non c'entra più). Tenuto tutto il resto — la maniglia (`richiamati` in
+`GruppoAlto.tsx`) resta, ora più visibile, per l'unico caso in cui questi campi SI nascondono
+ancora da soli: riempiti, 10s dopo l'ultimo tocco. Rimosso anche l'azzeramento di `richiamati`
+legato a `cicloAttivo` (non serviva più a nulla, dato che `campiSessioneNascosti` non torna mai
+falso da sé una volta vero — v. il suo `useEffect` in `Serenity.tsx` — quindi non c'era un
+momento "naturale" in cui richiudere da soli senza disfare un tocco intenzionale dell'auditor).
+
+**Il GUIDE aggiornato** — segnalato di non dimenticarlo. `~/Downloads/Guide Static
+Meter/SERENITY-manuale.html` (fuori dal deposito, copiato dentro da `scripts/copy-guide.cjs` a
+ogni build — v. la nota in quello script) ora spiega anche questo: un nuovo paragrafo, subito
+dopo quello sullo schermo SESSION START (che già nominava i tre campi), nelle tre lingue del
+manuale (FR/IT/EN) — la sparizione a 10s se riempiti, l'attesa indefinita se vuoti, la maniglia
+per richiamarli con un tocco. `node scripts/copy-guide.cjs` rilanciato per sincronizzare
+`public/guide/`.
+
+`tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run`
+754/754 (invariato). Verificato di nuovo dal vivo: seduta senza strumenti, ciclo CONTACT, campi
+vuoti — restano a schermo durante « DÌ L'ITEM », come voluto.

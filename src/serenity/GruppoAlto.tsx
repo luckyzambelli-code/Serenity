@@ -19,7 +19,7 @@
  *
  * @see docs/serenity-refonte.md — giro di scomposizione, 2026-09-07.
  */
-import React, { useEffect, useMemo, useState, useSyncExternalStore, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import React, { useMemo, useState, useSyncExternalStore, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 import { Play, StickyNote } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { useUiStore } from '../store/uiStore';
@@ -278,11 +278,12 @@ export function GruppoAlto({
    *  `campiSessioneNascosti` (prop, da `Serenity.tsx`) direbbe di no — puro stato di resa,
    *  non c'è nulla che un altro componente debba sapere su « li ho richiamati », quindi
    *  resta locale qui invece di risalire a `Serenity.tsx` come lo stato dei CAMPI stessi
-   *  (`sessionObjective` & co., quelli sì condivisi). Si azzera da sé all'inizio/fine di ogni
-   *  ciclo (`cicloAttivo` cambia): richiamarli DURANTE un ciclo non deve restare aperto per
-   *  sempre nei cicli successivi, a insaputa di chi ha toccato la maniglia una volta sola. */
+   *  (`sessionObjective` & co., quelli sì condivisi). Nessun azzeramento automatico: una volta
+   *  vero (`campiSessioneNascosti`, il timer dei 10s) non torna mai falso da sé — v. l'effetto
+   *  in `Serenity.tsx` — quindi non c'è un momento "naturale" in cui richiudere da soli senza
+   *  disfare un tocco intenzionale dell'auditor. Resta com'era finché non si tocca di nuovo la
+   *  maniglia (sotto, nel render, quando i campi sono a vista). */
   const [richiamati, setRichiamati] = useState(false);
-  useEffect(() => { setRichiamati(false); }, [cicloAttivo]);
   const campiVisibili = aperta && (!campiSessioneNascosti || richiamati);
 
   return (
@@ -303,18 +304,19 @@ export function GruppoAlto({
             comunque scritti (nello stato, nel rapporto) — solo non più a vista, e SENZA MODO
             di tornare a vederli (v. sotto per la correzione).
             ⚠️ CORRETTO — proposta « un solo fuoco per volta » (mockup discusso a voce,
-            09/09/2026): due bug, non uno solo. Primo, quello appena sopra — nessuna maniglia
-            vera esisteva più, nonostante un commento altrove (`Serenity.tsx`) affermasse il
-            contrario. Secondo, verificato dal vivo: su una seduta dove questi tre campi
-            restano VUOTI (il caso più comune — sono facoltativi) il timer dei 10 secondi non
-            parte MAI, quindi restavano a schermo per l'INTERA seduta, anche nel bel mezzo di
-            « DÌ L'ITEM » — l'istante in cui contano di meno. `campiSessioneNascosti`, passata
-            da `Serenity.tsx`, ora è vera anche quando un ciclo è semplicemente IN CORSO
-            (`cicloAttivo`, indipendente dal timer) — v. la nota lì. Qui, una maniglia VERA
-            stavolta: `richiamati` (sotto) la riporta in vista con un tocco, esattamente come
-            chiesto (« nascosti, un tocco per richiamarli ») — non una pillola isolata come
-            quella tolta un giro fa, un filo appena percepibile, la stessa idea di « si coglie
-            con la coda dell'occhio » che già governa `tokens.css`. */}
+            09/09/2026): nessuna maniglia vera esisteva più, nonostante un commento altrove
+            (`Serenity.tsx`) affermasse il contrario. `richiamati` (sotto) la riporta in vista
+            con un tocco, esattamente come chiesto (« nascosti, un tocco per richiamarli ») —
+            non una pillola isolata come quella tolta un giro fa, un filo appena percepibile
+            (poi reso più visibile — v. la sua nota, sotto), la stessa idea di « si coglie con
+            la coda dell'occhio » che già governa `tokens.css`.
+            ⚠️ PROVATO E RITIRATO — lo stesso giro aveva anche legato `campiSessioneNascosti` a
+            `cicloAttivo` in `Serenity.tsx` (nascosti anche a campi VUOTI durante un ciclo, non
+            solo 10s dopo averli riempiti — verificato dal vivo che restavano a schermo per
+            l'intera seduta se mai riempiti, anche in « DÌ L'ITEM »). Segnalato dall'utente,
+            visto il quadro completo: questi tre campi non valgono lo sforzo di sparire da
+            soli — la maniglia (sopra) basta quando serva liberare lo sguardo. Tornato al solo
+            timer dei 10s: `cicloAttivo` non condiziona più `campiSessioneNascosti`. */}
         {/* ⚠️ SEGNALATO DI NUOVO — « hai fatto malissimo: appare il bottone CHIUDI LA SEDUTA
             mentre abbiamo in alto il bottone pulsante INIZIA, questo non va bene. Il bottone
             START deve essere posizionato sotto la frase INSERISCI L'R-FACTOR ». Il giro
