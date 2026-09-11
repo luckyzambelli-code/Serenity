@@ -12080,3 +12080,34 @@ Verificato dal vivo: icona presente subito dopo EP a seduta aperta, clic apre co
 
 `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run`
 754/754 (invariato).
+
+## Giro — 2026-09-11 — GUIDE: la voce mancante su COMMANDS, e il telefono del PC spostato prima di PAUSA
+
+**Segnalato (GUIDE):** « La guide ne parle pas de l'evolution de COMMANDS avec la partie qui
+inscrive la reponse du PC et la possibilitè pour l'auditeur de reisncrire dessus ». Vero: il
+giro del 2026-09-05/09-10 (« arco visibile durante COMMANDS, voce del PC sotto la domanda »)
+aveva cambiato il comportamento reale (`PistaProcedimento.tsx`: uno spazio testo sotto ogni
+comando, la risposta del PC — dal telefono se collegato, altrimenti dal microfono locale —
+si scrive da sola in corsivo grigio finché l'auditor non la tocca; appena l'auditor ci clicca
+e scrive, il suo testo prende il posto, senza perdere la trascrizione) ma il manuale esterno
+(`~/Downloads/Guide Static Meter/SERENITY-manuale.html`, §7 COMMANDS) non ne parlava affatto.
+Aggiunta una nuova voce nell'elenco numerato di §7 (FR/IT/EN), tra "clicca su un procedimento"
+e "per chiuderlo", risincronizzata in `public/guide/` via `node scripts/copy-guide.cjs`.
+
+**Segnalato (posizione icona telefono):** « Tu as positionnè telephone PC avec les commands,
+EP et dictionnaire, cela n'est pas bon. Positionne le avant le bouton PAUSE, sur la meme
+ligne ». Vero — l'icona aggiunta nel giro precedente (« la parte opzionale del collegare il
+telefonino... mettila sotto forma di ICONA ») era finita nel riquadro EP/COMMANDS/DIZIONARIO:
+un posto sbagliato concettualmente, perché quel riquadro è consultazione (ripasso, raggiungibile
+anche a seduta chiusa), mentre collegare il telefono è un'azione di seduta in corso — esattamente
+come mettere in pausa. Spostata sulla stessa riga del bottone PAUSA, PRIMA di esso: stesso stile
+compatto di PAUSA (icona sola 20px, padding 10px, `borderRadius:16`), non più il cerchio 54px
+con etichetta sotto di EP/COMMANDS/DIZIONARIO, che lì avrebbe affollato la riga. Stesse guardie
+di prima (`!avvio.solo && !avvio.distanza`); `aperta`/`!mostraBriefingIniziale` arrivano gratis
+dal cancello del contenitore, come per PAUSA stessa. File: `src/serenity/BarraLaterale.tsx`.
+
+Verificato dal vivo: telefono PC → pausa, sulla stessa riga, in quest'ordine, subito sotto
+"chiudi la seduta"; riquadro EP/COMMANDS/DIZIONARIO tornato ai suoi tre soli bottoni originali.
+
+`tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run`
+754/754 (invariato).

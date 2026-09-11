@@ -339,6 +339,37 @@ export function BarraLaterale({
           "chiudi/apri la seduta" già fanno. */}
       {aperta && !mostraBriefingIniziale && (
         <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {/* ── COLLEGA IL TELEFONO DEL PC, SULLA STESSA RIGA DI PAUSA — segnalato di nuovo:
+              « hai positionè telephone PC avec les commands, EP et dictionnaire, cela n'est
+              pas bon. Positionne le avant le bouton PAUSE, sur la meme ligne ». Era finito nel
+              riquadro EP/COMMANDS/DIZIONARIO (v. la nota, più sotto, ancora presente per la
+              cronologia) — un posto sbagliato: quel riquadro è "consultazione" (ripasso,
+              raggiungibile anche a seduta chiusa), mentre collegare il telefono è un'AZIONE DI
+              SEDUTA in corso, esattamente come mettere in pausa. Stessa riga di PAUSA, PRIMA
+              del suo bottone — stesso stile compatto (icona sola, 20px, padding 10px,
+              `borderRadius:16`, NON il cerchio 54px con etichetta sotto usato da EP/COMMANDS/
+              DIZIONARIO, che qui affollerebbe la riga). Stesse guardie di prima
+              (`!avvio.solo && !avvio.distanza` — mai in SOLO, mai a distanza, quella modalità
+              ha già la sua `Connessione` a schermo intero); `aperta` e `!mostraBriefingIniziale`
+              arrivano gratis dal cancello del contenitore, come per PAUSA stessa. */}
+          {!avvio.solo && !avvio.distanza && (
+            <button
+              className="s-glass s-glass-btn"
+              onClick={onApriSatellite}
+              title={telefonoPcCollegato
+                ? LC('telefono del PC collegato', 'téléphone du PC connecté', "PC's phone connected",
+                     'teléfono del PC conectado', 'PC-telefonen ansluten') as string
+                : LC('opzionale — collega il telefono del PC', 'facultatif — connecter le téléphone du PC',
+                     "optional — connect the PC's phone", 'opcional — conectar el teléfono del PC',
+                     'valfritt — anslut PC:ns telefon') as string}
+              style={{
+                cursor: 'pointer', pointerEvents: 'auto', padding: '10px 10px', borderRadius: 16,
+                background: 'var(--s-disc)', display: 'flex', justifyContent: 'center', flexShrink: 0,
+                color: telefonoPcCollegato ? 'var(--s-still)' : 'var(--s-ink-soft)',
+              }}>
+              <Smartphone size={20} strokeWidth={1.8} aria-hidden="true" />
+            </button>
+          )}
           {pausata && (
             <span className="ser-pulse" style={{
               fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
@@ -445,45 +476,6 @@ export function BarraLaterale({
             fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
             color: ep.epValidated ? 'var(--s-still)' : 'var(--s-ink-faint)',
           }}>{ep.epValidated ? 'EP ✓' : 'EP'}</span>
-        </div>
-      )}
-      {/* ── COLLEGA IL TELEFONO DEL PC, ANCHE A SEDUTA GIÀ APERTA — segnalato: « la parte
-          opzionale del collegare il telefonino deve essere visibile per attivarla se l'auditor
-          vuole attivarla durante la sessione, una volta la sessione iniziata mettila sotto
-          forma di icona, comprensibile ». Il bottone/la pillola di stato appena sopra
-          (`!aperta && …`) resta l'UNICO modo di avviare il collegamento PRIMA di aprire — qui,
-          la STESSA azione (`onApriSatellite`), nella STESSA forma delle icone vicine
-          (EP/COMMANDS/DIZIONARIO: cerchio 54px, etichetta sotto), per non restare bloccati
-          fuori se la scelta di collegare un telefono arriva a metà seduta (esattamente il
-          momento in cui oggi serve di più: CAM 2 non mostra più nulla senza un flusso vero,
-          v. la nota grande in `ZonaCamere.tsx`). Stesse tre guardie del bottone di prima
-          (`!avvio.solo && !avvio.distanza`, mai in SOLO, mai a distanza — quella modalità ha
-          già la sua `Connessione` a schermo intero) — solo `!aperta` diventa `aperta`. */}
-      {aperta && !avvio.solo && !avvio.distanza && (
-        <div style={{ display: 'grid', justifyItems: 'center', gap: 4, pointerEvents: 'auto' }}>
-          <button
-            className="s-glass s-glass-btn"
-            onClick={onApriSatellite}
-            title={telefonoPcCollegato
-              ? LC('telefono del PC collegato', 'téléphone du PC connecté', "PC's phone connected",
-                   'teléfono del PC conectado', 'PC-telefonen ansluten') as string
-              : LC('opzionale — collega il telefono del PC', 'facultatif — connecter le téléphone du PC',
-                   "optional — connect the PC's phone", 'opcional — conectar el teléfono del PC',
-                   'valfritt — anslut PC:ns telefon') as string}
-            style={{
-              width: 54, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', border: '1.5px solid var(--s-ink-ghost)', borderRadius: '50%',
-              background: 'var(--s-disc)', color: telefonoPcCollegato ? 'var(--s-still)' : 'var(--s-ink-soft)',
-            }}>
-            <Smartphone size={22} strokeWidth={1.8} aria-hidden="true" />
-          </button>
-          <span style={{
-            fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
-            color: telefonoPcCollegato ? 'var(--s-still)' : 'var(--s-ink-faint)',
-          }}>
-            {telefonoPcCollegato ? LC('PC ✓', 'PC ✓', 'PC ✓', 'PC ✓', 'PC ✓')
-              : LC('telefono PC', 'téléphone PC', 'PC phone', 'teléfono PC', 'PC-telefon')}
-          </span>
         </div>
       )}
         <div style={{ display: 'grid', justifyItems: 'center', gap: 4, pointerEvents: 'auto' }}>
