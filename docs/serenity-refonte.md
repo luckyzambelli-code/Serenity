@@ -12174,3 +12174,44 @@ File: `Serenity.tsx` (i quattro `useXCycle(...)` — CONTACT/NULL, MIRROR, TONE,
 
 `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754
 (invariato).
+
+## Giro — 2026-09-11 (continuazione) — COMMANDS: righe doppie nel Giornale, stesso orario
+
+**Segnalato dal vivo, in seduta reale** — incollato direttamente dal Giornale: righe ripetute
+identiche, con lo STESSO orario (« 19.5s PC: ... » tre volte, « 27.9s PC: ... » due volte), « cela
+me semble non correcte au niveau du timing ».
+
+Causa vera: `PistaProcedimento` incoraggia ESPLICITAMENTE l'auditor a scorrere avanti e indietro
+fra i comandi (frecce, rotellina — v. la sua nota in cima al file) — ma `committaRispostaProcedimento`
+non svuotava MAI `risposteProcedimento[indice]` dopo averla scritta nel Giornale. Tornare su un
+comando GIÀ committato e lasciarlo di nuovo (anche senza aver aggiunto una sola parola) richiamava
+la stessa funzione, che ritrovava la STESSA risposta invariata e la riscriveva — un doppione puro.
+Prima della correzione del tempo (giro precedente, stesso giorno) ogni ri-scrittura prendeva
+`sessionClock.now()`, quindi un orario DIVERSO ogni volta: i doppioni c'erano già, ma sembravano
+righe nuove. Con `r.tParola` fissato una volta sola (la correzione di prima), il doppione porta
+ORA lo stesso identico orario di quello originale — più difficile da non notare, non un
+peggioramento, la stessa cosa resa visibile.
+
+Aggiunto `committato?: boolean` al record di ogni risposta: `true` appena scritta nel Giornale,
+riazzerato a `false` non appena arriva qualcosa di NUOVO (voce fresca in
+`registraRispostaVoceProcedimento`, o un tocco dell'auditor in `scriviRispostaProcedimento`).
+`committaRispostaProcedimento` non scrive più nulla se `r.committato` è già vero — tornare su un
+comando senza aggiungere nulla non produce più nessuna riga; aggiungere qualcosa di nuovo, sì,
+una volta sola.
+
+**Trovato scrivendo la correzione, non segnalato:** `scriviRispostaProcedimento` (l'auditor che
+tocca il campo) SOSTITUIVA l'intero record invece di aggiornarlo — perdeva silenziosamente
+`tParola` ad ogni tocco. Effetto pratico: la reazione live sotto il comando (il giro precedente,
+stesso giorno) spariva nel momento stesso in cui l'auditor cominciava a scrivere sopra la
+trascrizione del PC. Corretto insieme, stessa causa di fondo (un record sostituito invece che
+aggiornato) in due punti.
+
+File: `Serenity.tsx` (`committaRispostaProcedimento`, `registraRispostaVoceProcedimento`,
+`scriviRispostaProcedimento`). `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori
+(invariato), `npx vitest run` 754/754 (invariato).
+
+**GUIDE aggiornata nello stesso giro:** segnalato « devi anche aggiornare il GUIDE con il nuovo
+bottone TELEFONO » — mancava del tutto una voce dedicata al collegamento del telefono del PC (solo
+un accenno di passaggio, dentro il paragrafo COMMANDS). Aggiunto un paragrafo nuovo in §3 "Avviare
+una seduta" (FR/IT/EN), che descrive entrambi gli stati: la pillola pre-seduta e la nuova icona
+54px sulla riga di PAUSA, prima di essa, raggiungibile durante tutta la seduta.

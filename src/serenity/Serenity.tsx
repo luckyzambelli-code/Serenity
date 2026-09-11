@@ -295,7 +295,7 @@ export default function Serenity() {
    * Giornale — indipendentemente da quanto l'auditor riscrive sopra la sua copia.
    */
   const [fuocoProcedimento, setFuocoProcedimentoStato] = useState(0);
-  const [risposteProcedimento, setRisposteProcedimento] = useState<Record<number, { auditor: string; pc: string; modificato: boolean; tParola?: number }>>({});
+  const [risposteProcedimento, setRisposteProcedimento] = useState<Record<number, { auditor: string; pc: string; modificato: boolean; tParola?: number; committato?: boolean }>>({});
   const risposteProcedimentoRef = useRef(risposteProcedimento); risposteProcedimentoRef.current = risposteProcedimento;
   const domandeLoggateRef = useRef<Set<number>>(new Set());
   /** Scrive nel Giornale le risposte accumulate per UN comando. La trascrizione del PC, se
@@ -305,7 +305,22 @@ export default function Serenity() {
    *  informazione. */
   const committaRispostaProcedimento = useCallback((indice: number) => {
     const r = risposteProcedimentoRef.current[indice];
-    if (!r) return;
+    // ⚠️ AGGIUNTO `r.committato` — segnalato dal vivo (in seduta reale): righe DOPPIE nel
+    // Giornale, stessa ora, stesso testo, ripetute — « REGARDE, cela me semble non correcte au
+    // niveau du timing ». Causa vera: tornare su un comando GIÀ committato (l'auditor scorre
+    // avanti e indietro fra i comandi, cosa che `PistaProcedimento` incoraggia apposta — v. la
+    // sua nota sulle frecce/rotellina) e poi lasciarlo di nuovo richiama QUESTA funzione da
+    // `impostaFuocoProcedimento` — ma `risposteProcedimentoRef.current[indice]` non veniva MAI
+    // svuotato dopo la scrittura: la STESSA risposta, invariata, veniva scritta una seconda
+    // (terza, quarta…) volta nel Giornale, con lo STESSO `r.tParola` di prima (da qui « stesso
+    // orario » ripetuto — prima della correzione del tempo, più sopra in questo file, ogni
+    // ri-scrittura usava `sessionClock.now()` e quindi un orario DIVERSO ogni volta, che
+    // nascondeva la duplicazione dietro numeri che sembravano tutti nuovi). `committato` segna
+    // « niente di nuovo da quando ho scritto l'ultima volta »: si riazzera a `false` non appena
+    // arriva altro (voce nuova in `registraRispostaVoceProcedimento`, o un tocco dell'auditor in
+    // `scriviRispostaProcedimento`, sotto) — tornare su un comando SENZA aggiungere nulla non
+    // scrive più nulla di nuovo; tornarci E aggiungere qualcosa scrive solo quel che è nuovo.
+    if (!r || r.committato) return;
     // ⚠️ CORRETTO — segnalato: « adesso scrive nello spazio risposta sotto il comando, ma va
     // nel giornale solo quando si passa al comando seguente. QUESTO IMPEDISCE DI VEDERE SE C'È
     // UNA REAZIONE ». Era `time: sessionClock.now()` — l'istante del COMMIT (quando l'auditor
@@ -325,6 +340,11 @@ export default function Serenity() {
                   '↳ PC:s svar (omskrivet av auditören): ') + r.auditor.trim(),
       });
     }
+    setRisposteProcedimento(prev => {
+      const cur = prev[indice];
+      if (!cur) return prev;
+      return { ...prev, [indice]: { ...cur, committato: true } };
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journal]);
   /**
@@ -361,7 +381,16 @@ export default function Serenity() {
    *  di questo comando, anche se il PC continua a parlare. */
   const scriviRispostaProcedimento = useCallback((indice: number, valore: string) => {
     setRisposteProcedimento(prev => ({
-      ...prev, [indice]: { auditor: valore, pc: prev[indice]?.pc ?? '', modificato: true },
+      // ⚠️ CORRETTO due campi che questo `useCallback` perdeva SOSTITUENDO l'intero record
+      // invece di aggiornarlo: `tParola` (senza, la reazione live sotto il comando spariva nel
+      // momento stesso in cui l'auditor toccava il campo — v. la nota grande su `PistaProcedimento`)
+      // e `committato` (senza azzerarlo, riscrivere SOPRA una risposta già committata non faceva
+      // scattare un nuovo commit — v. la nota grande su `committaRispostaProcedimento`, sopra:
+      // stessa causa dei doppioni, un'altra via per arrivarci).
+      ...prev, [indice]: {
+        auditor: valore, pc: prev[indice]?.pc ?? '', modificato: true,
+        tParola: prev[indice]?.tParola, committato: false,
+      },
     }));
   }, []);
   /** ── LA VOCE, QUALUNQUE SIA LA SUA SORGENTE, DENTRO LO STESSO COMANDO A FUOCO — segnalato:
@@ -385,7 +414,10 @@ export default function Serenity() {
       const attuale = prev[fuocoProcedimento] ?? { auditor: '', pc: '', modificato: false };
       const pc = attuale.pc ? `${attuale.pc} ${testo}` : testo;
       const auditor = attuale.modificato ? attuale.auditor : pc;
-      return { ...prev, [fuocoProcedimento]: { auditor, pc, modificato: attuale.modificato, tParola } };
+      // `committato: false` — v. la nota grande su `committaRispostaProcedimento`: arriva voce
+      // nuova, quindi c'è di nuovo qualcosa da scrivere la prossima volta che si lascia questo
+      // comando, anche se era già stato committato in un passaggio precedente.
+      return { ...prev, [fuocoProcedimento]: { auditor, pc, modificato: attuale.modificato, tParola, committato: false } };
     });
   }, [fuocoProcedimento]);
   useEffect(() => {
