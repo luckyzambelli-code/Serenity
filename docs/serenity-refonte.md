@@ -12111,3 +12111,66 @@ Verificato dal vivo: telefono PC → pausa, sulla stessa riga, in quest'ordine, 
 
 `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run`
 754/754 (invariato).
+
+## Giro — 2026-09-11 (continuazione) — la reazione, subito sotto il comando di COMMANDS
+
+**Segnalato:** « Abbiamo un problema pero, adesso scive nello spazio risposta sotto il comando,
+ma va nel giornale solo quando si passa al comando seguente. QUESTO IMPEDISCE DI VEDERE SE C'E
+UNA REAZIONE, invece quando si scrive nel giornale si vede. DEVI METTERE LA REAZIONE AVVENUTA
+NELLO SPAZIO SOTTO IL COMANDO PER PERMETTERE ALL'AUDITOR DI VEDERE SE C'È REAZIONE ». Vero, e due
+cause distinte:
+
+1. **Il tempo sbagliato al commit.** `committaRispostaProcedimento` scriveva la risposta del PC
+   nel Giornale con `time: sessionClock.now()` — l'istante del COMMIT (quando l'auditor passa al
+   comando successivo, anche minuti dopo), non l'istante in cui il PC aveva DAVVERO parlato.
+   `GiornaleSeduta.tsx` cerca la reazione in una finestra attorno a `log.time` — con un tempo così
+   tardivo, la reazione vera era già fuori da quella finestra: nessuna trovata, anche quando c'era
+   stata per davvero.
+2. **Nessuna reazione PRIMA del commit, comunque.** Anche corretto il tempo, la reazione compariva
+   SOLO nel Giornale — mai nello spazio sotto il comando, dove l'auditor la sta davvero guardando
+   mentre il PC parla.
+
+Corretto entrambi. `risposteProcedimento` guadagna `tParola?: number` — l'istante dell'ULTIMA
+parola accumulata in questa risposta, passato da ciascuna delle due sorgenti (`registraRisposta
+VoceProcedimento(testo, tParola)`, non più solo il testo): il microfono locale lo retrodata con
+lo stesso `ritardoS` del percorso normale, il telefono del PC usa l'istante di arrivo (nessuna
+retrodatazione, come il suo stesso percorso senza procedimento). `committaRispostaProcedimento`
+scrive nel Giornale con `r.tParola ?? sessionClock.now()`, non più `sessionClock.now()` diretto.
+`PistaProcedimento.tsx` calcola la reazione DAL VIVO per il comando a fuoco — stessa identica
+formula di `GiornaleSeduta.tsx` (`computeInstantRead` contro `shownReadsRef`/`agoEegRef`, ricevuti
+come prop, non una seconda fonte), con `risposta.tParola` al posto di `log.time` — e la mostra
+subito sotto il campo risposta, stesso badge `→ READ` in `--s-still`. File: `Serenity.tsx`,
+`GruppoBasso.tsx`, `PistaProcedimento.tsx`.
+
+Non verificabile dal vivo nel browser sandbox (COMMANDS ha bisogno dell'app installata per
+leggere la cartella dei procedimenti — v. GUIDE §7 — e qui non c'è microfono). `tsc --noEmit`
+pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-11 (continuazione) — TONE: « altra resistenza » che riscrive la resistenza vecchia
+
+**Segnalato:** « In TONE quando si valida il ciclo, se si passa a AUTRE RESISTANCE succede qui
+riscrive lo stesso iteme, e si deve rischiacciare su AUTRE RESISTANCE per azzere il ciclo e
+ripartire ». Causa vera, TROVATA leggendo — non indovinata: `logLength: () => journal.logs.length`
+(passato a tutti e quattro i cicli — CONTACT/NULL, MIRROR, TONE, TRUTH — non solo TONE) chiude su
+`journal.logs`, l'ARRAY React che `useSessionJournal` SOSTITUISCE (mai muta) ad ogni `addLog` — non
+sul suo valore al momento della chiamata. `localizzaTone()` (l'equivalente per gli altri tre) è un
+`useCallback` con proprie dipendenze che NON includono `logLength` stesso (una chiusura nuova ad
+ogni render, mai messa in lista) — se non si è rigenerato da un po', la chiusura che gira resta
+quella di un render vecchio, con un `journal.logs` vecchio, più CORTO di quello vero.
+`toneLogCursorRef.current = logLength()` si pianta quindi TROPPO INDIETRO: l'effetto che legge
+« cosa si è detto dopo il tasto » (`Serenity.tsx`, gli `useEffect` su `*LogCursorRef`) ritrova righe
+VECCHIE del Giornale — l'item della resistenza appena chiusa — e le riscrive nel campo. Il SECONDO
+clic su "altra resistenza" "risolveva" solo perché, nel frattempo, altri render avevano rigenerato
+la chiusura con un `journal.logs` più fresco — non una vera correzione, un caso fortunato (spiega
+« succede », non sempre).
+
+`App.tsx` (EQUILIBRIUM) non ha MAI avuto questo bug: la sua stessa funzione legge
+`logsRef.current.length` — un REF, mutato sul posto, mai una chiusura da rinfrescare. SERENITY
+aveva la sua PROPRIA versione, con `journal.logs` diretto invece del `logsRef` che
+`useSessionJournal.ts` espone già (`logsRef`, tenuto allineato ad ogni render) — esattamente il
+tipo di divergenza che [[serenity_reproduce_equilibrium_logic]] vieta. Corretto alla RADICE, nei
+quattro punti insieme (stessa causa, non quattro bug): `logLength: () => journal.logsRef.current.length`.
+File: `Serenity.tsx` (i quattro `useXCycle(...)` — CONTACT/NULL, MIRROR, TONE, TRUTH).
+
+`tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754
+(invariato).

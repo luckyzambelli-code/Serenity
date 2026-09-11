@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import type { RefObject } from 'react';
 import { X } from 'lucide-react';
 import type { ComandoProcedimento } from '../lib/procedimenti';
 import { pick5 } from '../i18n5';
+import { computeInstantRead, READ_NON_MISURATO, type ReadSrc } from '../engine/instantRead';
 
 /**
  * PistaProcedimento — I COMANDI DI UN PROCEDIMENTO, NELLO STESSO SPAZIO DI `PistaCiclo`.
@@ -63,6 +65,7 @@ import { pick5 } from '../i18n5';
 export function PistaProcedimento({
   nome, comandi, onChiudi, lang,
   fuoco, onImpostaFuoco, risposte, onScriviRisposta, onApriRisposta,
+  museOk, meterC, shownReadsRef, agoEegRef,
 }: {
   nome: string;
   comandi: ComandoProcedimento[];
@@ -79,13 +82,28 @@ export function PistaProcedimento({
   fuoco: number;
   onImpostaFuoco: (indice: number) => void;
   /** Le due risposte del comando A FUOCO (e di ogni altro già visitato) — mai una fusa
-   *  nell'altra, v. la nota grande in `Serenity.tsx` su `risposteProcedimento`. */
-  risposte: Record<number, { auditor: string; pc: string; modificato: boolean }>;
+   *  nell'altra, v. la nota grande in `Serenity.tsx` su `risposteProcedimento`. `tParola`:
+   *  l'istante (in secondi di seduta, `sessionClock.now()`) dell'ULTIMA parola del PC accumulata
+   *  in questa risposta — v. la nota grande sulla reazione, sotto, sul perché serve. */
+  risposte: Record<number, { auditor: string; pc: string; modificato: boolean; tParola?: number }>;
   onScriviRisposta: (indice: number, valore: string) => void;
   /** La prima volta che l'auditor apre lo spazio risposta di un comando, la SUA domanda entra
    *  nel Giornale — chiamato da `onFocus` del campo, non da un semplice passaggio col fuoco
    *  (scorrere con la rotellina/le frecce resta una lettura passiva, come sempre). */
   onApriRisposta: (indice: number) => void;
+  /**
+   * ⚠️ AGGIUNTO — segnalato: « adesso scrive nello spazio risposta sotto il comando, ma va nel
+   * giornale solo quando si passa al comando seguente. QUESTO IMPEDISCE DI VEDERE SE C'È UNA
+   * REAZIONE... devi mettere la reazione avvenuta nello spazio sotto il comando ». Vero: la
+   * reazione (`→ F`, `→ LFBD`…) compariva SOLO nel Giornale, e solo dopo il commit — troppo
+   * tardi per l'auditor che sta ancora guardando il comando a fuoco. Stessa identica fonte già
+   * usata da `GiornaleSeduta.tsx` per lo stesso calcolo (`computeInstantRead` contro
+   * `shownReadsRef`/`agoEegRef`) — non una seconda implementazione: qui si legge DIRETTAMENTE,
+   * per il comando a fuoco, invece di aspettare che la risposta arrivi nel Giornale. */
+  museOk: boolean;
+  meterC: boolean;
+  shownReadsRef: RefObject<Array<{ time: number; reaction: string; src?: ReadSrc; episodeId?: number }>>;
+  agoEegRef: RefObject<boolean>;
 }) {
   const titoloChiudi = pick5(lang, 'chiudi il procedimento', 'fermer le procédé',
     'close the procedure', 'cerrar el procedimiento', 'stäng proceduren') as string;
@@ -215,6 +233,16 @@ export function PistaProcedimento({
         // frase vera del PC, non ricomincia da un campo vuoto accanto a lei.
         const testoMostrato = risposta?.auditor ?? '';
         const mostraTrascrizione = !risposta?.modificato && !!testoMostrato;
+        // ⚠️ AGGIUNTO — v. la nota grande sul perché, in cima al file. Stessa identica formula
+        // di `GiornaleSeduta.tsx` (`computeInstantRead` contro la finestra `shownReadsRef`),
+        // solo con l'istante dell'ULTIMA parola di QUESTA risposta (`risposta.tParola`) al posto
+        // di `log.time` — qui non c'è ancora un log, la risposta non è stata committata.
+        const reazione = (museOk || meterC) && risposta?.tParola !== undefined
+          ? computeInstantRead(shownReadsRef.current, risposta.tParola, -Infinity, Infinity,
+              agoEegRef.current ? 'eeg' : 'theta').read
+          : undefined;
+        const reazioneUtile = reazione && reazione !== 'NULL' && reazione !== READ_NON_MISURATO
+          ? reazione : null;
         return (
           <div key={i} style={{ width: '100%' }}>
           <button ref={el => { righeRef.current[i] = el; }} type="button" onClick={() => onImpostaFuoco(i)}
@@ -273,7 +301,7 @@ export function PistaProcedimento({
               proseguimento della trascrizione — v. la nota di `Serenity.tsx` sul perché sono
               DUE campi separati). */}
           {inFuoco && (
-            <div style={{ padding: '4px 10px 8px 46px' }}>
+            <div style={{ padding: '4px 10px 8px 46px', display: 'flex', flexDirection: 'column', gap: 3 }}>
               <input
                 type="text"
                 value={testoMostrato}
@@ -288,6 +316,17 @@ export function PistaProcedimento({
                   color: mostraTrascrizione ? 'var(--s-ink-faint)' : 'var(--s-ink)',
                 }}
               />
+              {/* ── LA REAZIONE, SUBITO QUI — v. la nota grande sul perché, in cima al file.
+                  Stesso badge esatto di `GiornaleSeduta.tsx` (`→ READ`, `--s-still`, mono) — lo
+                  stesso segno, riconoscibile, solo spostato dove l'auditor lo sta già guardando. */}
+              {reazioneUtile && (
+                <span style={{
+                  fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)',
+                  fontWeight: 700, color: 'var(--s-still)', paddingLeft: 2,
+                }}>
+                  → {reazioneUtile}
+                </span>
+              )}
             </div>
           )}
           </div>

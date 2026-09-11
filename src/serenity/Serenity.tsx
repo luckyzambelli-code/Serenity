@@ -295,7 +295,7 @@ export default function Serenity() {
    * Giornale — indipendentemente da quanto l'auditor riscrive sopra la sua copia.
    */
   const [fuocoProcedimento, setFuocoProcedimentoStato] = useState(0);
-  const [risposteProcedimento, setRisposteProcedimento] = useState<Record<number, { auditor: string; pc: string; modificato: boolean }>>({});
+  const [risposteProcedimento, setRisposteProcedimento] = useState<Record<number, { auditor: string; pc: string; modificato: boolean; tParola?: number }>>({});
   const risposteProcedimentoRef = useRef(risposteProcedimento); risposteProcedimentoRef.current = risposteProcedimento;
   const domandeLoggateRef = useRef<Set<number>>(new Set());
   /** Scrive nel Giornale le risposte accumulate per UN comando. La trascrizione del PC, se
@@ -306,7 +306,17 @@ export default function Serenity() {
   const committaRispostaProcedimento = useCallback((indice: number) => {
     const r = risposteProcedimentoRef.current[indice];
     if (!r) return;
-    if (r.pc.trim()) journal.addLog({ speaker: 'PC', text: r.pc.trim(), time: sessionClock.now() });
+    // ⚠️ CORRETTO — segnalato: « adesso scrive nello spazio risposta sotto il comando, ma va
+    // nel giornale solo quando si passa al comando seguente. QUESTO IMPEDISCE DI VEDERE SE C'È
+    // UNA REAZIONE ». Era `time: sessionClock.now()` — l'istante del COMMIT (quando l'auditor
+    // passa al comando successivo, anche minuti dopo), non l'istante in cui il PC ha DAVVERO
+    // parlato. `GiornaleSeduta.tsx` calcola la reazione cercando nella finestra di
+    // `shownReadsRef` ATTORNO a `log.time` — con un `time` così tardivo, la reazione vera era già
+    // uscita da quella finestra: nessuna reazione trovata, anche quando c'era stata per davvero.
+    // `r.tParola` (l'istante dell'ULTIMA parola accumulata, preso da `registraRispostaVoceProcedimento`,
+    // sotto) è il tempo giusto — lo stesso già usato per mostrarla live nello spazio sotto il
+    // comando (v. `PistaProcedimento`), qui semplicemente riportato nel Giornale.
+    if (r.pc.trim()) journal.addLog({ speaker: 'PC', text: r.pc.trim(), time: r.tParola ?? sessionClock.now() });
     if (r.modificato && r.auditor.trim()) {
       journal.addLog({
         speaker: 'Aud', type: 'highlight', time: sessionClock.now(),
@@ -362,12 +372,20 @@ export default function Serenity() {
    *  identica logica delle due sorgenti: si accumula nel campo `pc` (il dato grezzo, intatto,
    *  per il Giornale), e in `auditor` SOLO se non ancora `modificato` (lo segue dal vivo finché
    *  l'auditor non tocca il campo — v. la nota grande su `risposteProcedimento`, sopra). */
-  const registraRispostaVoceProcedimento = useCallback((testo: string) => {
+  /** ⚠️ AGGIUNTO `tParola` — segnalato: « la reazione avvenuta nello spazio sotto il comando,
+   *  per vedere se c'è reazione ». Prima accumulava solo il TESTO — nessun istante per potervi
+   *  cercare una reazione (`computeInstantRead` ha bisogno di UN tempo attorno a cui guardare,
+   *  v. la nota grande in `PistaProcedimento` e nel commit del Giornale, sopra). Ogni chiamante
+   *  passa il PROPRIO istante più preciso (v. le due chiamate, sotto): il microfono locale
+   *  retrodata come il percorso normale (`ritardoS`), il telefono del PC usa l'istante di arrivo
+   *  — nessuna delle due deriva un tempo qui, per non indovinarne uno peggiore di quello che il
+   *  chiamante conosce già. */
+  const registraRispostaVoceProcedimento = useCallback((testo: string, tParola: number) => {
     setRisposteProcedimento(prev => {
       const attuale = prev[fuocoProcedimento] ?? { auditor: '', pc: '', modificato: false };
       const pc = attuale.pc ? `${attuale.pc} ${testo}` : testo;
       const auditor = attuale.modificato ? attuale.auditor : pc;
-      return { ...prev, [fuocoProcedimento]: { auditor, pc, modificato: attuale.modificato } };
+      return { ...prev, [fuocoProcedimento]: { auditor, pc, modificato: attuale.modificato, tParola } };
     });
   }, [fuocoProcedimento]);
   useEffect(() => {
@@ -665,7 +683,10 @@ export default function Serenity() {
     // se quello dell'auditor è vuoto: È il campo dell'auditor, semplicemente non ancora toccato.
     onTrascrizione: testo => {
       if (procedimentoAttivo) {
-        registraRispostaVoceProcedimento(testo);
+        // Stesso istante che il ramo `else` qui sotto scrive già nel Giornale per il telefono
+        // del PC (`sessionClock.now()`, nessuna retrodatazione — non ne aveva mai avuta) —
+        // v. la nota grande su `registraRispostaVoceProcedimento`.
+        registraRispostaVoceProcedimento(testo, sessionClock.now());
       } else {
         journal.addLog({ speaker: 'PC', text: testo, time: sessionClock.now() });
       }
@@ -1460,7 +1481,27 @@ export default function Serenity() {
     setAuditingQuestion: setItem,
     setItemSpoken,
     nowSec: () => sessionClock.now(),
-    logLength: () => journal.logs.length,
+    // ⚠️ CORRETTO — segnalato (TONE, stesso `logLength` degli altri tre cicli qui sotto): « se
+    // si passa a AUTRE RESISTANCE succede [che] riscrive lo stesso item, e si deve rischiacciare
+    // per azzerare il ciclo e ripartire ». Causa vera: `() => journal.logs.length` chiude su
+    // `journal.logs` — l'ARRAY React, sostituito (non mutato) da `useSessionJournal` a ogni
+    // `addLog` — non sul suo VALORE al momento della chiamata. `localizzaTone`/l'equivalente
+    // degli altri tre cicli è un `useCallback` con deps PROPRIE (non tutte includono `logLength`
+    // stesso, che qui è comunque una chiusura nuova a ogni render): se non si è rigenerato da un
+    // po', la chiusura che chiama resta quella di un render vecchio, con un `journal.logs`
+    // vecchio — più CORTO di quello vero. Il cursore (`toneLogCursorRef.current = logLength()`,
+    // in `useToneCycle.ts`, uguale per gli altri tre) si pianta quindi TROPPO INDIETRO: l'effetto
+    // che legge « cosa si è detto dopo il tasto » (`Serenity.tsx`, gli `useEffect` su
+    // `*LogCursorRef`) ritrova righe VECCHIE del Giornale (l'item della resistenza appena
+    // chiusa) e le scrive di nuovo nel campo — "riscrive lo stesso item". Il SECONDO clic lo
+    // "risolveva" solo perché, nel frattempo, altri render avevano rigenerato la chiusura con un
+    // `journal.logs` più fresco — non una vera correzione, un caso fortunato.
+    // `App.tsx` (EQUILIBRIUM) non ha MAI avuto questo bug: la sua stessa funzione legge
+    // `logsRef.current.length` — un REF, mutato sul posto, mai una chiusura vecchia da rinfrescare
+    // (v. `useSessionJournal.ts`: `logsRef` esiste già, tenuto allineato ad ogni render,
+    // semplicemente non ancora usato qui). Stessa correzione nei quattro cicli — la STESSA causa,
+    // non quattro bug distinti.
+    logLength: () => journal.logsRef.current.length,
     log: (text, type) => journal.addLog({ speaker: 'SYS', text, time: sessionClock.now(), type }),
     LC,
     thetaTa: () => thetaTaRef.current,
@@ -1505,7 +1546,8 @@ export default function Serenity() {
     setAuditingQuestion: setItem,
     setItemSpoken,
     nowSec: () => sessionClock.now(),
-    logLength: () => journal.logs.length,
+    // `logsRef`, non `journal.logs` — v. la nota grande su `cycles.logLength`, più sopra.
+    logLength: () => journal.logsRef.current.length,
     log: (text, type) => journal.addLog({ speaker: 'SYS', text, time: sessionClock.now(), type }),
     ensureAssessmentOn: attivaAssessment,
     LC,
@@ -1803,7 +1845,8 @@ export default function Serenity() {
     fnNow: toneFnNow, asIsSignature: asIsSignatureNow,
     auditingQuestion: item, setAuditingQuestion: setItem,
     nowSec: () => sessionClock.now(),
-    logLength: () => journal.logs.length,
+    // `logsRef`, non `journal.logs` — v. la nota grande su `cycles.logLength`, più sopra.
+    logLength: () => journal.logsRef.current.length,
     log: (text, type) => journal.addLog({ speaker: 'SYS', text, time: sessionClock.now(), type }),
     setItemSpoken,
     ensureAssessmentOn: attivaAssessment,
@@ -1843,7 +1886,8 @@ export default function Serenity() {
     auditingQuestion: item, setAuditingQuestion: setItem,
     setItemSpoken,
     nowSec: () => sessionClock.now(),
-    logLength: () => journal.logs.length,
+    // `logsRef`, non `journal.logs` — v. la nota grande su `cycles.logLength`, più sopra.
+    logLength: () => journal.logsRef.current.length,
     log: (text, type) => journal.addLog({ speaker: 'SYS', text, time: sessionClock.now(), type }),
     ensureAssessmentOn: attivaAssessment,
     LC,
@@ -2371,12 +2415,16 @@ export default function Serenity() {
       // proprio le righe `'Aud'`, v. la sua nota in `Serenity.tsx`) la intercetterebbe per
       // sbaglio, esattamente il sintomo segnalato. Fuori da un procedimento, o con un telefono
       // collegato, il comportamento resta quello di sempre — invariato, un solo `return` in più.
-      if (procedimentoAttivo && !avvio?.distanza && !remote.isConnected) {
-        registraRispostaVoceProcedimento(text);
-        return;
-      }
+      // ⚠️ `ritardoS` calcolato PRIMA del ramo procedimento — segnalato: « la reazione avvenuta
+      // nello spazio sotto il comando ». Serve la STESSA retrodatazione del ramo normale, sotto,
+      // non un istante diverso: è quanto la trascrizione arriva IN RITARDO sulla parola vera che
+      // la reazione sull'ago accompagna.
       const ritardoS = speechEndMs
         ? Math.min(3, Math.max(0, (performance.now() - speechEndMs) / 1000)) : 0;
+      if (procedimentoAttivo && !avvio?.distanza && !remote.isConnected) {
+        registraRispostaVoceProcedimento(text, Math.max(0, sessionClock.now() - ritardoS));
+        return;
+      }
       // ⚠️ IL TONO DI VOCE — segnalato: « solo il testo con il tono di voce ». Mancava per
       // intero — `useVoiceItem.ts` lo dichiara esplicito («... qui manca tutta la logica di
       // ruolo/satellite/tono-vocale/relay di rete di App.tsx »), non una svista di questa
@@ -3708,6 +3756,10 @@ export default function Serenity() {
           setToneAttivo={setToneAttivo}
           setTonoScelto={setTonoScelto}
           LC={LC}
+          museOk={museOk}
+          meterC={meterC}
+          shownReadsRef={shownReadsRef}
+          agoEegRef={agoEegRef}
         />
         {/* ── MNA — TERZO FRATELLO, NON PIÙ FIGLIO DI `gruppoBasso` ──────────────────────────
             Segnalato: « hai rialzato il MNA ma hai ridotto di molto la zona ago, non va bene.

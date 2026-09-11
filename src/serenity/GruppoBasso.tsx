@@ -24,6 +24,7 @@
  *
  * @see docs/serenity-refonte.md — giro di scomposizione, 2026-09-07.
  */
+import type { RefObject } from 'react';
 import { useI18n } from '../i18n';
 import { Crosshair, Scale, FlipHorizontal2, AudioWaveform, Lightbulb } from 'lucide-react';
 import { PistaProcedimento } from './PistaProcedimento';
@@ -31,6 +32,7 @@ import { PistaCiclo } from './PistaCiclo';
 import type { SessionMode } from '../engine/sessionMode';
 import type { SessionPhase } from '../engine/sessionPhase';
 import type { Procedimento } from '../lib/procedimenti';
+import type { ReadSrc } from '../engine/instantRead';
 import type { useToneCycle } from '../session/useToneCycle';
 import type { useMirrorCycle } from '../session/useMirrorCycle';
 import type { useContactNullCycle } from '../session/useContactNullCycle';
@@ -46,9 +48,16 @@ export interface GruppoBassoProps {
   committaRispostaProcedimento: (indice: number) => void;
   fuocoProcedimento: number;
   impostaFuocoProcedimento: (indice: number) => void;
-  risposteProcedimento: Record<number, { auditor: string; pc: string; modificato: boolean }>;
+  risposteProcedimento: Record<number, { auditor: string; pc: string; modificato: boolean; tParola?: number }>;
   scriviRispostaProcedimento: (indice: number, valore: string) => void;
   apriRispostaProcedimento: (indice: number) => void;
+  /** Passati tale e quale a `PistaProcedimento`, per mostrare la reazione SUBITO sotto il
+   *  comando — v. la nota grande lì. Stessa fonte già passata a `BarraLaterale`→`GiornaleSeduta`
+   *  per il suo stesso calcolo, non una seconda copia. */
+  museOk: boolean;
+  meterC: boolean;
+  shownReadsRef: RefObject<Array<{ time: number; reaction: string; src?: ReadSrc; episodeId?: number }>>;
+  agoEegRef: RefObject<boolean>;
   mode: SessionMode;
   faseCiclo: SessionPhase;
   item: string;
@@ -73,6 +82,7 @@ export function GruppoBasso({
   scriviRispostaProcedimento, apriRispostaProcedimento, mode, faseCiclo, item, setItemManuale,
   dichiaraItemDetto, spiegazioneCiclo, bottoniCiclo, cycles, mirror, toneAttivo, truth, tone,
   confermaItemSePresente, setToneAttivo, setTonoScelto, LC,
+  museOk, meterC, shownReadsRef, agoEegRef,
 }: GruppoBassoProps) {
   const { t, lang } = useI18n();
 
@@ -111,7 +121,8 @@ export function GruppoBasso({
                 }} lang={lang}
                 fuoco={fuocoProcedimento} onImpostaFuoco={impostaFuocoProcedimento}
                 risposte={risposteProcedimento} onScriviRisposta={scriviRispostaProcedimento}
-                onApriRisposta={apriRispostaProcedimento} />
+                onApriRisposta={apriRispostaProcedimento}
+                museOk={museOk} meterC={meterC} shownReadsRef={shownReadsRef} agoEegRef={agoEegRef} />
             : <PistaCiclo mode={mode} phase={faseCiclo} lang={lang}
                 item={item} setItem={setItemManuale} itemPlaceholder={t('ser_item_placeholder') as string}
                 spiegazione={spiegazioneCiclo} onDichiaraDetto={dichiaraItemDetto}>
