@@ -12215,3 +12215,26 @@ bottone TELEFONO » — mancava del tutto una voce dedicata al collegamento del 
 un accenno di passaggio, dentro il paragrafo COMMANDS). Aggiunto un paragrafo nuovo in §3 "Avviare
 una seduta" (FR/IT/EN), che descrive entrambi gli stati: la pillola pre-seduta e la nuova icona
 54px sulla riga di PAUSA, prima di essa, raggiungibile durante tutta la seduta.
+
+## Giro — 2026-09-15 — ToneCalibrationTest: il campionamento di sfondo era congelato
+
+**Trovato leggendo i primi due CSV di test** (non segnalato come bug — l'utente ha chiesto solo
+di capire come è organizzato il file): dentro ogni blocco resistenza, il `qL` di sfondo era un
+numero SOLO, identico per decine di righe consecutive — solo le righe con un evento (locate/top/
+minimo) portavano un valore diverso. Causa: `setInterval` (il campionamento ~4 volte al secondo)
+chiudeva sulla prop `qL` SENZA averla fra le dipendenze dell'effetto (`eslint-disable` apposta) —
+la stessa chiusura ferma già trovata più volte in questo deposito (v. `qLRef` in
+`useToneCycle.ts`). L'effetto si ricrea solo quando `running`/`resistenza` cambiano (cioè a un
+CIMA/TONO 40): fra un cambio e l'altro, scriveva per sempre lo stesso `qL` catturato in quel
+momento, mai quello vero dell'istante in cui la riga viene scritta. `markEvent` non ne soffriva
+(legge `qL` fresco dal corpo del componente ad ogni render) — da qui perché solo i tre marcatori
+portavano un numero vero.
+
+Corretto con un `qLRef` tenuto allineato da un effetto a parte, letto dentro l'intervallo — non
+aggiungendo `qL` alle dipendenze dell'effetto originale, che avrebbe ricreato l'intervallo (e la
+sua fase dei 250ms) ad ogni variazione di `qL`, molto più frequente: mai un campionamento
+regolare. File: `src/serenity/dev/ToneCalibrationTest.tsx`.
+
+I primi due CSV raccolti restano utili solo per i punti marcati (locate/top/minimo, veri) — la
+tendenza fra un punto e l'altro nei due file non è reale, era il numero congelato. `tsc --noEmit`
+pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
