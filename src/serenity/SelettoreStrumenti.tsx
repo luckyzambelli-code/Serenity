@@ -14,7 +14,7 @@
  * @see docs/serenity-refonte.md — giro di scomposizione, 2026-09-07.
  */
 import React, { useSyncExternalStore } from 'react';
-import { Headphones, Gauge, MessageSquareOff } from 'lucide-react';
+import { Headphones, Gauge, MessageSquareOff, Battery } from 'lucide-react';
 import { integrityTracker } from '../runtime/SmoothingEngine';
 import { useI18n } from '../i18n';
 import { COLORE_PUNTO, type StatoConnessione } from './IndicatoreConnessione';
@@ -157,7 +157,8 @@ export function SelettoreStrumenti({
       {strumenti.map(s => {
         const clic = s.onClick;
         return (
-        <button key={s.key} className="s-glass-btn" onClick={clic} title={s.title} data-help={s.title}
+        <React.Fragment key={s.key}>
+        <button className="s-glass-btn" onClick={clic} title={s.title} data-help={s.title}
           style={{
             position: 'relative', border: 'none', background: 'transparent',
             cursor: clic ? 'pointer' : 'default', padding: 6, borderRadius: 999,
@@ -172,10 +173,51 @@ export function SelettoreStrumenti({
             transition: 'background var(--s-slow) var(--s-ease), box-shadow var(--s-slow) var(--s-ease)',
           }} />
         </button>
+        {/* ── LA BATTERIA DEL MUSE, ACCANTO ALLA SUA ICONA — segnalato: « metti sotto o
+            accanto all'icona del MUSE la percentuale della batteria, poiché quando è chiusa
+            Santé Système non si sa ». Il numero esisteva già (`batteryLevel`, già passato a
+            questo componente) ma vivo SOLO dentro il `title` (`museTitolo`, sopra) — un
+            tooltip al passaggio del mouse, invisibile finché non ci si passa sopra apposta,
+            e Santé Système (l'unico posto dove restava visibile SEMPRE) è proprio il pannello
+            che l'auditor chiude. Stessa condizione, stessa icona `Battery`, STESSO badge già
+            presente in EQUILIBRIUM (`InstrumentBadges.tsx`) — non un'invenzione nuova qui:
+            `museConnection === 'connected' && batteryLevel !== null`, senza richiedere anche
+            il contatto (`museGate.museContact`) — la batteria del casco è la stessa che sia
+            indossato o solo appoggiato sul tavolo. */}
+        {s.key === 'muse' && muse.museConnection === 'connected' && batteryLevel !== null && (
+          <span title={t('muse_battery_tip')} style={{
+            display: 'flex', alignItems: 'center', gap: 2, padding: '0 6px 0 0',
+            fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', fontVariantNumeric: 'tabular-nums',
+            color: batteryLevel <= 20 ? 'var(--s-reserve)' : 'var(--s-ink-faint)',
+          }}>
+            <Battery size={13} strokeWidth={1.9} />
+            {batteryLevel.toFixed(0)}%
+          </span>
+        )}
+        </React.Fragment>
         );
       })}
-      {museOk && mostraBiometria && (
-        <span title={t('biometric_integrity')} style={{
+      {/* ⚠️ CORRETTO — segnalato: « la percentuale accanto di INTEGRITÀ non è chiaro cosa sia,
+          dovresti fare in modo che si capisca ». Il `title` diceva solo `t('biometric_integrity')`
+          — l'etichetta stessa ("INTEGRITÀ BIOMETRICA"), non una SPIEGAZIONE: passandoci sopra si
+          leggeva lo stesso nome criptico già scritto "INT" accanto, senza dire di cosa si tratta.
+          La sigla "INT" resta (spazio strettissimo nella pillola) — la spiegazione vera, in più,
+          nel tooltip: è la carica letta dal MUSE in QUESTO istante (`integrityTracker`, alimentato
+          da `qL*100` in `useChargeEngine.ts`), lisciata perché non salti in continuazione, NON
+          una misura della qualità del segnale/collegamento nonostante il nome. Stringa locale
+          (`LC`), non la voce condivisa `biometric_integrity` — quella resta un titolo generico,
+          usato anche altrove (`BiometricPanel.tsx`/EQUILIBRIUM) dove riscriverla come frase
+          intera non ci starebbe. */}
+      {museOk && mostraBiometria && (() => {
+        const integritaSpiegata = LC(
+          'integrità biometrica — la carica letta dal MUSE in questo momento, da 0 a 100%',
+          'intégrité biométrique — la charge lue par le MUSE en ce moment, de 0 à 100 %',
+          'biometric integrity — the charge read from the MUSE right now, 0 to 100%',
+          'integridad biométrica — la carga leída por el MUSE en este momento, de 0 a 100%',
+          'biometrisk integritet — laddningen som MUSE läser just nu, 0 till 100%',
+        ) as string;
+        return (
+        <span title={integritaSpiegata} data-help={integritaSpiegata} style={{
           display: 'flex', alignItems: 'baseline', gap: 3, padding: '0 8px 0 2px',
           fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', color: 'var(--s-ink-faint)',
         }}>
@@ -184,7 +226,8 @@ export function SelettoreStrumenti({
           </span>
           <LetturaIntegrita />
         </span>
-      )}
+        );
+      })()}
     </span>
   );
 }

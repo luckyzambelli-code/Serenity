@@ -12256,3 +12256,31 @@ media toglie, non solo il risultato finale.
 
 File: `src/serenity/dev/ToneCalibrationTest.tsx`. `tsc --noEmit` pulito, `npm run lint` 324
 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-16 (continuazione) — la batteria del MUSE accanto alla sua icona, e INT spiegato
+
+**Segnalato:** « Vorrei che tu mettessi però sotto o accanto all'icona del MUSE la percentuale
+della batteria, poiché quando è chiusa salute sistema non si sa ». Il numero (`batteryLevel`)
+arrivava già come prop a `SelettoreStrumenti` ma viveva SOLO dentro il `title` (tooltip al
+passaggio del mouse) — invisibile finché non ci si passa sopra apposta, e Santé Système (l'unico
+posto dove restava visibile SEMPRE) è proprio il pannello che l'auditor chiude. Aggiunto un badge
+vero — icona `Battery` + percentuale, stessa condizione e stessa icona già usate in EQUILIBRIUM
+(`InstrumentBadges.tsx`: `museConnection === 'connected' && batteryLevel !== null`) — accanto
+all'icona del MUSE nella pillola strumenti. Tinto `--s-reserve` (il colore di "attenzione" già
+usato altrove) sotto il 20%, `--s-ink-faint` altrimenti — tace quando va bene, parla quando no.
+
+**Segnalato subito dopo:** « la percentuale accanto di INTEGRITÀ non è chiaro cosa sia, dovresti
+fare in modo che si capisca ». Vero — il `title` diceva solo l'etichetta stessa
+(`t('biometric_integrity')` → "INTEGRITÀ BIOMETRICA"), non una spiegazione: passandoci sopra si
+leggeva lo stesso nome criptico già scritto "INT" accanto. Verificato cosa quel numero calcola
+davvero (`integrityTracker.setTarget(qL*100)` in `useChargeEngine.ts`): è la carica (`qL`) letta
+dal MUSE in quel momento, lisciata ed espressa 0-100% — NON una misura di qualità del segnale/
+collegamento, nonostante il nome. Aggiunta una spiegazione vera nel tooltip (stringa locale `LC`,
+non la voce condivisa `biometric_integrity` — quella resta un titolo generico usato anche altrove,
+`BiometricPanel.tsx`/EQUILIBRIUM, dove riscriverla come frase intera non ci starebbe), anche in
+`data-help` per il sistema di aiuto della pillola.
+
+File: `src/serenity/SelettoreStrumenti.tsx`. Non verificabile dal vivo nel browser sandbox (serve
+un MUSE vero collegato) — verificato che il rendering non si rompe senza strumento collegato.
+`tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754
+(invariato).
