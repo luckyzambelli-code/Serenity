@@ -19,11 +19,18 @@
  *     ancora nella parte bassa; il cursore dice comunque il nome di QUALUNQUE livello, quindi
  *     togliere etichette non toglie informazione — toglie rumore.
  *
- * ── I DOPPIONI SONO VOLUTI ──────────────────────────────────────────────────────────────────
- * Sympathy sta a 9,0 e a 0,9; Grief a 5,0 e a 0,5; Making Amends a 3,75 e a 0,375. Sono nella
- * scala di Ron così come li ha dati l'utente — la banda alta e la sua eco un decimo più in
- * basso — e non si deduplicano: sarebbero due stati diversi con lo stesso nome, ed è la scala
- * a volerlo.
+ * ── ⚠️ CORRETTO — TRE LIVELLI FALSI, TROVATI CONFRONTANDO CON LA FONTE VERA ────────────────
+ * Segnalato: « ma dove hai visto un tono 5? io non ce l'ho??! ». Verificato contro l'HCO
+ * Bulletin del 25 settembre 1971RB (rivisto 1 aprile 1978), « SCALA DEL TONO AL COMPLETO —
+ * SCALA DEL TONO ESTESA », la fonte vera data dall'utente — QUESTA tabella aveva TRE livelli
+ * che in quel documento NON ESISTONO: 9,0 (« Sympathy »), 5,0 (« Grief ») e 3,75 (« Making
+ * Amends »). La nota che stava qui prima (« i doppioni sono voluti: Sympathy sta a 9,0 e a
+ * 0,9... ») era un'invenzione plausibile ma falsa — Ron non duplica quei tre stati in cima
+ * alla banda alta, la scala vera salta DRITTA da 20,0 (Action) a 8,0 (Exhilaration), senza
+ * fermata a 9. I loro « echi » più bassi (0,9 · 0,5 · 0,375) SONO reali e restano — solo i tre
+ * duplicati alti erano fabbricati. Tolti, non solo nascosti: nessun test dipendeva da loro
+ * (verificato con una ricerca sul deposito), e tenerli avrebbe voluto dire proporre all'auditor
+ * un tono su cui appoggiare una domanda che Ron non ha mai scritto.
  *
  * Puro TS, nessun React: si prova da solo.
  */
@@ -44,12 +51,9 @@ export const TONE_LEVELS: readonly ToneLevel[] = [
   { tone:  30.0,  name: 'Postulates' },
   { tone:  22.0,  name: 'Games' },
   { tone:  20.0,  name: 'Action' },
-  { tone:   9.0,  name: 'Sympathy' },
   { tone:   8.0,  name: 'Exhilaration / Proportion' },
   { tone:   6.0,  name: 'Aesthetic' },
-  { tone:   5.0,  name: 'Grief' },
   { tone:   4.0,  name: 'Enthusiasm' },
-  { tone:   3.75, name: 'Making Amends' },
   { tone:   3.5,  name: 'Cheerfulness' },
   { tone:   3.3,  name: 'Strong Interest' },
   { tone:   3.0,  name: 'Conservatism' },
@@ -107,9 +111,13 @@ export const TONE_LEVELS: readonly ToneLevel[] = [
 /**
  * I livelli che si SCRIVONO sulla colonna — scelti dall'utente perché coprano la scala senza
  * accavallarsi. Gli altri restano leggibili dal cursore, che ne dice il nome per esteso.
+ *
+ * ⚠️ 9 → 8 — il 9 era uno dei tre livelli falsi tolti sopra (v. la nota grande su
+ * `TONE_LEVELS`): non esisteva un tono 9 da scegliere come etichetta. `8` (Exhilaration), il
+ * livello vero più vicino in quella fascia, prende il suo posto come ancora dell'asse.
  */
 export const TONE_LABELS: readonly number[] =
-  [40, 30, 20, 9, 6, 4, 3, 2, 0, -10, -20, -30, -40] as const;
+  [40, 30, 20, 8, 6, 4, 3, 2, 0, -10, -20, -30, -40] as const;
 
 /**
  * Le tacche degli OTTO SEGMENTI: ogni multiplo di dieci, da −40 a +40. Nove tacche, otto
@@ -184,13 +192,17 @@ export const exactLevelName = (tone: number): string | undefined =>
 /**
  * ⚠️ LA CHIAVE È IL NOME INGLESE, e non è per pigrizia: è il nome che Ron dà al livello, quello
  * che compare nella tabella e nei testi. Restando la chiave, cambiare una traduzione non può
- * spostare un livello — e i tre nomi che si ripetono (Sympathy, Grief, Making Amends, ognuno a
- * un valore e al suo decimo) si traducono una volta sola, come è giusto.
+ * spostare un livello.
  *
  * ⚠️ Le chiavi si copiano dalla tabella, MAI a mano: il livello −30 si chiama « Can't Hide » e
  * un elenco ricavato con uno script si era fermato all'apostrofo, lasciando « Can ». Il nome
  * esisteva, la traduzione no, e guardando lo schermo non si sarebbe visto niente di strano —
  * `levelName` ricade sull'inglese. È il test `hasLevelName` che l'ha preso.
+ *
+ * ⚠️ DIECI TRADUZIONI CORRETTE contro l'HCO Bulletin del 25/09/1971RB (rivisto 1/4/1978), la
+ * fonte vera — v. la nota grande su `TONE_LEVELS`, sopra, per come è arrivata. Segnate riga per
+ * riga, sotto, dove cadono: la parola italiana di prima (spesso plausibile, mai verificata
+ * contro il testo di Ron) non coincideva con quella del Bulletin.
  */
 const NOMI: Record<string, [string, string, string, string]> = {
   //                          IT                       FR                        ES                          SV
@@ -198,34 +210,34 @@ const NOMI: Record<string, [string, string, string, string]> = {
   'Postulates':            ['Postulati',             'Postulats',              'Postulados',               'Postulat'],
   'Games':                 ['Giochi',                'Jeux',                   'Juegos',                   'Spel'],
   'Action':                ['Azione',                'Action',                 'Acción',                   'Handling'],
-  'Sympathy':              ['Simpatia',              'Sympathie',              'Simpatía',                 'Sympati'],
-  'Exhilaration / Proportion': ['Esaltazione / Proporzione', 'Exaltation / Proportion', 'Euforia / Proporción', 'Upprymdhet / Proportion'],
+  'Sympathy':              ['Compassione',           'Sympathie',              'Simpatía',                 'Sympati'],   // Bulletin: COMPASSIONE (0,9)
+  'Exhilaration / Proportion': ['Ilarità',            'Exaltation / Proportion', 'Euforia / Proporción', 'Upprymdhet / Proportion'],   // Bulletin: ILARITÀ (8,0)
   'Aesthetic':             ['Estetica',              'Esthétique',             'Estética',                 'Estetik'],
-  'Grief':                 ['Dolore',                'Chagrin',                'Pena',                     'Sorg'],
+  'Grief':                 ['Afflizione',            'Chagrin',                'Pena',                     'Sorg'],   // Bulletin: AFFLIZIONE (0,5)
   'Enthusiasm':            ['Entusiasmo',            'Enthousiasme',           'Entusiasmo',               'Entusiasm'],
   'Making Amends':         ['Fare ammenda',          'Faire amende',           'Enmendar',                 'Gottgörelse'],
   'Cheerfulness':          ['Allegria',              'Gaieté',                 'Alegría',                  'Munterhet'],
   'Strong Interest':       ['Interesse forte',       'Intérêt fort',           'Interés fuerte',           'Starkt intresse'],
   'Conservatism':          ['Conservatorismo',       'Conservatisme',          'Conservadurismo',          'Konservatism'],
   'Mild Interest':         ['Interesse lieve',       'Intérêt léger',          'Interés leve',             'Milt intresse'],
-  'Contented':             ['Contentezza',           'Contentement',           'Contento',                 'Belåtenhet'],
+  'Contented':             ['Soddisfatto',           'Contentement',           'Contento',                 'Belåtenhet'],   // Bulletin: SODDISFATTO (2,8)
   'Disinterested':         ['Disinteresse',          'Désintérêt',             'Desinterés',               'Ointresse'],
   'Boredom':               ['Noia',                  'Ennui',                  'Aburrimiento',             'Uttråkning'],
   'Monotony':              ['Monotonia',             'Monotonie',              'Monotonía',                'Monotoni'],
   'Antagonism':            ['Antagonismo',           'Antagonisme',            'Antagonismo',              'Antagonism'],
   'Hostility':             ['Ostilità',              'Hostilité',              'Hostilidad',               'Fientlighet'],
-  'Pain':                  ['Dolore fisico',         'Douleur',                'Dolor',                    'Smärta'],
+  'Pain':                  ['Dolore',                'Douleur',                'Dolor',                    'Smärta'],   // Bulletin: DOLORE (1,8)
   'Anger':                 ['Collera',               'Colère',                 'Ira',                      'Ilska'],
   'Hate':                  ['Odio',                  'Haine',                  'Odio',                     'Hat'],
   'Resentment':            ['Risentimento',          'Ressentiment',           'Resentimiento',            'Förbittring'],
-  'No Sympathy':           ['Nessuna simpatia',      'Aucune sympathie',       'Sin simpatía',             'Ingen sympati'],
+  'No Sympathy':           ['Nessuna compassione',   'Aucune sympathie',       'Sin simpatía',             'Ingen sympati'],   // Bulletin: NESSUNA COMPASSIONE (1,2)
   'Unexpressed Resentment':['Risentimento inespresso','Ressentiment inexprimé','Resentimiento no expresado','Outtryckt förbittring'],
   'Covert Hostility':      ['Ostilità nascosta',     'Hostilité cachée',       'Hostilidad encubierta',    'Dold fientlighet'],
   'Anxiety':               ['Ansia',                 'Anxiété',                'Ansiedad',                 'Ångest'],
   'Fear':                  ['Paura',                 'Peur',                   'Miedo',                    'Rädsla'],
   'Despair':               ['Disperazione',          'Désespoir',              'Desesperación',            'Förtvivlan'],
   'Terror':                ['Terrore',               'Terreur',                'Terror',                   'Skräck'],
-  'Numb':                  ['Torpore',               'Engourdissement',        'Entumecimiento',           'Domning'],
+  'Numb':                  ['Intontimento',          'Engourdissement',        'Entumecimiento',           'Domning'],   // Bulletin: INTONTIMENTO (0,94)
   'Propitiation':          ['Propiziazione',         'Propitiation',           'Propiciación',             'Blidkande'],
   'Undeserving':           ['Immeritevole',          'Indigne',                'Inmerecedor',              'Ovärdig'],
   'Self-abasement':        ['Autoumiliazione',       'Auto-abaissement',       'Autohumillación',          'Självförnedring'],
@@ -238,9 +250,9 @@ const NOMI: Record<string, [string, string, string, string]> = {
   'Failure':               ['Fallimento',            'Échec',                  'Fracaso',                  'Misslyckande'],
   'Pity':                  ['Pietà',                 'Pitié',                  'Lástima',                  'Medlidande'],
   'Shame':                 ['Vergogna',              'Honte',                  'Vergüenza',                'Skam'],
-  'Accountable':           ['Rendere conto',         'Rendre compte',          'Rendir cuentas',           'Ansvarsskyldig'],
-  'Blame':                 ['Colpa',                 'Blâme',                  'Culpa',                    'Skuldbeläggande'],
-  'Regret':                ['Rimpianto',             'Regret',                 'Arrepentimiento',          'Ånger'],
+  'Accountable':           ['Colpevole',             'Rendre compte',          'Rendir cuentas',           'Ansvarsskyldig'],   // Bulletin: COLPEVOLE (−0,7)
+  'Blame':                 ['Incolpare',             'Blâme',                  'Culpa',                    'Skuldbeläggande'],   // Bulletin: INCOLPARE (−1,0)
+  'Regret':                ['Rimorso',               'Regret',                 'Arrepentimiento',          'Ånger'],   // Bulletin: RIMORSO (−1,3)
   'Controlling Bodies':    ['Controllare i corpi',   'Contrôler les corps',    'Controlar cuerpos',        'Styra kroppar'],
   'Protecting Bodies':     ['Proteggere i corpi',    'Protéger les corps',     'Proteger cuerpos',         'Skydda kroppar'],
   'Owning Bodies':         ['Possedere i corpi',     'Posséder les corps',     'Poseer cuerpos',           'Äga kroppar'],

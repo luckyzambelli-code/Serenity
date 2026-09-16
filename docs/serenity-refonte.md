@@ -12367,3 +12367,50 @@ un'unità su tutta la scala, da −40 a +40.
 
 File: `src/components/ToneColumn.tsx`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0
 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-16 (continuazione ancora) — TONE: tre livelli falsi tolti, dieci traduzioni corrette
+
+**Segnalato, con la fonte vera in mano:** « ma dove hai visto un tono 5? io non ce l'ho??! » —
+poi l'utente ha mandato l'HCO Bulletin del 25 settembre 1971RB (rivisto 1 aprile 1978), « SCALA
+DEL TONO AL COMPLETO — SCALA DEL TONO ESTESA », il documento originale di Ron. Confrontata riga
+per riga con `TONE_LEVELS`: **tre livelli non esistono affatto** nel Bulletin —
+9,0 (« Sympathy »), 5,0 (« Grief »), 3,75 (« Making Amends »). La scala vera salta DRITTA da
+20,0 (Action) a 8,0 (Exhilaration), senza fermata a 9 — e così per gli altri due. La nota che
+giustificava questi tre come « doppioni voluti » (la banda alta e la sua eco un decimo più in
+basso) era un'invenzione plausibile, mai verificata contro il testo di Ron — tolti tutti e tre,
+non solo nascosti.
+
+**Trovate confrontando il resto della tabella, non segnalate una per una:** dieci traduzioni
+italiane che non coincidevano con la parola del Bulletin — corrette:
+
+| tono | prima | Bulletin |
+|---|---|---|
+| 8,0 | Esaltazione / Proporzione | **Ilarità** |
+| 2,8 | Contentezza | **Soddisfatto** |
+| 1,8 | Dolore fisico | **Dolore** |
+| 1,2 | Nessuna simpatia | **Nessuna compassione** |
+| 0,94 | Torpore | **Intontimento** |
+| 0,9 | Simpatia | **Compassione** |
+| 0,5 | Dolore | **Afflizione** |
+| −0,7 | Rendere conto | **Colpevole** |
+| −1,0 | Colpa | **Incolpare** |
+| −1,3 | Rimpianto | **Rimorso** |
+
+`TONE_LABELS` (le 13 etichette della colonna, v. `ToneColumn.tsx`) aveva "9" fra le sue ancore
+— sostituito con "8" (Exhilaration/Ilarità, il livello vero più vicino).
+
+**Poi, sulla lente aggiunta nel giro precedente:** « devi utilizzare solo i toni dati nella
+scala espansa, quelli intermediari se non ci sono non sono indicati ». Il tentativo precedente
+riempiva i vuoti di Ron con interi inventati (10, 11, 12…) — sembrava ragionevole finché non è
+arrivata la fonte vera. Tolto: la lente ora legge `TONE_LEVELS` (corretto) direttamente, senza
+alcun riempimento sintetico — dove Ron ha un vuoto, la lente mostra semplicemente un salto più
+grande fra due toni reali, mai un numero che Ron non ha scritto. La "scala espansa" non è
+un'invenzione da fare in questo file: è il nome proprio del documento di Ron.
+
+Tre test in `toneLevels.test.ts` aggiornati per riflettere la correzione (non più i doppioni
+falsi, dieci traduzioni verificate contro il Bulletin, la banda "vita quotidiana" misurata fino
+a 8 invece che a 9).
+
+File: `src/engine/toneLevels.ts`, `src/components/ToneColumn.tsx`,
+`src/engine/__tests__/toneLevels.test.ts`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0
+errori (invariato), `npx vitest run` 754/754 (tre test riscritti, non solo fatti passare).

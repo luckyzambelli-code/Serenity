@@ -23,14 +23,20 @@ describe('la tabella', () => {
     }
   });
 
-  it('i DOPPIONI di nome sono voluti: la banda alta e la sua eco un decimo più in basso', () => {
+  // ⚠️ CORRETTO — segnalato dal vivo, con la fonte vera in mano (« ma dove hai visto un tono
+  // 5? io non ce l'ho??! », poi l'HCO Bulletin del 25/09/1971RB rivisto 1/4/1978, « SCALA DEL
+  // TONO ESTESA »): i « doppioni » che questo test pretendeva (Sympathy 9,0/0,9, Grief 5,0/0,5,
+  // Making Amends 3,75/0,375) erano un'invenzione — nel Bulletin vero la banda alta salta DRITTA
+  // da 20,0 (Action) a 8,0 (Exhilaration), senza fermata a 9, e così per gli altri due. Tolti i
+  // tre livelli falsi da `TONE_LEVELS` — questo test ora verifica l'opposto di prima: NESSUN
+  // nome si ripete più, i tre "echi" bassi (0,9 · 0,5 · 0,375) restano soli, ciascuno con la sua
+  // propria traduzione, mai più costretta a valere anche per un gemello che non esiste.
+  it('nessun nome si ripete più — i tre echi bassi restano soli', () => {
     const nomi = TONE_LEVELS.map(l => l.name);
     const doppi = nomi.filter((n, i) => nomi.indexOf(n) !== i);
-    expect([...new Set(doppi)].sort()).toEqual(['Grief', 'Making Amends', 'Sympathy']);
-    // …e ciascuno sta a un valore e al suo decimo.
+    expect([...new Set(doppi)]).toEqual([]);
     for (const n of ['Sympathy', 'Grief', 'Making Amends']) {
-      const v = TONE_LEVELS.filter(l => l.name === n).map(l => l.tone);
-      expect({ n, ok: Math.abs(v[0] / 10 - v[1]) < 1e-9 }).toEqual({ n, ok: true });
+      expect({ n, quanti: TONE_LEVELS.filter(l => l.name === n).length }).toEqual({ n, quanti: 1 });
     }
   });
 });
@@ -110,12 +116,17 @@ describe('la posizione sulla colonna — è la corrispondenza con l ago', () => 
     expect(tonePosition(0)).toBeCloseTo(1 / 3, 10);
   });
 
-  it('la banda della vita quotidiana (0…9) prende QUASI METÀ colonna', () => {
-    // Lineare valeva 9/80, cioè un nono scarso, e i venticinque livelli che ci stanno dentro
-    // erano illeggibili. Ora attraversa cinque etichette (0 2 3 4 6 9) su dodici intervalli.
-    const banda = tonePosition(9) - tonePosition(0);
+  // ⚠️ 9 → 8 — segnalato: « ma dove hai visto un tono 5? io non ce l'ho??! », poi verificato
+  // contro l'HCO Bulletin vero: il tono 9 non è mai esistito nella scala di Ron, tolto insieme
+  // agli altri due livelli falsi (v. la nota grande in `toneLevels.ts`). `TONE_LABELS` ha
+  // sostituito l'etichetta 9 con 8 (Exhilaration, il livello vero più vicino) — la banda
+  // "vita quotidiana" ora si misura fino a lì, stessi cinque intervalli di prima.
+  it('la banda della vita quotidiana (0…8) prende QUASI METÀ colonna', () => {
+    // Lineare valeva 8/80, un decimo scarso, e i livelli che ci stanno dentro erano illeggibili.
+    // Ora attraversa cinque etichette (0 2 3 4 6 8) su dodici intervalli.
+    const banda = tonePosition(8) - tonePosition(0);
     expect(banda).toBeCloseTo(5 / 12, 10);
-    expect(banda).toBeGreaterThan(9 / 80);
+    expect(banda).toBeGreaterThan(8 / 80);
   });
 
   it('ogni intervallo fra due etichette scritte vale UGUALE', () => {
@@ -206,11 +217,26 @@ describe('i nomi nelle cinque lingue', () => {
     expect(levelNameAtIn(1.5, 'en')).toBe('Anger');
   });
 
-  it('i tre nomi che si ripetono si traducono UNA volta, e uguale nei due posti', () => {
-    for (const n of ['Sympathy', 'Grief', 'Making Amends']) {
-      const v = TONE_LEVELS.filter(l => l.name === n);
-      expect({ n, uguali: levelName(v[0].name, 'it') === levelName(v[1].name, 'it') })
-        .toEqual({ n, uguali: true });
+  // ⚠️ CORRETTO — v. la nota grande in cima al file: 'Sympathy'/'Grief'/'Making Amends' non
+  // hanno più un secondo posto (i tre livelli alti falsi sono stati tolti), quindi non c'è più
+  // niente da confrontare "nei due posti". Al suo posto, dieci traduzioni italiane verificate
+  // parola per parola contro l'HCO Bulletin — la fonte vera, non più un'invenzione plausibile.
+  it('dieci traduzioni italiane corrette contro l HCO Bulletin (SCALA DEL TONO ESTESA)', () => {
+    const attese: Record<number, string> = {
+      8.0: 'Ilarità',
+      2.8: 'Soddisfatto',
+      1.8: 'Dolore',
+      1.2: 'Nessuna compassione',
+      0.94: 'Intontimento',
+      0.9: 'Compassione',
+      0.5: 'Afflizione',
+      [-0.7]: 'Colpevole',
+      [-1.0]: 'Incolpare',
+      [-1.3]: 'Rimorso',
+    };
+    for (const [tone, atteso] of Object.entries(attese)) {
+      const t = Number(tone);
+      expect({ t, nome: levelNameAtIn(t, 'it') }).toEqual({ t, nome: atteso });
     }
   });
 });

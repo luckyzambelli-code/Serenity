@@ -3,7 +3,6 @@ import { useUiStore } from '../store/uiStore';
 import { TONE_LEVELS, levelAt, exactLevelName, levelName } from '../engine/toneLevels';
 import { pick5 } from '../i18n5';
 import { TOKEN } from '../ui/tokens';
-import { TONE_SCALE_MAX } from '../engine/tuning';
 
 /**
  * ToneColumn — LA SCALA DEL TONO, in verticale, accanto all'ago.
@@ -112,36 +111,28 @@ export function spezza(nome: string, max = MAX_CAR): string[] {
  * all'intera scala. Il risultato si ricalcola ad ogni tono nuovo: la colonna "insegue" la
  * lettura invece di restare un poster fisso con un cursore che ci scorre sopra.
  *
- * ⚠️ CORRETTO SUBITO DOPO — segnalato: « hai troppi pochi toni. Passi da 9 a 20, devi mettere
- * un certo numero di toni che si seguono, come scala espansa, al fine di aiutare l'auditor per
- * indicare al PC magari il tono successivo da raggiungere ». Vero — i tredici `TONE_LABELS`
- * sono scelti apposta per NON accavallarsi (v. `toneLevels.ts`), quindi restano radi anche
- * nella loro stessa scala intera: fra 9 e 20 non c'è NIENTE, nemmeno nei 62 nomi completi di
- * Ron (`TONE_LEVELS`) — è la scala stessa a non avere un nome lì, non una scelta di questo
- * file. Ma l'auditor non ha bisogno di un NOME per dare un traguardo intermedio al PC — gli
- * basta un NUMERO (« portalo a undici »). `TONI_RIFERIMENTO` (sotto) unisce i 62 nomi di Ron a
- * un intero per ogni unità SENZA un nome già vicino (entro mezzo punto) — dove Ron è fitto
- * (0…9, decine di nomi) restano i nomi suoi, intatti; dove Ron è rado (9…40) la lente si
- * riempie da sola di numeri interi consecutivi, una scala espansa vera, mai un salto più largo
- * di un'unità.
+ * ⚠️ CORRETTO SUBITO DOPO, POI CORRETTO DI NUOVO — segnalato: « hai troppi pochi toni. Passi
+ * da 9 a 20, devi mettere un certo numero di toni che si seguono, come scala espansa ». Un primo
+ * tentativo aveva riempito i vuoti di Ron con interi inventati (10, 11, 12…) — sembrava
+ * ragionevole finché l'utente non ha mandato la fonte VERA (l'HCO Bulletin « SCALA DEL TONO
+ * ESTESA », v. la nota grande su `TONE_LEVELS` in `toneLevels.ts`) e ha chiarito: « devi
+ * utilizzare solo i toni dati nella scala espansa, quelli intermediari se non ci sono non sono
+ * indicati ». La « scala espansa » non è un'invenzione da fare qui: è il NOME PROPRIO di quel
+ * documento — i 59 livelli reali di `TONE_LEVELS`, corretti contro il Bulletin. Dove Ron ha un
+ * vuoto (9…20, per esempio: lì non c'era mai stato un tono 9 vero, tolto insieme agli altri due
+ * falsi), la lente mostra semplicemente un salto più grande fra due toni reali — MAI un numero
+ * che Ron non ha scritto.
  *
  * Non tocca `tonePosition` (in `toneLevels.ts`, puro, provato, usato anche altrove) — resta
  * la fonte della VERITÀ sulla posizione assoluta; qui si legge solo l'elenco completo dei
  * livelli per costruire la finestra locale.
  */
-/** Tutti i 62 nomi di Ron più un intero per ogni unità che ne resta priva — calcolato una sola
- *  volta (non dipende da `tone`, ricalcolarlo ad ogni render sarebbe lavoro sprecato). */
-const TONI_RIFERIMENTO: readonly number[] = (() => {
-  const nominati = TONE_LEVELS.map(l => l.tone);
-  const punti = new Set<number>(nominati);
-  for (let i = -TONE_SCALE_MAX; i <= TONE_SCALE_MAX; i++) {
-    if (!nominati.some(n => Math.abs(n - i) < 0.5)) punti.add(i);
-  }
-  return Array.from(punti).sort((a, b) => a - b);
-})();
 const RAGGIO = 4;
+/** I toni di Ron, ascendenti — calcolato una sola volta (non dipende da `tone`, ricalcolarlo
+ *  ad ogni render sarebbe lavoro sprecato per un elenco che non cambia mai). */
+const NODI: readonly number[] = TONE_LEVELS.map(l => l.tone).slice().reverse();
 function useFinestra(tone: number) {
-  const nodi = TONI_RIFERIMENTO;                           // −40 … +40, già ascendente
+  const nodi = NODI;
   let segIdx = nodi.length - 1;
   for (let i = 1; i < nodi.length; i++) {
     if (tone <= nodi[i]) { segIdx = i; break; }
