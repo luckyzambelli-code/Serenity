@@ -1,8 +1,9 @@
 import React from 'react';
 import { useUiStore } from '../store/uiStore';
-import { TONE_LABELS, levelAt, exactLevelName, levelName } from '../engine/toneLevels';
+import { TONE_LEVELS, levelAt, exactLevelName, levelName } from '../engine/toneLevels';
 import { pick5 } from '../i18n5';
 import { TOKEN } from '../ui/tokens';
+import { TONE_SCALE_MAX } from '../engine/tuning';
 
 /**
  * ToneColumn — LA SCALA DEL TONO, in verticale, accanto all'ago.
@@ -111,13 +112,36 @@ export function spezza(nome: string, max = MAX_CAR): string[] {
  * all'intera scala. Il risultato si ricalcola ad ogni tono nuovo: la colonna "insegue" la
  * lettura invece di restare un poster fisso con un cursore che ci scorre sopra.
  *
+ * ⚠️ CORRETTO SUBITO DOPO — segnalato: « hai troppi pochi toni. Passi da 9 a 20, devi mettere
+ * un certo numero di toni che si seguono, come scala espansa, al fine di aiutare l'auditor per
+ * indicare al PC magari il tono successivo da raggiungere ». Vero — i tredici `TONE_LABELS`
+ * sono scelti apposta per NON accavallarsi (v. `toneLevels.ts`), quindi restano radi anche
+ * nella loro stessa scala intera: fra 9 e 20 non c'è NIENTE, nemmeno nei 62 nomi completi di
+ * Ron (`TONE_LEVELS`) — è la scala stessa a non avere un nome lì, non una scelta di questo
+ * file. Ma l'auditor non ha bisogno di un NOME per dare un traguardo intermedio al PC — gli
+ * basta un NUMERO (« portalo a undici »). `TONI_RIFERIMENTO` (sotto) unisce i 62 nomi di Ron a
+ * un intero per ogni unità SENZA un nome già vicino (entro mezzo punto) — dove Ron è fitto
+ * (0…9, decine di nomi) restano i nomi suoi, intatti; dove Ron è rado (9…40) la lente si
+ * riempie da sola di numeri interi consecutivi, una scala espansa vera, mai un salto più largo
+ * di un'unità.
+ *
  * Non tocca `tonePosition` (in `toneLevels.ts`, puro, provato, usato anche altrove) — resta
- * la fonte della VERITÀ sulla posizione assoluta; qui si legge solo l'elenco `TONE_LABELS` per
- * costruire la finestra locale.
+ * la fonte della VERITÀ sulla posizione assoluta; qui si legge solo l'elenco completo dei
+ * livelli per costruire la finestra locale.
  */
-const RAGGIO = 2;
+/** Tutti i 62 nomi di Ron più un intero per ogni unità che ne resta priva — calcolato una sola
+ *  volta (non dipende da `tone`, ricalcolarlo ad ogni render sarebbe lavoro sprecato). */
+const TONI_RIFERIMENTO: readonly number[] = (() => {
+  const nominati = TONE_LEVELS.map(l => l.tone);
+  const punti = new Set<number>(nominati);
+  for (let i = -TONE_SCALE_MAX; i <= TONE_SCALE_MAX; i++) {
+    if (!nominati.some(n => Math.abs(n - i) < 0.5)) punti.add(i);
+  }
+  return Array.from(punti).sort((a, b) => a - b);
+})();
+const RAGGIO = 4;
 function useFinestra(tone: number) {
-  const nodi = [...TONE_LABELS].slice().reverse();        // −40 … +40, ascendente
+  const nodi = TONI_RIFERIMENTO;                           // −40 … +40, già ascendente
   let segIdx = nodi.length - 1;
   for (let i = 1; i < nodi.length; i++) {
     if (tone <= nodi[i]) { segIdx = i; break; }

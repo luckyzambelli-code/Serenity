@@ -12348,3 +12348,22 @@ modifica di comportamento per EQUILIBRIUM, che resta comunque non costruito). No
 dal vivo con un vero MUSE/meter nel browser sandbox — verificato che tipi/lint/test restano
 puliti. `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run`
 754/754 (invariato).
+
+## Giro — 2026-09-16 (continuazione ancora) — la lente, riempita: niente più salti da 9 a 20
+
+**Segnalato subito dopo la lente:** « hai troppi pochi toni. Passi da 9 a 20, devi mettere un
+certo numero di toni che si seguono, come scala espansa, al fine di aiutare l'auditor per
+indicare al PC magari il tono successivo da raggiungere ». Vero — i tredici `TONE_LABELS` sono
+scelti apposta per NON accavallarsi, quindi restano radi anche nella loro stessa scala: fra 9 e
+20 non c'è NIENTE, nemmeno nei 62 nomi completi di Ron (`TONE_LEVELS`) — è la scala di Ron a non
+avere un nome lì, non una scelta di questo file.
+
+Ma l'auditor non ha bisogno di un NOME per dare un traguardo intermedio al PC — gli basta un
+NUMERO (« portalo a undici »). `TONI_RIFERIMENTO` (nuovo, calcolato una sola volta) unisce i 62
+nomi di Ron a un intero per ogni unità che ne resta priva (entro mezzo punto) — dove Ron è fitto
+(0…9, decine di nomi) restano i suoi nomi, intatti; dove è rado (9…40) la lente si riempie da
+sola di numeri interi consecutivi. Verificato con uno script a parte: nessun salto più largo di
+un'unità su tutta la scala, da −40 a +40.
+
+File: `src/components/ToneColumn.tsx`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0
+errori (invariato), `npx vitest run` 754/754 (invariato).
