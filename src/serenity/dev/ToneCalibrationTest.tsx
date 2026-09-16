@@ -29,6 +29,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import type { MuseConnectionState } from '../../hooks/useMuseConnection';
+import { TONE_SMOOTH } from '../../engine/tuning';
 
 interface Props {
   qL: number;
@@ -37,7 +38,7 @@ interface Props {
 }
 
 type EventKind = 'locate' | 'top' | 'minimo';
-interface LogRow { tSec: number; qL: number; evento: EventKind | ''; resistenza: number }
+interface LogRow { tSec: number; qL: number; qLSmooth: number; evento: EventKind | ''; resistenza: number }
 
 const MUSE_LABEL: Record<MuseConnectionState, string> = {
   connected: 'MUSE connesso',
@@ -77,14 +78,30 @@ export function ToneCalibrationTest({ qL, museState, sessionOpen }: Props) {
    *  quindi la sua fase dei 250ms) ad OGNI variazione di `qL`, che arriva molto più spesso: mai
    *  un campionamento regolare, nella migliore delle ipotesi. */
   const qLRef = useRef(qL);
-  useEffect(() => { qLRef.current = qL; }, [qL]);
+  /** ⚠️ AGGIUNTO — segnalato indirettamente: i numeri di `qL` grezzo saltano di due/tre ordini
+   *  di grandezza da un campione al successivo (0,1 → 400+). Vero, ma è il grezzo: il ciclo TONE
+   *  VERO non lo guarda mai così com'è — `useToneCycle.ts` gli applica PRIMA una media mobile
+   *  (`qLSmoothRef`, stessa costante `TONE_SMOOTH`) apposta per questo rumore, e SOLO quella
+   *  lisciata entra in `toneFromDelta`. Tarare `TONE_MUSE_ESCURSIONE` sul grezzo di questo tool
+   *  significherebbe tarare una costante che verrà poi usata su un segnale diverso da quello
+   *  misurato qui. Stessa identica formula (`TONE_SMOOTH`, non una copia inventata), calcolata
+   *  in un ref a parte così il grezzo resta comunque nel CSV — utile per vedere quanto rumore la
+   *  media toglie, non solo il risultato. */
+  const qLSmoothRef = useRef(qL);
+  useEffect(() => {
+    qLRef.current = qL;
+    qLSmoothRef.current = qLSmoothRef.current * (1 - TONE_SMOOTH) + qL * TONE_SMOOTH;
+  }, [qL]);
 
   // Campiona qL ~4 volte al secondo mentre il test gira — indipendente da SessionRecorder,
   // apposta: non deve dipendere da (né essere azzerato da) reset/cicli di una seduta vera.
   useEffect(() => {
     if (!running) return;
     const id = setInterval(() => {
-      setRows(r => [...r, { tSec: (Date.now() - startRef.current) / 1000, qL: qLRef.current, evento: '', resistenza }]);
+      setRows(r => [...r, {
+        tSec: (Date.now() - startRef.current) / 1000,
+        qL: qLRef.current, qLSmooth: qLSmoothRef.current, evento: '', resistenza,
+      }]);
     }, 250);
     return () => clearInterval(id);
   }, [running, resistenza]);
@@ -99,7 +116,10 @@ export function ToneCalibrationTest({ qL, museState, sessionOpen }: Props) {
 
   const markEvent = (evento: EventKind) => {
     if (!running) return;
-    setRows(r => [...r, { tSec: (Date.now() - startRef.current) / 1000, qL, evento, resistenza }]);
+    setRows(r => [...r, {
+      tSec: (Date.now() - startRef.current) / 1000,
+      qL, qLSmooth: qLSmoothRef.current, evento, resistenza,
+    }]);
     if (evento === 'top') setResistenza(n => n + 1);
   };
 
@@ -113,8 +133,9 @@ export function ToneCalibrationTest({ qL, museState, sessionOpen }: Props) {
   const fermaTest = () => setRunning(false);
 
   const scaricaCsv = () => {
-    const header = 't_s,qL,evento,resistenza';
-    const body = rows.map(r => `${r.tSec.toFixed(2)},${r.qL.toFixed(4)},${r.evento},${r.resistenza}`).join('\n');
+    const header = 't_s,qL,qL_smooth,evento,resistenza';
+    const body = rows.map(r =>
+      `${r.tSec.toFixed(2)},${r.qL.toFixed(4)},${r.qLSmooth.toFixed(4)},${r.evento},${r.resistenza}`).join('\n');
     const blob = new Blob([`${header}\n${body}\n`], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -146,6 +167,9 @@ export function ToneCalibrationTest({ qL, museState, sessionOpen }: Props) {
       </div>
 
       <div style={{ fontSize: 22, margin: '8px 0' }}>qL = {qL.toFixed(4)}</div>
+      <div style={{ fontSize: 13, color: '#9ab', marginTop: -6, marginBottom: 8 }}>
+        lisciato (quello che TONE usa davvero) = {qLSmoothRef.current.toFixed(4)}
+      </div>
       <div style={{ marginBottom: 8 }}>
         {running ? `⏱ ${elapsed.toFixed(1)}s — resistenza #${resistenza}` : 'test fermo'}
         {rows.length > 0 && ` — ${nLocate} localizza / ${nMinimo} minimo / ${nTop} cima`}

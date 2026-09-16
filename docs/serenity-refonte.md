@@ -12238,3 +12238,21 @@ regolare. File: `src/serenity/dev/ToneCalibrationTest.tsx`.
 I primi due CSV raccolti restano utili solo per i punti marcati (locate/top/minimo, veri) — la
 tendenza fra un punto e l'altro nei due file non è reale, era il numero congelato. `tsc --noEmit`
 pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-16 — ToneCalibrationTest: aggiunta la colonna `qL` lisciato
+
+Confermato dal terzo CSV: il campionamento di sfondo ora varia riga per riga (fix del giro
+precedente verificato). Notato però che il `qL` grezzo salta di due/tre ordini di grandezza da un
+campione al successivo (0,1 → 400+) — vero, ma è appunto il grezzo: il ciclo TONE reale non lo
+guarda mai così com'è, gli applica prima una media mobile (`qLSmoothRef`, `TONE_SMOOTH` in
+`tuning.ts`) apposta per questo rumore, e SOLO quella entra in `toneFromDelta`. Tarare
+`TONE_MUSE_ESCURSIONE` sul grezzo di questo tool avrebbe significato tarare una costante che poi
+lavora su un segnale diverso da quello misurato.
+
+Aggiunta una seconda colonna `qL_smooth` al CSV (stessa identica formula `TONE_SMOOTH`, non una
+copia inventata — un secondo ref allineato allo stesso ritmo del primo), e il numero lisciato
+anche nel riquadro live. Il grezzo resta comunque nel file: utile per vedere quanto rumore la
+media toglie, non solo il risultato finale.
+
+File: `src/serenity/dev/ToneCalibrationTest.tsx`. `tsc --noEmit` pulito, `npm run lint` 324
+warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
