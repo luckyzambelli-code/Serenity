@@ -30,6 +30,9 @@ import { needleEngine, virtualNeedle } from '../runtime/NeedleEngine';
 import { integrityTracker } from '../runtime/SmoothingEngine';
 import { useThetaMeter } from '../hooks/useThetaMeter';
 import { useMuseConnection } from '../hooks/useMuseConnection';
+// TEST TEMPORANEO TONE/MUSE — v. src/serenity/dev/ToneCalibrationTest.tsx. Da togliere (questa
+// riga + il blocco JSX più giù marcato allo stesso modo + il file) a calibrazione conclusa.
+import { ToneCalibrationTest } from './dev/ToneCalibrationTest';
 import { useMuseContactGate } from '../hooks/useMuseContactGate';
 import { useStableReleaseState } from '../hooks/useStableReleaseState';
 import { useChargeEngine } from '../hooks/useChargeEngine';
@@ -128,6 +131,24 @@ export default function Serenity() {
    *  ai moduli condivisi (`useChargeEngine`'s deps non lo usa direttamente, ma sarà necessario
    *  quando la fase 6 monterà i cicli — vedi la nota più sotto). */
   const LC = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang as string, it, fr, en, es, sv);
+
+  // TEST TEMPORANEO TONE/MUSE — Ctrl/Cmd+Shift+T mostra o nasconde il pannello di calibrazione
+  // (v. import in cima al file e src/serenity/dev/ToneCalibrationTest.tsx). Niente URL: in
+  // Electron pacchettizzato non c'è una barra indirizzi da cui aggiungere un `?flag=1`. Messo
+  // qui, prima di qualunque `return` anticipato della funzione, per restare un hook
+  // incondizionato. Da togliere insieme al resto — questo blocco compreso — a calibrazione
+  // conclusa.
+  const [toneTestOpen, setToneTestOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        setToneTestOpen(v => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   // ⚠️ STESSA PREFERENZA DI EQUILIBRIUM — non uno stato di SERENITY. Segnalato: « toutes les
   // fonctionnalités de EQUILIBRIUM ». `isLightTheme` è la stessa chiave che governa
   // `GlassThemeToggle`, stesso `localStorage`: cambiarla qui la cambia anche di là.
@@ -3193,6 +3214,11 @@ export default function Serenity() {
          a Santé/Journal: compensato in parte lasciando all'arco un margine più stretto ancora. */
       padding: '16px 20px', gap: 20, position: 'relative',
     }}>
+      {/* TEST TEMPORANEO TONE/MUSE — pannello galleggiante per tarare TONE_MUSE_ESCURSIONE.
+          Ctrl/Cmd+Shift+T per mostrarlo o nasconderlo (v. sopra). Da togliere a calibrazione
+          conclusa (v. nota sull'import, sopra, e src/serenity/dev/ToneCalibrationTest.tsx). */}
+      {toneTestOpen
+        && <ToneCalibrationTest qL={qLnow} museState={muse.museConnection} sessionOpen={aperta} />}
       {/* ── METER / MUSE / NESSUNO STRUMENTO — si sceglie PRIMA di aprire ──────────────────────
           Segnalato: « la logica... non sembra ancora implementata ». Le TRE voci sullo stesso
           piano di App.tsx (`connSel`): MUSE e METER si possono spuntare insieme (chi lavora con
