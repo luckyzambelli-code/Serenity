@@ -12310,3 +12310,41 @@ File: `src/serenity/SelettoreStrumenti.tsx`. Non verificabile dal vivo con un MU
 browser sandbox — verificato che il rendering non si rompe, in entrambi i rami (compresso/
 espanso), senza strumento collegato. `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori
 (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-16 (continuazione) — TONE: la scala come lente, l'arco senza più un numero che litiga
+
+Due segnalazioni sull'interfaccia di TONE (condivisa con EQUILIBRIUM — `ToneDial.tsx`/
+`ToneColumn.tsx` vivono in `src/components/`, non in `src/serenity/`):
+
+**1 — « la scala a sinistra è un poco confusa, deve essere come una lente di ingrandimento...
+si focalizza sui Toni sopra e sotto quello raggiunto, non si deve vedere tutta la scala, ma
+solo qualche tono sopra e sotto ».** `ToneColumn` disegnava SEMPRE tutti e tredici i
+`TONE_LABELS`, dallo zero al fondo scala in un colpo solo — dodici nomi su tredici non contano
+nulla nel momento in cui si guarda. Aggiunta `useFinestra`: ritaglia una manciata di nodi (±2)
+attorno al segmento in cui cade il tono ATTUALE e li rimappa sull'intera altezza — stessa idea
+di `tonePosition` (ogni intervallo pesa uguale), applicata a una fetta stretta che insegue il
+tono invece di un poster fisso con un cursore che ci scorre sopra. Elementi fuori dalla finestra
+(lo zero, il punto di partenza del ciclo, il secondo sguardo EEG) non si disegnano più fuori
+scala — spariscono finché non rientrano nella lente, invece di essere schiacciati a un bordo.
+
+**2 — « l'indicazione sul quadrante non coincide con la scala, per esempio se siamo a 12,5 sul
+Tono, appare 13 sull'arco. È destabilizzante. Non metterei il numero... ma farei la linea che
+si muove più presente e visibile, tracciando una scia luminosa ».** Causa vera, verificata nel
+codice: il numero sull'ago misurato di `ToneDial` arrotondava SEMPRE a un intero
+(`.toFixed(0)`), mentre `ToneColumn` mostra un decimale col meter (`≈ +12.5`) — stesso `tone`,
+due arrotondamenti diversi, mai davvero allineati salvo per caso. Non una correzione
+dell'arrotondamento: rimosso il numero dall'ago, come chiesto esplicitamente — un solo posto
+dove leggere la cifra (la colonna), non due che possono discordare. Al suo posto: la linea più
+spessa (4→7), un bagliore (`filter="url(#td-needle-glow)"`, nuovo, distinto da `td-glow` che è
+ambra/teal legato al traguardo) e una breve scia sfumata dietro l'ago — un arco dal trasparente
+al colore pieno, sempre verso il tono più basso (in TONE si sale SEMPRE verso +40, la direzione
+della coda non dipende dal movimento istante per istante). Rimossa anche `approx`, la prop che
+serviva solo al « ≈ » del numero tolto — nessuna logica persa, i due chiamanti (qui e
+`App.tsx`) la passavano sempre `true`.
+
+File: `src/components/ToneColumn.tsx`, `src/components/ToneDial.tsx`,
+`src/serenity/GruppoAlto.tsx`, `src/App.tsx` (solo l'adeguamento a `approx` rimossa — nessuna
+modifica di comportamento per EQUILIBRIUM, che resta comunque non costruito). Non verificabile
+dal vivo con un vero MUSE/meter nel browser sandbox — verificato che tipi/lint/test restano
+puliti. `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run`
+754/754 (invariato).

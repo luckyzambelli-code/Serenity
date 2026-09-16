@@ -1,6 +1,6 @@
 import React from 'react';
 import { useUiStore } from '../store/uiStore';
-import { TONE_LABELS, levelAt, exactLevelName, tonePosition, levelName } from '../engine/toneLevels';
+import { TONE_LABELS, levelAt, exactLevelName, levelName } from '../engine/toneLevels';
 import { pick5 } from '../i18n5';
 import { TOKEN } from '../ui/tokens';
 
@@ -29,11 +29,22 @@ import { TOKEN } from '../ui/tokens';
  * in un decimo dell'altezza, illeggibile, e un tono normale si posava appena sopra la metà con
  * un vuoto enorme sopra: da cui « ci si ritrova sempre in basso » (segnalato).
  *
- * Ora ogni intervallo fra due etichette scritte occupa la stessa altezza (`tonePosition`, dove
- * si prova). Si perde la proporzione e si tiene il verso — il « quanto » è dell'ago, che resta
- * lineare; la colonna dice DOVE SI È e SE SI SALE.
+ * Ogni intervallo fra due etichette scritte occupa la stessa altezza (`tonePosition`, in
+ * `toneLevels.ts`, dove si prova). Si perde la proporzione e si tiene il verso — il « quanto »
+ * è dell'ago, che resta lineare; la colonna dice DOVE SI È e SE SI SALE.
  *
  * I nomi degli altri livelli restano fuori: li dice il cursore, per esteso.
+ *
+ * ── LA LENTE — SOLO POCHI NODI ALLA VOLTA, NON PIÙ TUTTI E TREDICI ─────────────────────────
+ * Segnalato ancora: « la scala a sinistra è un poco confusa, deve essere come una lente di
+ * ingrandimento... si focalizza sui Toni sopra e sotto quello raggiunto, non si deve vedere
+ * tutta la scala, ma solo qualche tono sopra e sotto ». Fino a qui la colonna disegnava
+ * SEMPRE tutti e tredici i `TONE_LABELS`, dallo zero al fondo scala in un colpo solo — utile
+ * per la proporzione (vedi sopra), ma dodici nomi su tredici non contano nulla nel momento in
+ * cui si guarda, ed erano comunque a schermo. `useFinestra` (sotto) ritaglia una manciata di
+ * nodi attorno al segmento in cui cade il tono ATTUALE e li rimappa sull'intera altezza — la
+ * stessa idea di `tonePosition` (ogni intervallo pesa uguale), applicata a una fetta stretta
+ * invece che all'intera scala, che insegue il tono invece di restare un poster fisso.
  *
  * ── SI LEGGE, QUINDI È GRANDE ───────────────────────────────────────────────────────────────
  * I nomi erano a corpo 9 su una colonna larga 190: leggibili col naso sullo schermo, non da
@@ -86,9 +97,53 @@ export function spezza(nome: string, max = MAX_CAR): string[] {
   return righe;
 }
 
-/** Tono → y nel viewBox. +40 in alto, −40 in basso. La mappatura vive in `toneLevels`
- *  (`tonePosition`), dove si prova: qui si converte soltanto in coordinate. */
-const y = (tone: number): number => BOT - tonePosition(tone) * H;
+/**
+ * ⚠️ LA LENTE — segnalato: « la scala a sinistra è un poco confusa, deve essere come una lente
+ * di ingrandimento... si focalizza sui Toni sopra e sotto quello raggiunto, non si deve vedere
+ * tutta la scala, ma solo qualche tono sopra e sotto ». Prima la colonna mostrava SEMPRE i
+ * tredici `TONE_LABELS`, dallo zero al fondo scala, in un colpo solo — l'intera scala di Ron
+ * compressa nella stessa altezza, indipendentemente da dove si è: a colpo d'occhio, dodici
+ * nomi che non contano nulla in questo momento e uno solo che conta.
+ *
+ * Qui si RITAGLIA una finestra di pochi nodi (`RAGGIO` per lato) attorno al segmento in cui
+ * cade il tono attuale, e SI RIMAPPA quella finestra sola sull'intera altezza `H` — la stessa
+ * idea di `tonePosition` (ogni intervallo pesa uguale), applicata a una fetta invece che
+ * all'intera scala. Il risultato si ricalcola ad ogni tono nuovo: la colonna "insegue" la
+ * lettura invece di restare un poster fisso con un cursore che ci scorre sopra.
+ *
+ * Non tocca `tonePosition` (in `toneLevels.ts`, puro, provato, usato anche altrove) — resta
+ * la fonte della VERITÀ sulla posizione assoluta; qui si legge solo l'elenco `TONE_LABELS` per
+ * costruire la finestra locale.
+ */
+const RAGGIO = 2;
+function useFinestra(tone: number) {
+  const nodi = [...TONE_LABELS].slice().reverse();        // −40 … +40, ascendente
+  let segIdx = nodi.length - 1;
+  for (let i = 1; i < nodi.length; i++) {
+    if (tone <= nodi[i]) { segIdx = i; break; }
+  }
+  const loIdx = Math.max(0, segIdx - 1 - RAGGIO);
+  const hiIdx = Math.min(nodi.length - 1, segIdx + RAGGIO);
+  const finestra = nodi.slice(loIdx, hiIdx + 1);           // solo i nodi nella lente, ascendente
+
+  const yFinestra = (t: number): number => {
+    const tc = Math.max(finestra[0], Math.min(finestra[finestra.length - 1], t));
+    const passo = 1 / (finestra.length - 1 || 1);
+    for (let i = 1; i < finestra.length; i++) {
+      if (tc <= finestra[i]) {
+        const q = (tc - finestra[i - 1]) / (finestra[i] - finestra[i - 1]);
+        return BOT - ((i - 1) * passo + q * passo) * H;
+      }
+    }
+    return TOP;
+  };
+  // Fuori dalla lente: non ha senso disegnarlo (sparirebbe schiacciato a un bordo, o peggio
+  // suggerirebbe una posizione che non è la sua). I chiamanti controllano `dentro` prima di
+  // disegnare qualunque elemento che non sia il tono attuale (sempre dentro, per costruzione).
+  const dentro = (t: number): boolean => t >= finestra[0] - 1e-9 && t <= finestra[finestra.length - 1] + 1e-9;
+
+  return { finestra, yFinestra, dentro };
+}
 
 export function ToneColumn({ tone, toneEeg, hasMeter, charge, chargeFrom, lang, margin = 0 }: {
   /** Il tono in questo istante, −40…+40. Col meter viene dal TA; senza, lo dichiara l'auditor. */
@@ -127,12 +182,17 @@ export function ToneColumn({ tone, toneEeg, hasMeter, charge, chargeFrom, lang, 
   const tenue      = isLightTheme ? 'rgba(26,26,31,0.78)' : 'rgba(240,246,255,0.80)';
   const tacca      = isLightTheme ? 'rgba(26,26,31,0.45)' : 'rgba(226,238,255,0.42)';
 
-  const yOra = y(tone);
+  const { finestra, yFinestra, dentro } = useFinestra(tone);
+  const yOra = yFinestra(tone);
   const liv  = levelAt(tone);
   const nomeLiv = levelName(liv.name, lang);
   // Il percorso del ciclo: da dove si è partiti a dove si è adesso. Se sale, è il lavoro che
   // sta funzionando; se scende, l'auditor lo deve vedere subito.
-  const yDa   = chargeFrom != null ? y(chargeFrom) : null;
+  // ⚠️ `dentro(chargeFrom)` — la lente segue il tono ATTUALE: il punto di partenza di un ciclo
+  // lungo può restare ben fuori dalla finestra di oggi. Fuori lente, niente percorso disegnato
+  // (non un segmento troncato che punterebbe a un bordo arbitrario) — resta comunque nel
+  // Giornale e nel numero del ciclo, solo non su QUESTA colonna ritagliata.
+  const yDa   = (chargeFrom != null && dentro(chargeFrom)) ? yFinestra(chargeFrom) : null;
   const sale  = yDa != null && yOra < yDa;
 
   return (
@@ -148,19 +208,21 @@ export function ToneColumn({ tone, toneEeg, hasMeter, charge, chargeFrom, lang, 
       {/* L'asta */}
       <line x1={54} y1={TOP} x2={54} y2={BOT} stroke={tacca} strokeWidth={1.5} />
 
-      {/* LO ZERO — la sola tacca marcata. Le nove tacche dei multipli di dieci non si
-          disegnano più: con la colonna adattata cadono dove capita rispetto alle etichette,
-          e due griglie sovrapposte con passi diversi si leggono peggio di una. Lo zero resta
-          perché è il confine, e si vede a colpo d'occhio dov'è. */}
-      <line x1={44} y1={y(0)} x2={64} y2={y(0)} stroke={inchiostro} strokeWidth={2.2} />
+      {/* LO ZERO — la sola tacca marcata, e solo se la lente lo inquadra: con la finestra
+          ritagliata attorno al tono attuale, lo zero può restare fuori (si è saliti oltre 9,
+          o si è scesi sotto −10) — disegnarlo comunque, fuori scala, direbbe una posizione
+          falsa. */}
+      {dentro(0) && (
+        <line x1={44} y1={yFinestra(0)} x2={64} y2={yFinestra(0)} stroke={inchiostro} strokeWidth={2.2} />
+      )}
 
-      {/* LE ETICHETTE RADE — le tredici scelte, col nome del livello nella lingua in corso.
-          Il nome va SOTTO il numero e non di fianco: di fianco, a corpo leggibile, i nomi
-          lunghi uscivano dalla colonna. Sotto, ognuno ha la sua riga (o due). */}
-      {TONE_LABELS.map(t => {
+      {/* ── LA LENTE — v. `useFinestra`, in testa al file, per il perché. Solo i nodi DENTRO la
+          finestra attorno al tono attuale, rimappati per occupare l'intera altezza — non più i
+          tredici fissi dell'intera scala. */}
+      {finestra.map(t => {
         const en = exactLevelName(t);
         const nome = en ? levelName(en, lang) : undefined;
-        const yy = y(t);
+        const yy = yFinestra(t);
         const righe = nome ? spezza(nome) : [];
         return (
           <g key={`l${t}`}>
@@ -198,11 +260,11 @@ export function ToneColumn({ tone, toneEeg, hasMeter, charge, chargeFrom, lang, 
           Una marca sottile a sinistra dell'asta, senza scritte: si guarda se sale INSIEME al
           cursore, non che numero fa. Solo col MUSE, e solo se dice qualcosa di diverso — a un
           decimo di divisione dal cursore sarebbe una riga sopra l'altra. */}
-      {toneEeg != null && Math.abs(y(toneEeg) - yOra) > 3 && (
+      {toneEeg != null && dentro(toneEeg) && Math.abs(yFinestra(toneEeg) - yOra) > 3 && (
         <g>
-          <line x1={40} y1={y(toneEeg)} x2={62} y2={y(toneEeg)}
+          <line x1={40} y1={yFinestra(toneEeg)} x2={62} y2={yFinestra(toneEeg)}
                 stroke={inchiostro} strokeWidth={1.6} opacity={0.5} strokeDasharray="3 3" />
-          <text x={30} y={y(toneEeg) - 4} textAnchor="end" fill={inchiostro}
+          <text x={30} y={yFinestra(toneEeg) - 4} textAnchor="end" fill={inchiostro}
                 style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 700, opacity: 0.55 }}>
             EEG
           </text>

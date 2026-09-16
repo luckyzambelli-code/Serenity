@@ -1014,7 +1014,6 @@ export function GruppoAlto({
                 <ToneDial
                   tone={tone.toneOra ?? 0}
                   hasMeter={!vistaSenzaAgo && tone.toneMisurato}
-                  approx
                   located={tone.toneAtStart}
                   phase={tone.tonePhase}
                   toneAtStart={tone.toneAtStart}

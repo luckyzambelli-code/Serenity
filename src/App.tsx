@@ -6391,7 +6391,7 @@ export default function App() {
             <div className="absolute inset-0 z-40 pointer-events-none">
               {viewMode === 'tone' ? (
                 // ⚠️ `toneMisurato`, non `toneHasMeter` — v. la nota sopra su `ToneColumn`.
-                <ToneDial tone={toneOra ?? 0} hasMeter={toneMisurato} approx
+                <ToneDial tone={toneOra ?? 0} hasMeter={toneMisurato}
                   located={toneAtStart}
                   phase={tonePhase} toneAtStart={toneAtStart}
                   isLightTheme={isLightTheme} />

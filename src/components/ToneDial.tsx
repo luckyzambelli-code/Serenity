@@ -59,7 +59,7 @@ const bandAlpha = (tone: number): number =>
  * cambiati. I props sono numeri e stringhe primitive: il confronto superficiale li individua identici.
  */
 export const ToneDial = React.memo(function ToneDial({
-  tone, hasMeter, approx, located, phase, toneAtStart,
+  tone, hasMeter, located, phase, toneAtStart,
   isLightTheme = false,
 }: {
   /** Tono MISURATO adesso, −40..+40. Ignorato quando `hasMeter` è falso. */
@@ -67,8 +67,9 @@ export const ToneDial = React.memo(function ToneDial({
   /** C'è uno strumento che misura la resistenza? Senza, la vista funziona lo stesso: è la
    *  situazione di Ron, che lavora off-meter — ma allora NON si disegna un ago misurato. */
   hasMeter: boolean;
-  /** Il tono viene dal TA e non da ohm veri → si scrive « ≈ ». Vedi `toneFromTa`. */
-  approx?: boolean;
+  /** ⚠️ `approx` RIMOSSO — serviva solo al « ≈ » del numero sull'ago misurato, tolto insieme
+   *  al numero stesso (v. la nota grande più sotto, sul perché). I due chiamanti (qui e
+   *  `App.tsx`) lo passavano sempre `true`, mai `false`: nessuna logica persa. */
   /** Il tono LOCALIZZATO, fissato premendo il bottone: la PRIMA posa della riga gialla. */
   located: number | null;
   /** Quel che l'auditor ha VALIDATO. È questo che comanda il bersaglio — e dove la riga
@@ -106,6 +107,14 @@ export const ToneDial = React.memo(function ToneDial({
       <defs>
         <filter id="td-glow" x="-60%" y="-60%" width="220%" height="220%">
           <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor={done ? TEAL : AMBER} floodOpacity="0.8" />
+        </filter>
+        {/* ⚠️ AGGIUNTO — segnalato: « l'indicazione sul quadrante non coincide con la scala...
+            è destabilizzante... non metterei il numero, tanto appare il tono col numero nella
+            scala a sinistra, ma farei la linea che si muove più presente e visibile,
+            tracciando una scia luminosa ». Filtro a parte da `td-glow` (quello è ambra/teal,
+            legato al traguardo — questo ago è sempre `ink`, il colore neutro del quadrante). */}
+        <filter id="td-needle-glow" x="-80%" y="-80%" width="260%" height="260%">
+          <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor={ink} floodOpacity="0.85" />
         </filter>
       </defs>
 
@@ -145,20 +154,37 @@ export const ToneDial = React.memo(function ToneDial({
       {/* AGO MISURATO — dove la resistenza si trova ADESSO. Solo col meter: senza, non c'è
           niente da misurare e disegnarlo sarebbe una bugia.
 
-          ⚠️ IL NUMERO VA SOTTO, non fuori dall'arco. Scritto a R+88 finiva sopra i numeri della
-          scala e li copriva; e stava dalla parte opposta rispetto a quello della riga gialla,
-          che è INTERNO. Adesso i due si leggono sulla stessa fascia, uno accanto all'altro
-          (richiesta utente). */}
+          ⚠️ IL NUMERO TOLTO, LA SCIA AGGIUNTA — segnalato: « l'indicazione sul quadrante non
+          coincide con la scala... per esempio se siamo a 12,5 sul Tono, appare 13 sull'arco.
+          È destabilizzante ». Causa vera, verificata nel codice: QUESTO numero arrotondava
+          SEMPRE a un intero (`.toFixed(0)`), mentre `ToneColumn` (la scala a sinistra) mostra
+          un decimale quando c'è un misuratore (`≈ +12.5`) — stesso `tone`, due arrotondamenti
+          diversi, MAI davvero allineati salvo per caso. Non una correzione dell'arrotondamento:
+          rimosso il numero qui, come chiesto — « tanto appare il tono col numero nella scala a
+          sinistra », un solo posto dove leggere la cifra invece di due che possono discordare.
+          Al suo posto, la richiesta esplicita: la linea più presente/visibile, con una scia
+          luminosa. `filter="url(#td-needle-glow)"` (v. i `defs`, sopra) per il bagliore;
+          `strokeWidth` quasi raddoppiato (4→7); e una breve scia — un arco sfumato dietro l'ago,
+          dal trasparente al colore pieno — nella direzione da cui la lettura sale (in TONE si
+          sale SEMPRE verso +40, mai il contrario: la coda sta quindi sempre verso il tono più
+          basso, mai serve sapere la direzione vera del movimento istante per istante). */}
       {hasMeter && (() => {
         const a = tpt(tone, R + 26), b = tpt(tone, R - 26);
-        const lp = tpt(tone, R - 100);
+        const codaDa = clampTone(tone - 2.5);
+        const ca = tpt(codaDa, R + 26);
+        const gradId = 'td-needle-trail-grad';
         return (
-          <g>
-            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={ink} strokeWidth={4} />
-            <text x={lp.x.toFixed(1)} y={lp.y.toFixed(1)} textAnchor="middle" dominantBaseline="middle"
-              fontSize={22} fontWeight={700} fill={ink}>
-              {approx ? '≈' : ''}{clampTone(tone) > 0 ? '+' : ''}{clampTone(tone).toFixed(0)}
-            </text>
+          <g filter="url(#td-needle-glow)">
+            <linearGradient id={gradId} gradientUnits="userSpaceOnUse"
+              x1={ca.x} y1={ca.y} x2={a.x} y2={a.y}>
+              <stop offset="0%" stopColor={ink} stopOpacity="0" />
+              <stop offset="100%" stopColor={ink} stopOpacity="0.85" />
+            </linearGradient>
+            {Math.abs(codaDa - tone) > 0.05 && (
+              <path d={arcPath(toneOffset(codaDa), toneOffset(tone), R)} fill="none"
+                stroke={`url(#${gradId})`} strokeWidth={16} strokeLinecap="round" />
+            )}
+            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={ink} strokeWidth={7} strokeLinecap="round" />
           </g>
         );
       })()}
