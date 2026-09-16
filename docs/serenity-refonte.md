@@ -12284,3 +12284,29 @@ File: `src/serenity/SelettoreStrumenti.tsx`. Non verificabile dal vivo nel brows
 un MUSE vero collegato) — verificato che il rendering non si rompe senza strumento collegato.
 `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754
 (invariato).
+
+## Giro — 2026-09-16 (continuazione ancora) — batteria sempre visibile, INT diventa una barra
+
+**Segnalato:** « la percentuale del MUSE deve apparire anche a SESSION non iniziata, quando il
+MUSE è collegato deve apparire subito ». Vero — il badge batteria del giro precedente viveva SOLO
+dentro la fila espansa delle tre icone (`espertoAttivo === true || strumentiEspansi`): in BASIC,
+prima che l'auditor tocchi la pillola (praticamente sempre, a seduta appena aperta o non ancora
+iniziata), le tre icone restano un pallino solo e quel badge non veniva mai raggiunto. Estratto in
+`batteriaMuse`, calcolato una volta sola e usato in ENTRAMBI i rami — compresso e espanso — invece
+di due copie della stessa condizione. Nessun cancello su `aperta`: la batteria del casco non
+dipende dal fatto che una seduta sia aperta.
+
+**Segnalato di nuovo:** « ti avevo chiesto di migliorare l'indicazione di INTEGRITÀ del sistema,
+poiché INT con una percentuale non si capisce cosa sia. Cosa proponi? ». Proposte tre vie
+(AskUserQuestion) — icona+rinomina, stessa sigla con un'icona, o una barra colorata al posto del
+numero nudo. Scelta: **la barra**. Stessa idea già in EQUILIBRIUM (`BiometricPanel.tsx`: una
+barretta che si riempie, colorata sotto soglia) — ma NON i suoi quattro toni di verde: SERENITY ha
+un lessico di colore suo, tre soli segnali di quiete (`--s-alive`/`--s-still`/`--s-reserve`) — mai
+un quarto inventato per l'occasione. `--s-reserve` sotto una soglia bassa (≤20%, stessa soglia già
+scelta per la batteria), `--s-ink-soft` altrimenti — la stessa distinzione binaria di tutto il
+resto del file, non un arcobaleno a quattro tacche.
+
+File: `src/serenity/SelettoreStrumenti.tsx`. Non verificabile dal vivo con un MUSE vero nel
+browser sandbox — verificato che il rendering non si rompe, in entrambi i rami (compresso/
+espanso), senza strumento collegato. `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori
+(invariato), `npx vitest run` 754/754 (invariato).

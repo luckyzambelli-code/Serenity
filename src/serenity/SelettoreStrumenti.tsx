@@ -30,11 +30,36 @@ import type { useMuseContactGate } from '../hooks/useMuseContactGate';
  *  serviva a NIENTE per evitare re-render da genitore, ma qui il punto è un altro: senza,
  *  `SelettoreStrumenti` (il genitore) ridisegnava anche questo span ad ogni suo stesso
  *  re-render, invece di lasciare che sia SOLO `integrityTracker.subscribe` a deciderlo. */
+/**
+ * ⚠️ DA NUMERO NUDO A BARRA — segnalato: « la percentuale accanto di INTEGRITÀ non è chiaro
+ * cosa sia, dovresti fare in modo che si capisca » — poi, alla domanda su come, scelto: « barra
+ * colorata al posto del numero nudo ». Stessa idea già in EQUILIBRIUM (`BiometricPanel.tsx`: una
+ * barretta che si riempie, colorata sotto soglia) — ma NON i suoi quattro toni di verde: SERENITY
+ * ha un lessico di colore suo, tre soli segnali di quiete (`--s-alive`/`--s-still`/`--s-reserve`,
+ * v. `tokens.css`), mai un quarto inventato qui. `--s-reserve` (lo stesso "attenzione" già usato
+ * per la batteria bassa, poco sopra) sotto una soglia bassa, `--s-ink-soft` altrimenti — non un
+ * arcobaleno a quattro tacche, la stessa distinzione binaria di tutto il resto del file.
+ */
 const LetturaIntegrita = React.memo(function LetturaIntegrita() {
   const pct = useSyncExternalStore(integrityTracker.subscribe, integrityTracker.getCurrent);
+  const clamped = Math.max(0, Math.min(100, pct));
+  const basso = clamped <= 20;
+  const colore = basso ? 'var(--s-reserve)' : 'var(--s-ink-soft)';
   return (
-    <span style={{ fontFamily: 'var(--s-mono)', fontVariantNumeric: 'tabular-nums' }}>
-      {Math.round(pct)}%
+    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <span style={{
+        position: 'relative', width: 28, height: 6, borderRadius: 999, flexShrink: 0,
+        background: 'var(--s-disc-sunk)', overflow: 'hidden',
+      }}>
+        <span style={{
+          position: 'absolute', inset: 0, width: `${clamped}%`, borderRadius: 999,
+          background: colore,
+          transition: 'width var(--s-slow) var(--s-ease), background var(--s-slow) var(--s-ease)',
+        }} />
+      </span>
+      <span style={{ fontFamily: 'var(--s-mono)', fontVariantNumeric: 'tabular-nums', color: colore }}>
+        {Math.round(clamped)}%
+      </span>
     </span>
   );
 });
@@ -86,6 +111,26 @@ export function SelettoreStrumenti({
   }`;
   const noneTitolo = `${LC('SENZA STRUMENTI', 'SANS INSTRUMENTS', 'NO INSTRUMENTS', 'SIN INSTRUMENTOS', 'UTAN INSTRUMENT')} — ${t('no_instruments_mode')}`;
 
+  /** ── LA BATTERIA DEL MUSE, SEMPRE VISIBILE — segnalato di nuovo: « deve apparire anche a
+   *  seduta non iniziata, quando il MUSE è collegato deve apparire SUBITO, per indicare
+   *  all'auditor lo stato del MUSE ». Il giro precedente l'aveva messa SOLO nella fila espansa
+   *  (`espertoAttivo === true || strumentiEspansi`) — in BASIC, PRIMA che l'auditor tocchi la
+   *  pillola per aprirla (praticamente sempre, a seduta appena aperta o non ancora iniziata),
+   *  le tre icone restano UN pallino solo (v. sotto) e questo badge non veniva mai raggiunto.
+   *  Calcolato UNA volta qui, usato in ENTRAMBI i rami (pallino compresso e fila espansa) — non
+   *  due copie della stessa condizione/stile da poter disallineare in un domani. Nessun cancello
+   *  su `aperta`/seduta: la batteria del casco non dipende dal fatto che una seduta sia aperta. */
+  const batteriaMuse = muse.museConnection === 'connected' && batteryLevel !== null && (
+    <span title={t('muse_battery_tip')} style={{
+      display: 'flex', alignItems: 'center', gap: 2,
+      fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', fontVariantNumeric: 'tabular-nums',
+      color: batteryLevel <= 20 ? 'var(--s-reserve)' : 'var(--s-ink-faint)',
+    }}>
+      <Battery size={13} strokeWidth={1.9} />
+      {batteryLevel.toFixed(0)}%
+    </span>
+  );
+
   // `connesso` — SOLO lo stato ATTIVO/in ascolto di ciascuno strumento, non "ricerca in corso":
   // cliccare durante una ricerca la riprova/annulla, non stacca un dato che sta arrivando
   // davvero. Decide quali bottoni restano vivi durante un ciclo (il chiamante lo sa già: la
@@ -127,7 +172,11 @@ export function SelettoreStrumenti({
       ordinePriorita[s.stato] < ordinePriorita[peggiore] ? s.stato : peggiore, 'in-attesa');
     const IconaAggregata = strumenti.find(s => s.stato === statoAggregato)?.icona ?? strumenti[0].icona;
     return (
-      <button className="s-glass s-glass-btn" onClick={onEspandi}
+      <span className="s-glass" style={{
+        display: 'flex', alignItems: 'center', gap: 4, background: 'var(--s-disc)',
+        borderRadius: 999, padding: batteriaMuse ? '4px 8px 4px 4px' : 0,
+      }}>
+      <button className="s-glass-btn" onClick={onEspandi}
         data-help={LC('strumenti — tocca per scegliere MUSE/METER/senza', 'instruments — touche pour choisir MUSE/METER/sans',
           'instruments — tap to choose MUSE/METER/none', 'instrumentos — toca para elegir MUSE/METER/ninguno',
           'instrument — tryck för att välja MUSE/METER/inga')}
@@ -136,7 +185,7 @@ export function SelettoreStrumenti({
           'instrument — tryck för att välja')}
         style={{
           position: 'relative', cursor: 'pointer', padding: 7, borderRadius: 999,
-          background: 'var(--s-disc)', display: 'flex', color: 'var(--s-ink-soft)', border: 'none',
+          background: 'transparent', display: 'flex', color: 'var(--s-ink-soft)', border: 'none',
         }}>
         {IconaAggregata}
         <span aria-hidden="true" style={{
@@ -146,6 +195,8 @@ export function SelettoreStrumenti({
             ? `0 0 0 2px color-mix(in srgb, ${COLORE_PUNTO[statoAggregato]} 25%, transparent)` : 'none',
         }} />
       </button>
+      {batteriaMuse}
+      </span>
     );
   }
 
@@ -173,27 +224,9 @@ export function SelettoreStrumenti({
             transition: 'background var(--s-slow) var(--s-ease), box-shadow var(--s-slow) var(--s-ease)',
           }} />
         </button>
-        {/* ── LA BATTERIA DEL MUSE, ACCANTO ALLA SUA ICONA — segnalato: « metti sotto o
-            accanto all'icona del MUSE la percentuale della batteria, poiché quando è chiusa
-            Santé Système non si sa ». Il numero esisteva già (`batteryLevel`, già passato a
-            questo componente) ma vivo SOLO dentro il `title` (`museTitolo`, sopra) — un
-            tooltip al passaggio del mouse, invisibile finché non ci si passa sopra apposta,
-            e Santé Système (l'unico posto dove restava visibile SEMPRE) è proprio il pannello
-            che l'auditor chiude. Stessa condizione, stessa icona `Battery`, STESSO badge già
-            presente in EQUILIBRIUM (`InstrumentBadges.tsx`) — non un'invenzione nuova qui:
-            `museConnection === 'connected' && batteryLevel !== null`, senza richiedere anche
-            il contatto (`museGate.museContact`) — la batteria del casco è la stessa che sia
-            indossato o solo appoggiato sul tavolo. */}
-        {s.key === 'muse' && muse.museConnection === 'connected' && batteryLevel !== null && (
-          <span title={t('muse_battery_tip')} style={{
-            display: 'flex', alignItems: 'center', gap: 2, padding: '0 6px 0 0',
-            fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', fontVariantNumeric: 'tabular-nums',
-            color: batteryLevel <= 20 ? 'var(--s-reserve)' : 'var(--s-ink-faint)',
-          }}>
-            <Battery size={13} strokeWidth={1.9} />
-            {batteryLevel.toFixed(0)}%
-          </span>
-        )}
+        {/* La batteria del MUSE — v. `batteriaMuse`, calcolata una sola volta più sopra (stessa
+            variabile che il ramo compresso/BASIC usa accanto al pallino unico). */}
+        {s.key === 'muse' && batteriaMuse}
         </React.Fragment>
         );
       })}
@@ -218,7 +251,7 @@ export function SelettoreStrumenti({
         ) as string;
         return (
         <span title={integritaSpiegata} data-help={integritaSpiegata} style={{
-          display: 'flex', alignItems: 'baseline', gap: 3, padding: '0 8px 0 2px',
+          display: 'flex', alignItems: 'center', gap: 4, padding: '0 8px 0 2px',
           fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', color: 'var(--s-ink-faint)',
         }}>
           <span style={{ fontSize: 'var(--s-fs-micro)', letterSpacing: '0.06em' }}>
