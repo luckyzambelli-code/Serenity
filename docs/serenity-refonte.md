@@ -12915,3 +12915,34 @@ File: `public/dizionario/dizionario-{it,en,fr,es}.json`, `src/components/Process
 `src/serenity/FinestreSovrapposte.tsx`, `src/lib/procedimenti.ts`, `main.cjs`,
 `preload.cjs`, `api-routes.cjs`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori
 (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-17 (continuazione ancora) — PROCESSUS/PROCEDIMENTI: ricerca e liste più
+sobrie
+
+**Segnalato:** « Non trovi che è un poco confusionario quando hai tutti i procedimenti o i
+commandi messi in quel modo? Cosa proponi di più elegante e efficiente? » — poi, dopo la
+proposta: « si ».
+
+**PROCEDIMENTI** (card COMANDI PROCEDIMENTI, dentro COMMANDS): da una riga di pillole che
+andava a capo — un muro disordinato con molti procedimenti — a una LISTA VERTICALE
+compatta (nome a sinistra, conteggio comandi a destra, una riga per procedimento, altezza
+massima 176px con scroll interno). Aggiunto un campo di ricerca sopra, ma SOLO oltre 10
+procedimenti (con pochi non serve, sarebbe un campo vuoto inutile).
+
+**PROCESSUS** (griglia PDF): tolta la finta "costa di libro 3D" (pura decorazione, la
+STESSA icona su ogni card, nessuna informazione) e il badge del tag ripetuto su ogni card
+(ridondante — il gruppo è già intitolato col tag). Card piccole e dense (icona piatta
+14px + nome + cestino al passaggio del mouse), più colonne (4→5→6 invece di 3→4→5). Stesso
+campo di ricerca, soglia identica (> 10 PDF).
+
+Entrambe le ricerche sono locali al modale (si azzerano ad ogni apertura, non un nuovo
+stato sollevato a `Serenity.tsx`) e ignorano maiuscole/accenti (stessa normalizzazione già
+in uso nel Dizionario Tecnico).
+
+Verificato: `tsc`/lint/test puliti; vista PROCESSUS vuota renderizzata correttamente dal
+vivo (griglia/ricerca non testabili a fondo senza PDF reali in locale — logica di filtro
+JS standard, basso rischio). Segnalato dall'utente che la "pagina bianca" persiste ancora:
+in attesa dell'errore preciso dalla console sviluppatore per la diagnosi.
+
+File: `src/components/ProcessusModal.tsx`. `tsc --noEmit` pulito, `npm run lint` 324
+warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).

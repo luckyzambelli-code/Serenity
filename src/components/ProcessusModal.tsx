@@ -1,5 +1,5 @@
-import React from 'react';
-import { BookOpen } from 'lucide-react';
+import React, { useState } from 'react';
+import { BookOpen, Search } from 'lucide-react';
 import { GlassCollapseToggle } from './GlassCollapseToggle';
 import {
   isServerAvailable,
@@ -75,9 +75,22 @@ export function ProcessusModal({
   const L = (it: string, fr: string, en: string, es: string, sv: string) =>
     pick5(lang as string, it, fr, en, es, sv);
   const allTags      = Array.from(new Set(processusPdfs.map(p => p.tag || 'General'))).sort();
-  const visiblePdfs  = processusTagFilter === 'all'
+  const visiblePdfsByTag = processusTagFilter === 'all'
     ? processusPdfs
     : processusPdfs.filter(p => (p.tag || 'General') === processusTagFilter);
+  // ⚠️ AGGIUNTA — segnalato: « non trovi che è un poco confusionario quando hai tutti i
+  // procedimenti o i comandi messi in quel modo? ». Con molte voci, scorrere a occhio non
+  // basta più — una ricerca testuale, stesso principio già in uso nel Dizionario Tecnico.
+  // Locale al modale (non sollevato a `Serenity.tsx`): non deve sopravvivere alla chiusura,
+  // ricominciare vuota ogni apertura è il comportamento giusto per un filtro del genere.
+  const [pdfSearch, setPdfSearch] = useState('');
+  const [procSearch, setProcSearch] = useState('');
+  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const visiblePdfs = pdfSearch.trim()
+    ? visiblePdfsByTag.filter(p => norm(p.name).includes(norm(pdfSearch.trim())))
+    : visiblePdfsByTag;
+  const procedimentiFiltrati = (procedimenti ?? []).filter(p =>
+    !procSearch.trim() || norm(p.nome).includes(norm(procSearch.trim())));
 
   // FIX #3: the modal ignored the theme and stayed dark in Light mode. Read the
   // theme and resolve the main surfaces from a small palette below.
@@ -201,6 +214,22 @@ export function ProcessusModal({
               I tre className qui sotto (◈ ALL, l'input di rinomina, il chip normale) erano
               `font-mono` senza `font-bold` — aggiunto a tutti e tre per restare coerenti fra
               stato normale/attivo/in-modifica dello stesso chip. */}
+          {/* ⚠️ AGGIUNTA — v. la nota su `pdfSearch`, sopra: con molti PDF la sola griglia
+              a occhio non basta più. Solo oltre una decina di file (`> 10`): con pochi non
+              serve, sarebbe un campo vuoto che occupa spazio per niente. */}
+          {!soloComandi && processusPdfs.length > 10 && (
+            <div className="relative">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: th.textDim }} />
+              <input
+                type="text"
+                value={pdfSearch}
+                onChange={e => setPdfSearch(e.target.value)}
+                placeholder={L('cerca un processus…', 'cherche un processus…', 'search a processus…', 'busca un processus…', 'sök en processus…')}
+                className="w-full pl-8 pr-3 py-1.5 rounded-lg text-[11px] font-mono outline-none"
+                style={{ border: `1px solid ${th.accentBorder}`, background: th.card, color: th.text }}
+              />
+            </div>
+          )}
           {!soloComandi && <div className="flex items-center gap-2 flex-wrap">
             {(() => {
               const chipStyle = (active: boolean): React.CSSProperties => ({
@@ -373,19 +402,42 @@ export function ProcessusModal({
                     'inga procedurer — en .txt-fil per procedur, ett kommando per rad')}
                 </p>
               ) : (
-                <div className="flex items-center gap-2 flex-wrap">
-                  {procedimenti.map(p => (
-                    <button key={p.nome} onClick={() => onSelectProcedimento?.(p)}
-                      title={`${p.comandi.length} ${L('comandi', 'commandes', 'commands', 'comandos', 'kommandon')}`}
-                      className="px-3.5 py-1.5 rounded-full text-[11px] font-mono font-bold tracking-widest uppercase transition-all flex items-center gap-1.5"
-                      style={{ border: `1px solid ${th.accent}`, background: lt ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.08)', color: th.text }}>
-                      ▸ {p.nome}
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: lt ? 'rgba(8,145,178,0.12)' : 'rgba(255,255,255,0.15)' }}>
-                        {p.comandi.length}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+                <>
+                  {/* ⚠️ SFOLTITA — v. la nota grande su `procSearch`/`pdfSearch`, sopra la
+                      funzione del componente: « non trovi che è un poco confusionario... ».
+                      La riga di pillole che andava a capo diventava un muro con molti
+                      procedimenti, senza un modo rapido per trovarne uno. Sostituita da una
+                      LISTA VERTICALE (nome a sinistra, conteggio comandi a destra) — più
+                      scorribile a occhio — con un campo di ricerca sopra, solo oltre una
+                      decina di procedimenti (con pochi non serve). */}
+                  {procedimenti.length > 10 && (
+                    <div className="relative mb-1">
+                      <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: th.textDim }} />
+                      <input
+                        type="text"
+                        value={procSearch}
+                        onChange={e => setProcSearch(e.target.value)}
+                        placeholder={L('cerca un procedimento…', 'cherche un procédé…', 'search a procedure…', 'busca un procedimiento…', 'sök en procedur…')}
+                        className="w-full pl-7 pr-2 py-1 rounded-md text-[10px] font-mono outline-none"
+                        style={{ border: `1px solid ${th.accent}`, background: lt ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.08)', color: th.text }}
+                      />
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-1 overflow-y-auto" style={{ maxHeight: 176 }}>
+                    {procedimentiFiltrati.map(p => (
+                      <button key={p.nome} onClick={() => onSelectProcedimento?.(p)}
+                        className="w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-left transition-colors"
+                        style={{ border: `1px solid ${th.accentBorder}`, background: lt ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.08)' }}>
+                        <span className="text-[11px] font-mono font-bold tracking-wide uppercase truncate" style={{ color: th.text }}>
+                          ▸ {p.nome}
+                        </span>
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: lt ? 'rgba(8,145,178,0.12)' : 'rgba(255,255,255,0.15)', color: th.accent }}>
+                          {p.comandi.length} {L('comandi', 'commandes', 'commands', 'comandos', 'kommandon')}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -424,66 +476,36 @@ export function ProcessusModal({
                 <div className="flex-1 h-px" style={{ background: lt ? 'linear-gradient(90deg, rgba(8,145,178,0.3), transparent)' : 'linear-gradient(90deg, rgba(255,255,255,0.3), transparent)' }} />
               </div>
 
-              {/* PDF cards grid */}
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
+              {/* ⚠️ SFOLTITA — segnalato: « non trovi che è un poco confusionario... cosa
+                  proponi di più elegante e efficiente? ». Prima: card grandi con una finta
+                  "costa di libro 3D" (pura decorazione, nessuna informazione — ogni PDF
+                  aveva la STESSA icona) e un'etichetta del tag ripetuta su OGNI card, anche
+                  se il gruppo è già intitolato col tag qui sopra — rumore doppio.
+                  Ora: card piccole e dense, senza la costa finta (una sola icona piatta,
+                  piccola, solo per dire "è un documento"), senza il badge del tag
+                  ridondante — più righe stanno a schermo, meno elementi ripetuti per
+                  occhio. Più colonne (`sm:grid-cols-5 md:grid-cols-6`), meno spazio sprecato
+                  per card. */}
+              <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
                 {pdfs.map((p, i) => {
                   const globalIdx = processusPdfs.indexOf(p);
                   return (
                     <div
                       key={i}
                       title={p.name}
-                      className="relative group cursor-pointer flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-200"
-                      style={{
-                        background: th.card,
-                        border: `1px solid ${th.cardBorder}`,
-                        boxShadow: lt ? '0 4px 16px rgba(30,60,100,0.12)' : '0 4px 20px rgba(0,0,0,0.4)',
-                        transform: 'perspective(600px) rotateX(2deg)',
-                      }}
-                      onMouseEnter={e => {
-                        const el = e.currentTarget as HTMLDivElement;
-                        el.style.transform = 'perspective(600px) rotateX(0deg) translateY(-4px) scale(1.04)';
-                        el.style.boxShadow = lt ? '0 8px 26px rgba(8,145,178,0.20), 0 0 0 1px rgba(8,145,178,0.35)' : '0 8px 30px rgba(0,180,255,0.25), 0 0 0 1px rgba(255,255,255,0.4)';
-                        el.style.background = lt ? 'rgba(255,255,255,0.97)' : 'rgba(0,40,90,0.7)';
-                      }}
-                      onMouseLeave={e => {
-                        const el = e.currentTarget as HTMLDivElement;
-                        el.style.transform = 'perspective(600px) rotateX(2deg)';
-                        el.style.boxShadow = lt ? '0 4px 16px rgba(30,60,100,0.12)' : '0 4px 20px rgba(0,0,0,0.4)';
-                        el.style.background = th.card;
-                      }}
+                      className="relative group cursor-pointer flex items-center gap-2 px-2.5 py-2 rounded-lg transition-colors"
+                      style={{ background: th.card, border: `1px solid ${th.cardBorder}` }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = lt ? 'rgba(255,255,255,0.97)' : 'rgba(0,40,90,0.5)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = th.card; }}
                       onClick={() => {
                         onSelectProcessus({ id: Date.now(), name: p.name, url: p.url });
                         onClose();
                       }}
                     >
-                      {/* 3D book spine */}
-                      <div className="relative flex-shrink-0" style={{ width: 56, height: 72 }}>
-                        <div className="absolute inset-0 rounded-sm flex items-center justify-center"
-                          style={{
-                            background: 'linear-gradient(135deg, rgba(0,60,140,0.8), rgba(0,20,60,0.9))',
-                            border: '1px solid rgba(255,255,255,0.25)',
-                          }}>
-                          <BookOpen size={22} style={{ color: 'rgba(255,255,255,0.6)' }} />
-                        </div>
-                        {/* Spine shadow */}
-                        <div className="absolute left-0 top-1 bottom-1 w-2 rounded-l-sm"
-                          style={{ background: 'rgba(0,0,0,0.4)', borderRight: '1px solid rgba(255,255,255,0.1)' }} />
-                      </div>
-
-                      {/* File name */}
-                      {/* ⚠️ CORRETTO — segnalato: « non hai messo in grassetto i PROCESSI ». Il
-                          giro precedente aveva messo in grassetto SOLO l'elenco più in basso
-                          (PROCESSUS→PROCEDIMENTI, i file .txt con i comandi) — questa griglia di
-                          card, i veri file PROCESSUS (PDF), era rimasta senza `font-bold`. */}
-                      <span className="text-center text-[10px] font-mono font-bold leading-tight line-clamp-2"
-                        style={{ color: th.text, maxWidth: '100%', wordBreak: 'break-word' }}>
+                      <BookOpen size={14} className="flex-shrink-0" style={{ color: th.accent }} />
+                      <span className="text-[10px] font-mono font-bold leading-tight line-clamp-2"
+                        style={{ color: th.text, wordBreak: 'break-word' }}>
                         {p.name}
-                      </span>
-
-                      {/* Tag badge — theme-aware so it stays readable in Light mode */}
-                      <span className="text-[8px] font-mono px-1.5 py-0.5 rounded-full"
-                        style={{ background: lt ? 'rgba(8,145,178,0.12)' : 'rgba(255,255,255,0.1)', border: `1px solid ${th.accentBorder}`, color: th.accent }}>
-                        {p.tag}
                       </span>
 
                       {/* Delete button */}
@@ -500,7 +522,7 @@ export function ProcessusModal({
                           setProcessusPdfs(prev => prev.filter((_, j) => j !== globalIdx));
                         }}
                         title={L('elimina', 'supprimer', 'delete', 'eliminar', 'ta bort')}
-                        className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] opacity-0 group-hover:opacity-100 transition-opacity"
                         style={{ background: 'rgba(200,0,0,0.5)', border: '1px solid rgba(255,60,60,0.4)', color: 'rgba(255,180,180,0.9)' }}>
                         ✕
                       </button>
