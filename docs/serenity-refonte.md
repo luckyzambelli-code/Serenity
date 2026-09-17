@@ -12624,3 +12624,21 @@ commit del contenuto. La prossima build raccoglierà questo giro insieme a quell
 
 File: `public/dizionario/dizionario-{it,en,fr,es}.json`. `tsc --noEmit` pulito, `npm run
 lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-17 (continuazione ancora) — DIZIONARIO: nuova voce APPROSSIMAZIONE
+RIDEFINITA
+
+**Richiesto:** nuova voce (HCOB 27 Dicembre 2025 - APPROSSIMAZIONE RIDEFINITA), tradotta
+anche in francese e spagnolo. ⚠️ Corretta l'ortografia data dall'utente ("APPROSIMAZIONE",
+una sola S) nella grafia italiana corretta "APPROSSIMAZIONE" (due S) — non una coniazione
+tecnica nuova, solo la parola comune con l'ortografia giusta; verificato che nessun termine
+classico "approssimazione"/"approximation" esisteva già nei 4 dizionari (nessuna
+collisione). Stessa procedura del secondo lotto: posizionata con l'algoritmo a cluster
+dominante, verificata contro i vicini alfabetici reali in tutte le lingue. Verificato dal
+vivo: la ricerca isola un solo risultato e apre da sola la definizione (v. il giro sulla
+ricerca diretta), testo integro, nessun errore in console.
+
+Build ancora sospesa su richiesta dell'utente — solo commit del contenuto.
+
+File: `public/dizionario/dizionario-{it,en,fr,es}.json`. `tsc --noEmit` pulito, `npm run
+lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
