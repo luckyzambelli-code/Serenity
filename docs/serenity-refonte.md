@@ -12979,3 +12979,78 @@ gli edit era residuo di un salvataggio intermedio, sparito al reload).
 
 File: `src/components/ProcessusModal.tsx`. `tsc --noEmit` pulito, `npm run lint` 324
 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-17 (continuazione ancora) — PROCESSUS: la vera causa della "pagina
+bianca" trovata e corretta
+
+**Segnalato:** « Come faccio a vedere l'errore della console? » — poi, dopo le istruzioni
+per aprire gli Strumenti per sviluppatori, l'utente ha incollato l'errore vero:
+
+```
+NotFoundError: User cancelled the requestDevice() chooser.
+  (anonymous) @ crashGuard-BUyi1amQ.js:295
+chrome-error://chromewebdata/:1
+Failed to load resource: the server responded with a status of 403 ()
+chrome-error://chromewebdata/:1
+Failed to load resource: the server responded with a status of 403 ()
+```
+
+**Diagnosi:** la riga `NotFoundError: requestDevice()` è rumore scollegato (un tentativo
+di connessione Bluetooth/USB annullato, intercettato dal logger globale `crashGuard.ts` —
+non c'entra coi PROCESSUS). La pista vera è `chrome-error://chromewebdata` ripetuto due
+volte con 403 — lo schema d'errore interno di Chromium, mostrato quando una navigazione
+fallisce. Il visualizzatore PDF dei PROCESSUS carica il file in un `<iframe
+src={processusVisualizzato.url}>` (`FinestreSovrapposte.tsx`), e quell'`url` viene da
+`serverProcessusUrl(id)` (`src/lib/serverStorage.ts`) — un semplice URL, SENZA il token
+`X-Local-Auth`. `/api/processus` è dentro `LOCAL_ONLY_PREFIXES` (protezione FIX SEC-1,
+`api-routes.cjs`/`server-core.cjs`): senza quel token ogni richiesta prende 403. Il
+problema: **un `<iframe src>` è una navigazione del browser, non un `fetch()` — non può
+mai portare un header custom.** Ogni singola apertura di un PROCESSUS era quindi
+STRUTTURALMENTE condannata al 403, fin da quando la protezione SEC-1 è stata aggiunta,
+senza che nessuno l'avesse notato prima (nessun test automatico carica un vero iframe).
+
+**Correzione:** `hasLocalToken()` (`server-core.cjs`) ora accetta il token anche via query
+string (`?token=...`), non solo via header — un fallback pensato apposta per le rotte che
+DEVONO restare raggiungibili da una navigazione piatta. Stesso segreto, stessa minaccia
+difesa (il token non è MAI esposto al tunnel pubblico, solo veicolato per un canale
+diverso). `getCachedLocalAuthToken()` (nuovo, `src/lib/localAuth.ts`) espone
+sincronamente il token già risolto da un `fetch()` precedente (la lista dei PROCESSUS
+arriva sempre da uno, prima che `serverProcessusUrl()` venga chiamata — verificato
+leggendo tutti e 4 i punti di chiamata). `serverProcessusUrl()` ora incorpora il token
+nella query string quando disponibile.
+
+Verificato: `tsc`/lint/test puliti. Verifica dal vivo LIMITATA: il server Express locale
+(`server-core.cjs`/`api-routes.cjs`) gira solo dentro l'app Electron pacchettizzata, non
+nell'anteprima del browser di sviluppo (che mostra 403/ERR_CONNECTION_REFUSED per
+mancanza del server reale, non per la logica del token) — la riproduzione end-to-end vera
+resta da confermare nell'app reale.
+
+File: `server-core.cjs`, `src/lib/localAuth.ts`, `src/lib/serverStorage.ts`. `tsc --noEmit`
+pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754
+(invariato).
+
+## Giro — 2026-09-17 (continuazione ancora) — bottone di aggiornamento: il medaglione
+SERENITY al posto dell'icona a parte
+
+**Segnalato:** « Il bottone di aggiornamento non mi piace. Abbiamo l'immagine di serenity
+forma cerchio, perché non utilizzarla semplicemente facendo apparire quando c'è un
+aggiornamento la scritta Verifica aggiornamento? »
+
+Il piccolo cerchio "vetro" con l'icona `RefreshCw` (giro precedente) è stato tolto del
+tutto. Il medaglione circolare SERENITY già esistente (`/credits/ondes.png`, accanto alla
+versione) diventa ESSO STESSO il pulsante quando l'API di aggiornamento è disponibile
+(`disponibile`): bordo ambra (`--s-reserve`) quando c'è qualcosa da notare
+(trovato/scaricamento/pronto), l'immagine ruota durante il controllo (`sAggiornaSpin`, già
+in `tokens.css`). Accanto alla versione, la scritta "Verifica aggiornamento" compare come
+invito cliccabile SOLO finché non si è ancora controllato (stato inattivo, sottolineatura
+tratteggiata); una volta cliccato lascia il posto allo stato reale (verifica…/trovato/
+scaricamento N%/pronto — riavvia/errore), esattamente come prima — nessuna perdita del
+riscontro visibile già corretto nel giro precedente.
+
+Verificato dal vivo: fuori da Electron (`disponibile` falso) il medaglione resta
+un'immagine ferma non cliccabile, nessuna scritta extra — nessuna regressione visiva
+nell'intestazione. Lo stato `disponibile` vero (dentro Electron) non è testabile
+nell'anteprima browser di sviluppo.
+
+File: `src/serenity/LogoSerenity.tsx`. `tsc --noEmit` pulito, `npm run lint` 324
+warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).

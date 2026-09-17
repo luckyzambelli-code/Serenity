@@ -11,7 +11,7 @@
 // FIX SEC-1: il token che prova « sono l'app locale » — v. la nota grande su
 // `LOCAL_AUTH_TOKEN` in `server-core.cjs`. Ogni fetch qui sotto lo porta, `/health` incluso
 // (è in `LOCAL_ONLY_PREFIXES`: senza il token riceverebbe 403 anche da un'app locale vera).
-import { localAuthHeaders } from './localAuth';
+import { localAuthHeaders, getCachedLocalAuthToken } from './localAuth';
 
 // CONN-85: the API base MUST follow the origin the app was served from, not a
 // hardcoded localhost. Electron loads from http://127.0.0.1:7893 (same origin →
@@ -188,9 +188,22 @@ export async function serverSaveProcessus(
   }
 }
 
-/** Returns a URL pointing to the file served from the local API (cacheable, shareable). */
+/**
+ * Returns a URL pointing to the file served from the local API (cacheable, shareable).
+ *
+ * FIX (17/09/2026) — questo URL finisce dentro un `<iframe src>` nel visualizzatore PDF dei
+ * PROCESSUS: una navigazione, non un `fetch()`, quindi non può portare l'header
+ * `X-Local-Auth` che protegge `/api/processus` (è in `LOCAL_ONLY_PREFIXES`). Senza il token,
+ * ogni apertura prendeva 403 e Chromium mostrava la sua pagina d'errore al posto del PDF —
+ * la "pagina bianca" segnalata. Il token va quindi incorporato qui nella query string (v. il
+ * fallback in `hasLocalToken()`, `server-core.cjs`); `getCachedLocalAuthToken()` è sincrono
+ * perché a questo punto è già stato risolto da un `fetch()` precedente (la lista dei
+ * PROCESSUS arriva sempre da uno).
+ */
 export function serverProcessusUrl(id: string): string {
-  return `${API}/processus/${encodeURIComponent(id)}`;
+  const base = `${API}/processus/${encodeURIComponent(id)}`;
+  const token = getCachedLocalAuthToken();
+  return token ? `${base}?token=${encodeURIComponent(token)}` : base;
 }
 
 export async function serverDeleteProcessus(id: string): Promise<boolean> {

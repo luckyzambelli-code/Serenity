@@ -85,7 +85,15 @@ const PEERJS_KEY = _resolvePeerJsKey();
 // dedurre dall'Host:, niente più aggirabile da un `curl` con un header a piacere.
 const LOCAL_AUTH_TOKEN = crypto.randomBytes(24).toString('hex');
 function hasLocalToken(req) {
-  return req.headers['x-local-auth'] === LOCAL_AUTH_TOKEN;
+  if (req.headers['x-local-auth'] === LOCAL_AUTH_TOKEN) return true;
+  // FIX (17/09/2026) — segnalato: « i PROCESSUS restano a pagina bianca ». Il visualizzatore
+  // PDF li carica in un <iframe src=...>: una navigazione del browser, non un fetch() — e una
+  // navigazione non può portare un header custom. Ogni apertura di un PROCESSUS finiva quindi
+  // SEMPRE su questo 403 (`/api/processus` è in `LOCAL_ONLY_PREFIXES`, v. api-routes.cjs), e
+  // Chromium mostrava la sua pagina d'errore interna al posto del PDF. Stesso segreto, stesso
+  // token mai esposto al tunnel — solo veicolato nella query string invece che nell'header,
+  // per le sole richieste che DEVONO passare da una navigazione piatta anziché da un fetch().
+  return typeof req.query?.token === 'string' && req.query.token === LOCAL_AUTH_TOKEN;
 }
 // ⚠️ CORRETTO — segnalato nella revisione completa: le TRE rotte sotto (`/api/server-info`,
 // `POST /api/tunnel`, `DELETE /api/tunnel`) ripetevano la STESSA riga di guardia copiata tre

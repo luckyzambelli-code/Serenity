@@ -62,3 +62,14 @@ export const localAuthHeaders = async (): Promise<Record<string, string>> => {
   const t = await getLocalAuthToken();
   return t ? { 'X-Local-Auth': t } : {};
 };
+
+/**
+ * Il token, SOLO se già risolto in questa pagina — sincrono, `null` se `getLocalAuthToken()`
+ * non è ancora stato chiamato. Serve a `serverProcessusUrl()`: quell'URL finisce dentro un
+ * `<iframe src>` (una navigazione, non un `fetch()`) e non può portare l'header `X-Local-Auth`
+ * — il token va quindi incorporato nella query string (v. il fallback in `hasLocalToken()`,
+ * `server-core.cjs`). Sincrono apposta: la lista dei PROCESSUS arriva sempre da un `fetch()`
+ * precedente (che passa da `localAuthHeaders()` e quindi risolve già il token), quindi al
+ * momento in cui si costruiscono questi URL il valore è già in cache.
+ */
+export const getCachedLocalAuthToken = (): string | null => _cached ?? null;
