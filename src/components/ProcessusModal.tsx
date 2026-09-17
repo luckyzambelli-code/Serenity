@@ -42,6 +42,12 @@ interface ProcessusModalProps {
   procedimenti?: Procedimento[];
   onSelectProcedimento?: (p: Procedimento) => void;
   onApriCartellaProcedimenti?: () => void;
+  /** ⚠️ AGGIUNTO — segnalato: « puoi integrare i file COMMANDS e PROCESSUS in una cartella
+   *  identica separata in PROCESSUS e COMMANDI? ». Gemello di `onApriCartellaProcedimenti`
+   *  sopra, ma per l'archivio PDF stesso (`~/EQUILIBRIUM/PROCESSUS/`, v. `main.cjs`) — mostrato
+   *  SOLO nella vista PROCESSUS completa (mai con `soloComandi`, dove l'archivio PDF non
+   *  compare affatto). */
+  onApriCartellaProcessus?: () => void;
   /** ⚠️ SOLO SERENITY, additiva — segnalato di nuovo: « quando schiacci sul bottone COMMANDS,
    *  devono apparire solo i file dei comandi, non tutti i processus ». Un giro precedente
    *  aveva scelto di aprire lo STESSO modale generale per COMMANDS e Processus, solo mettendo
@@ -61,7 +67,7 @@ export function ProcessusModal({
   editingTag, setEditingTag,
   editingTagValue, setEditingTagValue,
   onSelectProcessus, onClose, t,
-  procedimenti, onSelectProcedimento, onApriCartellaProcedimenti,
+  procedimenti, onSelectProcedimento, onApriCartellaProcedimenti, onApriCartellaProcessus,
   soloComandi,
 }: ProcessusModalProps) {
   // La lingua non arrivava fra le props: il segnaposto del campo restava in francese per tutti.
@@ -170,6 +176,20 @@ export function ProcessusModal({
                   : `${processusPdfs.length} PROCESSUS · ${allTags.length} TAG${allTags.length !== 1 ? 'S' : ''}`}
               </p>
             </div>
+            {/* ⚠️ AGGIUNTO — v. la nota su `onApriCartellaProcessus`, sopra: la cartella
+                gemella di COMANDI PROCEDIMENTI, ma per l'archivio PDF. Solo nella vista
+                completa — con `soloComandi` l'archivio PDF non compare affatto, aprirne
+                la cartella qui non avrebbe senso. */}
+            {!soloComandi && onApriCartellaProcessus && (
+              <button onClick={onApriCartellaProcessus}
+                title={L('apri (o crea) la cartella dei processus', 'ouvrir (ou créer) le dossier des processus',
+                  'open (or create) the processus folder', 'abrir (o crear) la carpeta de processus',
+                  'öppna (eller skapa) mappen med processus') as string}
+                className="text-[10px] font-mono tracking-widest uppercase px-2.5 py-1 rounded-full transition-all flex-shrink-0"
+                style={{ border: `1px solid ${th.accentBorder}`, color: th.accent, background: 'transparent' }}>
+                {L('apri cartella', 'ouvrir le dossier', 'open folder', 'abrir carpeta', 'öppna mapp')}
+              </button>
+            )}
             {/* Fermeture en MINI TOGGLE (cohérence graphique) : on = panneau ouvert. */}
             <GlassCollapseToggle on onToggle={() => { onClose(); setPendingFiles([]); setPendingTagInput(''); }} title={t('tip_close')} />
           </div>
@@ -267,13 +287,23 @@ export function ProcessusModal({
                   className="flex-1 bg-transparent border-b px-2 py-1 text-xs font-mono outline-none placeholder:opacity-30"
                   style={{ borderColor: 'rgba(255,255,255,0.4)', color: 'rgba(240,246,255,0.95)' }}
                 />
-                {allTags.map(tag => (
-                  <button key={tag} onClick={() => setPendingTagInput(tag)}
-                    className="px-2 py-1 rounded text-[10px] font-mono transition-all hover:bg-cyan-500/20"
-                    style={{ border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.6)' }}>
-                    {tag}
-                  </button>
-                ))}
+                {/* ⚠️ SCORREVOLE — segnalato: « quando aggiungi un PROCESSUS devo poter far
+                    scorrere i TAG per scegliere quello idoneo ». Prima questi chip erano
+                    nella STESSA riga flessibile di input/ADD/annulla, senza wrap né
+                    scroll — con molti tag esistenti finivano semplicemente tagliati fuori
+                    dallo schermo, irraggiungibili. `overflow-x-auto` + `flex-shrink-0` sui
+                    chip: la striscia scorre in orizzontale, input e bottoni ADD/annulla
+                    restano sempre visibili accanto (mai spinti fuori). */}
+                <div className="flex items-center gap-1.5 overflow-x-auto"
+                  style={{ maxWidth: 260, flexShrink: 0 }}>
+                  {allTags.map(tag => (
+                    <button key={tag} onClick={() => setPendingTagInput(tag)}
+                      className="px-2 py-1 rounded text-[10px] font-mono transition-all hover:bg-cyan-500/20 flex-shrink-0"
+                      style={{ border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.6)' }}>
+                      {tag}
+                    </button>
+                  ))}
+                </div>
                 <button
                   onClick={() => commitPendingFiles(pendingTagInput.trim() || 'General')}
                   className="px-4 py-1 rounded text-xs font-mono font-bold transition-all"
@@ -306,7 +336,14 @@ export function ProcessusModal({
             del grigio neutro, un lieve alone (`boxShadow`) — la stessa lingua visiva che già
             marca "selezionato"/"attivo" altrove nel modale (v. `chipStyle`, sopra), non un
             colore nuovo inventato qui. */}
-        {procedimenti !== undefined && (
+        {/* ⚠️ SOLO CON `soloComandi` — segnalato: « quando apri i PROCESSUS non far più
+            vedere i COMMANDI. Prendono troppo spazio ed hanno la loro visiale ». Prima
+            questa card compariva SEMPRE che `procedimenti !== undefined`, anche nella
+            vista PROCESSUS completa (dove chi arriva cerca l'archivio PDF, non i
+            procedimenti — quelli hanno già il proprio bottone COMMANDS dedicato, che apre
+            questo stesso modale con `soloComandi:true`). Aggiunto `&& soloComandi`: ora la
+            card compare SOLO arrivando da COMMANDS, mai da PROCESSUS. */}
+        {procedimenti !== undefined && soloComandi && (
           <div className="px-6 py-4 border-b flex flex-col gap-2" style={{ borderColor: th.divider }}>
             <div className="rounded-xl px-4 py-3 flex flex-col gap-2" style={{
               background: th.accentSoft, border: `1.5px solid ${th.accent}`,

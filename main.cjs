@@ -293,6 +293,24 @@ ipcMain.handle('procedimenti-folder-open', () => {
   } catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
 });
 
+// ⚠️ AGGIUNTO — segnalato: « puoi integrare i file COMMANDS e PROCESSUS in una cartella
+// identica separata in PROCESSUS e COMMANDI? ». PROCEDIMENTI_DIR, sopra, ha già il suo
+// bottone "apri cartella" (`ProcessusModal.tsx`, card COMANDI PROCEDIMENTI); PROCESSUS
+// (i PDF) non ne aveva uno equivalente — ora sì, stesso schema, stessa cartella visibile
+// sotto HOME (v. la nota grande in `api-routes.cjs` su `PROCESSUS_DIR`, spostato lì da
+// dentro `Library/Application Support` a `~/EQUILIBRIUM/PROCESSUS/` proprio per questo).
+// Il percorso è ripetuto qui invece di importato da `api-routes.cjs` (che non esporta le
+// sue costanti) — stesso schema già in uso per `PROCEDIMENTI_DIR`, una singola `path.join`
+// duplicata non merita un giro di refactor.
+const PROCESSUS_DIR = path.join(os.homedir(), 'EQUILIBRIUM', 'PROCESSUS');
+ipcMain.handle('processus-folder-open', () => {
+  try {
+    fs.mkdirSync(PROCESSUS_DIR, { recursive: true });
+    shell.openPath(PROCESSUS_DIR);
+    return { ok: true, dir: PROCESSUS_DIR };
+  } catch (e) { return { ok: false, error: String((e && e.message) || e) }; }
+});
+
 // CONN-76: native clipboard read — navigator.clipboard.readText() is blocked in
 // the Electron renderer, so "paste from clipboard" never pasted. Read via the
 // main process instead.

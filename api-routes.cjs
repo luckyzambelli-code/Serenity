@@ -217,12 +217,44 @@ function relayQueryParam(rawUrl, key) {
 // ~/Library/Application Support/Static Meter/ is hidden from casual Finder
 // browsing (Library is invisible by default on macOS) — prevents accidental deletion.
 const BASE_DIR        = path.join(os.homedir(), 'Library', 'Application Support', 'Static Meter', 'appdata');
-const PROCESSUS_DIR   = path.join(BASE_DIR, 'processus');
+// ⚠️ PROCESSUS SPOSTATO FUORI DA `BASE_DIR` — segnalato: « puoi integrare i file COMMANDS
+// e PROCESSUS in una cartella identica separata in PROCESSUS e COMMANDI? ». COMANDI
+// (`main.cjs`, `PROCEDIMENTI_DIR`) vive già in `~/EQUILIBRIUM/COMANDI/Procedimenti` — una
+// cartella vera, sotto HOME, che si apre in Finder/Explorer, si copia, si scrive a mano.
+// PROCESSUS invece viveva qui dentro `BASE_DIR`, la cartella NASCOSTA di sistema pensata
+// per profili/sedute/backup (v. la nota sopra) — comodo per non farli cancellare per
+// sbaglio, ma impossibile da trovare o gestire a mano, il contrario di COMANDI. Spostato
+// a `~/EQUILIBRIUM/PROCESSUS/`, sorella di `~/EQUILIBRIUM/COMANDI/`, sotto lo stesso
+// genitore visibile — "cartella identica separata" per entrambi. `index.json` (i tag)
+// resta dentro, come prima, solo nella nuova cartella.
+const PROCESSUS_DIR   = path.join(os.homedir(), 'EQUILIBRIUM', 'PROCESSUS');
+// La vecchia posizione, SOLO per la migrazione una tantum qui sotto — mai più scritta.
+const PROCESSUS_DIR_LEGACY = path.join(BASE_DIR, 'processus');
 const SESSION_PDF_DIR = path.join(BASE_DIR, 'session-pdfs');
 const PROCESSUS_INDEX = path.join(PROCESSUS_DIR, 'index.json');
 const BACKUP_DIR      = path.join(BASE_DIR, 'backups'); // R5: rotating daily backups
 
+// ⚠️ MIGRAZIONE UNA TANTUM — chi aveva già dei PROCESSUS salvati nella vecchia cartella
+// nascosta non deve vederli sparire al primo avvio dopo l'aggiornamento: se la cartella
+// nuova non esiste ancora ma la vecchia sì, la si sposta (non copia: un solo posto vero,
+// niente doppioni da disallineare) prima di procedere. `renameSync` tra due cartelle sotto
+// la stessa HOME sta sempre sullo stesso disco — atomico, istantaneo. Se qualcosa va
+// storto (permessi, disco pieno) si logga e si continua: la cartella nuova viene comunque
+// creata vuota da `ensureDirs`, mai un crash del server per questo.
+function migraProcessusLegacy() {
+  try {
+    if (fs.existsSync(PROCESSUS_DIR_LEGACY) && !fs.existsSync(PROCESSUS_DIR)) {
+      fs.mkdirSync(path.dirname(PROCESSUS_DIR), { recursive: true });
+      fs.renameSync(PROCESSUS_DIR_LEGACY, PROCESSUS_DIR);
+      console.log('[processus] migrata la cartella da', PROCESSUS_DIR_LEGACY, 'a', PROCESSUS_DIR);
+    }
+  } catch (e) {
+    console.warn('[processus] migrazione fallita, si riparte da una cartella nuova vuota:', e && e.message);
+  }
+}
+
 function ensureDirs() {
+  migraProcessusLegacy();
   [BASE_DIR, PROCESSUS_DIR, SESSION_PDF_DIR, BACKUP_DIR].forEach(d => {
     if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
   });

@@ -12865,3 +12865,53 @@ conferma esplicita ogni volta.
 
 File: `src/serenity/LogoSerenity.tsx`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0
 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-17 (continuazione ancora) — 4 nuove voci dizionario + PROCESSUS: tre
+correzioni e cartella spostata
+
+**Dizionario, 4 nuove voci** (HCOB 2019, Comunicazione di Ron 2025) — FENOMENI FINALI
+NELL'UNIVERSO FISICO P/eP O (P-EP), LA LEGGE DELL'UNIFICAZIONE, IL PRINCIPIO
+DELL'INVERSIONE, MINIMA AZIONE — tradotte anche in francese e spagnolo, stessa procedura
+dei giri precedenti (cluster dominante, articolo iniziale escluso dall'ordinamento per gli
+ultimi due). Nessuna collisione con voci classiche (verificato: "FENOMENI FINALI",
+"INVERSIONE", "INVERSIONE DEL POSTULATO" esistono già ma sono termini diversi).
+
+**PROCESSUS, tre segnalazioni insieme:**
+1. « QUando apri i PROCESSUS non far più vedere i COMMANDI. Prendono troppo spazio ed
+   hanno la loro visiale » — la card COMANDI PROCEDIMENTI compariva SEMPRE che
+   `procedimenti !== undefined`, anche nella vista PROCESSUS completa. Aggiunto `&&
+   soloComandi`: ora compare SOLO da COMMANDS, mai da PROCESSUS.
+2. « QUando aggiungi un PROCESSUS devo poter far scorrere i TAG per scegliere quello
+   idoneo » — i chip dei tag esistenti, nella schermata "assegna tag" dopo aver scelto i
+   file, erano su un'unica riga senza wrap né scroll: con molti tag finivano tagliati
+   fuori dallo schermo. Isolati in un contenitore proprio con `overflow-x-auto` e
+   `flex-shrink-0` sui chip — input e bottoni ADD/annulla restano sempre visibili accanto.
+3. « I PROCESSUS quando apri resta pagina bianca » — non riprodotto in locale (la vista si
+   apre correttamente qui); il fix del punto 1 toglie un candidato plausibile (la card
+   PROCEDIMENTI che tentava di renderizzare anche nella vista completa). Da confermare con
+   l'utente se persiste dopo questo giro.
+
+**Segnalato separatamente: « Puoi integrare i file COMMANDS e PROCESSUS in una cartella
+identica separata in PROCESSUS e COMMANDI? »** — trovata l'asimmetria reale: COMANDI vive
+in `~/EQUILIBRIUM/COMANDI/Procedimenti` (cartella vera, visibile, apribile in Finder);
+PROCESSUS viveva dentro `~/Library/Application Support/Static Meter/appdata/processus/`,
+la cartella NASCOSTA di sistema pensata per profili/sedute/backup — impossibile da trovare
+a mano, l'opposto di COMANDI. Spostato a `~/EQUILIBRIUM/PROCESSUS/`, sorella di
+`~/EQUILIBRIUM/COMANDI/` — "cartella identica separata" per entrambi. Aggiunta una
+migrazione una tantum (`migraProcessusLegacy` in `api-routes.cjs`): se la cartella vecchia
+esiste e la nuova no, sposta (non copia) il contenuto prima di procedere — chi aveva già
+dei PROCESSUS salvati non li perde. Aggiunto anche un bottone "APRI CARTELLA" per
+l'archivio PROCESSUS (prima esisteva solo per COMANDI/Procedimenti): nuovo canale IPC
+`processus-folder-open` (`main.cjs`), esposto in `preload.cjs`, richiamato da
+`apriCartellaProcessus()` (`src/lib/procedimenti.ts`), bottone nell'intestazione del
+modale (solo vista completa, mai con `soloComandi`).
+
+Verificato dal vivo: vista PROCESSUS completa senza più la card COMANDI PROCEDIMENTI, con
+il nuovo bottone APRI CARTELLA; vista COMMANDS (`soloComandi`) invariata, card
+COMANDI PROCEDIMENTI ancora presente, nessun bottone PROCESSUS lì (corretto). Sintassi dei
+file `.cjs` verificata con `node --check` (non coperti da `tsc`). Nessun errore in console.
+
+File: `public/dizionario/dizionario-{it,en,fr,es}.json`, `src/components/ProcessusModal.tsx`,
+`src/serenity/FinestreSovrapposte.tsx`, `src/lib/procedimenti.ts`, `main.cjs`,
+`preload.cjs`, `api-routes.cjs`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori
+(invariato), `npx vitest run` 754/754 (invariato).

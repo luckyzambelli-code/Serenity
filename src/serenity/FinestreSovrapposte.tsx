@@ -28,7 +28,7 @@ import { CreditsModal } from '../components/CreditsModal';
 import { SplashScreen } from '../components/SplashScreen';
 import { DizionarioModal } from './DizionarioModal';
 import { ProcessusModal, type ProcessusEntry } from '../components/ProcessusModal';
-import { apriCartellaProcedimenti, type Procedimento } from '../lib/procedimenti';
+import { apriCartellaProcedimenti, apriCartellaProcessus, type Procedimento } from '../lib/procedimenti';
 import type { UserProfile } from '../lib/storage';
 
 /** ── HISTORY, CARICATA A RICHIESTA — v. la nota originale in `Serenity.tsx`: lo stesso
@@ -273,6 +273,7 @@ export function FinestreSovrapposte({
               setFuocoProcedimentoStato(0); setRisposteProcedimento({}); domandeLoggateRef.current.clear();
             }}
             onApriCartellaProcedimenti={() => { apriCartellaProcedimenti(); }}
+            onApriCartellaProcessus={() => { apriCartellaProcessus(); }}
             soloComandi={processusSoloComandi}
           />
         </div>

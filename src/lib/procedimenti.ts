@@ -42,6 +42,10 @@ export interface Procedimento {
 interface ElectronProcedimentiApi {
   listProcedimenti?: () => Promise<Procedimento[]>;
   openProcedimentiFolder?: () => Promise<{ ok: boolean; dir?: string; error?: string }>;
+  // ⚠️ AGGIUNTO — segnalato: « puoi integrare i file COMMANDS e PROCESSUS in una cartella
+  // identica separata in PROCESSUS e COMMANDI? ». Stesso schema di `openProcedimentiFolder`
+  // qui sopra, per la cartella gemella `~/EQUILIBRIUM/PROCESSUS/` (v. `main.cjs`).
+  openProcessusFolder?: () => Promise<{ ok: boolean; dir?: string; error?: string }>;
 }
 const api = (): ElectronProcedimentiApi | null => {
   const w = window as unknown as { electronAPI?: ElectronProcedimentiApi };
@@ -59,4 +63,13 @@ export const listaProcedimenti = async (): Promise<Procedimento[]> => {
 /** Crea (se manca) e apre in Finder la cartella dei procedimenti. Nessun effetto fuori da Electron. */
 export const apriCartellaProcedimenti = async (): Promise<void> => {
   try { await api()?.openProcedimentiFolder?.(); } catch { /* noop */ }
+};
+
+/** Crea (se manca) e apre in Finder la cartella `~/EQUILIBRIUM/PROCESSUS/` — gemella di
+ *  quella dei procedimenti sopra, per gli stessi file che `ProcessusModal.tsx` elenca come
+ *  card PDF. Nessun effetto fuori da Electron (stesso `api()` — richiede `electronAPI`
+ *  presente, non solo `openProcessusFolder` da solo, per restare coerente con l'unico
+ *  cancello già in uso per questo intero file). */
+export const apriCartellaProcessus = async (): Promise<void> => {
+  try { await api()?.openProcessusFolder?.(); } catch { /* noop */ }
 };
