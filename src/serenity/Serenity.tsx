@@ -3320,7 +3320,6 @@ export default function Serenity() {
         onPausaManuale={pausaManuale}
         onChiudi={chiudi}
         onApri={apri}
-        ep={ep}
         procedimenti={procedimenti}
         onApriCommands={() => { setProcessusSoloComandi(true); setProcessusAperto(true); }}
         onApriDizionario={() => setDizionarioAperto(true)}

@@ -12804,3 +12804,36 @@ copiato dalla fonte esterna; il file sorgente fuori dal deposito non fa parte de
 
 File: `public/guide/SERENITY-manuale.html` (copiato). `tsc --noEmit` non applicabile (HTML
 puro, non toccato codice TS/TSX in questo giro).
+
+## Giro — 2026-09-17 (continuazione ancora) — EP spostato sotto CON AGO/SENZA AGO
+
+**Segnalato:** « Devi anche spostare il bottone EP sotto SENZA AGO per più coerenza ».
+
+EP viveva in `BarraLaterale.tsx`, primo bottone della fila EP/COMMANDS/PROCESSUS/
+DIZIONARIO (in basso a sinistra). Spostato in `GruppoAlto.tsx`, subito sotto il bottone
+CON AGO/SENZA AGO (angolo in alto vicino al quadrante, sotto NEEDLE LIGHT) — `ep` era già
+un prop di quel componente (usato per `asIsnessState`), nessun filo nuovo da tirare.
+
+**Ristilizzato, non solo spostato:** EP aveva un cerchio 54px con icona e etichetta sotto
+(stessa forma di COMMANDS/DIZIONARIO, dove viveva prima) — impilato sotto le due pillole
+sottili NEEDLE LIGHT/CON AGO-SENZA AGO sarebbe sembrato un corpo estraneo, non "più
+coerente". Rifatto nella STESSA forma a pillola (bordo sottile, sfondo trasparente,
+icona+testo in riga) — stessa icona (`BadgeCheck` quando validato, altrimenti
+`FileCheck`), stessa logica di click (`ep.setEpTimestamp`/`ep.setEpManualOpen`), stesso
+cancello `{aperta && (…)}` di prima (un EP si registra solo a seduta aperta) — MA non più
+legato a `(agoEeg || meterC)` come NEEDLE LIGHT/CON AGO: EP resta visibile anche senza
+strumenti, dove quei due bottoni non compaiono.
+
+Ripulito `BarraLaterale.tsx`: rimossi gli import diventati inutili (`BadgeCheck`,
+`FileCheck`, `sessionClock`, il tipo `useEpValidation`) e il prop `ep` non più usato
+(anche dalla chiamata a `<BarraLaterale>` in `Serenity.tsx`).
+
+Verificato dal vivo: aperta una seduta, EP compare come pillola vicino al quadrante (non
+più nella fila COMMANDS/PROCESSUS/DIZIONARIO, verificato assente lì), un clic apre
+correttamente il pannello END PHENOMENON, ANNULLA lo richiude, nessun errore in console.
+
+Build ancora sospesa — solo commit del contenuto.
+
+File: `src/serenity/GruppoAlto.tsx`, `src/serenity/BarraLaterale.tsx`,
+`src/serenity/Serenity.tsx`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori
+(invariato), `npx vitest run` 754/754 (invariato).

@@ -17,14 +17,12 @@
  * @see docs/serenity-refonte.md — giro di scomposizione, 2026-09-07.
  */
 import React, { useEffect, useState, type MutableRefObject, type RefObject } from 'react';
-import { Clock, Timer, Play, Pause, BookOpen, BadgeCheck, FileCheck, BookText, Smartphone, Files } from 'lucide-react';
+import { Clock, Timer, Play, Pause, BookOpen, BookText, Smartphone, Files } from 'lucide-react';
 import { useSerenityModuleStore } from './serenityModuleStore';
 import { GiornaleSeduta } from './GiornaleSeduta';
 import { orologio } from './orologio';
-import { sessionClock } from '../runtime/SessionClock';
 import type { Avvio } from './flussoAvvio';
 import type { Procedimento } from '../lib/procedimenti';
-import type { useEpValidation } from '../hooks/useEpValidation';
 import type { useSessionJournal } from '../session/useSessionJournal';
 import type { ReadSrc } from '../engine/instantRead';
 
@@ -62,7 +60,6 @@ export interface BarraLateraleProps {
   onPausaManuale: () => void;
   onChiudi: () => void;
   onApri: () => void;
-  ep: ReturnType<typeof useEpValidation>;
   procedimenti: Procedimento[];
   onApriCommands: () => void;
   onApriDizionario: () => void;
@@ -82,7 +79,7 @@ export interface BarraLateraleProps {
 
 export function BarraLaterale({
   sidebarTop, aperta, mostraBriefingIniziale, tempo, avvio, telefonoPcCollegato, onApriSatellite,
-  LC, pausata, pausaMotivoRef, onPausaManuale, onChiudi, onApri, ep, procedimenti, onApriCommands,
+  LC, pausata, pausaMotivoRef, onPausaManuale, onChiudi, onApri, procedimenti, onApriCommands,
   onApriDizionario, onApriProcessus, processusCount, journal, museOk, meterC, shownReadsRef, agoEegRef,
 }: BarraLateraleProps) {
   const moduleVis = useSerenityModuleStore(s => s.moduleVis);
@@ -423,15 +420,21 @@ export function BarraLaterale({
         </div>
       )}
       </div>
-      {/* ── EP E PROCEDIMENTI, LA STESSA PICCOLA ZONA — segnalato: « i comandi e le
+      {/* ── PROCEDIMENTI, LA STESSA PICCOLA ZONA — segnalato: « i comandi e le
           indicazioni dei cicli devono stare sotto il perno dell'ago, in larghezza »:
           CONTACT/NULL/MIRROR/TONE (e il campo item che li precede) hanno lasciato questa
           barra laterale per la stessa fascia larga di `PistaCiclo`, sotto il quadrante — v.
-          la nota lì per il perché e per dove sono ora. EP resta QUI: a differenza dei
-          quattro metodi è visibile SEMPRE a seduta aperta, non solo quando nessun ciclo è
-          armato (si registra un EP in qualunque momento) — non avrebbe senso spostarlo
-          dentro-e-fuori dalla fascia dei cicli insieme a loro. Stessa cornice sottile del
+          la nota lì per il perché e per dove sono ora. Stessa cornice sottile del
           Giornale/Assessment/Santé Système (`--s-zone-bg`/`--s-zone-border`).
+          ⚠️ EP NON PIÙ QUI — segnalato: « sposta il bottone EP sotto SENZA AGO per più
+          coerenza ». Viveva qui, primo bottone della fila (a differenza dei quattro metodi
+          era visibile SEMPRE a seduta aperta, non solo quando nessun ciclo è armato) —
+          spostato in `GruppoAlto.tsx`, subito sotto il bottone CON AGO/SENZA AGO: `ep` era
+          già un prop di quel componente (usato per `asIsnessState`), nessun filo nuovo da
+          tirare, solo il bottone spostato. La cronologia di questa nota resta qui perché
+          spiega ancora perché EP è SEMPRE visibile a seduta aperta (si registra un EP in
+          qualunque momento, mai legato a un ciclo armato) — la stessa ragione vale anche
+          nella sua nuova casa.
           ⚠️ PROCEDIMENTI, ACCANTO A EP — segnalato: « il campo Process, toglilo, è
           ridondante col nuovo Comandi Procedimenti; creerei un bottone specifico con icona
           da mettere accanto al bottone EP ». Tolto il campo di testo libero "processo" (v.
@@ -445,46 +448,26 @@ export function BarraLaterale({
           ⚠️ CHIAMALO COMMANDS — segnalato: « il Bottone Processus devi chiamarlo COMMANDS
           e deve aprire processus in generale, ma mettere in evidenza la zona Processu
           Command ». L'etichetta "procedimenti"/"processes" (tradotta via `LC`, come il resto
-          di SERENITY) non diceva perché questo bottone esiste QUI, vicino a EP, e non solo
-          in intestazione: non un secondo elenco di PDF, la scorciatoia diretta ai comandi di
-          un procedimento. "COMMANDS", fissa in maiuscolo come "EP"/"TONE" (mai tradotta — un
-          nome proprio della funzione, non una frase), lo dice. Il click resta lo stesso
-          (`setProcessusAperto(true)`, l'intero modale PROCESSUS, PDF compresi) — solo la
-          sezione COMANDI PROCEDIMENTI dentro di lui si fa notare di più (v. `ProcessusModal`,
-          il suo stesso `procedimenti !== undefined`). */}
+          di SERENITY) non diceva perché questo bottone esiste QUI: non un secondo elenco di
+          PDF, la scorciatoia diretta ai comandi di un procedimento. "COMMANDS", fissa in
+          maiuscolo come "TONE" (mai tradotta — un nome proprio della funzione, non una
+          frase), lo dice. Il click resta lo stesso (`setProcessusAperto(true)`, l'intero
+          modale PROCESSUS, PDF compresi) — solo la sezione COMANDI PROCEDIMENTI dentro di
+          lui si fa notare di più (v. `ProcessusModal`, il suo stesso `procedimenti !==
+          undefined`). */}
       {/* ⚠️ TOLTO IL CANCELLO `aperta` SU QUESTA RIGA — segnalato: « il Dizionario, i
           comandi devono essere presenti anche a seduta chiusa o non iniziata, per
           permettere all'auditor di rivedere i termini o i comandi ». Il riquadro intero
-          (EP + COMMANDS + DIZIONARIO) stava dietro `{aperta && (…)}`, doppiato da un
-          secondo `{aperta && (…)}` identico su OGNI bottone al suo interno — nessuno dei
-          tre raggiungibile prima di aprire o dopo aver chiuso. EP resta legato alla seduta
-          (registrare un EP senza seduta non ha senso, v. il suo `{aperta && (…)}` rimasto
-          invariato qui sotto) — COMMANDS e DIZIONARIO no: consultarli è un ripasso, non
-          un'azione di seduta, e l'auditor deve poterlo fare anche prima di iniziare o dopo
-          aver finito. */}
+          (COMMANDS + DIZIONARIO, EP allora incluso) stava dietro `{aperta && (…)}`, doppiato
+          da un secondo `{aperta && (…)}` identico su OGNI bottone al suo interno — nessuno
+          dei due raggiungibile prima di aprire o dopo aver chiuso. COMMANDS e DIZIONARIO
+          restano SENZA quel cancello: consultarli è un ripasso, non un'azione di seduta, e
+          l'auditor deve poterlo fare anche prima di iniziare o dopo aver finito. */}
       <div style={{
         display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 10, width: 272,
         background: 'var(--s-zone-bg)', border: '1px solid var(--s-zone-border)',
         borderRadius: 18, padding: 10,
       }}>
-      {aperta && (
-        <div style={{ display: 'grid', justifyItems: 'center', gap: 4, pointerEvents: 'auto' }}>
-          <button
-            className="s-glass s-glass-btn"
-            onClick={() => { if (!ep.epValidated) ep.setEpTimestamp(sessionClock.now()); ep.setEpManualOpen(true); }}
-            title="EP" style={{
-              width: 54, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', border: '1.5px solid var(--s-ink-ghost)', borderRadius: '50%',
-              background: 'var(--s-disc)', color: ep.epValidated ? 'var(--s-still)' : 'var(--s-ink-soft)',
-            }}>
-            {ep.epValidated ? <BadgeCheck size={22} strokeWidth={1.8} aria-hidden="true" /> : <FileCheck size={22} strokeWidth={1.8} aria-hidden="true" />}
-          </button>
-          <span style={{
-            fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
-            color: ep.epValidated ? 'var(--s-still)' : 'var(--s-ink-faint)',
-          }}>{ep.epValidated ? 'EP ✓' : 'EP'}</span>
-        </div>
-      )}
         <div style={{ display: 'grid', justifyItems: 'center', gap: 4, pointerEvents: 'auto' }}>
           <button
             className="s-glass s-glass-btn"

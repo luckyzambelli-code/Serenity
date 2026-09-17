@@ -20,12 +20,13 @@
  * @see docs/serenity-refonte.md — giro di scomposizione, 2026-09-07.
  */
 import React, { useMemo, useState, useSyncExternalStore, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
-import { Play, StickyNote } from 'lucide-react';
+import { Play, StickyNote, BadgeCheck, FileCheck } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { useUiStore } from '../store/uiStore';
 import { useMetric } from '../store/metricsStore';
 import { chargeStateById } from '../lib/chargeState';
 import { needleEngine } from '../runtime/NeedleEngine';
+import { sessionClock } from '../runtime/SessionClock';
 import { SET_OFFSET } from '../engine/dialGeometry';
 import { SQUEEZE_TARGET_OFFSET } from '../engine/thetaSetup';
 import { QuantumSphere } from '../components/QuantumSphere';
@@ -829,6 +830,31 @@ export function GruppoAlto({
                   color: vistaSenzaAgo ? 'var(--s-ink-soft)' : 'var(--s-ink-faint)',
                 }}>
                 {vistaSenzaAgo ? '○ WITH NEEDLE' : '● WITHOUT NEEDLE'}
+              </button>
+            )}
+            {/* ── EP, SOTTO CON AGO/SENZA AGO — segnalato: « sposta il bottone EP sotto
+                SENZA AGO per più coerenza ». Viveva in `BarraLaterale.tsx` (prima voce
+                della fila EP/COMMANDS/PROCESSUS/DIZIONARIO, in basso) — spostato qui, sotto
+                l'ultimo bottone di questo angolo del quadrante: `ep` è già un prop di
+                questo componente (v. `asIsnessState` più sotto), nessun filo nuovo, solo il
+                bottone spostato. Stessa icona/logica di prima: badge pieno quando l'EP è
+                validato, altrimenti l'icona foglio; un click apre il pannello EP (e, se non
+                ancora validato, marca l'istante). `aperta &&`: si registra un EP solo a
+                seduta aperta, mai prima o dopo — stessa condizione di prima. */}
+            {aperta && (
+              <button type="button"
+                onClick={() => { if (!ep.epValidated) ep.setEpTimestamp(sessionClock.now()); ep.setEpManualOpen(true); }}
+                title="EP" style={{
+                  pointerEvents: 'auto', marginTop: 2, borderRadius: 999, cursor: 'pointer',
+                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
+                  padding: '3px 9px', background: 'transparent', display: 'flex', alignItems: 'center', gap: 4,
+                  border: '1px solid var(--s-ink-ghost)',
+                  color: ep.epValidated ? 'var(--s-still)' : 'var(--s-ink-faint)',
+                }}>
+                {ep.epValidated
+                  ? <BadgeCheck size={13} strokeWidth={2} aria-hidden="true" />
+                  : <FileCheck size={13} strokeWidth={2} aria-hidden="true" />}
+                {ep.epValidated ? 'EP ✓' : 'EP'}
               </button>
             )}
           </div>
