@@ -74,19 +74,38 @@ export function LogoSerenity({ onApriCrediti, isLightTheme, mostraLivello, esper
           }}>
             {esperto === true ? 'EXPERT' : LC('BASIC', 'BASIQUE', 'BASIC', 'BÁSICO', 'BASIC')}
             {' · '}{__SERENITY_VERSION__}
-            {disponibile && (
-              <button type="button" onClick={verifica} disabled={stato === 'verifica' || stato === 'scaricamento'}
-                title={LC('verifica aggiornamento', 'vérifier la mise à jour', 'check for update',
-                  'buscar actualización', 'sök uppdatering')}
-                style={{
-                  marginLeft: 5, border: 'none', background: 'transparent', padding: 2,
-                  cursor: (stato === 'verifica' || stato === 'scaricamento') ? 'default' : 'pointer',
-                  color: 'var(--s-ink-faint)', verticalAlign: -3, lineHeight: 0,
-                }}>
-                <RefreshCw size={11} strokeWidth={2}
-                  style={stato === 'verifica' ? { animation: 'sAggiornaSpin 0.9s linear infinite' } : undefined} />
-              </button>
-            )}
+            {disponibile && (() => {
+              // ⚠️ RIDISEGNATO — segnalato: « il bottone di aggiornamento è poco visibile ».
+              // Prima: un'icona nuda di 11px, grigio tenue, senza sfondo, dentro il testo
+              // della versione — niente la faceva leggere come un vero bottone cliccabile,
+              // a differenza di TUTTI gli altri bottoni-icona dell'intestazione (cuffie,
+              // quadrante, ingranaggio, guida…), che usano tutti `.s-glass .s-glass-btn` —
+              // il cerchio "vetro" con sfondo/bordo/rilievo che dice "cliccami" in SERENITY.
+              // Stessa ricetta qui, solo più piccola (22px non i ~36px standard) per stare
+              // accanto alla versione. In più: quando c'è davvero qualcosa da notare
+              // (trovato/scaricamento/pronto), il cerchio passa al colore "attenzione"
+              // (`--s-reserve`, l'ambra già usata per la barra INT quando la carica è
+              // bassa) — non solo un bottone più visibile, un vero avviso passivo.
+              const attenzione = stato === 'trovato' || stato === 'scaricamento' || stato === 'pronto';
+              const fermo = stato === 'verifica' || stato === 'scaricamento';
+              return (
+                <button type="button" onClick={verifica} disabled={fermo}
+                  className="s-glass s-glass-btn"
+                  title={LC('verifica aggiornamento', 'vérifier la mise à jour', 'check for update',
+                    'buscar actualización', 'sök uppdatering')}
+                  style={{
+                    marginLeft: 6, width: 22, height: 22, borderRadius: '50%',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    verticalAlign: -6, cursor: fermo ? 'default' : 'pointer',
+                    border: `1px solid ${attenzione ? 'var(--s-reserve)' : 'var(--s-ink-ghost)'}`,
+                    background: attenzione ? 'color-mix(in srgb, var(--s-reserve) 16%, var(--s-disc))' : 'var(--s-disc)',
+                    color: attenzione ? 'var(--s-reserve)' : 'var(--s-ink-faint)',
+                  }}>
+                  <RefreshCw size={12} strokeWidth={2}
+                    style={stato === 'verifica' ? { animation: 'sAggiornaSpin 0.9s linear infinite' } : undefined} />
+                </button>
+              );
+            })()}
             {testoStato && (
               <span style={{ marginLeft: 5, color: stato === 'errore' ? 'var(--s-reserve)' : 'var(--s-ink-faint)' }}>
                 — {testoStato}

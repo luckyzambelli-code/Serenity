@@ -12837,3 +12837,31 @@ Build ancora sospesa — solo commit del contenuto.
 File: `src/serenity/GruppoAlto.tsx`, `src/serenity/BarraLaterale.tsx`,
 `src/serenity/Serenity.tsx`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori
 (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-17 (continuazione ancora) — pulsante aggiornamento: ridisegnato, più
+visibile
+
+**Segnalato:** « non trovi che il bottone di aggiornamento è poco visibile? Proponi una
+soluzione più chiara » — poi, dopo la proposta: « si ».
+
+Prima: un'icona nuda di 11px, grigio tenue, senza sfondo, infilata dentro il testo della
+versione — niente la faceva leggere come un vero bottone cliccabile, a differenza di TUTTI
+gli altri bottoni-icona dell'intestazione (cuffie, quadrante, ingranaggio, guida…), che
+usano tutti `.s-glass .s-glass-btn` — il cerchio "vetro" con sfondo/bordo/rilievo che dice
+"cliccami" in SERENITY ovunque tranne qui.
+
+Ridisegnato con la stessa ricetta, solo più piccolo (22px, non i ~36px standard) per stare
+accanto alla versione. In più, non solo più visibile ma anche un vero avviso passivo:
+quando c'è davvero qualcosa da notare (`trovato`/`scaricamento`/`pronto`) il cerchio passa
+al colore "attenzione" (`--s-reserve`, la stessa ambra già usata per la barra INT quando la
+carica è bassa) — sfondo e bordo tinti, non solo l'icona.
+
+Verificato dal vivo (mock `electronAPI` in dev): a riposo il cerchio "vetro" è chiaramente
+un bottone; simulando `available` il cerchio passa all'ambra con "— nuova versione trovata"
+accanto — differenza netta rispetto a prima, nessun errore in console.
+
+Build in corso: da ora in poi l'utente ha chiesto di procedere alle build senza aspettare
+conferma esplicita ogni volta.
+
+File: `src/serenity/LogoSerenity.tsx`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0
+errori (invariato), `npx vitest run` 754/754 (invariato).
