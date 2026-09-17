@@ -12440,3 +12440,45 @@ render pesante).
 
 File: `src/serenity/PistaProcedimento.tsx`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0
 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-17 (continuazione) — DIZIONARIO: 4 voci "Alternative Scientology", con
+sezione dedicata prima delle abbreviazioni
+
+**Richiesto:** aggiungere al DIZIONARIO TECNICO 4 definizioni (VERO STATICO, UNO STATO CINETICO
+DELL'ESSERE, IL VERO STATO NATIVO DI UN ESSERE, CINETICO — HCOB 27 gen. 2018 e 22 dic. 2025) con
+accanto l'etichetta "(Alternative Scientology)", collocate SIA alla loro lettera alfabetica normale
+SIA in più, in una sezione dedicata "ALTERNATIVE SCIENTOLOGY" prima delle abbreviazioni — poi
+tradotte anche in francese e spagnolo.
+
+**`src/serenity/DizionarioModal.tsx`:** interfacce estese con `fonte?: 'alternative'` e
+`sezioneAlternativa?: boolean`; il caricamento dati duplica ogni voce `fonte==='alternative'`
+(marcata `sezioneAlternativa:true`) e la inserisce subito prima delle abbreviazioni, per ciascuna
+delle 4 lingue; nuova riga di titolo "ALTERNATIVE SCIENTOLOGY" (come "ABBREVIAZIONI") visibile solo
+a vista non filtrata; etichetta "(Alternative Scientology)" accanto al termine, nei due punti.
+
+**Bug trovato dal vivo — chiave React doppia:** cercando "cinetico" nel browser, la console segnalava
+`Encountered two children with the same key... v:CINETICO` — "CINETICO"/"KINETIC" esisteva già
+nel dizionario classico (Scn 8-80) in TUTTE le 4 lingue, in collisione col nuovo termine omonimo.
+Corretto aggiungendo un ramo `fonte === 'alternative' ? 'x'` al calcolo dell'`id` di riga. Verificato
+in una scheda nuova (per escludere una console vecchia): la ricerca ora mostra correttamente 4
+risultati distinti, nessun avviso di chiave doppia.
+
+**Bug trovato dopo — posizione alfabetica sbagliata nella vista non filtrata:** lo script Python
+usato per inserire le 4 voci assumeva l'array già ordinato e si fermava alla prima voce con
+confronto stringa ≥ (senza guardare la lettera) — ma il dizionario di partenza NON è mai
+perfettamente ordinato: contiene singole voci isolate fuori posto altrove nel file (es.
+"INTEGRITY PROCESSING" spuntava vicino alla lettera A, "SW" vicino alla C — anomalie preesistenti,
+non introdotte qui), che bloccavano la scansione lineare troppo presto. Corretto raggruppando gli
+indici per lettera iniziale e tenendo solo il cluster DOMINANTE (il blocco vero, non le anomalie
+isolate). Scoperta seconda, verificando il contesto reale: i dizionari FR e SP sono ordinati sul
+CAMPO `termine_en` (il termine inglese), non sul termine tradotto — es. in francese si trova
+"TRIPLES (TRIPLES)"[en=TRIPLES] poi "GPM TRONQUÉ"[en=TRUNCATED GPM], ordinato sull'inglese. Corretto
+lo script per ordinare FR/SP sul loro `termine_en`. Infine, su richiesta: "IL VERO STATO NATIVO DI
+UN ESSERE" si alfabetizza come "STATO NATIVO DI UN ESSERE" (l'articolo e l'aggettivo non contano
+per l'ordinamento, restano solo nel termine mostrato) — stesso principio per l'equivalente inglese
+"A BEING'S TRUE NATIVE STATE" → "BEING'S...". Tutte le 4 voci ora verificate a mano, corrette in
+tutte le lingue.
+
+File: `src/serenity/DizionarioModal.tsx`, `public/dizionario/dizionario-{it,en,fr,es}.json`.
+`tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754
+(invariato).

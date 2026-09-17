@@ -64,12 +64,33 @@ import { pick5 } from '../i18n5';
  * (`termine_en`, es. "ATTUABILITÀ - WORKABILITY") — la ricerca in italiano confronta la parola
  * digitata con ENTRAMBI i campi, non solo col termine italiano.
  *
+ * ── LE VOCI "ALTERNATIVE SCIENTOLOGY" — UNA QUINTA/SESTA FONTE ─────────────────────────────
+ * Segnalato: aggiungere quattro voci recenti (VERO STATICO, UNO STATO CINETICO DELL'ESSERE, IL
+ * VERO STATO NATIVO DI UN ESSERE, CINETICO) da HCOB del 2018/2025 — non dal Dizionario Tecnico
+ * storico, quindi marcate `fonte: 'alternative'` nei quattro JSON principali (mai nei file
+ * delle abbreviazioni, che restano solo citazioni). Due posti insieme, come chiesto: alla loro
+ * lettera vera (con l'etichetta "(Alternative Scientology)" accanto al termine, per non
+ * confonderle mai con la fonte originale), E in una sezione a parte, subito prima delle
+ * abbreviazioni — un doppione VOLUTO (v. `aSezioneAlt`, dove si costruisce), non un errore.
+ * Tradotte in francese e spagnolo (traduzione semantica di questa stessa IA, come il resto del
+ * dizionario FR/ES — stesso avviso giallo in testa al pannello).
+ *
  * Elenco cliccabile (di sole parole, leggero) più campo di ricerca — SOLO SERENITY, nessun
  * dato né logica di ciclo qui dentro.
  */
 
-interface VoceGrezza { termine: string; termine_en?: string | null; definizione: string }
-interface Voce { termine: string; termineEn?: string | null; definizione: string; abbreviazione?: boolean }
+/** ⚠️ AGGIUNTO `fonte` — segnalato: aggiungere delle voci nuove (VERO STATICO, CINETICO,
+ *  UNO STATO CINETICO DELL'ESSERE, IL VERO STATO NATIVO DI UN ESSERE), non dal Dizionario
+ *  Tecnico storico ma da HCOB recenti citati come "(Alternative Scientology)" — mai confuse
+ *  con la fonte originale, che resta il libro. `'alternative'` è l'unico valore per ora: un
+ *  campo aperto, non un booleano, se un giorno servisse distinguere più fonti non canoniche. */
+interface VoceGrezza { termine: string; termine_en?: string | null; definizione: string; fonte?: 'alternative' }
+interface Voce {
+  termine: string; termineEn?: string | null; definizione: string; abbreviazione?: boolean;
+  fonte?: 'alternative';
+  /** v. la nota grande su `sezioneAlternativa`, più sotto, dove si costruisce. */
+  sezioneAlternativa?: boolean;
+}
 interface AbbrGrezza { codice: string; espansione: string }
 
 const rimuoviAccenti = (s: string): string =>
@@ -155,26 +176,34 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
       if (!vivo) return;
       if (!Array.isArray(it) && !Array.isArray(en)) { setErroreCaricamento(true); setCaricamento(false); return; }
       const aVoce = (a: AbbrGrezza): Voce => ({ termine: a.codice, definizione: a.espansione, abbreviazione: true });
-      setVociIt([
-        ...(Array.isArray(it) ? it : []).map(v => ({ termine: v.termine, termineEn: v.termine_en ?? null, definizione: v.definizione })),
-        ...(Array.isArray(abbrIt) ? abbrIt : []).map(aVoce),
-      ]);
-      setVociEn([
-        ...(Array.isArray(en) ? en : []).map(v => ({ termine: v.termine, definizione: v.definizione })),
-        ...(Array.isArray(abbrEn) ? abbrEn : []).map(aVoce),
-      ]);
+      // ⚠️ AGGIUNTA — segnalato: « aggiungere queste definizioni [...] devi aggiungere accanto
+      // (Alternative Scientology) [...] in più di collocarle secondo la lettera alfabetica, in
+      // una sezione specifica, prima delle abbreviazioni ». Le voci `fonte === 'alternative'`
+      // sono già nella lista principale (arrivano dal JSON come le altre, quindi contano già
+      // per la LORO lettera — v. `letterePresenti`/il filtro per lettera, sotto, che le tratta
+      // come voci vere lì) — qui si DUPLICANO, marcate `sezioneAlternativa: true`, e messe
+      // subito PRIMA delle abbreviazioni: la stessa idea già usata per queste ultime (`aVoce`,
+      // sopra — in coda, con un titolo che le introduce), non un secondo meccanismo. La
+      // duplicazione è voluta, non un doppione per errore: l'utente ha chiesto ESPLICITAMENTE
+      // sia il posto alfabetico sia la sezione a parte.
+      const aSezioneAlt = (voci: Voce[]): Voce[] =>
+        voci.filter(v => v.fonte === 'alternative').map(v => ({ ...v, sezioneAlternativa: true }));
+      const itVere = (Array.isArray(it) ? it : []).map(v =>
+        ({ termine: v.termine, termineEn: v.termine_en ?? null, definizione: v.definizione, fonte: v.fonte }));
+      setVociIt([...itVere, ...aSezioneAlt(itVere), ...(Array.isArray(abbrIt) ? abbrIt : []).map(aVoce)]);
+      const enVere = (Array.isArray(en) ? en : []).map(v =>
+        ({ termine: v.termine, definizione: v.definizione, fonte: v.fonte }));
+      setVociEn([...enVere, ...aSezioneAlt(enVere), ...(Array.isArray(abbrEn) ? abbrEn : []).map(aVoce)]);
       // ⚠️ AGGIUNTO — segnalato: « traduci anche le parole del dizionario, lasciando a fianco
       // la versione inglese ». Stesso `termine_en` già usato per l'italiano, sopra — non un
       // secondo meccanismo. Il termine tradotto sostituisce `termine`, l'originale inglese
       // resta leggibile accanto (v. il rendering più giù, stessa riga di `termineEn` per IT).
-      setVociFr([
-        ...(Array.isArray(fr) ? fr : []).map(v => ({ termine: v.termine, termineEn: v.termine_en ?? null, definizione: v.definizione })),
-        ...(Array.isArray(abbrFr) ? abbrFr : []).map(aVoce),
-      ]);
-      setVociEs([
-        ...(Array.isArray(es) ? es : []).map(v => ({ termine: v.termine, termineEn: v.termine_en ?? null, definizione: v.definizione })),
-        ...(Array.isArray(abbrEs) ? abbrEs : []).map(aVoce),
-      ]);
+      const frVere = (Array.isArray(fr) ? fr : []).map(v =>
+        ({ termine: v.termine, termineEn: v.termine_en ?? null, definizione: v.definizione, fonte: v.fonte }));
+      setVociFr([...frVere, ...aSezioneAlt(frVere), ...(Array.isArray(abbrFr) ? abbrFr : []).map(aVoce)]);
+      const esVere = (Array.isArray(es) ? es : []).map(v =>
+        ({ termine: v.termine, termineEn: v.termine_en ?? null, definizione: v.definizione, fonte: v.fonte }));
+      setVociEs([...esVere, ...aSezioneAlt(esVere), ...(Array.isArray(abbrEs) ? abbrEs : []).map(aVoce)]);
       setCaricamento(false);
     }).catch(() => { if (vivo) { setErroreCaricamento(true); setCaricamento(false); } });
     return () => { vivo = false; };
@@ -191,7 +220,10 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
   const letterePresenti = useMemo(() => {
     const s = new Set<string>();
     for (const v of lista) {
-      if (v.abbreviazione) continue;
+      // `sezioneAlternativa`, come `abbreviazione`: è un DOPPIONE apposta (v. la nota grande
+      // su `aSezioneAlt`, dove si costruisce) — la voce vera conta già per la sua lettera,
+      // contare anche lei una seconda volta non aggiungerebbe nessuna lettera nuova.
+      if (v.abbreviazione || v.sezioneAlternativa) continue;
       const prima = rimuoviAccenti(v.termine).charAt(0).toUpperCase();
       if (prima >= 'A' && prima <= 'Z') s.add(prima);
     }
@@ -208,11 +240,17 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
     // un clic e si vedono SOLO le abbreviazioni, esattamente la sezione a sé del libro stampato,
     // non più solo raggiungibile scorrendo.
     if (letteraFiltro === '#') return lista.filter(v => v.abbreviazione);
-    if (letteraFiltro) return lista.filter(v => !v.abbreviazione && rimuoviAccenti(v.termine).charAt(0).toUpperCase() === letteraFiltro);
+    if (letteraFiltro) {
+      return lista.filter(v =>
+        !v.abbreviazione && !v.sezioneAlternativa && rimuoviAccenti(v.termine).charAt(0).toUpperCase() === letteraFiltro);
+    }
     const q = rimuoviAccenti(ricerca.trim());
     if (!q) return lista;
-    return lista.filter(v =>
-      rimuoviAccenti(v.termine).includes(q) || (v.termineEn ? rimuoviAccenti(v.termineEn).includes(q) : false));
+    // `!v.sezioneAlternativa` — il doppione della sezione dedicata non deve comparire ANCHE
+    // nella ricerca testuale: la voce vera (con la sua etichetta, v. il rendering sotto) la
+    // trova già, mostrarla due volte nello stesso elenco filtrato sarebbe solo ridondanza.
+    return lista.filter(v => !v.sezioneAlternativa &&
+      (rimuoviAccenti(v.termine).includes(q) || (v.termineEn ? rimuoviAccenti(v.termineEn).includes(q) : false)));
   }, [lista, ricerca, letteraFiltro]);
 
   return (
@@ -432,7 +470,18 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
             // confondono a vicenda nella riconciliazione (React non sa più quale dei due tenere,
             // quale togliere) non appena la lista filtrata cambia. Un id che include anche
             // `abbreviazione` resta unico anche quando il nome coincide.
-            const id = `${v.abbreviazione ? 'a' : 'v'}:${v.termine}`;
+            // `sezioneAlternativa` in più di `abbreviazione`: senza, il doppione apposta della
+            // sezione dedicata (v. `aSezioneAlt`, sopra) avrebbe lo STESSO id della voce vera
+            // con lo stesso termine — la stessa collisione React già trovata per HCOB, qui
+            // certa invece che occasionale (sono LO STESSO termine, sempre).
+            // ⚠️ TROVATO VERIFICANDO DAL VIVO — console: « Encountered two children with the
+            // same key... v:CINETICO ». "CINETICO" esiste GIÀ nel Dizionario Tecnico storico
+            // (Scn 8-80: « qualcosa che ha un notevole movimento »), una voce corta e diversa
+            // dalla nuova — collisione reale, non ipotetica, verificata in tutte e quattro le
+            // lingue (KINETIC/CINÉTIQUE/CINÉTICO hanno lo stesso destino). `fonte` in più
+            // dell'id distingue la voce storica da quella nuova con lo stesso nome — due voci
+            // vere, non una ripetuta.
+            const id = `${v.abbreviazione ? 'a' : v.sezioneAlternativa ? 's' : v.fonte === 'alternative' ? 'x' : 'v'}:${v.termine}`;
             const aperta = espanso === id;
             // ── LA RIGA-TITOLO "ABBREVIAZIONI" — appare una volta sola, appena PRIMA della
             // prima voce marcata `abbreviazione`: solo così si vede il confine "qui finiscono
@@ -444,8 +493,25 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
             // questo", non un confine da segnare.
             const inizioAbbreviazioni = v.abbreviazione && (!letteraFiltro || letteraFiltro === '#') && !ricerca.trim()
               && (i === 0 || !filtrata[i - 1].abbreviazione);
+            // ── LA RIGA-TITOLO "ALTERNATIVE SCIENTOLOGY" — segnalato: « mettile... in una
+            // sezione specifica, prima delle abbreviazioni ». Stessa identica idea della riga
+            // sopra: appare una volta sola, appena prima del primo doppione della sezione —
+            // che per costruzione (v. `aSezioneAlt`) sta SEMPRE subito prima delle
+            // abbreviazioni, mai dopo, mai mescolato. Nessun cancello `letteraFiltro === '#'`
+            // qui: questa sezione non ha un suo bottone di accesso diretto come le
+            // abbreviazioni, si raggiunge solo scorrendo senza filtro.
+            const inizioSezioneAlternativa = v.sezioneAlternativa && !letteraFiltro && !ricerca.trim()
+              && (i === 0 || !filtrata[i - 1].sezioneAlternativa);
             return (
               <div key={id}>
+                {inizioSezioneAlternativa && (
+                  <div style={{
+                    padding: '14px 18px 6px 18px', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)',
+                    fontWeight: 700, letterSpacing: '0.06em', color: 'var(--s-ink-faint)',
+                  }}>
+                    ALTERNATIVE SCIENTOLOGY
+                  </div>
+                )}
                 {inizioAbbreviazioni && (
                   <div style={{
                     padding: '14px 18px 6px 18px', fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)',
@@ -467,6 +533,17 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
                     }}>
                       {v.termine}
                     </span>
+                    {/* ⚠️ AGGIUNTA — segnalato: « devi aggiungere accanto (Alternative
+                        Scientology) ». Stesso posto/stile del `termineEn` appena sotto — mai
+                        confusa con la fonte originale del Dizionario Tecnico, il libro. */}
+                    {v.fonte === 'alternative' && (
+                      <span style={{
+                        fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontStyle: 'italic',
+                        color: 'var(--s-ink-faint)',
+                      }}>
+                        (Alternative Scientology)
+                      </span>
+                    )}
                     {v.termineEn && v.termineEn !== v.termine && (
                       <span style={{ fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', color: 'var(--s-ink-faint)' }}>
                         {v.termineEn}
