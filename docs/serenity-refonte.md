@@ -12642,3 +12642,20 @@ Build ancora sospesa su richiesta dell'utente — solo commit del contenuto.
 
 File: `public/dizionario/dizionario-{it,en,fr,es}.json`. `tsc --noEmit` pulito, `npm run
 lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-17 (continuazione ancora) — DIZIONARIO: nuova voce LETTURE ED
+INDICAZIONI (R & I), poi build
+
+**Richiesto:** nuova voce (HCOB 30 Dicembre 2025 - LETTURE ED INDICAZIONI), tradotta anche
+in francese e spagnolo — poi, esplicitamente: « PROCEDI COL BUILD ». Riusata la traduzione
+già presente nel dizionario classico per "READ" (FR "LECTURE (READ)", ES "LECTURA (READ)")
+per restare coerenti. Stessa procedura di posizionamento dei giri precedenti, verificata
+contro i vicini alfabetici reali in tutte le lingue. Verificato dal vivo: la ricerca isola
+un solo risultato e apre da sola la definizione, testo integro, nessun errore in console.
+
+Con questo giro si chiude la sospensione della build chiesta prima: la prossima build
+raccoglie insieme tutti i giri dal secondo lotto di voci Alternative Scientology in poi
+(5 voci, CINETICO RIDEFINITO, APPROSSIMAZIONE RIDEFINITA, LETTURE ED INDICAZIONI).
+
+File: `public/dizionario/dizionario-{it,en,fr,es}.json`. `tsc --noEmit` pulito, `npm run
+lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).

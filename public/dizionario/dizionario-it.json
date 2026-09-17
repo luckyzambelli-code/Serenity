@@ -6303,6 +6303,12 @@
   "definizione": "v. LETTURA."
  },
  {
+  "termine": "LETTURE ED INDICAZIONI (R & I)",
+  "termine_en": "READS AND INDICATIONS (R & I)",
+  "definizione": "C'è un nuovo strumento diagnostico che utilizziamo da un po' di tempo, ma che non è stato ancora spiegato in modo esauriente. È la LETTURA ED INDICAZIONE - R & I! L'idea è che la condizione ottimale che cerchiamo quando individuiamo la carica è quella in cui si verifica una lettura sul meter E indicazioni sull'essere sottoposto al processing. Ecco quindi il termine R & I! È sempre meglio avere sia una lettura che un'indicazione, anche se un auditor può cavarsela solo con le indicazioni. Tuttavia, NON è consigliabile procedere senza un'indicazione, poiché questa potrebbe rivelarsi errata. Quindi, le R & I possono essere utilizzate con un meter (in cui sono presenti sia la lettura che l'indicazione) o senza meter (solo con le indicazioni). Questo è anche il punto in cui la carica e l'interesse si incontrano in un caso. (HCOB 30 Dicembre 2025 - LETTURE ED INDICAZIONI)",
+  "fonte": "alternative"
+ },
+ {
   "termine": "LETTURE PREMATURE",
   "termine_en": "PRIOR READS",
   "definizione": "1. letture che avvengono prima del completamento del pensiero maggiore. (EMD, pago 38) 2. qualsiasi reazione che non avviene immediatamente alla fine della frase ma avviene prima che questa termini. (SH Spec 148, 6205C24)"
