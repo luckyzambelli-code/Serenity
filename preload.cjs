@@ -68,4 +68,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('window-resized', handler);
     return () => ipcRenderer.removeListener('window-resized', handler);
   },
+
+  // AGGIORNAMENTO — pulsante "verifica aggiornamento" (v. `src/hooks/useAppUpdater.ts`).
+  // `checkForUpdates` è fire-and-forget: l'esito arriva sempre via `onUpdaterEvent`, mai
+  // dal valore risolto qui (stesso comportamento di electron-updater lato main.cjs).
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  onUpdaterEvent: (cb) => {
+    const handler = (_e, payload) => cb(payload);
+    ipcRenderer.on('updater-event', handler);
+    return () => ipcRenderer.removeListener('updater-event', handler);
+  },
 });

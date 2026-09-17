@@ -12721,3 +12721,57 @@ Build ancora sospesa su richiesta dell'utente — solo commit del contenuto.
 File: `src/serenity/BarraLaterale.tsx`, `BottoniStoricoProcessus.tsx`, `Intestazione.tsx`,
 `Serenity.tsx`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato),
 `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-17 (continuazione ancora) — pulsante "verifica aggiornamento"
+
+**Segnalato:** « Dimmi come fare per attualizzare il programma. Ho aperto su Windows e non
+lo aggiorna (versione 3.0.337) verso la 3.0.344. Non sarebbe bello includere un pulsante
+VERIFICARE AGGIORNAMENTO? Dimmi cosa proponi » — poi, dopo la proposta: « si ».
+
+**Causa del mancato aggiornamento (spiegata all'utente, non un bug da correggere qui):**
+nessuna delle build fatte in questa sessione (`dist:serenity:both`) è mai stata PUBBLICATA
+su GitHub Releases — solo costruita in locale e mandata come file. L'autoUpdater cerca
+release pubblicate: non trovando nulla di più nuovo di quanto già pubblicato in passato,
+non ha nulla da scaricare. Serve `npm run dist:win-serenity:publish:nobump` (col `GH_TOKEN`
+dell'utente) per pubblicare davvero — poi l'aggiornamento automatico funziona da sé su
+Windows (su Mac resta bloccato dalla mancanza di firma Developer ID, questione già nota e
+documentata più sopra).
+
+**Il vero difetto trovato lungo la strada:** il controllo partiva UNA sola volta, 5s dopo
+l'avvio (`main.cjs`), senza modo per l'utente di richiamarlo senza riavviare l'app, e senza
+NESSUN riscontro visibile se non trovava nulla — "fallisce in silenzio" per design (v. il
+commento originale in `main.cjs`), indistinguibile da "non funziona" per chi guarda.
+
+**Aggiunto:**
+- `main.cjs`: `inviaEventoUpdater()` inoltra ogni fase di `autoUpdater` (`checking-for-update`,
+  `update-available`, `update-not-available`, `download-progress`, `error`,
+  `update-downloaded`) a tutte le finestre via IPC (`updater-event`); nuovo
+  `ipcMain.handle('check-for-updates', ...)` per il trigger manuale (fire-and-forget, come
+  il controllo automatico — l'esito arriva sempre via evento). Il dialogo di riavvio
+  esistente resta invariato, l'evento è un'aggiunta.
+- `preload.cjs`: `checkForUpdates()`/`onUpdaterEvent()` esposti su `window.electronAPI`.
+- `src/hooks/useAppUpdater.ts` (nuovo): stato del pulsante — `inattivo/verifica/aggiornato/
+  trovato/scaricamento/pronto/errore` — `disponibile` è `false` fuori da Electron (preview
+  browser, ParticipantView remoto), il pulsante allora non compare affatto.
+- `src/serenity/LogoSerenity.tsx`: icona `RefreshCw` (gira durante la verifica, animazione
+  `sAggiornaSpin` in `tokens.css`) subito dopo la versione, con testo di riscontro
+  (localizzato in 5 lingue) per ogni stato — "già aggiornato"/"verifica non riuscita" si
+  azzerano da soli dopo 6s, "trovato"/"scaricamento"/"pronto" restano finché non cambiano
+  (informano di un'azione ancora da fare, non solo "è successo qualcosa").
+
+**Bug trovato e corretto durante la verifica dal vivo:** l'effetto di sottoscrizione in
+`useAppUpdater.ts` aveva `useEffect(..., [])` — sottoscritto una volta sola al mount. In
+Electron vero non è un problema (`window.electronAPI` esiste già al primo render, iniettato
+dal preload prima dello script della pagina) ma è comunque fragile: verificato dal vivo
+iniettando `electronAPI` DOPO il mount (nella preview browser, che non ce l'ha di suo) — con
+`[]` l'hook restava sottoscritto per sempre a "niente" anche dopo un nuovo render. Corretto
+a `[disponibile]`: si riaggancia da solo se la disponibilità cambia. Poi riverificati tutti
+e 6 gli stati (iniettando un `electronAPI` finto e richiamando a mano ogni tipo di evento)
+dal vivo: testo giusto per ognuno, "già aggiornato"/"errore" spariscono da soli dopo 6s,
+nessun errore in console.
+
+Build ancora sospesa su richiesta dell'utente — solo commit del contenuto.
+
+File: `main.cjs`, `preload.cjs`, `src/hooks/useAppUpdater.ts` (nuovo),
+`src/serenity/LogoSerenity.tsx`, `src/serenity/tokens.css`. `tsc --noEmit` pulito, `npm run
+lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).

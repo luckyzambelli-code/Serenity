@@ -106,13 +106,36 @@ catch (_) { /* package.json illeggibile: EQUILIBRIUM */ }
 // 2 file (un DMG + uno ZIP) in upload contemporaneamente.
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
+
+// ⚠️ AGGIUNTO — segnalato: « non sarebbe bello includere un pulsante VERIFICARE
+// AGGIORNAMENTO? ». Prima il controllo partiva UNA sola volta, 5s dopo l'avvio
+// (`setTimeout` più sotto), senza nessun modo per l'utente di richiamarlo senza
+// riavviare l'app, e senza nessun riscontro visibile se non trovava nulla (falliva "in
+// silenzio", proprio come dice il commento qui sopra). `inviaEventoUpdater` inoltra ogni
+// fase di `autoUpdater` (verifica in corso, trovato, non trovato, scaricamento,
+// scaricato, errore) a TUTTE le finestre aperte via IPC — il renderer decide da sé cosa
+// mostrare (v. `useAppUpdater.ts`/`LogoSerenity.tsx`). Il dialogo di riavvio esistente,
+// sotto, resta invariato: l'evento è un'AGGIUNTA per il pulsante, non una sostituzione.
+function inviaEventoUpdater(payload) {
+  for (const w of BrowserWindow.getAllWindows()) {
+    try { w.webContents.send('updater-event', payload); } catch (_) { /* finestra già chiusa */ }
+  }
+}
+autoUpdater.on('checking-for-update', () => inviaEventoUpdater({ type: 'checking' }));
+autoUpdater.on('update-available', (info) => inviaEventoUpdater({ type: 'available', version: info && info.version }));
+autoUpdater.on('update-not-available', () => inviaEventoUpdater({ type: 'not-available' }));
+autoUpdater.on('download-progress', (p) => inviaEventoUpdater({ type: 'downloading', percent: p && p.percent }));
 autoUpdater.on('error', (err) => {
   // Normale finché non esiste un repository di pubblicazione configurato, o offline — non un
-  // guasto dell'app: non deve mai apparire come un errore all'utente.
+  // guasto dell'app: non deve mai apparire come un errore all'utente SENZA che l'abbia
+  // richiesto lui (v. `useAppUpdater.ts`: il pulsante mostra l'errore, il controllo
+  // automatico di sottofondo resta silenzioso come prima).
   console.warn('[updater] controllo fallito (normale se offline o senza release ancora):', err && err.message);
+  inviaEventoUpdater({ type: 'error', message: err && err.message });
 });
 autoUpdater.on('update-downloaded', (info) => {
   console.log('[updater] versione scaricata:', info && info.version);
+  inviaEventoUpdater({ type: 'downloaded', version: info && info.version });
   const proponi = () => {
     // Mai interrompere una seduta in corso — si ripropone da sola finché non finisce.
     if (_sessionActive) { setTimeout(proponi, 60_000); return; }
@@ -127,6 +150,14 @@ autoUpdater.on('update-downloaded', (info) => {
     }).then(({ response }) => { if (response === 0) autoUpdater.quitAndInstall(); });
   };
   proponi();
+});
+
+// Trigger manuale per il pulsante "verifica aggiornamento" — fire-and-forget, come il
+// controllo automatico di sottofondo: l'esito arriva sempre e solo via gli eventi sopra,
+// mai come valore di ritorno di questa chiamata (electron-updater è così).
+ipcMain.handle('check-for-updates', () => {
+  autoUpdater.checkForUpdates().catch(() => {});
+  return { ok: true };
 });
 
 // Kill whatever process is occupying PORT (macOS/Linux only)

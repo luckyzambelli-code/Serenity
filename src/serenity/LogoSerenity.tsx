@@ -12,7 +12,9 @@
  *
  * @see docs/serenity-refonte.md — giro di scomposizione, 2026-09-07.
  */
+import { RefreshCw } from 'lucide-react';
 import { useI18n } from '../i18n';
+import { useAppUpdater } from '../hooks/useAppUpdater';
 
 export interface LogoSerenityProps {
   onApriCrediti: () => void;
@@ -27,6 +29,26 @@ export interface LogoSerenityProps {
 
 export function LogoSerenity({ onApriCrediti, isLightTheme, mostraLivello, esperto, LC }: LogoSerenityProps) {
   const { t } = useI18n();
+  // ⚠️ AGGIUNTO — segnalato: « non sarebbe bello includere un pulsante VERIFICARE
+  // AGGIORNAMENTO? ». V. `useAppUpdater.ts` per il perché (il controllo automatico partiva
+  // una sola volta all'avvio, senza riscontro visibile). `disponibile` è `false` fuori da
+  // Electron (preview browser, ParticipantView remoto) — lì il pulsante non compare
+  // affatto, invece di comparire per poi non fare nulla.
+  const { disponibile, stato, percentuale, verifica } = useAppUpdater();
+  const testoStato = stato === 'verifica'
+    ? LC('verifica…', 'vérification…', 'checking…', 'comprobando…', 'kontrollerar…')
+    : stato === 'aggiornato'
+    ? LC('già aggiornato', 'déjà à jour', 'up to date', 'ya actualizado', 'redan uppdaterad')
+    : stato === 'trovato'
+    ? LC('nuova versione trovata', 'nouvelle version trouvée', 'new version found', 'nueva versión encontrada', 'ny version hittad')
+    : stato === 'scaricamento'
+    ? `${LC('scaricamento', 'téléchargement', 'downloading', 'descargando', 'laddar ner')} ${Math.round(percentuale)}%`
+    : stato === 'pronto'
+    ? LC('pronto — riavvia per installare', 'prêt — redémarrez pour installer', 'ready — restart to install',
+        'listo — reinicia para instalar', 'klar — starta om för att installera')
+    : stato === 'errore'
+    ? LC('verifica non riuscita', 'échec de la vérification', 'check failed', 'comprobación fallida', 'kontroll misslyckades')
+    : null;
 
   return (
     <>
@@ -52,6 +74,24 @@ export function LogoSerenity({ onApriCrediti, isLightTheme, mostraLivello, esper
           }}>
             {esperto === true ? 'EXPERT' : LC('BASIC', 'BASIQUE', 'BASIC', 'BÁSICO', 'BASIC')}
             {' · '}{__SERENITY_VERSION__}
+            {disponibile && (
+              <button type="button" onClick={verifica} disabled={stato === 'verifica' || stato === 'scaricamento'}
+                title={LC('verifica aggiornamento', 'vérifier la mise à jour', 'check for update',
+                  'buscar actualización', 'sök uppdatering')}
+                style={{
+                  marginLeft: 5, border: 'none', background: 'transparent', padding: 2,
+                  cursor: (stato === 'verifica' || stato === 'scaricamento') ? 'default' : 'pointer',
+                  color: 'var(--s-ink-faint)', verticalAlign: -3, lineHeight: 0,
+                }}>
+                <RefreshCw size={11} strokeWidth={2}
+                  style={stato === 'verifica' ? { animation: 'sAggiornaSpin 0.9s linear infinite' } : undefined} />
+              </button>
+            )}
+            {testoStato && (
+              <span style={{ marginLeft: 5, color: stato === 'errore' ? 'var(--s-reserve)' : 'var(--s-ink-faint)' }}>
+                — {testoStato}
+              </span>
+            )}
           </span>
         )}
       </div>
