@@ -96,6 +96,25 @@ interface AbbrGrezza { codice: string; espansione: string }
 const rimuoviAccenti = (s: string): string =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
+// ⚠️ ESTRATTO da dentro il `.map()` del rendering — segnalato: « quando cerco qualcosa non
+// mi mette direttamente sulla definizione ». Per aprire da sola la definizione quando la
+// ricerca trova UN SOLO risultato (v. l'effetto sotto, in `DizionarioModal`) serve lo STESSO
+// id usato per `espanso` nel rendering — un secondo calcolo copiato a mano si sarebbe
+// disallineato al primo cambiamento fatto solo in un posto.
+// ⚠️ AGGIUNTO `termineEn` alla chiave — segnalato: « il dizionario è bloccato » e « trova
+// definizioni in spagnolo nel dizionario italiano ». Causa vera, trovata dal vivo (console:
+// dozzine di « two children with the same key » sulla scheda SPAGNOLO, poi passando il
+// dizionario mostrava voci spagnole sotto ITALIANO — React perde il filo di quali nodi
+// aggiornare quando le chiavi si scontrano, non solo alla prima voce duplicata) — NON dati
+// corrotti: normali collisioni di traduzione, più termini inglesi diversi che condividono la
+// stessa parola francese/spagnola (verificato sul JSON: "CICLO DE ACCIÓN" traduce sia ACTION
+// CYCLE sia CYCLE OF ACTION, "MALA MEMORIA" traduce BAD MEMORY/MIS-MEMORY/POOR MEMORY, ecc. —
+// 12-13 casi in FR/ES). `termineEn` differisce sempre in questi casi (confermato: solo la
+// coppia CINETICO/KINETIC già gestita da `fonte` resta duplicata anche aggiungendolo) — un
+// secondo campo nella chiave la rende di nuovo unica senza toccare i dati.
+const idDi = (v: Voce): string =>
+  `${v.abbreviazione ? 'a' : v.sezioneAlternativa ? 's' : v.fonte === 'alternative' ? 'x' : 'v'}:${v.termine}:${v.termineEn ?? ''}`;
+
 export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () => void }) {
   const LC = (it: string, fr: string, en: string, es: string, sv: string) => pick5(lang, it, fr, en, es, sv) as string;
 
@@ -252,6 +271,17 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
       (rimuoviAccenti(v.termine).includes(q) || (v.termineEn ? rimuoviAccenti(v.termineEn).includes(q) : false)));
   }, [lista, ricerca, letteraFiltro]);
 
+  // ⚠️ AGGIUNTO — segnalato: « quando ricerco qualcosa non mi mette direttamente sulla
+  // definizione ». Prima bisognava SEMPRE cliccare il risultato, anche quando la ricerca
+  // ne isolava uno solo. Qui si apre da sola la definizione SOLO quando c'è un solo
+  // risultato — con più risultati aprirli tutti sarebbe una parete di testo, resta il clic.
+  // Dipende da `filtrata` (non da `ricerca` calcolato dentro) apposta: un clic manuale per
+  // richiudere non cambia `filtrata`, quindi l'effetto non riparte e non riapre da sola
+  // contro la volontà di chi la sta leggendo.
+  useEffect(() => {
+    if (ricerca.trim() && filtrata.length === 1) setEspanso(idDi(filtrata[0]));
+  }, [filtrata, ricerca]);
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200, display: 'flex', flexDirection: 'column',
@@ -299,7 +329,13 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
                 sessione, non più sempre l'inglese): l'inglese resta la prima scheda da
                 sinistra comunque, anche in una sessione che si apre su un'altra lingua. */}
             {(['en', 'it', 'fr', 'es'] as const).map(l => (
-              <button key={l} onClick={() => { setLingua(l); setEspanso(null); setLetteraFiltro(null); }}
+              // ⚠️ AGGIUNTO `setRicerca('')` — segnalato: « il dizionario è bloccato ».
+              // Cambiando lingua si azzerava `espanso`/`letteraFiltro` ma NON il testo
+              // cercato: chi cercava un termine italiano e poi passava a INGLESE si
+              // ritrovava "0 / 2678 voci — nessun termine trovato" (il testo italiano non
+              // esiste in quella lista) — sembrava un blocco, era solo una ricerca rimasta
+              // attiva da una lingua all'altra dove non ha più senso.
+              <button key={l} onClick={() => { setLingua(l); setEspanso(null); setLetteraFiltro(null); setRicerca(''); }}
                 style={{
                   border: 'none', cursor: 'pointer', padding: '6px 16px',
                   fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-sm)', fontWeight: 700,
@@ -480,7 +516,7 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
             // lingue (KINETIC/CINÉTIQUE/CINÉTICO hanno lo stesso destino). `fonte` in più
             // dell'id distingue la voce storica da quella nuova con lo stesso nome — due voci
             // vere, non una ripetuta.
-            const id = `${v.abbreviazione ? 'a' : v.sezioneAlternativa ? 's' : v.fonte === 'alternative' ? 'x' : 'v'}:${v.termine}`;
+            const id = idDi(v);
             const aperta = espanso === id;
             // ── LA RIGA-TITOLO "ABBREVIAZIONI" — appare una volta sola, appena PRIMA della
             // prima voce marcata `abbreviazione`: solo così si vede il confine "qui finiscono

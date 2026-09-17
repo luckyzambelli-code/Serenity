@@ -12498,3 +12498,52 @@ abbreviazione, con le 4 voci raggruppate lì.
 
 File: `src/serenity/DizionarioModal.tsx`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0
 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-17 (continuazione ancora) — DIZIONARIO: BUG GRAVE, voci spagnole sotto
+ITALIANO — e tre correzioni minori
+
+**Segnalato insieme:** « A KINETIC STATE OF BEING trattalo come KINETIC STATE OF BEING in
+tutte le lingue. Poi perché quando ricerco qualcosa non mi mette direttamente sulla
+definizione? E poi il dizionario è anche bloccato. Trova anche delle definizioni in spagnolo
+nel dizionario italiano VERIFICA CORRETTAMENTE TUTTO ».
+
+**1) "A KINETIC STATE OF BEING" → "KINETIC STATE OF BEING":** stesso principio del giro
+precedente su "IL VERO STATO NATIVO..." — l'articolo iniziale non conta per l'ordinamento.
+Aggiunta una seconda voce a `CHIAVE_ORDINAMENTO` nello script di riposizionamento (anche per
+l'equivalente italiano "UNO STATO CINETICO DELL'ESSERE" → "STATO CINETICO DELL'ESSERE"),
+rieseguito su tutti e 4 i file. Verificato: ora tra KINETIC MOTION e KNOW BEST (era prima,
+sotto la lettera A).
+
+**2) La ricerca non porta alla definizione:** vero — bisognava sempre cliccare, anche con un
+solo risultato. Aggiunto un `useEffect` che apre da sola la definizione quando `filtrata` ha
+esattamente 1 voce con una ricerca attiva (con più risultati resta il clic, aprirli tutti
+sarebbe un muro di testo). Dipende da `filtrata` (non da `ricerca` calcolato dentro): un clic
+manuale per richiudere non fa ripartire l'effetto.
+
+**3) e 4) BUG GRAVE — trovato dal vivo, non nei dati:** riprodotto sistematicamente: cercare
+qualcosa su SPAGNOLO e poi passare a ITALIANO mostrava una dozzina di voci SPAGNOLE in cima
+alla lista italiana (confermato: file `dizionario-it.json` pulito al 100%, la richiesta di
+rete per lui restituisce dati corretti — il bug non è nei dati, è nel rendering). Console:
+decine di « Encountered two children with the same key » sulla scheda SPAGNOLO PRIMA ancora
+di cambiare lingua — la vera causa. Isolata contando i doppioni di `termine` nei 4 JSON:
+IT/EN ne hanno 1 (CINETICO/KINETIC, già gestito da `fonte`), ma FR ne ha 13 ed ES 12 — NON
+dati corrotti: normali collisioni di traduzione, più termini inglesi diversi che condividono
+la stessa parola francese/spagnola (verificato riga per riga: "CICLO DE ACCIÓN" traduce sia
+ACTION CYCLE sia CYCLE OF ACTION, "MALA MEMORIA" traduce BAD MEMORY/MIS-MEMORY/POOR MEMORY,
+ecc.). Le chiavi React duplicate su SPAGNOLO corrompevano la riconciliazione al punto da far
+comparire nodi vecchi sotto la scheda successiva — non un problema isolato alla scheda dove
+capita, un problema che si propaga. Corretto aggiungendo `termineEn` alla chiave (`idDi`,
+estratta in una funzione unica condivisa da rendering ed effetto del punto 2): verificato che
+`termine`+`termine_en` insieme non hanno più nessun doppione non gestito, in nessuna delle 4
+lingue. Riprodotto il bug end-to-end (tab nuovo, server riavviato, per escludere l'hot-reload
+di Vite) PRIMA della correzione, e la sua scomparsa DOPO, nello stesso identico scenario.
+
+Anche trovato e corretto strada facendo: cambiando lingua si azzeravano `espanso` e
+`letteraFiltro` ma non il testo cercato — chi cercava in una lingua e passava a un'altra si
+ritrovava "0 voci — nessun termine trovato" (sembrava un secondo blocco, era la stessa
+ricerca rimasta attiva dove non ha più senso). Aggiunto `setRicerca('')` allo stesso posto.
+
+File: `src/serenity/DizionarioModal.tsx`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0
+errori (invariato), `npx vitest run` 754/754 (invariato). Verificato dal vivo, tab e server
+puliti: la sequenza SPAGNOLO→ricerca→ITALIANO che riproduceva il bug ora mostra la lista
+italiana corretta fin dalla prima voce, nessun errore in console.
