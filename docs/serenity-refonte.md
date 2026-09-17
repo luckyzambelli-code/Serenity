@@ -12775,3 +12775,32 @@ Build ancora sospesa su richiesta dell'utente — solo commit del contenuto.
 File: `main.cjs`, `preload.cjs`, `src/hooks/useAppUpdater.ts` (nuovo),
 `src/serenity/LogoSerenity.tsx`, `src/serenity/tokens.css`. `tsc --noEmit` pulito, `npm run
 lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-17 (continuazione ancora) — GUIDE aggiornata
+
+**Richiesto:** « Aggiorna il GUIDE ». Sincronizzati nella guida i cambiamenti di questo
+giro di lavoro (il file sorgente vive fuori dal deposito, `~/Downloads/Guide Static
+Meter/SERENITY-manuale.html` — copiato in `public/guide/` da `scripts/copy-guide.cjs`):
+
+1. **PROCESSUS spostato accanto a COMMANDS**: tolta la riga "Processus" dalla tabella
+   §2 (barra in alto — non c'è più lì); corrette le due menzioni "Processus (barre du
+   haut)" in §7 con "Processus (à côté de COMMANDS, sous le cadran)", nelle 3 lingue.
+2. **Sezione ALTERNATIVE SCIENTOLOGY nel dizionario**: nuovo punto in §11, dopo quello
+   sulle abbreviazioni — spiega l'etichetta "(Alternative Scientology)", la doppia
+   collocazione (lettera vera + sezione a parte dopo le abbreviazioni) e il bottone "AS"
+   per andarci direttamente.
+3. **Pulsante "verifica aggiornamento"**: nuova riga nella tabella §12 (Problemi
+   comuni) — "l'app non si aggiorna da sola" → icona ↻ accanto alla versione.
+
+Aggiunto anche un blocco "MIS À JOUR ENCORE (17/09/2026)" nel commento di sviluppo in
+testa al file, stesso stile delle voci precedenti.
+
+Verificato dal vivo (`/guide/SERENITY-manuale.html`, IT/EN): tutti e tre i punti
+compaiono col testo giusto, la riga PROCESSUS non c'è più nella tabella §2, nessun
+errore in console.
+
+Build ancora sospesa su richiesta dell'utente — solo commit del contenuto (`public/guide/`,
+copiato dalla fonte esterna; il file sorgente fuori dal deposito non fa parte del commit).
+
+File: `public/guide/SERENITY-manuale.html` (copiato). `tsc --noEmit` non applicabile (HTML
+puro, non toccato codice TS/TSX in questo giro).

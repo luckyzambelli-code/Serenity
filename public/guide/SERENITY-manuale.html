@@ -76,6 +76,18 @@
   déjà le panneau Assessment/R&I·Manuel tout seul (`Serenity.tsx`, `setAssessAttivo(mode !==
   'free')`), et tout ce qui est tapé ou dit s'ajoute au Journal comme toujours. Note ajoutée en
   §3, juste après « Ouvrir une séance ».
+
+  ── MIS À JOUR ENCORE (17/09/2026) ───────────────────────────────────────────────────────────
+  1) Segnalato : « il bottone PROCESSUS deve essere accanto al bottone COMANDI ». Processus a
+  déménagé de la barre du haut (à côté de Historique) vers la rangée sous le cadran, juste
+  après COMMANDS (`BarraLaterale.tsx`) — §2 (tableau de la barre du haut) : la ligne Processus
+  retirée, elle n'y est plus ; §7 : les deux mentions « Processus (barre du haut) » corrigées en
+  « Processus (à côté de COMMANDS, sous le cadran) ».
+  2) Ajout d'une section « ALTERNATIVE SCIENTOLOGY » dans le Dictionnaire Technique (§11) : des
+  définitions récentes (HCOB 2025-2026), hors du Dictionnaire Technique historique, marquées
+  « (Alternative Scientology) » à côté du terme — à leur place alphabétique normale ET dans une
+  section à part après les abréviations, avec un accès direct par un bouton « AS » (à côté de
+  « § », la rangée des lettres). Nouveau point ajouté après « Les abréviations » dans la liste.
 -->
 <style>
   :root{
@@ -251,9 +263,6 @@
     <tr data-l="fr"><td>🕐 Historique</td><td>toutes tes séances passées — voir §9.</td></tr>
     <tr data-l="it"><td>🕐 Storico</td><td>tutte le tue sedute passate — vedi §9.</td></tr>
     <tr data-l="en"><td>🕐 History</td><td>all your past sessions — see §9.</td></tr>
-    <tr data-l="fr"><td>Processus</td><td>charge un fichier de commandes/procédure — voir §7.</td></tr>
-    <tr data-l="it"><td>Processi</td><td>carica un file di comandi/procedura — vedi §7.</td></tr>
-    <tr data-l="en"><td>Processes</td><td>loads a commands/procedure file — see §7.</td></tr>
     <tr data-l="fr"><td>profil · seul/préclair</td><td>rouvre les questions du premier lancement (5, ou 3 en SOLO — voir §1).</td></tr>
     <tr data-l="it"><td>profilo · solo/preclear</td><td>riapre le domande del primo avvio (5, o 3 in SOLO — vedi §1).</td></tr>
     <tr data-l="en"><td>profile · alone/preclear</td><td>reopens the first-launch questions (5, or 3 in SOLO — see §1).</td></tr>
@@ -446,16 +455,16 @@
 
   <h2 id="processus"><span data-l="fr">7. Processus et COMMANDS</span><span data-l="it">7. Processi e COMMANDS</span><span data-l="en">7. Processes and COMMANDS</span></h2>
   <div class="note info">
-    <span data-l="fr"><b>Deux boutons, pas un seul.</b> <b>Processus</b> (barre du haut) ouvre l'ARCHIVE ENTIÈRE : tous les PDF déposés, classés par tag, avec la zone pour en ajouter — et, tout en haut, la même carte "commandes de procédés" que ci-dessous. <b>COMMANDS</b> (à côté de EP, sous le cadran) ouvre SEULEMENT cette carte-là : les procédés prêts à charger dans la séance — pas de PDF, pas de tags, pas de zone d'ajout. Va sur COMMANDS pour charger vite un procédé en cours de séance ; va sur Processus pour gérer l'archive des PDF (en ajouter, les classer, les consulter).</span>
-    <span data-l="it">Due bottoni, non uno solo. <b>Processi</b> (barra in alto) apre l'ARCHIVIO INTERO: tutti i PDF depositati, ordinati per tag, con la zona per aggiungerne — e, in cima, la stessa card "comandi di procedimenti" descritta sotto. <b>COMMANDS</b> (accanto a EP, sotto il quadrante) apre SOLO quella card: i procedimenti pronti da caricare nella seduta — niente PDF, niente tag, niente zona per aggiungere. Vai su COMMANDS per caricare in fretta un procedimento durante la seduta; vai su Processi per gestire l'archivio dei PDF (aggiungerne, classificarli, consultarli).</span>
-    <span data-l="en"><b>Two buttons, not one.</b> <b>Processes</b> (top bar) opens the WHOLE ARCHIVE: every PDF you've dropped in, sorted by tag, with the zone to add more — and, right at the top, the same "procedure commands" card described below. <b>COMMANDS</b> (next to EP, under the dial) opens ONLY that card: the procedures ready to load into the session — no PDFs, no tags, no add zone. Use COMMANDS to quickly load a procedure mid-session; use Processes to manage the PDF archive (add, sort, browse).</span>
+    <span data-l="fr"><b>Deux boutons, pas un seul, côte à côte.</b> <b>Processus</b> (à côté de COMMANDS, sous le cadran) ouvre l'ARCHIVE ENTIÈRE : tous les PDF déposés, classés par tag, avec la zone pour en ajouter — et, tout en haut, la même carte "commandes de procédés" que ci-dessous. <b>COMMANDS</b>, juste à côté, ouvre SEULEMENT cette carte-là : les procédés prêts à charger dans la séance — pas de PDF, pas de tags, pas de zone d'ajout. Va sur COMMANDS pour charger vite un procédé en cours de séance ; va sur Processus pour gérer l'archive des PDF (en ajouter, les classer, les consulter).</span>
+    <span data-l="it">Due bottoni, non uno solo, fianco a fianco. <b>Processi</b> (accanto a COMMANDS, sotto il quadrante) apre l'ARCHIVIO INTERO: tutti i PDF depositati, ordinati per tag, con la zona per aggiungerne — e, in cima, la stessa card "comandi di procedimenti" descritta sotto. <b>COMMANDS</b>, proprio accanto, apre SOLO quella card: i procedimenti pronti da caricare nella seduta — niente PDF, niente tag, niente zona per aggiungere. Vai su COMMANDS per caricare in fretta un procedimento durante la seduta; vai su Processi per gestire l'archivio dei PDF (aggiungerne, classificarli, consultarli).</span>
+    <span data-l="en"><b>Two buttons, not one, side by side.</b> <b>Processes</b> (next to COMMANDS, under the dial) opens the WHOLE ARCHIVE: every PDF you've dropped in, sorted by tag, with the zone to add more — and, right at the top, the same "procedure commands" card described below. <b>COMMANDS</b>, right beside it, opens ONLY that card: the procedures ready to load into the session — no PDFs, no tags, no add zone. Use COMMANDS to quickly load a procedure mid-session; use Processes to manage the PDF archive (add, sort, browse).</span>
   </div>
   <p><b><span data-l="fr">Processus — l'archive PDF</span><span data-l="it">Processi — l'archivio PDF</span><span data-l="en">Processes — the PDF archive</span></b></p>
   <ol>
     <li>
-      <span data-l="fr">Clique sur <b>Processus</b> dans la barre du haut : une liste de fichiers apparaît (déposés dans le dossier partagé, ou déjà présents).</span>
-      <span data-l="it">Clicca su <b>Processi</b> nella barra in alto: appare un elenco di file (depositati nella cartella condivisa, o già presenti).</span>
-      <span data-l="en">Click <b>Processes</b> in the top bar: a list of files appears (dropped in the shared folder, or already present).</span>
+      <span data-l="fr">Clique sur <b>Processus</b> (à côté de COMMANDS, sous le cadran) : une liste de fichiers apparaît (déposés dans le dossier partagé, ou déjà présents).</span>
+      <span data-l="it">Clicca su <b>Processi</b> (accanto a COMMANDS, sotto il quadrante): appare un elenco di file (depositati nella cartella condivisa, o già presenti).</span>
+      <span data-l="en">Click <b>Processes</b> (next to COMMANDS, under the dial): a list of files appears (dropped in the shared folder, or already present).</span>
     </li>
     <li>
       <span data-l="fr">Clique sur un fichier pour l'ouvrir — il reste affiché à côté de la séance, tu peux le suivre page par page.</span>
@@ -683,6 +692,12 @@
       <span data-l="en">every definition ends with a code in parentheses (e.g. "(HCOB 23 Ago 65)") — these codes have their own section, "ABBREVIATIONS", at the very bottom of the list (scroll all the way down to see it, just like in the printed book). It stays inside the SAME search as the terms: type "HCOB" and the code shows up with its full explanation, right next to the term that cited it.</span>
     </li>
     <li>
+      <b><span data-l="fr">"Alternative Scientology", après les abréviations :</span><span data-l="it">"Alternative Scientology", dopo le abbreviazioni:</span><span data-l="en">"Alternative Scientology", after the abbreviations:</span></b>
+      <span data-l="fr">quelques définitions récentes (bulletins HCOB 2025-2026), en dehors du Dictionnaire Technique historique — reconnaissables à l'étiquette <i>(Alternative Scientology)</i> à côté du terme. Elles apparaissent à DEUX endroits : à leur place alphabétique normale, ET regroupées dans une section à part tout en bas de la liste, juste après "ABRÉVIATIONS". Pour y aller directement sans tout faire défiler : le bouton <b>AS</b>, juste après le "§" des abréviations dans la rangée de lettres — un clic et seules ces définitions-là s'affichent.</span>
+      <span data-l="it">alcune definizioni recenti (bollettini HCOB 2025-2026), fuori dal Dizionario Tecnico storico — riconoscibili dall'etichetta <i>(Alternative Scientology)</i> accanto al termine. Compaiono in DUE punti: alla loro posizione alfabetica normale, E raggruppate in una sezione a parte in fondo all'elenco, subito dopo "ABBREVIAZIONI". Per andarci direttamente senza scorrere tutto: il bottone <b>AS</b>, subito dopo il "§" delle abbreviazioni nella riga delle lettere — un clic e compaiono solo quelle definizioni.</span>
+      <span data-l="en">a handful of recent definitions (HCOB bulletins 2025-2026), outside the historical Technical Dictionary — recognizable by the <i>(Alternative Scientology)</i> tag next to the term. They show up in TWO places: at their normal alphabetical spot, AND grouped in a section of their own at the very bottom of the list, right after "ABBREVIATIONS". To jump straight there without scrolling through everything: the <b>AS</b> button, right after the abbreviations' "§" in the letter row — one click and only those definitions show.</span>
+    </li>
+    <li>
       <b><span data-l="fr">Pour le fermer :</span><span data-l="it">Per chiuderlo:</span><span data-l="en">To close it:</span></b>
       <span data-l="fr">le bouton <b>fermer</b> en haut à droite du dictionnaire.</span>
       <span data-l="it">il pulsante <b>chiudi</b> in alto a destra del dizionario.</span>
@@ -720,6 +735,9 @@
     <tr data-l="fr"><td>Le dossier CORPUS</td><td>reste nommé <code>~/EQUILIBRIUM/corpus/</code> même dans SERENITY — les deux apps partagent le même moteur et la même archive.</td></tr>
     <tr data-l="it"><td>La cartella CORPUS</td><td>resta chiamata <code>~/EQUILIBRIUM/corpus/</code> anche in SERENITY — le due app condividono lo stesso motore e lo stesso archivio.</td></tr>
     <tr data-l="en"><td>The CORPUS folder</td><td>stays named <code>~/EQUILIBRIUM/corpus/</code> even in SERENITY — both apps share the same engine and the same archive.</td></tr>
+    <tr data-l="fr"><td>L'app ne se met pas à jour toute seule</td><td>clique la petite icône ↻ à côté du numéro de version (sous "SERENITY", en haut à gauche) pour vérifier manuellement — un message indique le résultat (déjà à jour, nouvelle version trouvée, etc.). Si aucune nouvelle version n'apparaît, elle n'a peut-être simplement pas encore été publiée.</td></tr>
+    <tr data-l="it"><td>L'app non si aggiorna da sola</td><td>clicca la piccola icona ↻ accanto al numero di versione (sotto "SERENITY", in alto a sinistra) per verificare manualmente — un messaggio indica l'esito (già aggiornato, nuova versione trovata, ecc.). Se non compare nessuna versione nuova, potrebbe semplicemente non essere stata ancora pubblicata.</td></tr>
+    <tr data-l="en"><td>The app isn't updating on its own</td><td>click the small ↻ icon next to the version number (under "SERENITY", top left) to check manually — a message shows the result (already up to date, new version found, etc.). If no new version shows up, it may simply not have been published yet.</td></tr>
   </table>
 
 </main>
