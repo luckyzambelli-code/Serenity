@@ -12482,3 +12482,19 @@ tutte le lingue.
 File: `src/serenity/DizionarioModal.tsx`, `public/dizionario/dizionario-{it,en,fr,es}.json`.
 `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754
 (invariato).
+
+## Giro — 2026-09-17 (continuazione ancora) — DIZIONARIO: la sezione ALTERNATIVE SCIENTOLOGY va
+DOPO le abbreviazioni, non prima
+
+**Corretto:** « Non hai messo, dopo le abbreviazioni un label ALTERNATIVE SCIENTOLOGY... »: la
+sezione dedicata era stata messa PRIMA delle abbreviazioni (fraintendimento della richiesta
+originale). Spostata in fondo a tutto: nel caricamento dati, ogni lingua costruisce ora la lista
+come `[voci vere, abbreviazioni, sezione ALTERNATIVE SCIENTOLOGY]` invece di
+`[voci vere, sezione, abbreviazioni]` — un solo scambio d'ordine negli spread di
+`setVociIt`/`setVociEn`/`setVociFr`/`setVociEs`, la riga-titolo si sposta da sola perché segue
+comunque il primo doppione `sezioneAlternativa` che trova. Verificato dal vivo: scorrendo la
+lista non filtrata fino in fondo si vede "ALTERNATIVE SCIENTOLOGY" subito dopo l'ultima
+abbreviazione, con le 4 voci raggruppate lì.
+
+File: `src/serenity/DizionarioModal.tsx`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0
+errori (invariato), `npx vitest run` 754/754 (invariato).

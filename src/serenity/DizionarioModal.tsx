@@ -70,7 +70,7 @@ import { pick5 } from '../i18n5';
  * storico, quindi marcate `fonte: 'alternative'` nei quattro JSON principali (mai nei file
  * delle abbreviazioni, che restano solo citazioni). Due posti insieme, come chiesto: alla loro
  * lettera vera (con l'etichetta "(Alternative Scientology)" accanto al termine, per non
- * confonderle mai con la fonte originale), E in una sezione a parte, subito prima delle
+ * confonderle mai con la fonte originale), E in una sezione a parte, subito DOPO le
  * abbreviazioni — un doppione VOLUTO (v. `aSezioneAlt`, dove si costruisce), non un errore.
  * Tradotte in francese e spagnolo (traduzione semantica di questa stessa IA, come il resto del
  * dizionario FR/ES — stesso avviso giallo in testa al pannello).
@@ -178,32 +178,31 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
       const aVoce = (a: AbbrGrezza): Voce => ({ termine: a.codice, definizione: a.espansione, abbreviazione: true });
       // ⚠️ AGGIUNTA — segnalato: « aggiungere queste definizioni [...] devi aggiungere accanto
       // (Alternative Scientology) [...] in più di collocarle secondo la lettera alfabetica, in
-      // una sezione specifica, prima delle abbreviazioni ». Le voci `fonte === 'alternative'`
-      // sono già nella lista principale (arrivano dal JSON come le altre, quindi contano già
-      // per la LORO lettera — v. `letterePresenti`/il filtro per lettera, sotto, che le tratta
-      // come voci vere lì) — qui si DUPLICANO, marcate `sezioneAlternativa: true`, e messe
-      // subito PRIMA delle abbreviazioni: la stessa idea già usata per queste ultime (`aVoce`,
-      // sopra — in coda, con un titolo che le introduce), non un secondo meccanismo. La
-      // duplicazione è voluta, non un doppione per errore: l'utente ha chiesto ESPLICITAMENTE
-      // sia il posto alfabetico sia la sezione a parte.
+      // una sezione specifica ». Corretto poi: « dopo le abbreviazioni », non prima — la
+      // sezione dedicata va in fondo a tutto. Le voci `fonte === 'alternative'` sono già nella
+      // lista principale (arrivano dal JSON come le altre, quindi contano già per la LORO
+      // lettera — v. `letterePresenti`/il filtro per lettera, sotto, che le tratta come voci
+      // vere lì) — qui si DUPLICANO, marcate `sezioneAlternativa: true`, e messe DOPO le
+      // abbreviazioni: la duplicazione è voluta, non un doppione per errore, l'utente ha
+      // chiesto ESPLICITAMENTE sia il posto alfabetico sia la sezione a parte.
       const aSezioneAlt = (voci: Voce[]): Voce[] =>
         voci.filter(v => v.fonte === 'alternative').map(v => ({ ...v, sezioneAlternativa: true }));
       const itVere = (Array.isArray(it) ? it : []).map(v =>
         ({ termine: v.termine, termineEn: v.termine_en ?? null, definizione: v.definizione, fonte: v.fonte }));
-      setVociIt([...itVere, ...aSezioneAlt(itVere), ...(Array.isArray(abbrIt) ? abbrIt : []).map(aVoce)]);
+      setVociIt([...itVere, ...(Array.isArray(abbrIt) ? abbrIt : []).map(aVoce), ...aSezioneAlt(itVere)]);
       const enVere = (Array.isArray(en) ? en : []).map(v =>
         ({ termine: v.termine, definizione: v.definizione, fonte: v.fonte }));
-      setVociEn([...enVere, ...aSezioneAlt(enVere), ...(Array.isArray(abbrEn) ? abbrEn : []).map(aVoce)]);
+      setVociEn([...enVere, ...(Array.isArray(abbrEn) ? abbrEn : []).map(aVoce), ...aSezioneAlt(enVere)]);
       // ⚠️ AGGIUNTO — segnalato: « traduci anche le parole del dizionario, lasciando a fianco
       // la versione inglese ». Stesso `termine_en` già usato per l'italiano, sopra — non un
       // secondo meccanismo. Il termine tradotto sostituisce `termine`, l'originale inglese
       // resta leggibile accanto (v. il rendering più giù, stessa riga di `termineEn` per IT).
       const frVere = (Array.isArray(fr) ? fr : []).map(v =>
         ({ termine: v.termine, termineEn: v.termine_en ?? null, definizione: v.definizione, fonte: v.fonte }));
-      setVociFr([...frVere, ...aSezioneAlt(frVere), ...(Array.isArray(abbrFr) ? abbrFr : []).map(aVoce)]);
+      setVociFr([...frVere, ...(Array.isArray(abbrFr) ? abbrFr : []).map(aVoce), ...aSezioneAlt(frVere)]);
       const esVere = (Array.isArray(es) ? es : []).map(v =>
         ({ termine: v.termine, termineEn: v.termine_en ?? null, definizione: v.definizione, fonte: v.fonte }));
-      setVociEs([...esVere, ...aSezioneAlt(esVere), ...(Array.isArray(abbrEs) ? abbrEs : []).map(aVoce)]);
+      setVociEs([...esVere, ...(Array.isArray(abbrEs) ? abbrEs : []).map(aVoce), ...aSezioneAlt(esVere)]);
       setCaricamento(false);
     }).catch(() => { if (vivo) { setErroreCaricamento(true); setCaricamento(false); } });
     return () => { vivo = false; };
@@ -494,12 +493,12 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
             const inizioAbbreviazioni = v.abbreviazione && (!letteraFiltro || letteraFiltro === '#') && !ricerca.trim()
               && (i === 0 || !filtrata[i - 1].abbreviazione);
             // ── LA RIGA-TITOLO "ALTERNATIVE SCIENTOLOGY" — segnalato: « mettile... in una
-            // sezione specifica, prima delle abbreviazioni ». Stessa identica idea della riga
+            // sezione specifica, dopo le abbreviazioni ». Stessa identica idea della riga
             // sopra: appare una volta sola, appena prima del primo doppione della sezione —
-            // che per costruzione (v. `aSezioneAlt`) sta SEMPRE subito prima delle
-            // abbreviazioni, mai dopo, mai mescolato. Nessun cancello `letteraFiltro === '#'`
-            // qui: questa sezione non ha un suo bottone di accesso diretto come le
-            // abbreviazioni, si raggiunge solo scorrendo senza filtro.
+            // che per costruzione (v. `aSezioneAlt`) sta SEMPRE subito dopo le abbreviazioni,
+            // in fondo a tutto, mai mescolato. Nessun cancello `letteraFiltro === '#'` qui:
+            // questa sezione non ha un suo bottone di accesso diretto come le abbreviazioni,
+            // si raggiunge solo scorrendo senza filtro.
             const inizioSezioneAlternativa = v.sezioneAlternativa && !letteraFiltro && !ricerca.trim()
               && (i === 0 || !filtrata[i - 1].sezioneAlternativa);
             return (
