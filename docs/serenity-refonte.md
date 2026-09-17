@@ -12659,3 +12659,36 @@ raccoglie insieme tutti i giri dal secondo lotto di voci Alternative Scientology
 
 File: `public/dizionario/dizionario-{it,en,fr,es}.json`. `tsc --noEmit` pulito, `npm run
 lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-17 (continuazione ancora) — DIZIONARIO: SOL DEFINITO, MICROPROCEDIMENTO
+DEFINITO, L'EFFETTO FARFALLA
+
+**Richiesto:** tre nuove voci — SOL DEFINITO (HCOB 22 gen. 2026), MICROPROCESSING DEFINED
+(HCOB 23 gen. 2026, dato solo in inglese) e L'EFFETTO FARFALLA (HCOB 20 gen. 2018, Serie
+Infinity 10). Poi, esplicitamente: « NON FARE BUILD, ti darò altre definizioni » — build
+sospesa di nuovo.
+
+**MICROPROCESSING DEFINED:** dato solo in inglese, tradotto qui in italiano come
+"MICROPROCEDIMENTO DEFINITO" — poi l'utente ha inviato il proprio testo italiano ufficiale
+con esattamente questa scelta terminologica ("IL MICROPROCEDIMENTO", non "microprocessing"
+lasciato in inglese): sostituita la mia bozza col testo dell'utente. Rifatte anche le
+traduzioni FR/ES con lo stesso criterio (tradurre il NOME dello strumento —
+MICROPROCÉDÉ/MICROPROCEDIMIENTO — lasciando invece "processing" generico non tradotto,
+come fa l'utente stesso in "processing quantistico": lo stesso principio già in uso nel
+resto del dizionario per "processing").
+
+**L'EFFETTO FARFALLA:** spagnolo non fornito, tradotto qui. Applicato lo stesso principio
+già usato per "Il vero stato nativo di un essere": l'articolo iniziale (L'/THE/EL) non
+conta per l'ordinamento — "L'EFFETTO FARFALLA" si alfabetizza come "EFFETTO FARFALLA",
+"THE BUTTERFLY EFFECT" come "BUTTERFLY EFFECT" (e di riflesso FR/ES, che ordinano su
+`termine_en`).
+
+Verificato dal vivo (dopo aver dovuto riavviare il server dev, fermatosi da solo): le tre
+voci si trovano cercando, si aprono da sole con un solo risultato, testo integro, contatore
+"2774/2774" corretto (10 voci in più: 5 nuove + 5 doppioni di sezione), nessun errore in
+console.
+
+Build ancora sospesa su richiesta dell'utente — solo commit del contenuto.
+
+File: `public/dizionario/dizionario-{it,en,fr,es}.json`. `tsc --noEmit` pulito, `npm run
+lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
