@@ -22,6 +22,7 @@
  * @see docs/serenity-refonte.md — giro di scomposizione, 2026-09-07.
  */
 import React, { Suspense, lazy, useEffect, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import { ExternalLink } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { GuideModal } from '../components/GuideModal';
 import { CreditsModal } from '../components/CreditsModal';
@@ -180,8 +181,8 @@ export interface FinestreSovrapposteProps {
   setEditingTag: Dispatch<SetStateAction<string | null>>;
   editingTagValue: string;
   setEditingTagValue: Dispatch<SetStateAction<string>>;
-  processusVisualizzato: { name: string; url: string } | null;
-  setProcessusVisualizzato: (v: { name: string; url: string } | null) => void;
+  activeProcessus: { id: number; name: string; url: string }[];
+  setActiveProcessus: (v: { id: number; name: string; url: string }[] | ((v: { id: number; name: string; url: string }[]) => { id: number; name: string; url: string }[])) => void;
   procedimenti: Procedimento[];
   setProcedimentoAttivo: (p: Procedimento | null) => void;
   setFuocoProcedimentoStato: (v: number) => void;
@@ -197,7 +198,7 @@ export function FinestreSovrapposte({
   profiliAuditor, auditorId, processusAperto, setProcessusAperto, processusPdfs, setProcessusPdfs,
   pendingFiles, setPendingFiles, pendingTagInput, setPendingTagInput, processusTagFilter,
   setProcessusTagFilter, editingTag, setEditingTag, editingTagValue, setEditingTagValue,
-  processusVisualizzato, setProcessusVisualizzato, procedimenti, setProcedimentoAttivo,
+  activeProcessus, setActiveProcessus, procedimenti, setProcedimentoAttivo,
   setFuocoProcedimentoStato, setRisposteProcedimento, domandeLoggateRef, processusSoloComandi, LC,
 }: FinestreSovrapposteProps) {
   const { t, lang } = useI18n();
@@ -261,7 +262,7 @@ export function FinestreSovrapposte({
             setEditingTag={setEditingTag}
             editingTagValue={editingTagValue}
             setEditingTagValue={setEditingTagValue}
-            onSelectProcessus={entry => { setProcessusVisualizzato({ name: entry.name, url: entry.url }); setProcessusAperto(false); }}
+            onSelectProcessus={entry => { setActiveProcessus(prev => [...prev, entry]); setProcessusAperto(false); }}
             onClose={() => setProcessusAperto(false)}
             t={k => t(k as never) as string}
             procedimenti={procedimenti}
@@ -278,33 +279,110 @@ export function FinestreSovrapposte({
           />
         </div>
       )}
-      {/* ── IL VISORE — un PDF alla volta, non le finestre multiple trascinabili di App.tsx
-          (`activeProcessus`, dichiarato un raffinamento ancora aperto). Un `<iframe>` sul PDF
-          scelto, chiudibile: quel che serve per LEGGERE il processo durante la seduta. */}
-      {processusVisualizzato && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 200, display: 'flex', flexDirection: 'column',
-          background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)', padding: 24,
+      {/* ── IL VISORE — FINESTRE STACCABILI — segnalato: « i PROCESSUS dovevano poter essere
+          messi in una finestra detachable ». Riprodotta TALE E QUALE la logica già in
+          `App.tsx` (EQUILIBRIUM, `activeProcessus`) — stessa forma di stato (un array, più
+          PROCESSUS aperti insieme), stesso trascinamento via Pointer Capture (l'header cattura
+          il puntatore: niente scudo a schermo intero che restava bloccato se il rilascio del
+          mouse avveniva fuori dalla finestra), stesso ridimensionamento CSS (`resize: both`),
+          stesso bottone "Stacca" (`window.open` sulla stessa origine locale — ammessa dal
+          `setWindowOpenHandler` di `main.cjs`, già condiviso con EQUILIBRIUM: nessuna modifica
+          lì necessaria). Nessuna tenda scura di sfondo, apposta: il punto di più finestre è
+          poter continuare a lavorare nel resto di SERENITY mentre restano aperte. Solo la
+          grafica è di SERENITY (`.s-glass`/`.s-glass-lift`, gli stessi token del resto
+          dell'intestazione) al posto del vetro ciano di EQUILIBRIUM. */}
+      {activeProcessus.map((proc, idx) => (
+        <div key={proc.id} className="s-glass s-glass-lift" style={{
+          position: 'fixed', zIndex: 205, display: 'flex', flexDirection: 'column',
+          top: `${64 + idx * 24}px`, left: `${64 + idx * 24}px`,
+          width: `min(820px, calc(100vw - ${64 + idx * 24}px - 24px))`,
+          height: '78vh', minWidth: 420, minHeight: 360,
+          resize: 'both', overflow: 'hidden', borderRadius: 14,
+          background: 'var(--s-disc)',
         }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            marginBottom: 10, flexShrink: 0,
-          }}>
-            <span style={{ fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: '#fff' }}>
-              {processusVisualizzato.name}
-            </span>
-            <button onClick={() => setProcessusVisualizzato(null)} style={{
-              border: 'none', background: 'rgba(255,255,255,0.12)', color: '#fff',
-              borderRadius: 999, padding: '6px 16px', cursor: 'pointer',
-              fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)',
+          <div
+            onPointerDown={e => {
+              // Il pannello si trascina dall'intestazione — ma "Stacca"/✕ vivono anche loro
+              // lì dentro: esce subito se la pressione parte su un bottone, così il SUO click
+              // scatta invece del trascinamento.
+              if ((e.target as HTMLElement).closest('button')) return;
+              const maniglia = e.currentTarget as HTMLElement;
+              const pannello = maniglia.parentElement as HTMLElement;
+              const startX = e.clientX - pannello.offsetLeft;
+              const startY = e.clientY - pannello.offsetTop;
+              try { maniglia.setPointerCapture(e.pointerId); } catch { /* noop */ }
+              const muovi = (ev: PointerEvent) => {
+                pannello.style.left = (ev.clientX - startX) + 'px';
+                pannello.style.top = (ev.clientY - startY) + 'px';
+              };
+              const rilascia = (ev: PointerEvent) => {
+                maniglia.removeEventListener('pointermove', muovi);
+                maniglia.removeEventListener('pointerup', rilascia);
+                maniglia.removeEventListener('pointercancel', rilascia);
+                try { maniglia.releasePointerCapture(ev.pointerId); } catch { /* noop */ }
+              };
+              maniglia.addEventListener('pointermove', muovi);
+              maniglia.addEventListener('pointerup', rilascia);
+              maniglia.addEventListener('pointercancel', rilascia);
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '8px 10px', flexShrink: 0, cursor: 'move', userSelect: 'none',
+              borderBottom: '1px solid var(--s-ink-ghost)', gap: 10,
+            }}
+          >
+            <span style={{
+              fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-base)', color: 'var(--s-ink)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
-              {LC('chiudi', 'fermer', 'close', 'cerrar', 'stäng')}
-            </button>
+              {proc.name}
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <button type="button" className="s-glass s-glass-btn"
+                title={LC('stacca in una finestra separata', 'détacher dans une fenêtre séparée',
+                  'detach to a separate window', 'separar en una ventana', 'koppla loss i eget fönster')}
+                onClick={() => {
+                  const finestra = window.open(
+                    proc.url, `processus_${proc.id}`,
+                    'width=900,height=900,toolbar=no,menubar=no,location=no,scrollbars=yes,resizable=yes'
+                  );
+                  if (finestra) {
+                    try { finestra.document.title = proc.name; } catch { /* noop */ }
+                    setActiveProcessus(prev => prev.filter(p => p.id !== proc.id));
+                  } else {
+                    alert(LC(
+                      'Autorizza le finestre pop-up per staccare il processo.',
+                      'Veuillez autoriser les fenêtres pop-up pour détacher le processus.',
+                      'Please allow pop-up windows to detach the process.',
+                      'Permite las ventanas emergentes para desacoplar el proceso.',
+                      'Tillåt popup-fönster för att koppla loss processen.',
+                    ));
+                  }
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px',
+                  borderRadius: 999, border: '1px solid var(--s-ink-ghost)', cursor: 'pointer',
+                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
+                  letterSpacing: '0.04em', color: 'var(--s-ink-faint)',
+                }}
+              >
+                <ExternalLink size={12} strokeWidth={2} aria-hidden="true" />
+                {LC('stacca', 'détacher', 'detach', 'separar', 'koppla loss')}
+              </button>
+              <button type="button" onClick={() => setActiveProcessus(prev => prev.filter(p => p.id !== proc.id))}
+                title={LC('chiudi', 'fermer', 'close', 'cerrar', 'stäng')}
+                style={{
+                  border: 'none', background: 'none', color: 'var(--s-ink-faint)', cursor: 'pointer',
+                  fontSize: 16, lineHeight: 1, padding: '2px 4px',
+                }}
+              >
+                ✕
+              </button>
+            </div>
           </div>
-          <iframe src={processusVisualizzato.url} title={processusVisualizzato.name}
-            style={{ flex: 1, border: 'none', borderRadius: 12, background: '#fff' }} />
+          <iframe src={proc.url} title={proc.name} style={{ flex: 1, border: 'none', background: '#fff' }} />
         </div>
-      )}
+      ))}
     </>
   );
 }

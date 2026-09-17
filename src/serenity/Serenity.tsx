@@ -267,7 +267,14 @@ export default function Serenity() {
   const [processusTagFilter, setProcessusTagFilter] = useState('all');
   const [editingTag, setEditingTag] = useState<string | null>(null);
   const [editingTagValue, setEditingTagValue] = useState('');
-  const [processusVisualizzato, setProcessusVisualizzato] = useState<{ name: string; url: string } | null>(null);
+  /** ── FINESTRE STACCABILI — segnalato: « i PROCESSUS dovevano poter essere messi in una
+   *  finestra detachable ». Stessa forma di stato di `activeProcessus` in `App.tsx`
+   *  (EQUILIBRIUM): un ARRAY, non più un solo PDF alla volta — più PROCESSUS aperti insieme,
+   *  ciascuno nel proprio pannello trascinabile/ridimensionabile, "Stacca" lo apre in una vera
+   *  finestra del sistema operativo (`window.open`, v. `FinestreSovrapposte.tsx`). Riprodotta
+   *  la stessa logica di EQUILIBRIUM (stessa funzione, stessa condizione), non inventata da
+   *  zero — solo la grafica è di SERENITY. */
+  const [activeProcessus, setActiveProcessus] = useState<{ id: number; name: string; url: string }[]>([]);
   /** ── PROCEDIMENTI — segnalato: « consenti la selezione di procedimenti presenti nella
    *  cartella COMANDI/Procedimenti, e versa i suoi comandi nello spazio comandi dei cicli ».
    *  `procedimenti`: la lista trovata in `~/EQUILIBRIUM/COMANDI/Procedimenti` (ricaricata ogni
@@ -3419,8 +3426,8 @@ export default function Serenity() {
         setEditingTag={setEditingTag}
         editingTagValue={editingTagValue}
         setEditingTagValue={setEditingTagValue}
-        processusVisualizzato={processusVisualizzato}
-        setProcessusVisualizzato={setProcessusVisualizzato}
+        activeProcessus={activeProcessus}
+        setActiveProcessus={setActiveProcessus}
         procedimenti={procedimenti}
         setProcedimentoAttivo={setProcedimentoAttivo}
         setFuocoProcedimentoStato={setFuocoProcedimentoStato}

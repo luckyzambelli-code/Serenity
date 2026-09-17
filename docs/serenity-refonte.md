@@ -13054,3 +13054,43 @@ nell'anteprima browser di sviluppo.
 
 File: `src/serenity/LogoSerenity.tsx`. `tsc --noEmit` pulito, `npm run lint` 324
 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-17 (continuazione ancora) — PROCESSUS: finestre staccabili, come in
+EQUILIBRIUM
+
+**Segnalato:** « si, si aprono, ma dovevano poter essere messi in una finestra detachable... »
+— confermato che il fix del 403 ha risolto la pagina bianca, poi la richiesta successiva.
+
+`App.tsx` (EQUILIBRIUM) ha già ESATTAMENTE questa funzione da tempo: `activeProcessus`, un
+array di PROCESSUS aperti insieme, ciascuno in un pannello trascinabile e ridimensionabile,
+con un bottone "Détacher" che lo apre in una vera finestra del sistema operativo
+(`window.open`, ammesso dal `setWindowOpenHandler` già condiviso in `main.cjs` — nessuna
+modifica lì necessaria, stesso motore delle due app). SERENITY ne aveva solo una versione
+ridotta: UN PDF alla volta, dentro un overlay modale a tutta pagina, senza trascinamento né
+distacco. Per [[serenity_reproduce_equilibrium_logic]] (regola permanente: stessa funzione,
+stessa condizione di EQUILIBRIUM di default) riprodotta la stessa logica TALE E QUALE — non
+inventata una versione semplificata:
+
+- **Stato**: `processusVisualizzato` (un solo `{name,url}` o `null`) → `activeProcessus`
+  (`{id,name,url}[]`, stessa forma di EQUILIBRIUM), in `Serenity.tsx`.
+- **Trascinamento**: stessa tecnica di EQUILIBRIUM — Pointer Capture sull'intestazione del
+  pannello (non lo "scudo" a schermo intero con `mouseup` globale, che restava bloccato se il
+  rilascio del mouse avveniva fuori dalla finestra Electron: « ne se détache plus ni se
+  déplace ni se ferme », il bug che EQUILIBRIUM stesso aveva già avuto e risolto).
+- **Ridimensionamento**: `resize: both` CSS, stesso meccanismo.
+- **Distacco**: stesso `window.open(url, 'processus_ID', 'width=900,height=900,...')`, stesso
+  messaggio di errore se i pop-up sono bloccati.
+- **Grafica**: SOLO questa è di SERENITY, non copiata — `.s-glass`/`.s-glass-lift` (lo stesso
+  "vetro" già usato per drawer/popover/MNA) al posto del vetro ciano di EQUILIBRIUM, nessuna
+  tenda scura di sfondo (il punto di più finestre è poter continuare a lavorare nel resto di
+  SERENITY mentre restano aperte — a differenza del vecchio overlay a piena pagina).
+
+Verificato: `tsc`/lint/test puliti. Dal vivo: il modale PROCESSUS si apre senza errori nuovi
+in console con le props rinominate; il trascinamento/distacco reale (serve un vero PDF dal
+server locale, non disponibile nell'anteprima browser di sviluppo) non testabile a fondo qui
+— stessa logica, verbatim, di una funzione EQUILIBRIUM già in produzione da tempo: rischio
+basso.
+
+File: `src/serenity/Serenity.tsx`, `src/serenity/FinestreSovrapposte.tsx`. `tsc --noEmit`
+pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754
+(invariato).
