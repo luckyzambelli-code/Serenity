@@ -12566,3 +12566,40 @@ vivo: un clic isola le 4 voci raggruppate, un secondo clic torna alla lista inte
 
 File: `src/serenity/DizionarioModal.tsx`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0
 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-17 (continuazione ancora) — DIZIONARIO: 5 nuove voci "Alternative
+Scientology" (secondo lotto)
+
+**Richiesto:** aggiungere 5 nuove definizioni HCOB 22 Dicembre 2025 — MEST ASSOLUTO,
+CONDIZIONE CINETICA, POTENZIALE, LA NUOVA SCALA DEL TONO, IL TRIANGOLO DI SPK — con le
+stesse regole del primo lotto (etichetta, lettera vera + sezione dedicata), tradotte anche
+in francese e spagnolo.
+
+**Il diagramma della NUOVA SCALA DEL TONO:** il testo originale include uno schema ASCII a
+triangolo (tabulazioni e lettere posizionate a formare la figura). Verificato che il testo
+delle definizioni è renderizzato in un `<div>` senza `white-space: pre`/`pre-wrap`
+(`DizionarioModal.tsx`, riga del rendering di `v.definizione`) — un diagramma con tabulazioni
+sarebbe collassato dal browser in uno spazio unico, illeggibile. Sostituito con una
+descrizione testuale del triangolo (vertice a +40 il CINETICO, vertice a -40 lo STATICO, le
+due bande laterali il POTENZIALE +/-), in tutte e 4 le lingue, preservando il resto del testo
+originale.
+
+**Correzioni ai testi originali** (refusi da copia-incolla, non toccando il contenuto):
+"diﬀerisce"→"differisce", "tu7o"→"tutto", "rela>vo"→"relativo", "eﬃcace"→"efficace" (IT); "…
+their own preferred [ ] of motion…" → "…their own preferred types of motion…" (parola mancante
+nel testo fornito, riempita per coerenza con la frase parallela successiva, EN).
+
+**Inserimento:** riusato l'algoritmo di posizionamento del giro precedente (cluster
+dominante per lettera iniziale del campo giusto: `termine` per IT/EN, `termine_en` per
+FR/ES) — nessuna posizione sbagliata questa volta, verificato ogni voce contro i vicini
+alfabetici reali in tutte e 4 le lingue prima di committare. Verificato anche che nessuna
+delle 5 nuove voci collida (per `termine`+`termine_en`) con una voce classica già esistente
+(resta solo il caso CINETICO/KINETIC del primo lotto, già gestito).
+
+Verificato dal vivo: bottone "AS" mostra le 9 voci (4+5) raggruppate e ordinate, in ITALIANO
+e FRANCESE (schermate), contatore "2764/2764" (IT) e "2688/2688" (FR) corretti (2621/2550
+voci vere+alternative + 134/129 abbreviazioni + 9 doppioni di sezione), nessun errore in
+console.
+
+File: `public/dizionario/dizionario-{it,en,fr,es}.json`. `tsc --noEmit` pulito, `npm run
+lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
