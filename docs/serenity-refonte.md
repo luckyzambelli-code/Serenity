@@ -12603,3 +12603,24 @@ console.
 
 File: `public/dizionario/dizionario-{it,en,fr,es}.json`. `tsc --noEmit` pulito, `npm run
 lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-17 (continuazione ancora) — DIZIONARIO: "CINETICO RIDEFINITO" aggiunto
+alla STESSA voce CINETICO (HCOB 27 Dicembre 2025)
+
+**Richiesto:** aggiungere un nuovo blocco (HCOB 27 Dicembre 2025 - CINETICO RIDEFINITO) alla
+definizione ESISTENTE di CINETICO/KINETIC "Alternative Scientology" — non una voce nuova,
+un'aggiunta in coda alla stessa definizione. Tradotto anche in francese e spagnolo.
+
+Trovata la voce giusta (`fonte==='alternative'` e `termine_en==='KINETIC'`; per l'inglese,
+che non ha `termine_en`, cercata per `termine==='KINETIC'`) e concatenato il nuovo testo
+alla fine di `definizione`, in tutte e 4 le lingue — nessuna voce nuova, nessun cambio di
+posizione o di conteggio (2621/2550/2550/2550 voci, invariato). Verificato dal vivo: la
+voce CINETICO ora mostra entrambi i blocchi di seguito, con le due citazioni HCOB (22 e 27
+Dicembre 2025) alla fine di ciascuno.
+
+**Nota — build sospesa:** su richiesta esplicita dell'utente (« NON FARE IL BUILD, devo
+darti altre definizioni prima »), questo giro NON produce una build/release: solo il
+commit del contenuto. La prossima build raccoglierà questo giro insieme a quelli successivi.
+
+File: `public/dizionario/dizionario-{it,en,fr,es}.json`. `tsc --noEmit` pulito, `npm run
+lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
