@@ -12547,3 +12547,22 @@ File: `src/serenity/DizionarioModal.tsx`. `tsc --noEmit` pulito, `npm run lint` 
 errori (invariato), `npx vitest run` 754/754 (invariato). Verificato dal vivo, tab e server
 puliti: la sequenza SPAGNOLO→ricerca→ITALIANO che riproduceva il bug ora mostra la lista
 italiana corretta fin dalla prima voce, nessun errore in console.
+
+## Giro — 2026-09-17 (continuazione ancora) — DIZIONARIO: bottone "AS" per vedere SOLO
+ALTERNATIVE SCIENTOLOGY, come "§" per le abbreviazioni
+
+**Segnalato:** « hai aggiunto ALTERNATIVE SCIENTOLOGY in alto accanto a ABBREVIAZIONI per
+ricapitolare anche in un solo punto le definizioni? » — no, non ancora: la sezione dedicata
+(giro precedente) si vedeva solo scorrendo l'elenco non filtrato fino in fondo, senza un
+accesso diretto come il bottone "§" già esistente per le abbreviazioni.
+
+Aggiunto un secondo valore speciale di `letteraFiltro` (`'@'`, mai una vera lettera, come
+`'#'` per le abbreviazioni) e un bottone "AS" subito dopo "§" nella riga delle lettere —
+`title="ALTERNATIVE SCIENTOLOGY"` letterale, stesso stile, disabilitato se la sezione è
+vuota. Un clic e `filtrata` mostra SOLO le 4 voci (`v.sezioneAlternativa`), con la
+riga-titolo "ALTERNATIVE SCIENTOLOGY" sopra (stesso trattamento già dato a "§"/ABBREVIAZIONI:
+il titolo resta visibile anche a filtro attivo, "stai guardando questo"). Verificato dal
+vivo: un clic isola le 4 voci raggruppate, un secondo clic torna alla lista intera.
+
+File: `src/serenity/DizionarioModal.tsx`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0
+errori (invariato), `npx vitest run` 754/754 (invariato).

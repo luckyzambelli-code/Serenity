@@ -73,7 +73,9 @@ import { pick5 } from '../i18n5';
  * confonderle mai con la fonte originale), E in una sezione a parte, subito DOPO le
  * abbreviazioni — un doppione VOLUTO (v. `aSezioneAlt`, dove si costruisce), non un errore.
  * Tradotte in francese e spagnolo (traduzione semantica di questa stessa IA, come il resto del
- * dizionario FR/ES — stesso avviso giallo in testa al pannello).
+ * dizionario FR/ES — stesso avviso giallo in testa al pannello). Bottone "AS" dopo "§"
+ * (accesso diretto alle abbreviazioni) nella riga delle lettere — stesso principio, un clic
+ * per vedere SOLO queste 4 voci, senza scorrere l'elenco fino in fondo.
  *
  * Elenco cliccabile (di sole parole, leggero) più campo di ricerca — SOLO SERENITY, nessun
  * dato né logica di ciclo qui dentro.
@@ -258,6 +260,12 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
     // un clic e si vedono SOLO le abbreviazioni, esattamente la sezione a sé del libro stampato,
     // non più solo raggiungibile scorrendo.
     if (letteraFiltro === '#') return lista.filter(v => v.abbreviazione);
+    // ⚠️ AGGIUNTO — segnalato: « aggiungi ALTERNATIVE SCIENTOLOGY accanto ad ABBREVIAZIONI
+    // per ricapitolare anche in un solo punto le definizioni ». Stessa idea di `'#'` sopra:
+    // un secondo valore speciale di `letteraFiltro` (mai una vera lettera) per un secondo
+    // bottone nella riga sotto — un clic e si vedono SOLO le 4 voci "Alternative
+    // Scientology", senza scorrere tutto l'elenco fino in fondo (prima l'unico modo).
+    if (letteraFiltro === '@') return lista.filter(v => v.sezioneAlternativa);
     if (letteraFiltro) {
       return lista.filter(v =>
         !v.abbreviazione && !v.sezioneAlternativa && rimuoviAccenti(v.termine).charAt(0).toUpperCase() === letteraFiltro);
@@ -471,6 +479,30 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
                 </button>
               );
             })()}
+            {(() => {
+              // ⚠️ AGGIUNTO — segnalato: « aggiungi ALTERNATIVE SCIENTOLOGY accanto ad
+              // ABBREVIAZIONI per ricapitolare anche in un solo punto le definizioni ».
+              // Stesso identico bottone di "§" sopra, stesso `title` letterale (non
+              // tradotto via LC) della riga-titolo che introduce la sezione nel rendering
+              // sotto — coerenza tra i due punti d'accesso alla stessa sezione.
+              const presente = lista.some(v => v.sezioneAlternativa);
+              const attiva = letteraFiltro === '@';
+              return (
+                <button
+                  disabled={!presente}
+                  onClick={() => { setLetteraFiltro(attiva ? null : '@'); if (ricerca) setRicerca(''); }}
+                  title="ALTERNATIVE SCIENTOLOGY"
+                  style={{
+                    marginLeft: 6, minWidth: 22, padding: '3px 6px', border: 'none', borderRadius: 5,
+                    cursor: presente ? 'pointer' : 'default',
+                    fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
+                    background: attiva ? 'var(--s-reserve)' : 'transparent',
+                    color: attiva ? '#0b0f14' : presente ? 'var(--s-ink-faint)' : 'var(--s-ink-ghost)',
+                  }}>
+                  AS
+                </button>
+              );
+            })()}
           </div>
           <div style={{
             marginTop: 8, fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)',
@@ -529,13 +561,14 @@ export function DizionarioModal({ lang, onClose }: { lang: string; onClose: () =
             const inizioAbbreviazioni = v.abbreviazione && (!letteraFiltro || letteraFiltro === '#') && !ricerca.trim()
               && (i === 0 || !filtrata[i - 1].abbreviazione);
             // ── LA RIGA-TITOLO "ALTERNATIVE SCIENTOLOGY" — segnalato: « mettile... in una
-            // sezione specifica, dopo le abbreviazioni ». Stessa identica idea della riga
-            // sopra: appare una volta sola, appena prima del primo doppione della sezione —
-            // che per costruzione (v. `aSezioneAlt`) sta SEMPRE subito dopo le abbreviazioni,
-            // in fondo a tutto, mai mescolato. Nessun cancello `letteraFiltro === '#'` qui:
-            // questa sezione non ha un suo bottone di accesso diretto come le abbreviazioni,
-            // si raggiunge solo scorrendo senza filtro.
-            const inizioSezioneAlternativa = v.sezioneAlternativa && !letteraFiltro && !ricerca.trim()
+            // sezione specifica, dopo le abbreviazioni », poi: « aggiungi un bottone come
+            // "§" per ricapitolare anche in un solo punto le definizioni ». Stessa identica
+            // idea della riga sopra: appare una volta sola, appena prima del primo doppione
+            // della sezione — che per costruzione (v. `aSezioneAlt`) sta SEMPRE subito dopo
+            // le abbreviazioni, in fondo a tutto, mai mescolato. Resta anche col bottone
+            // "AS" (`letteraFiltro === '@'`, v. sotto): lì la lista È solo questa sezione,
+            // stesso trattamento già dato a "§"/ABBREVIAZIONI qui sopra.
+            const inizioSezioneAlternativa = v.sezioneAlternativa && (!letteraFiltro || letteraFiltro === '@') && !ricerca.trim()
               && (i === 0 || !filtrata[i - 1].sezioneAlternativa);
             return (
               <div key={id}>
