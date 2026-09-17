@@ -12946,3 +12946,36 @@ in attesa dell'errore preciso dalla console sviluppatore per la diagnosi.
 
 File: `src/components/ProcessusModal.tsx`. `tsc --noEmit` pulito, `npm run lint` 324
 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-17 (continuazione ancora) — PROCESSUS: tag colorati, lista PROCEDIMENTI
+più alta
+
+**Segnalato:** « la pagina bianca persiste » (ancora in attesa dell'errore preciso dalla
+console) — poi due richieste distinte: « Quando apri COMMANDS fai la finestra più alta
+così c'è meno scroll » e « In PROCESSUS i TAG così non sono belli, puoi farli più sexy?
+Poi il colore del Tag deve essere ritrovato nella lista, col tag in inizio lista ».
+
+**Lista PROCEDIMENTI più alta:** l'altezza massima dell'elenco (dentro la card COMANDI
+PROCEDIMENTI, vista COMMANDS) era 176px fissi, scelti senza un vero motivo — con
+`soloComandi` il modale mostra SOLO intestazione + questa card, molto spazio verticale
+restava inutilizzato. Cambiata a `60vh` (cresce con la finestra): verificato dal vivo con
+18 procedimenti finti, ~14 righe visibili invece di ~5, molto meno scroll.
+
+**Tag colorati:** prima ogni tag (chip in alto, sezione della griglia PDF) usava lo STESSO
+colore accento del tema — nessun modo di distinguerli a colpo d'occhio. Aggiunta
+`colorePerTag(nome)`: un hash del nome del tag sceglie sempre lo stesso colore da una
+tavolozza di 10 tinte curate (stabile, non `Math.random`). I chip in alto ora hanno un
+pallino colorato al posto del glifo `◈`/`⬡`, bordo/sfondo tinti dello stesso colore invece
+dell'accento unico. Il titolo di ogni sezione della griglia PDF usa lo stesso colore del
+suo tag; ogni card PDF ha un bordo sinistro di 3px dello stesso colore, "in inizio" della
+card come richiesto — non un pallino piccolo in mezzo al resto, il primo elemento visibile
+della riga.
+
+Verificato dal vivo (procedimenti finti via mock, tag reali non testabili senza PDF veri
+in locale — logica identica, stesso rischio basso della ricerca già verificata):
+l'elenco PROCEDIMENTI mostra 18 voci, la ricerca isola subito quella giusta, nessun
+errore in console dopo un ricaricamento pulito (un errore HMR transitorio visto durante
+gli edit era residuo di un salvataggio intermedio, sparito al reload).
+
+File: `src/components/ProcessusModal.tsx`. `tsc --noEmit` pulito, `npm run lint` 324
+warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).

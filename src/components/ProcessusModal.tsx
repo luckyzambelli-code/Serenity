@@ -11,6 +11,33 @@ import { useI18n } from '../i18n';
 import { pick5 } from '../i18n5';
 import type { Procedimento } from '../lib/procedimenti';
 
+// ⚠️ AGGIUNTA — segnalato: « i TAG così non sono belli, puoi farli più sexy? Poi il
+// colore del Tag deve essere ritrovato nella lista, col tag in inizio lista ». Prima
+// OGNI tag (chip in alto, e — finché non tolto in un giro precedente — badge su ogni
+// card) usava lo STESSO colore accento del tema: nessun modo di distinguerli a colpo
+// d'occhio, il colore non diceva "questo tag" ma solo "questo è un tag". Una funzione
+// pura, fuori dal componente (non ha bisogno del tema): un hash del NOME del tag sceglie
+// sempre lo stesso colore da una tavolozza curata — stabile tra un render e l'altro,
+// niente Math.random. La tavolozza è pensata per restare leggibile sia su fondo chiaro
+// che scuro (tinte medie, non pastello troppo chiaro né scuro spento).
+const TAVOLOZZA_TAG = [
+  '#0ea5e9', '#f59e0b', '#22c55e', '#a78bfa', '#f472b6',
+  '#ef4444', '#14b8a6', '#6366f1', '#fb923c', '#84cc16',
+];
+function colorePerTag(tag: string): string {
+  let h = 0;
+  for (let i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) >>> 0;
+  return TAVOLOZZA_TAG[h % TAVOLOZZA_TAG.length];
+}
+
+/** Un colore esadecimale della tavolozza sopra, con trasparenza — per gli sfondi tinti dei
+ *  chip/indicatori, senza dover ripetere una tavolozza rgba parallela. */
+function hexConAlpha(hex: string, alpha: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 export interface ProcessusEntry {
   name: string;
   url:  string;
@@ -232,23 +259,37 @@ export function ProcessusModal({
           )}
           {!soloComandi && <div className="flex items-center gap-2 flex-wrap">
             {(() => {
-              const chipStyle = (active: boolean): React.CSSProperties => ({
-                border: `1px solid ${active ? th.accent : th.accentBorder}`,
-                background: active ? (lt ? 'rgba(8,145,178,0.14)' : 'rgba(255,255,255,0.15)') : th.accentSoft,
-                color: active ? th.accent : th.textDim,
-                boxShadow: active && !lt ? '0 0 10px rgba(255,255,255,0.3)' : 'none',
+              // ⚠️ RIDISEGNATI — segnalato: « i TAG così non sono belli, puoi farli più
+              // sexy? ». Prima: un solo colore (l'accento del tema) per OGNI tag, un
+              // glifo di testo (◈/⬡) invece di un vero indicatore — tutti i chip
+              // sembravano varianti dello stesso, niente li distingueva a colpo d'occhio.
+              // Ora: un pallino colorato (`colorePerTag`, sopra) al posto del glifo, lo
+              // sfondo/bordo tinti dello STESSO colore (non più l'accento unico) — un
+              // linguaggio visivo coerente con `colorePerTag`, ritrovato anche nella
+              // griglia sotto (v. più giù). "ALL" resta sul colore dell'accento: non
+              // rappresenta un tag preciso.
+              const chipStyle = (active: boolean, colore: string): React.CSSProperties => ({
+                border: `1.5px solid ${active ? colore : hexConAlpha(colore, 0.35)}`,
+                background: active ? hexConAlpha(colore, lt ? 0.16 : 0.22) : hexConAlpha(colore, lt ? 0.07 : 0.09),
+                color: active ? colore : th.textDim,
+                boxShadow: active ? `0 2px 10px ${hexConAlpha(colore, 0.3)}` : 'none',
               });
+              const puntino = (colore: string) => (
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: colore, flexShrink: 0 }} />
+              );
               const countBadge = { background: lt ? 'rgba(8,145,178,0.12)' : 'rgba(255,255,255,0.15)' };
               return (<>
                 <button onClick={() => setProcessusTagFilter('all')}
                   title={L('mostra tutti i processus', 'afficher tous les processus', 'show all processus',
                     'mostrar todos los processus', 'visa alla processus')}
                   className="px-3.5 py-1.5 rounded-full text-[11px] font-mono font-bold tracking-widest uppercase transition-all flex items-center gap-1.5"
-                  style={chipStyle(processusTagFilter === 'all')}>
+                  style={chipStyle(processusTagFilter === 'all', th.accent)}>
                   ◈ ALL
                   <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={countBadge}>{processusPdfs.length}</span>
                 </button>
-                {allTags.map(tag => (
+                {allTags.map(tag => {
+                  const colore = colorePerTag(tag);
+                  return (
                   <div key={tag} className="relative group/tagchip">
                     {editingTag === tag ? (
                       <input
@@ -277,7 +318,7 @@ export function ProcessusModal({
                         }}
                         onBlur={() => setEditingTag(null)}
                         className="px-3.5 py-1.5 rounded-full text-[11px] font-mono font-bold tracking-widest uppercase outline-none"
-                        style={{ border: `1px solid ${th.accent}`, background: lt ? 'rgba(8,145,178,0.14)' : 'rgba(255,255,255,0.15)', color: th.accent, width: `${Math.max(70, editingTagValue.length * 9)}px` }}
+                        style={{ border: `1.5px solid ${colore}`, background: hexConAlpha(colore, lt ? 0.16 : 0.22), color: colore, width: `${Math.max(70, editingTagValue.length * 9)}px` }}
                       />
                     ) : (
                       <button
@@ -285,14 +326,15 @@ export function ProcessusModal({
                         onDoubleClick={() => { setEditingTag(tag); setEditingTagValue(tag); }}
                         title={t('tip_filter_rename')}
                         className="px-3.5 py-1.5 rounded-full text-[11px] font-mono font-bold tracking-widest uppercase transition-all flex items-center gap-1.5"
-                        style={chipStyle(processusTagFilter === tag)}>
-                        ⬡ {tag}
+                        style={chipStyle(processusTagFilter === tag, colore)}>
+                        {puntino(colore)} {tag}
                         <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={countBadge}>{tagCount(tag)}</span>
                         <span className="opacity-0 group-hover/tagchip:opacity-60 text-[9px] transition-opacity ml-0.5">✎</span>
                       </button>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </>);
             })()}
           </div>}
@@ -423,7 +465,13 @@ export function ProcessusModal({
                       />
                     </div>
                   )}
-                  <div className="flex flex-col gap-1 overflow-y-auto" style={{ maxHeight: 176 }}>
+                  {/* ⚠️ PIÙ ALTA — segnalato: « quando apri COMMANDS fai la finestra più
+                      alta così c'è meno scroll ». Era 176px fissi, scelti a caso — con
+                      `soloComandi` il modale mostra SOLO intestazione + questa card (niente
+                      griglia PDF, niente footer): tanto spazio verticale restava inutilizzato
+                      sotto un elenco che scrollava presto. `60vh` invece di un numero fisso:
+                      cresce con la finestra, molti più procedimenti visibili senza scorrere. */}
+                  <div className="flex flex-col gap-1 overflow-y-auto" style={{ maxHeight: '60vh' }}>
                     {procedimentiFiltrati.map(p => (
                       <button key={p.nome} onClick={() => onSelectProcedimento?.(p)}
                         className="w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-left transition-colors"
@@ -459,21 +507,27 @@ export function ProcessusModal({
             </div>
           )}
 
-          {Object.entries(groupedByTag).map(([tag, pdfs]) => (
+          {Object.entries(groupedByTag).map(([tag, pdfs]) => {
+            const colore = colorePerTag(tag);
+            return (
             <div key={tag} className="mb-8">
-              {/* Tag section header */}
+              {/* ⚠️ COLORE PER TAG — v. `colorePerTag`, in testa al file: lo stesso colore
+                  di questo titolo si ritrova sul pallino a inizio di ogni card qui sotto
+                  (segnalato: « il colore del Tag deve essere ritrovato nella lista, col
+                  tag in inizio lista »). */}
               <div className="flex items-center gap-3 mb-4">
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full"
-                  style={{ background: th.accentSoft, border: `1px solid ${th.accentBorder}`, boxShadow: lt ? 'none' : '0 0 10px rgba(255,255,255,0.1)' }}>
-                  <span className="text-[10px] font-mono font-bold tracking-[0.35em] uppercase" style={{ color: th.accent }}>
-                    ⬡ {tag}
+                  style={{ background: hexConAlpha(colore, lt ? 0.10 : 0.14), border: `1px solid ${hexConAlpha(colore, 0.4)}`, boxShadow: lt ? 'none' : `0 0 10px ${hexConAlpha(colore, 0.15)}` }}>
+                  <span className="text-[10px] font-mono font-bold tracking-[0.35em] uppercase flex items-center gap-1.5" style={{ color: colore }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: colore, flexShrink: 0 }} />
+                    {tag}
                   </span>
                   <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full"
-                    style={{ background: lt ? 'rgba(8,145,178,0.12)' : 'rgba(255,255,255,0.15)', color: th.accent }}>
+                    style={{ background: hexConAlpha(colore, lt ? 0.14 : 0.2), color: colore }}>
                     {pdfs.length}
                   </span>
                 </div>
-                <div className="flex-1 h-px" style={{ background: lt ? 'linear-gradient(90deg, rgba(8,145,178,0.3), transparent)' : 'linear-gradient(90deg, rgba(255,255,255,0.3), transparent)' }} />
+                <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${hexConAlpha(colore, 0.35)}, transparent)` }} />
               </div>
 
               {/* ⚠️ SFOLTITA — segnalato: « non trovi che è un poco confusionario... cosa
@@ -494,7 +548,7 @@ export function ProcessusModal({
                       key={i}
                       title={p.name}
                       className="relative group cursor-pointer flex items-center gap-2 px-2.5 py-2 rounded-lg transition-colors"
-                      style={{ background: th.card, border: `1px solid ${th.cardBorder}` }}
+                      style={{ background: th.card, border: `1px solid ${hexConAlpha(colore, 0.25)}`, borderLeft: `3px solid ${colore}` }}
                       onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = lt ? 'rgba(255,255,255,0.97)' : 'rgba(0,40,90,0.5)'; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = th.card; }}
                       onClick={() => {
@@ -502,7 +556,13 @@ export function ProcessusModal({
                         onClose();
                       }}
                     >
-                      <BookOpen size={14} className="flex-shrink-0" style={{ color: th.accent }} />
+                      {/* ⚠️ PALLINO → BORDO A SINISTRA — segnalato: « il colore del Tag
+                          deve essere ritrovato nella lista, col tag in inizio lista ».
+                          Un bordo colorato di 3px all'inizio della card, dello stesso
+                          colore del titolo del gruppo (`colorePerTag`) — più leggibile di
+                          un pallino piccolo, e "in inizio" per davvero (il primo pixel
+                          della card, non un'icona in mezzo al resto). */}
+                      <BookOpen size={13} className="flex-shrink-0" style={{ color: colore }} />
                       <span className="text-[10px] font-mono font-bold leading-tight line-clamp-2"
                         style={{ color: th.text, wordBreak: 'break-word' }}>
                         {p.name}
@@ -531,7 +591,8 @@ export function ProcessusModal({
                 })}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>}
 
         {/* Footer — upload zone */}
