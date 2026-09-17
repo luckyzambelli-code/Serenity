@@ -3324,6 +3324,8 @@ export default function Serenity() {
         procedimenti={procedimenti}
         onApriCommands={() => { setProcessusSoloComandi(true); setProcessusAperto(true); }}
         onApriDizionario={() => setDizionarioAperto(true)}
+        onApriProcessus={() => { setProcessusSoloComandi(false); setProcessusAperto(true); }}
+        processusCount={processusPdfs.length}
         journal={journal}
         museOk={museOk}
         meterC={meterC}
@@ -3361,9 +3363,7 @@ export default function Serenity() {
             { muse: museOk, theta: meterC, none: senzaStrumenti || (!museOk && !meterC) }, lang);
           setConfigSalvata(true);
         }}
-        processusCount={processusPdfs.length}
         onApriStorico={() => setHistoryAperto(true)}
-        onApriProcessus={() => { setProcessusSoloComandi(false); setProcessusAperto(true); }}
         muse={muse}
         theta={theta}
         museGate={museGate}

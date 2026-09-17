@@ -73,9 +73,7 @@ export interface IntestazioneProps {
   nomeConfigDaSalvare: string;
   onCambiaNomeConfig: (v: string) => void;
   onSalvaConfig: () => void;
-  processusCount: number;
   onApriStorico: () => void;
-  onApriProcessus: () => void;
   muse: ReturnType<typeof useMuseConnection>;
   theta: ReturnType<typeof useThetaMeter>;
   museGate: ReturnType<typeof useMuseContactGate>;
@@ -106,7 +104,7 @@ export function Intestazione({
   headerRef, modalitaCiclo, avvio, espertoAttivo, LC, onApriCrediti, nomeAuditor, nomePreclear,
   aperta, assettoAperto, onToggleAssetto, onCambiaLivello, onCambiaPersone, salvaConfigAperto,
   onToggleSalvaConfig, configSalvata, nomeConfigDaSalvare, onCambiaNomeConfig, onSalvaConfig,
-  processusCount, onApriStorico, onApriProcessus, muse, theta, museGate, meterC, batteryLevel,
+  onApriStorico, muse, theta, museGate, meterC, batteryLevel,
   senzaStrumenti, onSenzaStrumenti, strumentiEspansi, onEspandi, museOk, meterSetupAperto,
   onToggleMeterSetup, hardwareError, remote, onApriConfig, aiAperto, onToggleAi, tempo,
   needleReaction, journalLogs, onApriGuida, helpAttivo, onToggleHelp,
@@ -171,13 +169,12 @@ export function Intestazione({
             `Impostazioni.tsx`: qui restano visibili per tutta la seduta, non solo prima. */}
         <SelettoreTema />
         <SelettoreLingua />
-        {/* ── STORICO E PROCESSUS — ESTRATTI in `BottoniStoricoProcessus.tsx`, segnalato nella
-            revisione completa. Nessuna logica cambiata, solo il disegno. */}
+        {/* ── STORICO — ESTRATTO in `BottoniStoricoProcessus.tsx`, segnalato nella revisione
+            completa. PROCESSUS non è più qui: spostato accanto a COMMANDS in
+            `BarraLaterale.tsx` (v. la nota nel componente). */}
         <BottoniStoricoProcessus
           auditorId={avvio?.auditorId}
-          processusCount={processusCount}
           onApriStorico={onApriStorico}
-          onApriProcessus={onApriProcessus}
         />
         {/* ── DA QUI IN POI, ZONE SEPARATE E NOMINATE ─────────────────────────────────────────
             Segnalato: « en haut tu dois expliciter les écrits pour comprendre de quoi il

@@ -17,7 +17,7 @@
  * @see docs/serenity-refonte.md — giro di scomposizione, 2026-09-07.
  */
 import React, { useEffect, useState, type MutableRefObject, type RefObject } from 'react';
-import { Clock, Timer, Play, Pause, BookOpen, BadgeCheck, FileCheck, BookText, Smartphone } from 'lucide-react';
+import { Clock, Timer, Play, Pause, BookOpen, BadgeCheck, FileCheck, BookText, Smartphone, Files } from 'lucide-react';
 import { useSerenityModuleStore } from './serenityModuleStore';
 import { GiornaleSeduta } from './GiornaleSeduta';
 import { orologio } from './orologio';
@@ -66,6 +66,13 @@ export interface BarraLateraleProps {
   procedimenti: Procedimento[];
   onApriCommands: () => void;
   onApriDizionario: () => void;
+  // ⚠️ AGGIUNTI — segnalato: « il bottone PROCESSUS deve essere accanto al bottone COMANDI
+  // per più coerenza ». Prima viveva solo in intestazione (`BottoniStoricoProcessus.tsx`,
+  // accanto a STORICO) — spostato qui, accanto a COMMANDS: stesso `ProcessusModal`, aperto
+  // in modalità COMPLETA (non `processusSoloComandi`, quella resta il bottone COMMANDS
+  // appena sotto), v. `onApriProcessus`/`processusCount` nel giro qui sotto.
+  onApriProcessus: () => void;
+  processusCount: number;
   journal: ReturnType<typeof useSessionJournal>;
   museOk: boolean;
   meterC: boolean;
@@ -76,7 +83,7 @@ export interface BarraLateraleProps {
 export function BarraLaterale({
   sidebarTop, aperta, mostraBriefingIniziale, tempo, avvio, telefonoPcCollegato, onApriSatellite,
   LC, pausata, pausaMotivoRef, onPausaManuale, onChiudi, onApri, ep, procedimenti, onApriCommands,
-  onApriDizionario, journal, museOk, meterC, shownReadsRef, agoEegRef,
+  onApriDizionario, onApriProcessus, processusCount, journal, museOk, meterC, shownReadsRef, agoEegRef,
 }: BarraLateraleProps) {
   const moduleVis = useSerenityModuleStore(s => s.moduleVis);
   const setModuleVis = useSerenityModuleStore(s => s.setModuleVis);
@@ -509,6 +516,42 @@ export function BarraLaterale({
             fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
             color: 'var(--s-ink-faint)',
           }}>COMMANDS</span>
+        </div>
+      {/* ── PROCESSUS, ACCANTO A COMMANDS — segnalato: « il bottone PROCESSUS deve essere
+          accanto al bottone COMANDI per più coerenza ». Prima viveva solo in intestazione,
+          accanto a STORICO (v. `BottoniStoricoProcessus.tsx`) — stessa icona/contatore di
+          allora, spostati qui. Icona DIVERSA da COMMANDS (`BookOpen`, appena sopra) apposta:
+          stesso motivo di `BookText` per DIZIONARIO, poco più giù — mai la stessa icona per
+          due bottoni diversi, anche se aprono lo stesso `ProcessusModal` (qui in modalità
+          COMPLETA, tutti i PDF, non solo i comandi). `Files` (una pila di pagine) dice
+          "l'archivio intero", contro il singolo "libro aperto" di COMMANDS. */}
+        <div style={{ display: 'grid', justifyItems: 'center', gap: 4, pointerEvents: 'auto' }}>
+          <button
+            className="s-glass s-glass-btn"
+            onClick={onApriProcessus}
+            title="PROCESSUS" data-help={LC('apri l\'archivio completo dei documenti del procedimento',
+              'ouvre l\'archive complète des documents du processus',
+              'opens the full processus document archive',
+              'abre el archivo completo de documentos del procedimiento',
+              'öppnar hela processusarkivet') as string} style={{
+              position: 'relative', width: 54, height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', border: '1.5px solid var(--s-ink-ghost)', borderRadius: '50%',
+              background: 'var(--s-disc)', color: 'var(--s-ink-soft)',
+            }}>
+            <Files size={22} strokeWidth={1.8} aria-hidden="true" />
+            {processusCount > 0 && (
+              <span style={{
+                position: 'absolute', top: -2, right: -2, minWidth: 17, height: 17, borderRadius: 999,
+                background: 'var(--s-ink)', color: 'var(--s-ground)',
+                fontFamily: 'var(--s-mono)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px',
+              }}>{processusCount}</span>
+            )}
+          </button>
+          <span style={{
+            fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700, letterSpacing: '0.04em',
+            color: 'var(--s-ink-faint)',
+          }}>PROCESSUS</span>
         </div>
       {/* ── DIZIONARIO TECNICO — segnalato: « si potrebbe integrare il dizionario tecnico?
           ...un bottone come comands e processus sarebbe l'ideale ». Stessa forma esatta del

@@ -12692,3 +12692,32 @@ Build ancora sospesa su richiesta dell'utente — solo commit del contenuto.
 
 File: `public/dizionario/dizionario-{it,en,fr,es}.json`. `tsc --noEmit` pulito, `npm run
 lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-17 (continuazione ancora) — PROCESSUS spostato accanto a COMMANDS
+
+**Segnalato:** « Mi rendo conto che il bottone PROCESSUS deve essere accanto al bottone
+COMANDI per più coerenza. SPOSTALO ». Il bottone PROCESSUS (icona `BookOpen`, apre
+`ProcessusModal` in modalità COMPLETA — tutti i PDF, tag, upload — diversa dal bottone
+COMMANDS, che apre lo STESSO modale ma in modalità ristretta ai soli comandi) viveva in
+intestazione, accanto a STORICO (`BottoniStoricoProcessus.tsx`); COMMANDS invece vive nella
+barra laterale, accanto a EP/DIZIONARIO (`BarraLaterale.tsx`) — due punti d'accesso allo
+stesso modale, in due posti diversi dello schermo.
+
+Spostato: tolto da `BottoniStoricoProcessus.tsx` (che ora mostra solo STORICO — il nome del
+componente resta per non rompere la cronologia dei commenti), aggiunto in
+`BarraLaterale.tsx` subito dopo COMMANDS, stesso `onClick`/contatore di prima, icona diversa
+apposta (`Files`, una pila di pagine — mai la stessa icona di COMMANDS per due bottoni
+diversi, stesso principio già usato per `BookText` di DIZIONARIO). `processusCount`/
+`onApriProcessus` spostati nella chiamata a `<BarraLaterale>` in `Serenity.tsx`, tolti da
+quella a `<Intestazione>`.
+
+Verificato dal vivo: COMMANDS, PROCESSUS e DIZIONARIO ora in fila nello stesso riquadro;
+PROCESSUS apre la vista completa (AGGIUNGI PROCESSO, tag, upload) e non quella ristretta ai
+comandi; l'intestazione mostra solo l'icona STORICO col contatore sedute. Nessun errore in
+console.
+
+Build ancora sospesa su richiesta dell'utente — solo commit del contenuto.
+
+File: `src/serenity/BarraLaterale.tsx`, `BottoniStoricoProcessus.tsx`, `Intestazione.tsx`,
+`Serenity.tsx`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato),
+`npx vitest run` 754/754 (invariato).
