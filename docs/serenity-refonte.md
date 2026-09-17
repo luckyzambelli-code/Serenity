@@ -12414,3 +12414,29 @@ a 8 invece che a 9).
 File: `src/engine/toneLevels.ts`, `src/components/ToneColumn.tsx`,
 `src/engine/__tests__/toneLevels.test.ts`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0
 errori (invariato), `npx vitest run` 754/754 (tre test riscritti, non solo fatti passare).
+
+## Giro — 2026-09-17 — BUG GRAVE: SERENITY si bloccava del tutto durante COMMANDS
+
+**Segnalato con forza:** « Abbiamo un problema, è la seconda volta che SERENITY si blocca e non
+si può più fare nulla. VERIFICA » — poi, ai chiarimenti: « Stavo facendo COMMANDS », e come
+sintomo collaterale (poi ritirato, giustamente): « L'MNA non appare più » — non era un bug a
+parte, era la CONSEGUENZA dello stesso blocco: con tutto il render fermo, l'MNA smetteva di
+aggiornarsi come ogni altra cosa a schermo.
+
+**Causa trovata leggendo, non indovinata:** il calcolo della reazione live sotto il comando
+(aggiunto due giorni fa — v. il giro « la reazione, subito sotto il comando ») chiamava
+`computeInstantRead` — una scansione LINEARE di `shownReadsRef.current`, fino a
+`SHOWN_READS_CAP` = 2000 letture, con `push`/`map`/`filter`/`reduce` ad ogni chiamata — per
+OGNI comando della lista che avesse già una risposta registrata, non solo per quello A FUOCO.
+Con un procedimento lungo e una seduta di COMMANDS che si prolunga (molti comandi già risposti,
+`shownReadsRef` che si riempie), il conto esplode: N comandi × 2000 letture × decine di render
+al secondo (il ritmo delle letture EEG/meter) — la CPU non ce la fa più, e SERENITY smette di
+rispondere a TUTTO, non solo a `PistaProcedimento`.
+
+Spostato il calcolo DENTRO `{inFuoco && (...)}`: un solo comando è a fuoco alla volta, quindi un
+solo calcolo per render invece di N — lo stesso principio già seguito ovunque in questo file
+(le note, il campo risposta, tutto ciò che non riguarda il comando a fuoco resta fuori dal
+render pesante).
+
+File: `src/serenity/PistaProcedimento.tsx`. `tsc --noEmit` pulito, `npm run lint` 324 warning/0
+errori (invariato), `npx vitest run` 754/754 (invariato).

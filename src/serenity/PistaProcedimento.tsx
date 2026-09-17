@@ -233,16 +233,22 @@ export function PistaProcedimento({
         // frase vera del PC, non ricomincia da un campo vuoto accanto a lei.
         const testoMostrato = risposta?.auditor ?? '';
         const mostraTrascrizione = !risposta?.modificato && !!testoMostrato;
-        // ⚠️ AGGIUNTO — v. la nota grande sul perché, in cima al file. Stessa identica formula
-        // di `GiornaleSeduta.tsx` (`computeInstantRead` contro la finestra `shownReadsRef`),
-        // solo con l'istante dell'ULTIMA parola di QUESTA risposta (`risposta.tParola`) al posto
-        // di `log.time` — qui non c'è ancora un log, la risposta non è stata committata.
-        const reazione = (museOk || meterC) && risposta?.tParola !== undefined
-          ? computeInstantRead(shownReadsRef.current, risposta.tParola, -Infinity, Infinity,
-              agoEegRef.current ? 'eeg' : 'theta').read
-          : undefined;
-        const reazioneUtile = reazione && reazione !== 'NULL' && reazione !== READ_NON_MISURATO
-          ? reazione : null;
+        // ⚠️ BUG GRAVE TROVATO — segnalato: « SERENITY si blocca e non si può più fare nulla »,
+        // poi « stavo facendo COMMANDS », poi « l'MNA non appare più » (sintomo collaterale
+        // dello stesso blocco: nulla si aggiorna più). Causa: `computeInstantRead` (v. la nota
+        // grande, sotto, dove ORA vive) gira su una scansione lineare di `shownReadsRef.current`
+        // — fino a `SHOWN_READS_CAP` = 2000 letture, con `push`/`map`/`filter`/`reduce` ad ogni
+        // chiamata, tutt'altro che gratis. Questo calcolo stava QUI, FUORI dal blocco
+        // `{inFuoco && (...)}` — cioè girava per OGNI comando della lista che avesse già una
+        // risposta (`risposta?.tParola !== undefined`), non solo per quello a fuoco, e ad OGNI
+        // singolo render di questo componente (che segue il ritmo delle letture EEG/meter —
+        // diverse volte al secondo). Con un procedimento lungo e mezz'ora di COMMANDS alle
+        // spalle (molti comandi già risposti, `shownReadsRef` pieno), il conto esplode:
+        // N comandi × 2000 letture × decine di render al secondo — la CPU non riesce più a
+        // tenere il passo, e SERENITY smette di rispondere a tutto, non solo a questa pista
+        // (l'MNA, altrove nello stesso albero React, semplicemente non riceve più il suo turno
+        // di render). Spostato dentro `{inFuoco && (...)}`, sotto: un solo calcolo per render,
+        // non uno per comando.
         return (
           <div key={i} style={{ width: '100%' }}>
           <button ref={el => { righeRef.current[i] = el; }} type="button" onClick={() => onImpostaFuoco(i)}
@@ -300,7 +306,20 @@ export function PistaProcedimento({
               iniziando a scrivere (da quel momento diventa testo dell'auditor, non più un
               proseguimento della trascrizione — v. la nota di `Serenity.tsx` sul perché sono
               DUE campi separati). */}
-          {inFuoco && (
+          {inFuoco && (() => {
+            // ⚠️ SPOSTATO QUI DENTRO — v. la nota grande più sopra, sul `const risposta = ...`:
+            // un solo calcolo per render (il comando a fuoco è uno solo), non uno per ogni
+            // comando della lista. Stessa identica formula di `GiornaleSeduta.tsx`
+            // (`computeInstantRead` contro la finestra `shownReadsRef`), solo con l'istante
+            // dell'ULTIMA parola di questa risposta (`risposta.tParola`) al posto di `log.time`
+            // — qui non c'è ancora un log, la risposta non è stata committata.
+            const reazione = (museOk || meterC) && risposta?.tParola !== undefined
+              ? computeInstantRead(shownReadsRef.current, risposta.tParola, -Infinity, Infinity,
+                  agoEegRef.current ? 'eeg' : 'theta').read
+              : undefined;
+            const reazioneUtile = reazione && reazione !== 'NULL' && reazione !== READ_NON_MISURATO
+              ? reazione : null;
+            return (
             <div style={{ padding: '4px 10px 8px 46px', display: 'flex', flexDirection: 'column', gap: 3 }}>
               <input
                 type="text"
@@ -328,7 +347,8 @@ export function PistaProcedimento({
                 </span>
               )}
             </div>
-          )}
+            );
+          })()}
           </div>
         );
       })}
