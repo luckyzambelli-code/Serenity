@@ -13189,3 +13189,34 @@ nell'anteprima browser di sviluppo, come per il resto di questo controllo.
 
 File: `src/serenity/LogoSerenity.tsx`. `tsc --noEmit` pulito, `npm run lint` 324
 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-18 (continuazione ancora) — `releaseType` torna "draft": la protezione
+delle 2 ore
+
+**Contesto**: dopo aver corretto `releaseType: "release"` (giro precedente, per far vedere
+le release all'aggiornatore), la pubblicazione Mac+Windows della 3.0.355 ha incontrato la
+solita instabilità di GitHub sui file grandi — diversi tentativi, alcuni bloccati per oltre
+un'ora senza progresso, interrotti a mano. Nel frattempo la release Mac (completata con
+successo) è rimasta pubblica per più di 2 ore prima che il tentativo Windows partisse.
+
+**Scoperto**: electron-builder rifiuta di scrivere NUOVI asset su una release già
+pubblicata (`draft: false`) più vecchia di 2 ore (`GitHub release not created / skipped
+publishing ... reason=existing release published more than 2 hours ago`) — una protezione
+contro il sovrascrivere accidentalmente il contenuto di una release che gli utenti
+potrebbero già scaricare. Utile in generale, ma qui rendeva IMPOSSIBILE completare Windows
+dopo che Mac era già andato a buon fine e il tempo totale (build + upload + ritentativi)
+aveva superato le 2 ore — la release restava per sempre incompleta (Mac ok, Windows
+mancante), cancellabile solo ripartendo da zero.
+
+**Correzione**: `releaseType` torna `"draft"` (il default di electron-builder). Una draft
+NON ha il limite delle 2 ore — Mac e Windows possono completarsi in tempi diversi, anche
+a distanza di ore, senza che electron-builder si rifiuti di aggiungere gli asset mancanti.
+La release resta però invisibile all'aggiornatore finché è draft — quindi il passo finale
+(`PATCH .../releases/:id {"draft": false}`, con conferma esplicita dell'utente ogni volta —
+azione bloccata di default dal classificatore automatico) va fatto A MANO, una volta sola,
+SOLO dopo aver verificato via API che tutti gli asset (Mac + Windows) sono presenti. Non
+più un passo automatico dentro la build: un controllo deliberato prima di rendere visibile
+la release.
+
+File: `package.json`. `tsc --noEmit` pulito (nessun file sorgente toccato), `npm run lint`
+324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).

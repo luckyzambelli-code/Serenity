@@ -98,7 +98,7 @@
       "owner": "luckyzambelli-code",
       "repo": "Serenity",
       "channel": "equilibrium",
-      "releaseType": "release"
+      "releaseType": "draft"
     },
     "directories": {
       "output": "release"
