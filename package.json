@@ -97,7 +97,8 @@
       "provider": "github",
       "owner": "luckyzambelli-code",
       "repo": "Serenity",
-      "channel": "equilibrium"
+      "channel": "equilibrium",
+      "releaseType": "release"
     },
     "directories": {
       "output": "release"

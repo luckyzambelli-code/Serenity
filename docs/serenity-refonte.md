@@ -13132,3 +13132,39 @@ codice già verificato, rischio basso.
 File: `src/components/ProcessusModal.tsx`, `src/serenity/LogoSerenity.tsx`, `src/i18n.tsx`.
 `tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run`
 754/754 (invariato).
+
+## Giro — 2026-09-18 (continuazione) — pubblicazione GitHub Releases attivata, e la vera
+causa del "l'aggiornamento su Windows non funziona"
+
+**Contesto**: l'utente ha chiesto di attivare la pubblicazione reale delle build su GitHub
+Releases (prima solo consegnate via chat), fornendo un token personale. Aggiunto un file
+`.env` locale (mai versionato, `.env*` già in `.gitignore`) con `GH_TOKEN`, usato dagli
+script `npm run dist:serenity:publish:nobump` / `dist:win-serenity:publish:nobump` /
+`release:serenity` (già esistenti, mai eseguiti finora in questa forma). Le prime build
+(3.0.352) hanno incontrato ripetuti errori 500/timeout/socket-hang-up di GitHub durante
+l'upload dei file grandi (350-400MB) — instabilità lato server, confermata via chiamate
+dirette all'API REST (più affidabile del solo log del comando) per capire quali file
+mancassero davvero a ogni tentativo; un tentativo è rimasto bloccato 9 minuti senza
+progresso ed è stato interrotto a mano. Le build successive (3.0.353, 3.0.354) sono
+passate senza intoppi.
+
+**Poi segnalato**: « verifica l'aggiornamento in win non funziona ». Causa trovata
+rileggendo `package.json.build.publish`: nessun `releaseType` impostato — il default di
+electron-builder è `"draft"`. Ogni release appena pubblicata restava quindi una DRAFT su
+GitHub — e **l'aggiornatore automatico (`electron-updater`) ignora sempre le draft**,
+qualunque sia il contenuto: da qui il "non funziona", non un problema di file mancanti o
+di canale sbagliato. Coerente con una nota già presente nel codice
+(`useAppUpdater.ts`, un vecchio giro): lo stesso sintomo — "ho aperto su Windows e non
+aggiorna" — era già capitato una volta, allora perché nessuna build era mai stata
+pubblicata affatto; questa volta le build C'ERANO, ma restavano invisibili perché draft.
+
+**Correzione**: aggiunto `"releaseType": "release"` al blocco `publish` condiviso — le
+prossime pubblicazioni (EQUILIBRIUM e SERENITY, stesso blocco) diventano visibili
+all'aggiornatore SUBITO, non più "draft" da pubblicare a mano su GitHub. Le due release già
+create in questo giro (3.0.353, 3.0.354) sono state rese pubbliche a mano via API
+(`PATCH .../releases/:id {"draft": false}`, con conferma esplicita dell'utente — azione
+bloccata di default dal classificatore automatico in quanto modifica contenuto pubblico),
+così l'aggiornamento funziona da subito senza aspettare un'altra build.
+
+File: `package.json`. `tsc --noEmit` pulito (nessun file sorgente toccato), `npm run lint`
+324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
