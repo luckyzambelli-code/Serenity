@@ -257,18 +257,19 @@ export function ProcessusModal({
               />
             </div>
           )}
-          {!soloComandi && <div className="flex items-center gap-2 overflow-x-auto" style={{ paddingBottom: 2 }}>
+          {!soloComandi && <div className="flex items-center gap-2 flex-wrap overflow-y-auto"
+            style={{ maxHeight: 76 }}>
             {(() => {
               // ⚠️ RIDISEGNATI (di nuovo) — segnalato: « i TAG in alto sono molto confuso »,
               // poi precisato: vuole qualcosa di più immediato, e con molti tag « vanno a
-              // capo in modo disordinato ». Due correzioni mirate, non un rifacimento:
-              //
-              // 1) `flex-wrap` → `overflow-x-auto` + `flex-shrink-0` su ogni chip: STESSA
-              //    ricetta già usata poco sotto per i tag della coda di upload (v. la nota
-              //    "SCORREVOLE" su quella striscia) — una sola riga che scorre in
-              //    orizzontale invece di un muro irregolare a capo libero. Coerenza: due
-              //    strisce di tag nello stesso modale, un solo comportamento.
-              // 2) "ALL" perde il glifo `◈` residuo — un giro fa i chip normali erano
+              // capo in modo disordinato ». Un primo tentativo era passato a una striscia
+              // scorrevole in orizzontale (`overflow-x-auto`, una sola riga) — poi corretto
+              // di nuovo: « fallo su due linee per cortesia ». Tornato a `flex-wrap`
+              // (wrap naturale, non più forzato su una riga), ma con un'altezza massima di
+              // ESATTAMENTE due righe di chip (`maxHeight: 76`) e scroll VERTICALE oltre:
+              // niente più muro indefinito di righe (il problema originale), ma nemmeno
+              // una sola riga stretta — due righe fisse, scorrevoli se servono di più.
+              // "ALL" perde il glifo `◈` residuo — un giro fa i chip normali erano
               //    passati dal glifo di testo (◈/⬡) al pallino colorato, ma "ALL" era
               //    rimasto com'era: l'unico chip ancora col vecchio linguaggio, la vera
               //    incoerenza che rendeva la riga meno "immediata" da leggere a colpo
