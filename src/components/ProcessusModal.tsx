@@ -257,17 +257,23 @@ export function ProcessusModal({
               />
             </div>
           )}
-          {!soloComandi && <div className="flex items-center gap-2 flex-wrap">
+          {!soloComandi && <div className="flex items-center gap-2 overflow-x-auto" style={{ paddingBottom: 2 }}>
             {(() => {
-              // ⚠️ RIDISEGNATI — segnalato: « i TAG così non sono belli, puoi farli più
-              // sexy? ». Prima: un solo colore (l'accento del tema) per OGNI tag, un
-              // glifo di testo (◈/⬡) invece di un vero indicatore — tutti i chip
-              // sembravano varianti dello stesso, niente li distingueva a colpo d'occhio.
-              // Ora: un pallino colorato (`colorePerTag`, sopra) al posto del glifo, lo
-              // sfondo/bordo tinti dello STESSO colore (non più l'accento unico) — un
-              // linguaggio visivo coerente con `colorePerTag`, ritrovato anche nella
-              // griglia sotto (v. più giù). "ALL" resta sul colore dell'accento: non
-              // rappresenta un tag preciso.
+              // ⚠️ RIDISEGNATI (di nuovo) — segnalato: « i TAG in alto sono molto confuso »,
+              // poi precisato: vuole qualcosa di più immediato, e con molti tag « vanno a
+              // capo in modo disordinato ». Due correzioni mirate, non un rifacimento:
+              //
+              // 1) `flex-wrap` → `overflow-x-auto` + `flex-shrink-0` su ogni chip: STESSA
+              //    ricetta già usata poco sotto per i tag della coda di upload (v. la nota
+              //    "SCORREVOLE" su quella striscia) — una sola riga che scorre in
+              //    orizzontale invece di un muro irregolare a capo libero. Coerenza: due
+              //    strisce di tag nello stesso modale, un solo comportamento.
+              // 2) "ALL" perde il glifo `◈` residuo — un giro fa i chip normali erano
+              //    passati dal glifo di testo (◈/⬡) al pallino colorato, ma "ALL" era
+              //    rimasto com'era: l'unico chip ancora col vecchio linguaggio, la vera
+              //    incoerenza che rendeva la riga meno "immediata" da leggere a colpo
+              //    d'occhio. Resta sul colore accento (non rappresenta un tag preciso), ma
+              //    ora nella STESSA forma pillola degli altri, senza glifo.
               const chipStyle = (active: boolean, colore: string): React.CSSProperties => ({
                 border: `1.5px solid ${active ? colore : hexConAlpha(colore, 0.35)}`,
                 background: active ? hexConAlpha(colore, lt ? 0.16 : 0.22) : hexConAlpha(colore, lt ? 0.07 : 0.09),
@@ -282,15 +288,15 @@ export function ProcessusModal({
                 <button onClick={() => setProcessusTagFilter('all')}
                   title={L('mostra tutti i processus', 'afficher tous les processus', 'show all processus',
                     'mostrar todos los processus', 'visa alla processus')}
-                  className="px-3.5 py-1.5 rounded-full text-[11px] font-mono font-bold tracking-widest uppercase transition-all flex items-center gap-1.5"
+                  className="px-3.5 py-1.5 rounded-full text-[11px] font-mono font-bold tracking-widest uppercase transition-all flex items-center gap-1.5 flex-shrink-0"
                   style={chipStyle(processusTagFilter === 'all', th.accent)}>
-                  ◈ ALL
+                  ALL
                   <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={countBadge}>{processusPdfs.length}</span>
                 </button>
                 {allTags.map(tag => {
                   const colore = colorePerTag(tag);
                   return (
-                  <div key={tag} className="relative group/tagchip">
+                  <div key={tag} className="relative group/tagchip flex-shrink-0">
                     {editingTag === tag ? (
                       <input
                         autoFocus

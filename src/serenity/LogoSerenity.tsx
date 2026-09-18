@@ -81,16 +81,26 @@ export function LogoSerenity({ onApriCrediti, isLightTheme, mostraLivello, esper
             {esperto === true ? 'EXPERT' : LC('BASIC', 'BASIQUE', 'BASIC', 'BÁSICO', 'BASIC')}
             {' · '}{__SERENITY_VERSION__}
             {disponibile && etichettaAggiornamento && (
+              // ⚠️ CORRETTO — segnalato: « lo hai fatto bianco, non mi piace, io lo farei
+              // fondo nero ma visibile ». Prima era testo nudo sottolineato — su fondo
+              // chiaro si perdeva, non si leggeva come un vero bottone. Ora una PILLOLA
+              // piena, stessa ricetta già in uso qui accanto per il logo dei crediti
+              // (`#2a2a2f` in chiaro, dove serve contrasto vero; in scuro l'intestazione è
+              // già scura, un vetro chiaro traslucido resta visibile senza sparire nel
+              // fondo). Ambra/`--s-reserve` quando c'è davvero qualcosa da notare o un
+              // errore — stesso significato di prima, solo dentro una pillola invece che
+              // come semplice colore del testo.
               <button type="button" onClick={verifica} disabled={fermo}
                 style={{
-                  marginLeft: 6, border: 'none', background: 'none', padding: 0,
-                  font: 'inherit', fontWeight: stato === 'inattivo' ? 400 : 700,
-                  cursor: fermo ? 'default' : 'pointer',
-                  textDecoration: stato === 'inattivo' ? 'underline dotted' : 'none',
-                  textUnderlineOffset: 2,
-                  color: stato === 'errore' ? 'var(--s-reserve)' : attenzione ? 'var(--s-reserve)' : 'var(--s-ink-faint)',
+                  marginLeft: 6, border: 'none', borderRadius: 999, padding: '2px 9px',
+                  fontFamily: 'var(--s-sans)', fontSize: 'var(--s-fs-micro)', fontWeight: 700,
+                  letterSpacing: '0.03em', cursor: fermo ? 'default' : 'pointer',
+                  background: (stato === 'errore' || attenzione)
+                    ? 'var(--s-reserve)'
+                    : (isLightTheme ? '#2a2a2f' : 'rgba(255,255,255,0.16)'),
+                  color: (stato === 'errore' || attenzione) ? '#2a2a2f' : '#fff',
                 }}>
-                — {etichettaAggiornamento}
+                {etichettaAggiornamento}
               </button>
             )}
           </span>

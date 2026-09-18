@@ -13094,3 +13094,41 @@ basso.
 File: `src/serenity/Serenity.tsx`, `src/serenity/FinestreSovrapposte.tsx`. `tsc --noEmit`
 pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run` 754/754
 (invariato).
+
+## Giro — 2026-09-18 — tre correzioni: TAG PROCESSUS, bottone aggiornamento, testo CONFIG
+
+**Segnalato** (tre messaggi separati): « i TAG in alto di PROCESSUS sono molto confuso »
+(precisato via domanda: « qualcosa di più immediato, di capibile » + « con molti tag vanno a
+capo in modo disordinato »); « il bottone di verifica aggiornamenti, lo hai fatto bianco,
+non mi piace, io lo farei fondo nero ma visibile »; « In config hai scritto: [...] resta
+accesa ma nascosta [...] DI COSA PARLI? devi specificarlo ».
+
+**TAG PROCESSUS**: la riga di chip in alto (filtro per tag) andava a capo (`flex-wrap`) —
+con molti tag un muro irregolare. Cambiata a `overflow-x-auto` + `flex-shrink-0` su ogni
+chip: STESSA ricetta già in uso poco più sotto nello stesso file, per la striscia di tag
+della coda di upload (« devo poter far scorrere i TAG », giro precedente) — coerenza, non
+un secondo comportamento diverso per lo stesso tipo di controllo. Tolto anche il glifo `◈`
+residuo davanti ad "ALL": un giro fa i chip normali erano passati dal glifo al pallino
+colorato, "ALL" era rimasto indietro — l'unica incoerenza visibile nella riga.
+
+**Bottone di aggiornamento**: la scritta "Verifica aggiornamento" (giro precedente) era
+testo nudo sottolineato — su fondo chiaro si perdeva, non si leggeva come un vero bottone.
+Ora una pillola piena: `#2a2a2f` (nero) in tema chiaro — STESSA ricetta già in uso per il
+bottone del logo crediti proprio accanto — un vetro chiaro traslucido in tema scuro (dove
+l'intestazione è già scura, il nero sparirebbe). Ambra quando c'è davvero qualcosa da
+notare o un errore, stesso significato di prima.
+
+**Testo CONFIG**: `config_mod_cam1_hint` (sotto l'elenco MODULI, visibile solo quando CAM 1
+è accesa) diceva "resta accesa ma nascosta" senza mai nominare il soggetto — si affidava
+alla posizione (subito sotto la riga CAM 1), ma con altri moduli in mezzo nell'elenco quel
+legame si perde. Riscritto in tutte le 5 lingue per aprire nominando esplicitamente "CAM 1
+(Auditor)".
+
+Verificato dal vivo: il testo CONFIG compare corretto (screenshot); TAG PROCESSUS e bottone
+aggiornamento non testabili a fondo in anteprima browser (il primo serve PDF reali dal
+server locale, il secondo `window.electronAPI` reale) — modifiche di sola CSS/testo su
+codice già verificato, rischio basso.
+
+File: `src/components/ProcessusModal.tsx`, `src/serenity/LogoSerenity.tsx`, `src/i18n.tsx`.
+`tsc --noEmit` pulito, `npm run lint` 324 warning/0 errori (invariato), `npx vitest run`
+754/754 (invariato).
