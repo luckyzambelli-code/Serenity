@@ -13168,3 +13168,24 @@ così l'aggiornamento funziona da subito senza aspettare un'altra build.
 
 File: `package.json`. `tsc --noEmit` pulito (nessun file sorgente toccato), `npm run lint`
 324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-18 (continuazione ancora) — bottone di aggiornamento: etichetta fissa
+
+**Segnalato**: « quando schiacci verifica aggiornamento e ti dice già aggiornato, poi
+riscrive verifica aggiornamento. Questo eh, sembra voler dire che devi aggiornare, non è
+molto chiaro ». La scritta DENTRO il bottone cambiava con lo stato ("Verifica
+aggiornamento" → "già aggiornato" → torna da sola a "Verifica aggiornamento" dopo 6s) —
+dentro una pillola piena che si legge come un comando, vederla ricomparire SUBITO dopo un
+esito sembrava un nuovo invito ad aggiornare, non la semplice scadenza di un messaggio
+temporaneo.
+
+**Correzione**: il bottone ora dice SEMPRE "Verifica aggiornamento" — non cambia mai
+significato. L'esito (`testoStato`: verifica…/già aggiornato/trovato/scaricamento N%/
+pronto — riavvia/errore) compare come testo semplice ACCANTO al bottone, non più al posto
+della sua scritta — non può più essere scambiato per una nuova istruzione.
+
+Verificato: `tsc`/lint/test puliti. Stato reale (`disponibile`) non testabile
+nell'anteprima browser di sviluppo, come per il resto di questo controllo.
+
+File: `src/serenity/LogoSerenity.tsx`. `tsc --noEmit` pulito, `npm run lint` 324
+warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).

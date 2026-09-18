@@ -52,9 +52,14 @@ export function LogoSerenity({ onApriCrediti, isLightTheme, mostraLivello, esper
     : stato === 'errore'
     ? LC('verifica non riuscita', 'échec de la vérification', 'check failed', 'comprobación fallida', 'kontroll misslyckades')
     : null;
-  const etichettaAggiornamento = stato === 'inattivo'
-    ? LC('verifica aggiornamento', 'vérifier la mise à jour', 'check for update', 'buscar actualización', 'sök uppdatering')
-    : testoStato;
+  // ⚠️ SEPARATO DI NUOVO — segnalato: « quando ti dice già aggiornato [...] sembra voler
+  // dire che devi aggiornare, non è molto chiaro ». Prima la scritta dentro il bottone
+  // CAMBIAVA con lo stato ("Verifica aggiornamento" → "già aggiornato" → ecc.) — dentro una
+  // pillola piena che si legge come un comando, "già aggiornato" (un ESITO, non un'azione)
+  // suonava ambiguo. Ora il bottone dice SEMPRE "Verifica aggiornamento" — l'azione non
+  // cambia mai significato — e l'esito (`testoStato`) compare come testo semplice ACCANTO,
+  // mai dentro la pillola: non è più possibile scambiarlo per un'istruzione.
+  const etichettaBottone = LC('verifica aggiornamento', 'vérifier la mise à jour', 'check for update', 'buscar actualización', 'sök uppdatering');
 
   return (
     <>
@@ -80,7 +85,7 @@ export function LogoSerenity({ onApriCrediti, isLightTheme, mostraLivello, esper
           }}>
             {esperto === true ? 'EXPERT' : LC('BASIC', 'BASIQUE', 'BASIC', 'BÁSICO', 'BASIC')}
             {' · '}{__SERENITY_VERSION__}
-            {disponibile && etichettaAggiornamento && (
+            {disponibile && (
               // ⚠️ CORRETTO — segnalato: « lo hai fatto bianco, non mi piace, io lo farei
               // fondo nero ma visibile ». Prima era testo nudo sottolineato — su fondo
               // chiaro si perdeva, non si leggeva come un vero bottone. Ora una PILLOLA
@@ -89,7 +94,8 @@ export function LogoSerenity({ onApriCrediti, isLightTheme, mostraLivello, esper
               // già scura, un vetro chiaro traslucido resta visibile senza sparire nel
               // fondo). Ambra/`--s-reserve` quando c'è davvero qualcosa da notare o un
               // errore — stesso significato di prima, solo dentro una pillola invece che
-              // come semplice colore del testo.
+              // come semplice colore del testo. Etichetta FISSA — v. la nota su
+              // `etichettaBottone`, sopra.
               <button type="button" onClick={verifica} disabled={fermo}
                 style={{
                   marginLeft: 6, border: 'none', borderRadius: 999, padding: '2px 9px',
@@ -100,15 +106,20 @@ export function LogoSerenity({ onApriCrediti, isLightTheme, mostraLivello, esper
                     : (isLightTheme ? '#2a2a2f' : 'rgba(255,255,255,0.16)'),
                   color: (stato === 'errore' || attenzione) ? '#2a2a2f' : '#fff',
                 }}>
-                {etichettaAggiornamento}
+                {etichettaBottone}
               </button>
+            )}
+            {disponibile && testoStato && (
+              <span style={{ marginLeft: 6, color: stato === 'errore' ? 'var(--s-reserve)' : 'var(--s-ink-faint)' }}>
+                {testoStato}
+              </span>
             )}
           </span>
         )}
       </div>
       {disponibile ? (
         <button type="button" onClick={verifica} disabled={fermo}
-          title={testoStato ?? etichettaAggiornamento ?? undefined}
+          title={testoStato ?? etichettaBottone}
           style={{
             width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, padding: 0,
             boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.6), 0 1px 3px rgba(44,47,51,0.35)',
