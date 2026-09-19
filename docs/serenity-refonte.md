@@ -13220,3 +13220,26 @@ la release.
 
 File: `package.json`. `tsc --noEmit` pulito (nessun file sorgente toccato), `npm run lint`
 324 warning/0 errori (invariato), `npx vitest run` 754/754 (invariato).
+
+## Giro — 2026-09-19 — 3.0.355 pubblicata: upload diretto con verifica, e un manifest incoerente
+
+**Problema**: l'upload dei binari (350-400 MB) tramite `electron-builder --publish always`
+restava appeso per ore (uno per quasi 3 ore) o falliva con 500/timeout, e ogni ripetizione
+RICOSTRUISCE tutti i file — cambiando hash e dimensioni rispetto a quanto già caricato.
+
+**Scoperto**: il `serenity-mac.yml` locale era stato scritto PRIMA dell'ultima ricostruzione:
+sha512 e dimensioni degli zip/dmg non corrispondevano ai file in `release/`
+(il manifest Windows invece era coerente). Caricati così, `electron-updater` avrebbe
+rifiutato il download per hash diverso.
+
+**Come si è chiusa**: nessuna ricostruzione. Manifest Mac rigenerato dai file esatti da caricare
+(sha512 base64 + dimensione, stesso formato di electron-builder) e caricamento diretto con
+`curl` sulla bozza, con verifica della dimensione su GitHub dopo ogni file e fino a 6 tentativi
+(script idempotente: salta i file già presenti con la stessa dimensione, sostituisce sempre i
+`.yml`). Controllo finale via API: 12/12 asset, dimensioni identiche ai file locali. Poi
+`PATCH draft:false` con conferma esplicita (azione bloccata di default dal classificatore).
+Verificato senza token: `releases/latest` = v3.0.355, `serenity.yml` e `serenity-mac.yml`
+scaricabili pubblicamente, con gli hash attesi.
+
+**Da ricordare**: `releaseType` resta `"draft"` (v. giro precedente) — ogni release nuova
+nasce bozza e va resa pubblica a mano, solo dopo aver verificato che i 12 file ci sono.
